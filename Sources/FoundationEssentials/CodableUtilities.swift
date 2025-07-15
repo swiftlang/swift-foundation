@@ -687,3 +687,14 @@ extension BufferView where Element == UInt8 {
     }
 }
 
+// Non-RawRepresentable Codable enum cases with the same number and labels of associated values all share equivalent CodingKeys, but the compiler-synthesized implementation generates a new type for each case.
+// Each of these types has their own set of `metadata instantiation cache for protocol conformance descriptor` symbols for each of 5 protocol conformances which consumes DATA space.
+// Instead of using the synthesized CodingKey types, you can make a `private typealias <CaseName>CodingKeys = <one of these types>` inside the Codable enum to reduce the amount of redundant DATA.
+package enum EmptyCodingKeys: CodingKey { }
+package enum DefaultAssociatedValueCodingKeys1: String, CodingKey {
+    case _0
+}
+package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
+    case _0
+    case _1
+}

@@ -520,6 +520,11 @@ extension AttributeScopes.FoundationAttributes {
             case spelledOutValue
             case unit(Unit)
             case actualByteCount
+            
+            private typealias ValueCodingKeys = EmptyCodingKeys
+            private typealias SpelledOutValueCodingKeys = EmptyCodingKeys
+            private typealias UnitCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias ActualByteCountCodingKeys = EmptyCodingKeys
         }
         
         public enum Unit: Codable, Sendable {
@@ -532,6 +537,16 @@ extension AttributeScopes.FoundationAttributes {
             case eb
             case zb
             case yb
+            
+            private typealias ByteCodingKeys = EmptyCodingKeys
+            private typealias KbCodingKeys = EmptyCodingKeys
+            private typealias MbCodingKeys = EmptyCodingKeys
+            private typealias GbCodingKeys = EmptyCodingKeys
+            private typealias TbCodingKeys = EmptyCodingKeys
+            private typealias PbCodingKeys = EmptyCodingKeys
+            private typealias EbCodingKeys = EmptyCodingKeys
+            private typealias ZbCodingKeys = EmptyCodingKeys
+            private typealias YbCodingKeys = EmptyCodingKeys
         }
     }
 
@@ -583,6 +598,11 @@ extension AttributeScopes.FoundationAttributes {
                 case int(Int64)
                 case double(Double)
                 case decimal(Decimal)
+                
+                private typealias UintCodingKeys = DefaultAssociatedValueCodingKeys1
+                private typealias IntCodingKeys = DefaultAssociatedValueCodingKeys1
+                private typealias DoubleCodingKeys = DefaultAssociatedValueCodingKeys1
+                private typealias DecimalCodingKeys = DefaultAssociatedValueCodingKeys1
             }
         }
         
@@ -941,5 +961,8 @@ extension AttributedString {
         /// - Note: In vertical scripts, this equivalent to a bottom-to-top
         /// writing direction.
         case rightToLeft
+        
+        private typealias LeftToRightCodingKeys = EmptyCodingKeys
+        private typealias RightToLeftCodingKeys = EmptyCodingKeys
     }
 }

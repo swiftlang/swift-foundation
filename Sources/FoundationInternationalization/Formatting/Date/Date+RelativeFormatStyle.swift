@@ -150,6 +150,9 @@ extension Date {
         enum ComponentAdjustmentStrategy : Codable, Hashable {
             case alignedWithComponentBoundary
             case rounded
+            
+            private typealias AlignedWithComponentBoundaryCodingKeys = EmptyCodingKeys
+            private typealias RoundedCodingKeys = EmptyCodingKeys
         }
 
         var componentAdjustmentStrategy: ComponentAdjustmentStrategy {

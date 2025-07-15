@@ -297,7 +297,11 @@ extension Date {
         enum InnerStyle: Codable, Hashable {
             case formatStyle(Date.FormatStyle)
             case verbatimFormatStyle(VerbatimFormatStyle)
+            
+            private typealias FormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias VerbatimFormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
         }
+        
         var innerStyle: InnerStyle
 
         init(style: InnerStyle) {

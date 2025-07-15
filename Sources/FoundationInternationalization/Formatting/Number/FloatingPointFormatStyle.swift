@@ -344,6 +344,10 @@ extension FloatingPointFormatStyle {
             case floatingPoint(FloatingPointFormatStyle)
             case currency(FloatingPointFormatStyle.Currency)
             case percent(FloatingPointFormatStyle.Percent)
+            
+            private typealias FloatingPointCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
 
             var formatter: ICUNumberFormatterBase? {
                 switch self {

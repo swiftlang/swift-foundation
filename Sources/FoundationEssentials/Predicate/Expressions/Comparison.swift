@@ -14,6 +14,11 @@
 extension PredicateExpressions {
     public enum ComparisonOperator: Codable, Sendable {
         case lessThan, lessThanOrEqual, greaterThan, greaterThanOrEqual
+        
+        private typealias LessThanCodingKeys = EmptyCodingKeys
+        private typealias LessThanOrEqualCodingKeys = EmptyCodingKeys
+        private typealias GreaterThanCodingKeys = EmptyCodingKeys
+        private typealias GreaterThanOrEqualCodingKeys = EmptyCodingKeys
     }
 
     public struct Comparison<

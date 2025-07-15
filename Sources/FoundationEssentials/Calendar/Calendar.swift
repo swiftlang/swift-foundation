@@ -94,6 +94,34 @@ public struct Calendar : Hashable, Equatable, Sendable {
         
         @available(FoundationPreview 6.2, *)
         case vietnamese
+        
+        private typealias GregorianCodingKeys = EmptyCodingKeys
+        private typealias ChineseCodingKeys = EmptyCodingKeys
+        private typealias BuddhistCodingKeys = EmptyCodingKeys
+        private typealias CopticCodingKeys = EmptyCodingKeys
+        private typealias EthiopicAmeteMihretCodingKeys = EmptyCodingKeys
+        private typealias EthiopicAmeteAlemCodingKeys = EmptyCodingKeys
+        private typealias HebrewCodingKeys = EmptyCodingKeys
+        private typealias Iso8601CodingKeys = EmptyCodingKeys
+        private typealias IndianCodingKeys = EmptyCodingKeys
+        private typealias IslamicCodingKeys = EmptyCodingKeys
+        private typealias IslamicCivilCodingKeys = EmptyCodingKeys
+        private typealias JapaneseCodingKeys = EmptyCodingKeys
+        private typealias PersianCodingKeys = EmptyCodingKeys
+        private typealias RepublicOfChinaCodingKeys = EmptyCodingKeys
+        private typealias IslamicTabularCodingKeys = EmptyCodingKeys
+        private typealias IslamicUmmAlQuraCodingKeys = EmptyCodingKeys
+        private typealias BanglaCodingKeys = EmptyCodingKeys
+        private typealias GujaratiCodingKeys = EmptyCodingKeys
+        private typealias KannadaCodingKeys = EmptyCodingKeys
+        private typealias MalayalamCodingKeys = EmptyCodingKeys
+        private typealias MarathiCodingKeys = EmptyCodingKeys
+        private typealias OdiaCodingKeys = EmptyCodingKeys
+        private typealias TamilCodingKeys = EmptyCodingKeys
+        private typealias TeluguCodingKeys = EmptyCodingKeys
+        private typealias VikramCodingKeys = EmptyCodingKeys
+        private typealias DangiCodingKeys = EmptyCodingKeys
+        private typealias VietnameseCodingKeys = EmptyCodingKeys
 
         package static let cldrKeywordKey = "ca"
         package static let legacyKeywordKey = ICULegacyKey("calendar")

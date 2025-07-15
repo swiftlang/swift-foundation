@@ -125,6 +125,10 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
         case percent(NumberFormatStyleConfiguration.Collection)
         case currency(CurrencyFormatStyleConfiguration.Collection, currencyCode: String)
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
+        
+        private typealias NumberCodingKeys = DefaultAssociatedValueCodingKeys1
+        private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+        private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
     }
 
     private struct Signature : Hashable {

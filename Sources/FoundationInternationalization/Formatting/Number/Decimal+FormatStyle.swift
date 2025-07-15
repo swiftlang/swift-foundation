@@ -267,6 +267,10 @@ extension Decimal.FormatStyle {
             case decimal(Decimal.FormatStyle)
             case currency(Decimal.FormatStyle.Currency)
             case percent(Decimal.FormatStyle.Percent)
+            
+            private typealias DecimalCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
         }
 
         var style: Style
