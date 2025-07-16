@@ -112,44 +112,52 @@ extension ProgressManager {
         public struct Throughput: Sendable, Property {
             public typealias Value = Int64
             
-            public typealias Summary = [Int64]
+            public struct AggregateThroughput: Sendable, Equatable {
+                var values: Int64
+                var count: Int
+            }
+            
+            public typealias Summary = AggregateThroughput
             
             public static var defaultValue: Int64 { return 0 }
             
-            public static var defaultSummary: [Int64] { return [] }
+            public static var defaultSummary: AggregateThroughput { return AggregateThroughput(values: 0, count: 0) }
 
             public typealias T = Int64
             
-            public static func reduce(into summary: inout [Int64], value: Int64) {
-                summary.append(value)
+            public static func reduce(into summary: inout AggregateThroughput, value: Int64) {
+                summary = Summary(values: summary.values + value, count: summary.count + 1)
             }
             
-            public static func merge(_ summary1: [Int64], _ summary2: [Int64]) -> [Int64] {
-                return summary1 + summary2
+            public static func merge(_ summary1: AggregateThroughput, _ summary2: AggregateThroughput) -> AggregateThroughput {
+                return Summary(values: summary1.values + summary2.values, count: summary1.count + summary2.count)
             }
         }
         
         /// The amount of time remaining in the processing of files.
         public var estimatedTimeRemaining: EstimatedTimeRemaining.Type { EstimatedTimeRemaining.self }
         public struct EstimatedTimeRemaining: Sendable, Property {
-            // average duration - might need to define ourselves
             
             public typealias Value = Duration
             
-            public typealias Summary = [Duration]
+            public typealias Summary = Duration
             
             public static var defaultValue: Duration { return Duration.seconds(0) }
 
-            public static var defaultSummary: [Duration] { return [] }
+            public static var defaultSummary: Duration { return Duration.seconds(0) }
             
             public typealias T = Duration
             
-            public static func reduce(into summary: inout [Duration], value: Duration) {
-                summary.append(value)
+            public static func reduce(into summary: inout Duration, value: Duration) {
+                if summary >= value {
+                    return
+                } else {
+                    summary = value
+                }
             }
             
-            public static func merge(_ summary1: [Duration], _ summary2: [Duration]) -> [Duration] {
-                return summary1 + summary2
+            public static func merge(_ summary1: Duration, _ summary2: Duration) -> Duration {
+                return max(summary1, summary2)
             }
 
         }
