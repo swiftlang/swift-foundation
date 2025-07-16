@@ -136,12 +136,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// A type that conveys task-specific information on progress.
     public protocol Property {
         
-        associatedtype Value: Sendable, Hashable, Equatable
-        associatedtype Summary: Sendable, Hashable, Equatable
+        associatedtype Value: Sendable, Equatable
+        associatedtype Summary: Sendable, Equatable
         
         /// The default value to return when property is not set to a specific value.
         static var defaultValue: Value { get }
-        // don't need default value because that just means dictionary is empty 
         
         static var defaultSummary: Summary { get }
         
