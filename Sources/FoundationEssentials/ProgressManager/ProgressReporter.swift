@@ -76,19 +76,12 @@ import Observation
         return try manager.getProperties(closure)
     }
     
-    /// Returns an array of values for specified property in subtree.
+    /// Returns a summary for specified property in subtree.
     /// - Parameter metatype: Type of property.
-    /// - Returns: Array of values for property.
+    /// - Returns: Summary of property as specified.
     public func summary<P: ProgressManager.Property>(of property: P.Type) -> P.Summary {
         manager.summary(of: property)
     }
-    
-    /// Returns the aggregated result of values.
-    /// - Parameters:
-    ///   - property: Type of property.
-//    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
-//        manager.total(of: property)
-//    }
     
     internal let manager: ProgressManager
     
