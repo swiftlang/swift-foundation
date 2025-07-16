@@ -342,18 +342,12 @@ import Testing
         #expect(fileProgressManager.isFinished == true)
         #expect(fileProgressManager.withProperties(\.totalFileCount) == 0)
         #expect(fileProgressManager.withProperties(\.completedFileCount) == 0)
-
-        let totalFileValues = fileProgressManager.values(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(totalFileValues == [0, 100])
         
-        let reducedTotalFileValue = fileProgressManager.total(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(reducedTotalFileValue == 100)
+        let summaryTotalFile = fileProgressManager.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        #expect(summaryTotalFile == 100)
         
-        let completedFileValues = fileProgressManager.values(of: ProgressManager.Properties.CompletedFileCount.self)
-        #expect(completedFileValues == [0, 100])
-        
-        let reducedCompletedFileValue = fileProgressManager.total(of: ProgressManager.Properties.CompletedFileCount.self)
-        #expect(reducedCompletedFileValue == 100)
+        let summaryCompletedFile = fileProgressManager.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        #expect(summaryCompletedFile == 100)
     }
     
     @Test func twoLevelTreeWithOneChildWithFileProperties() async throws {
@@ -373,11 +367,11 @@ import Testing
         #expect(manager1.withProperties(\.totalFileCount) == 10)
         #expect(manager1.withProperties(\.completedFileCount) == 0)
         
-        let totalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(totalFileValues == [0, 10])
+        let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        #expect(summaryTotalFile == 10)
         
-        let completedFileValues = overall.values(of: ProgressManager.Properties.CompletedFileCount.self)
-        #expect(completedFileValues == [0, 0])
+        let summaryCompletedFile = overall.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        #expect(summaryCompletedFile == 0)
     }
     
     @Test func twoLevelTreeWithTwoChildrenWithFileProperties() async throws {
@@ -402,10 +396,12 @@ import Testing
         #expect(overall.fractionCompleted == 0.0)
         #expect(overall.withProperties(\.totalFileCount) == 0)
         #expect(overall.withProperties(\.completedFileCount) == 0)
-        let totalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(totalFileValues == [0, 11, 9])
-        let completedFileValues = overall.values(of: ProgressManager.Properties.CompletedFileCount.self)
-        #expect(completedFileValues == [0, 0, 0])
+        
+        let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        #expect(summaryTotalFile == 20)
+        
+        let summaryCompletedFile = overall.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        #expect(summaryCompletedFile == 0)
         
         // Update FileCounts
         manager1.withProperties { properties in
@@ -417,8 +413,8 @@ import Testing
         }
         
         #expect(overall.withProperties(\.completedFileCount) == 0)
-        let updatedCompletedFileValues = overall.values(of: ProgressManager.Properties.CompletedFileCount.self)
-        #expect(updatedCompletedFileValues == [0, 1, 1])
+        let summaryCompletedFileUpdated = overall.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        #expect(summaryCompletedFileUpdated == 2)
     }
     
     @Test func threeLevelTreeWithFileProperties() async throws {
@@ -435,8 +431,8 @@ import Testing
         }
         #expect(childManager1.withProperties(\.totalFileCount) == 10)
         
-        let preTotalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(preTotalFileValues == [0, 0, 10])
+        let summaryTotalFileInitial = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        #expect(summaryTotalFileInitial == 10)
         
         let childProgress2 = manager1.subprogress(assigningCount: 2)
         let childManager2 = childProgress2.start(totalCount: nil)
@@ -447,14 +443,14 @@ import Testing
 
         // Tests that totalFileCount propagates to root level
         #expect(overall.withProperties(\.totalFileCount) == 0)
-        let totalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(totalFileValues == [0, 0, 10, 10])
+        let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        #expect(summaryTotalFile == 20)
         
         manager1.withProperties { properties in
             properties.totalFileCount += 999
         }
-        let totalUpdatedFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(totalUpdatedFileValues == [0, 999, 10, 10])
+        let summaryTotalFileUpdated = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        #expect(summaryTotalFileUpdated == 1019)
     }
 }
 
@@ -671,11 +667,8 @@ import Testing
         }
         #expect(reporter.withProperties(\.totalFileCount) == 6)
         
-        let totalFileCount = manager.total(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(totalFileCount == 6)
-        
-        let totalFileCountValues = manager.values(of: ProgressManager.Properties.TotalFileCount.self)
-        #expect(totalFileCountValues == [6])
+        let summaryTotalFile = manager.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        #expect(summaryTotalFile == 6)
     }
     
     @Test func testAddProgressReporterAsChild() {
