@@ -206,19 +206,13 @@ let package = Package(
                 .enableExperimentalFeature("AccessLevelOnImport")
             ] + availabilityMacros + featureSettings
         ),
+        
+        .testTarget(
+            name: "FoundationMacrosTests",
+            dependencies: [
+                "FoundationMacros"
+            ],
+            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+        )
     ]
 )
-
-// https://github.com/apple/swift-package-manager/issues/7174
-// Test macro targets result in multiple definitions of `main` on Windows.
-#if !os(Windows)
-package.targets.append(contentsOf: [
-    .testTarget(
-        name: "FoundationMacrosTests",
-        dependencies: [
-            "FoundationMacros"
-        ],
-        swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
-    )
-])
-#endif
