@@ -267,7 +267,7 @@ extension AttributedStringProtocol {
     internal func _range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = []) -> Range<AttributedString.Index>? {
 
         // TODO: Implement this on BigString to avoid O(n) iteration
-        let substring = Substring(characters)
+        let substring = Substring(String(_characters: self.characters))
         guard let range = try? substring._range(of: Substring(stringToFind), options: options) else {
             return nil
         }
