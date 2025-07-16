@@ -21,79 +21,17 @@ internal import OrderedCollections
 internal import _FoundationCollections
 #endif
 
-internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
-    let metatype: Any.Type
-    
-    internal static func ==(lhs: Self, rhs: Self) -> Bool {
-        lhs.metatype == rhs.metatype
-    }
-    
-    internal func hash(into hasher: inout Hasher) {
-        hasher.combine(ObjectIdentifier(metatype))
-    }
-}
-
 @available(FoundationPreview 6.2, *)
 /// An object that conveys ongoing progress to the user for a specified task.
 @Observable public final class ProgressManager: Sendable {
     
-    internal struct PropertyState {
-        var value: (any Sendable)
-        var isDirty: Bool
-    }
-    
-    internal struct ChildState {
-        weak var child: ProgressManager?
-        var portionOfTotal: Int
-        var childFraction: ProgressFraction
-        var isDirty: Bool
-        var childProperties: [AnyMetatypeWrapper: PropertyState]
-    }
-    
-    internal struct ParentState {
-        var parent: ProgressManager
-        var positionInParent: Int
-    }
-    
-    internal enum ObserverState {
-        case fractionUpdated(totalCount: Int, completedCount: Int)
-    }
-    
-    internal struct InteropObservation {
-        let progressParentProgressManagerChild: _ProgressParentProgressManagerChild?
-        var progressParentProgressReporterChild: _ProgressParentProgressReporterChild?
-        #if FOUNDATION_FRAMEWORK
-        var parentBridge: Foundation.Progress?
-        #endif
-    }
-    
-    internal struct State {
-        var interopChild: ProgressManager?
-        var selfFraction: ProgressFraction
-        var overallFraction: ProgressFraction {
-            var overallFraction = selfFraction
-            for child in children {
-                if !child.childFraction.isFinished {
-                    overallFraction = overallFraction + ((ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)!)
-                }
-            }
-            return overallFraction
-        }
-        var children: [ChildState]
-        var parents: [ParentState]
-        var properties: [AnyMetatypeWrapper: (any Sendable)]
-        var interopObservation: InteropObservation
-        let progressParentProgressManagerChildMessenger: ProgressManager?
-        var observers: [@Sendable (ObserverState) -> Void]
-    }
-    
-    private let state: Mutex<State>
+    private let state: Mutex<State> //CheerBridge exclusion
     
     /// The total units of work.
     public var totalCount: Int? {
         _$observationRegistrar.access(self, keyPath: \.totalCount)
         return state.withLock { state in
-            getTotalCountLocked(state: state)
+            state.getTotalCount()
         }
     }
     
@@ -111,121 +49,38 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// If `self` is indeterminate, the value will be 0.
     public var fractionCompleted: Double {
         _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
-        return getFractionCompleted()
+        return state.withLock { state in
+            if let interopChild = state.interopChild {
+                return interopChild.fractionCompleted
+            }
+            
+            updateChildrenProgressFractionLocked(state: &state)
+            
+            return state.overallFraction.fractionCompleted
+        }
     }
     
     /// The state of initialization of `totalCount`.
     /// If `totalCount` is `nil`, the value will be `true`.
     public var isIndeterminate: Bool {
         _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
-        return getIsIndeterminate()
+        return state.withLock { state in
+            state.selfFraction.isIndeterminate
+        }
     }
     
     /// The state of completion of work.
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool {
         _$observationRegistrar.access(self, keyPath: \.isFinished)
-        return getIsFinished()
+        return state.withLock { state in
+            state.selfFraction.isFinished
+        }
     }
     
     /// A `ProgressReporter` instance, used for providing read-only observation of progress updates or composing into other `ProgressManager`s.
     public var reporter: ProgressReporter {
         return .init(manager: self)
-    }
-    
-    /// A type that conveys task-specific information on progress.
-    public protocol Property {
-        
-        associatedtype Value: Sendable, Equatable
-        associatedtype Summary: Sendable, Equatable
-        
-        /// The default value to return when property is not set to a specific value.
-        static var defaultValue: Value { get }
-        
-        static var defaultSummary: Summary { get }
-        
-        static func reduce(into: inout Summary, value: Value)
-        
-        static func merge(_ summary1: Summary, _ summary2: Summary) -> Summary
-    }
-    
-    /// A container that holds values for properties that specify information on progress.
-    @dynamicMemberLookup
-    public struct Values : Sendable {
-        //TODO: rdar://149225947 Non-escapable conformance
-        var state: State
-        
-        let willGetCompletedCount: (@Sendable (inout State) -> (Int))
-        let willMarkSelfDirty: (@Sendable ([ParentState]) -> ())
-        let willMarkPropertyDirty: (@Sendable (any Property.Type, [ParentState]) -> ())
-        let willNotifyObservers: (@Sendable (ObserverState, inout State) -> ())
-        
-        /// The total units of work.
-        public var totalCount: Int? {
-            get {
-                if let interopChild = state.interopChild {
-                    return interopChild.totalCount
-                }
-                return state.selfFraction.total
-            }
-            
-            set {
-                guard newValue != state.selfFraction.total else {
-                    return 
-                }
-                
-                state.selfFraction.total = newValue
-                
-                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed))
-                
-                if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    willNotifyObservers(.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed), &state)
-                }
-                
-                willMarkSelfDirty(state.parents)
-            }
-        }
-        
-        
-        /// The completed units of work.
-        public var completedCount: Int {
-            mutating get {
-                willGetCompletedCount(&state)
-            }
-            
-            set {
-                guard newValue != state.selfFraction.completed else {
-                    return
-                }
-                
-                state.selfFraction.completed = newValue
-                
-                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed))
-                
-                if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    willNotifyObservers(.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed), &state)
-                }
-                
-                willMarkSelfDirty(state.parents)
-            }
-        }
-        
-        /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
-            get {
-                return state.properties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value ?? P.self.defaultValue
-            }
-            
-            set {
-                guard newValue != state.properties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value else {
-                    return
-                }
-                
-                state.properties[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                
-                willMarkPropertyDirty(P.self, state.parents)
-            }
-        }
     }
     
     internal init(total: Int?, progressParentProgressManagerChildMessenger: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
@@ -316,17 +171,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Returns a summary for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Summary of property as specified.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary {
+    public func summary<P: Property>(of property: P.Type) -> P.Summary { // rename this later - aggregate 
 //        _$observationRegistrar.access(self, keyPath: \.state)
         return getUpdatedSummary(property: property)
     }
-    
-    /// Returns the aggregated result of values.
-    /// - Parameters:
-    ///   - property: Type of property.
-//    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
-//        return getUpdatedValues(property: property, includeSelf: true)
-//    }
     
     /// Mutates any settable properties that convey information about progress.
     public func withProperties<T, E: Error>(
@@ -335,12 +183,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         return try state.withLock { (state) throws(E) -> T in
             var values = Values(state: state, willGetCompletedCount: { updatedState in
                 self.getCompletedCountLocked(state: &updatedState)
-            }, willMarkSelfDirty: { parents in
-                self.markSelfDirty(parents: parents)
-            }, willMarkPropertyDirty: { property, parents in
-                self.markSelfDirty(property: property, parents: parents)
-            }, willNotifyObservers: { observerState, state in
-                self.notifyObserversLocked(with: observerState, state: &state)
             })
             // This is done to avoid copy on write later
             state = State(
@@ -353,6 +195,19 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 observers: []
             )
             let result = try closure(&values)
+            if values.fractionalCountDirty {
+                markSelfDirty(parents: values.state.parents)
+            }
+            if values.dirtyProperties.count > 0 {
+                for property in values.dirtyProperties {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
+            if let observerState = values.observerState {
+                if let _ = state.interopObservation.progressParentProgressReporterChild {
+                    notifyObserversLocked(with: observerState, state: &values.state)
+                }
+            }
             state = values.state
             return result
         }
@@ -365,15 +220,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    /// Returns nil if `self` was instantiated without total units;
-    /// returns a `Int` value otherwise.
-    private func getTotalCountLocked(state: State) -> Int? {
-        if let interopChild = state.interopChild {
-            return interopChild.totalCount
-        }
-        return state.selfFraction.total
-    }
-    
     /// Returns 0 if `self` has `nil` total units;
     /// returns a `Int` value otherwise.
     private func getCompletedCountLocked(state: inout State) -> Int {
@@ -384,39 +230,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         updateChildrenProgressFractionLocked(state: &state)
 
         return state.selfFraction.completed
-    }
-    
-    /// Returns 0.0 if `self` has `nil` total units;
-    /// returns a `Double` otherwise.
-    /// If `indeterminate`, return 0.0.
-    ///
-    /// The calculation of fraction completed for a ProgressManager instance that has children
-    /// will take into account children's fraction completed as well.
-    private func getFractionCompleted() -> Double {
-        return state.withLock { state in
-            if let interopChild = state.interopChild {
-                return interopChild.fractionCompleted
-            }
-            
-            updateChildrenProgressFractionLocked(state: &state)
-
-            return state.overallFraction.fractionCompleted
-        }
-    }
-
-    /// Returns `true` if completed and total units are not `nil` and completed units is greater than or equal to total units;
-    /// returns `false` otherwise.
-    private func getIsFinished() -> Bool {
-        return state.withLock { state in
-            state.selfFraction.isFinished
-        }
-    }
-    
-    /// Returns `true` if `self` has `nil` total units.
-    private func getIsIndeterminate() -> Bool {
-        return state.withLock { state in
-            state.selfFraction.isIndeterminate
-        }
     }
     
     //MARK: Fractional Calculation methods
@@ -537,12 +350,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         try state.withLock { state throws(E) -> T in
             let values = Values(state: state, willGetCompletedCount: { updatedState in
                 self.getCompletedCountLocked(state: &updatedState)
-            }, willMarkSelfDirty: { parents in
-                self.markSelfDirty(parents: parents)
-            }, willMarkPropertyDirty: { property, parents in
-                self.markSelfDirty(property: property, parents: parents)
-            }, willNotifyObservers: { observerState, state in
-                self.notifyObserversLocked(with: observerState, state: &state)
             })
             let result = try closure(values)
             return result
@@ -608,7 +415,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     /// Notifies all `_observers` of `self` when `state` changes.
-    private func notifyObservers(with observedState: ObserverState) {
+    internal func notifyObservers(with observedState: ObserverState) {
         state.withLock { state in
             for observer in state.observers {
                 observer(observedState)
