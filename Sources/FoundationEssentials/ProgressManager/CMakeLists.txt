@@ -16,5 +16,7 @@ target_sources(FoundationEssentials PRIVATE
     ProgressManager.swift
     ProgressManager+Interop.swift
     ProgressManager+Properties.swift
+    ProgressManager+State.swift
+    ProgressManager+Values.swift
     ProgressReporter.swift
     Subprogress.swift)
