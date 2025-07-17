@@ -153,14 +153,14 @@ internal import _FoundationCollections
                 )
             )
             if let _ = state.interopObservation.progressParentProgressReporterChild {
-                notifyObserversLocked(
+                state.notifyObservers(
                     with: .fractionUpdated(
                         totalCount: state.selfFraction.total ?? 0,
                         completedCount: state.selfFraction.completed
-                    ),
-                    state: &state
+                    )
                 )
             }
+            
             return state.parents
         }
         if let parents = parents {
@@ -203,7 +203,7 @@ internal import _FoundationCollections
             }
             if let observerState = values.observerState {
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    notifyObserversLocked(with: observerState, state: &values.state)
+                    notifyObservers(with: observerState)
                 }
             }
             state = values.state
@@ -272,6 +272,10 @@ internal import _FoundationCollections
             
             var value: P.Summary = P.defaultSummary
             P.reduce(into: &value, value: state.properties[propertyWrapper] as? P.Value ?? P.defaultValue)
+            
+            guard !state.children.isEmpty else {
+                return value
+            }
             
             for (idx, childState) in state.children.enumerated() {
                 if let childPropertyState = childState.childProperties[propertyWrapper] {
@@ -395,12 +399,6 @@ internal import _FoundationCollections
             for observer in state.observers {
                 observer(observedState)
             }
-        }
-    }
-    
-    private func notifyObserversLocked(with observedState: ObserverState, state: inout State) {
-        for observer in state.observers {
-            observer(observedState)
         }
     }
     

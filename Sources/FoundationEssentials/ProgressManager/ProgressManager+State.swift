@@ -33,10 +33,11 @@ extension ProgressManager {
     internal struct ChildState {
         weak var child: ProgressManager?
         var remainingProperties: [AnyMetatypeWrapper: (any Sendable)]?
+//        var totalFileCount: Int // do this for specialized ones
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool
-        var childProperties: [AnyMetatypeWrapper: PropertyState]
+        var childProperties: [AnyMetatypeWrapper: PropertyState] // speacialise
     }
     
     internal struct ParentState {
@@ -101,6 +102,9 @@ extension ProgressManager {
         }
         
         internal mutating func updateChildrenProgressFraction() {
+            guard !children.isEmpty else {
+                return
+            }
             for (idx, childState) in children.enumerated() {
                 if childState.isDirty {
                     if let child = childState.child {
@@ -124,6 +128,12 @@ extension ProgressManager {
                         selfFraction.completed += children[idx].portionOfTotal
                     }
                 }
+            }
+        }
+        
+        internal func notifyObservers(with observerState: ObserverState) {
+            for observer in observers {
+                observer(observerState)
             }
         }
     }
