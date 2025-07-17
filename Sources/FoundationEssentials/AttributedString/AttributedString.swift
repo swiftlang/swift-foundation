@@ -150,7 +150,10 @@ extension AttributedString {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString { // Equatable
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        AttributedString.Guts.characterwiseIsEqual(lhs._guts, to: rhs._guts)
+        if lhs._guts === rhs._guts {
+            return true
+        }
+        return AttributedString.Guts.characterwiseIsEqual(lhs._guts, to: rhs._guts)
     }
 }
 
