@@ -83,5 +83,42 @@ extension ProgressManager {
             }
             return selfFraction.total
         }
+        
+        /// Returns 0 if `self` has `nil` total units;
+        /// returns a `Int` value otherwise.
+        internal mutating func getCompletedCount() -> Int {
+            if let interopChild = interopChild {
+                return interopChild.completedCount
+            }
+            
+            updateChildrenProgressFraction()
+
+            return selfFraction.completed
+        }
+        
+        internal mutating func updateChildrenProgressFraction() {
+            for (idx, childState) in children.enumerated() {
+                if childState.isDirty {
+                    if let child = childState.child {
+                        let updatedProgressFraction = child.getUpdatedProgressFraction()
+                        children[idx] = ChildState(child: child,
+                                                       portionOfTotal: children[idx].portionOfTotal,
+                                                       childFraction: updatedProgressFraction,
+                                                       isDirty: false,
+                                                       childProperties: children[idx].childProperties)
+                        if updatedProgressFraction.isFinished {
+                            selfFraction.completed += children[idx].portionOfTotal
+                        }
+                    } else {
+                        children[idx] = ChildState(child: nil,
+                                                       portionOfTotal: children[idx].portionOfTotal,
+                                                       childFraction: children[idx].childFraction,
+                                                       isDirty: false,
+                                                       childProperties: children[idx].childProperties)
+                        selfFraction.completed += children[idx].portionOfTotal
+                    }
+                }
+            }
+        }
     }
 }

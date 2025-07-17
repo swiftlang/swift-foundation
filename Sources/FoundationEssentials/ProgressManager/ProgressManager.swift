@@ -40,7 +40,7 @@ internal import _FoundationCollections
     public var completedCount: Int {
         _$observationRegistrar.access(self, keyPath: \.completedCount)
         return state.withLock { state in
-            getCompletedCountLocked(state: &state)
+            state.getCompletedCount()
         }
     }
     
@@ -54,8 +54,8 @@ internal import _FoundationCollections
                 return interopChild.fractionCompleted
             }
             
-            updateChildrenProgressFractionLocked(state: &state)
-            
+            state.updateChildrenProgressFraction()
+                        
             return state.overallFraction.fractionCompleted
         }
     }
@@ -181,9 +181,7 @@ internal import _FoundationCollections
         _ closure: (inout sending Values) throws(E) -> sending T
     ) throws(E) -> sending T {
         return try state.withLock { (state) throws(E) -> T in
-            var values = Values(state: state, willGetCompletedCount: { updatedState in
-                self.getCompletedCountLocked(state: &updatedState)
-            })
+            var values = Values(state: state)
             // This is done to avoid copy on write later
             state = State(
                 selfFraction: ProgressFraction(),
@@ -220,18 +218,6 @@ internal import _FoundationCollections
         }
     }
     
-    /// Returns 0 if `self` has `nil` total units;
-    /// returns a `Int` value otherwise.
-    private func getCompletedCountLocked(state: inout State) -> Int {
-        if let interopChild = state.interopChild {
-            return interopChild.completedCount
-        }
-        
-        updateChildrenProgressFractionLocked(state: &state)
-
-        return state.selfFraction.completed
-    }
-    
     //MARK: Fractional Calculation methods
     internal func markSelfDirty() {
         let parents = state.withLock { state in
@@ -258,9 +244,9 @@ internal import _FoundationCollections
         markSelfDirty(parents: parents)
     }
     
-    private func getUpdatedProgressFraction() -> ProgressFraction {
+    internal func getUpdatedProgressFraction() -> ProgressFraction {
         return state.withLock { state in
-            updateChildrenProgressFractionLocked(state: &state)
+            state.updateChildrenProgressFraction()
             return state.overallFraction
         }
     }

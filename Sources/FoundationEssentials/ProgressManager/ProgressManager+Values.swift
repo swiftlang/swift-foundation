@@ -21,9 +21,7 @@ extension ProgressManager {
         var fractionalCountDirty = false
         var dirtyProperties: [any Property.Type] = []
         var observerState: ObserverState?
-        
-        let willGetCompletedCount: (@Sendable (inout State) -> (Int))
-        
+                
         /// The total units of work.
         public var totalCount: Int? {
             get {
@@ -49,7 +47,7 @@ extension ProgressManager {
         /// The completed units of work.
         public var completedCount: Int {
             mutating get {
-                willGetCompletedCount(&state)
+                state.getCompletedCount()
             }
             
             set {
