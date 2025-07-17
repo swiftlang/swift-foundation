@@ -63,9 +63,9 @@ let benchmarks = {
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
     
     let manyAttributesString = createManyAttributesString()
+    let longString = createLongString()
 #if FOUNDATION_FRAMEWORK
     let manyAttributesNS = createManyAttributesNSString()
-    let longString = createLongString()
     let toInsertNS = NSAttributedString(string: String(repeating: "c", count: longString.characters.count))
 #endif
     
@@ -508,6 +508,10 @@ let benchmarks = {
         for (value, range) in longParagraphsString.runs[\.testParagraphConstrained].reversed() {
             blackHole(value)
         }
+    }
+    
+    Benchmark("range(of:)") { benchmark in
+        longString.range(of: "cccc")
     }
 }
 
