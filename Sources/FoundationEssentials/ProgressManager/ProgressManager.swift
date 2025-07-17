@@ -148,14 +148,14 @@ internal import _FoundationCollections
             
             state.progressParentProgressManagerChildMessenger?.notifyObservers(
                 with: .fractionUpdated(
-                    totalCount: state.selfFraction.total!,
+                    totalCount: state.selfFraction.total ?? 0,
                     completedCount: state.selfFraction.completed
                 )
             )
             if let _ = state.interopObservation.progressParentProgressReporterChild {
                 notifyObserversLocked(
                     with: .fractionUpdated(
-                        totalCount: state.selfFraction.total!,
+                        totalCount: state.selfFraction.total ?? 0,
                         completedCount: state.selfFraction.completed
                     ),
                     state: &state
@@ -251,39 +251,10 @@ internal import _FoundationCollections
         }
     }
     
-    private func updateChildrenProgressFractionLocked(state: inout State) {
-        if state.children.count > 0 {
-            for i in 0..<state.children.count {
-                if state.children[i].isDirty {
-                    if let child = state.children[i].child {
-                        let updatedProgressFraction = child.getUpdatedProgressFraction()
-                        state.children[i] = ChildState(child: child,
-                                                       portionOfTotal: state.children[i].portionOfTotal,
-                                                       childFraction: updatedProgressFraction,
-                                                       isDirty: false,
-                                                       childProperties: state.children[i].childProperties)
-                        if updatedProgressFraction.isFinished {
-                            state.selfFraction.completed += state.children[i].portionOfTotal
-                        }
-                    } else {
-                        state.children[i] = ChildState(child: nil,
-                                                       portionOfTotal: state.children[i].portionOfTotal,
-                                                       childFraction: state.children[i].childFraction,
-                                                       isDirty: false,
-                                                       childProperties: state.children[i].childProperties)
-                        state.selfFraction.completed += state.children[i].portionOfTotal
-                    }
-                }
-            }
-        }
-    }
-    
     // MARK: Additional Properties Methods (Dual Mode of Operations)
     private func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) {
-        if parents.count > 0 {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
@@ -334,9 +305,7 @@ internal import _FoundationCollections
         _ closure: (sending Values) throws(E) -> sending T
     ) throws(E) -> sending T {
         try state.withLock { state throws(E) -> T in
-            let values = Values(state: state, willGetCompletedCount: { updatedState in
-                self.getCompletedCountLocked(state: &updatedState)
-            })
+            let values = Values(state: state)
             let result = try closure(values)
             return result
         }
