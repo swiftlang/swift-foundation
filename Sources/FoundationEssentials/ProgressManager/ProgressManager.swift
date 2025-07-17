@@ -268,25 +268,45 @@ internal import _FoundationCollections
     
     private func getUpdatedSummary<P: Property>(property: P.Type) -> P.Summary {
         return state.withLock { state in
+            let propertyWrapper = AnyMetatypeWrapper(metatype: property)
+            
             var value: P.Summary = P.defaultSummary
-            P.reduce(into: &value, value: state.properties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue)
-            if state.children.count > 0 {
-                for i in 0..<state.children.count {
-                    if let childPropertyState = state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] {
-                        if childPropertyState.isDirty {
-                            if let child = state.children[i].child {
-                                let updatedSummary = child.getUpdatedSummary(property: property)
-                                state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]! = PropertyState(value: updatedSummary, isDirty: false)
-                                value = P.merge(value, updatedSummary)
-                            }
+            P.reduce(into: &value, value: state.properties[propertyWrapper] as? P.Value ?? P.defaultValue)
+            
+            for (idx, childState) in state.children.enumerated() {
+                if let childPropertyState = childState.childProperties[propertyWrapper] {
+                    if childPropertyState.isDirty {
+                        // Update dirty path
+                        if let child = childState.child {
+                            let updatedSummary = child.getUpdatedSummary(property: property)
+                            let newChildPropertyState = PropertyState(value: updatedSummary, isDirty: false)
+                            state.children[idx].childProperties[propertyWrapper] = newChildPropertyState
+                            value = P.merge(value, updatedSummary)
                         } else {
-                            value = P.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
+                            // Get value from remainingProperties
+                            if let remainingProperties = childState.remainingProperties {
+                                if let remainingSummary = remainingProperties[propertyWrapper] {
+                                    value = P.merge(value, remainingSummary as? P.Summary ?? P.defaultSummary)
+                                }
+                            }
                         }
                     } else {
-                        if let child = state.children[i].child {
-                            let childSummary = child.getUpdatedSummary(property: property)
-                            state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = PropertyState(value: childSummary, isDirty: false)
-                            value = P.merge(value, childSummary)
+                        // Merge non-dirty, updated value
+                        value = P.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
+                    }
+                } else {
+                    // First fetch of value
+                    if let child = childState.child {
+                        let childSummary = child.getUpdatedSummary(property: property)
+                        let newChildPropertyState = PropertyState(value: childSummary, isDirty: false)
+                        state.children[idx].childProperties[propertyWrapper] = newChildPropertyState
+                        value = P.merge(value, childSummary)
+                    } else {
+                        // Get value from remainingProperties
+                        if let remainingProperties = childState.remainingProperties {
+                            if let remainingSummary = remainingProperties[propertyWrapper] {
+                                value = P.merge(value, remainingSummary as? P.Summary ?? P.defaultSummary)
+                            }
                         }
                     }
                 }
@@ -295,9 +315,9 @@ internal import _FoundationCollections
         }
     }
     
-    private func setPropertyState<P: Property>(property: P.Type, value: P.Summary, at position: Int) {
+    private func setChildRemainingProperties(_ properties: [AnyMetatypeWrapper: (any Sendable)], at position: Int) {
         state.withLock { state in
-            state.children[position].childProperties[AnyMetatypeWrapper(metatype: property)] = PropertyState(value: value, isDirty: false)
+            state.children[position].remainingProperties = properties
         }
     }
     
@@ -314,7 +334,7 @@ internal import _FoundationCollections
     //MARK: Parent - Child Relationship Methods
     internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
         let index = state.withLock { state in
-            let childState = ChildState(child: child, portionOfTotal: portion, childFraction: childFraction, isDirty: true, childProperties: [:])
+            let childState = ChildState(child: child, remainingProperties: nil, portionOfTotal: portion, childFraction: childFraction, isDirty: true, childProperties: [:])
             state.children.append(childState)
             return state.children.count - 1
         }
@@ -413,22 +433,18 @@ internal import _FoundationCollections
             }
         }
         
-        let parents = state.withLock { state in
-            return state.parents
+        let (properties, parents) = state.withLock { state in
+            return (state.properties, state.parents)
+        }
+        
+        var finalSummary: [AnyMetatypeWrapper: (any Sendable)] = [:]
+        for property in properties.keys {
+            let updatedSummary = self.summary(of: property.metatype.self)
+            finalSummary[property] = updatedSummary
         }
         
         for parentState in parents {
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalFileCount.self, value: self.summary(of: ProgressManager.Properties.TotalFileCount.self), at: parentState.positionInParent)
-            
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedFileCount.self, value: self.summary(of: ProgressManager.Properties.CompletedFileCount.self), at: parentState.positionInParent)
-            
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalByteCount.self, value: self.summary(of: ProgressManager.Properties.TotalByteCount.self), at: parentState.positionInParent)
-
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedByteCount.self, value: self.summary(of: ProgressManager.Properties.CompletedByteCount.self), at: parentState.positionInParent)
-            
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.Throughput.self, value: self.summary(of: ProgressManager.Properties.Throughput.self), at: parentState.positionInParent)
-            
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.EstimatedTimeRemaining.self, value: self.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self), at: parentState.positionInParent)
+            parentState.parent.setChildRemainingProperties(finalSummary, at: parentState.positionInParent)
         }
     }
 }

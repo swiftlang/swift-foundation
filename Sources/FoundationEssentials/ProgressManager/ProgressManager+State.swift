@@ -14,7 +14,7 @@
 extension ProgressManager {
     
     internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
-        let metatype: Any.Type
+        let metatype: any Property.Type
         
         internal static func ==(lhs: Self, rhs: Self) -> Bool {
             lhs.metatype == rhs.metatype
@@ -32,6 +32,7 @@ extension ProgressManager {
     
     internal struct ChildState {
         weak var child: ProgressManager?
+        var remainingProperties: [AnyMetatypeWrapper: (any Sendable)]?
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool
@@ -62,7 +63,10 @@ extension ProgressManager {
             var overallFraction = selfFraction
             for child in children {
                 if !child.childFraction.isFinished {
-                    overallFraction = overallFraction + ((ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)!)
+                    let multiplier = ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total)
+                    if let additionalFraction = multiplier * child.childFraction {
+                        overallFraction = overallFraction + additionalFraction
+                    }
                     // should not crash here - add a test case - child becomes indeterminate halfway
                 }
             }
@@ -102,19 +106,21 @@ extension ProgressManager {
                     if let child = childState.child {
                         let updatedProgressFraction = child.getUpdatedProgressFraction()
                         children[idx] = ChildState(child: child,
-                                                       portionOfTotal: children[idx].portionOfTotal,
-                                                       childFraction: updatedProgressFraction,
-                                                       isDirty: false,
-                                                       childProperties: children[idx].childProperties)
+                                                   remainingProperties: children[idx].remainingProperties,
+                                                   portionOfTotal: children[idx].portionOfTotal,
+                                                   childFraction: updatedProgressFraction,
+                                                   isDirty: false,
+                                                   childProperties: children[idx].childProperties)
                         if updatedProgressFraction.isFinished {
                             selfFraction.completed += children[idx].portionOfTotal
                         }
                     } else {
                         children[idx] = ChildState(child: nil,
-                                                       portionOfTotal: children[idx].portionOfTotal,
-                                                       childFraction: children[idx].childFraction,
-                                                       isDirty: false,
-                                                       childProperties: children[idx].childProperties)
+                                                   remainingProperties: children[idx].remainingProperties,
+                                                   portionOfTotal: children[idx].portionOfTotal,
+                                                   childFraction: children[idx].childFraction,
+                                                   isDirty: false,
+                                                   childProperties: children[idx].childProperties)
                         selfFraction.completed += children[idx].portionOfTotal
                     }
                 }
