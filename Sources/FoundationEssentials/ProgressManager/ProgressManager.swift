@@ -95,6 +95,9 @@ internal import _FoundationCollections
             completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
+            propertiesInt: [:],
+            propertiesDouble: [:],
+            propertiesString: [:],
             properties: [:],
             interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
             progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger,
@@ -199,6 +202,9 @@ internal import _FoundationCollections
                 completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
                 throughput: ProgressManager.Properties.Throughput.defaultValue,
                 estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
+                propertiesInt: [:],
+                propertiesDouble: [:],
+                propertiesString: [:],
                 properties: [:],
                 interopObservation: InteropObservation(progressParentProgressManagerChild: nil),
                 progressParentProgressManagerChildMessenger: nil,
@@ -227,6 +233,7 @@ internal import _FoundationCollections
     internal func getProgressFraction() -> ProgressFraction {
         return state.withLock { state in
             return state.selfFraction
+            
         }
     }
     
@@ -331,9 +338,220 @@ internal import _FoundationCollections
         }
     }
     
+    private enum CountType{
+        case total
+        case completed
+    }
+    
+    private func getUpdatedFileCount(type: CountType) -> Int {
+        switch type {
+        case .total:
+            return state.withLock { state in
+                // Get self's totalFileCount as part of summary
+                var value: Int = 0
+                ProgressManager.Properties.TotalFileCount.reduce(into: &value, value: state.totalFileCount)
+                
+                guard !state.children.isEmpty else {
+                    return value
+                }
+                
+                for (idx, childState) in state.children.enumerated() {
+                    if childState.totalFileCount.isDirty {
+                        // Update dirty path
+                        if let child = childState.child {
+                            let updatedSummary = child.getUpdatedFileCount(type: type)
+                            let newTotalFileCountState = PropertyStateInt(value: updatedSummary, isDirty: false)
+                            state.children[idx].totalFileCount =  newTotalFileCountState
+                            value = ProgressManager.Properties.TotalFileCount.merge(value, updatedSummary)
+                        }
+                    } else {
+                        // Merge non-drity, updated value
+                        value = ProgressManager.Properties.TotalFileCount.merge(value, childState.totalFileCount.value)
+                    }
+                }
+                return value
+            }
+        case .completed:
+            return state.withLock { state in
+                // Get self's completedFileCount as part of summary
+                var value: Int = 0
+                ProgressManager.Properties.CompletedFileCount.reduce(into: &value, value: state.completedFileCount)
+                
+                guard !state.children.isEmpty else {
+                    return value
+                }
+                
+                for (idx, childState) in state.children.enumerated() {
+                    if childState.completedFileCount.isDirty {
+                        // Update dirty path
+                        if let child = childState.child {
+                            let updatedSummary = child.getUpdatedFileCount(type: type)
+                            let newCompletedFileCountState = PropertyStateInt(value: updatedSummary, isDirty: false)
+                            state.children[idx].completedFileCount =  newCompletedFileCountState
+                            value = ProgressManager.Properties.CompletedFileCount.merge(value, updatedSummary)
+                        }
+                    } else {
+                        // Merge non-drity, updated value
+                        value = ProgressManager.Properties.CompletedFileCount.merge(value, childState.completedFileCount.value)
+                    }
+                }
+                return value
+            }
+        }
+    }
+    
+    private func getUpdatedByteCount(type: CountType) -> Int64 {
+        switch type {
+        case .total:
+            return state.withLock { state in
+                // Get self's totalByteCount as part of summary
+                var value: Int64 = 0
+                ProgressManager.Properties.TotalByteCount.reduce(into: &value, value: state.totalByteCount)
+                
+                guard !state.children.isEmpty else {
+                    return value
+                }
+                
+                for (idx, childState) in state.children.enumerated() {
+                    if childState.totalByteCount.isDirty {
+                        // Update dirty path
+                        if let child = childState.child {
+                            let updatedSummary = child.getUpdatedByteCount(type: type)
+                            let newTotalByteCountState = PropertyStateInt64(value: updatedSummary, isDirty: false)
+                            state.children[idx].totalByteCount =  newTotalByteCountState
+                            value = ProgressManager.Properties.TotalByteCount.merge(value, updatedSummary)
+                        }
+                    } else {
+                        // Merge non-drity, updated value
+                        value = ProgressManager.Properties.TotalByteCount.merge(value, childState.totalByteCount.value)
+                    }
+                }
+                return value
+            }
+        case .completed:
+            return state.withLock { state in
+                // Get self's completedByteCount as part of summary
+                var value: Int64 = 0
+                ProgressManager.Properties.CompletedByteCount.reduce(into: &value, value: state.completedByteCount)
+                
+                guard !state.children.isEmpty else {
+                    return value
+                }
+                
+                for (idx, childState) in state.children.enumerated() {
+                    if childState.completedByteCount.isDirty {
+                        // Update dirty path
+                        if let child = childState.child {
+                            let updatedSummary = child.getUpdatedByteCount(type: type)
+                            let newCompletedByteCountState = PropertyStateInt64(value: updatedSummary, isDirty: false)
+                            state.children[idx].completedByteCount =  newCompletedByteCountState
+                            value = ProgressManager.Properties.CompletedByteCount.merge(value, updatedSummary)
+                        }
+                    } else {
+                        // Merge non-drity, updated value
+                        value = ProgressManager.Properties.CompletedByteCount.merge(value, childState.completedByteCount.value)
+                    }
+                }
+                return value
+            }
+        }
+    }
+    
+    private func getUpdatedThroughput() -> ProgressManager.Properties.Throughput.AggregateThroughput {
+        return state.withLock { state in
+            // Get self's throughput as part of summary
+            var value: ProgressManager.Properties.Throughput.AggregateThroughput = ProgressManager.Properties.Throughput.defaultSummary
+            ProgressManager.Properties.Throughput.reduce(into: &value, value: state.throughput)
+            
+            guard !state.children.isEmpty else {
+                return value
+            }
+            
+            for (idx, childState) in state.children.enumerated() {
+                if childState.throughput.isDirty {
+                    // Update dirty path
+                    if let child = childState.child {
+                        let updatedSummary = child.getUpdatedThroughput()
+                        let newThroughputState = PropertyStateThroughput(value: updatedSummary, isDirty: false)
+                        state.children[idx].throughput =  newThroughputState
+                        value = ProgressManager.Properties.Throughput.merge(value, updatedSummary)
+                    }
+                } else {
+                    // Merge non-drity, updated value
+                    value = ProgressManager.Properties.Throughput.merge(value, childState.throughput.value)
+                }
+            }
+            return value
+        }
+    }
+    
+    private func getUpdatedEstimatedTimeRemaining() -> Duration {
+        return state.withLock { state in
+            // Get self's throughput as part of summary
+            var value: Duration = Duration.seconds(0)
+            ProgressManager.Properties.EstimatedTimeRemaining.reduce(into: &value, value: state.estimatedTimeRemaining)
+            
+            guard !state.children.isEmpty else {
+                return value
+            }
+            
+            for (idx, childState) in state.children.enumerated() {
+                if childState.estimatedTimeRemaining.isDirty {
+                    // Update dirty path
+                    if let child = childState.child {
+                        let updatedSummary = child.getUpdatedEstimatedTimeRemaining()
+                        let newDurationState = PropertyStateDuration(value: updatedSummary, isDirty: false)
+                        state.children[idx].estimatedTimeRemaining = newDurationState
+                        value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, updatedSummary)
+                    }
+                } else {
+                    // Merge non-drity, updated value
+                    value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, childState.estimatedTimeRemaining.value)
+                }
+            }
+            return value
+        }
+    }
+    
     private func setChildRemainingProperties(_ properties: [AnyMetatypeWrapper: (any Sendable)], at position: Int) {
         state.withLock { state in
             state.children[position].remainingProperties = properties
+        }
+    }
+    
+    private func setChildTotalFileCount(value: Int, at position: Int) {
+        state.withLock { state in
+            state.children[position].totalFileCount = PropertyStateInt(value: value, isDirty: false)
+        }
+    }
+    
+    private func setChildCompletedFileCount(value: Int, at position: Int) {
+        state.withLock { state in
+            state.children[position].completedFileCount = PropertyStateInt(value: value, isDirty: false)
+        }
+    }
+    
+    private func setChildTotalByteCount(value: Int64, at position: Int) {
+        state.withLock { state in
+            state.children[position].totalByteCount = PropertyStateInt64(value: value, isDirty: false)
+        }
+    }
+    
+    private func setChildCompletedByteCount(value: Int64, at position: Int) {
+        state.withLock { state in
+            state.children[position].completedByteCount = PropertyStateInt64(value: value, isDirty: false)
+        }
+    }
+    
+    private func setChildThroughput(value: ProgressManager.Properties.Throughput.AggregateThroughput, at position: Int) {
+        state.withLock { state in
+            state.children[position].throughput = PropertyStateThroughput(value: value, isDirty: false)
+        }
+    }
+    
+    private func setChildEstimatedTimeRemaining(value: Duration, at position: Int) {
+        state.withLock { state in
+            state.children[position].estimatedTimeRemaining = PropertyStateDuration(value: value, isDirty: false)
         }
     }
     
@@ -350,7 +568,24 @@ internal import _FoundationCollections
     //MARK: Parent - Child Relationship Methods
     internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
         let index = state.withLock { state in
-            let childState = ChildState(child: child, remainingProperties: nil, portionOfTotal: portion, childFraction: childFraction, isDirty: true, childProperties: [:])
+            let childState = ChildState(child: child,
+                                        remainingPropertiesInt: nil,
+                                        remainingPropertiesDouble: nil,
+                                        remainingPropertiesString: nil,
+                                        remainingProperties: nil,
+                                        portionOfTotal: portion,
+                                        childFraction: childFraction,
+                                        isDirty: true,
+                                        totalFileCount: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
+                                        completedFileCount: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
+                                        totalByteCount: PropertyStateInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
+                                        completedByteCount: PropertyStateInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
+                                        throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
+                                        estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
+                                        childPropertiesInt: [:],
+                                        childPropertiesDouble: [:],
+                                        childPropertiesString: [:],
+                                        childProperties: [:])
             state.children.append(childState)
             return state.children.count - 1
         }
@@ -442,6 +677,8 @@ internal import _FoundationCollections
                 }
             }
         }
+        
+        // TODO: Handle declared properties (specialize)
         
         let (properties, parents) = state.withLock { state in
             return (state.properties, state.parents)

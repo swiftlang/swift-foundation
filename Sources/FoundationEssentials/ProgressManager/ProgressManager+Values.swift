@@ -163,6 +163,54 @@ extension ProgressManager {
             }
         }
         
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int {
+            get {
+                return state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
+            }
+            
+            set {
+                guard newValue != state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] else {
+                    return
+                }
+                
+                state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] = newValue
+                
+                dirtyProperties.append(P.self)
+            }
+        }
+        
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Double where P.Value == Double {
+            get {
+                return state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
+            }
+            
+            set {
+                guard newValue != state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] else {
+                    return
+                }
+                
+                state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] = newValue
+                
+                dirtyProperties.append(P.self)
+            }
+        }
+        
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String where P.Value == String {
+            get {
+                return state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
+            }
+            
+            set {
+                guard newValue != state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] else {
+                    return
+                }
+                
+                state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] = newValue
+                
+                dirtyProperties.append(P.self)
+            }
+        }
+        
         /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
             get {

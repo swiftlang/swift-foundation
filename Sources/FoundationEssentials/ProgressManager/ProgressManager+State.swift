@@ -30,14 +30,55 @@ extension ProgressManager {
         var isDirty: Bool
     }
     
+    internal struct PropertyStateInt {
+        var value: Int
+        var isDirty: Bool
+    }
+    
+    internal struct PropertyStateInt64 {
+        var value: Int64
+        var isDirty: Bool
+    }
+    
+    internal struct PropertyStateThroughput {
+        var value: ProgressManager.Properties.Throughput.AggregateThroughput
+        var isDirty: Bool
+    }
+    
+    internal struct PropertyStateDuration {
+        var value: Duration
+        var isDirty: Bool
+    }
+    
+    internal struct PropertyStateDouble {
+        var value: Double
+        var isDirty: Bool
+    }
+    
+    internal struct PropertyStateString {
+        var value: String
+        var isDirty: Bool
+    }
+    
     internal struct ChildState {
         weak var child: ProgressManager?
+        var remainingPropertiesInt: [AnyMetatypeWrapper: Int]?
+        var remainingPropertiesDouble: [AnyMetatypeWrapper: Double]?
+        var remainingPropertiesString: [AnyMetatypeWrapper: String]?
         var remainingProperties: [AnyMetatypeWrapper: (any Sendable)]?
-//        var totalFileCount: Int // do this for specialized ones
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool
-        var childProperties: [AnyMetatypeWrapper: PropertyState] // speacialise
+        var totalFileCount: PropertyStateInt
+        var completedFileCount: PropertyStateInt
+        var totalByteCount: PropertyStateInt64
+        var completedByteCount: PropertyStateInt64
+        var throughput: PropertyStateThroughput
+        var estimatedTimeRemaining: PropertyStateDuration
+        var childPropertiesInt: [AnyMetatypeWrapper: PropertyStateInt]
+        var childPropertiesDouble: [AnyMetatypeWrapper: PropertyStateDouble]
+        var childPropertiesString: [AnyMetatypeWrapper: PropertyStateString]
+        var childProperties: [AnyMetatypeWrapper: PropertyState]
     }
     
     internal struct ParentState {
@@ -81,6 +122,9 @@ extension ProgressManager {
         var completedByteCount: Int64
         var throughput: Int64
         var estimatedTimeRemaining: Duration
+        var propertiesInt: [AnyMetatypeWrapper: Int]
+        var propertiesDouble: [AnyMetatypeWrapper: Double]
+        var propertiesString: [AnyMetatypeWrapper: String]
         var properties: [AnyMetatypeWrapper: (any Sendable)]
         var interopObservation: InteropObservation
         let progressParentProgressManagerChildMessenger: ProgressManager?
@@ -120,6 +164,15 @@ extension ProgressManager {
                                                    portionOfTotal: children[idx].portionOfTotal,
                                                    childFraction: updatedProgressFraction,
                                                    isDirty: false,
+                                                   totalFileCount: children[idx].totalFileCount,
+                                                   completedFileCount: children[idx].completedFileCount,
+                                                   totalByteCount: children[idx].totalByteCount,
+                                                   completedByteCount: children[idx].completedByteCount,
+                                                   throughput: children[idx].throughput,
+                                                   estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
+                                                   childPropertiesInt: children[idx].childPropertiesInt,
+                                                   childPropertiesDouble: children[idx].childPropertiesDouble,
+                                                   childPropertiesString: children[idx].childPropertiesString,
                                                    childProperties: children[idx].childProperties)
                         if updatedProgressFraction.isFinished {
                             selfFraction.completed += children[idx].portionOfTotal
@@ -130,6 +183,15 @@ extension ProgressManager {
                                                    portionOfTotal: children[idx].portionOfTotal,
                                                    childFraction: children[idx].childFraction,
                                                    isDirty: false,
+                                                   totalFileCount: children[idx].totalFileCount,
+                                                   completedFileCount: children[idx].completedFileCount,
+                                                   totalByteCount: children[idx].totalByteCount,
+                                                   completedByteCount: children[idx].completedByteCount,
+                                                   throughput: children[idx].throughput,
+                                                   estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
+                                                   childPropertiesInt: children[idx].childPropertiesInt,
+                                                   childPropertiesDouble: children[idx].childPropertiesDouble,
+                                                   childPropertiesString: children[idx].childPropertiesString,
                                                    childProperties: children[idx].childProperties)
                         selfFraction.completed += children[idx].portionOfTotal
                     }
