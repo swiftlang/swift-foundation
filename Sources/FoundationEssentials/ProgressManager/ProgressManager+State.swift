@@ -75,6 +75,12 @@ extension ProgressManager {
         }
         var children: [ChildState]
         var parents: [ParentState]
+        var totalFileCount: Int
+        var completedFileCount: Int
+        var totalByteCount: Int64
+        var completedByteCount: Int64
+        var throughput: Int64
+        var estimatedTimeRemaining: Duration
         var properties: [AnyMetatypeWrapper: (any Sendable)]
         var interopObservation: InteropObservation
         let progressParentProgressManagerChildMessenger: ProgressManager?
