@@ -65,6 +65,104 @@ extension ProgressManager {
             }
         }
         
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalFileCount.Type>) -> Int {
+            get {
+                return state.totalFileCount ?? ProgressManager.Properties.TotalFileCount.defaultValue
+            }
+            
+            set {
+                
+                guard newValue != state.totalFileCount else {
+                    return
+                }
+                
+                state.totalFileCount = newValue
+                
+                dirtyProperties.append(ProgressManager.Properties.TotalFileCount.self)
+            }
+        }
+        
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedFileCount.Type>) -> Int {
+            get {
+                return state.completedFileCount ?? ProgressManager.Properties.CompletedFileCount.defaultValue
+            }
+            
+            set {
+                
+                guard newValue != state.completedFileCount else {
+                    return
+                }
+                
+                state.completedFileCount = newValue
+                
+                dirtyProperties.append(ProgressManager.Properties.CompletedFileCount.self)
+            }
+        }
+        
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalByteCount>) -> Int64 {
+            get {
+                return state.totalByteCount ?? ProgressManager.Properties.TotalByteCount.defaultValue
+            }
+            
+            set {
+                guard newValue != state.totalByteCount else {
+                    return
+                }
+                
+                state.totalByteCount = newValue
+
+                dirtyProperties.append(ProgressManager.Properties.TotalByteCount.self)
+            }
+        }
+        
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedByteCount>) -> Int64 {
+            get {
+                return state.completedByteCount ?? ProgressManager.Properties.CompletedByteCount.defaultValue
+            }
+            
+            set {
+                guard newValue != state.completedByteCount else {
+                    return
+                }
+                
+                state.completedByteCount = newValue
+
+                dirtyProperties.append(ProgressManager.Properties.CompletedByteCount.self)
+            }
+        }
+        
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.Throughput>) -> Int64 {
+            get {
+                return state.throughput ?? ProgressManager.Properties.Throughput.defaultValue
+            }
+            
+            set {
+                guard newValue != state.throughput else {
+                    return
+                }
+                
+                state.throughput = newValue
+
+                dirtyProperties.append(ProgressManager.Properties.Throughput.self)
+            }
+        }
+        
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.EstimatedTimeRemaining>) -> Duration {
+            get {
+                return state.estimatedTimeRemaining ?? ProgressManager.Properties.EstimatedTimeRemaining.defaultValue
+            }
+            
+            set {
+                guard newValue != state.estimatedTimeRemaining else {
+                    return
+                }
+                
+                state.estimatedTimeRemaining = newValue
+
+                dirtyProperties.append(ProgressManager.Properties.EstimatedTimeRemaining.self)
+            }
+        }
+        
         /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
             get {
