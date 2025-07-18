@@ -67,7 +67,7 @@ extension ProgressManager {
         
         public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalFileCount.Type>) -> Int {
             get {
-                return state.totalFileCount ?? ProgressManager.Properties.TotalFileCount.defaultValue
+                return state.totalFileCount
             }
             
             set {
@@ -84,7 +84,7 @@ extension ProgressManager {
         
         public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedFileCount.Type>) -> Int {
             get {
-                return state.completedFileCount ?? ProgressManager.Properties.CompletedFileCount.defaultValue
+                return state.completedFileCount
             }
             
             set {
@@ -101,7 +101,7 @@ extension ProgressManager {
         
         public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalByteCount>) -> Int64 {
             get {
-                return state.totalByteCount ?? ProgressManager.Properties.TotalByteCount.defaultValue
+                return state.totalByteCount
             }
             
             set {
@@ -117,7 +117,7 @@ extension ProgressManager {
         
         public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedByteCount>) -> Int64 {
             get {
-                return state.completedByteCount ?? ProgressManager.Properties.CompletedByteCount.defaultValue
+                return state.completedByteCount
             }
             
             set {
@@ -133,7 +133,7 @@ extension ProgressManager {
         
         public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.Throughput>) -> Int64 {
             get {
-                return state.throughput ?? ProgressManager.Properties.Throughput.defaultValue
+                return state.throughput
             }
             
             set {
@@ -149,7 +149,7 @@ extension ProgressManager {
         
         public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.EstimatedTimeRemaining>) -> Duration {
             get {
-                return state.estimatedTimeRemaining ?? ProgressManager.Properties.EstimatedTimeRemaining.defaultValue
+                return state.estimatedTimeRemaining
             }
             
             set {
