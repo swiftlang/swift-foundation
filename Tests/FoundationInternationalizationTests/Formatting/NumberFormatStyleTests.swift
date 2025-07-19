@@ -56,7 +56,9 @@ private struct NumberFormatStyleTests {
         #expect(formatter_long.format(42 as Double) == "0,000,000,000,000,000,000,000,000,000,000,000,000,042")
     }
 
-#if !os(watchOS) // 99504292
+#if !os(watchOS) && FOUNDATION_FRAMEWORK // 99504292 && 155484008
+    // This test would fail if the cache is cleared while running the test
+    // But we still enable it for FOUNDATION_FRAMEWORK because it somehow still passes there
     @Test func nsICUNumberFormatterCache() throws {
 
         let intStyle = IntegerFormatStyle<Int64>(locale: Locale(identifier: "en_US"))
