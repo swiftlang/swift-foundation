@@ -45,18 +45,20 @@ private struct DateRelativeFormatStyleTests {
         #expect(style.format(Date(timeIntervalSinceNow: oneHour * 1.5)) == "in 2 hours")
     }
 
-    @Test func dateRelativeFormatConvenience() throws {
-        let now = Date()
-        let tomorrow = Date(timeInterval: oneDay + oneHour * 2, since: now)
-        let future = Date(timeInterval: oneDay * 14 + oneHour * 3, since: now)
-        let past = Date(timeInterval: -(oneDay * 14 + oneHour * 2), since: now)
-
-        #expect(past.formatted(.relative(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named, unitsStyle: .wide).locale(enUSLocale).format(past))
-        #expect(tomorrow.formatted(.relative(presentation: .numeric).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .wide).locale(enUSLocale).format(tomorrow))
-        #expect(tomorrow.formatted(Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale).format(tomorrow))
-
-        #expect(past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale).format(past))
-        #expect(future.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .abbreviated).locale(enUSLocale).format(future))
+    @Test func dateRelativeFormatConvenience() async {
+        await usingCurrentInternationalizationPreferences {
+            let now = Date()
+            let tomorrow = Date(timeInterval: oneDay + oneHour * 2, since: now)
+            let future = Date(timeInterval: oneDay * 14 + oneHour * 3, since: now)
+            let past = Date(timeInterval: -(oneDay * 14 + oneHour * 2), since: now)
+            
+            #expect(past.formatted(.relative(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named, unitsStyle: .wide).locale(enUSLocale).format(past))
+            #expect(tomorrow.formatted(.relative(presentation: .numeric).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .wide).locale(enUSLocale).format(tomorrow))
+            #expect(tomorrow.formatted(Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale).format(tomorrow))
+            
+            #expect(past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale).format(past))
+            #expect(future.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .abbreviated).locale(enUSLocale).format(future))
+        }
     }
 
     @Test func namedStyleRounding() throws {
@@ -332,8 +334,8 @@ private struct DateRelativeFormatStyleTests {
         var named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
 
         func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
-            let date = try! Date.ISO8601FormatStyle().parse(dateStr)
-            let refDate = try! Date.ISO8601FormatStyle().parse(relativeTo)
+            let date = try! Date.ISO8601FormatStyle(timeZone: .gmt).parse(dateStr)
+            let refDate = try! Date.ISO8601FormatStyle(timeZone: .gmt).parse(relativeTo)
             let formatted = named._format(date, refDate: refDate)
             #expect(formatted == expected, sourceLocation: sourceLocation)
         }
@@ -408,7 +410,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
 
     @Test func examples() throws {
         var now = Date.now
-        var style = Date.AnchoredRelativeFormatStyle(anchor: now)
+        var style = Date.AnchoredRelativeFormatStyle(anchor: now, calendar: calendar)
             .locale(enUSLocale)
 
         #expect(style.discreteInput(after: now.addingTimeInterval(1)) == now.addingTimeInterval(1.5))
@@ -868,28 +870,32 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         now = Date(timeIntervalSinceReferenceDate: 724685580.417914)
         style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 12176601839.415668))) > Date(timeIntervalSinceReferenceDate: 12176601839.415668))
 
 
         now = Date(timeIntervalSinceReferenceDate: 724686086.706003)
         style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -24141834543.08099))) < Date(timeIntervalSinceReferenceDate: -24141834543.08099))
 
         now = Date(timeIntervalSinceReferenceDate: 724688507.315708)
         style = .init(anchor: now, allowedFields: [.minute, .second], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 6013270816.926929))) > Date(timeIntervalSinceReferenceDate: 6013270816.926929))
 
         now = Date(timeIntervalSinceReferenceDate: 724689590.234374)
         style = .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
-        print(style.format(Date(timeIntervalSinceReferenceDate: 722325435.4645464)))
+        style.locale = enUSLocale
         #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722325435.4645464))) > Date(timeIntervalSinceReferenceDate: 722325435.4645464))
 
         now = Date(timeIntervalSinceReferenceDate: 724701229.591328)
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -7256167.2374657225)) returned Date(timeIntervalSinceReferenceDate: -31622400.5), but
         /// Date(timeIntervalSinceReferenceDate: -31622400.49), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: -31622400.5)) = Date(timeIntervalSinceReferenceDate: -31622400.49),
         /// already produces a different formatted output 'in 24 yr' compared to style.format(Date(timeIntervalSinceReferenceDate: -7256167.2374657225)), which is 'in 23 yr'
@@ -899,6 +905,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         now = Date(timeIntervalSinceReferenceDate: 724707086.436074)
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         /// style.discreteInput(after: Date(timeIntervalSinceReferenceDate: -728.7911686889214)) returned Date(timeIntervalSinceReferenceDate: 0.9360740142747098), but
         /// Date(timeIntervalSinceReferenceDate: 0.9260740142747098), which is a valid input, because style.input(before: Date(timeIntervalSinceReferenceDate: 0.9360740142747098)) = Date(timeIntervalSinceReferenceDate: 0.9260740142747098),
         /// already produces a different formatted output 'in 22 yr' compared to style.format(Date(timeIntervalSinceReferenceDate: -728.7911686889214)), which is 'in 23 yr'
@@ -908,11 +915,13 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         now = Date(timeIntervalSinceReferenceDate: 724707983.332096)
         style = .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722086631.228182))) > Date(timeIntervalSinceReferenceDate: 722086631.228182))
 
         now = Date(timeIntervalSinceReferenceDate: 725887340.112405)
         style = .init(anchor: now, allowedFields: [.month, .week, .day, .hour], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 728224511.9413433)) returned Date(timeIntervalSinceReferenceDate: 727487999.6124048), but
         /// Date(timeIntervalSinceReferenceDate: 727487999.6224048), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: 727487999.6124048)) = Date(timeIntervalSinceReferenceDate: 727487999.6224048),
         /// already produces a different formatted output '3 wk ago' compared to style.format(Date(timeIntervalSinceReferenceDate: 728224511.9413433)), which is '1 mo ago'
@@ -921,6 +930,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         now = Date(timeIntervalSinceReferenceDate: 725895690.016681)
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 726561180.513301)) returned Date(timeIntervalSinceReferenceDate: 726364799.5166808), but
         /// Date(timeIntervalSinceReferenceDate: 726364799.5266808), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: 726364799.5166808)) = Date(timeIntervalSinceReferenceDate: 726364799.5266808),
         /// already produces a different formatted output '6 days ago' compared to style.format(Date(timeIntervalSinceReferenceDate: 726561180.513301)), which is '1 wk ago'
@@ -929,6 +939,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         now = Date(timeIntervalSinceReferenceDate: 725903036.660503)
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         /// style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436)) returned Date(timeIntervalSinceReferenceDate: 725414400.1605031), but
         /// Date(timeIntervalSinceReferenceDate: 725398549.919868), which is a valid input, because style.input(before: Date(timeIntervalSinceReferenceDate: 725414400.1605031)) = Date(timeIntervalSinceReferenceDate: 725414400.1505032),
         /// already produces a different formatted output 'in 6 days' compared to style.format(Date(timeIntervalSinceReferenceDate: 725318223.6599436)), which is 'in 1 wk'
