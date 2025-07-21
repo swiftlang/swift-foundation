@@ -108,7 +108,7 @@ extension ProgressManager {
             }
         }
         
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalByteCount>) -> Int64 {
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalByteCount.Type>) -> Int64 {
             get {
                 return state.totalByteCount
             }
@@ -124,7 +124,7 @@ extension ProgressManager {
             }
         }
         
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedByteCount>) -> Int64 {
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedByteCount.Type>) -> Int64 {
             get {
                 return state.completedByteCount
             }
@@ -140,7 +140,7 @@ extension ProgressManager {
             }
         }
         
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.Throughput>) -> Int64 {
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.Throughput.Type>) -> Int64 {
             get {
                 return state.throughput
             }
@@ -156,7 +156,7 @@ extension ProgressManager {
             }
         }
         
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.EstimatedTimeRemaining>) -> Duration {
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.EstimatedTimeRemaining.Type>) -> Duration {
             get {
                 return state.estimatedTimeRemaining
             }
