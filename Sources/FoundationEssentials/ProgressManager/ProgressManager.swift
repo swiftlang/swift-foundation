@@ -559,7 +559,7 @@ internal import _FoundationCollections
         }
         
         var finalSummaryDouble: [AnyMetatypeWrapper: Double] = [:]
-        for property in propertiesInt.keys {
+        for property in propertiesDouble.keys {
             let updatedSummary = self.summary(of: property.metatype.self)
             finalSummaryDouble[property] = updatedSummary as? Double
         }
