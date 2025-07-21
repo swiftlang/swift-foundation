@@ -83,6 +83,42 @@ import Observation
         manager.summary(of: property)
     }
     
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Int where P.Summary == Int {
+        manager.summary(of: property)
+    }
+    
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Double where P.Summary == Double {
+        manager.summary(of: property)
+    }
+    
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> String where P.Summary == String {
+        manager.summary(of: property)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
+        return manager.summary(of: property)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int {
+        manager.summary(of: property)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> Int64 {
+        manager.summary(of: property)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> Int64 {
+        manager.summary(of: property)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> Int64 {
+        manager.summary(of: property)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration {
+        manager.summary(of: property)
+    }
+
     internal let manager: ProgressManager
     
     internal init(manager: ProgressManager) {
