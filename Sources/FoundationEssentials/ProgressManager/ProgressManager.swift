@@ -185,17 +185,14 @@ internal import _FoundationCollections
         return getUpdatedSummary(property: property)
     }
     
-    @_disfavoredOverload
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Summary == Int {
         return getUpdatedIntSummary(property: property)
     }
     
-    @_disfavoredOverload
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Summary == Double {
         return getUpdatedDoubleSummary(property: property)
     }
     
-    @_disfavoredOverload
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Summary == String {
         return getUpdatedStringSummary(property: property)
     }

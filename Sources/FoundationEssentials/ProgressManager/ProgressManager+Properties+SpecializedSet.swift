@@ -16,28 +16,24 @@ internal import Synchronization
 extension ProgressManager {
     
     //MARK: Methods to set dirty bit recursively
-    @_disfavoredOverload
     internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
-    @_disfavoredOverload
     internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Int {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
-    @_disfavoredOverload
     internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Double {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
-    @_disfavoredOverload
     internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == String {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
@@ -80,7 +76,6 @@ extension ProgressManager {
         }
     }
     
-    @_disfavoredOverload
     internal func markChildDirty<P: Property>(property: P.Type, at position: Int) {
         let parents = state.withLock { state in
             state.children[position].childProperties[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
@@ -89,7 +84,6 @@ extension ProgressManager {
         markSelfDirty(property: property, parents: parents)
     }
     
-    @_disfavoredOverload
     internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Int {
         let parents = state.withLock { state in
             state.children[position].childPropertiesInt[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
@@ -98,7 +92,6 @@ extension ProgressManager {
         markSelfDirty(property: property, parents: parents)
     }
     
-    @_disfavoredOverload
     internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Double {
         let parents = state.withLock { state in
             state.children[position].childPropertiesDouble[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
@@ -107,7 +100,6 @@ extension ProgressManager {
         markSelfDirty(property: property, parents: parents)
     }
     
-    @_disfavoredOverload
     internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == String {
         let parents = state.withLock { state in
             state.children[position].childPropertiesString[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
