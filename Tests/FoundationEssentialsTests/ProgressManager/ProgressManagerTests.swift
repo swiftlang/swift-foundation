@@ -291,7 +291,7 @@ import Testing
             }
             
             group.addTask {
-                print(manager.fractionCompleted)
+                #expect(manager.fractionCompleted <= 0.4)
             }
         }
     }
