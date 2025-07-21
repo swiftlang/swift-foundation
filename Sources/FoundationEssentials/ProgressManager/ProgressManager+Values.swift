@@ -19,7 +19,16 @@ extension ProgressManager {
         var state: State
         
         var fractionalCountDirty = false
+        var totalFileCountDirty = false
+        var completedFileCountDirty = false
+        var totalByteCountDirty = false
+        var completedByteCountDirty = false
+        var throughputDirty = false
+        var estimatedTimeRemainingDirty = false
         var dirtyProperties: [any Property.Type] = []
+        var dirtyPropertiesInt: [any Property.Type] = []
+        var dirtyPropertiesDouble: [any Property.Type] = []
+        var dirtyPropertiesString: [any Property.Type] = []
         var observerState: ObserverState?
                 
         /// The total units of work.
@@ -78,7 +87,7 @@ extension ProgressManager {
                 
                 state.totalFileCount = newValue
                 
-                dirtyProperties.append(ProgressManager.Properties.TotalFileCount.self)
+                totalFileCountDirty = true
             }
         }
         
@@ -95,7 +104,7 @@ extension ProgressManager {
                 
                 state.completedFileCount = newValue
                 
-                dirtyProperties.append(ProgressManager.Properties.CompletedFileCount.self)
+                completedFileCountDirty = true
             }
         }
         
@@ -111,7 +120,7 @@ extension ProgressManager {
                 
                 state.totalByteCount = newValue
 
-                dirtyProperties.append(ProgressManager.Properties.TotalByteCount.self)
+                totalByteCountDirty = true
             }
         }
         
@@ -127,7 +136,7 @@ extension ProgressManager {
                 
                 state.completedByteCount = newValue
 
-                dirtyProperties.append(ProgressManager.Properties.CompletedByteCount.self)
+                completedByteCountDirty = true
             }
         }
         
@@ -143,7 +152,7 @@ extension ProgressManager {
                 
                 state.throughput = newValue
 
-                dirtyProperties.append(ProgressManager.Properties.Throughput.self)
+                throughputDirty = true
             }
         }
         
@@ -159,7 +168,7 @@ extension ProgressManager {
                 
                 state.estimatedTimeRemaining = newValue
 
-                dirtyProperties.append(ProgressManager.Properties.EstimatedTimeRemaining.self)
+                estimatedTimeRemainingDirty = true
             }
         }
         
@@ -175,7 +184,7 @@ extension ProgressManager {
                 
                 state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
-                dirtyProperties.append(P.self)
+                dirtyPropertiesInt.append(P.self)
             }
         }
         
@@ -191,7 +200,7 @@ extension ProgressManager {
                 
                 state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
-                dirtyProperties.append(P.self)
+                dirtyPropertiesDouble.append(P.self)
             }
         }
         
@@ -207,7 +216,7 @@ extension ProgressManager {
                 
                 state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
-                dirtyProperties.append(P.self)
+                dirtyPropertiesString.append(P.self)
             }
         }
         
