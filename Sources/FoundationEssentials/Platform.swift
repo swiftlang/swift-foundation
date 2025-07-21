@@ -366,8 +366,10 @@ extension Platform {
             return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
         }
 #else
-        // TODO: Implement for other platforms
-        return nil
+        guard let processPath = CommandLine.arguments.first else {
+            return nil
+        }
+        return processPath.lastPathComponent
 #endif
     }
 }
