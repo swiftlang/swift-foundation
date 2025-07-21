@@ -15,6 +15,7 @@ internal import Synchronization
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
+    //MARK: Methods to get updated summary of properties
     internal func getUpdatedSummary<P: Property>(property: P.Type) -> P.Summary {
         return state.withLock { state in
             let propertyWrapper = AnyMetatypeWrapper(metatype: property)

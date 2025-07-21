@@ -355,66 +355,6 @@ internal import _FoundationCollections
     }
     
     // MARK: Additional Properties Methods
-    private func setChildRemainingProperties(_ properties: [AnyMetatypeWrapper: (any Sendable)], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingProperties = properties
-        }
-    }
-    
-    private func setChildRemainingPropertiesInt(_ properties: [AnyMetatypeWrapper: Int], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingPropertiesInt = properties
-        }
-    }
-    
-    private func setChildRemainingPropertiesDouble(_ properties: [AnyMetatypeWrapper: Double], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingPropertiesDouble = properties
-        }
-    }
-    
-    private func setChildRemainingPropertiesString(_ properties: [AnyMetatypeWrapper: String], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingPropertiesString = properties
-        }
-    }
-    
-    private func setChildTotalFileCount(value: Int, at position: Int) {
-        state.withLock { state in
-            state.children[position].totalFileCount = PropertyStateInt(value: value, isDirty: false)
-        }
-    }
-    
-    private func setChildCompletedFileCount(value: Int, at position: Int) {
-        state.withLock { state in
-            state.children[position].completedFileCount = PropertyStateInt(value: value, isDirty: false)
-        }
-    }
-    
-    private func setChildTotalByteCount(value: Int64, at position: Int) {
-        state.withLock { state in
-            state.children[position].totalByteCount = PropertyStateInt64(value: value, isDirty: false)
-        }
-    }
-    
-    private func setChildCompletedByteCount(value: Int64, at position: Int) {
-        state.withLock { state in
-            state.children[position].completedByteCount = PropertyStateInt64(value: value, isDirty: false)
-        }
-    }
-    
-    private func setChildThroughput(value: ProgressManager.Properties.Throughput.AggregateThroughput, at position: Int) {
-        state.withLock { state in
-            state.children[position].throughput = PropertyStateThroughput(value: value, isDirty: false)
-        }
-    }
-    
-    private func setChildEstimatedTimeRemaining(value: Duration, at position: Int) {
-        state.withLock { state in
-            state.children[position].estimatedTimeRemaining = PropertyStateDuration(value: value, isDirty: false)
-        }
-    }
-    
     internal func getProperties<T, E: Error>(
         _ closure: (sending Values) throws(E) -> sending T
     ) throws(E) -> sending T {

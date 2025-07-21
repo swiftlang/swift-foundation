@@ -15,6 +15,7 @@ internal import Synchronization
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
+    //MARK: Methods to set dirty bit recursively
     @_disfavoredOverload
     internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) {
         for parentState in parents {
@@ -161,5 +162,66 @@ extension ProgressManager {
             return state.parents
         }
         markSelfDirty(property: property, parents: parents)
+    }
+    
+    //MARK: Methods to preserve values of properties upon deinit
+    internal func setChildRemainingProperties(_ properties: [AnyMetatypeWrapper: (any Sendable)], at position: Int) {
+        state.withLock { state in
+            state.children[position].remainingProperties = properties
+        }
+    }
+    
+    internal func setChildRemainingPropertiesInt(_ properties: [AnyMetatypeWrapper: Int], at position: Int) {
+        state.withLock { state in
+            state.children[position].remainingPropertiesInt = properties
+        }
+    }
+    
+    internal func setChildRemainingPropertiesDouble(_ properties: [AnyMetatypeWrapper: Double], at position: Int) {
+        state.withLock { state in
+            state.children[position].remainingPropertiesDouble = properties
+        }
+    }
+    
+    internal func setChildRemainingPropertiesString(_ properties: [AnyMetatypeWrapper: String], at position: Int) {
+        state.withLock { state in
+            state.children[position].remainingPropertiesString = properties
+        }
+    }
+    
+    internal func setChildTotalFileCount(value: Int, at position: Int) {
+        state.withLock { state in
+            state.children[position].totalFileCount = PropertyStateInt(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildCompletedFileCount(value: Int, at position: Int) {
+        state.withLock { state in
+            state.children[position].completedFileCount = PropertyStateInt(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildTotalByteCount(value: Int64, at position: Int) {
+        state.withLock { state in
+            state.children[position].totalByteCount = PropertyStateInt64(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildCompletedByteCount(value: Int64, at position: Int) {
+        state.withLock { state in
+            state.children[position].completedByteCount = PropertyStateInt64(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildThroughput(value: ProgressManager.Properties.Throughput.AggregateThroughput, at position: Int) {
+        state.withLock { state in
+            state.children[position].throughput = PropertyStateThroughput(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildEstimatedTimeRemaining(value: Duration, at position: Int) {
+        state.withLock { state in
+            state.children[position].estimatedTimeRemaining = PropertyStateDuration(value: value, isDirty: false)
+        }
     }
 }
