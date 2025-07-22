@@ -216,7 +216,11 @@ extension ProgressManager {
                 
                 state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
-                dirtyPropertiesString.append(P.self)
+                if P.Summary.self == String.self {
+                    dirtyPropertiesString.append(P.self)
+                } else {
+                    dirtyProperties.append(P.self)
+                }
             }
         }
         
