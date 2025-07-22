@@ -64,6 +64,8 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 path: "\(root)/swift-syntax")
         ]
 } else {
+    // These dependencies should match `update-checkout`
+    // See `update-checkout-config.json` for the `main` branch-scheme
     dependencies += 
         [
             .package(
