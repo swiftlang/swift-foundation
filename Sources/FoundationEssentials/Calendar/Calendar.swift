@@ -1153,9 +1153,17 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
 
         let weekendEndComponents = DateComponents(weekday: weekend.end)
-        // We only care about the end date to get the interval of the weekend, so we don't care if it falls ahead of the passed in date. Always search forward from here, since we just found the *beginning* of the weekend.
-        guard var end = nextDate(after: start, matching: weekendEndComponents, matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward) else {
-            return nil
+
+        var end: Date
+        if weekend.start == weekend.end {
+            // This locale has a 1-day weekend
+            end = start
+        } else {
+            // We only care about the end date to get the interval of the weekend, so we don't care if it falls ahead of the passed in date. Always search forward from here, since we just found the *beginning* of the weekend.
+            guard let possibleEnd = nextDate(after: start, matching: weekendEndComponents, matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward) else {
+                return nil
+            }
+            end = possibleEnd
         }
 
         if let ceaseTime = weekend.ceaseTime, ceaseTime > 0 {
@@ -1667,7 +1675,8 @@ package struct WeekendRange: Equatable, Hashable {
     package var ceaseTime: TimeInterval?
     package var start: Int
     package var end: Int
-    
+
+    // start == end means a one-day weekend. There isn't a known use case for 7-day weekend.
     package init(onsetTime: TimeInterval? = nil, ceaseTime: TimeInterval? = nil, start: Int, end: Int) {
         self.onsetTime = onsetTime
         self.ceaseTime = ceaseTime

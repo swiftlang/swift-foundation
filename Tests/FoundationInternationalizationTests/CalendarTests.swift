@@ -907,7 +907,49 @@ private struct CalendarTests {
         #expect(weekend != nil)
         #expect(weekend == weekendForNilLocale)
     }
-    
+
+    @Test func weekendRange_1dayWeekend() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_IN")
+        calendar.timeZone = .gmt
+
+        do {
+            // Date(timeIntervalSinceReferenceDate: 0) is a Monday
+            // India's weekend is on Sunday
+            let weekend = try #require(calendar.nextWeekend(startingAfter: Date(timeIntervalSinceReferenceDate: 0)))
+            let expectStart = try Date("2001-01-07T00:00:00Z", strategy: .iso8601)
+            #expect(weekend.start == expectStart)
+
+            let expectEnd = try Date("2001-01-08T00:00:00Z", strategy: .iso8601)
+            #expect(weekend.end == expectEnd)
+
+            let previousWeekend = try #require(calendar.nextWeekend(startingAfter: Date(timeIntervalSinceReferenceDate: 0), direction: .backward))
+            let expectedPreviousStart = try Date("2000-12-31T00:00:00Z", strategy: .iso8601)
+            #expect(previousWeekend.start == expectedPreviousStart)
+
+            let expectedPreviousEnd = try Date("2001-01-01T00:00:00Z", strategy: .iso8601)
+            #expect(previousWeekend.end == expectedPreviousEnd)
+        }
+
+        // Starting on a weekend
+        do {
+            let sundayMidnight = Date(timeIntervalSinceReferenceDate: -86400)
+            let weekend = try #require(calendar.nextWeekend(startingAfter: sundayMidnight))
+            let expectStart = try Date("2001-01-07T00:00:00Z", strategy: .iso8601)
+            #expect(weekend.start == expectStart)
+
+            let expectEnd = try Date("2001-01-08T00:00:00Z", strategy: .iso8601)
+            #expect(weekend.end == expectEnd)
+
+            let previousWeekend = try #require(calendar.nextWeekend(startingAfter: sundayMidnight, direction: .backward))
+            let expectedPreviousStart = try Date("2000-12-24T00:00:00Z", strategy: .iso8601)
+            #expect(previousWeekend.start == expectedPreviousStart)
+
+            let expectedPreviousEnd = try Date("2000-12-25T00:00:00Z", strategy: .iso8601)
+            #expect(previousWeekend.end == expectedPreviousEnd)
+        }
+    }
+
     @Test func datesAdding_range() {
         let startDate = Date(timeIntervalSinceReferenceDate: 689292158.712307) // 2022-11-04 22:02:38 UTC
         let endDate = startDate + (86400 * 3) + (3600 * 2) // 3 days + 2 hours later - cross a DST boundary which adds a day with an additional hour in it
