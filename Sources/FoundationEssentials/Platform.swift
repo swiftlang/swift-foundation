@@ -365,11 +365,13 @@ extension Platform {
             }
             return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
         }
-#else
+#elseif !NO_FILESYSTEM
         guard let processPath = CommandLine.arguments.first else {
             return nil
         }
         return processPath.lastPathComponent
+#else
+        return nil
 #endif
     }
 }
