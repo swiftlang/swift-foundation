@@ -1,9 +1,10 @@
 # `AttributedString` & `SendableMetatype`
 
-* Proposal: [SF-NNNN](NNNN-attributedstring-sendable-metatype.md)
+* Proposal: [SF-0029](0029-attributedstring-sendable-metatype.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Review Manager: TBD
-* Status: **Pitch**
+* Review Manager: [Tina L](https://github.com/itingliu)
+* Status: **Review: July 22...July 29, 2025**
+* Review: [Pitch](https://forums.swift.org/t/pitch-attributedstring-sendablemetatype/80986)
 
 
 
