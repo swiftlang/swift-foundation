@@ -9,7 +9,7 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-
+// Keep all interop logiv here
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 @available(FoundationPreview 6.2, *)
@@ -31,23 +31,24 @@ extension Progress {
     public func makeChild(withPendingUnitCount count: Int) -> Subprogress {
         
         // Make ghost parent & add it to actual parent's children list
-        let ghostProgressParent = Progress(totalUnitCount: Int64(count))
-        self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
+        let topProgress = Progress(totalUnitCount: 1)
+        self.addChild(topProgress, withPendingUnitCount: Int64(count))
         
         // Make ghost child
-        let ghostReporterChild = ProgressManager(totalCount: count)
+        let bottomProgress = ProgressManager(totalCount: 1)
         
         // Make observation instance
-        let managerObservation = _ProgressParentProgressManagerChild(
-            ghostParent: ghostProgressParent,
-            ghostChild: ghostReporterChild
+        let managerObservation = _NSProgressParentSubprogressChild(
+            ghostParent: topProgress,
+            ghostChild: bottomProgress
         )
         
         // Make actual child with ghost child being parent
-        var actualProgress = ghostReporterChild.subprogress(assigningCount: count)
-        actualProgress.managerObservation = managerObservation
-        actualProgress.progressParentProgressManagerChildMessenger = ghostReporterChild
-        return actualProgress
+        var subprogress = Subprogress(parent: bottomProgress, portionOfParent: 1)
+        bottomProgress.subprogress(assigningCount: 1)
+        subprogress.managerObservation = managerObservation
+        subprogress.progressParentProgressManagerChildMessenger = bottomProgress
+        return subprogress
     }
     
     
@@ -66,7 +67,7 @@ extension Progress {
         self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
         
         // Make observation instance
-        let reporterObservation = _ProgressParentProgressReporterChild(
+        let reporterObservation = _NSProgressParentProgressReporterChild(
             intermediary: ghostProgressParent,
             reporter: reporter
         )
@@ -95,7 +96,7 @@ extension Progress {
     }
 }
 
-internal final class _ProgressParentProgressManagerChild: Sendable {
+internal final class _NSProgressParentSubprogressChild: Sendable {
     private let ghostParent: Progress
     private let ghostChild: ProgressManager
     
@@ -119,7 +120,7 @@ internal final class _ProgressParentProgressManagerChild: Sendable {
     }
 }
 
-internal final class _ProgressParentProgressReporterChild: Sendable {
+internal final class _NSProgressParentProgressReporterChild: Sendable {
     private let intermediary: Progress
     private let reporter: ProgressReporter
     
