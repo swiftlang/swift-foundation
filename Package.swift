@@ -57,7 +57,7 @@ var dependencies: [Package.Dependency] {
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                from: "1.1.0"),
+                from: "1.2.1"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
@@ -110,6 +110,7 @@ let package = Package(
             "_FoundationCShims",
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
+            .product(name: "DequeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
           ],
           exclude: [
@@ -128,7 +129,8 @@ let package = Package(
             "CMakeLists.txt",
             "ProcessInfo/CMakeLists.txt",
             "FileManager/CMakeLists.txt",
-            "URL/CMakeLists.txt"
+            "URL/CMakeLists.txt",
+            "NotificationCenter/CMakeLists.txt"
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux]))
