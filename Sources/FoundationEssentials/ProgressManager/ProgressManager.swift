@@ -65,7 +65,10 @@ internal import _FoundationCollections
     public var isIndeterminate: Bool {
         _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
         return state.withLock { state in
-            state.selfFraction.isIndeterminate
+            if let interopChild = state.interopChild {
+                return interopChild.isIndeterminate
+            }
+            return state.selfFraction.isIndeterminate
         }
     }
     
@@ -74,7 +77,10 @@ internal import _FoundationCollections
     public var isFinished: Bool {
         _$observationRegistrar.access(self, keyPath: \.isFinished)
         return state.withLock { state in
-            state.selfFraction.isFinished
+            if let interopChild = state.interopChild {
+                return interopChild.isIndeterminate
+            }
+            return state.selfFraction.isFinished
         }
     }
     
@@ -83,7 +89,7 @@ internal import _FoundationCollections
         return .init(manager: self)
     }
     
-    internal init(total: Int?, progressParentProgressManagerChildMessenger: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
+    internal init(total: Int?, progressParentProgressManagerChildMessenger: ProgressManager?, managerObservation: _NSProgressParentSubprogressChild?) {
         let state = State(
             interopChild: nil,
             selfFraction: ProgressFraction(completed: 0, total: total),
@@ -98,7 +104,6 @@ internal import _FoundationCollections
             propertiesInt: [:],
             propertiesDouble: [:],
             propertiesString: [:],
-            properties: [:],
             interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
             progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger,
             observers: []
@@ -180,20 +185,20 @@ internal import _FoundationCollections
     /// Returns a summary for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Summary of property as specified.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary { // rename this later - aggregate 
-//        _$observationRegistrar.access(self, keyPath: \.state)
-        return getUpdatedSummary(property: property)
-    }
+//    public func summary<P: Property>(of property: P.Type) -> P.Summary { // rename this later - aggregate 
+////        _$observationRegistrar.access(self, keyPath: \.state)
+//        return getUpdatedSummary(property: property)
+//    }
     
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Summary == Int {
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
         return getUpdatedIntSummary(property: property)
     }
     
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Summary == Double {
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
         return getUpdatedDoubleSummary(property: property)
     }
     
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Summary == String {
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String, P.Summary == String {
         return getUpdatedStringSummary(property: property)
     }
     
@@ -242,7 +247,6 @@ internal import _FoundationCollections
                 propertiesInt: [:],
                 propertiesDouble: [:],
                 propertiesString: [:],
-                properties: [:],
                 interopObservation: InteropObservation(progressParentProgressManagerChild: nil),
                 progressParentProgressManagerChildMessenger: nil,
                 observers: []
@@ -277,28 +281,24 @@ internal import _FoundationCollections
             }
             
             if values.dirtyPropertiesInt.count > 0 {
-                for property in values.dirtyProperties {
+                for property in values.dirtyPropertiesInt {
                     markSelfDirty(property: property, parents: values.state.parents)
                 }
             }
             
             if values.dirtyPropertiesDouble.count > 0 {
-                for property in values.dirtyProperties {
+                for property in values.dirtyPropertiesDouble {
                     markSelfDirty(property: property, parents: values.state.parents)
                 }
             }
             
             if values.dirtyPropertiesString.count > 0 {
-                for property in values.dirtyProperties {
+                for property in values.dirtyPropertiesString {
                     markSelfDirty(property: property, parents: values.state.parents)
                 }
             }
             
-            if values.dirtyProperties.count > 0 {
-                for property in values.dirtyProperties {
-                    markSelfDirty(property: property, parents: values.state.parents)
-                }
-            }
+
             
             if let observerState = values.observerState {
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
@@ -369,7 +369,6 @@ internal import _FoundationCollections
                                         remainingPropertiesInt: nil,
                                         remainingPropertiesDouble: nil,
                                         remainingPropertiesString: nil,
-                                        remainingProperties: nil,
                                         portionOfTotal: portion,
                                         childFraction: childFraction,
                                         isDirty: true,
@@ -381,8 +380,7 @@ internal import _FoundationCollections
                                         estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
                                         childPropertiesInt: [:],
                                         childPropertiesDouble: [:],
-                                        childPropertiesString: [:],
-                                        childProperties: [:])
+                                        childPropertiesString: [:])
             state.children.append(childState)
             return state.children.count - 1
         }
@@ -446,7 +444,7 @@ internal import _FoundationCollections
         }
     }
     
-    internal func setInteropObservationReporter(observation reporterObservation: _ProgressParentProgressReporterChild) {
+    internal func setInteropObservationReporter(observation reporterObservation: _NSProgressParentProgressReporterChild) {
         state.withLock { state in
             state.interopObservation.progressParentProgressReporterChild = reporterObservation
         }
@@ -475,30 +473,23 @@ internal import _FoundationCollections
             }
         }
         
-        let (properties, propertiesInt, propertiesDouble, propertiesString, parents) = state.withLock { state in
-            return (state.properties,
-                    state.propertiesInt,
+        let (propertiesInt, propertiesDouble, propertiesString, parents) = state.withLock { state in
+            return (state.propertiesInt,
                     state.propertiesDouble,
                     state.propertiesString,
                     state.parents)
         }
         
-        var finalSummary: [AnyMetatypeWrapper: (any Sendable)] = [:]
-        for property in properties.keys {
-            let updatedSummary = self.summary(of: property.metatype.self)
-            finalSummary[property] = updatedSummary
-        }
-        
         var finalSummaryInt: [AnyMetatypeWrapper: Int] = [:]
         for property in propertiesInt.keys {
-            let updatedSummary = self.summary(of: property.metatype.self)
-            finalSummaryInt[property] = updatedSummary as? Int
+            let updatedSummary = self.summary(of: property.metatype)
+            finalSummaryInt[property] = updatedSummary
         }
         
         var finalSummaryDouble: [AnyMetatypeWrapper: Double] = [:]
         for property in propertiesDouble.keys {
-            let updatedSummary = self.summary(of: property.metatype.self)
-            finalSummaryDouble[property] = updatedSummary as? Double
+            let updatedSummary = self.summary(of: property.metatype)
+            finalSummaryDouble[property] = updatedSummary
         }
         
         var finalSummaryString: [AnyMetatypeWrapper: String] = [:]
@@ -507,18 +498,15 @@ internal import _FoundationCollections
             finalSummaryString[property] = updatedSummary as? String
         }
         
-        
         for parentState in parents {
-            parentState.parent.setChildRemainingProperties(finalSummary, at: parentState.positionInParent)
             parentState.parent.setChildRemainingPropertiesInt(finalSummaryInt, at: parentState.positionInParent)
             parentState.parent.setChildRemainingPropertiesDouble(finalSummaryDouble, at: parentState.positionInParent)
             parentState.parent.setChildRemainingPropertiesString(finalSummaryString, at: parentState.positionInParent)
-            parentState.parent.setChildTotalFileCount(value: self.summary(of: Properties.TotalFileCount.self), at: parentState.positionInParent)
-            parentState.parent.setChildCompletedFileCount(value: self.summary(of: Properties.CompletedFileCount.self), at: parentState.positionInParent)
-            parentState.parent.setChildTotalByteCount(value: self.summary(of: Properties.TotalByteCount.self), at: parentState.positionInParent)
-            parentState.parent.setChildCompletedByteCount(value: self.summary(of: Properties.CompletedByteCount.self), at: parentState.positionInParent)
-            parentState.parent.setChildThroughput(value: self.summary(of: Properties.Throughput.self), at: parentState.positionInParent)
-            parentState.parent.setChildEstimatedTimeRemaining(value: self.summary(of: Properties.EstimatedTimeRemaining.self), at: parentState.positionInParent)
+            parentState.parent.setChildTotalFileCount(value: self.getUpdatedFileCount(type: .total), at: parentState.positionInParent)
+            parentState.parent.setChildCompletedFileCount(value: self.getUpdatedFileCount(type: .completed), at: parentState.positionInParent)
+            parentState.parent.setChildTotalByteCount(value: self.getUpdatedByteCount(type: .total), at: parentState.positionInParent)
+            parentState.parent.setChildCompletedByteCount(value: self.getUpdatedByteCount(type: .completed), at: parentState.positionInParent)
+            parentState.parent.setChildThroughput(value: self.getUpdatedThroughput(), at: parentState.positionInParent)
         }
     }
 }

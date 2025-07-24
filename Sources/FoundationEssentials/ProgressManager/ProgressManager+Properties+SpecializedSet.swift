@@ -16,25 +16,19 @@ internal import Synchronization
 extension ProgressManager {
     
     //MARK: Methods to set dirty bit recursively
-    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) {
+    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Int, P.Summary == Int {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
-    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Int {
+    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Double, P.Summary == Double {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
-    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Double {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-        }
-    }
-    
-    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == String {
+    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == String, P.Summary == String {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
@@ -76,15 +70,7 @@ extension ProgressManager {
         }
     }
     
-    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) {
-        let parents = state.withLock { state in
-            state.children[position].childProperties[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
-            return state.parents
-        }
-        markSelfDirty(property: property, parents: parents)
-    }
-    
-    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Int {
+    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Int, P.Summary == Int {
         let parents = state.withLock { state in
             state.children[position].childPropertiesInt[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
             return state.parents
@@ -92,7 +78,7 @@ extension ProgressManager {
         markSelfDirty(property: property, parents: parents)
     }
     
-    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Double {
+    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Double, P.Summary == Double {
         let parents = state.withLock { state in
             state.children[position].childPropertiesDouble[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
             return state.parents
@@ -100,7 +86,7 @@ extension ProgressManager {
         markSelfDirty(property: property, parents: parents)
     }
     
-    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == String {
+    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == String, P.Summary == String {
         let parents = state.withLock { state in
             state.children[position].childPropertiesString[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
             return state.parents
@@ -157,12 +143,6 @@ extension ProgressManager {
     }
     
     //MARK: Methods to preserve values of properties upon deinit
-    internal func setChildRemainingProperties(_ properties: [AnyMetatypeWrapper: (any Sendable)], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingProperties = properties
-        }
-    }
-    
     internal func setChildRemainingPropertiesInt(_ properties: [AnyMetatypeWrapper: Int], at position: Int) {
         state.withLock { state in
             state.children[position].remainingPropertiesInt = properties
@@ -208,12 +188,6 @@ extension ProgressManager {
     internal func setChildThroughput(value: ProgressManager.Properties.Throughput.AggregateThroughput, at position: Int) {
         state.withLock { state in
             state.children[position].throughput = PropertyStateThroughput(value: value, isDirty: false)
-        }
-    }
-    
-    internal func setChildEstimatedTimeRemaining(value: Duration, at position: Int) {
-        state.withLock { state in
-            state.children[position].estimatedTimeRemaining = PropertyStateDuration(value: value, isDirty: false)
         }
     }
 }

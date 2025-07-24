@@ -16,65 +16,65 @@ internal import Synchronization
 extension ProgressManager {
     
     //MARK: Methods to get updated summary of properties
-    internal func getUpdatedSummary<P: Property>(property: P.Type) -> P.Summary {
-        return state.withLock { state in
-            let propertyWrapper = AnyMetatypeWrapper(metatype: property)
-            
-            var value: P.Summary = P.defaultSummary
-            P.reduce(into: &value, value: state.properties[propertyWrapper] as? P.Value ?? P.defaultValue)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-            
-            for (idx, childState) in state.children.enumerated() {
-                if let childPropertyState = childState.childProperties[propertyWrapper] {
-                    if childPropertyState.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedSummary(property: property)
-                            let newChildPropertyState = PropertyState(value: updatedSummary, isDirty: false)
-                            state.children[idx].childProperties[propertyWrapper] = newChildPropertyState
-                            value = P.merge(value, updatedSummary)
-                        } else {
-                            // Get value from remainingProperties
-                            if let remainingProperties = childState.remainingProperties {
-                                if let remainingSummary = remainingProperties[propertyWrapper] {
-                                    value = P.merge(value, remainingSummary as? P.Summary ?? P.defaultSummary)
-                                }
-                            }
-                        }
-                    } else {
-                        // Merge non-dirty, updated value
-                        value = P.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
-                    }
-                } else {
-                    // First fetch of value
-                    if let child = childState.child {
-                        let childSummary = child.getUpdatedSummary(property: property)
-                        let newChildPropertyState = PropertyState(value: childSummary, isDirty: false)
-                        state.children[idx].childProperties[propertyWrapper] = newChildPropertyState
-                        value = P.merge(value, childSummary)
-                    } else {
-                        // Get value from remainingProperties
-                        if let remainingProperties = childState.remainingProperties {
-                            if let remainingSummary = remainingProperties[propertyWrapper] {
-                                value = P.merge(value, remainingSummary as? P.Summary ?? P.defaultSummary)
-                            }
-                        }
-                    }
-                }
-            }
-            return value
-        }
-    }
+//    internal func getUpdatedSummary<P: Property>(property: P.Type) -> P.Summary {
+//        return state.withLock { state in
+//            let propertyWrapper = AnyMetatypeWrapper(metatype: property)
+//            
+//            var value: P.Summary = P.defaultSummary
+//            P.reduce(into: &value, value: state.properties[propertyWrapper] as? P.Value ?? P.defaultValue)
+//            
+//            guard !state.children.isEmpty else {
+//                return value
+//            }
+//            
+//            for (idx, childState) in state.children.enumerated() {
+//                if let childPropertyState = childState.childProperties[propertyWrapper] {
+//                    if childPropertyState.isDirty {
+//                        // Update dirty path
+//                        if let child = childState.child {
+//                            let updatedSummary = child.getUpdatedSummary(property: property)
+//                            let newChildPropertyState = PropertyState(value: updatedSummary, isDirty: false)
+//                            state.children[idx].childProperties[propertyWrapper] = newChildPropertyState
+//                            value = P.merge(value, updatedSummary)
+//                        } else {
+//                            // Get value from remainingProperties
+//                            if let remainingProperties = childState.remainingProperties {
+//                                if let remainingSummary = remainingProperties[propertyWrapper] {
+//                                    value = P.merge(value, remainingSummary as? P.Summary ?? P.defaultSummary)
+//                                }
+//                            }
+//                        }
+//                    } else {
+//                        // Merge non-dirty, updated value
+//                        value = P.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
+//                    }
+//                } else {
+//                    // First fetch of value
+//                    if let child = childState.child {
+//                        let childSummary = child.getUpdatedSummary(property: property)
+//                        let newChildPropertyState = PropertyState(value: childSummary, isDirty: false)
+//                        state.children[idx].childProperties[propertyWrapper] = newChildPropertyState
+//                        value = P.merge(value, childSummary)
+//                    } else {
+//                        // Get value from remainingProperties
+//                        if let remainingProperties = childState.remainingProperties {
+//                            if let remainingSummary = remainingProperties[propertyWrapper] {
+//                                value = P.merge(value, remainingSummary as? P.Summary ?? P.defaultSummary)
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//            return value
+//        }
+//    }
     
-    internal func getUpdatedIntSummary<P: Property>(property: P.Type) -> P.Summary where P.Summary == Int {
+    internal func getUpdatedIntSummary<P: Property>(property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
         return state.withLock { state in
             let propertyWrapper = AnyMetatypeWrapper(metatype: property)
             
             var value: Int = P.defaultSummary
-            P.reduce(into: &value, value: state.propertiesInt[propertyWrapper] as? P.Value ?? P.defaultValue)
+            P.reduce(into: &value, value: state.propertiesInt[propertyWrapper] ?? P.defaultValue)
             
             guard !state.children.isEmpty else {
                 return value
@@ -122,12 +122,12 @@ extension ProgressManager {
         }
     }
     
-    internal func getUpdatedDoubleSummary<P: Property>(property: P.Type) -> P.Summary where P.Summary == Double {
+    internal func getUpdatedDoubleSummary<P: Property>(property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
         return state.withLock { state in
             let propertyWrapper = AnyMetatypeWrapper(metatype: property)
             
             var value: Double = P.defaultSummary
-            P.reduce(into: &value, value: state.propertiesDouble[propertyWrapper] as? P.Value ?? P.defaultValue)
+            P.reduce(into: &value, value: state.propertiesDouble[propertyWrapper] ?? P.defaultValue)
             
             guard !state.children.isEmpty else {
                 return value
@@ -175,12 +175,12 @@ extension ProgressManager {
         }
     }
     
-    internal func getUpdatedStringSummary<P: Property>(property: P.Type) -> P.Summary where P.Summary == String {
+    internal func getUpdatedStringSummary<P: Property>(property: P.Type) -> P.Summary where P.Value == String, P.Summary == String {
         return state.withLock { state in
             let propertyWrapper = AnyMetatypeWrapper(metatype: property)
             
             var value: String = P.defaultSummary
-            P.reduce(into: &value, value: state.propertiesString[propertyWrapper] as? P.Value ?? P.defaultValue)
+            P.reduce(into: &value, value: state.propertiesString[propertyWrapper] ?? P.defaultValue)
             
             guard !state.children.isEmpty else {
                 return value
@@ -255,7 +255,7 @@ extension ProgressManager {
                             value = ProgressManager.Properties.TotalFileCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-drity, updated value
+                        // Merge non-dirty, updated value
                         value = ProgressManager.Properties.TotalFileCount.merge(value, childState.totalFileCount.value)
                     }
                 }
@@ -281,7 +281,7 @@ extension ProgressManager {
                             value = ProgressManager.Properties.CompletedFileCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-drity, updated value
+                        // Merge non-dirty, updated value
                         value = ProgressManager.Properties.CompletedFileCount.merge(value, childState.completedFileCount.value)
                     }
                 }
@@ -312,7 +312,7 @@ extension ProgressManager {
                             value = ProgressManager.Properties.TotalByteCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-drity, updated value
+                        // Merge non-dirty, updated value
                         value = ProgressManager.Properties.TotalByteCount.merge(value, childState.totalByteCount.value)
                     }
                 }
@@ -338,7 +338,7 @@ extension ProgressManager {
                             value = ProgressManager.Properties.CompletedByteCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-drity, updated value
+                        // Merge non-dirty, updated value
                         value = ProgressManager.Properties.CompletedByteCount.merge(value, childState.completedByteCount.value)
                     }
                 }
@@ -363,11 +363,11 @@ extension ProgressManager {
                     if let child = childState.child {
                         let updatedSummary = child.getUpdatedThroughput()
                         let newThroughputState = PropertyStateThroughput(value: updatedSummary, isDirty: false)
-                        state.children[idx].throughput =  newThroughputState
+                        state.children[idx].throughput = newThroughputState
                         value = ProgressManager.Properties.Throughput.merge(value, updatedSummary)
                     }
                 } else {
-                    // Merge non-drity, updated value
+                    // Merge non-dirty, updated value
                     value = ProgressManager.Properties.Throughput.merge(value, childState.throughput.value)
                 }
             }

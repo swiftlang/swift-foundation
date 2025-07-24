@@ -16,20 +16,19 @@ extension ProgressManager {
     @dynamicMemberLookup
     public struct Values : Sendable {
         //TODO: rdar://149225947 Non-escapable conformance
-        var state: State
+        internal var state: State
         
-        var fractionalCountDirty = false
-        var totalFileCountDirty = false
-        var completedFileCountDirty = false
-        var totalByteCountDirty = false
-        var completedByteCountDirty = false
-        var throughputDirty = false
-        var estimatedTimeRemainingDirty = false
-        var dirtyProperties: [any Property.Type] = []
-        var dirtyPropertiesInt: [any Property.Type] = []
-        var dirtyPropertiesDouble: [any Property.Type] = []
-        var dirtyPropertiesString: [any Property.Type] = []
-        var observerState: ObserverState?
+        internal var fractionalCountDirty = false
+        internal var totalFileCountDirty = false
+        internal var completedFileCountDirty = false
+        internal var totalByteCountDirty = false
+        internal var completedByteCountDirty = false
+        internal var throughputDirty = false
+        internal var estimatedTimeRemainingDirty = false
+        internal var dirtyPropertiesInt: [any Property.Type] = []
+        internal var dirtyPropertiesDouble: [any Property.Type] = []
+        internal var dirtyPropertiesString: [any Property.Type] = []
+        internal var observerState: ObserverState?
                 
         /// The total units of work.
         public var totalCount: Int? {
@@ -172,7 +171,7 @@ extension ProgressManager {
             }
         }
         
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int {
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Int, P.Summary == Int {
             get {
                 return state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
             }
@@ -188,9 +187,9 @@ extension ProgressManager {
             }
         }
         
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Double where P.Value == Double {
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Double, P.Summary == Double {
             get {
-                return state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
+                return state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] ?? P.defaultValue
             }
             
             set {
@@ -204,41 +203,59 @@ extension ProgressManager {
             }
         }
         
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String where P.Value == String {
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String where P.Value == String, P.Summary == String {
             get {
                 return state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
             }
-            
+
             set {
                 guard newValue != state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] else {
                     return
                 }
-                
+
                 state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                
-                if P.Summary.self == String.self {
-                    dirtyPropertiesString.append(P.self)
-                } else {
-                    dirtyProperties.append(P.self)
-                }
+
+                dirtyPropertiesString.append(P.self)
             }
         }
         
+        //TODO: Bool
+        
+        //TODO: Add fileURL
+    
+        
         /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
-            get {
-                return state.properties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value ?? P.self.defaultValue
-            }
-            
-            set {
-                guard newValue != state.properties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value else {
-                    return
-                }
-                
-                state.properties[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                
-                dirtyProperties.append(P.self)
-            }
-        }
+//        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
+//            get {
+//                return state.properties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value ?? P.self.defaultValue
+//            }
+//            
+//            set {
+//                guard newValue != state.properties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value else {
+//                    return
+//                }
+//                
+//                state.properties[AnyMetatypeWrapper(metatype: P.self)] = newValue
+//                
+//                dirtyProperties.append(P.self)
+//            }
+//        }
+        
+//        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == URL, P.Summary == URL {
+//            get {
+//                return state.properties[P.key] as? P.Value ?? P.self.defaultValue
+//            }
+//            
+//            set {
+//                print("hit generic setter")
+//                guard newValue != state.properties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value else {
+//                    return
+//                }
+//                
+//                state.properties[AnyMetatypeWrapper(metatype: P.self)] = newValue
+//                
+//                dirtyProperties.append(P.self)
+//            }
+//        }
     }
 }

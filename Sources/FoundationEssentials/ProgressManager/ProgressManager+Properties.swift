@@ -19,6 +19,9 @@ extension ProgressManager {
         associatedtype Value: Sendable, Equatable
         associatedtype Summary: Sendable, Equatable
         
+        // use reverse DNS style, com.apple.file
+//        static var key: String { get }
+        
         /// The default value to return when property is not set to a specific value.
         static var defaultValue: Value { get }
         

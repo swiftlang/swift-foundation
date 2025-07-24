@@ -22,7 +22,7 @@ public struct Subprogress: ~Copyable, Sendable {
     
     // Interop variables for Progress - ProgressManager Interop
     // To be kept alive in ProgressManager
-    internal var managerObservation: _ProgressParentProgressManagerChild?
+    internal var managerObservation: _NSProgressParentSubprogressChild?
     internal var progressParentProgressManagerChildMessenger: ProgressManager?
             
     internal init(parent: ProgressManager, portionOfParent: Int) {
@@ -36,7 +36,7 @@ public struct Subprogress: ~Copyable, Sendable {
     /// - Returns: A `ProgressManager` instance.
     public consuming func start(totalCount: Int?) -> ProgressManager {
         isInitializedToProgressReporter = true
-        
+        // do I have a ProgressManager handed to me - move interop out of here into interop file
         let childManager = ProgressManager(
             total: totalCount,
             progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger,

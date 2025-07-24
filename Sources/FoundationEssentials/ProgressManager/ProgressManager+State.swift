@@ -62,10 +62,10 @@ extension ProgressManager {
     
     internal struct ChildState {
         weak var child: ProgressManager?
+        //TODO: Think about cleaning up for readability
         var remainingPropertiesInt: [AnyMetatypeWrapper: Int]?
         var remainingPropertiesDouble: [AnyMetatypeWrapper: Double]?
         var remainingPropertiesString: [AnyMetatypeWrapper: String]?
-        var remainingProperties: [AnyMetatypeWrapper: (any Sendable)]?
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool
@@ -75,10 +75,10 @@ extension ProgressManager {
         var completedByteCount: PropertyStateInt64
         var throughput: PropertyStateThroughput
         var estimatedTimeRemaining: PropertyStateDuration
+        //TODO: Make sure this gets triggered
         var childPropertiesInt: [AnyMetatypeWrapper: PropertyStateInt]
         var childPropertiesDouble: [AnyMetatypeWrapper: PropertyStateDouble]
         var childPropertiesString: [AnyMetatypeWrapper: PropertyStateString]
-        var childProperties: [AnyMetatypeWrapper: PropertyState]
     }
     
     internal struct ParentState {
@@ -90,16 +90,23 @@ extension ProgressManager {
         case fractionUpdated(totalCount: Int, completedCount: Int)
     }
     
+#if FOUNDATION_FRAMEWORK //put more behind this
     internal struct InteropObservation {
-        let progressParentProgressManagerChild: _ProgressParentProgressManagerChild?
-        var progressParentProgressReporterChild: _ProgressParentProgressReporterChild?
-        #if FOUNDATION_FRAMEWORK //put more behind this
+        let progressParentProgressManagerChild: _NSProgressParentSubprogressChild?
+        var progressParentProgressReporterChild: _NSProgressParentProgressReporterChild?
         var parentBridge: Foundation.Progress?
-        #endif
     }
+#endif
+
+//    internal enum InteropOrNot {
+//        case interop(ProgressManager)
+//        case nonInterop(ProgressFraction)
+//    }
     
     internal struct State {
+        #if FOUNDATION_FRAMEWORK
         var interopChild: ProgressManager?
+        #endif
         var selfFraction: ProgressFraction
         var overallFraction: ProgressFraction {
             var overallFraction = selfFraction
@@ -125,7 +132,6 @@ extension ProgressManager {
         var propertiesInt: [AnyMetatypeWrapper: Int]
         var propertiesDouble: [AnyMetatypeWrapper: Double]
         var propertiesString: [AnyMetatypeWrapper: String]
-        var properties: [AnyMetatypeWrapper: (any Sendable)]
         var interopObservation: InteropObservation
         let progressParentProgressManagerChildMessenger: ProgressManager?
         var observers: [@Sendable (ObserverState) -> Void]
@@ -160,7 +166,6 @@ extension ProgressManager {
                     if let child = childState.child {
                         let updatedProgressFraction = child.getUpdatedProgressFraction()
                         children[idx] = ChildState(child: child,
-                                                   remainingProperties: children[idx].remainingProperties,
                                                    portionOfTotal: children[idx].portionOfTotal,
                                                    childFraction: updatedProgressFraction,
                                                    isDirty: false,
@@ -172,14 +177,12 @@ extension ProgressManager {
                                                    estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
                                                    childPropertiesInt: children[idx].childPropertiesInt,
                                                    childPropertiesDouble: children[idx].childPropertiesDouble,
-                                                   childPropertiesString: children[idx].childPropertiesString,
-                                                   childProperties: children[idx].childProperties)
+                                                   childPropertiesString: children[idx].childPropertiesString)
                         if updatedProgressFraction.isFinished {
                             selfFraction.completed += children[idx].portionOfTotal
                         }
                     } else {
                         children[idx] = ChildState(child: nil,
-                                                   remainingProperties: children[idx].remainingProperties,
                                                    portionOfTotal: children[idx].portionOfTotal,
                                                    childFraction: children[idx].childFraction,
                                                    isDirty: false,
@@ -191,8 +194,7 @@ extension ProgressManager {
                                                    estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
                                                    childPropertiesInt: children[idx].childPropertiesInt,
                                                    childPropertiesDouble: children[idx].childPropertiesDouble,
-                                                   childPropertiesString: children[idx].childPropertiesString,
-                                                   childProperties: children[idx].childProperties)
+                                                   childPropertiesString: children[idx].childPropertiesString)
                         selfFraction.completed += children[idx].portionOfTotal
                     }
                 }
