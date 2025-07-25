@@ -25,9 +25,9 @@ extension ProgressManager {
         internal var completedByteCountDirty = false
         internal var throughputDirty = false
         internal var estimatedTimeRemainingDirty = false
-        internal var dirtyPropertiesInt: [any Property.Type] = []
-        internal var dirtyPropertiesDouble: [any Property.Type] = []
-        internal var dirtyPropertiesString: [any Property.Type] = []
+        internal var dirtyPropertiesInt: [String] = []
+//        internal var dirtyPropertiesDouble: [any Property] = []
+//        internal var dirtyPropertiesString: [any Property] = []
         internal var observerState: ObserverState?
                 
         /// The total units of work.
@@ -171,53 +171,55 @@ extension ProgressManager {
             }
         }
         
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Int, P.Summary == Int {
+        public subscript<P: Property2>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int, P.Summary == Int {
             get {
-                return state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
+                return state.propertiesInt[P.key] ?? P.defaultValue
             }
             
             set {
-                guard newValue != state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] else {
+                guard newValue != state.propertiesInt[P.key] else {
                     return
                 }
                 
-                state.propertiesInt[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                
-                dirtyPropertiesInt.append(P.self)
-            }
-        }
-        
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Double, P.Summary == Double {
-            get {
-                return state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] ?? P.defaultValue
-            }
+                PropertyRegistry.register(P.self)
             
-            set {
-                guard newValue != state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] else {
-                    return
-                }
+                state.propertiesInt[P.key] = newValue
                 
-                state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                
-                dirtyPropertiesDouble.append(P.self)
+                dirtyPropertiesInt.append(P.key)
             }
         }
         
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String where P.Value == String, P.Summary == String {
-            get {
-                return state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
-            }
-
-            set {
-                guard newValue != state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] else {
-                    return
-                }
-
-                state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] = newValue
-
-                dirtyPropertiesString.append(P.self)
-            }
-        }
+//        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Double, P.Summary == Double {
+//            get {
+//                return state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] ?? P.defaultValue
+//            }
+//            
+//            set {
+//                guard newValue != state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] else {
+//                    return
+//                }
+//                
+//                state.propertiesDouble[AnyMetatypeWrapper(metatype: P.self)] = newValue
+//                
+//                dirtyPropertiesDouble.append(P.self)
+//            }
+//        }
+//        
+//        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String where P.Value == String, P.Summary == String {
+//            get {
+//                return state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] ?? P.self.defaultValue
+//            }
+//
+//            set {
+//                guard newValue != state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] else {
+//                    return
+//                }
+//
+//                state.propertiesString[AnyMetatypeWrapper(metatype: P.self)] = newValue
+//
+//                dirtyPropertiesString.append(P.self)
+//            }
+//        }
         
         //TODO: Bool
         

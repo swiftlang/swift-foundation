@@ -13,6 +13,26 @@
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
+    public protocol Property2: SendableMetatype {
+        
+        associatedtype Value: Sendable, Equatable
+        associatedtype Summary: Sendable, Equatable
+        
+        static var key: String { get }
+        
+        static var defaultValue: Value { get }
+        
+        static var defaultSummary: Summary { get }
+        
+        static func reduce(into: inout Summary, value: Value)
+        
+        static func merge(_ summary1: Summary, _ summary2: Summary) -> Summary
+        
+        static func reduceTypeErased(into summary: inout Any, value: Any)
+        
+        static func mergeTypeErased(_ summary1: Any, _ summary2: Any) -> Any 
+    }
+    
     /// A type that conveys task-specific information on progress.
     public protocol Property: SendableMetatype {
         

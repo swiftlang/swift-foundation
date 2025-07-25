@@ -9,6 +9,25 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+internal import Synchronization
+
+@available(FoundationPreview 6.2, *)
+final class PropertyRegistry: Sendable {
+    private static let shared = PropertyRegistry()
+    private let registry = Mutex<[String: Any.Type]>([:])
+    
+    static func register<T: ProgressManager.Property2>(_ type: T.Type) {
+        shared.registry.withLock { registry in
+            registry[type.key] = type
+        }
+    }
+    
+    static func getType(for key: String) -> Any.Type? {
+        shared.registry.withLock { registry in
+            registry[key]
+        }
+    }
+}
 
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
@@ -63,9 +82,7 @@ extension ProgressManager {
     internal struct ChildState {
         weak var child: ProgressManager?
         //TODO: Think about cleaning up for readability
-        var remainingPropertiesInt: [AnyMetatypeWrapper: Int]?
-        var remainingPropertiesDouble: [AnyMetatypeWrapper: Double]?
-        var remainingPropertiesString: [AnyMetatypeWrapper: String]?
+        var remainingPropertiesInt: [String: Int]?
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool
@@ -76,9 +93,7 @@ extension ProgressManager {
         var throughput: PropertyStateThroughput
         var estimatedTimeRemaining: PropertyStateDuration
         //TODO: Make sure this gets triggered
-        var childPropertiesInt: [AnyMetatypeWrapper: PropertyStateInt]
-        var childPropertiesDouble: [AnyMetatypeWrapper: PropertyStateDouble]
-        var childPropertiesString: [AnyMetatypeWrapper: PropertyStateString]
+        var childPropertiesInt: [String: PropertyStateInt]
     }
     
     internal struct ParentState {
@@ -129,9 +144,7 @@ extension ProgressManager {
         var completedByteCount: Int64
         var throughput: Int64
         var estimatedTimeRemaining: Duration
-        var propertiesInt: [AnyMetatypeWrapper: Int]
-        var propertiesDouble: [AnyMetatypeWrapper: Double]
-        var propertiesString: [AnyMetatypeWrapper: String]
+        var propertiesInt: [String: Int]
         var interopObservation: InteropObservation
         let progressParentProgressManagerChildMessenger: ProgressManager?
         var observers: [@Sendable (ObserverState) -> Void]
@@ -159,13 +172,16 @@ extension ProgressManager {
         
         internal mutating func updateChildrenProgressFraction() {
             guard !children.isEmpty else {
+                print("children is empty")
                 return
             }
             for (idx, childState) in children.enumerated() {
+                print("fractionCompleted child state \(childState)")
                 if childState.isDirty {
                     if let child = childState.child {
                         let updatedProgressFraction = child.getUpdatedProgressFraction()
                         children[idx] = ChildState(child: child,
+                                                   remainingPropertiesInt: children[idx].remainingPropertiesInt,
                                                    portionOfTotal: children[idx].portionOfTotal,
                                                    childFraction: updatedProgressFraction,
                                                    isDirty: false,
@@ -175,14 +191,13 @@ extension ProgressManager {
                                                    completedByteCount: children[idx].completedByteCount,
                                                    throughput: children[idx].throughput,
                                                    estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
-                                                   childPropertiesInt: children[idx].childPropertiesInt,
-                                                   childPropertiesDouble: children[idx].childPropertiesDouble,
-                                                   childPropertiesString: children[idx].childPropertiesString)
+                                                   childPropertiesInt: children[idx].childPropertiesInt)
                         if updatedProgressFraction.isFinished {
                             selfFraction.completed += children[idx].portionOfTotal
                         }
                     } else {
                         children[idx] = ChildState(child: nil,
+                                                   remainingPropertiesInt: children[idx].remainingPropertiesInt,
                                                    portionOfTotal: children[idx].portionOfTotal,
                                                    childFraction: children[idx].childFraction,
                                                    isDirty: false,
@@ -192,9 +207,7 @@ extension ProgressManager {
                                                    completedByteCount: children[idx].completedByteCount,
                                                    throughput: children[idx].throughput,
                                                    estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
-                                                   childPropertiesInt: children[idx].childPropertiesInt,
-                                                   childPropertiesDouble: children[idx].childPropertiesDouble,
-                                                   childPropertiesString: children[idx].childPropertiesString)
+                                                   childPropertiesInt: children[idx].childPropertiesInt)
                         selfFraction.completed += children[idx].portionOfTotal
                     }
                 }

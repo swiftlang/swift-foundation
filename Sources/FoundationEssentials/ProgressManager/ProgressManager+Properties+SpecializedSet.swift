@@ -16,23 +16,23 @@ internal import Synchronization
 extension ProgressManager {
     
     //MARK: Methods to set dirty bit recursively
-    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Int, P.Summary == Int {
+    internal func markSelfDirty(key: String, parents: [ParentState]) {
         for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+            parentState.parent.markChildDirty(key: key, at: parentState.positionInParent)
         }
     }
     
-    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Double, P.Summary == Double {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-        }
-    }
-    
-    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == String, P.Summary == String {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-        }
-    }
+//    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == Double, P.Summary == Double {
+//        for parentState in parents {
+//            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+//        }
+//    }
+//    
+//    internal func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) where P.Value == String, P.Summary == String {
+//        for parentState in parents {
+//            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+//        }
+//    }
     
     internal func markSelfDirty(property: ProgressManager.Properties.TotalFileCount.Type, parents: [ParentState]) {
         for parentState in parents {
@@ -70,29 +70,29 @@ extension ProgressManager {
         }
     }
     
-    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Int, P.Summary == Int {
+    internal func markChildDirty(key: String, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].childPropertiesInt[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
+            state.children[position].childPropertiesInt[key]?.isDirty = true
             return state.parents
         }
-        markSelfDirty(property: property, parents: parents)
+        markSelfDirty(key: key, parents: parents)
     }
-    
-    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Double, P.Summary == Double {
-        let parents = state.withLock { state in
-            state.children[position].childPropertiesDouble[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
-            return state.parents
-        }
-        markSelfDirty(property: property, parents: parents)
-    }
-    
-    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == String, P.Summary == String {
-        let parents = state.withLock { state in
-            state.children[position].childPropertiesString[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
-            return state.parents
-        }
-        markSelfDirty(property: property, parents: parents)
-    }
+//    
+//    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == Double, P.Summary == Double {
+//        let parents = state.withLock { state in
+//            state.children[position].childPropertiesDouble[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
+//            return state.parents
+//        }
+//        markSelfDirty(property: property, parents: parents)
+//    }
+//    
+//    internal func markChildDirty<P: Property>(property: P.Type, at position: Int) where P.Value == String, P.Summary == String {
+//        let parents = state.withLock { state in
+//            state.children[position].childPropertiesString[AnyMetatypeWrapper(metatype: property)]?.isDirty = true
+//            return state.parents
+//        }
+//        markSelfDirty(property: property, parents: parents)
+//    }
 
     internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
         let parents = state.withLock { state in
@@ -143,23 +143,23 @@ extension ProgressManager {
     }
     
     //MARK: Methods to preserve values of properties upon deinit
-    internal func setChildRemainingPropertiesInt(_ properties: [AnyMetatypeWrapper: Int], at position: Int) {
+    internal func setChildRemainingPropertiesInt(_ properties: [String: Int], at position: Int) {
         state.withLock { state in
             state.children[position].remainingPropertiesInt = properties
         }
     }
     
-    internal func setChildRemainingPropertiesDouble(_ properties: [AnyMetatypeWrapper: Double], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingPropertiesDouble = properties
-        }
-    }
+//    internal func setChildRemainingPropertiesDouble(_ properties: [AnyMetatypeWrapper: Double], at position: Int) {
+//        state.withLock { state in
+//            state.children[position].remainingPropertiesDouble = properties
+//        }
+//    }
     
-    internal func setChildRemainingPropertiesString(_ properties: [AnyMetatypeWrapper: String], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingPropertiesString = properties
-        }
-    }
+//    internal func setChildRemainingPropertiesString(_ properties: [AnyMetatypeWrapper: String], at position: Int) {
+//        state.withLock { state in
+//            state.children[position].remainingPropertiesString = properties
+//        }
+//    }
     
     internal func setChildTotalFileCount(value: Int, at position: Int) {
         state.withLock { state in
