@@ -102,6 +102,8 @@ internal import _FoundationCollections
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
             propertiesInt: [:],
+            propertiesDouble: [:],
+            propertiesString: [:],
             interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
             progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger,
             observers: []
@@ -183,22 +185,18 @@ internal import _FoundationCollections
     /// Returns a summary for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Summary of property as specified.
-//    public func summary<P: Property>(of property: P.Type) -> P.Summary { // rename this later - aggregate 
-////        _$observationRegistrar.access(self, keyPath: \.state)
-//        return getUpdatedSummary(property: property)
-//    }
     
-    public func summary<P: Property2>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
-        return getUpdatedIntSummary(property: property)
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
+        return getUpdatedIntSummary(property: MetatypeWrapper(property))
     }
     
-//    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
-//        return getUpdatedDoubleSummary(property: property)
-//    }
-//    
-//    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String, P.Summary == String {
-//        return getUpdatedStringSummary(property: property)
-//    }
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
+        return getUpdatedDoubleSummary(property: MetatypeWrapper(property))
+    }
+    
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String, P.Summary == String {
+        return getUpdatedStringSummary(property: MetatypeWrapper(property))
+    }
     
     public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
         return getUpdatedFileCount(type: .total)
@@ -243,6 +241,8 @@ internal import _FoundationCollections
                 throughput: ProgressManager.Properties.Throughput.defaultValue,
                 estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
                 propertiesInt: [:],
+                propertiesDouble: [:],
+                propertiesString: [:],
                 interopObservation: InteropObservation(progressParentProgressManagerChild: nil),
                 progressParentProgressManagerChildMessenger: nil,
                 observers: []
@@ -277,8 +277,20 @@ internal import _FoundationCollections
             }
             
             if values.dirtyPropertiesInt.count > 0 {
-                for propertyKey in values.dirtyPropertiesInt {
-                    markSelfDirty(key: propertyKey, parents: values.state.parents)
+                for property in values.dirtyPropertiesInt {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
+            
+            if values.dirtyPropertiesDouble.count > 0 {
+                for property in values.dirtyPropertiesDouble {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
+            
+            if values.dirtyPropertiesString.count > 0 {
+                for property in values.dirtyPropertiesString {
+                    markSelfDirty(property: property, parents: values.state.parents)
                 }
             }
             
@@ -358,7 +370,9 @@ internal import _FoundationCollections
                                         completedByteCount: PropertyStateInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
                                         throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
                                         estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
-                                        childPropertiesInt: [:])
+                                        childPropertiesInt: [:],
+                                        childPropertiesDouble: [:],
+                                        childPropertiesString: [:])
             state.children.append(childState)
             return state.children.count - 1
         }
@@ -451,20 +465,33 @@ internal import _FoundationCollections
             }
         }
         
-        let (propertiesInt, parents) = state.withLock { state in
-            return (state.propertiesInt, state.parents)
+        let (propertiesInt, propertiesDouble, propertiesString, parents) = state.withLock { state in
+            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.parents)
         }
         
-        var finalSummaryInt: [String: Int] = [:]
-        for key in propertiesInt.keys {
-            let updatedSummary = self.getUpdatedIntSummary(propertyKey: key)
-            finalSummaryInt[key] = updatedSummary
-            print("final summary: key \(key), value \(updatedSummary)")
+        var finalSummaryInt: [MetatypeWrapper<Int>: Int] = [:]
+        for property in propertiesInt.keys {
+            let updatedSummary = self.getUpdatedIntSummary(property: property)
+            finalSummaryInt[property] = updatedSummary
         }
-        print("final summary Int: \(finalSummaryInt)")
+        
+        var finalSummaryDouble: [MetatypeWrapper<Double>: Double] = [:]
+        for property in propertiesDouble.keys {
+            let updatedSummary = self.getUpdatedDoubleSummary(property: property)
+            finalSummaryDouble[property] = updatedSummary
+        }
+
+        var finalSummaryString: [MetatypeWrapper<String>: String] = [:]
+        for property in propertiesString.keys {
+            let updatedSummary = self.getUpdatedStringSummary(property: property)
+            finalSummaryString[property] = updatedSummary
+        }
+        
         
         for parentState in parents {
             parentState.parent.setChildRemainingPropertiesInt(finalSummaryInt, at: parentState.positionInParent)
+            parentState.parent.setChildRemainingPropertiesDouble(finalSummaryDouble, at: parentState.positionInParent)
+            parentState.parent.setChildRemainingPropertiesString(finalSummaryString, at: parentState.positionInParent)
             parentState.parent.setChildTotalFileCount(value: self.getUpdatedFileCount(type: .total), at: parentState.positionInParent)
             parentState.parent.setChildCompletedFileCount(value: self.getUpdatedFileCount(type: .completed), at: parentState.positionInParent)
             parentState.parent.setChildTotalByteCount(value: self.getUpdatedByteCount(type: .total), at: parentState.positionInParent)

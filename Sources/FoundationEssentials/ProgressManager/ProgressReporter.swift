@@ -79,17 +79,17 @@ import Observation
     /// Returns a summary for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Summary of property as specified.
-    public func summary<P: ProgressManager.Property2>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int {
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int {
         manager.summary(of: property)
     }
     
-//    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Double where P.Value == Double, P.Summary == Double {
-//        manager.summary(of: property)
-//    }
-//    
-//    public func summary<P: ProgressManager.Property>(of property: P.Type) -> String where P.Value == String, P.Summary == String {
-//        manager.summary(of: property)
-//    }
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Double where P.Value == Double, P.Summary == Double {
+        manager.summary(of: property)
+    }
+    
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> String where P.Value == String, P.Summary == String {
+        manager.summary(of: property)
+    }
     
     public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
         return manager.summary(of: property)

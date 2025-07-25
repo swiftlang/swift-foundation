@@ -13,26 +13,6 @@
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
-    public protocol Property2: SendableMetatype {
-        
-        associatedtype Value: Sendable, Equatable
-        associatedtype Summary: Sendable, Equatable
-        
-        static var key: String { get }
-        
-        static var defaultValue: Value { get }
-        
-        static var defaultSummary: Summary { get }
-        
-        static func reduce(into: inout Summary, value: Value)
-        
-        static func merge(_ summary1: Summary, _ summary2: Summary) -> Summary
-        
-        static func reduceTypeErased(into summary: inout Any, value: Any)
-        
-        static func mergeTypeErased(_ summary1: Any, _ summary2: Any) -> Any 
-    }
-    
     /// A type that conveys task-specific information on progress.
     public protocol Property: SendableMetatype {
         
@@ -40,7 +20,7 @@ extension ProgressManager {
         associatedtype Summary: Sendable, Equatable
         
         // use reverse DNS style, com.apple.file
-//        static var key: String { get }
+        static var key: String { get }
         
         /// The default value to return when property is not set to a specific value.
         static var defaultValue: Value { get }
@@ -62,6 +42,8 @@ extension ProgressManager {
             public typealias Value = Int
             
             public typealias Summary = Int
+            
+            public static var key: String { return "TotalFileCount" }
             
             public static var defaultValue: Int { return 0 }
             
@@ -86,6 +68,8 @@ extension ProgressManager {
             
             public typealias Summary = Int
             
+            public static var key: String { return "CompletedFileCount" }
+
             public static var defaultValue: Int { return 0 }
             
             public static var defaultSummary: Int { return 0 }
@@ -109,6 +93,8 @@ extension ProgressManager {
             
             public typealias Summary = Int64
             
+            public static var key: String { return "TotalByteCount" }
+            
             public static var defaultValue: Int64 { return 0 }
             
             public static var defaultSummary: Int64 { return 0 }
@@ -131,6 +117,8 @@ extension ProgressManager {
             public typealias Value = Int64
             
             public typealias Summary = Int64
+            
+            public static var key: String { return "CompletedByteCount" }
             
             public static var defaultValue: Int64 { return 0 }
             
@@ -159,6 +147,8 @@ extension ProgressManager {
             
             public typealias Summary = AggregateThroughput
             
+            public static var key: String { return "Throughput" }
+            
             public static var defaultValue: Int64 { return 0 }
             
             public static var defaultSummary: AggregateThroughput { return AggregateThroughput(values: 0, count: 0) }
@@ -181,6 +171,8 @@ extension ProgressManager {
             public typealias Value = Duration
             
             public typealias Summary = Duration
+            
+            public static var key: String { return "EstimatedTimeRemaining" }
             
             public static var defaultValue: Duration { return Duration.seconds(0) }
 
