@@ -517,7 +517,8 @@ extension ProgressManager: Hashable, Equatable {
 extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         return """
-        ObjectIdentifier: \(ObjectIdentifier(self))
+        Class Name: ProgressManager
+        Object Identifier: \(ObjectIdentifier(self))
         totalCount: \(String(describing: totalCount))
         completedCount: \(completedCount)
         fractionCompleted: \(fractionCompleted)

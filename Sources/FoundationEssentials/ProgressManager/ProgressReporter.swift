@@ -50,6 +50,8 @@ import Observation
     
     public var description: String {
         return """
+        Class Name: ProgressReporter
+        Object Identifier: \(ObjectIdentifier(self))
         progressManager: \(manager)
         totalCount: \(String(describing: totalCount))
         completedCount: \(completedCount)
