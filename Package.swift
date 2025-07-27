@@ -57,7 +57,7 @@ var dependencies: [Package.Dependency] {
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                from: "1.2.1"),
+                from: "1.1.0"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
