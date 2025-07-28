@@ -376,6 +376,66 @@ import Testing
     }
     
 }
+    
+@Suite("Progress Manager File URL Properties") struct ProgressManagerFileURLTests {
+    
+    func doSomething(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.fileURL = URL(string: "https://www.kittens.com")
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.kittens.com")])
+    }
+    
+    @Test func discreteManager() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.fileURL = URL(string: "https://www.cats.com")
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com")])
+    }
+    
+    @Test func twoLevelManagerWithFinishedChild() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.fileURL = URL(string: "https://www.cats.com")
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com")])
+    }
+    
+    @Test func twoLevelManagerWithUnfinishedChild() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.fileURL = URL(string: "https://www.cats.com")
+        }
+        
+        let childManager = manager.subprogress(assigningCount: 1).start(totalCount: 2)
+        
+        childManager.withProperties { properties in
+            properties.completedCount = 1
+            properties.fileURL = URL(string: "https://www.kittens.com")
+        }
+        
+        #expect(manager.fractionCompleted == 0.75)
+        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com"), URL(string: "https://www.kittens.com")])
+    }
+}
 
 extension ProgressManager.Properties {
 

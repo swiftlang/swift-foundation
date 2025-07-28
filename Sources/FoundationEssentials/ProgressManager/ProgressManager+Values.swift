@@ -172,7 +172,7 @@ extension ProgressManager {
             }
         }
         
-        public subscript(dyanamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.FileURL.Type>) -> URL? {
+        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.FileURL.Type>) -> URL? {
             get {
                 return state.fileURL
             }
