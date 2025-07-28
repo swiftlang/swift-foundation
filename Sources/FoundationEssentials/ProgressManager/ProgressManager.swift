@@ -101,6 +101,7 @@ internal import _FoundationCollections
             completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
+            fileURL: ProgressManager.Properties.FileURL.defaultValue,
             propertiesInt: [:],
             propertiesDouble: [:],
             propertiesString: [:],
@@ -223,6 +224,10 @@ internal import _FoundationCollections
         return getUpdatedEstimatedTimeRemaining()
     }
     
+    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL] {
+        return getUpdatedFileURL()
+    }
+    
     /// Mutates any settable properties that convey information about progress.
     public func withProperties<T, E: Error>(
         _ closure: (inout sending Values) throws(E) -> sending T
@@ -274,6 +279,10 @@ internal import _FoundationCollections
             
             if values.estimatedTimeRemainingDirty {
                 markSelfDirty(property: Properties.EstimatedTimeRemaining.self, parents: values.state.parents)
+            }
+            
+            if values.fileURLDirty {
+                markSelfDirty(property: Properties.FileURL.self, parents: values.state.parents)
             }
             
             if values.dirtyPropertiesInt.count > 0 {
@@ -370,6 +379,7 @@ internal import _FoundationCollections
                                         completedByteCount: PropertyStateInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
                                         throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
                                         estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
+                                        fileURL: PropertyStateURL(value: ProgressManager.Properties.FileURL.defaultSummary, isDirty: false),
                                         childPropertiesInt: [:],
                                         childPropertiesDouble: [:],
                                         childPropertiesString: [:])

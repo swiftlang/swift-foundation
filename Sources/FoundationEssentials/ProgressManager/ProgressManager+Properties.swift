@@ -191,7 +191,34 @@ extension ProgressManager {
             public static func merge(_ summary1: Duration, _ summary2: Duration) -> Duration {
                 return max(summary1, summary2)
             }
-
+        }
+        
+        public var fileURL: FileURL.Type { FileURL.self }
+        public struct FileURL: Sendable, Property {
+            
+            public typealias Value = URL?
+            
+            public typealias Summary = [URL]
+            
+            public static var key: String { return "FileURL" }
+            
+            public static var defaultValue: URL? { return nil }
+            
+            public static var defaultSummary: [URL] { return [] }
+            
+            public typealias T = URL
+            
+            public static func reduce(into summary: inout [URL], value: URL?) {
+                guard let value else {
+                    return
+                }
+                summary.append(value)
+            }
+            
+            public static func merge(_ summary1: [URL], _ summary2: [URL]) -> [URL] {
+                return summary1 + summary2
+            }
+            
         }
     }
 }

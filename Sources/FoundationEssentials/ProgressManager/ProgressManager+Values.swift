@@ -25,6 +25,7 @@ extension ProgressManager {
         internal var completedByteCountDirty = false
         internal var throughputDirty = false
         internal var estimatedTimeRemainingDirty = false
+        internal var fileURLDirty = false
         internal var dirtyPropertiesInt: [MetatypeWrapper<Int>] = []
         internal var dirtyPropertiesDouble: [MetatypeWrapper<Double>] = []
         internal var dirtyPropertiesString: [MetatypeWrapper<String>] = []
@@ -168,6 +169,22 @@ extension ProgressManager {
                 state.estimatedTimeRemaining = newValue
 
                 estimatedTimeRemainingDirty = true
+            }
+        }
+        
+        public subscript(dyanamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.FileURL.Type>) -> URL? {
+            get {
+                return state.fileURL
+            }
+            
+            set {
+                guard newValue != state.fileURL else {
+                    return
+                }
+                
+                state.fileURL = newValue
+                
+                fileURLDirty = true
             }
         }
         

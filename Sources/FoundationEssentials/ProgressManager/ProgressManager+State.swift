@@ -76,6 +76,11 @@ extension ProgressManager {
         var isDirty: Bool
     }
     
+    internal struct PropertyStateURL {
+        var value: [URL]
+        var isDirty: Bool
+    }
+    
     internal struct ChildState {
         weak var child: ProgressManager?
         var remainingPropertiesInt: [MetatypeWrapper<Int>: Int]?
@@ -90,6 +95,7 @@ extension ProgressManager {
         var completedByteCount: PropertyStateInt64
         var throughput: PropertyStateThroughput
         var estimatedTimeRemaining: PropertyStateDuration
+        var fileURL: PropertyStateURL
         var childPropertiesInt: [MetatypeWrapper<Int>: PropertyStateInt]
         var childPropertiesDouble: [MetatypeWrapper<Double>: PropertyStateDouble]
         var childPropertiesString: [MetatypeWrapper<String>: PropertyStateString]
@@ -143,6 +149,7 @@ extension ProgressManager {
         var completedByteCount: Int64
         var throughput: Int64
         var estimatedTimeRemaining: Duration
+        var fileURL: URL?
         var propertiesInt: [MetatypeWrapper<Int>: Int]
         var propertiesDouble: [MetatypeWrapper<Double>: Double]
         var propertiesString: [MetatypeWrapper<String>: String]
@@ -192,6 +199,7 @@ extension ProgressManager {
                                                    completedByteCount: children[idx].completedByteCount,
                                                    throughput: children[idx].throughput,
                                                    estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
+                                                   fileURL: children[idx].fileURL,
                                                    childPropertiesInt: children[idx].childPropertiesInt,
                                                    childPropertiesDouble: children[idx].childPropertiesDouble,
                                                    childPropertiesString: children[idx].childPropertiesString)
@@ -212,6 +220,7 @@ extension ProgressManager {
                                                    completedByteCount: children[idx].completedByteCount,
                                                    throughput: children[idx].throughput,
                                                    estimatedTimeRemaining: children[idx].estimatedTimeRemaining,
+                                                   fileURL: children[idx].fileURL,
                                                    childPropertiesInt: children[idx].childPropertiesInt,
                                                    childPropertiesDouble: children[idx].childPropertiesDouble,
                                                    childPropertiesString: children[idx].childPropertiesString)

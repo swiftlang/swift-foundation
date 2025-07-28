@@ -70,6 +70,12 @@ extension ProgressManager {
         }
     }
     
+    internal func markSelfDirty(property: ProgressManager.Properties.FileURL.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
     internal func markChildDirty(property: MetatypeWrapper<Int>, at position: Int) {
         let parents = state.withLock { state in
             state.children[position].childPropertiesInt[property]?.isDirty = true
@@ -137,6 +143,14 @@ extension ProgressManager {
     internal func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) {
         let parents = state.withLock { state in
             state.children[position].estimatedTimeRemaining.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: ProgressManager.Properties.FileURL.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].fileURL.isDirty = true
             return state.parents
         }
         markSelfDirty(property: property, parents: parents)

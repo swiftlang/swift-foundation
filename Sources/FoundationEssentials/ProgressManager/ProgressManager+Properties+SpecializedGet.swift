@@ -316,7 +316,7 @@ extension ProgressManager {
     
     internal func getUpdatedEstimatedTimeRemaining() -> Duration {
         return state.withLock { state in
-            // Get self's throughput as part of summary
+            // Get self's estimatedTimeRemaining as part of summary
             var value: Duration = Duration.seconds(0)
             ProgressManager.Properties.EstimatedTimeRemaining.reduce(into: &value, value: state.estimatedTimeRemaining)
             
@@ -335,7 +335,35 @@ extension ProgressManager {
                     }
                 } else {
                     // Merge non-dirty, updated value
-                    value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, state.estimatedTimeRemaining)
+                    value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, childState.estimatedTimeRemaining.value)
+                }
+            }
+            return value
+        }
+    }
+    
+    internal func getUpdatedFileURL() -> [URL] {
+        return state.withLock { state in
+            // Get self's estimatedTimeRemaining as part of summary
+            var value: [URL] = ProgressManager.Properties.FileURL.defaultSummary
+            ProgressManager.Properties.FileURL.reduce(into: &value, value: state.fileURL)
+            
+            guard !state.children.isEmpty else {
+                return value
+            }
+            
+            for (idx, childState) in state.children.enumerated() {
+                if childState.fileURL.isDirty {
+                    // Update dirty path
+                    if let child = childState.child {
+                        let updatedSummary = child.getUpdatedFileURL()
+                        let newFileURL = PropertyStateURL(value: updatedSummary, isDirty: false)
+                        state.children[idx].fileURL = newFileURL
+                        value = ProgressManager.Properties.FileURL.merge(value, updatedSummary)
+                    }
+                } else {
+                    // Merge non-dirty, updated value
+                    value = ProgressManager.Properties.FileURL.merge(value, childState.fileURL.value)
                 }
             }
             return value
