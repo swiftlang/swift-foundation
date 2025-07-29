@@ -10,8 +10,151 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import Synchronization
+
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
+    
+    /// Returns a summary for specified property in subtree.
+    /// - Parameter metatype: Type of property.
+    /// - Returns: Summary of property as specified.
+    
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
+        return getUpdatedIntSummary(property: MetatypeWrapper(property))
+    }
+    
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
+        return getUpdatedDoubleSummary(property: MetatypeWrapper(property))
+    }
+    
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String, P.Summary == String {
+        return getUpdatedStringSummary(property: MetatypeWrapper(property))
+    }
+    
+    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
+        return getUpdatedFileCount(type: .total)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int {
+        return getUpdatedFileCount(type: .completed)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> Int64 {
+        return getUpdatedByteCount(type: .total)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> Int64 {
+        return getUpdatedByteCount(type: .completed)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> Int64 {
+        let throughput = getUpdatedThroughput()
+        return throughput.values / Int64(throughput.count)
+    }
+    
+    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration {
+        return getUpdatedEstimatedTimeRemaining()
+    }
+    
+    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL] {
+        return getUpdatedFileURL()
+    }
+    
+    // MARK: Additional Properties Methods
+    internal func getProperties<T, E: Error>(
+        _ closure: (sending Values) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try state.withLock { state throws(E) -> T in
+            let values = Values(state: state)
+            let result = try closure(values)
+            return result
+        }
+    }
+    
+    /// Mutates any settable properties that convey information about progress.
+    public func withProperties<T, E: Error>(
+        _ closure: (inout sending Values) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        return try state.withLock { (state) throws(E) -> T in
+            var values = Values(state: state)
+            // This is done to avoid copy on write later
+            state = State(
+                selfFraction: ProgressFraction(),
+                children: [],
+                parents: [],
+                totalFileCount: ProgressManager.Properties.TotalFileCount.defaultValue,
+                completedFileCount: ProgressManager.Properties.CompletedFileCount.defaultValue,
+                totalByteCount: ProgressManager.Properties.TotalByteCount.defaultValue,
+                completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
+                throughput: ProgressManager.Properties.Throughput.defaultValue,
+                estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
+                propertiesInt: [:],
+                propertiesDouble: [:],
+                propertiesString: [:],
+                interopObservation: InteropObservation(subprogressBridge: nil),
+                observers: []
+            )
+            let result = try closure(&values)
+            if values.fractionalCountDirty {
+                markSelfDirty(parents: values.state.parents)
+            }
+            
+            if values.totalFileCountDirty {
+                markSelfDirty(property: Properties.TotalFileCount.self, parents: values.state.parents)
+            }
+            
+            if values.completedFileCountDirty {
+                markSelfDirty(property: Properties.CompletedFileCount.self, parents: values.state.parents)
+            }
+            
+            if values.totalByteCountDirty {
+                markSelfDirty(property: Properties.TotalByteCount.self, parents: values.state.parents)
+            }
+            
+            if values.completedByteCountDirty {
+                markSelfDirty(property: Properties.CompletedByteCount.self, parents: values.state.parents)
+            }
+            
+            if values.throughputDirty {
+                markSelfDirty(property: Properties.Throughput.self, parents: values.state.parents)
+            }
+            
+            if values.estimatedTimeRemainingDirty {
+                markSelfDirty(property: Properties.EstimatedTimeRemaining.self, parents: values.state.parents)
+            }
+            
+            if values.fileURLDirty {
+                markSelfDirty(property: Properties.FileURL.self, parents: values.state.parents)
+            }
+            
+            if values.dirtyPropertiesInt.count > 0 {
+                for property in values.dirtyPropertiesInt {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
+            
+            if values.dirtyPropertiesDouble.count > 0 {
+                for property in values.dirtyPropertiesDouble {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
+            
+            if values.dirtyPropertiesString.count > 0 {
+                for property in values.dirtyPropertiesString {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
+            
+            if let observerState = values.observerState {
+                if let _ = state.interopObservation.reporterBridge {
+                    notifyObservers(with: observerState)
+                }
+            }
+            state = values.state
+            return result
+        }
+    }
+    
     /// A container that holds values for properties that specify information on progress.
     @dynamicMemberLookup
     public struct Values : Sendable {
@@ -44,14 +187,11 @@ extension ProgressManager {
                 
                 state.selfFraction.total = newValue
                 
-                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
-                
-                observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
+                interopNotifications()
                 
                 fractionalCountDirty = true
             }
         }
-        
         
         /// The completed units of work.
         public var completedCount: Int {
@@ -66,9 +206,7 @@ extension ProgressManager {
                 
                 state.selfFraction.completed = newValue
                 
-                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
-                
-                observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
+                interopNotifications()
 
                 fractionalCountDirty = true
             }
@@ -234,6 +372,12 @@ extension ProgressManager {
 
                 dirtyPropertiesString.append(MetatypeWrapper(P.self))
             }
+        }
+        
+        private mutating func interopNotifications() {
+            state.interopObservation.subprogressBridge?.manager.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
+            
+            self.observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
         }
     }
 }
