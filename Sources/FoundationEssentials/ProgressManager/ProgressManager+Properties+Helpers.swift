@@ -14,6 +14,11 @@ internal import Synchronization
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
+    internal enum CountType {
+        case total
+        case completed
+    }
+    
     //MARK: Methods to get updated summary of properties
     internal func getUpdatedIntSummary(property: MetatypeWrapper<Int>) -> Int {
         return state.withLock { state in
@@ -165,11 +170,6 @@ extension ProgressManager {
             }
             return value
         }
-    }
-    
-    internal enum CountType {
-        case total
-        case completed
     }
     
     internal func getUpdatedFileCount(type: CountType) -> Int {
@@ -367,6 +367,196 @@ extension ProgressManager {
                 }
             }
             return value
+        }
+    }
+    
+    //MARK: Methods to set dirty bit recursively
+    internal func markSelfDirty(property: MetatypeWrapper<Int>, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: MetatypeWrapper<Double>, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: MetatypeWrapper<String>, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: ProgressManager.Properties.TotalFileCount.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: ProgressManager.Properties.CompletedFileCount.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: ProgressManager.Properties.TotalByteCount.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: ProgressManager.Properties.CompletedByteCount.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: ProgressManager.Properties.Throughput.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markSelfDirty(property: ProgressManager.Properties.FileURL.Type, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
+    internal func markChildDirty(property: MetatypeWrapper<Int>, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].childPropertiesInt[property]?.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: MetatypeWrapper<Double>, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].childPropertiesDouble[property]?.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: MetatypeWrapper<String>, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].childPropertiesString[property]?.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+
+    internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].totalFileCount.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].completedFileCount.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].totalByteCount.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].completedByteCount.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].throughput.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].estimatedTimeRemaining.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    internal func markChildDirty(property: ProgressManager.Properties.FileURL.Type, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].fileURL.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
+    
+    //MARK: Methods to preserve values of properties upon deinit
+    internal func setChildRemainingPropertiesInt(_ properties: [MetatypeWrapper<Int>: Int], at position: Int) {
+        state.withLock { state in
+            state.children[position].remainingPropertiesInt = properties
+        }
+    }
+    
+    internal func setChildRemainingPropertiesDouble(_ properties: [MetatypeWrapper<Double>: Double], at position: Int) {
+        state.withLock { state in
+            state.children[position].remainingPropertiesDouble = properties
+        }
+    }
+    
+    internal func setChildRemainingPropertiesString(_ properties: [MetatypeWrapper<String>: String], at position: Int) {
+        state.withLock { state in
+            state.children[position].remainingPropertiesString = properties
+        }
+    }
+    
+    internal func setChildTotalFileCount(value: Int, at position: Int) {
+        state.withLock { state in
+            state.children[position].totalFileCount = PropertyStateInt(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildCompletedFileCount(value: Int, at position: Int) {
+        state.withLock { state in
+            state.children[position].completedFileCount = PropertyStateInt(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildTotalByteCount(value: Int64, at position: Int) {
+        state.withLock { state in
+            state.children[position].totalByteCount = PropertyStateInt64(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildCompletedByteCount(value: Int64, at position: Int) {
+        state.withLock { state in
+            state.children[position].completedByteCount = PropertyStateInt64(value: value, isDirty: false)
+        }
+    }
+    
+    internal func setChildThroughput(value: ProgressManager.Properties.Throughput.AggregateThroughput, at position: Int) {
+        state.withLock { state in
+            state.children[position].throughput = PropertyStateThroughput(value: value, isDirty: false)
         }
     }
 }
