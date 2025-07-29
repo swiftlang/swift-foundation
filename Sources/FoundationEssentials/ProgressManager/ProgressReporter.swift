@@ -116,6 +116,10 @@ import Observation
     public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration {
         manager.summary(of: property)
     }
+    
+    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL] {
+        manager.summary(of: property)
+    }
 
     internal let manager: ProgressManager
     
