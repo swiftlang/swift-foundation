@@ -125,29 +125,29 @@ private struct UUIDTests {
         #expect(uuid2 == uuid1)
     }
     
-    func testRandomVersionAndVariant() {
+    @Test func randomVersionAndVariant() {
         var generator = SystemRandomNumberGenerator()
         for _ in 0..<10000 {
             let uuid = UUID.random(using: &generator)
-            XCTAssertEqual(uuid.versionNumber, 0b0100)
-            XCTAssertEqual(uuid.varint, 0b10)
+            #expect(uuid.versionNumber == 0b0100)
+            #expect(uuid.varint == 0b10)
         }
     }
     
-    func testDeterministicRandomGeneration() {
+    @Test func deterministicRandomGeneration() {
         var generator = PCGRandomNumberGenerator(seed: 123456789)
         
         let firstUUID = UUID.random(using: &generator)
-        XCTAssertEqual(firstUUID, UUID(uuidString: "9492BAC4-F353-49E7-ACBB-A40941CA65DE"))
+        #expect(firstUUID ==  UUID(uuidString: "9492BAC4-F353-49E7-ACBB-A40941CA65DE"))
         
         let secondUUID = UUID.random(using: &generator)
-        XCTAssertEqual(secondUUID, UUID(uuidString: "392C44E5-EB3E-4455-85A7-AF9556722B9A"))
+        #expect(secondUUID == UUID(uuidString: "392C44E5-EB3E-4455-85A7-AF9556722B9A"))
         
         let thirdUUID = UUID.random(using: &generator)
-        XCTAssertEqual(thirdUUID, UUID(uuidString: "9ABFCCE9-AA85-485C-9CBF-C62F0C8D1D1A"))
+        #expect(thirdUUID ==  UUID(uuidString: "9ABFCCE9-AA85-485C-9CBF-C62F0C8D1D1A"))
         
         let fourthUUID = UUID.random(using: &generator)
-        XCTAssertEqual(fourthUUID, UUID(uuidString: "2B29542E-F719-4D58-87B9-C6291ADD4541"))
+        #expect(fourthUUID == UUID(uuidString: "2B29542E-F719-4D58-87B9-C6291ADD4541"))
     }
 }
 
