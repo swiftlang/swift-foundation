@@ -19,16 +19,13 @@ public struct Subprogress: ~Copyable, Sendable {
     internal var parent: ProgressManager
     internal var portionOfParent: Int
     internal var isInitializedToProgressReporter: Bool
-    
-    // Interop variables for Progress - ProgressManager Interop
-    // To be kept alive in ProgressManager
-    internal var managerObservation: _NSProgressParentSubprogressChild?
-    internal var progressParentProgressManagerChildMessenger: ProgressManager?
+    internal var subprogressBridge: SubprogressBridge?
             
-    internal init(parent: ProgressManager, portionOfParent: Int) {
+    internal init(parent: ProgressManager, portionOfParent: Int, subprogressBridge: SubprogressBridge? = nil) {
         self.parent = parent
         self.portionOfParent = portionOfParent
         self.isInitializedToProgressReporter = false
+        self.subprogressBridge = subprogressBridge
     }
     
     /// Instantiates a ProgressManager which is a child to the parent from which `self` is returned.
@@ -36,29 +33,27 @@ public struct Subprogress: ~Copyable, Sendable {
     /// - Returns: A `ProgressManager` instance.
     public consuming func start(totalCount: Int?) -> ProgressManager {
         isInitializedToProgressReporter = true
-        // do I have a ProgressManager handed to me - move interop out of here into interop file
+
         let childManager = ProgressManager(
             total: totalCount,
-            progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger,
-            managerObservation: managerObservation
+            completed: nil,
+            subprogressBridge: subprogressBridge
         )
         
-        // If messenger exists, it means there is interop of ProgressParent - ProgressManager Child
-        if let intermediary = progressParentProgressManagerChildMessenger {
-            // Set interop child of ghost manager so ghost manager reads from here
-            intermediary.setInteropChild(interopChild: childManager)
-        } else {
-            // Add child to parent's _children list & Store in child children's position in parent
-            let position = parent.addChild(
-                child: childManager,
-                portion: portionOfParent,
-                childFraction: childManager.getProgressFraction()
-            )
-            childManager.addParent(
-                parent: parent,
-                positionInParent: position
-            )
+        guard subprogressBridge == nil else {
+            subprogressBridge?.manager.setInteropChild(interopChild: childManager)
+            return childManager
         }
+
+        let position = parent.addChild(
+            child: childManager,
+            portion: portionOfParent,
+            childFraction: childManager.getProgressFraction()
+        )
+        childManager.addParent(
+            parent: parent,
+            positionInParent: position
+        )
         
         return childManager
     }

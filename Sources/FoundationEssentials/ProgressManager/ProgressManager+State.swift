@@ -105,18 +105,6 @@ extension ProgressManager {
         var parent: ProgressManager
         var positionInParent: Int
     }
-    
-    internal enum ObserverState {
-        case fractionUpdated(totalCount: Int, completedCount: Int)
-    }
-    
-#if FOUNDATION_FRAMEWORK //put more behind this
-    internal struct InteropObservation {
-        let progressParentProgressManagerChild: _NSProgressParentSubprogressChild?
-        var progressParentProgressReporterChild: _NSProgressParentProgressReporterChild?
-        var parentBridge: Foundation.Progress?
-    }
-#endif
 
 //    internal enum InteropOrNot {
 //        case interop(ProgressManager)
@@ -124,9 +112,6 @@ extension ProgressManager {
 //    }
     
     internal struct State {
-        #if FOUNDATION_FRAMEWORK
-        var interopChild: ProgressManager?
-        #endif
         var selfFraction: ProgressFraction
         var overallFraction: ProgressFraction {
             var overallFraction = selfFraction
@@ -153,25 +138,31 @@ extension ProgressManager {
         var propertiesInt: [MetatypeWrapper<Int>: Int]
         var propertiesDouble: [MetatypeWrapper<Double>: Double]
         var propertiesString: [MetatypeWrapper<String>: String]
+#if FOUNDATION_FRAMEWORK
+        var interopChild: ProgressManager?
         var interopObservation: InteropObservation
-        let progressParentProgressManagerChildMessenger: ProgressManager?
         var observers: [@Sendable (ObserverState) -> Void]
-        
+#endif
+
         /// Returns nil if `self` was instantiated without total units;
         /// returns a `Int` value otherwise.
         internal func getTotalCount() -> Int? {
+#if FOUNDATION_FRAMEWORK
             if let interopChild = interopChild {
                 return interopChild.totalCount
             }
+#endif
             return selfFraction.total
         }
         
         /// Returns 0 if `self` has `nil` total units;
         /// returns a `Int` value otherwise.
         internal mutating func getCompletedCount() -> Int {
+#if FOUNDATION_FRAMEWORK
             if let interopChild = interopChild {
                 return interopChild.completedCount
             }
+#endif
             
             updateChildrenProgressFraction()
 
@@ -227,12 +218,6 @@ extension ProgressManager {
                         selfFraction.completed += children[idx].portionOfTotal
                     }
                 }
-            }
-        }
-        
-        internal func notifyObservers(with observerState: ObserverState) {
-            for observer in observers {
-                observer(observerState)
             }
         }
     }
