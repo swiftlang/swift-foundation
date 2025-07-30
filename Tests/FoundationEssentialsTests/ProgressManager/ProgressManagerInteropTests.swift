@@ -41,7 +41,7 @@ import Testing
             p1.completedUnitCount = 2
         }.value
         
-        // Check if ProgressManager values propagate to Progress parent
+        // Check if Progress values propagate to Progress parent
         #expect(overall.fractionCompleted == 0.5)
         #expect(overall.completedUnitCount == 5)
         
@@ -49,7 +49,7 @@ import Testing
         let p2 = overall.makeChild(withPendingUnitCount: 5)
         await doSomethingWithReporter(subprogress: p2)
         
-        // Check if Progress values propagate to Progress parent
+        // Check if ProgressManager values propagate to Progress parent
         #expect(overall.fractionCompleted == 1.0)
         #expect(overall.completedUnitCount == 10)
     }

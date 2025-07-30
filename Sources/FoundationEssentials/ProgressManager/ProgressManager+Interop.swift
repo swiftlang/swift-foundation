@@ -123,9 +123,9 @@ internal final class SubprogressBridge: Sendable {
     internal let manager: ProgressManager
     
     init(parent: Progress, portion: Int64, manager: ProgressManager) {
-        self.manager = manager
         self.progressBridge = Progress(totalUnitCount: 1, parent: parent, pendingUnitCount: portion)
-                
+        self.manager = manager
+
         manager.addObserver { [weak self] observerState in
             guard let self else {
                 return
@@ -133,8 +133,9 @@ internal final class SubprogressBridge: Sendable {
             
             switch observerState {
             case .fractionUpdated(let totalCount, let completedCount):
-                self.progressBridge.completedUnitCount = Int64(completedCount)
+                // This needs to change totalUnitCount before completedUnitCount otherwise progressBridge will finish and mess up the math
                 self.progressBridge.totalUnitCount = Int64(totalCount)
+                self.progressBridge.completedUnitCount = Int64(completedCount)
             }
         }
     }
