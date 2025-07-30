@@ -81,7 +81,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     ///
     /// - Parameter generator: The random number generator to use when creating the new random value.
     /// - Returns: A random UUID.
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationPreview 6.3, *)
     public static func random(
         using generator: inout some RandomNumberGenerator
     ) -> UUID {
