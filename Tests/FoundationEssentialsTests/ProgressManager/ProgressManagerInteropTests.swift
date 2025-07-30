@@ -13,12 +13,7 @@ import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
-#else
-@testable import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
 
-/// Unit tests for propagation of type-safe metadata in ProgressManager tree.
-#if FOUNDATION_FRAMEWORK
 /// Unit tests for interop methods that support building Progress trees with both Progress and ProgressManager
 @Suite("Progress Manager Interop") struct ProgressManagerInteropTests {
     func doSomethingWithProgress() async -> Progress {
