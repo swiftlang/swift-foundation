@@ -164,8 +164,8 @@ internal final class ProgressReporterBridge: Sendable {
             
             switch observerState {
             case .fractionUpdated(let totalCount, let completedCount):
-                self.progressBridge.completedUnitCount = Int64(completedCount)
                 self.progressBridge.totalUnitCount = Int64(totalCount)
+                self.progressBridge.completedUnitCount = Int64(completedCount)
             }
         }
     }
