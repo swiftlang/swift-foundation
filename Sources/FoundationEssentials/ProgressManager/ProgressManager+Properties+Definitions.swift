@@ -48,9 +48,7 @@ extension ProgressManager {
             public static var defaultValue: Int { return 0 }
             
             public static var defaultSummary: Int { return 0 }
-            
-            public typealias T = Int
-            
+                        
             public static func reduce(into summary: inout Int, value: Int) {
                 summary += value
             }
@@ -73,9 +71,7 @@ extension ProgressManager {
             public static var defaultValue: Int { return 0 }
             
             public static var defaultSummary: Int { return 0 }
-             
-            public typealias T = Int
-            
+                         
             public static func reduce(into summary: inout Int, value: Int) {
                 summary += value
             }
@@ -98,9 +94,7 @@ extension ProgressManager {
             public static var defaultValue: Int64 { return 0 }
             
             public static var defaultSummary: Int64 { return 0 }
-            
-            public typealias T = Int64
-            
+                        
             public static func reduce(into summary: inout Int64, value: Int64) {
                 summary += value
             }
@@ -123,9 +117,7 @@ extension ProgressManager {
             public static var defaultValue: Int64 { return 0 }
             
             public static var defaultSummary: Int64 { return 0 }
-            
-            public typealias T = Int64
-            
+                        
             public static func reduce(into summary: inout Int64, value: Int64) {
                 summary += value
             }
@@ -152,8 +144,6 @@ extension ProgressManager {
             public static var defaultValue: Int64 { return 0 }
             
             public static var defaultSummary: AggregateThroughput { return AggregateThroughput(values: 0, count: 0) }
-
-            public typealias T = Int64
             
             public static func reduce(into summary: inout AggregateThroughput, value: Int64) {
                 summary = Summary(values: summary.values + value, count: summary.count + 1)
@@ -177,9 +167,7 @@ extension ProgressManager {
             public static var defaultValue: Duration { return Duration.seconds(0) }
 
             public static var defaultSummary: Duration { return Duration.seconds(0) }
-            
-            public typealias T = Duration
-            
+                        
             public static func reduce(into summary: inout Duration, value: Duration) {
                 if summary >= value {
                     return
@@ -205,9 +193,7 @@ extension ProgressManager {
             public static var defaultValue: URL? { return nil }
             
             public static var defaultSummary: [URL] { return [] }
-            
-            public typealias T = URL
-            
+                        
             public static func reduce(into summary: inout [URL], value: URL?) {
                 guard let value else {
                     return
