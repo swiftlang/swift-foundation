@@ -159,6 +159,22 @@ private struct TimeZoneTests {
             #expect(current != autoupdatingCurrent)
             #expect(decodedCurrent != autoupdatingCurrent)
             #expect(current != decodedAutoupdatingCurrent)
+            
+            do {
+                // TimeZone does not decode the current as a sentinel value
+                TimeZoneCache.cache.resetCurrent(to: .gmt)
+                
+                let encodedCurrent = try JSONEncoder().encode(TimeZone.current)
+                let encodedAutoupdatingCurrent = try JSONEncoder().encode(TimeZone.autoupdatingCurrent)
+                
+                TimeZoneCache.cache.resetCurrent(to: TimeZone(identifier: "America/Los_Angeles")!)
+                
+                let decodedCurrent = try JSONDecoder().decode(TimeZone.self, from: encodedCurrent)
+                let decodedAutoupdatingCurrent = try JSONDecoder().decode(TimeZone.self, from: encodedAutoupdatingCurrent)
+                
+                #expect(decodedCurrent.identifier == "GMT")
+                #expect(decodedAutoupdatingCurrent.identifier == "America/Los_Angeles")
+            }
         }
     }
 }

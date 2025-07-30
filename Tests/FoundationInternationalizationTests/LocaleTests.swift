@@ -116,6 +116,34 @@ private struct LocaleTests {
             #expect(current != autoupdatingCurrent)
             #expect(decodedCurrent != autoupdatingCurrent)
             #expect(current != decodedAutoupdatingCurrent)
+            
+            do {
+                // Locale does not decode the current as a sentinel value
+                var prefs = LocalePreferences()
+                prefs.languages = ["en-US"]
+                prefs.locale = "en_US"
+                prefs.minDaysInFirstWeek = [.gregorian : 5]
+                LocaleCache.cache.resetCurrent(to: prefs)
+                CalendarCache.cache.reset()
+                
+                let encodedCurrent = try JSONEncoder().encode(Locale.current)
+                let encodedAutoupdatingCurrent = try JSONEncoder().encode(Locale.autoupdatingCurrent)
+                
+                prefs = LocalePreferences()
+                prefs.languages = ["es-ES"]
+                prefs.locale = "es_ES"
+                prefs.minDaysInFirstWeek = [.gregorian : 3]
+                LocaleCache.cache.resetCurrent(to: prefs)
+                CalendarCache.cache.reset()
+                
+                let decodedCurrent = try JSONDecoder().decode(Locale.self, from: encodedCurrent)
+                let decodedAutoupdatingCurrent = try JSONDecoder().decode(Locale.self, from: encodedAutoupdatingCurrent)
+                
+                #expect(decodedCurrent.identifier == "en_US")
+                #expect(decodedCurrent.prefs?.minDaysInFirstWeek?[.gregorian] == 5)
+                #expect(decodedAutoupdatingCurrent.identifier == "es_ES")
+                #expect(decodedAutoupdatingCurrent.prefs?.minDaysInFirstWeek?[.gregorian] == 3)
+            }
         }
     }
 

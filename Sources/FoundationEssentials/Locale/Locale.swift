@@ -94,6 +94,10 @@ public struct Locale : Hashable, Equatable, Sendable {
         // On Darwin, this overrides are applied on top of CFPreferences.
         return LocaleCache.cache.localeAsIfCurrent(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
     }
+    
+    internal static func localeWithPreferences(identifier: String, preferences: LocalePreferences) -> Locale {
+        return LocaleCache.cache.localeWithPreferences(identifier: identifier, prefs: preferences)
+    }
 
     internal static func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
         return LocaleCache.cache.localeAsIfCurrentWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations)
@@ -814,6 +818,7 @@ extension Locale : Codable {
     private enum CodingKeys : Int, CodingKey {
         case identifier
         case current
+        case preferences
     }
 
     // CFLocale enforces a rule that fixed/current/autoupdatingCurrent can never be equal even if their values seem like they are the same
@@ -825,6 +830,7 @@ extension Locale : Codable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let prefs = try container.decodeIfPresent(LocalePreferences.self, forKey: .preferences)
 
         if let current = try container.decodeIfPresent(Current.self, forKey: .current) {
             switch current {
@@ -832,8 +838,13 @@ extension Locale : Codable {
                 self = Locale.autoupdatingCurrent
                 return
             case .current:
-                self = Locale.current
-                return
+                if prefs == nil {
+                    // Prior to FoundationPreview 6.3 releases, Locale did not encode preferences and expected decoding .current to decode with the new current user's preferences via the new process' .currrent locale
+                    // Preserve behavior for encoded current locales without encoded preferences by decoding as the current locale here to preserve the intent of including user preferences even though preferences are not included in the archive
+                    // If preferences were encoded (the current locale encoded from a post-FoundationPreview 6.3 release), fallthrough to the new behavior below
+                    self = Locale.current
+                    return
+                }
             case .fixed:
                 // Fall through to identifier-based
                 break
@@ -841,7 +852,13 @@ extension Locale : Codable {
         }
 
         let identifier = try container.decode(String.self, forKey: .identifier)
-        self.init(identifier: identifier)
+        if let prefs {
+            // If preferences were encoded, create a locale with the preferences and identifier (not including preferences from the current user)
+            self = Locale.localeWithPreferences(identifier: identifier, preferences: prefs)
+        } else {
+            // If no preferences were encoded, create a fixed locale with just the identifier
+            self.init(identifier: identifier)
+        }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -852,9 +869,15 @@ extension Locale : Codable {
         if self == Locale.autoupdatingCurrent {
             try container.encode(Current.autoupdatingCurrent, forKey: .current)
         } else if self == Locale.current {
+            // Always encode .current for the current locale to preserve existing decoding behavior of .current when decoding on older runtimes prior to FoundationPreview 6.3 releases
             try container.encode(Current.current, forKey: .current)
         } else {
             try container.encode(Current.fixed, forKey: .current)
+        }
+        
+        if let prefs {
+            // Encode preferences (if present) so that when decoding on newer runtimes (FoundationPreview 6.3 releases and later) we create a locale with the preferences as they are at encode time
+            try container.encode(prefs, forKey: .preferences)
         }
     }
 }

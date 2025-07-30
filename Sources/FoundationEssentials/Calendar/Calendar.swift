@@ -1616,19 +1616,12 @@ extension Calendar : Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        if let current = try container.decodeIfPresent(Current.self, forKey: .current) {
-            switch current {
-            case .autoupdatingCurrent:
-                self = Calendar.autoupdatingCurrent
-                return
-            case .current:
-                self = Calendar.current
-                return
-            case .fixed:
-                // Fall through to identifier-based
-                break
-            }
+        if let current = try container.decodeIfPresent(Current.self, forKey: .current), current == .autoupdatingCurrent {
+            self = Calendar.autoupdatingCurrent
+            return
         }
+        
+        // Just like TimeZone and Locale, Whether the calendar was fixed or current we decode as a fixed calendar if it wasn't encoded as the sentinel autoupdating current
 
         let identifierString = try container.decode(String.self, forKey: .identifier)
         // Same as NSCalendar.Identifier
@@ -1655,7 +1648,8 @@ extension Calendar : Codable {
         try container.encode(self.firstWeekday, forKey: .firstWeekday)
         try container.encode(self.minimumDaysInFirstWeek, forKey: .minimumDaysInFirstWeek)
 
-        // current and autoupdatingCurrent are sentinel values. Calendar could theoretically not treat 'current' as a sentinel, but it is required for Locale (one of the properties of Calendar), so transitively we have to do the same here
+        // autoupdatingCurrent is a sentinel value
+        // Prior to FoundationPreview 6.3 releases, Calendar treated current-equivalent calendars as sentinel values while decoding as well. As of FoundationPreview 6.2 releases, Calendar no longer decodes the current sentinel value, but it is still encoded to preserve behavior when decoding with older runtimes
         if self == Calendar.autoupdatingCurrent {
             try container.encode(Current.autoupdatingCurrent, forKey: .current)
         } else if self == Calendar.current {
