@@ -119,31 +119,29 @@ open class NotificationCenter: @unchecked Sendable {
         // TODO: Darwin calls observers in the order they were added, mixing wildcard and non-wildcard observers.
         //       It's conceivable some users rely on that ordering.
         
-        // If 'M' is a Notification, users must manually manage isolation behaviors.
-        // If 'M' is a Message, this will already be the right isolation.
-        nonisolated(unsafe) let subject = subject
-        nonisolated(unsafe) let message = message
-        
-        registrar.withLock { _registrar in
+        let observers = registrar.withLock { _registrar in
+            var observers: [@Sendable (MessageBox) -> Void] = []
             let objectId = subject.map { ObjectIdentifier($0 as AnyObject) }
-            let messageBox = MessageBox(message: message)
             
             // Observers with 'name' and 'object'
-            _registrar[name]?[objectId]?.values.forEach { $0(messageBox) }
+            observers.append(contentsOf: _registrar[name]?[objectId]?.values ?? [])
             
             // Observers with wildcard name and 'object'
-            _registrar[nil]?[objectId]?.values.forEach { $0(messageBox) }
+            observers.append(contentsOf: _registrar[nil]?[objectId]?.values ?? [])
 
-            // Observers with wildcard name and wildcard object
             if subject != nil {
-                _registrar[nil]?[nil]?.values.forEach { $0(messageBox) }
+                // Observers with wildcard name and wildcard object
+                observers.append(contentsOf: _registrar[nil]?[nil]?.values ?? [])
+                
+                // Observers with 'name' and wildcard object
+                observers.append(contentsOf: _registrar[name]?[nil]?.values ?? [])
             }
             
-            // Observers with 'name' and wildcard object
-            if subject != nil {
-                _registrar[name]?[nil]?.values.forEach { $0(messageBox) }
-            }
+            return observers
         }
+        
+        let messageBox = MessageBox(message: message)
+        observers.forEach { $0(messageBox) }
     }
     
     // For testing purposes only!
