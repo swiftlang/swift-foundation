@@ -105,11 +105,6 @@ extension ProgressManager {
         var parent: ProgressManager
         var positionInParent: Int
     }
-
-//    internal enum InteropOrNot {
-//        case interop(ProgressManager)
-//        case nonInterop(ProgressFraction)
-//    }
     
     internal struct State {
         var selfFraction: ProgressFraction
