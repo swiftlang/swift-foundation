@@ -482,6 +482,21 @@ extension ProgressManager.Properties {
         #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 30)
     }
     
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.complete(count: 1)
+        
+        manager.withProperties { properties in
+            properties.counter = 15
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+    
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 45)
+    }
+    
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
@@ -507,9 +522,24 @@ extension ProgressManager.Properties {
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 40)
     }
+    
+    @Test func threeLevelManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.counter += 10
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 55)
+    }
 }
 
 extension ProgressManager.Properties {
+    
     var justADouble: JustADouble.Type { JustADouble.self }
     struct JustADouble: Sendable, ProgressManager.Property {
         
@@ -552,6 +582,19 @@ extension ProgressManager.Properties {
         #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 30.0)
     }
     
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async throws {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.justADouble = 7.0
+        }
+        
+        try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 37.0)
+    }
+    
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
@@ -577,9 +620,25 @@ extension ProgressManager.Properties {
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 110.0)
     }
+    
+    @Test func threeLevelManager() async throws {
+        
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.justADouble = 80.0
+        }
+        
+        try await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 117.0)
+    }
 }
 
 extension ProgressManager.Properties {
+    
     var fileName: FileName.Type { FileName.self }
     struct FileName: Sendable, ProgressManager.Property {
         
@@ -618,6 +677,20 @@ extension ProgressManager.Properties {
         #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Melon.jpg")
     }
     
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.fileName = "Cherry.jpg"
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Cherry.jpg, Melon.jpg")
+    }
+    
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
@@ -643,5 +716,19 @@ extension ProgressManager.Properties {
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Watermelon.jpg, Melon.jpg")
+    }
+    
+    @Test func threeLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.fileName = "Watermelon.jpg"
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Watermelon.jpg, Cherry.jpg, Melon.jpg")
     }
 }
