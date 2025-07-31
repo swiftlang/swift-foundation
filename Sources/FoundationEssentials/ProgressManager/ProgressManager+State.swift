@@ -121,7 +121,6 @@ extension ProgressManager {
                     if let additionalFraction = multiplier * child.childFraction {
                         overallFraction = overallFraction + additionalFraction
                     }
-                    // should not crash here - add a test case - child becomes indeterminate halfway
                 }
             }
             return overallFraction

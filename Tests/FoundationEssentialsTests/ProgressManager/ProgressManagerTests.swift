@@ -135,6 +135,36 @@ import Testing
         #expect(overall.isFinished == true)
     }
     
+    @Test func childTotalCountReset() async throws {
+        let overall = ProgressManager(totalCount: 1)
+        
+        let childManager = overall.subprogress(assigningCount: 1).start(totalCount: 4)
+        childManager.complete(count: 2)
+        
+        #expect(overall.fractionCompleted == 0.5)
+        #expect(childManager.isIndeterminate == false)
+        
+        childManager.withProperties { properties in
+            properties.totalCount = nil
+        }
+        
+        #expect(overall.fractionCompleted == 0.0)
+        #expect(childManager.isIndeterminate == true)
+        #expect(childManager.completedCount == 2)
+        
+        childManager.withProperties { properties in
+            properties.totalCount = 5
+        }
+        childManager.complete(count: 2)
+        
+        #expect(overall.fractionCompleted == 0.8)
+        #expect(childManager.completedCount == 4)
+        #expect(childManager.isIndeterminate == false)
+        
+        childManager.complete(count: 1)
+        #expect(overall.fractionCompleted == 1.0)
+    }
+    
     /// MARK: Tests single-level tree
     @Test func discreteManager() async throws {
         let manager =  ProgressManager(totalCount: 3)
