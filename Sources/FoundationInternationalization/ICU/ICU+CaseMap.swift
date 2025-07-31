@@ -18,7 +18,7 @@ import FoundationEssentials
 
 extension ICU {
     final class CaseMap : @unchecked Sendable {
-        let casemap: OpaquePointer
+        let casemap: OpaquePointer?
         
         let lock: LockedState<Void>
         
