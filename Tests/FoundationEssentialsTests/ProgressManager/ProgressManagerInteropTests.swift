@@ -21,12 +21,13 @@ import Testing
         return p
     }
     
-    func doSomethingWithReporter(subprogress: consuming Subprogress?) async {
+    func doSomething(subprogress: consuming Subprogress?) async {
         let manager =  subprogress?.start(totalCount: 4)
         manager?.complete(count: 2)
         manager?.complete(count: 2)
     }
     
+    // MARK: Progress - Subprogress Interop
     @Test func interopProgressParentProgressManagerChild() async throws {
         // Initialize a Progress Parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
@@ -47,14 +48,75 @@ import Testing
         
         // Add ProgressManager as Child
         let p2 = overall.makeChild(withPendingUnitCount: 5)
-        await doSomethingWithReporter(subprogress: p2)
+        await doSomething(subprogress: p2)
         
         // Check if ProgressManager values propagate to Progress parent
         #expect(overall.fractionCompleted == 1.0)
         #expect(overall.completedUnitCount == 10)
     }
     
-    @Test func interopProgressParentProgressReporterChildWithEmptyProgress() async throws {
+    @Test func interopProgressParentProgressManagerGrandchild() async throws {
+        // Structure: Progress with two Progress children, one of the children has a ProgressManager child
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        
+        let p1 = await doSomethingWithProgress()
+        overall.addChild(p1, withPendingUnitCount: 5)
+        
+        let _ = await Task.detached {
+            p1.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p1.completedUnitCount = 2
+        }.value
+        
+        #expect(overall.fractionCompleted == 0.5)
+        #expect(overall.completedUnitCount == 5)
+
+        let p2 = Progress(totalUnitCount: 1, parent: overall, pendingUnitCount: 5)
+        
+        await doSomething(subprogress: p2.makeChild(withPendingUnitCount: 1))
+        
+        // Check if ProgressManager values propagate to Progress parent
+        #expect(overall.fractionCompleted == 1.0)
+        #expect(overall.completedUnitCount == 10)
+    }
+    
+    @Test func interopProgressParentProgressManagerGrandchildAndProgressGrandchild() async throws {
+        // Structure: Progress with two Progress children, one of the children has a ProgressManager child and a Progress child
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        
+        let p1 = await doSomethingWithProgress()
+        overall.addChild(p1, withPendingUnitCount: 5)
+        
+        let _ = await Task.detached {
+            p1.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p1.completedUnitCount = 2
+        }.value
+        
+        #expect(overall.fractionCompleted == 0.5)
+        #expect(overall.completedUnitCount == 5)
+        
+        let p2 = Progress(totalUnitCount: 18)
+        overall.addChild(p2, withPendingUnitCount: 5)
+        
+        let p3 = await doSomethingWithProgress()
+        p2.addChild(p3, withPendingUnitCount: 9)
+        
+        let _ = await Task.detached {
+            p3.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p3.completedUnitCount = 2
+        }.value
+        
+        await doSomething(subprogress: p2.makeChild(withPendingUnitCount: 9))
+        
+        // Check if ProgressManager values propagate to Progress parent
+        #expect(overall.fractionCompleted == 1.0)
+        #expect(overall.completedUnitCount == 10)
+    }
+    
+    // MARK: Progress - ProgressReporter Interop
+    @Test func interopProgressParentProgressReporterChild() async throws {
         // Initialize a Progress parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
         
@@ -84,7 +146,7 @@ import Testing
         #expect(overall.completedUnitCount == 10)
     }
     
-    @Test func interopProgressParentProgressReporterChildWithExistingProgress() async throws {
+    @Test func interopProgressParentProgressReporterChildWithNonZeroFractionCompleted() async throws {
         // Initialize a Progress parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
         
@@ -115,12 +177,51 @@ import Testing
         #expect(overall.completedUnitCount == 10)
     }
     
+    @Test func interopProgressParentProgressReporterGrandchild() async throws {
+        // Initialize a Progress parent
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        
+        // Add Progress as Child
+        let p1 = await doSomethingWithProgress()
+        overall.addChild(p1, withPendingUnitCount: 5)
+        
+        let _ = await Task.detached {
+            p1.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p1.completedUnitCount = 2
+        }.value
+
+        // Check if ProgressManager values propagate to Progress parent
+        #expect(overall.fractionCompleted == 0.5)
+        #expect(overall.completedUnitCount == 5)
+        
+        let p2 = await doSomethingWithProgress()
+        overall.addChild(p2, withPendingUnitCount: 5)
+        
+        p2.completedUnitCount = 1
+        
+        #expect(overall.fractionCompleted == 0.75)
+        #expect(overall.completedUnitCount == 5)
+        
+        // Add ProgressReporter as Child
+        let p3 = ProgressManager(totalCount: 10)
+        let p3Reporter = p3.reporter
+        p2.addChild(p3Reporter, withPendingUnitCount: 1)
+        
+        p3.complete(count: 10)
+                
+        // Check if Progress values propagate to Progress parent
+        #expect(overall.fractionCompleted == 1.0)
+        #expect(overall.completedUnitCount == 10)
+    }
+    
+    // MARK: ProgressManager - Progress Interop
     @Test func interopProgressManagerParentProgressChild() async throws {
         // Initialize ProgressManager parent
         let overallManager = ProgressManager(totalCount: 10)
         
         // Add ProgressManager as Child
-        await doSomethingWithReporter(subprogress: overallManager.subprogress(assigningCount: 5))
+        await doSomething(subprogress: overallManager.subprogress(assigningCount: 5))
         
         // Check if ProgressManager values propagate to ProgressManager parent
         #expect(overallManager.fractionCompleted == 0.5)
@@ -142,6 +243,34 @@ import Testing
         #expect(overallManager.fractionCompleted == 1.0)
     }
     
+    @Test func interopProgressManagerParentProgressGrandchild() async throws {
+        // Initialize ProgressManager parent
+        let overallManager = ProgressManager(totalCount: 10)
+        
+        // Add ProgressManager as Child
+        await doSomething(subprogress: overallManager.subprogress(assigningCount: 5))
+        
+        #expect(overallManager.fractionCompleted == 0.5)
+        #expect(overallManager.completedCount == 5)
+        
+        let p2 = overallManager.subprogress(assigningCount: 5).start(totalCount: 3)
+        p2.complete(count: 1)
+        
+        
+        let p3 = await doSomethingWithProgress()
+        p2.subprogress(assigningCount: 2, to: p3)
+        
+        let _ = await Task.detached {
+            p3.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p3.completedUnitCount = 2
+        }.value
+        
+        // Check if Progress values propagate to ProgressRerpoter parent
+        #expect(overallManager.completedCount == 10)
+        #expect(overallManager.fractionCompleted == 1.0)
+    }
+    
     func getProgressWithTotalCountInitialized() -> Progress {
         return Progress(totalUnitCount: 5)
     }
@@ -150,6 +279,7 @@ import Testing
         let _ = progress.start(totalCount: 5)
     }
     
+    // MARK: Behavior Consistency Tests
     @Test func interopProgressManagerParentProgressChildConsistency() async throws {
         let overallReporter = ProgressManager(totalCount: nil)
         let child = overallReporter.subprogress(assigningCount: 5)
