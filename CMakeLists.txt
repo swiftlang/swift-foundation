@@ -86,7 +86,7 @@ else()
     message(STATUS "_SwiftCollections_SourceDIR not provided, checking out local copy of swift-collections")
     FetchContent_Declare(SwiftCollections
         GIT_REPOSITORY https://github.com/apple/swift-collections.git
-        GIT_TAG 1.1.2)
+        GIT_TAG 1.1.6)
 endif()
 FetchContent_MakeAvailable(SwiftFoundationICU SwiftCollections)
 
