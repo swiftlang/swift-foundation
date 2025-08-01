@@ -9,7 +9,7 @@ import CompilerPluginSupport
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
 ]
-let versionNumbers = ["6.0.2", "6.1", "6.2"]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3"]
 
 // Availability Macro Utilities
 
