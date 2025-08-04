@@ -92,12 +92,12 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         var secondBits = second
 
         // Set the version to 4 (0100 in binary)
-        firstBits &= 0xFFFFFFFFFFFF0FFF // Clear bits 48 through 51
-        firstBits |= 0x0000000000004000 // Set the version bits to '0100' at the correct position
+        firstBits &= 0b1111111111111111111111111111111111111111111111110000111111111111 // Clear bits 48 through 51
+        firstBits |= 0b0000000000000000000000000000000000000000000000000100000000000000 // Set the version bits to '0100' at the correct position
         
         // Set the variant to '10' (RFC9562 variant)
-        secondBits &= 0x3FFFFFFFFFFFFFFF // Clear the 2 most significant bits
-        secondBits |= 0x8000000000000000 // Set the two MSB to '10'
+        secondBits &= 0b0011111111111111111111111111111111111111111111111111111111111111 // Clear the 2 most significant bits
+        secondBits |= 0b1000000000000000000000000000000000000000000000000000000000000000 // Set the two MSB to '10'
 
         let uuidBytes = (
             UInt8(truncatingIfNeeded: firstBits >> 56),
