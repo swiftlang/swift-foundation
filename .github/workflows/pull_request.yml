@@ -17,6 +17,8 @@ jobs:
       enable_macos_checks: false
       macos_xcode_versions: '["16.3"]'
       macos_versions: '["sequoia"]'
+      enable_wasm_sdk_build: true
+      wasm_sdk_versions: '["nightly-main"]'
 
   cmake_build:
     name: Build (CMake)
