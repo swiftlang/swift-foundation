@@ -76,6 +76,50 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
             hasher.combine(bytes: buffer)
         }
     }
+    
+    /// Generates a new random UUID.
+    ///
+    /// - Parameter generator: The random number generator to use when creating the new random value.
+    /// - Returns: A random UUID.
+    @available(FoundationPreview 6.3, *)
+    public static func random(
+        using generator: inout some RandomNumberGenerator
+    ) -> UUID {
+        let first = UInt64.random(in: .min ... .max, using: &generator)
+        let second = UInt64.random(in: .min ... .max, using: &generator)
+
+        var firstBits = first
+        var secondBits = second
+
+        // Set the version to 4 (0100 in binary)
+        firstBits &= 0b11111111_11111111_11111111_11111111_11111111_11111111_00001111_11111111 // Clear bits 48 through 51
+        firstBits |= 0b00000000_00000000_00000000_00000000_00000000_00000000_01000000_00000000 // Set the version bits to '0100' at the correct position
+        
+        // Set the variant to '10' (RFC9562 variant)
+        secondBits &= 0b00111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111 // Clear the 2 most significant bits
+        secondBits |= 0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 // Set the two MSB to '10'
+
+        let uuidBytes = (
+            UInt8(truncatingIfNeeded: firstBits >> 56),
+            UInt8(truncatingIfNeeded: firstBits >> 48),
+            UInt8(truncatingIfNeeded: firstBits >> 40),
+            UInt8(truncatingIfNeeded: firstBits >> 32),
+            UInt8(truncatingIfNeeded: firstBits >> 24),
+            UInt8(truncatingIfNeeded: firstBits >> 16),
+            UInt8(truncatingIfNeeded: firstBits >> 8),
+            UInt8(truncatingIfNeeded: firstBits),
+            UInt8(truncatingIfNeeded: secondBits >> 56),
+            UInt8(truncatingIfNeeded: secondBits >> 48),
+            UInt8(truncatingIfNeeded: secondBits >> 40),
+            UInt8(truncatingIfNeeded: secondBits >> 32),
+            UInt8(truncatingIfNeeded: secondBits >> 24),
+            UInt8(truncatingIfNeeded: secondBits >> 16),
+            UInt8(truncatingIfNeeded: secondBits >> 8),
+            UInt8(truncatingIfNeeded: secondBits)
+        )
+
+        return UUID(uuid: uuidBytes)
+    }
 
     public var description: String {
         return uuidString
