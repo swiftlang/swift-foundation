@@ -64,6 +64,7 @@ set(COLLECTIONS_SINGLE_MODULE YES)
 set(COLLECTIONS_FOUNDATION_TOOLCHAIN_MODULE YES)
 
 set(SwiftFoundation_MACRO "" CACHE STRING "Path to Foundation macro plugin")
+set(USE_PREBUILT_SDK NO CACHE BOOL "A full prebuilt SDK is available, so use its headers")
 
 # Make sure our dependencies exists
 include(FetchContent)

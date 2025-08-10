@@ -17,10 +17,13 @@ add_library(_FoundationCShims STATIC
     string_shims.c
     uuid.c)
 
-target_include_directories(_FoundationCShims PUBLIC include)
 
-target_compile_options(_FoundationCShims INTERFACE
-  "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/include/module.modulemap>")
+if(NOT USE_PREBUILT_SDK)
+  target_include_directories(_FoundationCShims PUBLIC include)
+
+  target_compile_options(_FoundationCShims INTERFACE
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/include/module.modulemap>")
+endif()
 
 set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS _FoundationCShims)
 
