@@ -25,7 +25,7 @@ public struct BundleMacro: SwiftSyntaxMacros.ExpressionMacro, Sendable {
             #elseif SWIFT_BUNDLE_LOOKUP_HELPER_AVAILABLE
                 return Bundle(for: __BundleLookupHelper.self)
             #else
-                return Bundle(_dsoHandle: #dsohandle) ?? .main
+                return unsafe Bundle(_dsoHandle: #dsohandle) ?? .main
             #endif
         }()
         """
