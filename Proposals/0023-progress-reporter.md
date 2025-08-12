@@ -347,7 +347,7 @@ overall.assign(count: 3, to: examCountdown.progressReporter)
 
 // Add `ProgressReporter` to another parent `ProgressManager` with different assigned count
 let deadlineTracker = ProgressManager(totalCount: 2) 
-overall.assign(count: 1, to: examCountdown, progressReporter)
+deadlineTracker.assign(count: 1, to: examCountdown.progressReporter)
 ``` 
 
 ### Reporting Progress With Type-Safe Custom Properties 
