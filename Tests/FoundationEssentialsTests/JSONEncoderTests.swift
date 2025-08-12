@@ -2896,6 +2896,11 @@ extension JSONEncoderTests {
         let formatter = DateFormatter()
         formatter.dateStyle = .full
         formatter.timeStyle = .full
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .gmt
+        formatter.calendar = cal
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.timeZone = .gmt
 
         let timestamp = Date(timeIntervalSince1970: 1000)
         let expectedJSON = "\"\(formatter.string(from: timestamp))\"".data(using: .utf8)!
