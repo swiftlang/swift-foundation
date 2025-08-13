@@ -158,6 +158,38 @@ extension ProgressManager {
             return selfFraction.completed
         }
         
+        internal mutating func getFractionCompleted() -> Double {
+#if FOUNDATION_FRAMEWORK
+            // change name later to interopMirror
+            if let interopChild = interopChild {
+                return interopChild.fractionCompleted
+            }
+#endif
+            
+            updateChildrenProgressFraction()
+                        
+            return overallFraction.fractionCompleted
+
+        }
+        
+        internal func getIsIndeterminate() -> Bool {
+#if FOUNDATION_FRAMEWORK
+            if let interopChild = interopChild {
+                return interopChild.isIndeterminate
+            }
+#endif
+            return selfFraction.isIndeterminate
+        }
+        
+        internal func getIsFinished() -> Bool {
+#if FOUNDATION_FRAMEWORK
+            if let interopChild = interopChild {
+                return interopChild.isIndeterminate
+            }
+#endif
+            return selfFraction.isFinished
+        }
+        
         internal mutating func updateChildrenProgressFraction() {
             guard !children.isEmpty else {
                 return
@@ -176,6 +208,28 @@ extension ProgressManager {
                     children[idx].isDirty = false
                 }
             }
+        }
+        
+        internal mutating func complete(by count: Int) {
+            selfFraction.completed += count
+
+#if FOUNDATION_FRAMEWORK
+            interopObservation.subprogressBridge?.manager.notifyObservers(
+                with: .fractionUpdated(
+                    totalCount: selfFraction.total ?? 0,
+                    completedCount: selfFraction.completed
+                )
+            )
+            
+            if let _ = interopObservation.reporterBridge {
+                notifyObservers(
+                    with: .fractionUpdated(
+                        totalCount: selfFraction.total ?? 0,
+                        completedCount: selfFraction.completed
+                    )
+                )
+            }
+#endif
         }
     }
 }

@@ -50,15 +50,7 @@ internal import _FoundationCollections
     public var fractionCompleted: Double {
         _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
         return state.withLock { state in
-#if FOUNDATION_FRAMEWORK
-            if let interopChild = state.interopChild {
-                return interopChild.fractionCompleted
-            }
-#endif
-            
-            state.updateChildrenProgressFraction()
-                        
-            return state.overallFraction.fractionCompleted
+            state.getFractionCompleted()
         }
     }
     
@@ -67,12 +59,7 @@ internal import _FoundationCollections
     public var isIndeterminate: Bool {
         _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
         return state.withLock { state in
-#if FOUNDATION_FRAMEWORK
-            if let interopChild = state.interopChild {
-                return interopChild.isIndeterminate
-            }
-#endif
-            return state.selfFraction.isIndeterminate
+            state.getIsIndeterminate()
         }
     }
     
@@ -81,12 +68,7 @@ internal import _FoundationCollections
     public var isFinished: Bool {
         _$observationRegistrar.access(self, keyPath: \.isFinished)
         return state.withLock { state in
-#if FOUNDATION_FRAMEWORK
-            if let interopChild = state.interopChild {
-                return interopChild.isIndeterminate
-            }
-#endif
-            return state.selfFraction.isFinished
+            state.getIsFinished()
         }
     }
     
@@ -191,25 +173,7 @@ internal import _FoundationCollections
                 return nil
             }
             
-            state.selfFraction.completed += count
-
-#if FOUNDATION_FRAMEWORK
-            state.interopObservation.subprogressBridge?.manager.notifyObservers(
-                with: .fractionUpdated(
-                    totalCount: state.selfFraction.total ?? 0,
-                    completedCount: state.selfFraction.completed
-                )
-            )
-            
-            if let _ = state.interopObservation.reporterBridge {
-                state.notifyObservers(
-                    with: .fractionUpdated(
-                        totalCount: state.selfFraction.total ?? 0,
-                        completedCount: state.selfFraction.completed
-                    )
-                )
-            }
-#endif
+            state.complete(by: count)
             
             return state.parents
         }
