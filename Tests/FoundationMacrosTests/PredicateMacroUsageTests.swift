@@ -21,14 +21,12 @@ import Foundation
 fileprivate func _blackHole<T>(_ t: T) {}
 
 @inline(never)
-@available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
 fileprivate func _blackHoleExplicitInput(_ predicate: Predicate<Int>) {}
 
 // MARK: - Tests
 
 @Suite("#Predicate Macro Usage")
 private struct PredicateMacroUsageTests {
-    @available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
     @Test func usage() {
         _blackHole(#Predicate<Bool> {
             return $0
