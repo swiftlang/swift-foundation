@@ -52,7 +52,7 @@ public struct Subprogress: ~Copyable, Sendable {
         )
         
         guard subprogressBridge == nil else {
-            subprogressBridge?.manager.setInteropChild(interopChild: childManager)
+            subprogressBridge?.manager.setInteropChild(interopMirror: childManager)
             return childManager
         }
 #else
