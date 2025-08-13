@@ -14,19 +14,21 @@ internal import Synchronization
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
-    internal struct MetatypeWrapper<T: Sendable>: Hashable, Equatable, Sendable {
+    internal struct MetatypeWrapper<V: Sendable, S: Sendable>: Hashable, Equatable, Sendable {
         
-        let reduce: @Sendable (inout T, T) -> ()
-        let merge: @Sendable (T, T) -> T
+        let reduce: @Sendable (inout S, V) -> ()
+        let merge: @Sendable (S, S) -> S
+        let finalSummary: @Sendable (S, S) -> S
         
-        let defaultValue: T
-        let defaultSummary: T
+        let defaultValue: V
+        let defaultSummary: S
         
         let key: String
         
-        init<P: Property>(_ argument: P.Type) where P.Value == T, P.Summary == T {
+        init<P: Property>(_ argument: P.Type) where P.Value == V, P.Summary == S {
             reduce = P.reduce
             merge = P.merge
+            finalSummary = P.finalSummary
             defaultValue = P.defaultValue
             defaultSummary = P.defaultSummary
             key = P.key
@@ -36,7 +38,7 @@ extension ProgressManager {
             hasher.combine(key)
         }
         
-        static func == (lhs: ProgressManager.MetatypeWrapper<T>, rhs: ProgressManager.MetatypeWrapper<T>) -> Bool {
+        static func == (lhs: ProgressManager.MetatypeWrapper<V, S>, rhs: ProgressManager.MetatypeWrapper<V, S>) -> Bool {
             lhs.key == rhs.key
         }
     }
@@ -52,7 +54,7 @@ extension ProgressManager {
     }
     
     internal struct PropertyStateThroughput {
-        var value: ProgressManager.Properties.Throughput.AggregateThroughput
+        var value: [UInt64]
         var isDirty: Bool
     }
     
@@ -67,20 +69,17 @@ extension ProgressManager {
     }
     
     internal struct PropertyStateString {
-        var value: String
+        var value: [String?]
         var isDirty: Bool
     }
     
     internal struct PropertyStateURL {
-        var value: [URL]
+        var value: [URL?]
         var isDirty: Bool
     }
     
     internal struct ChildState {
         weak var child: ProgressManager?
-        var remainingPropertiesInt: [MetatypeWrapper<Int>: Int]?
-        var remainingPropertiesDouble: [MetatypeWrapper<Double>: Double]?
-        var remainingPropertiesString: [MetatypeWrapper<String>: String]?
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool
@@ -90,10 +89,11 @@ extension ProgressManager {
         var completedByteCount: PropertyStateUInt64
         var throughput: PropertyStateThroughput
         var estimatedTimeRemaining: PropertyStateDuration
-        var fileURL: PropertyStateURL
-        var childPropertiesInt: [MetatypeWrapper<Int>: PropertyStateInt]
-        var childPropertiesDouble: [MetatypeWrapper<Double>: PropertyStateDouble]
-        var childPropertiesString: [MetatypeWrapper<String>: PropertyStateString]
+        var childPropertiesInt: [MetatypeWrapper<Int, Int>: PropertyStateInt]
+        var childPropertiesDouble: [MetatypeWrapper<Double, Double>: PropertyStateDouble]
+        var childPropertiesString: [MetatypeWrapper<String?, [String?]>: PropertyStateString]
+        var childPropertiesURL: [MetatypeWrapper<URL?, [URL?]>: PropertyStateURL]
+        var childPropertiesUInt64: [MetatypeWrapper<UInt64, [UInt64]>: PropertyStateThroughput]
     }
     
     internal struct ParentState {
@@ -105,11 +105,13 @@ extension ProgressManager {
         var selfFraction: ProgressFraction
         var overallFraction: ProgressFraction {
             var overallFraction = selfFraction
-            for child in children {
-                if !child.childFraction.isFinished {
-                    let multiplier = ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total)
-                    if let additionalFraction = multiplier * child.childFraction {
-                        overallFraction = overallFraction + additionalFraction
+            for childState in children {
+                if let _ = childState.child {
+                    if !childState.childFraction.isFinished {
+                        let multiplier = ProgressFraction(completed: childState.portionOfTotal, total: selfFraction.total)
+                        if let additionalFraction = multiplier * childState.childFraction {
+                            overallFraction = overallFraction + additionalFraction
+                        }
                     }
                 }
             }
@@ -123,22 +125,22 @@ extension ProgressManager {
         var completedByteCount: UInt64
         var throughput: UInt64
         var estimatedTimeRemaining: Duration
-        var fileURL: URL?
-        var propertiesInt: [MetatypeWrapper<Int>: Int]
-        var propertiesDouble: [MetatypeWrapper<Double>: Double]
-        var propertiesString: [MetatypeWrapper<String>: String]
+        var propertiesInt: [MetatypeWrapper<Int, Int>: Int]
+        var propertiesDouble: [MetatypeWrapper<Double, Double>: Double]
+        var propertiesString: [MetatypeWrapper<String?, [String?]>: String?]
+        var propertiesURL: [MetatypeWrapper<URL?, [URL?]>: URL?]
+        var propertiesUInt64: [MetatypeWrapper<UInt64, [UInt64]>: UInt64]
 #if FOUNDATION_FRAMEWORK
-        var interopChild: ProgressManager?
-        var interopObservation: InteropObservation
         var observers: [@Sendable (ObserverState) -> Void]
+        var interopType: InteropType?
 #endif
 
         /// Returns nil if `self` was instantiated without total units;
         /// returns a `Int` value otherwise.
         internal func getTotalCount() -> Int? {
 #if FOUNDATION_FRAMEWORK
-            if let interopChild = interopChild {
-                return interopChild.totalCount
+            if let interopTotalCount = interopType?.totalCount {
+                return interopTotalCount
             }
 #endif
             return selfFraction.total
@@ -148,14 +150,41 @@ extension ProgressManager {
         /// returns a `Int` value otherwise.
         internal mutating func getCompletedCount() -> Int {
 #if FOUNDATION_FRAMEWORK
-            if let interopChild = interopChild {
-                return interopChild.completedCount
+            if let interopCompletedCount = interopType?.completedCount {
+                return interopCompletedCount
             }
 #endif
-            
             updateChildrenProgressFraction()
-
             return selfFraction.completed
+        }
+        
+        internal mutating func getFractionCompleted() -> Double {
+#if FOUNDATION_FRAMEWORK
+            if let interopFractionCompleted = interopType?.fractionCompleted {
+                return interopFractionCompleted
+            }
+#endif
+            updateChildrenProgressFraction()
+            return overallFraction.fractionCompleted
+        }
+        
+        internal func getIsIndeterminate() -> Bool {
+#if FOUNDATION_FRAMEWORK
+            if let interopIsIndeterminate = interopType?.isIndeterminate {
+                return interopIsIndeterminate
+            }
+#endif
+            return selfFraction.isIndeterminate
+        }
+        
+        internal mutating func getIsFinished() -> Bool {
+#if FOUNDATION_FRAMEWORK
+            if let interopIsFinished = interopType?.isFinished {
+                return interopIsFinished
+            }
+#endif
+            updateChildrenProgressFraction()
+            return selfFraction.isFinished
         }
         
         internal mutating func updateChildrenProgressFraction() {
@@ -176,6 +205,35 @@ extension ProgressManager {
                     children[idx].isDirty = false
                 }
             }
+        }
+        
+        internal mutating func complete(by count: Int) {
+            selfFraction.completed += count
+
+#if FOUNDATION_FRAMEWORK
+            switch interopType {
+            case .interopObservation(let observation):
+                observation.subprogressBridge?.manager.notifyObservers(
+                    with: .fractionUpdated(
+                        totalCount: selfFraction.total ?? 0,
+                        completedCount: selfFraction.completed
+                    )
+                )
+                
+                if let _ = observation.reporterBridge {
+                    notifyObservers(
+                        with: .fractionUpdated(
+                            totalCount: selfFraction.total ?? 0,
+                            completedCount: selfFraction.completed
+                        )
+                    )
+                }
+            case .interopMirror:
+                break
+            default:
+                break
+            }
+#endif
         }
     }
 }

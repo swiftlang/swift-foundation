@@ -220,6 +220,56 @@ extension ProgressManager {
         var reporterBridge: ProgressReporterBridge?
         var nsProgressBridge: Foundation.Progress?
     }
+    
+    internal enum InteropType {
+        case interopMirror(ProgressManager)
+        case interopObservation(InteropObservation)
+        
+        internal var totalCount: Int? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.totalCount
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var completedCount: Int? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.completedCount
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var fractionCompleted: Double? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.fractionCompleted
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var isIndeterminate: Bool? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.isIndeterminate
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var isFinished: Bool? {
+            switch self {
+            case .interopMirror(let mirror):
+                 mirror.isFinished
+            case .interopObservation:
+                nil
+            }
+        }
+    }
 }
 
 extension ProgressManager.State {
@@ -251,19 +301,23 @@ extension ProgressManager {
     
     internal func addBridge(reporterBridge: ProgressReporterBridge? = nil, nsProgressBridge: Foundation.Progress? = nil) {
         state.withLock { state in
+            var interopObservation = InteropObservation(subprogressBridge: nil)
+            
             if let reporterBridge {
-                state.interopObservation.reporterBridge = reporterBridge
+                interopObservation.reporterBridge = reporterBridge
             }
             
             if let nsProgressBridge {
-                state.interopObservation.nsProgressBridge = nsProgressBridge
+                interopObservation.nsProgressBridge = nsProgressBridge
             }
+            
+            state.interopType = .interopObservation(interopObservation)
         }
     }
     
-    internal func setInteropChild(interopChild: ProgressManager) {
+    internal func setInteropChild(interopMirror: ProgressManager) {
         state.withLock { state in
-            state.interopChild = interopChild
+            state.interopType = .interopMirror(interopMirror)
         }
     }
 }
