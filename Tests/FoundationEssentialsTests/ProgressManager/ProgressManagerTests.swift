@@ -330,10 +330,16 @@ extension Tag {
         }
     }
     
+    // MARK: Test deinit behavior
     func makeUnfinishedChild(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 3)
         manager.complete(count: 2)
         #expect(manager.fractionCompleted == Double(2) / Double(3))
+    }
+    
+    func makeFinishedChild(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        manager.complete(count: 2)
     }
     
     @Test func unfinishedChild() async throws {
@@ -343,6 +349,62 @@ extension Tag {
         #expect(manager.fractionCompleted == 0.5)
         
         await makeUnfinishedChild(subprogress: manager.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func unfinishedGrandchild() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        let child = manager.subprogress(assigningCount: 1).start(totalCount: 1)
+        
+        await makeUnfinishedChild(subprogress: child.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func unfinishedGreatGrandchild() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        let child = manager.subprogress(assigningCount: 1).start(totalCount: 1)
+        
+        let grandchild = child.subprogress(assigningCount: 1).start(totalCount: 1)
+        
+        await makeUnfinishedChild(subprogress: grandchild.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func finishedChildUnreadBeforeDeinit() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.complete(count: 1)
+        #expect(manager.fractionCompleted == 0.5)
+        
+        await makeFinishedChild(subprogress: manager.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func finishedChildReadBeforeDeinit() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.complete(count: 1)
+        #expect(manager.fractionCompleted == 0.5)
+
+        var child: ProgressManager? = manager.subprogress(assigningCount: 1).start(totalCount: 1)
+        child?.complete(count: 1)
+        #expect(manager.fractionCompleted == 1.0)
+        
+        child = nil
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func uninitializedSubprogress() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.complete(count: 1)
+        
+        var subprogress: Subprogress? = manager.subprogress(assigningCount: 1)
+        #expect(manager.fractionCompleted == 0.5)
+        
+        subprogress = nil
         #expect(manager.fractionCompleted == 1.0)
     }
 }

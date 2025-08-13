@@ -256,7 +256,7 @@ import Testing
         }
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 2000)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [2000])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -270,7 +270,7 @@ import Testing
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 1500)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 2000])
     }
     
     @Test func discreteManager() async throws {
@@ -283,7 +283,7 @@ import Testing
         }
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 3000)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [3000])
     }
     
     @Test func twoLevelManager() async throws {
@@ -296,7 +296,7 @@ import Testing
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 1500)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 2000])
     }
     
     @Test func threeLevelManager() async throws {
@@ -310,7 +310,7 @@ import Testing
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == Int64(4000 / 3))
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 1000, 2000])
     }
 }
 
@@ -365,76 +365,20 @@ import Testing
             properties.estimatedTimeRemaining = Duration.seconds(200)
         }
         
-        let child = manager.subprogress(assigningCount: 1).start(totalCount: 2)
-        child.withProperties { properties in
+        var child: ProgressManager? = manager.subprogress(assigningCount: 1).start(totalCount: 2)
+        child?.withProperties { properties in
             properties.completedCount = 1
             properties.estimatedTimeRemaining = Duration.seconds(80000)
         }
         
         #expect(manager.fractionCompleted == 0.75)
         #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(80000))
-    }
-    
-}
-    
-@Suite("Progress Manager File URL Properties", .tags(.progressManager)) struct ProgressManagerFileURLTests {
-    
-    func doSomething(subprogress: consuming Subprogress) async {
-        let manager = subprogress.start(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.fileURL = URL(string: "https://www.kittens.com")
-        }
-        
+        child = nil
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.kittens.com")])
+        #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(200))
     }
     
-    @Test func discreteManager() async throws {
-        let manager = ProgressManager(totalCount: 1)
-        
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.fileURL = URL(string: "https://www.cats.com")
-        }
-        
-        #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com")])
-    }
-    
-    @Test func twoLevelManagerWithFinishedChild() async throws {
-        let manager = ProgressManager(totalCount: 2)
-        
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.fileURL = URL(string: "https://www.cats.com")
-        }
-        
-        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
-        
-        #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com")])
-    }
-    
-    @Test func twoLevelManagerWithUnfinishedChild() async throws {
-        let manager = ProgressManager(totalCount: 2)
-        
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.fileURL = URL(string: "https://www.cats.com")
-        }
-        
-        let childManager = manager.subprogress(assigningCount: 1).start(totalCount: 2)
-        
-        childManager.withProperties { properties in
-            properties.completedCount = 1
-            properties.fileURL = URL(string: "https://www.kittens.com")
-        }
-        
-        #expect(manager.fractionCompleted == 0.75)
-        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com"), URL(string: "https://www.kittens.com")])
-    }
 }
 
 extension ProgressManager.Properties {
@@ -458,6 +402,10 @@ extension ProgressManager.Properties {
         
         static func merge(_ summary1: Int, _ summary2: Int) -> Int {
             return summary1 + summary2
+        }
+        
+        static func finalSummary(_ parentSummary: Int, _ childSummary: Int) -> Int {
+            return parentSummary + childSummary
         }
     }
 }
@@ -560,6 +508,10 @@ extension ProgressManager.Properties {
         static func merge(_ summary1: Double, _ summary2: Double) -> Double {
             return summary1 + summary2
         }
+        
+        static func finalSummary(_ parentSummary: Double, _ childSummary: Double) -> Double {
+            return parentSummary + childSummary
+        }
     }
 }
 
@@ -639,42 +591,46 @@ extension ProgressManager.Properties {
 
 extension ProgressManager.Properties {
     
-    var fileName: FileName.Type { FileName.self }
-    struct FileName: Sendable, ProgressManager.Property {
+    var downloadedFile: DownloadedFile.Type { DownloadedFile.self }
+    struct DownloadedFile: Sendable, ProgressManager.Property {
         
-        typealias Value = String
+        typealias Value = String?
         
-        typealias Summary = String
+        typealias Summary = [String?]
         
         static var key: String { return "FileName" }
         
-        static var defaultValue: String { return "" }
+        static var defaultValue: String? { return "" }
         
-        static var defaultSummary: String { return "" }
+        static var defaultSummary: [String?] { return [] }
         
-        static func reduce(into summary: inout String, value: String) {
-            summary += value
+        static func reduce(into summary: inout [String?], value: String?) {
+            summary.append(value)
         }
         
-        static func merge(_ summary1: String, _ summary2: String) -> String {
-            return summary1 + ", " + summary2
+        static func merge(_ summary1: [String?], _ summary2: [String?]) -> [String?] {
+            return summary1 + summary2
+        }
+        
+        static func finalSummary(_ parentSummary: [String?], _ childSummary: [String?]) -> [String?] {
+            return parentSummary + childSummary
         }
     }
 }
 
 
-@Suite("Progress Manager String Properties", .tags(.progressManager)) struct ProgressManagerStringPropertiesTests {
+@Suite("Progress Manager String (Retaining) Properties", .tags(.progressManager)) struct ProgressManagerStringPropertiesTests {
     
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 1)
         
         manager.withProperties { properties in
             properties.completedCount += 1
-            properties.fileName = "Melon.jpg"
+            properties.downloadedFile = "Melon.jpg"
         }
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Melon.jpg"])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -682,13 +638,13 @@ extension ProgressManager.Properties {
         
         manager.withProperties { properties in
             properties.completedCount = 1
-            properties.fileName = "Cherry.jpg"
+            properties.downloadedFile = "Cherry.jpg"
         }
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Cherry.jpg, Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Cherry.jpg", "Melon.jpg"])
     }
     
     @Test func discreteManager() async throws {
@@ -696,12 +652,12 @@ extension ProgressManager.Properties {
         
         manager.withProperties { properties in
             properties.completedCount += 1
-            properties.fileName = "Grape.jpg"
+            properties.downloadedFile = "Grape.jpg"
         }
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.withProperties { $0.fileName } == "Grape.jpg")
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Grape.jpg")
+        #expect(manager.withProperties { $0.downloadedFile } == "Grape.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Grape.jpg"])
     }
     
     @Test func twoLevelsManager() async throws {
@@ -709,13 +665,13 @@ extension ProgressManager.Properties {
         
         manager.withProperties { properties in
             properties.completedCount = 1
-            properties.fileName = "Watermelon.jpg"
+            properties.downloadedFile = "Watermelon.jpg"
         }
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Watermelon.jpg, Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Watermelon.jpg", "Melon.jpg"])
     }
     
     @Test func threeLevelsManager() async throws {
@@ -723,12 +679,298 @@ extension ProgressManager.Properties {
         
         manager.withProperties { properties in
             properties.completedCount = 1
-            properties.fileName = "Watermelon.jpg"
+            properties.downloadedFile = "Watermelon.jpg"
         }
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Watermelon.jpg, Cherry.jpg, Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Watermelon.jpg", "Cherry.jpg", "Melon.jpg"])
+    }
+}
+
+extension ProgressManager.Properties {
+    
+    var processingFile: ProcessingFile.Type { ProcessingFile.self }
+    struct ProcessingFile: Sendable, ProgressManager.Property {
+                
+        typealias Value = String?
+        
+        typealias Summary = [String?]
+        
+        static var key: String { return "ProcessingFile" }
+        
+        static var defaultValue: String? { return "" }
+        
+        static var defaultSummary: [String?] { return [] }
+        
+        static func reduce(into summary: inout [String?], value: String?) {
+            summary.append(value)
+        }
+        
+        static func merge(_ summary1: [String?], _ summary2: [String?]) -> [String?] {
+            return summary1 + summary2
+        }
+        
+        static func finalSummary(_ parentSummary: [String?], _ childSummary: [String?]) -> [String?] {
+            return parentSummary
+        }
+    }
+}
+
+@Suite("Progress Manager String (Non-retaining) Properties", .tags(.progressManager)) struct ProgressManagerStringNonRetainingProperties {
+    
+    func doSomething(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processingFile = "Hello.jpg"
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Hello.jpg"])
+    }
+    
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.processingFile = "Hi.jpg"
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Hi.jpg"])
+    }
+    
+    @Test func discreteManager() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processingFile = "Howdy.jpg"
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.withProperties { $0.processingFile } == "Howdy.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Howdy.jpg"])
+    }
+    
+    @Test func twoLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.processingFile = "Howdy.jpg"
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Howdy.jpg"])
+    }
+    
+    @Test func threeLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.processingFile = "Howdy.jpg"
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Howdy.jpg"])
+    }
+}
+
+
+extension ProgressManager.Properties {
+    var imageURL: ImageURL.Type { ImageURL.self }
+    struct ImageURL: Sendable, ProgressManager.Property {
+        
+        typealias Value = URL?
+        
+        typealias Summary = [URL?]
+        
+        static var key: String { "MyApp.ImageURL" }
+        
+        static var defaultValue: URL? { nil }
+        
+        static var defaultSummary: [URL?] { [] }
+        
+        static func reduce(into summary: inout [URL?], value: URL?) {
+            summary.append(value)
+        }
+        
+        static func merge(_ summary1: [URL?], _ summary2: [URL?]) -> [URL?] {
+            summary1 + summary2
+        }
+        
+        static func finalSummary(_ parentSummary: [URL?], _ childSummary: [URL?]) -> [URL?] {
+            parentSummary
+        }
+    }
+}
+
+@Suite("Progress Manager URL (Non-retaining) Properties", .tags(.progressManager)) struct ProgressManagerURLProperties {
+    func doSomething(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.imageURL = URL(string: "112.jpg")
+        }
+        
+        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "112.jpg")])
+    }
+    
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.imageURL = URL(string: "114.jpg")
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "114.jpg")])
+    }
+    
+    @Test func discreteManager() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.imageURL = URL(string: "116.jpg")
+        }
+        
+        #expect(manager.fractionCompleted == 0.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "116.jpg")])
+    }
+    
+    @Test func twoLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.imageURL = URL(string: "116.jpg")
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "116.jpg")])
+    }
+    
+    @Test func threeLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.imageURL = URL(string: "116.jpg")
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "116.jpg")])
+    }
+}
+
+extension ProgressManager.Properties {
+    var totalPixelCount: TotalPixelCount.Type { TotalPixelCount.self }
+    struct TotalPixelCount: Sendable, ProgressManager.Property {
+        typealias Value = UInt64
+        
+        typealias Summary = [UInt64]
+        
+        static var key: String { "MyApp.TotalPixelCount" }
+        
+        static var defaultValue: UInt64 { 0 }
+        
+        static var defaultSummary: [UInt64] { [] }
+        
+        static func reduce(into summary: inout [UInt64], value: UInt64) {
+            summary.append(value)
+        }
+        
+        static func merge(_ summary1: [UInt64], _ summary2: [UInt64]) -> [UInt64] {
+            summary1 + summary2
+        }
+        
+        static func finalSummary(_ parentSummary: [UInt64], _ childSummary: [UInt64]) -> [UInt64] {
+            parentSummary + childSummary
+        }
+    }
+}
+
+@Suite("Progress Manager UInt64 (Retaining) Properties", .tags(.progressManager)) struct ProgressManagerUInt64Properties {
+    
+    func doSomething(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 24
+        }
+        
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [24])
+    }
+    
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 26
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [26, 24])
+    }
+    
+    @Test func discreteManager() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.totalPixelCount = 42
+        }
+        
+        #expect(manager.fractionCompleted == 0.0)
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42])
+    }
+    
+    @Test func twoLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 42
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42, 24])
+    }
+    
+    @Test func threeLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 42
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42, 26, 24])
     }
 }

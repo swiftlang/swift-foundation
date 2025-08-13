@@ -16,7 +16,7 @@ import Observation
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
-@Observable public final class ProgressReporter: Sendable, CustomStringConvertible, CustomDebugStringConvertible {
+@Observable public final class ProgressReporter: Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -110,8 +110,16 @@ import Observation
     /// - Parameter property: The type of the string property to summarize. Must be a property
     ///   where both the value and summary types are `String`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> String where P.Value == String, P.Summary == String {
-        manager.summary(of: property)
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [String?] where P.Value == String?, P.Summary == [String?] {
+        return manager.summary(of: property)
+    }
+    
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [URL?] where P.Value == URL?, P.Summary == [URL?] {
+        return manager.summary(of: property)
+    }
+    
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64] {
+        return manager.summary(of: property)
     }
     
     /// Returns the total file count across the progress subtree.
@@ -150,7 +158,7 @@ import Observation
     ///
     /// - Parameter property: The `Throughput` property type.
     /// - Returns: The average throughput across the entire progress subtree, in bytes per second.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> UInt64 {
+    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64] {
         manager.summary(of: property)
     }
     
@@ -162,17 +170,17 @@ import Observation
         manager.summary(of: property)
     }
     
-    /// Returns all file URLs being processed across the progress subtree.
-    ///
-    /// - Parameter property: The `FileURL` property type.
-    /// - Returns: An array containing all file URLs across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL] {
-        manager.summary(of: property)
-    }
-
     internal let manager: ProgressManager
     
     internal init(manager: ProgressManager) {
         self.manager = manager
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
+    }
+    
+    public static func == (lhs: ProgressReporter, rhs: ProgressReporter) -> Bool {
+        ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
     }
 }
