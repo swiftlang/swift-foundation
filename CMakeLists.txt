@@ -27,14 +27,6 @@ endif()
 project(SwiftFoundation
     LANGUAGES C Swift)
 
-if(NOT SWIFT_SYSTEM_NAME)
-  if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    set(SWIFT_SYSTEM_NAME macosx)
-  else()
-    set(SWIFT_SYSTEM_NAME "$<LOWER_CASE:${CMAKE_SYSTEM_NAME}>")
-  endif()
-endif()
-
 # Don't enable WMO on Windows hosts due to linker failures, and the use of swift's
 # old driver from build.ps1 when building for windows/android on a windows host.
 if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
@@ -145,6 +137,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
 endif()
 
 include(GNUInstallDirs)
+include(PlatformInfo)
+
+option(SwiftFoundation_INSTALL_NESTED_SUBDIR "Install libraries under a platform and architecture subdirectory" NO)
+set(SwiftFoundation_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}/swift$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:_static>/${SwiftFoundation_PLATFORM_SUBDIR}$<$<BOOL:${SwiftFoundation_INSTALL_NESTED_SUBDIR}>:/${SwiftFoundation_ARCH_SUBDIR}>")
+set(SwiftFoundation_INSTALL_SWIFTMODULEDIR "${CMAKE_INSTALL_LIBDIR}/swift$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:_static>/${SwiftFoundation_PLATFORM_SUBDIR}")
+
 include(SwiftFoundationSwiftSupport)
 
 add_subdirectory(Sources)
