@@ -13,26 +13,25 @@
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
-    /// A type that conveys task-specific information on progress.
+    /// A type that conveys additional task-specific information on progress.
     ///
     /// The `Property` protocol defines custom properties that can be associated with progress tracking.
-    /// These properties allow you to store and aggregate additional information alongside the standard
-    /// progress metrics like completion counts and file counts.
-    ///
-    /// Properties use a key-value system where the key uniquely identifies the property type,
-    /// and values can be aggregated across progress manager hierarchies through reduction and merging operations.
+    /// These properties allow you to store and aggregate additional information alongside the
+    /// standard progress metrics such as `totalCount` and `completedCount`.
     public protocol Property: SendableMetatype {
         
-        /// The type of individual values stored in this property.
+        /// The type used for individual values of this property.
         ///
-        /// This associated type represents the data type of individual property values
+        /// This associated type represents the type of property values
         /// that can be set on progress managers. Must be `Sendable` and `Equatable`.
+        /// The currently allowed types are `Int`, `Double`, `String?`, `URL?` or `UInt64`.
         associatedtype Value: Sendable, Equatable
         
         /// The type used for aggregated summaries of this property.
         ///
-        /// This associated type represents the data type used when summarizing property values
-        /// across multiple progress managers in a hierarchy. Must be `Sendable` and `Equatable`.
+        /// This associated type represents the type used when summarizing property values
+        /// across multiple progress managers in a subtree.
+        /// The currently allowed types are `Int`, `Double`, `[String?]`, `[URL?]` or `[UInt64]`.
         associatedtype Summary: Sendable, Equatable
         
         /// A unique identifier for this property type.
@@ -54,7 +53,7 @@ extension ProgressManager {
         /// The default summary value for this property type.
         ///
         /// This value is used as the initial summary when no property values have been
-        /// aggregated yet, or as a fallback when summarization fails.
+        /// aggregated yet.
         ///
         /// - Returns: The default summary value for this property type.
         static var defaultSummary: Summary { get }
@@ -79,6 +78,25 @@ extension ProgressManager {
         ///   - summary2: The second summary to merge.
         /// - Returns: A new summary that represents the combination of both input summaries.
         static func merge(_ summary1: Summary, _ summary2: Summary) -> Summary
+        
+        /// Determines how to handle summary data when a progress manager is deinitialized.
+        ///
+        /// This method is used when a progress manager in the hierarchy is being
+        /// deinitialized and its accumulated summary needs to be processed in relation to
+        /// its parent's summary. The behavior can vary depending on the property type:
+        ///
+        /// - For additive properties (like file counts, byte counts): The self summary
+        ///   is typically added to the parent summary to preserve the accumulated progress.
+        /// - For max-based properties (like estimated time remaining): The parent summary
+        ///   is typically preserved as it represents an existing estimate.
+        /// - For collection-based properties (like file URLs): The self summary may be
+        ///   discarded to avoid accumulating stale references.
+        ///
+        /// - Parameters:
+        ///   - parentSummary: The current summary value of the parent progress manager.
+        ///   - selfSummary: The final summary value from the progress manager being deinitialized.
+        /// - Returns: The updated summary that replaces the parent's current summary.
+        static func finalSummary(_ parentSummary: Summary, _ selfSummary: Summary) -> Summary
     }
     
     // Namespace for properties specific to operations reported on
@@ -105,6 +123,10 @@ extension ProgressManager {
             public static func merge(_ summary1: Int, _ summary2: Int) -> Int {
                 return summary1 + summary2
             }
+            
+            public static func finalSummary(_ parentSummary: Int, _ selfSummary: Int) -> Int {
+                return parentSummary + selfSummary
+            }
         }
         
         /// The number of completed files.
@@ -127,6 +149,10 @@ extension ProgressManager {
             
             public static func merge(_ summary1: Int, _ summary2: Int) -> Int {
                 return summary1 + summary2
+            }
+            
+            public static func finalSummary(_ parentSummary: Int, _ selfSummary: Int) -> Int {
+                return parentSummary + selfSummary
             }
         }
         
@@ -151,6 +177,10 @@ extension ProgressManager {
             public static func merge(_ summary1: UInt64, _ summary2: UInt64) -> UInt64 {
                 return summary1 + summary2
             }
+            
+            public static func finalSummary(_ parentSummary: UInt64, _ selfSummary: UInt64) -> UInt64 {
+                return parentSummary + selfSummary
+            }
         }
         
         /// The number of completed bytes.
@@ -174,6 +204,10 @@ extension ProgressManager {
             public static func merge(_ summary1: UInt64, _ summary2: UInt64) -> UInt64 {
                 return summary1 + summary2
             }
+            
+            public static func finalSummary(_ parentSummary: UInt64, _ selfSummary: UInt64) -> UInt64 {
+                return parentSummary + selfSummary
+            }
         }
         
         /// The throughput, in bytes per second.
@@ -181,25 +215,24 @@ extension ProgressManager {
         public struct Throughput: Sendable, Property {
             public typealias Value = UInt64
             
-            public struct AggregateThroughput: Sendable, Equatable {
-                var values: UInt64
-                var count: Int
-            }
-            
-            public typealias Summary = AggregateThroughput
+            public typealias Summary = [UInt64]
             
             public static var key: String { return "Foundation.ProgressManager.Properties.Throughput" }
             
             public static var defaultValue: UInt64 { return 0 }
             
-            public static var defaultSummary: AggregateThroughput { return AggregateThroughput(values: 0, count: 0) }
+            public static var defaultSummary: [UInt64] { return [] }
             
-            public static func reduce(into summary: inout AggregateThroughput, value: UInt64) {
-                summary = Summary(values: summary.values + value, count: summary.count + 1)
+            public static func reduce(into summary: inout [UInt64], value: UInt64) {
+                summary.append(value)
             }
             
-            public static func merge(_ summary1: AggregateThroughput, _ summary2: AggregateThroughput) -> AggregateThroughput {
-                return Summary(values: summary1.values + summary2.values, count: summary1.count + summary2.count)
+            public static func merge(_ summary1: [UInt64], _ summary2: [UInt64]) -> [UInt64] {
+                return summary1 + summary2
+            }
+            
+            public static func finalSummary(_ parentSummary: [UInt64], _ selfSummary: [UInt64]) -> [UInt64] {
+                return parentSummary + selfSummary
             }
         }
         
@@ -228,34 +261,10 @@ extension ProgressManager {
             public static func merge(_ summary1: Duration, _ summary2: Duration) -> Duration {
                 return max(summary1, summary2)
             }
-        }
-        
-        
-        /// The URL of file being processed.
-        public var fileURL: FileURL.Type { FileURL.self }
-        public struct FileURL: Sendable, Property {
             
-            public typealias Value = URL?
-            
-            public typealias Summary = [URL]
-            
-            public static var key: String { return "Foundation.ProgressManager.Properties.FileURL" }
-            
-            public static var defaultValue: URL? { return nil }
-            
-            public static var defaultSummary: [URL] { return [] }
-                        
-            public static func reduce(into summary: inout [URL], value: URL?) {
-                guard let value else {
-                    return
-                }
-                summary.append(value)
+            public static func finalSummary(_ parentSummary: Duration, _ selfSummary: Duration) -> Duration {
+                return parentSummary
             }
-            
-            public static func merge(_ summary1: [URL], _ summary2: [URL]) -> [URL] {
-                return summary1 + summary2
-            }
-            
         }
     }
 }

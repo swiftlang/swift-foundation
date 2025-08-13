@@ -26,6 +26,9 @@ internal import _FoundationCollections
 @Observable public final class ProgressManager: Sendable {
     
     internal let state: Mutex<State>
+    internal let additionalPropertiesSink: Void // method 1
+    internal static let additionalPropertiesKeyPath: Mutex<KeyPath<ProgressManager, Void>> = Mutex(\ProgressManager.additionalPropertiesSink) // granular support: keypath synthesis
+    // view debugger in SwiftUI: show that keypath, name it a bit more close to its functionality
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -50,15 +53,7 @@ internal import _FoundationCollections
     public var fractionCompleted: Double {
         _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
         return state.withLock { state in
-#if FOUNDATION_FRAMEWORK
-            if let interopChild = state.interopChild {
-                return interopChild.fractionCompleted
-            }
-#endif
-            
-            state.updateChildrenProgressFraction()
-                        
-            return state.overallFraction.fractionCompleted
+            state.getFractionCompleted()
         }
     }
     
@@ -67,12 +62,7 @@ internal import _FoundationCollections
     public var isIndeterminate: Bool {
         _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
         return state.withLock { state in
-#if FOUNDATION_FRAMEWORK
-            if let interopChild = state.interopChild {
-                return interopChild.isIndeterminate
-            }
-#endif
-            return state.selfFraction.isIndeterminate
+            state.getIsIndeterminate()
         }
     }
     
@@ -81,12 +71,7 @@ internal import _FoundationCollections
     public var isFinished: Bool {
         _$observationRegistrar.access(self, keyPath: \.isFinished)
         return state.withLock { state in
-#if FOUNDATION_FRAMEWORK
-            if let interopChild = state.interopChild {
-                return interopChild.isIndeterminate
-            }
-#endif
-            return state.selfFraction.isFinished
+            state.getIsFinished()
         }
     }
     
@@ -107,13 +92,13 @@ internal import _FoundationCollections
             completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
-            fileURL: ProgressManager.Properties.FileURL.defaultValue,
             propertiesInt: [:],
             propertiesDouble: [:],
             propertiesString: [:],
-            interopChild: nil,
-            interopObservation: InteropObservation(subprogressBridge: subprogressBridge),
-            observers: []
+            propertiesURL: [:],
+            propertiesUInt64: [:],
+            observers: [],
+            interopType: .interopObservation(InteropObservation(subprogressBridge: subprogressBridge))
         )
         self.state = Mutex(state)
     }
@@ -129,10 +114,11 @@ internal import _FoundationCollections
             completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
-            fileURL: ProgressManager.Properties.FileURL.defaultValue,
             propertiesInt: [:],
             propertiesDouble: [:],
-            propertiesString: [:]
+            propertiesString: [:],
+            propertiesURL: [:],
+            propertiesUInt64: [:],
         )
         self.state = Mutex(state)
     }
@@ -191,25 +177,7 @@ internal import _FoundationCollections
                 return nil
             }
             
-            state.selfFraction.completed += count
-
-#if FOUNDATION_FRAMEWORK
-            state.interopObservation.subprogressBridge?.manager.notifyObservers(
-                with: .fractionUpdated(
-                    totalCount: state.selfFraction.total ?? 0,
-                    completedCount: state.selfFraction.completed
-                )
-            )
-            
-            if let _ = state.interopObservation.reporterBridge {
-                state.notifyObservers(
-                    with: .fractionUpdated(
-                        totalCount: state.selfFraction.total ?? 0,
-                        completedCount: state.selfFraction.completed
-                    )
-                )
-            }
-#endif
+            state.complete(by: count)
             
             return state.parents
         }
@@ -217,6 +185,38 @@ internal import _FoundationCollections
             markSelfDirty(parents: parents)
         }
     }
+    
+    // MARK: Internal Observation Support for Extensions
+    
+    /// Provides access to the observation registrar for use in extensions.
+    /// This allows extensions to properly register observation access.
+    internal func accessObservation<T>(keyPath: KeyPath<ProgressManager, T>) {
+        _$observationRegistrar.access(self, keyPath: keyPath)
+    }
+    
+    /// Provides mutation access to the observation registrar for use in extensions.
+    /// This allows extensions to properly register observation mutations.
+    internal func mutateObservation<T>(of keyPath: KeyPath<ProgressManager, T>, _ mutation: () -> Void) {
+        _$observationRegistrar.withMutation(of: self, keyPath: keyPath, mutation)
+    }
+    
+    // bad performance
+//    internal subscript(fakeKeypath fake: MetatypeWrapper<Int, Int>) -> Void {
+//        _$observationRegistrar.access(self, keyPath: \.[fakeKeypath: fake])
+//    }
+    
+    //MARK: Internal vars to make additional properties observable
+//    internal var totalFileCount: Int {
+//        _$observationRegistrar.access(self, keyPath: \.totalFileCount)
+//        return getUpdatedFileCount(type: .total)
+//    }
+//    
+//    internal var completedFileCount: Int {
+//        _$observationRegistrar.access(self, keyPath: \.completedFileCount)
+//        return getUpdatedFileCount(type: .completed)
+//    }
+    
+    
     
     //MARK: Fractional Properties Methods
     internal func getProgressFraction() -> ProgressFraction {
@@ -268,7 +268,6 @@ internal import _FoundationCollections
     internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
         let (index, parents) = state.withLock { state in
             let childState = ChildState(child: child,
-                                        remainingPropertiesInt: nil,
                                         portionOfTotal: portion,
                                         childFraction: childFraction,
                                         isDirty: true,
@@ -278,10 +277,11 @@ internal import _FoundationCollections
                                         completedByteCount: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
                                         throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
                                         estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
-                                        fileURL: PropertyStateURL(value: ProgressManager.Properties.FileURL.defaultSummary, isDirty: false),
                                         childPropertiesInt: [:],
                                         childPropertiesDouble: [:],
-                                        childPropertiesString: [:])
+                                        childPropertiesString: [:],
+                                        childPropertiesURL: [:],
+                                        childPropertiesUInt64: [:])
             state.children.append(childState)
             return (state.children.count - 1, state.parents)
         }
@@ -331,46 +331,67 @@ internal import _FoundationCollections
     }
     
     deinit {
-        if !isFinished {
-            self.withProperties { properties in
-                if let totalCount = properties.totalCount {
-                    properties.completedCount = totalCount
-                }
-            }
+                
+        let (propertiesInt, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64, parents) = state.withLock { state in
+            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64, state.parents)
         }
         
-        let (propertiesInt, propertiesDouble, propertiesString, parents) = state.withLock { state in
-            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.parents)
-        }
-        
-        var finalSummaryInt: [MetatypeWrapper<Int>: Int] = [:]
+        var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
         for property in propertiesInt.keys {
             let updatedSummary = self.getUpdatedIntSummary(property: property)
             finalSummaryInt[property] = updatedSummary
         }
         
-        var finalSummaryDouble: [MetatypeWrapper<Double>: Double] = [:]
+        var finalSummaryDouble: [MetatypeWrapper<Double, Double>: Double] = [:]
         for property in propertiesDouble.keys {
             let updatedSummary = self.getUpdatedDoubleSummary(property: property)
             finalSummaryDouble[property] = updatedSummary
         }
 
-        var finalSummaryString: [MetatypeWrapper<String>: String] = [:]
+        var finalSummaryString: [MetatypeWrapper<String?, [String?]>: [String?]] = [:]
         for property in propertiesString.keys {
             let updatedSummary = self.getUpdatedStringSummary(property: property)
             finalSummaryString[property] = updatedSummary
         }
         
+        var finalSummaryURL: [MetatypeWrapper<URL?, [URL?]>: [URL?]] = [:]
+        for property in propertiesURL.keys {
+            let updatedSummary = self.getUpdatedURLSummary(property: property)
+            finalSummaryURL[property] = updatedSummary
+        }
+        
+        var finalSummaryUInt64: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]] = [:]
+        for property in propertiesUInt64.keys {
+            let updatedSummary = self.getUpdatedUInt64Summary(property: property)
+            finalSummaryUInt64[property] = updatedSummary
+        }
+        
+        let totalFileCount = self.getUpdatedFileCount(type: .total)
+        let completedFileCount = self.getUpdatedFileCount(type: .completed)
+        let totalByteCount = self.getUpdatedByteCount(type: .total)
+        let completedByteCount = self.getUpdatedByteCount(type: .completed)
+        let throughput = self.getUpdatedThroughput()
+        let estimatedTimeRemaining = self.getUpdatedEstimatedTimeRemaining()
+        
+        if !isFinished {
+            markSelfDirty(parents: parents)
+        }
         
         for parentState in parents {
-            parentState.parent.setChildRemainingPropertiesInt(finalSummaryInt, at: parentState.positionInParent)
-            parentState.parent.setChildRemainingPropertiesDouble(finalSummaryDouble, at: parentState.positionInParent)
-            parentState.parent.setChildRemainingPropertiesString(finalSummaryString, at: parentState.positionInParent)
-            parentState.parent.setChildTotalFileCount(value: self.getUpdatedFileCount(type: .total), at: parentState.positionInParent)
-            parentState.parent.setChildCompletedFileCount(value: self.getUpdatedFileCount(type: .completed), at: parentState.positionInParent)
-            parentState.parent.setChildTotalByteCount(value: self.getUpdatedByteCount(type: .total), at: parentState.positionInParent)
-            parentState.parent.setChildCompletedByteCount(value: self.getUpdatedByteCount(type: .completed), at: parentState.positionInParent)
-            parentState.parent.setChildThroughput(value: self.getUpdatedThroughput(), at: parentState.positionInParent)
+            parentState.parent.setChildDeclaredAdditionalProperties(
+                at: parentState.positionInParent,
+                totalFileCount: totalFileCount,
+                completedFileCount: completedFileCount,
+                totalByteCount: totalByteCount,
+                completedByteCount: completedByteCount,
+                throughput: throughput,
+                estimatedTimeRemaining: estimatedTimeRemaining,
+                propertiesInt: finalSummaryInt,
+                propertiesDouble: finalSummaryDouble,
+                propertiesString: finalSummaryString,
+                propertiesURL: finalSummaryURL,
+                propertiesUInt64: finalSummaryUInt64
+            )
         }
     }
 }
