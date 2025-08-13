@@ -220,6 +220,11 @@ extension ProgressManager {
         var reporterBridge: ProgressReporterBridge?
         var nsProgressBridge: Foundation.Progress?
     }
+    
+    internal enum InteropType {
+        case interopMirror(ProgressManager)
+        case observation(InteropObservation)
+    }
 }
 
 extension ProgressManager.State {
@@ -252,18 +257,20 @@ extension ProgressManager {
     internal func addBridge(reporterBridge: ProgressReporterBridge? = nil, nsProgressBridge: Foundation.Progress? = nil) {
         state.withLock { state in
             if let reporterBridge {
-                state.interopObservation.reporterBridge = reporterBridge
+                let interopObservation = InteropObservation(subprogressBridge: nil, reporterBridge: reporterBridge)
+                state.interopType = .observation(interopObservation)
             }
             
             if let nsProgressBridge {
-                state.interopObservation.nsProgressBridge = nsProgressBridge
+                let interopObservation = InteropObservation(subprogressBridge: nil, nsProgressBridge: nsProgressBridge)
+                state.interopType = .observation(interopObservation)
             }
         }
     }
     
-    internal func setInteropChild(interopChild: ProgressManager) {
+    internal func setInteropChild(interopMirror: ProgressManager) {
         state.withLock { state in
-            state.interopChild = interopChild
+            state.interopType = .interopMirror(interopMirror)
         }
     }
 }

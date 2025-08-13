@@ -146,8 +146,8 @@ extension ProgressManager {
                 propertiesInt: [:],
                 propertiesDouble: [:],
                 propertiesString: [:],
-                interopObservation: InteropObservation(subprogressBridge: nil),
-                observers: []
+                observers: [],
+                interopType: nil
             )
 #else
             state = State(
@@ -217,8 +217,15 @@ extension ProgressManager {
             }
 #if FOUNDATION_FRAMEWORK
             if let observerState = values.observerState {
-                if let _ = state.interopObservation.reporterBridge {
-                    notifyObservers(with: observerState)
+                switch state.interopType {
+                case .interopMirror:
+                    break
+                case .observation(let interopObservation):
+                    if let _ = interopObservation.reporterBridge {
+                        notifyObservers(with: observerState)
+                    }
+                case .none:
+                    break
                 }
             }
 #endif
@@ -487,8 +494,14 @@ extension ProgressManager {
         }
 #if FOUNDATION_FRAMEWORK
         private mutating func interopNotifications() {
-            state.interopObservation.subprogressBridge?.manager.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
-            
+            switch state.interopType {
+            case .interopMirror(let mirror):
+                break
+            case .observation(let interopObservation):
+                interopObservation.subprogressBridge?.manager.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
+            case .none:
+                break
+            }
             self.observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
         }
 #endif

@@ -93,9 +93,8 @@ internal import _FoundationCollections
             propertiesInt: [:],
             propertiesDouble: [:],
             propertiesString: [:],
-            interopChild: nil,
-            interopObservation: InteropObservation(subprogressBridge: subprogressBridge),
-            observers: []
+            observers: [],
+            interopType: .observation(InteropObservation(subprogressBridge: subprogressBridge))
         )
         self.state = Mutex(state)
     }
