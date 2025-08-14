@@ -80,7 +80,6 @@ extension Decimal : _ObjectiveCBridgeable {
 // MARK: - Bridging code to C functions
 // We have one implementation function for each, and an entry point for both Darwin (cdecl, exported from the framework), and swift-corelibs-foundation (SPI here and available via that package as API)
 
-#if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     let result = try? x._power(
@@ -88,15 +87,6 @@ public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     )
     return result ?? .nan
 }
-#else
-@_spi(SwiftCorelibsFoundation)
-public func _pow(_ x: Decimal, _ y: Int) -> Decimal {
-    let result = try? x._power(
-        exponent: y, roundingMode: .plain
-    )
-    return result ?? .nan
-}
-#endif
 
 private func __NSDecimalAdd(
     _ result: UnsafeMutablePointer<Decimal>,
