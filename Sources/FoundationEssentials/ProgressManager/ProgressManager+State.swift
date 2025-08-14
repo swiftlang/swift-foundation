@@ -52,7 +52,7 @@ extension ProgressManager {
     }
     
     internal struct PropertyStateThroughput {
-        var value: ProgressManager.Properties.Throughput.AggregateThroughput
+        var value: [UInt64]
         var isDirty: Bool
     }
     
@@ -72,7 +72,7 @@ extension ProgressManager {
     }
     
     internal struct PropertyStateURL {
-        var value: [URL]
+        var value: [URL?]
         var isDirty: Bool
     }
     

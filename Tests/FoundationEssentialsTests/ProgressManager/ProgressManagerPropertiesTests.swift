@@ -256,7 +256,7 @@ import Testing
         }
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 2000)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [2000])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -270,7 +270,7 @@ import Testing
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 1500)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 2000])
     }
     
     @Test func discreteManager() async throws {
@@ -283,7 +283,7 @@ import Testing
         }
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 3000)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [3000])
     }
     
     @Test func twoLevelManager() async throws {
@@ -296,7 +296,7 @@ import Testing
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == 1500)
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 2000])
     }
     
     @Test func threeLevelManager() async throws {
@@ -310,7 +310,7 @@ import Testing
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == Int64(4000 / 3))
+        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 1000, 2000])
     }
 }
 

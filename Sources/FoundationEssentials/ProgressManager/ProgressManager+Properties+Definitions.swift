@@ -181,25 +181,20 @@ extension ProgressManager {
         public struct Throughput: Sendable, Property {
             public typealias Value = UInt64
             
-            public struct AggregateThroughput: Sendable, Equatable {
-                var values: UInt64
-                var count: Int
-            }
-            
-            public typealias Summary = AggregateThroughput
+            public typealias Summary = [UInt64]
             
             public static var key: String { return "Foundation.ProgressManager.Properties.Throughput" }
             
             public static var defaultValue: UInt64 { return 0 }
             
-            public static var defaultSummary: AggregateThroughput { return AggregateThroughput(values: 0, count: 0) }
+            public static var defaultSummary: [UInt64] { return [] }
             
-            public static func reduce(into summary: inout AggregateThroughput, value: UInt64) {
-                summary = Summary(values: summary.values + value, count: summary.count + 1)
+            public static func reduce(into summary: inout [UInt64], value: UInt64) {
+                summary.append(value)
             }
             
-            public static func merge(_ summary1: AggregateThroughput, _ summary2: AggregateThroughput) -> AggregateThroughput {
-                return Summary(values: summary1.values + summary2.values, count: summary1.count + summary2.count)
+            public static func merge(_ summary1: [UInt64], _ summary2: [UInt64]) -> [UInt64] {
+                return summary1 + summary2
             }
         }
         
@@ -237,22 +232,22 @@ extension ProgressManager {
             
             public typealias Value = URL?
             
-            public typealias Summary = [URL]
+            public typealias Summary = [URL?]
             
             public static var key: String { return "Foundation.ProgressManager.Properties.FileURL" }
             
             public static var defaultValue: URL? { return nil }
             
-            public static var defaultSummary: [URL] { return [] }
+            public static var defaultSummary: [URL?] { return [] }
                         
-            public static func reduce(into summary: inout [URL], value: URL?) {
+            public static func reduce(into summary: inout [URL?], value: URL?) {
                 guard let value else {
                     return
                 }
                 summary.append(value)
             }
             
-            public static func merge(_ summary1: [URL], _ summary2: [URL]) -> [URL] {
+            public static func merge(_ summary1: [URL?], _ summary2: [URL?]) -> [URL?] {
                 return summary1 + summary2
             }
             

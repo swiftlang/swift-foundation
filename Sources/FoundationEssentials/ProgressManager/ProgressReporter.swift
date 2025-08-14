@@ -150,7 +150,7 @@ import Observation
     ///
     /// - Parameter property: The `Throughput` property type.
     /// - Returns: The average throughput across the entire progress subtree, in bytes per second.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> UInt64 {
+    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64] {
         manager.summary(of: property)
     }
     
@@ -166,7 +166,7 @@ import Observation
     ///
     /// - Parameter property: The `FileURL` property type.
     /// - Returns: An array containing all file URLs across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL] {
+    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL?] {
         manager.summary(of: property)
     }
 

@@ -90,9 +90,8 @@ extension ProgressManager {
     ///
     /// - Note: The throughput is calculated as the sum of all throughput values divided by the count
     ///   of progress managers that have throughput data.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> UInt64 {
-        let throughput = getUpdatedThroughput()
-        return throughput.values / UInt64(throughput.count)
+    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64] {
+        return getUpdatedThroughput()
     }
     
     /// Returns the maximum estimated time remaining for completion across the progress subtree.
@@ -110,7 +109,7 @@ extension ProgressManager {
     ///
     /// - Parameter property: The `FileURL` property type.
     /// - Returns: An array containing all file URLs across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL] {
+    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL?] {
         return getUpdatedFileURL()
     }
     

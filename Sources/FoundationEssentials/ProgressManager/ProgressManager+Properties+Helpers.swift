@@ -286,10 +286,10 @@ extension ProgressManager {
         }
     }
     
-    internal func getUpdatedThroughput() -> ProgressManager.Properties.Throughput.AggregateThroughput {
+    internal func getUpdatedThroughput() -> [UInt64] {
         return state.withLock { state in
             // Get self's throughput as part of summary
-            var value: ProgressManager.Properties.Throughput.AggregateThroughput = ProgressManager.Properties.Throughput.defaultSummary
+            var value = ProgressManager.Properties.Throughput.defaultSummary
             ProgressManager.Properties.Throughput.reduce(into: &value, value: state.throughput)
             
             guard !state.children.isEmpty else {
@@ -342,10 +342,10 @@ extension ProgressManager {
         }
     }
     
-    internal func getUpdatedFileURL() -> [URL] {
+    internal func getUpdatedFileURL() -> [URL?] {
         return state.withLock { state in
             // Get self's estimatedTimeRemaining as part of summary
-            var value: [URL] = ProgressManager.Properties.FileURL.defaultSummary
+            var value: [URL?] = ProgressManager.Properties.FileURL.defaultSummary
             ProgressManager.Properties.FileURL.reduce(into: &value, value: state.fileURL)
             
             guard !state.children.isEmpty else {
@@ -554,7 +554,7 @@ extension ProgressManager {
         }
     }
     
-    internal func setChildThroughput(value: ProgressManager.Properties.Throughput.AggregateThroughput, at position: Int) {
+    internal func setChildThroughput(value: [UInt64], at position: Int) {
         state.withLock { state in
             state.children[position].throughput = PropertyStateThroughput(value: value, isDirty: false)
         }
