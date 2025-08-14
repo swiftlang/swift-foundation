@@ -136,17 +136,16 @@ extension ProgressManager {
         /// returns a `Int` value otherwise.
         internal func getTotalCount() -> Int? {
 #if FOUNDATION_FRAMEWORK
-            switch interopType {
-            case .interopMirror(let mirror):
-                return mirror.totalCount
-            case .observation(let observation):
-                return selfFraction.total
-            case .none:
-                return selfFraction.total
-            }
-#else
-            return selfFraction.total
+        switch interopType {
+        case .interopMirror(let mirror):
+            return mirror.totalCount
+        case .interopObservation(let observation):
+            break
+        default:
+            break
+        }
 #endif
+            return selfFraction.total
         }
         
         /// Returns 0 if `self` has `nil` total units;
@@ -156,35 +155,34 @@ extension ProgressManager {
             switch interopType {
             case .interopMirror(let mirror):
                 return mirror.completedCount
-            case .observation(let observation):
-                updateChildrenProgressFraction()
-                return selfFraction.completed
-            case .none:
-                updateChildrenProgressFraction()
-                return selfFraction.completed
+            case .interopObservation(let observation):
+                break
+            default:
+                break
             }
-#else
+#endif
             updateChildrenProgressFraction()
             return selfFraction.completed
-#endif
         }
         
         internal mutating func getFractionCompleted() -> Double {
 #if FOUNDATION_FRAMEWORK
+            // change name later to interopMirror
             switch interopType {
             case .interopMirror(let mirror):
                 return mirror.fractionCompleted
-            case .observation(let observation):
-                updateChildrenProgressFraction()
-                return selfFraction.fractionCompleted
-            case .none:
-                updateChildrenProgressFraction()
-                return selfFraction.fractionCompleted
+            case .interopObservation(let observation):
+                break
+            default:
+                break
             }
-#else
+//            if let interopChild = interopChild {
+//                return interopChild.fractionCompleted
+//            }
+#endif
+            
             updateChildrenProgressFraction()
             return overallFraction.fractionCompleted
-#endif
         }
         
         internal func getIsIndeterminate() -> Bool {
@@ -192,14 +190,14 @@ extension ProgressManager {
             switch interopType {
             case .interopMirror(let mirror):
                 return mirror.isIndeterminate
-            case .observation(let observation):
-                return selfFraction.isIndeterminate
-            case .none:
-                return selfFraction.isIndeterminate
+            case .interopObservation(let observation):
+                break
+            default:
+                break
             }
-#else
-            return selfFraction.isIndeterminate
+
 #endif
+            return selfFraction.isIndeterminate
         }
         
         internal func getIsFinished() -> Bool {
@@ -207,14 +205,13 @@ extension ProgressManager {
             switch interopType {
             case .interopMirror(let mirror):
                 return mirror.isFinished
-            case .observation(let observation):
-                return selfFraction.isFinished
-            case .none:
-                return selfFraction.isFinished
+            case .interopObservation(let observation):
+                break
+            default:
+                break
             }
-#else
-            return selfFraction.isFinished
 #endif
+            return selfFraction.isFinished
         }
         
         internal mutating func updateChildrenProgressFraction() {
@@ -242,9 +239,7 @@ extension ProgressManager {
 
 #if FOUNDATION_FRAMEWORK
             switch interopType {
-            case .interopMirror(let mirror):
-                return
-            case .observation(let observation):
+            case .interopObservation(let observation):
                 observation.subprogressBridge?.manager.notifyObservers(
                     with: .fractionUpdated(
                         totalCount: selfFraction.total ?? 0,
@@ -260,8 +255,10 @@ extension ProgressManager {
                         )
                     )
                 }
-            case .none:
-                return
+            case .interopMirror(let mirror):
+                break
+            default:
+                break
             }
 #endif
         }

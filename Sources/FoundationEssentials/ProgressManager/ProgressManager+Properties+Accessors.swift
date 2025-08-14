@@ -147,7 +147,7 @@ extension ProgressManager {
                 propertiesDouble: [:],
                 propertiesString: [:],
                 observers: [],
-                interopType: nil
+                interopType: nil,
             )
 #else
             state = State(
@@ -218,13 +218,13 @@ extension ProgressManager {
 #if FOUNDATION_FRAMEWORK
             if let observerState = values.observerState {
                 switch state.interopType {
-                case .interopMirror:
-                    break
-                case .observation(let interopObservation):
-                    if let _ = interopObservation.reporterBridge {
+                case .interopObservation(let observation):
+                    if let _ = observation.reporterBridge {
                         notifyObservers(with: observerState)
                     }
-                case .none:
+                case .interopMirror(let mirror):
+                    break
+                default:
                     break
                 }
             }
@@ -495,14 +495,14 @@ extension ProgressManager {
 #if FOUNDATION_FRAMEWORK
         private mutating func interopNotifications() {
             switch state.interopType {
+            case .interopObservation(let observation):
+                observation.subprogressBridge?.manager.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
+                self.observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
             case .interopMirror(let mirror):
                 break
-            case .observation(let interopObservation):
-                interopObservation.subprogressBridge?.manager.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
-            case .none:
-                break
+            default:
+                break 
             }
-            self.observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
         }
 #endif
     }

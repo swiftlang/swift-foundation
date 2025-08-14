@@ -223,7 +223,7 @@ extension ProgressManager {
     
     internal enum InteropType {
         case interopMirror(ProgressManager)
-        case observation(InteropObservation)
+        case interopObservation(InteropObservation)
     }
 }
 
@@ -256,15 +256,19 @@ extension ProgressManager {
     
     internal func addBridge(reporterBridge: ProgressReporterBridge? = nil, nsProgressBridge: Foundation.Progress? = nil) {
         state.withLock { state in
+            var interopObservation = InteropObservation(subprogressBridge: nil)
+            
             if let reporterBridge {
-                let interopObservation = InteropObservation(subprogressBridge: nil, reporterBridge: reporterBridge)
-                state.interopType = .observation(interopObservation)
+                interopObservation.reporterBridge = reporterBridge
+//                state.interopObservation.reporterBridge = reporterBridge
             }
             
             if let nsProgressBridge {
-                let interopObservation = InteropObservation(subprogressBridge: nil, nsProgressBridge: nsProgressBridge)
-                state.interopType = .observation(interopObservation)
+                interopObservation.nsProgressBridge = nsProgressBridge
+//                state.interopObservation.nsProgressBridge = nsProgressBridge
             }
+            
+            state.interopType = .interopObservation(interopObservation)
         }
     }
     
