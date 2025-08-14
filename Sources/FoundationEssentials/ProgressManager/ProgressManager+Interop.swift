@@ -305,12 +305,10 @@ extension ProgressManager {
             
             if let reporterBridge {
                 interopObservation.reporterBridge = reporterBridge
-//                state.interopObservation.reporterBridge = reporterBridge
             }
             
             if let nsProgressBridge {
                 interopObservation.nsProgressBridge = nsProgressBridge
-//                state.interopObservation.nsProgressBridge = nsProgressBridge
             }
             
             state.interopType = .interopObservation(interopObservation)
