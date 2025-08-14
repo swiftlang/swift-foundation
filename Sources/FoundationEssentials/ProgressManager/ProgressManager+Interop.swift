@@ -224,6 +224,51 @@ extension ProgressManager {
     internal enum InteropType {
         case interopMirror(ProgressManager)
         case interopObservation(InteropObservation)
+        
+        internal var totalCount: Int? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.totalCount
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var completedCount: Int? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.completedCount
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var fractionCompleted: Double? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.fractionCompleted
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var isIndeterminate: Bool? {
+            switch self {
+            case .interopMirror(let mirror):
+                mirror.isIndeterminate
+            case .interopObservation:
+                nil
+            }
+        }
+        
+        internal var isFinished: Bool? {
+            switch self {
+            case .interopMirror(let mirror):
+                 mirror.isFinished
+            case .interopObservation:
+                nil
+            }
+        }
     }
 }
 

@@ -222,7 +222,7 @@ extension ProgressManager {
                     if let _ = observation.reporterBridge {
                         notifyObservers(with: observerState)
                     }
-                case .interopMirror(let mirror):
+                case .interopMirror:
                     break
                 default:
                     break
@@ -498,7 +498,7 @@ extension ProgressManager {
             case .interopObservation(let observation):
                 observation.subprogressBridge?.manager.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
                 self.observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
-            case .interopMirror(let mirror):
+            case .interopMirror:
                 break
             default:
                 break 
