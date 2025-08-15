@@ -131,7 +131,7 @@ internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type
     // UIKit on macOS
     let macUIScope = (
         "$s10Foundation15AttributeScopesO5UIKitE0D10AttributesVN",
-        "/System/iOSSupport/System/Library/Frameworks/UIKit.framework/UIKit"
+        "/System/iOSSupport/System/Library/PrivateFrameworks/UIKitCore.framework/UIKitCore"
     )
     #endif
 
@@ -142,12 +142,12 @@ internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type
             // UIKit
             (
                 "$s10Foundation15AttributeScopesO5UIKitE0D10AttributesVN",
-                "/System/Library/Frameworks/UIKit.framework/UIKit"
+                "/System/Library/PrivateFrameworks/UIKitCore.framework/UIKitCore"
             ),
             // SwiftUI
             (
                 "$s10Foundation15AttributeScopesO7SwiftUIE0D12UIAttributesVN",
-                "/System/Library/Frameworks/SwiftUI.framework/SwiftUI"
+                "/System/Library/Frameworks/SwiftUICore.framework/SwiftUICore"
             ),
             // Accessibility
             (
