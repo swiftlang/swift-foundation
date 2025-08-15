@@ -47,7 +47,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the string property to summarize. Must be a property
     ///   where both the value and summary types are `String`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String, P.Summary == String {
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String, P.Summary == [String] {
         return getUpdatedStringSummary(property: MetatypeWrapper(property))
     }
     
@@ -247,9 +247,9 @@ extension ProgressManager {
         internal var throughputDirty = false
         internal var estimatedTimeRemainingDirty = false
         internal var fileURLDirty = false
-        internal var dirtyPropertiesInt: [MetatypeWrapper<Int>] = []
-        internal var dirtyPropertiesDouble: [MetatypeWrapper<Double>] = []
-        internal var dirtyPropertiesString: [MetatypeWrapper<String>] = []
+        internal var dirtyPropertiesInt: [MetatypeWrapper<Int, Int>] = []
+        internal var dirtyPropertiesDouble: [MetatypeWrapper<Double, Double>] = []
+        internal var dirtyPropertiesString: [MetatypeWrapper<String, [String]>] = []
 #if FOUNDATION_FRAMEWORK
         internal var observerState: ObserverState?
 #endif
@@ -476,7 +476,7 @@ extension ProgressManager {
         /// property's default value.
         ///
         /// - Parameter key: A key path to the custom string property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String where P.Value == String, P.Summary == String {
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String where P.Value == String, P.Summary == [String] {
             get {
                 return state.propertiesString[MetatypeWrapper(P.self)] ?? P.self.defaultValue
             }

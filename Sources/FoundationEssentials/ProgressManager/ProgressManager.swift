@@ -305,19 +305,19 @@ internal import _FoundationCollections
             return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.parents)
         }
         
-        var finalSummaryInt: [MetatypeWrapper<Int>: Int] = [:]
+        var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
         for property in propertiesInt.keys {
             let updatedSummary = self.getUpdatedIntSummary(property: property)
             finalSummaryInt[property] = updatedSummary
         }
         
-        var finalSummaryDouble: [MetatypeWrapper<Double>: Double] = [:]
+        var finalSummaryDouble: [MetatypeWrapper<Double, Double>: Double] = [:]
         for property in propertiesDouble.keys {
             let updatedSummary = self.getUpdatedDoubleSummary(property: property)
             finalSummaryDouble[property] = updatedSummary
         }
 
-        var finalSummaryString: [MetatypeWrapper<String>: String] = [:]
+        var finalSummaryString: [MetatypeWrapper<String, [String]>: [String]] = [:]
         for property in propertiesString.keys {
             let updatedSummary = self.getUpdatedStringSummary(property: property)
             finalSummaryString[property] = updatedSummary

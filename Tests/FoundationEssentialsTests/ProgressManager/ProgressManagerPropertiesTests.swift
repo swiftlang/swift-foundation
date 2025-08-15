@@ -652,24 +652,24 @@ extension ProgressManager.Properties {
         
         typealias Value = String
         
-        typealias Summary = String
+        typealias Summary = [String]
         
         static var key: String { return "FileName" }
         
         static var defaultValue: String { return "" }
         
-        static var defaultSummary: String { return "" }
+        static var defaultSummary: [String] { return [] }
         
-        static func reduce(into summary: inout String, value: String) {
-            summary += value
+        static func reduce(into summary: inout [String], value: String) {
+            summary.append(value)
         }
         
-        static func merge(_ summary1: String, _ summary2: String) -> String {
-            return summary1 + ", " + summary2
+        static func merge(_ summary1: [String], _ summary2: [String]) -> [String] {
+            return summary1 + summary2
         }
         
-        static func terminate(_ parentSummary: String, _ childSummary: String) -> String {
-            return parentSummary + ", " + childSummary
+        static func terminate(_ parentSummary: [String], _ childSummary: [String]) -> [String] {
+            return parentSummary + childSummary
         }
     }
 }
@@ -686,7 +686,7 @@ extension ProgressManager.Properties {
         }
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == ["Melon.jpg"])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -700,7 +700,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Cherry.jpg, Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == ["Cherry.jpg", "Melon.jpg"])
     }
     
     @Test func discreteManager() async throws {
@@ -713,7 +713,7 @@ extension ProgressManager.Properties {
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.withProperties { $0.fileName } == "Grape.jpg")
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Grape.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == ["Grape.jpg"])
     }
     
     @Test func twoLevelsManager() async throws {
@@ -727,7 +727,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Watermelon.jpg, Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == ["Watermelon.jpg", "Melon.jpg"])
     }
     
     @Test func threeLevelsManager() async throws {
@@ -741,6 +741,6 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == "Watermelon.jpg, Cherry.jpg, Melon.jpg")
+        #expect(manager.summary(of: ProgressManager.Properties.FileName.self) == ["Watermelon.jpg", "Cherry.jpg", "Melon.jpg"])
     }
 }

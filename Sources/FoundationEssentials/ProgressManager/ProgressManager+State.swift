@@ -14,18 +14,18 @@ internal import Synchronization
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
-    internal struct MetatypeWrapper<T: Sendable>: Hashable, Equatable, Sendable {
+    internal struct MetatypeWrapper<V: Sendable, S: Sendable>: Hashable, Equatable, Sendable {
         
-        let reduce: @Sendable (inout T, T) -> ()
-        let merge: @Sendable (T, T) -> T
-        let terminate: @Sendable (T, T) -> T
+        let reduce: @Sendable (inout S, V) -> ()
+        let merge: @Sendable (S, S) -> S
+        let terminate: @Sendable (S, S) -> S
         
-        let defaultValue: T
-        let defaultSummary: T
+        let defaultValue: V
+        let defaultSummary: S
         
         let key: String
         
-        init<P: Property>(_ argument: P.Type) where P.Value == T, P.Summary == T {
+        init<P: Property>(_ argument: P.Type) where P.Value == V, P.Summary == S {
             reduce = P.reduce
             merge = P.merge
             terminate = P.terminate
@@ -38,7 +38,7 @@ extension ProgressManager {
             hasher.combine(key)
         }
         
-        static func == (lhs: ProgressManager.MetatypeWrapper<T>, rhs: ProgressManager.MetatypeWrapper<T>) -> Bool {
+        static func == (lhs: ProgressManager.MetatypeWrapper<V, S>, rhs: ProgressManager.MetatypeWrapper<V, S>) -> Bool {
             lhs.key == rhs.key
         }
     }
@@ -69,7 +69,7 @@ extension ProgressManager {
     }
     
     internal struct PropertyStateString {
-        var value: String
+        var value: [String]
         var isDirty: Bool
     }
     
@@ -90,9 +90,9 @@ extension ProgressManager {
         var throughput: PropertyStateThroughput
         var estimatedTimeRemaining: PropertyStateDuration
         var fileURL: PropertyStateURL
-        var childPropertiesInt: [MetatypeWrapper<Int>: PropertyStateInt]
-        var childPropertiesDouble: [MetatypeWrapper<Double>: PropertyStateDouble]
-        var childPropertiesString: [MetatypeWrapper<String>: PropertyStateString]
+        var childPropertiesInt: [MetatypeWrapper<Int, Int>: PropertyStateInt]
+        var childPropertiesDouble: [MetatypeWrapper<Double, Double>: PropertyStateDouble]
+        var childPropertiesString: [MetatypeWrapper<String, [String]>: PropertyStateString]
     }
     
     internal struct ParentState {
@@ -123,9 +123,9 @@ extension ProgressManager {
         var throughput: UInt64
         var estimatedTimeRemaining: Duration
         var fileURL: URL?
-        var propertiesInt: [MetatypeWrapper<Int>: Int]
-        var propertiesDouble: [MetatypeWrapper<Double>: Double]
-        var propertiesString: [MetatypeWrapper<String>: String]
+        var propertiesInt: [MetatypeWrapper<Int, Int>: Int]
+        var propertiesDouble: [MetatypeWrapper<Double, Double>: Double]
+        var propertiesString: [MetatypeWrapper<String, [String]>: String]
 #if FOUNDATION_FRAMEWORK
         var observers: [@Sendable (ObserverState) -> Void]
         var interopType: InteropType?

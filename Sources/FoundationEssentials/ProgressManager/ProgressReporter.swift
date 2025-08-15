@@ -110,8 +110,8 @@ import Observation
     /// - Parameter property: The type of the string property to summarize. Must be a property
     ///   where both the value and summary types are `String`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> String where P.Value == String, P.Summary == String {
-        manager.summary(of: property)
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [String] where P.Value == String, P.Summary == [String] {
+        return manager.summary(of: property)
     }
     
     /// Returns the total file count across the progress subtree.
