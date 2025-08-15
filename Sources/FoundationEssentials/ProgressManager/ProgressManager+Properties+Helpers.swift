@@ -19,7 +19,8 @@ extension ProgressManager {
         case completed
     }
     
-    //MARK: Methods to get updated summary of properties
+    //MARK: Helper Methods for Updating Dirty Path
+    
     internal func getUpdatedIntSummary(property: MetatypeWrapper<Int, Int>) -> Int {
         return state.withLock { state in
             
@@ -416,7 +417,8 @@ extension ProgressManager {
         }
     }
     
-    //MARK: Methods to set dirty bit recursively
+    //MARK: Helper Methods for Setting Dirty Paths
+    
     internal func markSelfDirty(property: MetatypeWrapper<Int, Int>, parents: [ParentState]) {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)

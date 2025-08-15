@@ -15,118 +15,7 @@ internal import Synchronization
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
-    /// Returns a summary for the specified integer property across the progress subtree.
-    ///
-    /// This method aggregates the values of a custom integer property from this progress manager
-    /// and all its children, returning a consolidated summary value.
-    ///
-    /// - Parameter property: The type of the integer property to summarize. Must be a property
-    ///   where both the value and summary types are `Int`.
-    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
-        return getUpdatedIntSummary(property: MetatypeWrapper(property))
-    }
-    
-    /// Returns a summary for the specified double property across the progress subtree.
-    ///
-    /// This method aggregates the values of a custom double property from this progress manager
-    /// and all its children, returning a consolidated summary value.
-    ///
-    /// - Parameter property: The type of the double property to summarize. Must be a property
-    ///   where both the value and summary types are `Double`.
-    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
-        return getUpdatedDoubleSummary(property: MetatypeWrapper(property))
-    }
-    
-    /// Returns a summary for the specified string property across the progress subtree.
-    ///
-    /// This method aggregates the values of a custom string property from this progress manager
-    /// and all its children, returning a consolidated summary value.
-    ///
-    /// - Parameter property: The type of the string property to summarize. Must be a property
-    ///   where both the value and summary types are `String`.
-    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String?, P.Summary == [String?] {
-        return getUpdatedStringSummary(property: MetatypeWrapper(property))
-    }
-    
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
-        return getUpdatedURLSummary(property: MetatypeWrapper(property))
-    }
-    
-    /// Returns the total file count across the progress subtree.
-    ///
-    /// - Parameter property: The `TotalFileCount` property type.
-    /// - Returns: The sum of all total file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
-        return getUpdatedFileCount(type: .total)
-    }
-    
-    /// Returns the completed file count across the progress subtree.
-    ///
-    /// - Parameter property: The `CompletedFileCount` property type.
-    /// - Returns: The sum of all completed file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int {
-        return getUpdatedFileCount(type: .completed)
-    }
-    
-    /// Returns the total byte count across the progress subtree.
-    ///
-    /// - Parameter property: The `TotalByteCount` property type.
-    /// - Returns: The sum of all total byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> UInt64 {
-        return getUpdatedByteCount(type: .total)
-    }
-    
-    /// Returns the completed byte count across the progress subtree.
-    ///
-    /// - Parameter property: The `CompletedByteCount` property type.
-    /// - Returns: The sum of all completed byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> UInt64 {
-        return getUpdatedByteCount(type: .completed)
-    }
-    
-    /// Returns the average throughput across the progress subtree.
-    ///
-    /// - Parameter property: The `Throughput` property type.
-    /// - Returns: The average throughput across the entire progress subtree, in bytes per second.
-    ///
-    /// - Note: The throughput is calculated as the sum of all throughput values divided by the count
-    ///   of progress managers that have throughput data.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64] {
-        return getUpdatedThroughput()
-    }
-    
-    /// Returns the maximum estimated time remaining for completion across the progress subtree.
-    ///
-    /// - Parameter property: The `EstimatedTimeRemaining` property type.
-    /// - Returns: The estimated duration until completion for the entire progress subtree.
-    ///
-    /// - Note: The estimation is based on current throughput and remaining work. The accuracy
-    ///   depends on the consistency of the processing rate.
-    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration {
-        return getUpdatedEstimatedTimeRemaining()
-    }
-    
-    /// Returns all file URLs being processed across the progress subtree.
-    ///
-    /// - Parameter property: The `FileURL` property type.
-    /// - Returns: An array containing all file URLs across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL?] {
-        return getUpdatedFileURL()
-    }
-    
-    // MARK: Additional Properties Methods
-    internal func getProperties<T, E: Error>(
-        _ closure: (sending Values) throws(E) -> sending T
-    ) throws(E) -> sending T {
-        try state.withLock { state throws(E) -> T in
-            let values = Values(state: state)
-            let result = try closure(values)
-            return result
-        }
-    }
+    // MARK: Methods to Read & Write Additional Properties of single ProgressManager node
     
     /// Mutates any settable properties that convey information about progress.
     public func withProperties<T, E: Error>(
@@ -520,6 +409,7 @@ extension ProgressManager {
                 dirtyPropertiesURL.append(MetatypeWrapper(P.self))
             }
         }
+        
 #if FOUNDATION_FRAMEWORK
         private mutating func interopNotifications() {
             switch state.interopType {
@@ -533,5 +423,119 @@ extension ProgressManager {
             }
         }
 #endif
+    }
+    
+    internal func getProperties<T, E: Error>(
+        _ closure: (sending Values) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try state.withLock { state throws(E) -> T in
+            let values = Values(state: state)
+            let result = try closure(values)
+            return result
+        }
+    }
+    
+    // MARK: Methods to Read Additional Properties of Subtree with ProgressManager as root
+    
+    /// Returns a summary for the specified integer property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom integer property from this progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the integer property to summarize. Must be a property
+    ///   where both the value and summary types are `Int`.
+    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
+        return getUpdatedIntSummary(property: MetatypeWrapper(property))
+    }
+    
+    /// Returns a summary for the specified double property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom double property from this progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the double property to summarize. Must be a property
+    ///   where both the value and summary types are `Double`.
+    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
+        return getUpdatedDoubleSummary(property: MetatypeWrapper(property))
+    }
+    
+    /// Returns a summary for the specified string property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom string property from this progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the string property to summarize. Must be a property
+    ///   where both the value and summary types are `String`.
+    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String?, P.Summary == [String?] {
+        return getUpdatedStringSummary(property: MetatypeWrapper(property))
+    }
+    
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
+        return getUpdatedURLSummary(property: MetatypeWrapper(property))
+    }
+    
+    /// Returns the total file count across the progress subtree.
+    ///
+    /// - Parameter property: The `TotalFileCount` property type.
+    /// - Returns: The sum of all total file counts across the entire progress subtree.
+    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
+        return getUpdatedFileCount(type: .total)
+    }
+    
+    /// Returns the completed file count across the progress subtree.
+    ///
+    /// - Parameter property: The `CompletedFileCount` property type.
+    /// - Returns: The sum of all completed file counts across the entire progress subtree.
+    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int {
+        return getUpdatedFileCount(type: .completed)
+    }
+    
+    /// Returns the total byte count across the progress subtree.
+    ///
+    /// - Parameter property: The `TotalByteCount` property type.
+    /// - Returns: The sum of all total byte counts across the entire progress subtree, in bytes.
+    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> UInt64 {
+        return getUpdatedByteCount(type: .total)
+    }
+    
+    /// Returns the completed byte count across the progress subtree.
+    ///
+    /// - Parameter property: The `CompletedByteCount` property type.
+    /// - Returns: The sum of all completed byte counts across the entire progress subtree, in bytes.
+    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> UInt64 {
+        return getUpdatedByteCount(type: .completed)
+    }
+    
+    /// Returns the average throughput across the progress subtree.
+    ///
+    /// - Parameter property: The `Throughput` property type.
+    /// - Returns: The average throughput across the entire progress subtree, in bytes per second.
+    ///
+    /// - Note: The throughput is calculated as the sum of all throughput values divided by the count
+    ///   of progress managers that have throughput data.
+    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64] {
+        return getUpdatedThroughput()
+    }
+    
+    /// Returns the maximum estimated time remaining for completion across the progress subtree.
+    ///
+    /// - Parameter property: The `EstimatedTimeRemaining` property type.
+    /// - Returns: The estimated duration until completion for the entire progress subtree.
+    ///
+    /// - Note: The estimation is based on current throughput and remaining work. The accuracy
+    ///   depends on the consistency of the processing rate.
+    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration {
+        return getUpdatedEstimatedTimeRemaining()
+    }
+    
+    /// Returns all file URLs being processed across the progress subtree.
+    ///
+    /// - Parameter property: The `FileURL` property type.
+    /// - Returns: An array containing all file URLs across the entire progress subtree.
+    public func summary(of property: ProgressManager.Properties.FileURL.Type) -> [URL?] {
+        return getUpdatedFileURL()
     }
 }
