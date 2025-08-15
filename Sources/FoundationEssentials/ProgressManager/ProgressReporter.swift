@@ -118,6 +118,10 @@ import Observation
         return manager.summary(of: property)
     }
     
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64] {
+        return manager.summary(of: property)
+    }
+    
     /// Returns the total file count across the progress subtree.
     ///
     /// - Parameter property: The `TotalFileCount` property type.

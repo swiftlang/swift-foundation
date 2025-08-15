@@ -39,6 +39,7 @@ extension ProgressManager {
                 propertiesDouble: [:],
                 propertiesString: [:],
                 propertiesURL: [:],
+                propertiesUInt64: [:],
                 observers: [],
                 interopType: nil,
             )
@@ -56,7 +57,8 @@ extension ProgressManager {
                 propertiesInt: [:],
                 propertiesDouble: [:],
                 propertiesString: [:],
-                propertiesURL: [:]
+                propertiesURL: [:],
+                propertiesUInt64: [:]
             )
 #endif
             let result = try closure(&values)
@@ -115,6 +117,12 @@ extension ProgressManager {
                     markSelfDirty(property: property, parents: values.state.parents)
                 }
             }
+            
+            if values.dirtyPropertiesUInt64.count > 0 {
+                for property in values.dirtyPropertiesUInt64 {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
 #if FOUNDATION_FRAMEWORK
             if let observerState = values.observerState {
                 switch state.interopType {
@@ -152,6 +160,7 @@ extension ProgressManager {
         internal var dirtyPropertiesDouble: [MetatypeWrapper<Double, Double>] = []
         internal var dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>] = []
         internal var dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>] = []
+        internal var dirtyPropertiesUInt64: [MetatypeWrapper<UInt64, [UInt64]>] = []
 #if FOUNDATION_FRAMEWORK
         internal var observerState: ObserverState?
 #endif
@@ -410,6 +419,22 @@ extension ProgressManager {
             }
         }
         
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64? where P.Value == UInt64, P.Summary == [UInt64] {
+            get {
+                return state.propertiesUInt64[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+            }
+
+            set {
+                guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
+                    return
+                }
+
+                state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
+
+                dirtyPropertiesUInt64.append(MetatypeWrapper(P.self))
+            }
+        }
+        
 #if FOUNDATION_FRAMEWORK
         private mutating func interopNotifications() {
             switch state.interopType {
@@ -475,6 +500,10 @@ extension ProgressManager {
     
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
         return getUpdatedURLSummary(property: MetatypeWrapper(property))
+    }
+    
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
+        return getUpdatedUInt64Summary(property: MetatypeWrapper(property))
     }
     
     /// Returns the total file count across the progress subtree.

@@ -94,6 +94,7 @@ internal import _FoundationCollections
             propertiesDouble: [:],
             propertiesString: [:],
             propertiesURL: [:],
+            propertiesUInt64: [:],
             observers: [],
             interopType: .interopObservation(InteropObservation(subprogressBridge: subprogressBridge))
         )
@@ -245,7 +246,8 @@ internal import _FoundationCollections
                                         childPropertiesInt: [:],
                                         childPropertiesDouble: [:],
                                         childPropertiesString: [:],
-                                        childPropertiesURL: [:])
+                                        childPropertiesURL: [:],
+                                        childPropertiesUInt64: [:])
             state.children.append(childState)
             return (state.children.count - 1, state.parents)
         }
@@ -303,8 +305,8 @@ internal import _FoundationCollections
             }
         }
         
-        let (propertiesInt, propertiesDouble, propertiesString, propertiesURL, parents) = state.withLock { state in
-            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.parents)
+        let (propertiesInt, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64, parents) = state.withLock { state in
+            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64, state.parents)
         }
         
         var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
@@ -331,6 +333,12 @@ internal import _FoundationCollections
             finalSummaryURL[property] = updatedSummary
         }
         
+        var finalSummaryUInt64: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]] = [:]
+        for property in propertiesUInt64.keys {
+            let updatedSummary = self.getUpdatedUInt64Summary(property: property)
+            finalSummaryUInt64[property] = updatedSummary
+        }
+        
         let totalFileCount = self.getUpdatedFileCount(type: .total)
         let completedFileCount = self.getUpdatedFileCount(type: .completed)
         let totalByteCount = self.getUpdatedByteCount(type: .total)
@@ -352,7 +360,8 @@ internal import _FoundationCollections
                 propertiesInt: finalSummaryInt,
                 propertiesDouble: finalSummaryDouble,
                 propertiesString: finalSummaryString,
-                propertiesURL: finalSummaryURL
+                propertiesURL: finalSummaryURL,
+                propertiesUInt64: finalSummaryUInt64
             )
         }
     }
