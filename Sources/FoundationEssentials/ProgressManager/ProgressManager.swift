@@ -93,6 +93,7 @@ internal import _FoundationCollections
             propertiesInt: [:],
             propertiesDouble: [:],
             propertiesString: [:],
+            propertiesURL: [:],
             observers: [],
             interopType: .interopObservation(InteropObservation(subprogressBridge: subprogressBridge))
         )
@@ -243,7 +244,8 @@ internal import _FoundationCollections
                                         fileURL: PropertyStateURL(value: ProgressManager.Properties.FileURL.defaultSummary, isDirty: false),
                                         childPropertiesInt: [:],
                                         childPropertiesDouble: [:],
-                                        childPropertiesString: [:])
+                                        childPropertiesString: [:],
+                                        childPropertiesURL: [:])
             state.children.append(childState)
             return (state.children.count - 1, state.parents)
         }
@@ -301,8 +303,8 @@ internal import _FoundationCollections
             }
         }
         
-        let (propertiesInt, propertiesDouble, propertiesString, parents) = state.withLock { state in
-            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.parents)
+        let (propertiesInt, propertiesDouble, propertiesString, propertiesURL, parents) = state.withLock { state in
+            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.parents)
         }
         
         var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
@@ -321,6 +323,12 @@ internal import _FoundationCollections
         for property in propertiesString.keys {
             let updatedSummary = self.getUpdatedStringSummary(property: property)
             finalSummaryString[property] = updatedSummary
+        }
+        
+        var finalSummaryURL: [MetatypeWrapper<URL?, [URL?]>: [URL?]] = [:]
+        for property in propertiesURL.keys {
+            let updatedSummary = self.getUpdatedURLSummary(property: property)
+            finalSummaryURL[property] = updatedSummary
         }
         
         let totalFileCount = self.getUpdatedFileCount(type: .total)
@@ -343,7 +351,8 @@ internal import _FoundationCollections
                 fileURL: fileURL,
                 propertiesInt: finalSummaryInt,
                 propertiesDouble: finalSummaryDouble,
-                propertiesString: finalSummaryString
+                propertiesString: finalSummaryString,
+                propertiesURL: finalSummaryURL
             )
         }
     }

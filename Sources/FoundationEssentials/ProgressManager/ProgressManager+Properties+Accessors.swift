@@ -51,6 +51,10 @@ extension ProgressManager {
         return getUpdatedStringSummary(property: MetatypeWrapper(property))
     }
     
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
+        return getUpdatedURLSummary(property: MetatypeWrapper(property))
+    }
+    
     /// Returns the total file count across the progress subtree.
     ///
     /// - Parameter property: The `TotalFileCount` property type.
@@ -145,6 +149,7 @@ extension ProgressManager {
                 propertiesInt: [:],
                 propertiesDouble: [:],
                 propertiesString: [:],
+                propertiesURL: [:],
                 observers: [],
                 interopType: nil,
             )
@@ -161,7 +166,8 @@ extension ProgressManager {
                 estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
                 propertiesInt: [:],
                 propertiesDouble: [:],
-                propertiesString: [:]
+                propertiesString: [:],
+                propertiesURL: [:]
             )
 #endif
             let result = try closure(&values)
@@ -214,6 +220,12 @@ extension ProgressManager {
                     markSelfDirty(property: property, parents: values.state.parents)
                 }
             }
+            
+            if values.dirtyPropertiesURL.count > 0 {
+                for property in values.dirtyPropertiesURL {
+                    markSelfDirty(property: property, parents: values.state.parents)
+                }
+            }
 #if FOUNDATION_FRAMEWORK
             if let observerState = values.observerState {
                 switch state.interopType {
@@ -250,6 +262,7 @@ extension ProgressManager {
         internal var dirtyPropertiesInt: [MetatypeWrapper<Int, Int>] = []
         internal var dirtyPropertiesDouble: [MetatypeWrapper<Double, Double>] = []
         internal var dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>] = []
+        internal var dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>] = []
 #if FOUNDATION_FRAMEWORK
         internal var observerState: ObserverState?
 #endif
@@ -489,6 +502,22 @@ extension ProgressManager {
                 state.propertiesString[MetatypeWrapper(P.self)] = newValue
 
                 dirtyPropertiesString.append(MetatypeWrapper(P.self))
+            }
+        }
+        
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> URL? where P.Value == URL?, P.Summary == [URL?] {
+            get {
+                return state.propertiesURL[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+            }
+
+            set {
+                guard newValue != state.propertiesURL[MetatypeWrapper(P.self)] else {
+                    return
+                }
+
+                state.propertiesURL[MetatypeWrapper(P.self)] = newValue
+
+                dirtyPropertiesURL.append(MetatypeWrapper(P.self))
             }
         }
 #if FOUNDATION_FRAMEWORK

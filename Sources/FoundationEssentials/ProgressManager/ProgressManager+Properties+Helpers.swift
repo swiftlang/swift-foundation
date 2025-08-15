@@ -148,6 +148,48 @@ extension ProgressManager {
         }
     }
     
+    internal func getUpdatedURLSummary(property: MetatypeWrapper<URL?, [URL?]>) -> [URL?] {
+        return state.withLock { state in
+            
+            var value: [URL?] = property.defaultSummary
+            property.reduce(&value, state.propertiesURL[property] ?? property.defaultValue)
+            
+            guard !state.children.isEmpty else {
+                return value
+            }
+            
+            for (idx, childState) in state.children.enumerated() {
+                if let childPropertyState = childState.childPropertiesURL[property] {
+                    if childPropertyState.isDirty {
+                        // Update dirty path
+                        if let child = childState.child {
+                            let updatedSummary = child.getUpdatedURLSummary(property: property)
+                            let newChildPropertyState = PropertyStateURL(value: updatedSummary, isDirty: false)
+                            state.children[idx].childPropertiesURL[property] = newChildPropertyState
+                            value = property.merge(value, updatedSummary)
+                        }
+                    } else {
+                        if let _ = childState.child {
+                            // Merge non-dirty, updated value
+                            value = property.merge(value, childPropertyState.value)
+                        } else {
+                            value = property.terminate(value, childPropertyState.value)
+                        }
+                    }
+                } else {
+                    // First fetch of value
+                    if let child = childState.child {
+                        let childSummary = child.getUpdatedURLSummary(property: property)
+                        let newChildPropertyState = PropertyStateURL(value: childSummary, isDirty: false)
+                        state.children[idx].childPropertiesURL[property] = newChildPropertyState
+                        value = property.merge(value, childSummary)
+                    }
+                }
+            }
+            return value
+        }
+    }
+    
     internal func getUpdatedFileCount(type: CountType) -> Int {
         switch type {
         case .total:
@@ -393,6 +435,12 @@ extension ProgressManager {
         }
     }
     
+    internal func markSelfDirty(property: MetatypeWrapper<URL?, [URL?]>, parents: [ParentState]) {
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+        }
+    }
+    
     internal func markSelfDirty(property: ProgressManager.Properties.TotalFileCount.Type, parents: [ParentState]) {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
@@ -458,6 +506,14 @@ extension ProgressManager {
         }
         markSelfDirty(property: property, parents: parents)
     }
+    
+    internal func markChildDirty(property: MetatypeWrapper<URL?, [URL?]>, at position: Int) {
+        let parents = state.withLock { state in
+            state.children[position].childPropertiesURL[property]?.isDirty = true
+            return state.parents
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
 
     internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
         let parents = state.withLock { state in
@@ -516,7 +572,7 @@ extension ProgressManager {
     }
     
     //MARK: Method to preserve values of properties upon deinit
-    internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, fileURL: [URL?], propertiesInt: [MetatypeWrapper<Int, Int>: Int], propertiesDouble: [MetatypeWrapper<Double, Double>: Double], propertiesString: [MetatypeWrapper<String?, [String?]>: [String?]]) {
+    internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, fileURL: [URL?], propertiesInt: [MetatypeWrapper<Int, Int>: Int], propertiesDouble: [MetatypeWrapper<Double, Double>: Double], propertiesString: [MetatypeWrapper<String?, [String?]>: [String?]], propertiesURL: [MetatypeWrapper<URL?, [URL?]>: [URL?]]) {
         state.withLock { state in
             state.children[position].totalFileCount = PropertyStateInt(value: totalFileCount, isDirty: false)
             state.children[position].completedFileCount = PropertyStateInt(value: completedFileCount, isDirty: false)
@@ -536,6 +592,10 @@ extension ProgressManager {
             
             for (propertyKey, propertyValue) in propertiesString {
                 state.children[position].childPropertiesString[propertyKey] = PropertyStateString(value: propertyValue, isDirty: false)
+            }
+            
+            for (propertyKey, propertyValue) in propertiesURL {
+                state.children[position].childPropertiesURL[propertyKey] = PropertyStateURL(value: propertyValue, isDirty: false)
             }
         }
     }

@@ -93,6 +93,7 @@ extension ProgressManager {
         var childPropertiesInt: [MetatypeWrapper<Int, Int>: PropertyStateInt]
         var childPropertiesDouble: [MetatypeWrapper<Double, Double>: PropertyStateDouble]
         var childPropertiesString: [MetatypeWrapper<String?, [String?]>: PropertyStateString]
+        var childPropertiesURL: [MetatypeWrapper<URL?, [URL?]>: PropertyStateURL]
     }
     
     internal struct ParentState {
@@ -126,6 +127,7 @@ extension ProgressManager {
         var propertiesInt: [MetatypeWrapper<Int, Int>: Int]
         var propertiesDouble: [MetatypeWrapper<Double, Double>: Double]
         var propertiesString: [MetatypeWrapper<String?, [String?]>: String?]
+        var propertiesURL: [MetatypeWrapper<URL?, [URL?]>: URL?]
 #if FOUNDATION_FRAMEWORK
         var observers: [@Sendable (ObserverState) -> Void]
         var interopType: InteropType?
