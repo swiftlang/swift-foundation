@@ -69,7 +69,7 @@ extension ProgressManager {
     }
     
     internal struct PropertyStateString {
-        var value: [String]
+        var value: [String?]
         var isDirty: Bool
     }
     
@@ -92,7 +92,7 @@ extension ProgressManager {
         var fileURL: PropertyStateURL
         var childPropertiesInt: [MetatypeWrapper<Int, Int>: PropertyStateInt]
         var childPropertiesDouble: [MetatypeWrapper<Double, Double>: PropertyStateDouble]
-        var childPropertiesString: [MetatypeWrapper<String, [String]>: PropertyStateString]
+        var childPropertiesString: [MetatypeWrapper<String?, [String?]>: PropertyStateString]
     }
     
     internal struct ParentState {
@@ -125,7 +125,7 @@ extension ProgressManager {
         var fileURL: URL?
         var propertiesInt: [MetatypeWrapper<Int, Int>: Int]
         var propertiesDouble: [MetatypeWrapper<Double, Double>: Double]
-        var propertiesString: [MetatypeWrapper<String, [String]>: String]
+        var propertiesString: [MetatypeWrapper<String?, [String?]>: String?]
 #if FOUNDATION_FRAMEWORK
         var observers: [@Sendable (ObserverState) -> Void]
         var interopType: InteropType?

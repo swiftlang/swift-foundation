@@ -650,25 +650,25 @@ extension ProgressManager.Properties {
     var fileName: FileName.Type { FileName.self }
     struct FileName: Sendable, ProgressManager.Property {
         
-        typealias Value = String
+        typealias Value = String?
         
-        typealias Summary = [String]
+        typealias Summary = [String?]
         
         static var key: String { return "FileName" }
         
-        static var defaultValue: String { return "" }
+        static var defaultValue: String? { return "" }
         
-        static var defaultSummary: [String] { return [] }
+        static var defaultSummary: [String?] { return [] }
         
-        static func reduce(into summary: inout [String], value: String) {
+        static func reduce(into summary: inout [String?], value: String?) {
             summary.append(value)
         }
         
-        static func merge(_ summary1: [String], _ summary2: [String]) -> [String] {
+        static func merge(_ summary1: [String?], _ summary2: [String?]) -> [String?] {
             return summary1 + summary2
         }
         
-        static func terminate(_ parentSummary: [String], _ childSummary: [String]) -> [String] {
+        static func terminate(_ parentSummary: [String?], _ childSummary: [String?]) -> [String?] {
             return parentSummary + childSummary
         }
     }

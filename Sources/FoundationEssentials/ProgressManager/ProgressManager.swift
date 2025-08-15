@@ -317,7 +317,7 @@ internal import _FoundationCollections
             finalSummaryDouble[property] = updatedSummary
         }
 
-        var finalSummaryString: [MetatypeWrapper<String, [String]>: [String]] = [:]
+        var finalSummaryString: [MetatypeWrapper<String?, [String?]>: [String?]] = [:]
         for property in propertiesString.keys {
             let updatedSummary = self.getUpdatedStringSummary(property: property)
             finalSummaryString[property] = updatedSummary

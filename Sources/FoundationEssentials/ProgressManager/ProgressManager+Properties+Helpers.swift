@@ -106,10 +106,10 @@ extension ProgressManager {
         }
     }
     
-    internal func getUpdatedStringSummary(property: MetatypeWrapper<String, [String]>) -> [String] {
+    internal func getUpdatedStringSummary(property: MetatypeWrapper<String?, [String?]>) -> [String?] {
         return state.withLock { state in
             
-            var value: [String] = property.defaultSummary
+            var value: [String?] = property.defaultSummary
             property.reduce(&value, state.propertiesString[property] ?? property.defaultValue)
             
             guard !state.children.isEmpty else {
@@ -387,7 +387,7 @@ extension ProgressManager {
         }
     }
     
-    internal func markSelfDirty(property: MetatypeWrapper<String, [String]>, parents: [ParentState]) {
+    internal func markSelfDirty(property: MetatypeWrapper<String?, [String?]>, parents: [ParentState]) {
         for parentState in parents {
             parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
@@ -451,7 +451,7 @@ extension ProgressManager {
         markSelfDirty(property: property, parents: parents)
     }
     
-    internal func markChildDirty(property: MetatypeWrapper<String, [String]>, at position: Int) {
+    internal func markChildDirty(property: MetatypeWrapper<String?, [String?]>, at position: Int) {
         let parents = state.withLock { state in
             state.children[position].childPropertiesString[property]?.isDirty = true
             return state.parents
@@ -516,7 +516,7 @@ extension ProgressManager {
     }
     
     //MARK: Method to preserve values of properties upon deinit
-    internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, fileURL: [URL?], propertiesInt: [MetatypeWrapper<Int, Int>: Int], propertiesDouble: [MetatypeWrapper<Double, Double>: Double], propertiesString: [MetatypeWrapper<String, [String]>: [String]]) {
+    internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, fileURL: [URL?], propertiesInt: [MetatypeWrapper<Int, Int>: Int], propertiesDouble: [MetatypeWrapper<Double, Double>: Double], propertiesString: [MetatypeWrapper<String?, [String?]>: [String?]]) {
         state.withLock { state in
             state.children[position].totalFileCount = PropertyStateInt(value: totalFileCount, isDirty: false)
             state.children[position].completedFileCount = PropertyStateInt(value: completedFileCount, isDirty: false)
