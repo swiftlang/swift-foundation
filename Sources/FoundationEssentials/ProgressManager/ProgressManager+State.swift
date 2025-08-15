@@ -18,6 +18,7 @@ extension ProgressManager {
         
         let reduce: @Sendable (inout T, T) -> ()
         let merge: @Sendable (T, T) -> T
+        let terminate: @Sendable (T, T) -> T
         
         let defaultValue: T
         let defaultSummary: T
@@ -27,6 +28,7 @@ extension ProgressManager {
         init<P: Property>(_ argument: P.Type) where P.Value == T, P.Summary == T {
             reduce = P.reduce
             merge = P.merge
+            terminate = P.terminate
             defaultValue = P.defaultValue
             defaultSummary = P.defaultSummary
             key = P.key
@@ -78,9 +80,6 @@ extension ProgressManager {
     
     internal struct ChildState {
         weak var child: ProgressManager?
-        var remainingPropertiesInt: [MetatypeWrapper<Int>: Int]?
-        var remainingPropertiesDouble: [MetatypeWrapper<Double>: Double]?
-        var remainingPropertiesString: [MetatypeWrapper<String>: String]?
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool

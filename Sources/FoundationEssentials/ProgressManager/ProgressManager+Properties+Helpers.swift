@@ -33,34 +33,30 @@ extension ProgressManager {
             for (idx, childState) in state.children.enumerated() {
                 if let childPropertyState = childState.childPropertiesInt[property] {
                     if childPropertyState.isDirty {
+                        // Dirty, needs to fetch value
                         if let child = childState.child {
                             let updatedSummary = child.getUpdatedIntSummary(property: property)
                             let newChildPropertyState = PropertyStateInt(value: updatedSummary, isDirty: false)
                             state.children[idx].childPropertiesInt[property] = newChildPropertyState
                             value = property.merge(value, updatedSummary)
-                        } else {
-                            if let remainingProperties = childState.remainingPropertiesInt {
-                                if let remainingSummary = remainingProperties[property] {
-                                    value = property.merge(value, remainingSummary)
-                                }
-                            }
                         }
                     } else {
-                        value = property.merge(value, childPropertyState.value)
+                        // Not dirty, use value directly
+                        if let _ = childState.child {
+                            value = property.merge(value, childPropertyState.value)
+                        } else {
+                            // TODO: What to do after terminate? Set to nil?
+                            value = property.terminate(value, childPropertyState.value)
+                        }
                     }
                 } else {
+                    // Said property doesn't even get cached yet, but children might have been set
                     if let child = childState.child {
+                        // If there is a child
                         let childSummary = child.getUpdatedIntSummary(property: property)
                         let newChildPropertyState = PropertyStateInt(value: childSummary, isDirty: false)
                         state.children[idx].childPropertiesInt[property] = newChildPropertyState
                         value = property.merge(value, childSummary)
-                    } else {
-                        // Get value from remainingProperties
-                        if let remainingProperties = childState.remainingPropertiesInt {
-                            if let remainingSummary = remainingProperties[property] {
-                                value = property.merge(value, remainingSummary)
-                            }
-                        }
                     }
                 }
             }
@@ -87,17 +83,14 @@ extension ProgressManager {
                             let newChildPropertyState = PropertyStateDouble(value: updatedSummary, isDirty: false)
                             state.children[idx].childPropertiesDouble[property] = newChildPropertyState
                             value = property.merge(value, updatedSummary)
-                        } else {
-                            // Get value from remainingProperties
-                            if let remainingProperties = childState.remainingPropertiesDouble {
-                                if let remainingSummary = remainingProperties[property] {
-                                    value = property.merge(value, remainingSummary)
-                                }
-                            }
                         }
                     } else {
-                        // Merge non-dirty, updated value
-                        value = property.merge(value, childPropertyState.value)
+                        if let _ = childState.child {
+                            // Merge non-dirty, updated value
+                            value = property.merge(value, childPropertyState.value)
+                        } else {
+                            value = property.terminate(value, childPropertyState.value)
+                        }
                     }
                 } else {
                     // First fetch of value
@@ -106,13 +99,6 @@ extension ProgressManager {
                         let newChildPropertyState = PropertyStateDouble(value: childSummary, isDirty: false)
                         state.children[idx].childPropertiesDouble[property] = newChildPropertyState
                         value = property.merge(value, childSummary)
-                    } else {
-                        // Get value from remainingProperties
-                        if let remainingProperties = childState.remainingPropertiesDouble {
-                            if let remainingSummary = remainingProperties[property] {
-                                value = property.merge(value, remainingSummary)
-                            }
-                        }
                     }
                 }
             }
@@ -139,17 +125,14 @@ extension ProgressManager {
                             let newChildPropertyState = PropertyStateString(value: updatedSummary, isDirty: false)
                             state.children[idx].childPropertiesString[property] = newChildPropertyState
                             value = property.merge(value, updatedSummary)
-                        } else {
-                            // Get value from remainingProperties
-                            if let remainingProperties = childState.remainingPropertiesString {
-                                if let remainingSummary = remainingProperties[property] {
-                                    value = property.merge(value, remainingSummary)
-                                }
-                            }
                         }
                     } else {
-                        // Merge non-dirty, updated value
-                        value = property.merge(value, childPropertyState.value)
+                        if let _ = childState.child {
+                            // Merge non-dirty, updated value
+                            value = property.merge(value, childPropertyState.value)
+                        } else {
+                            value = property.terminate(value, childPropertyState.value)
+                        }
                     }
                 } else {
                     // First fetch of value
@@ -158,13 +141,6 @@ extension ProgressManager {
                         let newChildPropertyState = PropertyStateString(value: childSummary, isDirty: false)
                         state.children[idx].childPropertiesString[property] = newChildPropertyState
                         value = property.merge(value, childSummary)
-                    } else {
-                        // Get value from remainingProperties
-                        if let remainingProperties = childState.remainingPropertiesString {
-                            if let remainingSummary = remainingProperties[property] {
-                                value = property.merge(value, remainingSummary)
-                            }
-                        }
                     }
                 }
             }
@@ -194,8 +170,12 @@ extension ProgressManager {
                             value = ProgressManager.Properties.TotalFileCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-dirty, updated value
-                        value = ProgressManager.Properties.TotalFileCount.merge(value, childState.totalFileCount.value)
+                        if let _ = childState.child {
+                            // Merge non-dirty, updated value
+                            value = ProgressManager.Properties.TotalFileCount.merge(value, childState.totalFileCount.value)
+                        } else {
+                            value = ProgressManager.Properties.TotalFileCount.terminate(value, childState.totalFileCount.value)
+                        }
                     }
                 }
                 return value
@@ -220,8 +200,12 @@ extension ProgressManager {
                             value = ProgressManager.Properties.CompletedFileCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-dirty, updated value
-                        value = ProgressManager.Properties.CompletedFileCount.merge(value, childState.completedFileCount.value)
+                        if let _ = childState.child {
+                            // Merge non-dirty, updated value
+                            value = ProgressManager.Properties.CompletedFileCount.merge(value, childState.completedFileCount.value)
+                        } else {
+                            value = ProgressManager.Properties.CompletedFileCount.terminate(value, childState.completedFileCount.value)
+                        }
                     }
                 }
                 return value
@@ -251,8 +235,12 @@ extension ProgressManager {
                             value = ProgressManager.Properties.TotalByteCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-dirty, updated value
-                        value = ProgressManager.Properties.TotalByteCount.merge(value, childState.totalByteCount.value)
+                        if let _ = childState.child {
+                            // Merge non-dirty, updated value
+                            value = ProgressManager.Properties.TotalByteCount.merge(value, childState.totalByteCount.value)
+                        } else {
+                            value = ProgressManager.Properties.TotalByteCount.terminate(value, childState.totalByteCount.value)
+                        }
                     }
                 }
                 return value
@@ -277,8 +265,12 @@ extension ProgressManager {
                             value = ProgressManager.Properties.CompletedByteCount.merge(value, updatedSummary)
                         }
                     } else {
-                        // Merge non-dirty, updated value
-                        value = ProgressManager.Properties.CompletedByteCount.merge(value, childState.completedByteCount.value)
+                        if let _ = childState.child {
+                            // Merge non-dirty, updated value
+                            value = ProgressManager.Properties.CompletedByteCount.merge(value, childState.completedByteCount.value)
+                        } else {
+                            value = ProgressManager.Properties.CompletedByteCount.terminate(value, childState.completedByteCount.value)
+                        }
                     }
                 }
                 return value
@@ -306,8 +298,12 @@ extension ProgressManager {
                         value = ProgressManager.Properties.Throughput.merge(value, updatedSummary)
                     }
                 } else {
-                    // Merge non-dirty, updated value
-                    value = ProgressManager.Properties.Throughput.merge(value, childState.throughput.value)
+                    if let _ = childState.child {
+                        // Merge non-dirty, updated value
+                        value = ProgressManager.Properties.Throughput.merge(value, childState.throughput.value)
+                    } else {
+                        value = ProgressManager.Properties.Throughput.terminate(value, childState.throughput.value)
+                    }
                 }
             }
             return value
@@ -334,8 +330,12 @@ extension ProgressManager {
                         value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, updatedSummary)
                     }
                 } else {
-                    // Merge non-dirty, updated value
-                    value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, childState.estimatedTimeRemaining.value)
+                    if let _ = childState.child {
+                        // Merge non-dirty, updated value
+                        value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, childState.estimatedTimeRemaining.value)
+                    } else {
+                        value = ProgressManager.Properties.EstimatedTimeRemaining.terminate(value, childState.estimatedTimeRemaining.value)
+                    }
                 }
             }
             return value
@@ -362,8 +362,12 @@ extension ProgressManager {
                         value = ProgressManager.Properties.FileURL.merge(value, updatedSummary)
                     }
                 } else {
-                    // Merge non-dirty, updated value
-                    value = ProgressManager.Properties.FileURL.merge(value, childState.fileURL.value)
+                    if let _ = childState.child {
+                        // Merge non-dirty, updated value
+                        value = ProgressManager.Properties.FileURL.merge(value, childState.fileURL.value)
+                    } else {
+                        value = ProgressManager.Properties.FileURL.terminate(value, childState.fileURL.value)
+                    }
                 }
             }
             return value
@@ -511,52 +515,28 @@ extension ProgressManager {
         markSelfDirty(property: property, parents: parents)
     }
     
-    //MARK: Methods to preserve values of properties upon deinit
-    internal func setChildRemainingPropertiesInt(_ properties: [MetatypeWrapper<Int>: Int], at position: Int) {
+    //MARK: Method to preserve values of properties upon deinit
+    internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, fileURL: [URL?], propertiesInt: [MetatypeWrapper<Int>: Int], propertiesDouble: [MetatypeWrapper<Double>: Double], propertiesString: [MetatypeWrapper<String>: String]) {
         state.withLock { state in
-            state.children[position].remainingPropertiesInt = properties
-        }
-    }
-    
-    internal func setChildRemainingPropertiesDouble(_ properties: [MetatypeWrapper<Double>: Double], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingPropertiesDouble = properties
-        }
-    }
-    
-    internal func setChildRemainingPropertiesString(_ properties: [MetatypeWrapper<String>: String], at position: Int) {
-        state.withLock { state in
-            state.children[position].remainingPropertiesString = properties
-        }
-    }
-    
-    internal func setChildTotalFileCount(value: Int, at position: Int) {
-        state.withLock { state in
-            state.children[position].totalFileCount = PropertyStateInt(value: value, isDirty: false)
-        }
-    }
-    
-    internal func setChildCompletedFileCount(value: Int, at position: Int) {
-        state.withLock { state in
-            state.children[position].completedFileCount = PropertyStateInt(value: value, isDirty: false)
-        }
-    }
-    
-    internal func setChildTotalByteCount(value: UInt64, at position: Int) {
-        state.withLock { state in
-            state.children[position].totalByteCount = PropertyStateUInt64(value: value, isDirty: false)
-        }
-    }
-    
-    internal func setChildCompletedByteCount(value: UInt64, at position: Int) {
-        state.withLock { state in
-            state.children[position].completedByteCount = PropertyStateUInt64(value: value, isDirty: false)
-        }
-    }
-    
-    internal func setChildThroughput(value: [UInt64], at position: Int) {
-        state.withLock { state in
-            state.children[position].throughput = PropertyStateThroughput(value: value, isDirty: false)
+            state.children[position].totalFileCount = PropertyStateInt(value: totalFileCount, isDirty: false)
+            state.children[position].completedFileCount = PropertyStateInt(value: completedFileCount, isDirty: false)
+            state.children[position].totalByteCount = PropertyStateUInt64(value: totalByteCount, isDirty: false)
+            state.children[position].completedByteCount = PropertyStateUInt64(value: completedByteCount, isDirty: false)
+            state.children[position].throughput = PropertyStateThroughput(value: throughput, isDirty: false)
+            state.children[position].estimatedTimeRemaining = PropertyStateDuration(value: estimatedTimeRemaining, isDirty: false)
+            state.children[position].fileURL = PropertyStateURL(value: fileURL, isDirty: false)
+            
+            for (propertyKey, propertyValue) in propertiesInt {
+                state.children[position].childPropertiesInt[propertyKey] = PropertyStateInt(value: propertyValue, isDirty: false)
+            }
+            
+            for (propertyKey, propertyValue) in propertiesDouble {
+                state.children[position].childPropertiesDouble[propertyKey] = PropertyStateDouble(value: propertyValue, isDirty: false)
+            }
+            
+            for (propertyKey, propertyValue) in propertiesString {
+                state.children[position].childPropertiesString[propertyKey] = PropertyStateString(value: propertyValue, isDirty: false)
+            }
         }
     }
 }

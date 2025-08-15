@@ -79,6 +79,9 @@ extension ProgressManager {
         ///   - summary2: The second summary to merge.
         /// - Returns: A new summary that represents the combination of both input summaries.
         static func merge(_ summary1: Summary, _ summary2: Summary) -> Summary
+        
+        /// Determines the behavior for handling childSummary when the child is deinitialized. 
+        static func terminate(_ parentSummary: Summary, _ childSummary: Summary) -> Summary
     }
     
     // Namespace for properties specific to operations reported on
@@ -105,6 +108,10 @@ extension ProgressManager {
             public static func merge(_ summary1: Int, _ summary2: Int) -> Int {
                 return summary1 + summary2
             }
+            
+            public static func terminate(_ parentSummary: Int, _ childSummary: Int) -> Int {
+                return parentSummary + childSummary
+            }
         }
         
         /// The number of completed files.
@@ -127,6 +134,10 @@ extension ProgressManager {
             
             public static func merge(_ summary1: Int, _ summary2: Int) -> Int {
                 return summary1 + summary2
+            }
+            
+            public static func terminate(_ parentSummary: Int, _ childSummary: Int) -> Int {
+                return parentSummary + childSummary
             }
         }
         
@@ -151,6 +162,10 @@ extension ProgressManager {
             public static func merge(_ summary1: UInt64, _ summary2: UInt64) -> UInt64 {
                 return summary1 + summary2
             }
+            
+            public static func terminate(_ parentSummary: UInt64, _ childSummary: UInt64) -> UInt64 {
+                return parentSummary + childSummary
+            }
         }
         
         /// The number of completed bytes.
@@ -174,6 +189,10 @@ extension ProgressManager {
             public static func merge(_ summary1: UInt64, _ summary2: UInt64) -> UInt64 {
                 return summary1 + summary2
             }
+            
+            public static func terminate(_ parentSummary: UInt64, _ childSummary: UInt64) -> UInt64 {
+                return parentSummary + childSummary
+            }
         }
         
         /// The throughput, in bytes per second.
@@ -195,6 +214,10 @@ extension ProgressManager {
             
             public static func merge(_ summary1: [UInt64], _ summary2: [UInt64]) -> [UInt64] {
                 return summary1 + summary2
+            }
+            
+            public static func terminate(_ parentSummary: [UInt64], _ childSummary: [UInt64]) -> [UInt64] {
+                return parentSummary + childSummary
             }
         }
         
@@ -222,6 +245,10 @@ extension ProgressManager {
             
             public static func merge(_ summary1: Duration, _ summary2: Duration) -> Duration {
                 return max(summary1, summary2)
+            }
+            
+            public static func terminate(_ parentSummary: Duration, _ childSummary: Duration) -> Duration {
+                return parentSummary
             }
         }
         
@@ -251,6 +278,9 @@ extension ProgressManager {
                 return summary1 + summary2
             }
             
+            public static func terminate(_ parentSummary: [URL?], _ childSummary: [URL?]) -> [URL?] {
+                return parentSummary
+            }
         }
     }
 }

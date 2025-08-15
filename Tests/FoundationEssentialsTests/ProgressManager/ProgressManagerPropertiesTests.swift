@@ -459,6 +459,10 @@ extension ProgressManager.Properties {
         static func merge(_ summary1: Int, _ summary2: Int) -> Int {
             return summary1 + summary2
         }
+        
+        static func terminate(_ parentSummary: Int, _ childSummary: Int) -> Int {
+            return parentSummary + childSummary
+        }
     }
 }
 
@@ -560,6 +564,10 @@ extension ProgressManager.Properties {
         static func merge(_ summary1: Double, _ summary2: Double) -> Double {
             return summary1 + summary2
         }
+        
+        static func terminate(_ parentSummary: Double, _ childSummary: Double) -> Double {
+            return parentSummary + childSummary
+        }
     }
 }
 
@@ -658,6 +666,10 @@ extension ProgressManager.Properties {
         
         static func merge(_ summary1: String, _ summary2: String) -> String {
             return summary1 + ", " + summary2
+        }
+        
+        static func terminate(_ parentSummary: String, _ childSummary: String) -> String {
+            return parentSummary + ", " + childSummary
         }
     }
 }

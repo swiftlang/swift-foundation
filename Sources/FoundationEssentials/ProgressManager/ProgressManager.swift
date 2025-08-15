@@ -231,7 +231,6 @@ internal import _FoundationCollections
     internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
         let (index, parents) = state.withLock { state in
             let childState = ChildState(child: child,
-                                        remainingPropertiesInt: nil,
                                         portionOfTotal: portion,
                                         childFraction: childFraction,
                                         isDirty: true,
@@ -324,16 +323,28 @@ internal import _FoundationCollections
             finalSummaryString[property] = updatedSummary
         }
         
+        let totalFileCount = self.getUpdatedFileCount(type: .total)
+        let completedFileCount = self.getUpdatedFileCount(type: .completed)
+        let totalByteCount = self.getUpdatedByteCount(type: .total)
+        let completedByteCount = self.getUpdatedByteCount(type: .completed)
+        let throughput = self.getUpdatedThroughput()
+        let estimatedTimeRemaining = self.getUpdatedEstimatedTimeRemaining()
+        let fileURL = self.getUpdatedFileURL()
         
         for parentState in parents {
-            parentState.parent.setChildRemainingPropertiesInt(finalSummaryInt, at: parentState.positionInParent)
-            parentState.parent.setChildRemainingPropertiesDouble(finalSummaryDouble, at: parentState.positionInParent)
-            parentState.parent.setChildRemainingPropertiesString(finalSummaryString, at: parentState.positionInParent)
-            parentState.parent.setChildTotalFileCount(value: self.getUpdatedFileCount(type: .total), at: parentState.positionInParent)
-            parentState.parent.setChildCompletedFileCount(value: self.getUpdatedFileCount(type: .completed), at: parentState.positionInParent)
-            parentState.parent.setChildTotalByteCount(value: self.getUpdatedByteCount(type: .total), at: parentState.positionInParent)
-            parentState.parent.setChildCompletedByteCount(value: self.getUpdatedByteCount(type: .completed), at: parentState.positionInParent)
-            parentState.parent.setChildThroughput(value: self.getUpdatedThroughput(), at: parentState.positionInParent)
+            parentState.parent.setChildDeclaredAdditionalProperties(
+                at: parentState.positionInParent,
+                totalFileCount: totalFileCount,
+                completedFileCount: completedFileCount,
+                totalByteCount: totalByteCount,
+                completedByteCount: completedByteCount,
+                throughput: throughput,
+                estimatedTimeRemaining: estimatedTimeRemaining,
+                fileURL: fileURL,
+                propertiesInt: finalSummaryInt,
+                propertiesDouble: finalSummaryDouble,
+                propertiesString: finalSummaryString
+            )
         }
     }
 }
