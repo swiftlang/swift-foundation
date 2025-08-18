@@ -239,6 +239,14 @@ This feature can be freely adopted and un-adopted in source code with no deploym
 
 This feature will make more programs easy to parse string encoding names so that (e.g.) Web apps written in Swift won't need to implement such parser on their own.
 
+We already have the string converter in `FoundationInternationalization` that wraps ICU APIs, but that requires IANA Charset Names to create an instance of naive ICU converter[^icu-string-converter].
+Once this feature is adopted, it will become easier to implement other string encoding conversions that are unavailable yet.
+
+[^icu-string-converter]: https://github.com/swiftlang/swift-foundation/blob/a8bee5bfc71210168fa1b973fb1a1deb8bde2047/Sources/FoundationInternationalization/ICU/ICU%2BStringConverter.swift#L18-L37
+
+
+### Longer-term perspective
+
 Hopefully, happening some cascades like below might be expected in the longer term.
 
 - General string decoders/encoders and their protocols (for example, as suggested in "[Unicode Processing APIs](https://forums.swift.org/t/pitch-unicode-processing-apis/69294)") could be implemented.
