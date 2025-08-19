@@ -297,12 +297,9 @@ internal import _FoundationCollections
     }
     
     deinit {
-        if !isFinished {
-            self.withProperties { properties in
-                if let totalCount = properties.totalCount {
-                    properties.completedCount = totalCount
-                }
-            }
+        if let totalCount = self.totalCount {
+            let diff = totalCount - self.completedCount
+            self.complete(count: diff)
         }
         
         let (propertiesInt, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64, parents) = state.withLock { state in

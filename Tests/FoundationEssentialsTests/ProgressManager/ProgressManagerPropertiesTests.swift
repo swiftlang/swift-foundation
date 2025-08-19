@@ -425,15 +425,19 @@ import Testing
             properties.fileURL = URL(string: "https://www.cats.com")
         }
         
-        let childManager = manager.subprogress(assigningCount: 1).start(totalCount: 2)
+        var childManager: ProgressManager? = manager.subprogress(assigningCount: 1).start(totalCount: 2)
         
-        childManager.withProperties { properties in
+        childManager?.withProperties { properties in
             properties.completedCount = 1
             properties.fileURL = URL(string: "https://www.kittens.com")
         }
         
         #expect(manager.fractionCompleted == 0.75)
         #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com"), URL(string: "https://www.kittens.com")])
+                
+        childManager = nil
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.FileURL.self) == [URL(string: "https://www.cats.com")])
     }
 }
 
