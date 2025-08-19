@@ -365,14 +365,18 @@ import Testing
             properties.estimatedTimeRemaining = Duration.seconds(200)
         }
         
-        let child = manager.subprogress(assigningCount: 1).start(totalCount: 2)
-        child.withProperties { properties in
+        var child: ProgressManager? = manager.subprogress(assigningCount: 1).start(totalCount: 2)
+        child?.withProperties { properties in
             properties.completedCount = 1
             properties.estimatedTimeRemaining = Duration.seconds(80000)
         }
         
         #expect(manager.fractionCompleted == 0.75)
         #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(80000))
+        
+        child = nil
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(200))
     }
     
 }
