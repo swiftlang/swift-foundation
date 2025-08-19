@@ -310,6 +310,13 @@ private struct PredicateTests {
             $0.a == $0.c && $0.b == now
         }
     }
+    
+    @Test func finalKeyPaths() {
+        final class Foo {
+            var id: Int = 1
+        }
+        _ = #Predicate<Foo> { $0.id == 2 }
+    }
 
     @Test
     func regex() throws {

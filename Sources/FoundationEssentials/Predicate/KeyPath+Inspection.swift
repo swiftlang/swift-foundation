@@ -19,6 +19,8 @@ extension UInt32 {
     private static var COMPUTED_COMPONENT_PAYLOAD_ARGUMENTS_MASK: UInt32 { 0x0008_0000 }
     private static var COMPUTED_COMPONENT_PAYLOAD_SETTABLE_MASK: UInt32 { 0x0040_0000 }
     
+    private static var STORED_COMPONENT_PAYLOAD_MAXIMUM_INLINE_OFFSET: UInt32 { 0x007F_FFFC }
+    
     fileprivate var _keyPathHeader_bufferSize: Int {
         Int(self & Self.KEYPATH_HEADER_BUFFER_SIZE_MASK)
     }
@@ -31,6 +33,11 @@ extension UInt32 {
         self & Self.COMPONENT_HEADER_PAYLOAD_MASK
     }
     
+    fileprivate var _keyPathComponentHeader_storedIsInline: Bool {
+        // If the payload value is greater than the maximum inline offset then it is one of the out-of-line sentinel values
+        _keyPathComponentHeader_payload <= Self.STORED_COMPONENT_PAYLOAD_MAXIMUM_INLINE_OFFSET
+    }
+    
     fileprivate var _keyPathComponentHeader_computedHasArguments: Bool {
         (_keyPathComponentHeader_payload & Self.COMPUTED_COMPONENT_PAYLOAD_ARGUMENTS_MASK) != 0
     }
@@ -38,10 +45,6 @@ extension UInt32 {
     fileprivate var _keyPathComponentHeader_computedIsSettable: Bool {
         (_keyPathComponentHeader_payload & Self.COMPUTED_COMPONENT_PAYLOAD_SETTABLE_MASK) != 0
     }
-}
-
-private func _keyPathOffset<T>(_ root: T.Type, _ keyPath: AnyKeyPath) -> Int? {
-    MemoryLayout<T>.offset(of: keyPath as! PartialKeyPath<T>)
 }
 
 extension AnyKeyPath {
@@ -57,11 +60,10 @@ extension AnyKeyPath {
         case 1: // struct/tuple/self stored property
             fallthrough
         case 3: // class stored property
-            // Key paths to stored properties are only single-component if MemoryLayout.offset(of:) returns an offset
-            func project<T>(_: T.Type) -> Bool {
-                _keyPathOffset(T.self, self) == nil
-            }
-            if _openExistential(Self.rootType, do: project) {
+            // Stored property components are either just the payload, or the payload plus 32 bits if the offset is not stored in-line
+            // Note: we cannot use MemoryLayout.offset(of:) here because not all single-component keypaths have direct offsets (for example, stored properties in final classes)
+            let size = (firstComponentHeader._keyPathComponentHeader_storedIsInline) ? MemoryLayout<UInt32>.size : MemoryLayout<UInt64>.size
+            if header._keyPathHeader_bufferSize > size {
                 fatalError("Predicate does not support keypaths with multiple components")
             }
         case 2: // computed
