@@ -337,6 +337,11 @@ extension Tag {
         #expect(manager.fractionCompleted == Double(2) / Double(3))
     }
     
+    func makeFinishedChild(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        manager.complete(count: 2)
+    }
+    
     @Test func unfinishedChild() async throws {
         let manager = ProgressManager(totalCount: 2)
         
@@ -347,9 +352,24 @@ extension Tag {
         #expect(manager.fractionCompleted == 1.0)
     }
     
-    func makeFinishedChild(subprogress: consuming Subprogress) async {
-        let manager = subprogress.start(totalCount: 2)
-        manager.complete(count: 2)
+    @Test func unfinishedGrandchild() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        let child = manager.subprogress(assigningCount: 1).start(totalCount: 1)
+        
+        await makeUnfinishedChild(subprogress: child.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func unfinishedGreatGrandchild() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        let child = manager.subprogress(assigningCount: 1).start(totalCount: 1)
+        
+        let grandchild = child.subprogress(assigningCount: 1).start(totalCount: 1)
+        
+        await makeUnfinishedChild(subprogress: grandchild.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
     }
     
     @Test func finishedChildUnreadBeforeDeinit() async throws {
