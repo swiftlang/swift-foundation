@@ -317,6 +317,107 @@ private struct PredicateTests {
         }
         _ = #Predicate<Foo> { $0.id == 2 }
     }
+    
+#if FOUNDATION_EXIT_TESTS
+    @Test func unsupportedKeyPaths() async {
+        struct Sample {
+            let stored: Sample2
+            var immutableComputed: Sample2 { fatalError() }
+            var mutableComputed: Sample2 {
+                get { fatalError() }
+                set { fatalError() }
+            }
+            var optional: Sample2? { fatalError() }
+            
+            subscript(_ arg: Int) -> Sample2 { fatalError() }
+            subscript() -> Sample2 { fatalError() }
+        }
+        
+        struct Sample2 {
+            var prop: Int
+        }
+        
+        // multiple components
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.stored.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.immutableComputed.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.mutableComputed.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional?.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.[1].prop
+            )
+        }
+        
+        // subscripts with arguments
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.[0]
+            )
+        }
+        
+        // Optional chaining
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional?
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.?
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.?.stored
+            )
+        }
+        
+        // Force unwrapping
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional!
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.!
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.!.stored
+            )
+        }
+    }
+#endif
 
     @Test
     func regex() throws {
