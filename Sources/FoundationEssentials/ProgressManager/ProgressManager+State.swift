@@ -179,12 +179,13 @@ extension ProgressManager {
             return selfFraction.isIndeterminate
         }
         
-        internal func getIsFinished() -> Bool {
+        internal mutating func getIsFinished() -> Bool {
 #if FOUNDATION_FRAMEWORK
             if let interopIsFinished = interopType?.isFinished {
                 return interopIsFinished
             }
 #endif
+            updateChildrenProgressFraction()
             return selfFraction.isFinished
         }
         

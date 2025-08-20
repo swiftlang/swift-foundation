@@ -297,11 +297,7 @@ internal import _FoundationCollections
     }
     
     deinit {
-        if let totalCount = self.totalCount {
-            let diff = totalCount - self.completedCount
-            self.complete(count: diff)
-        }
-        
+                
         let (propertiesInt, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64, parents) = state.withLock { state in
             return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64, state.parents)
         }
@@ -343,6 +339,10 @@ internal import _FoundationCollections
         let throughput = self.getUpdatedThroughput()
         let estimatedTimeRemaining = self.getUpdatedEstimatedTimeRemaining()
         let fileURL = self.getUpdatedFileURL()
+        
+        if !isFinished {
+            markSelfDirty(parents: parents)
+        }
         
         for parentState in parents {
             parentState.parent.setChildDeclaredAdditionalProperties(

@@ -330,6 +330,7 @@ extension Tag {
         }
     }
     
+    // MARK: Test deinit behavior
     func makeUnfinishedChild(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 3)
         manager.complete(count: 2)
@@ -343,6 +344,33 @@ extension Tag {
         #expect(manager.fractionCompleted == 0.5)
         
         await makeUnfinishedChild(subprogress: manager.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    func makeFinishedChild(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        manager.complete(count: 2)
+    }
+    
+    @Test func finishedChild() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.complete(count: 1)
+        #expect(manager.fractionCompleted == 0.5)
+        
+        await makeFinishedChild(subprogress: manager.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func uninitializedSubprogress() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.complete(count: 1)
+        
+        var subprogress: Subprogress? = manager.subprogress(assigningCount: 1)
+        #expect(manager.fractionCompleted == 0.5)
+        
+        subprogress = nil
         #expect(manager.fractionCompleted == 1.0)
     }
 }
