@@ -881,7 +881,7 @@ extension ProgressManager.Properties {
     }
 }
 
-@Suite("Progress Manager Image URL (Non-retaining) Properties", .tags(.progressManager)) struct ProgressManagerImageURLProperties {
+@Suite("Progress Manager URL (Non-retaining) Properties", .tags(.progressManager)) struct ProgressManagerURLProperties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 1)
         
@@ -946,3 +946,95 @@ extension ProgressManager.Properties {
     }
 }
 
+extension ProgressManager.Properties {
+    var totalPixelCount: TotalPixelCount.Type { TotalPixelCount.self }
+    struct TotalPixelCount: Sendable, ProgressManager.Property {
+        typealias Value = UInt64
+        
+        typealias Summary = [UInt64]
+        
+        static var key: String { "MyApp.TotalPixelCount" }
+        
+        static var defaultValue: UInt64 { 0 }
+        
+        static var defaultSummary: [UInt64] { [] }
+        
+        static func reduce(into summary: inout [UInt64], value: UInt64) {
+            summary.append(value)
+        }
+        
+        static func merge(_ summary1: [UInt64], _ summary2: [UInt64]) -> [UInt64] {
+            summary1 + summary2
+        }
+        
+        static func terminate(_ parentSummary: [UInt64], _ childSummary: [UInt64]) -> [UInt64] {
+            parentSummary + childSummary
+        }
+    }
+}
+
+@Suite("Progress Manager UInt64 (Retaining) Properties", .tags(.progressManager)) struct ProgressManagerUInt64Properties {
+    
+    func doSomething(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 24
+        }
+        
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [24])
+    }
+    
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 26
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [26, 24])
+    }
+    
+    @Test func discreteManager() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.totalPixelCount = 42
+        }
+        
+        #expect(manager.fractionCompleted == 0.0)
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42])
+    }
+    
+    @Test func twoLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 42
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42, 24])
+    }
+    
+    @Test func threeLevelsManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.totalPixelCount = 42
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42, 26, 24])
+    }
+}
