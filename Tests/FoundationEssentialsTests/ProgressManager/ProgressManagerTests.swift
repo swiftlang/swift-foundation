@@ -352,13 +352,27 @@ extension Tag {
         manager.complete(count: 2)
     }
     
-    @Test func finishedChild() async throws {
+    @Test func finishedChildUnreadBeforeDeinit() async throws {
         let manager = ProgressManager(totalCount: 2)
         
         manager.complete(count: 1)
         #expect(manager.fractionCompleted == 0.5)
         
         await makeFinishedChild(subprogress: manager.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func finishedChildReadBeforeDeinit() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.complete(count: 1)
+        #expect(manager.fractionCompleted == 0.5)
+
+        var child: ProgressManager? = manager.subprogress(assigningCount: 1).start(totalCount: 1)
+        child?.complete(count: 1)
+        #expect(manager.fractionCompleted == 1.0)
+        
+        child = nil
         #expect(manager.fractionCompleted == 1.0)
     }
     
