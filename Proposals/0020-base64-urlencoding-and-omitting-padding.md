@@ -3,7 +3,7 @@
 * Proposal: [SF-0020](0020-base64-urlencoding-and-omitting-padding.md)
 * Authors: [Fabian Fett](https://github.com/fabianfett)
 * Review Manager: TBD
-* Status: **Awaiting review**
+* Status: **Accepted**
 * Implementation: [apple/swift-foundation#1195](https://github.com/swiftlang/swift-foundation/pull/1195) [apple/swift-foundation#1196](https://github.com/swiftlang/swift-foundation/pull/1196)
 * Review: [pitch](https://forums.swift.org/t/pitch-adding-base64-urlencoding-and-omitting-padding-options-to-base64-encoding-and-decoding/77659)
 
@@ -31,11 +31,11 @@ We propose to add additional options to `Data.Base64EncodingOptions`:
 ```swift
 extension Data.Base64EncodingOptions {
     /// Use the base64url alphabet to encode the data
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationPreview 6.3, *)
     public static var base64URLAlphabet: Base64EncodingOptions { get }
 
     /// Omit the `=` padding characters in the end of the base64 encoded result
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationPreview 6.3, *)
     public static var omitPaddingCharacter: Base64EncodingOptions { get }
 }
 ```
@@ -55,11 +55,11 @@ extension Data.Base64DecodingOptions {
     /// Modify the decoding algorithm so that it ignores whitespace characters (CR LF Tab and Space). 
     ///
     /// The decoding will fail if any other invalid character is found in the encoded data. 
-    @available(FoundationPreview 6.2, *)
-    public static var ignoreWhitespaceCharacters: Base64EncodingOptions { get }
+    @available(FoundationPreview 6.3, *)
+    public static var ignoreWhitespaceCharacters: Base64DecodingOptions { get }
 
     /// Modify the decoding algorithm so that it expects base64 encoded data that uses base64url alphabet.
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationPreview 6.3, *)
     public static var base64URLAlphabet: Base64EncodingOptions { get }
 
     /// Modify the decoding algorithm so that it expects no padding characters at the end of the encoded data.
@@ -68,7 +68,7 @@ extension Data.Base64DecodingOptions {
     /// 
     /// - Warning: This option is ignored if `ignoreUnknownCharacters` is used at the same time. Consider 
     ///            using `ignoreWhitespaceCharacters` if possible.
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationPreview 6.3, *)
     public static var omitPaddingCharacter: Base64EncodingOptions { get }
 }
 ```
