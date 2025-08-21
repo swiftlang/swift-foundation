@@ -218,7 +218,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
                 #if FOUNDATION_FRAMEWORK
                 let debugDescription = "Creating a temporary file via mktemp failed. Creating the temporary file via _amkrtemp previously also failed with errno \(amkrErrno)"
                 #else
-                let debugDescription = nil
+                let debugDescription: String? = nil
                 #endif
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant, debugDescription: debugDescription)
             }
