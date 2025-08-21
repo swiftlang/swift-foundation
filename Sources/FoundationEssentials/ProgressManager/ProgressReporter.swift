@@ -16,7 +16,7 @@ import Observation
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
-@Observable public final class ProgressReporter: Sendable, CustomStringConvertible, CustomDebugStringConvertible {
+@Observable public final class ProgressReporter: Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -182,5 +182,13 @@ import Observation
     
     internal init(manager: ProgressManager) {
         self.manager = manager
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
+    }
+    
+    public static func == (lhs: ProgressReporter, rhs: ProgressReporter) -> Bool {
+        ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
     }
 }

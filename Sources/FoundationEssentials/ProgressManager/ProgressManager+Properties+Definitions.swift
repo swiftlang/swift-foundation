@@ -13,26 +13,25 @@
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     
-    /// A type that conveys task-specific information on progress.
+    /// A type that conveys additional task-specific information on progress.
     ///
     /// The `Property` protocol defines custom properties that can be associated with progress tracking.
-    /// These properties allow you to store and aggregate additional information alongside the standard
-    /// progress metrics like completion counts and file counts.
-    ///
-    /// Properties use a key-value system where the key uniquely identifies the property type,
-    /// and values can be aggregated across progress manager hierarchies through reduction and merging operations.
+    /// These properties allow you to store and aggregate additional information alongside the
+    /// standard progress metrics such as `totalCount` and `completedCount`.
     public protocol Property: SendableMetatype {
         
-        /// The type of individual values stored in this property.
+        /// The type used for individual values of this property.
         ///
-        /// This associated type represents the data type of individual property values
+        /// This associated type represents the type of property values
         /// that can be set on progress managers. Must be `Sendable` and `Equatable`.
+        /// The currently allowed types are `Int`, `Double`, `String?`, `URL?` or `UInt64`.
         associatedtype Value: Sendable, Equatable
         
         /// The type used for aggregated summaries of this property.
         ///
-        /// This associated type represents the data type used when summarizing property values
-        /// across multiple progress managers in a hierarchy. Must be `Sendable` and `Equatable`.
+        /// This associated type represents the type used when summarizing property values
+        /// across multiple progress managers in a subtree.
+        /// The currently allowed types are `Int`, `Double`, `[String?]`, `[URL?]` or `[UInt64]`.
         associatedtype Summary: Sendable, Equatable
         
         /// A unique identifier for this property type.
@@ -54,7 +53,7 @@ extension ProgressManager {
         /// The default summary value for this property type.
         ///
         /// This value is used as the initial summary when no property values have been
-        /// aggregated yet, or as a fallback when summarization fails.
+        /// aggregated yet.
         ///
         /// - Returns: The default summary value for this property type.
         static var defaultSummary: Summary { get }
@@ -80,8 +79,24 @@ extension ProgressManager {
         /// - Returns: A new summary that represents the combination of both input summaries.
         static func merge(_ summary1: Summary, _ summary2: Summary) -> Summary
         
-        /// Determines the behavior for handling childSummary when the child is deinitialized. 
-        static func terminate(_ parentSummary: Summary, _ childSummary: Summary) -> Summary
+        /// Determines how to handle summary data when a progress manager is deinitialized.
+        ///
+        /// This method is used when a progress manager in the hierarchy is being
+        /// deinitialized and its accumulated summary needs to be processed in relation to
+        /// its parent's summary. The behavior can vary depending on the property type:
+        ///
+        /// - For additive properties (like file counts, byte counts): The self summary
+        ///   is typically added to the parent summary to preserve the accumulated progress.
+        /// - For max-based properties (like estimated time remaining): The parent summary
+        ///   is typically preserved as it represents an existing estimate.
+        /// - For collection-based properties (like file URLs): The self summary may be
+        ///   discarded to avoid accumulating stale references.
+        ///
+        /// - Parameters:
+        ///   - parentSummary: The current summary value of the parent progress manager.
+        ///   - selfSummary: The final summary value from the progress manager being deinitialized.
+        /// - Returns: The updated summary that replaces the parent's current summary.
+        static func terminate(_ parentSummary: Summary, _ selfSummary: Summary) -> Summary
     }
     
     // Namespace for properties specific to operations reported on
@@ -109,8 +124,8 @@ extension ProgressManager {
                 return summary1 + summary2
             }
             
-            public static func terminate(_ parentSummary: Int, _ childSummary: Int) -> Int {
-                return parentSummary + childSummary
+            public static func terminate(_ parentSummary: Int, _ selfSummary: Int) -> Int {
+                return parentSummary + selfSummary
             }
         }
         
@@ -136,8 +151,8 @@ extension ProgressManager {
                 return summary1 + summary2
             }
             
-            public static func terminate(_ parentSummary: Int, _ childSummary: Int) -> Int {
-                return parentSummary + childSummary
+            public static func terminate(_ parentSummary: Int, _ selfSummary: Int) -> Int {
+                return parentSummary + selfSummary
             }
         }
         
@@ -163,8 +178,8 @@ extension ProgressManager {
                 return summary1 + summary2
             }
             
-            public static func terminate(_ parentSummary: UInt64, _ childSummary: UInt64) -> UInt64 {
-                return parentSummary + childSummary
+            public static func terminate(_ parentSummary: UInt64, _ selfSummary: UInt64) -> UInt64 {
+                return parentSummary + selfSummary
             }
         }
         
@@ -190,8 +205,8 @@ extension ProgressManager {
                 return summary1 + summary2
             }
             
-            public static func terminate(_ parentSummary: UInt64, _ childSummary: UInt64) -> UInt64 {
-                return parentSummary + childSummary
+            public static func terminate(_ parentSummary: UInt64, _ selfSummary: UInt64) -> UInt64 {
+                return parentSummary + selfSummary
             }
         }
         
@@ -216,8 +231,8 @@ extension ProgressManager {
                 return summary1 + summary2
             }
             
-            public static func terminate(_ parentSummary: [UInt64], _ childSummary: [UInt64]) -> [UInt64] {
-                return parentSummary + childSummary
+            public static func terminate(_ parentSummary: [UInt64], _ selfSummary: [UInt64]) -> [UInt64] {
+                return parentSummary + selfSummary
             }
         }
         
@@ -247,7 +262,7 @@ extension ProgressManager {
                 return max(summary1, summary2)
             }
             
-            public static func terminate(_ parentSummary: Duration, _ childSummary: Duration) -> Duration {
+            public static func terminate(_ parentSummary: Duration, _ selfSummary: Duration) -> Duration {
                 return parentSummary
             }
         }
@@ -278,7 +293,7 @@ extension ProgressManager {
                 return summary1 + summary2
             }
             
-            public static func terminate(_ parentSummary: [URL?], _ childSummary: [URL?]) -> [URL?] {
+            public static func terminate(_ parentSummary: [URL?], _ selfSummary: [URL?]) -> [URL?] {
                 return parentSummary
             }
         }
