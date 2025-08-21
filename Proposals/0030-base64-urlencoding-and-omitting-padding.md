@@ -1,6 +1,6 @@
 # Adding base64 urlencoding and omitting padding option to base64 encoding and decoding
 
-* Proposal: [SF-0020](0020-base64-urlencoding-and-omitting-padding.md)
+* Proposal: [SF-0030](0030-base64-urlencoding-and-omitting-padding.md)
 * Authors: [Fabian Fett](https://github.com/fabianfett)
 * Review Manager: TBD
 * Status: **Accepted**
