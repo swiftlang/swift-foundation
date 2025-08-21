@@ -2889,11 +2889,11 @@ extension Data {
         public static let endLineWithLineFeed       = Base64EncodingOptions(rawValue: 1 << 5)
 
         /// Use the base64url alphabet to encode the data
-        @available(FoundationPreview 6.2, *)
+        @available(FoundationPreview 6.3, *)
         public static let base64URLAlphabet = Base64EncodingOptions(rawValue: 1 << 6)
 
         /// Omit the `=` padding characters in the end of the base64 encoded result
-        @available(FoundationPreview 6.2, *)
+        @available(FoundationPreview 6.3, *)
         public static let omitPaddingCharacter = Base64EncodingOptions(rawValue: 1 << 7)
     }
 
