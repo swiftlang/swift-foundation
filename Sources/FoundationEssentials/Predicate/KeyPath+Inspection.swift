@@ -50,7 +50,7 @@ extension UInt32 {
 extension AnyKeyPath {
     private static var WORD_SIZE: Int { MemoryLayout<Int>.size }
     
-    func _validateForPredicateUsage(restrictArguments: Bool = false) {
+    func _validateForPredicateUsage(restrictArguments: Bool = true) {
         var ptr = unsafeBitCast(self, to: UnsafeRawPointer.self)
         ptr = ptr.advanced(by: Self.WORD_SIZE * 3) // skip isa, type metadata, and KVC string pointers
         let header = ptr.load(as: UInt32.self)
