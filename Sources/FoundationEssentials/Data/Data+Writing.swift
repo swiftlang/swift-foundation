@@ -157,9 +157,37 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
     
     let pidString = String(ProcessInfo.processInfo.processIdentifier, radix: 16, uppercase: true)
     let template = directoryPath + prefix + pidString + ".XXXXXX"
-    var count = 0
     let maxCount = 7
-    repeat {
+    for _ in 0 ..< maxCount {
+#if FOUNDATION_FRAMEWORK
+        let (sandboxResult, amkrErrno) = inPath.withFileSystemRepresentation { inPathFileSystemRep -> ((Int32, String)?, Int32?) in
+            guard let inPathFileSystemRep else {
+                return (nil, nil)
+            }
+            // First, try _amkrtemp to carry over any sandbox extensions for inPath to the temporary file (even if the application isn't sandboxed)
+            guard let uniqueTempFile = _amkrtemp(inPathFileSystemRep) else {
+                return (nil, errno)
+            }
+            defer { free(uniqueTempFile) }
+            let fd = openFileDescriptorProtected(path: uniqueTempFile, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
+            if fd >= 0 {
+                // Got a good fd
+                return ((fd, String(cString: uniqueTempFile)), nil)
+            }
+            return (nil, errno)
+        }
+        
+        // If _amkrtemp succeeded, return its result
+        if let sandboxResult {
+            return sandboxResult
+        }
+        // If _amkrtemp failed with EEXIST, just retry
+        if amkrErrno == EEXIST {
+            continue
+        }
+        // Otherwise, fall through to mktemp below
+#endif
+        
         let result = try template.withMutableFileSystemRepresentation { templateFileSystemRep -> (Int32, String)? in
             guard let templateFileSystemRep else {
                 throw CocoaError(.fileWriteInvalidFileName)
@@ -187,7 +215,12 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             
             // If the file exists, we repeat. Otherwise throw the error.
             if errno != EEXIST {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
+                #if FOUNDATION_FRAMEWORK
+                let debugDescription = "Creating a temporary file via mktemp failed. Creating the temporary file via _amkrtemp previously also failed with errno \(amkrErrno)"
+                #else
+                let debugDescription: String? = nil
+                #endif
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant, debugDescription: debugDescription)
             }
 
             // Try again
@@ -196,14 +229,10 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
         
         if let result {
             return result
-        } else {
-            count += 1
-            if count > maxCount {
-                // Prevent an infinite loop; even if the error is obscure
-                throw CocoaError(.fileWriteUnknown)
-            }
         }
-    } while true
+    }
+    // We hit max count, prevent an infinite loop; even if the error is obscure
+    throw CocoaError(.fileWriteUnknown)
 #endif // os(WASI)
 }
 
