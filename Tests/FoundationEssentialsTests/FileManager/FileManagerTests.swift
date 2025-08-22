@@ -1133,6 +1133,12 @@ private struct FileManagerTests {
             let fileName = UUID().uuidString
             let cwd = fileManager.currentDirectoryPath
 
+            #expect(fileManager.changeCurrentDirectoryPath(cwd))
+            #expect(cwd == fileManager.currentDirectoryPath)
+
+            let nearLimitDir = cwd + "/" + String(repeating: "A", count: 255 - cwd.count)
+            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: nearLimitDir), withIntermediateDirectories: false) }
+
             #expect(fileManager.createFile(atPath: dirName + "/" + fileName, contents: nil))
 
             let dirURL = URL(filePath: dirName, directoryHint: .checkFileSystem)

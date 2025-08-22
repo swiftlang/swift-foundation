@@ -497,9 +497,14 @@ extension _FileManagerImpl {
         // This is solely to minimize the number of allocations and number of bytes allocated versus starting with a hardcoded value like MAX_PATH.
         // We should NOT early-return if this returns 0, in order to avoid TOCTOU issues.
         let dwSize = GetCurrentDirectoryW(0, nil)
-        return try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
+        let cwd = try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
             GetCurrentDirectoryW(DWORD($0.count), $0.baseAddress)
         }
+        
+        // Handle Windows NT object namespace prefix
+        // The \\??\ prefix is used by Windows NT for device paths and may appear
+        // in current working directory paths. We strip it to return a standard path.
+        return cwd?.removingNTObjectNamespacePrefix()
 #else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
