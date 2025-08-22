@@ -115,7 +115,9 @@ internal import _FoundationCollections
             fileURL: ProgressManager.Properties.FileURL.defaultValue,
             propertiesInt: [:],
             propertiesDouble: [:],
-            propertiesString: [:]
+            propertiesString: [:],
+            propertiesURL: [:],
+            propertiesUInt64: [:],
         )
         self.state = Mutex(state)
     }
