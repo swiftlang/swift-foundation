@@ -366,15 +366,14 @@ enum _FileOperations {
             var stack = [(path, false)]
             while let (directory, checked) = stack.popLast() {
                 try directory.withNTPathRepresentation {
-                    let ntpath = String(decodingCString: $0, as: UTF16.self)
+                    let fullpath = String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix()
 
-                    guard checked || filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
-
+                    guard checked || filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                     if RemoveDirectoryW($0) { return }
                     let dwError: DWORD = GetLastError()
                     guard dwError == ERROR_DIR_NOT_EMPTY else {
                         let error = CocoaError.removeFileError(dwError, directory)
-                        guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: ntpath) ?? false) else {
+                        guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: fullpath) ?? false) else {
                             throw error
                         }
                         return
@@ -383,21 +382,21 @@ enum _FileOperations {
 
                     for entry in _Win32DirectoryContentsSequence(path: directory, appendSlashForDirectory: false, prefix: [directory]) {
                         try entry.fileNameWithPrefix.withNTPathRepresentation {
-                            let ntpath = String(decodingCString: $0, as: UTF16.self)
+                            let fullpath = String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix()
 
                             if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
                                     entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
-                                if filemanager?._shouldRemoveItemAtPath(ntpath) ?? true {
-                                    stack.append((ntpath, true))
+                                if filemanager?._shouldRemoveItemAtPath(fullpath) ?? true {
+                                    stack.append((fullpath, true))
                                 }
                             } else {
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_READONLY == FILE_ATTRIBUTE_READONLY {
                                     guard SetFileAttributesW($0, entry.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY) else {
-                                        throw CocoaError.removeFileError(GetLastError(), ntpath)
+                                        throw CocoaError.removeFileError(GetLastError(), entry.fileName)
                                     }
                                 }
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
-                                    guard filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
+                                    guard filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                                     if !RemoveDirectoryW($0) {
                                         let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
                                         guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
@@ -405,7 +404,7 @@ enum _FileOperations {
                                         }
                                     }
                                 } else {
-                                    guard filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
+                                    guard filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                                     if !DeleteFileW($0) {
                                         let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
                                         guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
