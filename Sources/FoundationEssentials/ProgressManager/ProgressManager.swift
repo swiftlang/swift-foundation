@@ -185,6 +185,17 @@ internal import _FoundationCollections
         }
     }
     
+    //MARK: Internal vars to make additional properties observable
+    internal var totalFileCount: Int {
+        _$observationRegistrar.access(self, keyPath: \.totalFileCount)
+        return getUpdatedFileCount(type: .total)
+    }
+    
+    internal var completedFileCount: Int {
+        _$observationRegistrar.access(self, keyPath: \.completedFileCount)
+        return getUpdatedFileCount(type: .completed)
+    }
+    
     //MARK: Fractional Properties Methods
     internal func getProgressFraction() -> ProgressFraction {
         return state.withLock { state in

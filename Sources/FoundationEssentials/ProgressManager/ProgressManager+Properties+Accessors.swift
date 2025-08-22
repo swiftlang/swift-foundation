@@ -541,7 +541,8 @@ extension ProgressManager {
     /// - Parameter property: The `TotalFileCount` property type.
     /// - Returns: The sum of all total file counts across the entire progress subtree.
     public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
-        return getUpdatedFileCount(type: .total)
+//        return getUpdatedFileCount(type: .total)
+        return totalFileCount
     }
     
     /// Returns the completed file count across the progress subtree.
@@ -549,7 +550,8 @@ extension ProgressManager {
     /// - Parameter property: The `CompletedFileCount` property type.
     /// - Returns: The sum of all completed file counts across the entire progress subtree.
     public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int {
-        return getUpdatedFileCount(type: .completed)
+//        return getUpdatedFileCount(type: .completed)
+        return completedFileCount
     }
     
     /// Returns the total byte count across the progress subtree.
