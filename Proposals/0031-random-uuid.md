@@ -1,11 +1,11 @@
 # Generating UUIDs using RandomNumberGenerators
 
-* Proposal: [SF-NNNN](NNNN-random-uuid.md)
+* Proposal: [SF-0031](0031-random-uuid.md)
 * Authors: [FranzBusch](https://github.com/FranzBusch)
 * Review Manager: TBD
-* Status: **Awaiting review**
+* Status: **Accepted & Implemented**
 * Implementation: [swiftlang/swift-foundation#1271](https://github.com/swiftlang/swift-foundation/pull/1271)
-* Review: ([pitch](https://forums.swift.org/...))
+* Review: ([pitch/review](https://forums.swift.org/t/review-generating-uuids-using-randomnumbergenerators/79494/19))
 
 ## Introduction
 
