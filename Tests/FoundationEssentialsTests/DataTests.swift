@@ -1899,10 +1899,64 @@ extension DataTests {
         #expect(input.base64EncodedData() == Data("AAAAAAAAAAAAAA==".utf8))
     }
 
+    @Test func base64Encode_allBytesSequentially() {
+        let input = UInt8(0) ... UInt8(255)
+
+        #expect(
+            Data(input).base64EncodedString() == """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==
+            """
+        )
+        #expect(
+            Data(input).base64EncodedString(options: .omitPaddingCharacter) == """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w
+            """
+        )
+        #expect(
+            Data(input).base64EncodedString(options: [.base64URLAlphabet]) == """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w==
+            """
+        )
+        #expect(
+            Data(input).base64EncodedString(options: [.omitPaddingCharacter, .base64URLAlphabet]) == """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w
+            """
+        )
+    }
+
+    func test_base64Encode_arrayOfNulls() {
+        let input = Data(repeating: 0, count: 10)
+        #expect(input.base64EncodedString() == "AAAAAAAAAAAAAA==")
+        #expect(input.base64EncodedData() == Data("AAAAAAAAAAAAAA==".utf8))
+
+        #expect(input.base64EncodedString(options: .omitPaddingCharacter) == "AAAAAAAAAAAAAA")
+        #expect(input.base64EncodedData(options: .omitPaddingCharacter) == Data("AAAAAAAAAAAAAA".utf8))
+    }
+
     @Test func base64Encode_differentPaddingNeeds() {
         #expect(Data([1, 2, 3, 4]).base64EncodedString() == "AQIDBA==")
         #expect(Data([1, 2, 3, 4, 5]).base64EncodedString() == "AQIDBAU=")
         #expect(Data([1, 2, 3, 4, 5, 6]).base64EncodedString() == "AQIDBAUG")
+
+        #expect(Data([1, 2, 3, 4]).base64EncodedString(options: [.lineLength64Characters]) == "AQIDBA==")
+        #expect(Data([1, 2, 3, 4, 5]).base64EncodedString(options: [.lineLength64Characters]) == "AQIDBAU=")
+        #expect(Data([1, 2, 3, 4, 5, 6]).base64EncodedString(options: [.lineLength64Characters]) == "AQIDBAUG")
+
+        #expect(Data([1, 2, 3, 4]).base64EncodedString(options: .omitPaddingCharacter) == "AQIDBA")
+        #expect(Data([1, 2, 3, 4, 5]).base64EncodedString(options: .omitPaddingCharacter) == "AQIDBAU")
+        #expect(Data([1, 2, 3, 4, 5, 6]).base64EncodedString(options: .omitPaddingCharacter) == "AQIDBAUG")
 
         #expect(Data([1, 2, 3, 4]).base64EncodedString(options: [.lineLength64Characters]) == "AQIDBA==")
         #expect(Data([1, 2, 3, 4, 5]).base64EncodedString(options: [.lineLength64Characters]) == "AQIDBAU=")
@@ -2004,6 +2058,20 @@ extension DataTests {
              AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
              """
         )
+
+        #expect(
+            Data(repeating: 0, count: 48).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        )
+
+        #expect(
+             Data(repeating: 0, count: 96).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
+             """
+             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
+             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+             """
+        )
+
 
         #expect(
             Data(repeating: 0, count: 57).base64EncodedString(options: .lineLength76Characters) ==
