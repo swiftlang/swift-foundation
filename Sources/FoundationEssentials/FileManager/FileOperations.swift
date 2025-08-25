@@ -139,6 +139,9 @@ extension FileManager {
     fileprivate func _shouldRemoveItemAtPath(_ path: String) -> Bool {
         var delegateResponse: Bool?
         if let delegate = self.safeDelegate {
+#if os(Windows)
+            let path = path.removingNTObjectNamespacePrefix()
+#endif
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldRemoveItemAt: URL(fileURLWithPath: path))
             
@@ -393,7 +396,7 @@ enum _FileOperations {
                             } else {
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_READONLY == FILE_ATTRIBUTE_READONLY {
                                     guard SetFileAttributesW($0, entry.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY) else {
-                                        throw CocoaError.removeFileError(GetLastError(), ntpath)
+                                        throw CocoaError.removeFileError(GetLastError(), entry.fileName)
                                     }
                                 }
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
