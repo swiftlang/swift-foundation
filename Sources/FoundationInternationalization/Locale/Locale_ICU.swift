@@ -16,16 +16,22 @@ import FoundationEssentials
 
 #if FOUNDATION_FRAMEWORK
 // for CFXPreferences call
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 // For Logger
-@_implementationOnly import os
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
+internal import os
 #endif
 
+internal import _FoundationICU
+
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
+#endif
+
+#if !FOUNDATION_FRAMEWORK
+@_dynamicReplacement(for: _localeICUClass())
+private func _localeICUClass_localized() -> any _LocaleProtocol.Type {
+    return _LocaleICU.self
+}
 #endif
 
 let MAX_ICU_NAME_SIZE: Int32 = 1024
@@ -35,12 +41,12 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     // Single-optional values are caches where the result may not be nil. If the value is nil, the result has not yet been calculated.
     struct State: Hashable, Sendable {
         var languageComponents: Locale.Language.Components?
-        var calendarId: Calendar.Identifier?
         var collation: Locale.Collation?
         var currency: Locale.Currency??
         var numberingSystem: Locale.NumberingSystem?
         var availableNumberingSystems: [Locale.NumberingSystem]?
         var firstDayOfWeek: Locale.Weekday?
+        var weekendRange: WeekendRange??
         var minimalDaysInFirstWeek: Int?
         var hourCycle: Locale.HourCycle?
         var measurementSystem: Locale.MeasurementSystem?
@@ -49,7 +55,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         var subdivision: Locale.Subdivision??
         var timeZone: TimeZone??
         var variant: Locale.Variant??
-        var identifierCapturingPreferences: String?
 
         // If the key is present, the value has been calculated (and the result may or may not be nil).
         var identifierDisplayNames: [String : String?] = [:]
@@ -62,56 +67,71 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         var collationIdentifierDisplayNames: [String : String?] = [:]
         var currencySymbolDisplayNames: [String : String?] = [:]
         var currencyCodeDisplayNames: [String : String?] = [:]
+        var numberFormatters = NumberFormattersBox()
+        
+        // This type is @unchecked Sendable because it stores mutable pointers
+        // The mutable pointers are only ever "mutated" during the call to cleanup, so this type can be safely sent across concurrency boundaries so long as care is taken to ensure that during a call to cleanup that you have exclusive access to this box
+        // This is done by ensuring that cleanup is called from within the _LocaleICU lock
+        struct NumberFormattersBox : Hashable, @unchecked Sendable {
+            private var numberFormatters: [UInt32 /* UNumberFormatStyle */ : UnsafeMutablePointer<UNumberFormat?>] = [:]
 
-        var numberFormatters: [UInt32 /* UNumberFormatStyle */ : UnsafeMutablePointer<UNumberFormat?>] = [:]
+            mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafePointer<UNumberFormat?>? {
+                if let nf = numberFormatters[UInt32(style.rawValue)] {
+                    return UnsafePointer(nf)
+                }
 
-        mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafeMutablePointer<UNumberFormat?>? {
-            if let nf = numberFormatters[UInt32(style.rawValue)] {
-                return nf
-            }
+                var status = U_ZERO_ERROR
+                guard let nf = unum_open(style, nil, 0, identifier, nil, &status) else {
+                    return nil
+                }
 
-            var status = U_ZERO_ERROR
-            guard let nf = unum_open(style, nil, 0, identifier, nil, &status) else {
-                return nil
-            }
+                let multiplier = unum_getAttribute(nf, UNUM_MULTIPLIER)
+                if multiplier != 1 {
+                    unum_setAttribute(nf, UNUM_MULTIPLIER, 1)
+                }
 
-            let multiplier = unum_getAttribute(nf, UNUM_MULTIPLIER)
-            if multiplier != 1 {
-                unum_setAttribute(nf, UNUM_MULTIPLIER, 1)
-            }
+                unum_setAttribute(nf, UNUM_LENIENT_PARSE, 0)
+                unum_setContext(nf, UDISPCTX_CAPITALIZATION_NONE, &status)
 
-            unum_setAttribute(nf, UNUM_LENIENT_PARSE, 0)
-            unum_setContext(nf, UDISPCTX_CAPITALIZATION_NONE, &status)
-
-            if let numberSymbols {
-                for (sym, str) in numberSymbols {
-                    let utf16 = Array(str.utf16)
-                    utf16.withUnsafeBufferPointer {
-                        var status = U_ZERO_ERROR
-                        unum_setSymbol(nf, UNumberFormatSymbol(CInt(sym)), $0.baseAddress, Int32($0.count), &status)
+                if let numberSymbols {
+                    for (sym, str) in numberSymbols {
+                        let utf16 = Array(str.utf16)
+                        utf16.withUnsafeBufferPointer {
+                            var status = U_ZERO_ERROR
+                            unum_setSymbol(nf, UNumberFormatSymbol(CInt(sym)), $0.baseAddress, Int32($0.count), &status)
+                        }
                     }
                 }
+
+                numberFormatters[UInt32(style.rawValue)] = nf
+                
+                // Vending non-mutable pointers ensures callers don't mutate state
+                return UnsafePointer(nf)
             }
+            
+            mutating func cleanup() {
+                for nf in numberFormatters.values {
+                    unum_close(nf)
+                }
+                numberFormatters = [:]
+            }
+        }
 
-            numberFormatters[UInt32(style.rawValue)] = nf
-
-            return nf
+        mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafePointer<UNumberFormat?>? {
+            numberFormatters.formatter(for: style, identifier: identifier, numberSymbols: numberSymbols)
         }
         
         mutating func cleanup() {
-            for nf in numberFormatters.values {
-                unum_close(nf)
-            }
-            numberFormatters = [:]
+            numberFormatters.cleanup()
         }
     }
 
     // MARK: - ivar
 
     let identifier: String
-    
-    let doesNotRequireSpecialCaseHandling: Bool
-    
+    let identifierCapturingPreferences: String
+    let calendarIdentifier: Calendar.Identifier
+
     let prefs: LocalePreferences?
     
     private let lock: LockedState<State>
@@ -120,8 +140,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     // MARK: - Logging
 #if FOUNDATION_FRAMEWORK
-    static private let log: OSLog = {
-        OSLog(subsystem: "com.apple.foundation", category: "locale")
+    static private let log: SendableOSLog = {
+        .init(OSLog(subsystem: "com.apple.foundation", category: "locale"))
     }()
 #endif // FOUNDATION_FRAMEWORK
     
@@ -135,21 +155,21 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     required init(identifier: String, prefs: LocalePreferences? = nil) {
         self.identifier = Locale._canonicalLocaleIdentifier(from: identifier)
-        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
+        calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
+        identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
         lock = LockedState(initialState: State())
     }
 
     required init(components: Locale.Components) {
         self.identifier = components.icuIdentifier
-        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         prefs = nil
+        calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
+        identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
 
         // Copy over the component values into our internal state - if they are set
         var state = State()
         state.languageComponents = components.languageComponents
-        if let v = components.calendar { state.calendarId = v }
-        if let v = components.calendar { state.calendarId = v }
         if let v = components.collation { state.collation = v }
         if let v = components.currency { state.currency = v }
         if let v = components.numberingSystem { state.numberingSystem = v }
@@ -169,11 +189,11 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         if let name {
             ident = Locale._canonicalLocaleIdentifier(from: name)
 #if FOUNDATION_FRAMEWORK
-            if Self.log.isEnabled(type: .debug) {
+            if Self.log.log.isEnabled(type: .debug) {
                 if let ident {
                     let components = Locale.Components(identifier: ident)
                     if components.languageComponents.region == nil {
-                        Logger(Self.log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
+                        Logger(Self.log.log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
                     }
                 }
             }
@@ -198,7 +218,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
             #if FOUNDATION_FRAMEWORK
             if preferredLanguages == nil && (preferredLocale == nil || performBundleMatching) {
-                Logger(Self.log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
+                Logger(Self.log.log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
             }
             #endif
 
@@ -231,18 +251,18 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                         // Country???
                         if let countryCode = prefs.country {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
+                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: "\(languageIdentifier)_\(countryCode)")
                         } else {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
+                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: languageIdentifier)
                         }
                     } else {
                         #if FOUNDATION_FRAMEWORK
-                        Logger(Self.log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
+                        Logger(Self.log.log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
                         #endif // FOUNDATION_FRAMEWORK
                     }
                 } else {
@@ -260,13 +280,15 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         }
         
         self.identifier = Locale._canonicalLocaleIdentifier(from: fixedIdent)
-        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
+        calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
+        identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
         lock = LockedState(initialState: State())
     }
     
     deinit {
         lock.withLock { state in
+            // We can safely call this here because we have exclusive access to state within the lock
             state.cleanup()
         }
     }
@@ -310,19 +332,19 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             }
             return result
         case "AppleICUDateTimeSymbols":
-            return prefs.icuDateTimeSymbols
+            return prefs.icuSymbolsAndStrings.icuDateTimeSymbols
         case "AppleICUForce24HourTime":
             return prefs.force24Hour
         case "AppleICUForce12HourTime":
             return prefs.force12Hour
         case "AppleICUDateFormatStrings":
-            return prefs.icuDateFormatStrings
+            return prefs.icuSymbolsAndStrings.icuDateFormatStrings
         case "AppleICUTimeFormatStrings":
-            return prefs.icuTimeFormatStrings
+            return prefs.icuSymbolsAndStrings.icuTimeFormatStrings
         case "AppleICUNumberFormatStrings":
-            return prefs.icuNumberFormatStrings
+            return prefs.icuSymbolsAndStrings.icuNumberFormatStrings
         case "AppleICUNumberSymbols":
-            return prefs.icuNumberSymbols
+            return prefs.icuSymbolsAndStrings.icuNumberSymbols
         default:
             return nil
         }
@@ -409,40 +431,33 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     //
     // Intentionally ignore `prefs.country`: Locale identifier should already contain
     // that information. Do not override it.
-    var identifierCapturingPreferences: String {
-        lock.withLock { state in
-            if let result = state.identifierCapturingPreferences {
-                return result
-            }
-
-            guard let prefs else {
-                state.identifierCapturingPreferences = identifier
-                return identifier
-            }
-
-            var components = Locale.Components(identifier: identifier)
-
-            if let id = prefs.collationOrder {
-                components.collation = .init(id)
-            }
-
-            let calendarID = _lockedCalendarIdentifier(&state)
-            if let weekdayNumber = prefs.firstWeekday?[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
+    static func _identifierCapturingPreferences(forIdentifier identifier: String, calendarIdentifier: Calendar.Identifier, preferences prefs: LocalePreferences?) -> String {
+        guard let prefs else {
+            return identifier
+        }
+        
+        var components = Locale.Components(identifier: identifier)
+        
+        if let id = prefs.collationOrder {
+            components.collation = .init(id)
+        }
+        
+        if let firstWeekdayPrefs = prefs.firstWeekday {
+            let calendarID = calendarIdentifier
+            if let weekdayNumber = firstWeekdayPrefs[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
                 components.firstDayOfWeek = weekday
             }
-
-            if let measurementSystem = prefs.measurementSystem {
-                components.measurementSystem = measurementSystem
-            }
-
-            if let hourCycle = prefs.hourCycle {
-                components.hourCycle = hourCycle
-            }
-
-            let completeID = components.icuIdentifier
-            state.identifierCapturingPreferences = completeID
-            return completeID
         }
+        
+        if let measurementSystem = prefs.measurementSystem {
+            components.measurementSystem = measurementSystem
+        }
+        
+        if let hourCycle = prefs.hourCycle {
+            components.hourCycle = hourCycle
+        }
+        
+        return components.icuIdentifier
     }
 
     // MARK: - Language Code
@@ -695,46 +710,31 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     // MARK: - LocaleCalendarIdentifier
 
-    private func _lockedCalendarIdentifier(_ state: inout State) -> Calendar.Identifier {
-        if let calendarId = state.calendarId {
-            return calendarId
-        } else {
-            var calendarIDString = Locale.keywordValue(identifier: identifier, key: "calendar")
-            if calendarIDString == nil {
-                // Try again
-                var status = U_ZERO_ERROR
-                let e = ucal_getKeywordValuesForLocale("calendar", identifier, UBool.true, &status)
-                defer { uenum_close(e) }
-                guard let e, status.isSuccess else {
-                    state.calendarId = .gregorian
-                    return .gregorian
-                }
-                // Just get the first value
-                var resultLength = Int32(0)
-                let result = uenum_next(e, &resultLength, &status)
-                guard status.isSuccess, let result else {
-                    state.calendarId = .gregorian
-                    return .gregorian
-                }
-                calendarIDString = String(cString: result)
-            }
-
-            guard let calendarIDString else {
-                // Fallback value
-                state.calendarId = .gregorian
+    private static func _calendarIdentifier(forIdentifier identifier: String) -> Calendar.Identifier {
+        var calendarIDString = Locale.keywordValue(identifier: identifier, key: "calendar")
+        if calendarIDString == nil {
+            // Try again
+            var status = U_ZERO_ERROR
+            let e = ucal_getKeywordValuesForLocale("calendar", identifier, UBool.true, &status)
+            defer { uenum_close(e) }
+            guard let e, status.isSuccess else {
                 return .gregorian
             }
-
-            let id = Calendar.Identifier(identifierString: calendarIDString) ?? .gregorian
-            state.calendarId = id
-            return id
+            // Just get the first value
+            var resultLength = Int32(0)
+            let result = uenum_next(e, &resultLength, &status)
+            guard status.isSuccess, let result else {
+                return .gregorian
+            }
+            calendarIDString = String(cString: result)
         }
-    }
-
-    var calendarIdentifier: Calendar.Identifier {
-        lock.withLock { state in
-            _lockedCalendarIdentifier(&state)
+        
+        guard let calendarIDString else {
+            // Fallback value
+            return .gregorian
         }
+
+        return Calendar.Identifier(identifierString: calendarIDString) ?? .gregorian
     }
 
     func calendarIdentifierDisplayName(for value: Calendar.Identifier) -> String? {
@@ -755,20 +755,17 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     // MARK: - LocaleCalendar
 
     var calendar: Calendar {
-        lock.withLock { state in
-            let id = _lockedCalendarIdentifier(&state)
-            var calendar = Calendar(identifier: id)
-
-            if let prefs {
-                let firstWeekday = prefs.firstWeekday?[id]
-                let minDaysInFirstWeek = prefs.minDaysInFirstWeek?[id]
-                if let firstWeekday { calendar.firstWeekday = firstWeekday }
-                if let minDaysInFirstWeek { calendar.minimumDaysInFirstWeek = minDaysInFirstWeek }
-            }
-
-            // In order to avoid a retain cycle (Calendar has a Locale, Locale has a Calendar), we do not keep a reference to the Calendar in Locale but create one each time. Most of the time the value of `Calendar(identifier:)` will return a cached value in any case.
-            return calendar
+        var calendar = Calendar(identifier: calendarIdentifier)
+        
+        if let prefs {
+            let firstWeekday = prefs.firstWeekday?[calendarIdentifier]
+            let minDaysInFirstWeek = prefs.minDaysInFirstWeek?[calendarIdentifier]
+            if let firstWeekday { calendar.firstWeekday = firstWeekday }
+            if let minDaysInFirstWeek { calendar.minimumDaysInFirstWeek = minDaysInFirstWeek }
         }
+        
+        // In order to avoid a retain cycle (Calendar has a Locale, Locale has a Calendar), we do not keep a reference to the Calendar in Locale but create one each time. Most of the time the value of `Calendar(identifier:)` will return a cached value in any case.
+        return calendar
     }
 
     var timeZone: TimeZone? {
@@ -1160,18 +1157,28 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                     return hourCycle
                 }
 
-                let calendarId = _lockedCalendarIdentifier(&state)
+                let calendarId = calendarIdentifier
+                let rootHourCycle = Locale.HourCycle.zeroToTwentyThree
                 if let regionOverride = _lockedRegion(&state)?.identifier {
                     // Use the "rg" override in the identifier if there's one
                     // ICU isn't handling `rg` keyword yet (93783223), so we do this manually: create a fake locale with the `rg` override as the language region.
                     // Use "und" as the language code as it is irrelevant for regional preferences
                     let tmpLocaleIdentifier = "und_\(regionOverride)"
-                    let hc = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: tmpLocaleIdentifier, calendarIdentifier: calendarId).defaultHourCycle
+                    guard let icuPatternGenerator = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: tmpLocaleIdentifier, calendarIdentifier: calendarId) else {
+                        state.hourCycle = rootHourCycle
+                        return rootHourCycle
+                    }
+                    let hc = icuPatternGenerator.defaultHourCycle
                     state.hourCycle = hc
                     return hc
                 }
 
-                let hc = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: identifier, calendarIdentifier: calendarId).defaultHourCycle
+                guard let icuPatternGenerator = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: identifier, calendarIdentifier: calendarId) else {
+                    state.hourCycle = rootHourCycle
+                    return rootHourCycle
+                }
+                
+                let hc = icuPatternGenerator.defaultHourCycle
                 state.hourCycle = hc
                 return hc
             }
@@ -1202,10 +1209,13 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                     }
                 }
 
-                // Check prefs
-                if let first = forceFirstWeekday(_lockedCalendarIdentifier(&state)) {
-                    state.firstDayOfWeek = first
-                    return first
+                // Check prefs. The value doesn't matter here - we check it again in the `forceFirstWeekday` function, and it is immutable.
+                if prefs?.firstWeekday != nil {
+                    let calendarId = calendarIdentifier
+                    if let first = forceFirstWeekday(calendarId) {
+                        state.firstDayOfWeek = first
+                        return first
+                    }
                 }
 
                 // Fall back to the calendar's default value
@@ -1229,7 +1239,159 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         }
     }
 
+    var weekendRange: WeekendRange? {
+        let firstWeekday = self.firstDayOfWeek
+        return lock.withLock { state -> WeekendRange? in
+
+            if let r = state.weekendRange {
+                return r
+            }
+
+            var result = WeekendRange(start: 0, end: 0)
+
+            var weekdaysIndex : [UInt32] = [0, 0, 0, 0, 0, 0, 0]
+            weekdaysIndex[0] = UInt32(firstWeekday.icuIndex)
+            for i in 1..<7 {
+                weekdaysIndex[i] = (weekdaysIndex[i - 1] % 7) + 1
+            }
+
+            var weekdayTypes : [UCalendarWeekdayType] = [UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY]
+
+#if os(Windows)
+            var onset: CInt?
+            var cease: CInt?
+#else
+            var onset: CUnsignedInt?
+            var cease: CUnsignedInt?
+#endif
+
+            var status = U_ZERO_ERROR
+            let cal = ucal_open(nil, 0, identifier, UCAL_DEFAULT, &status)
+            defer { ucal_close(cal) }
+
+            for i in 0..<7 {
+                var status = U_ZERO_ERROR
+                weekdayTypes[i] = ucal_getDayOfWeekType(cal, UCalendarDaysOfWeek(CInt(weekdaysIndex[i])), &status)
+                if weekdayTypes[i] == UCAL_WEEKEND_ONSET {
+                    onset = numericCast(weekdaysIndex[i])
+                } else if weekdayTypes[i] == UCAL_WEEKEND_CEASE {
+                    cease = numericCast(weekdaysIndex[i])
+                }
+            }
+
+            let hasWeekend = weekdayTypes.contains {
+                $0 == UCAL_WEEKEND || $0 == UCAL_WEEKEND_ONSET || $0 == UCAL_WEEKEND_CEASE
+            }
+
+            guard hasWeekend else {
+                return nil
+            }
+
+            if let onset {
+                var status = U_ZERO_ERROR
+                // onsetTime is milliseconds after midnight at which the weekend starts. Divide to get to TimeInterval (seconds)
+                result.onsetTime = Double(ucal_getWeekendTransition(cal, UCalendarDaysOfWeek(rawValue: onset), &status)) / 1000.0
+            }
+
+            if let cease {
+                var status = U_ZERO_ERROR
+                // onsetTime is milliseconds after midnight at which the weekend ends. Divide to get to TimeInterval (seconds)
+                result.ceaseTime = Double(ucal_getWeekendTransition(cal, UCalendarDaysOfWeek(rawValue: cease), &status)) / 1000.0
+            }
+
+#if os(Windows)
+            var weekendStart: CInt?
+            var weekendEnd: CInt?
+#else
+            var weekendStart: CUnsignedInt?
+            var weekendEnd: CUnsignedInt?
+#endif
+
+            if let onset {
+                weekendStart = onset
+            } else {
+                if weekdayTypes[0] == UCAL_WEEKEND && weekdayTypes[6] == UCAL_WEEKEND {
+                    for i in (0...5).reversed() {
+                        if weekdayTypes[i] != UCAL_WEEKEND {
+                            weekendStart = numericCast(weekdaysIndex[i + 1])
+                            break
+                        }
+                    }
+                } else {
+                    for i in 0..<7 {
+                        if weekdayTypes[i] == UCAL_WEEKEND {
+                            weekendStart = numericCast(weekdaysIndex[i])
+                            break
+                        }
+                    }
+                }
+            }
+
+            if let cease {
+                weekendEnd = cease
+            } else {
+                if weekdayTypes[0] == UCAL_WEEKEND && weekdayTypes[6] == UCAL_WEEKEND {
+                    for i in 1..<7 {
+                        if weekdayTypes[i] != UCAL_WEEKEND {
+                            weekendEnd = numericCast(weekdaysIndex[i - 1])
+                            break
+                        }
+                    }
+                } else {
+                    for i in (0...6).reversed() {
+                        if weekdayTypes[i] == UCAL_WEEKEND {
+                            weekendEnd = numericCast(weekdaysIndex[i])
+                            break
+                        }
+                    }
+                }
+            }
+
+            // There needs to be a start and end to have a next weekend
+            guard let weekendStart, let weekendEnd else {
+                return nil
+            }
+
+            result.start = Int(weekendStart)
+            result.end = Int(weekendEnd)
+            return result
+        }
+    }
+
     // MARK: Min days in first week
+
+    var minimumDaysInFirstWeek: Int {
+        lock.withLock { state in
+            if let minDays = state.minimalDaysInFirstWeek {
+                return minDays
+            }
+
+            // Check prefs
+            if prefs != nil {
+                // `_lockedCalendarIdentifier` isn't cheap. Only call it when we already know there is `prefs` to read from
+                let calendarId = calendarIdentifier
+                if let minDays = forceMinDaysInFirstWeek(calendarId) {
+                    state.minimalDaysInFirstWeek = minDays
+                    return minDays
+                }
+            }
+
+            // Use locale's value
+            var status = U_ZERO_ERROR
+            let cal = ucal_open(nil, 0, identifier, UCAL_DEFAULT, &status)
+            defer { ucal_close(cal) }
+
+            guard status.isSuccess else {
+                // fallback to 001's value
+                state.minimalDaysInFirstWeek = 1
+                return 1
+            }
+
+            let minDays = Int(ucal_getAttribute(cal, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK))
+            state.minimalDaysInFirstWeek = minDays
+            return minDays
+        }
+    }
 
     func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int? {
         if let prefs {
@@ -1381,7 +1543,8 @@ extension Locale {
         var working = Set<String>()
         let localeCount = uloc_countAvailable()
         for locale in 0..<localeCount {
-            let localeID = String(cString: uloc_getAvailable(locale))
+            guard let name = uloc_getAvailable(locale) else { continue }
+            let localeID = String(cString: name)
             working.insert(localeID)
         }
         return Array(working)
@@ -1431,7 +1594,9 @@ extension Locale {
     }
 
     internal static func keywordValue(identifier: String, key: String) -> String? {
-        return _withFixedCharBuffer(size: ULOC_KEYWORD_AND_VALUES_CAPACITY) { buffer, size, status in
+        // Unlike other many ICU variables, `ULOC_KEYWORD_AND_VALUES_CAPACITY` does not include null-termination.
+        // Manually add one here.
+        return _withFixedCharBuffer(size: ULOC_KEYWORD_AND_VALUES_CAPACITY + 1) { buffer, size, status in
             return uloc_getKeywordValue(identifier, key, buffer, size, &status)
         }
     }
@@ -1447,12 +1612,7 @@ extension Locale {
                 return
             }
             var status = U_ZERO_ERROR
-            #if canImport(Glibc) || canImport(ucrt)
-            // Glibc doesn't support strlcpy
-            strcpy(buf, identifier)
-            #else
-            strlcpy(buf, identifier, Int(ULOC_FULLNAME_CAPACITY))
-            #endif
+            Platform.copyCString(dst: buf, src: identifier, size: Int(ULOC_FULLNAME_CAPACITY))
 
             // TODO: This could probably be lifted out of ICU; it is mostly string concatenation
             let len = uloc_setKeywordValue(key.key, value, buf, ULOC_FULLNAME_CAPACITY, &status)

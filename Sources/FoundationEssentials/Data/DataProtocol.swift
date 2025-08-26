@@ -13,13 +13,13 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(ucrt)
 import ucrt
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 //===--- DataProtocol -----------------------------------------------------===//
@@ -215,7 +215,7 @@ extension DataProtocol where Self : ContiguousBytes {
         withUnsafeBytes { fullBuffer in
             let adv = distance(from: startIndex, to: concreteRange.lowerBound)
             let delta = distance(from: concreteRange.lowerBound, to: concreteRange.upperBound)
-            memcpy(ptr.baseAddress!, fullBuffer.baseAddress!.advanced(by: adv), delta)
+            _ = memcpy(ptr.baseAddress!, fullBuffer.baseAddress!.advanced(by: adv), delta)
         }
     }
 }

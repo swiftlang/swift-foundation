@@ -3,7 +3,7 @@
 * Proposal: [SF-0001](0001-calendar-improvements.md)
 * Authors: [Tony Parker](https://github.com/parkera)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Active review: Dec 18, 2023...Dec 26, 2023**
+* Status: **Accepted**
 * Implementation: [Pull Request](https://github.com/apple/swift-foundation/pull/322)
 * Review: [Pitch](https://forums.swift.org/t/pitch-calendar-sequence-enumeration/68521)
 
@@ -112,13 +112,13 @@ extension Calendar {
 
 ### Matching Sequences
 
-The new `Sequence`-based API is a great fit for Swift because it composes with all the existing algorithms and functions that exist on `Sequence`. For example, the following code finds the next 3 minutes after _August 22, 2022 at 3:02:38 PM PDT_, then uses `zip` to combine them with some strings. The second array naturally has 3 elements. In contrast with the existing `enumerate` method, no additional counting of how many values we've seen and manully setting a `stop` argument to break out of a loop is required.
+The new `Sequence`-based API is a great fit for Swift because it composes with all the existing algorithms and functions that exist on `Sequence`. For example, the following code finds the next 3 minutes after _August 22, 2022 at 3:02:38 PM PDT_, then uses `zip` to combine them with some strings. The second array naturally has 3 elements. In contrast with the existing `enumerate` method, no additional counting of how many values we've seen and manually setting a `stop` argument to break out of a loop is required.
 
 ```swift
 let cal = Calendar(identifier: .gregorian)
 let date = Date(timeIntervalSinceReferenceDate: 682869758.712307)   // August 22, 2022 at 7:02:38 AM PDT
 let dates = zip(
-    cal.dates(startingAt: date, matching: DateComponents(minute: 0), matchingPolicy: .nextTime),
+    cal.dates(byMatching: DateComponents(minute: 0), startingAt: date, matchingPolicy: .nextTime)
     ["1st period", "2nd period", "3rd period"]
 )
 
@@ -134,7 +134,7 @@ Another example is using the generic `prefix` function. Here, it is combined wit
 var matchingComps = DateComponents()
 matchingComps.dayOfYear = 234
 // Including a leap year, find the next 5 "day 234"s
-let result = cal.dates(startingAt: date, matching: matchingComps).prefix(5)
+let result = cal.dates(byMatching: matchingComps, startingAt: date).prefix(5)
 /* 
   Result:
     2022-08-22 00:00:00 +0000
@@ -159,7 +159,7 @@ cal.timeZone = TimeZone.gmt
 var dc = DateComponents()
 dc.hour = 22
 
-let result = cal.dates(startingAt: startDate, in: startDate..<endDate, matching: dc)
+let result = cal.dates(byMatching: dc, startingAt: startDate, in: startDate..<endDate)
 /*
   Result:
     2022-08-23 22:00:00 +0000
@@ -171,7 +171,7 @@ let result = cal.dates(startingAt: startDate, in: startDate..<endDate, matching:
 The API also allows for backwards searches. Note that the `Range` remains ordered forward in time as Swift does not allow for reverse ranges. The separation of the starting point from the range allows for the caller to control where they want the search to start in the range (start or end, for example). The search can also start outside of the range, and will return results as long as the first result is inside of the range. The sequence terminates as soon as a result is not contained in the range.
 
 ```swift
-let result = cal.dates(startingAt: endDate, in: startDate..<endDate, matching: dc, direction: .backward)
+let result = cal.dates(byMatching: dc, startingAt: endDate, in: startDate..<endDate, direction: .backward)
 /*
   Result:
     2022-08-25 22:00:00 +0000
@@ -202,7 +202,7 @@ let endDate = startDate + (86400 * 3) + (3600 * 2) // 3 days + 2 hours later - c
 var cal = Calendar(identifier: .gregorian)
 cal.timeZone = TimeZone(name: "America/Los_Angeles")!
 
-let result = cal.dates(startingAt: startDate, in: startDate..<endDate, byAdding: .day)
+let result = cal.dates(byAdding: .day, startingAt: startDate, in: startDate..<endDate)
 /* 
   Result:
     2022-11-05 22:02:38 +0000
@@ -218,9 +218,10 @@ The new `dayOfYear` option composes with existing `Calendar` API, and can be use
 ```swift
 let date = Date(timeIntervalSinceReferenceDate: 682898558.712307) // 2022-08-22 22:02:38 UTC, day 234
 let dayOfYear = cal.component(.dayOfYear, from: date) // 234
+let leapYearDate = cal.date(from: .init(year: 2024, month: 1, day: 1))!
 
 let range1 = cal.range(of: .dayOfYear, in: .year, for: date) // 1..<366
-let range2 = cal.range(of: .dayOfYear, in: .year, for: leapYearDate // 1..<367
+let range2 = cal.range(of: .dayOfYear, in: .year, for: leapYearDate) // 1..<367
 
 // What day of the week is the 100th day of the year?
 let whatDay = cal.date(bySetting: .dayOfYear, value: 100, of: Date.now)!
@@ -242,7 +243,7 @@ The `DateSequence` API is missing one parameter that `enumerateDates` has - a `B
 
 We decided not to add the new fields to the `DateComponents` initializer. Swift might add a new "magic `with`" [operator](https://github.com/apple/swift-evolution/pull/2123) which will provide a better pattern for initializing immutable struct types with `var` fields. Even if that proposal does not end up accepted, adding a new initializer for each new field will quickly become unmanageable, and using default values makes the initializers ambiguous. Instead, the caller can simply set the desired value after initialization.
 
-We originally considered adding a field for Julian days, but decided this would be better expressed as a conversion from `Date` instead of from a `DateComponents`. Julian days are similar to `Date` in that they represent a point on a fixed timeline. For Julian days, they also assume a fixed calendar and time zone. Combining this with the open API of a `DateComponents`, which allows setting both a `Calendar` and `TimeZone` property, provides an opportunity for confusion. In addition, ICU defines a Julian day slightly differently than other standards and our current implementation relies on ICU for the calculations. This discrepency could lead to errors if the developer was not careful to offset the result manually.
+We originally considered adding a field for Julian days, but decided this would be better expressed as a conversion from `Date` instead of from a `DateComponents`. Julian days are similar to `Date` in that they represent a point on a fixed timeline. For Julian days, they also assume a fixed calendar and time zone. Combining this with the open API of a `DateComponents`, which allows setting both a `Calendar` and `TimeZone` property, provides an opportunity for confusion. In addition, ICU defines a Julian day slightly differently than other standards and our current implementation relies on ICU for the calculations. This discrepancy could lead to errors if the developer was not careful to offset the result manually.
 
 We considered changing the type of the `byAdding` argument to `dates(startingAt:byAdding:value:wrappingComponents:)` from `Calendar.Component` to `Int`, reading as something like: "dates starting at D, by adding 1, .day". However, we instead chose to use the same argument names and types as the existing `date(byAdding:value:to:wrappingComponent:)` API (which this new `Sequence` API calls) for consistency in the overall `Calendar` API.
 
@@ -254,7 +255,7 @@ let dates = calendar.dates(in: start..., matching: components, direction: .backw
 
 We considered adding new `Calendar.SearchDirection` enumeration values (backwards from, forwards from), but existing API would not know how to use them. We also feel that adding a new enumeration type for this API is more complicated than simply adding arguments to the functions themselves.
 
-We considered omitting the `startingAt` argument and assuming a starting point in the `range` argument based on `direction`. This works for the matching API (although it may be a little confusing), but it doesn't work for the adding API because it does not use a direction but instead the positive or negative values of the `DateComponents`. These components may be a combination of positive and negative values, making it diffcult to make a predictable assumption about where the starting point of the search should be. It is better to simply ask for it directly. 
+We considered omitting the `startingAt` argument and assuming a starting point in the `range` argument based on `direction`. This works for the matching API (although it may be a little confusing), but it doesn't work for the adding API because it does not use a direction but instead the positive or negative values of the `DateComponents`. These components may be a combination of positive and negative values, making it difficult to make a predictable assumption about where the starting point of the search should be. It is better to simply ask for it directly. 
 
 ## Acknowledgments
 

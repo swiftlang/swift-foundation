@@ -14,11 +14,7 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
 
 let hourSymbol: Character = "h"
 let minuteSymbol: Character = "m"
@@ -44,6 +40,15 @@ extension Duration {
             var fields: Fields
 
             var paddingForLargestField: Int?
+
+            var roundingRule: FloatingPointRoundingRule {
+                switch fields {
+                case .hourMinute(roundSeconds: let rule),
+                     .hourMinuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule),
+                     .minuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule):
+                    return rule
+                }
+            }
 
             init(fields: Fields, paddingForLargestField: Int? = nil) {
                 self.fields = fields
@@ -119,6 +124,10 @@ extension Duration {
             self._attributed = Attributed(pattern: pattern, locale: locale)
         }
 
+        fileprivate init(_ attributedStyle: Attributed) {
+            self._attributed = attributedStyle
+        }
+
         // `FormatStyle` conformance
 
         /// Creates a locale-aware string representation from a duration value.
@@ -138,9 +147,6 @@ extension Duration {
         }
 
     }
-
-    // For testing purpose. See notes about String._Encoding
-    internal typealias _TimeFormatStyle = TimeFormatStyle
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
@@ -170,11 +176,14 @@ extension Duration.TimeFormatStyle {
     /// 26.25 { durationField: .seconds }
     /// ```
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @dynamicMemberLookup
     public struct Attributed : FormatStyle, Sendable {
 
         typealias Pattern = Duration.TimeFormatStyle.Pattern
 
         var pattern: Pattern
+
+        var grouping: NumberFormatStyleConfiguration.Grouping = .automatic
 
         var locale: Locale
 
@@ -314,7 +323,7 @@ extension Duration.TimeFormatStyle {
 
         func formatWithPatternComponents(_ components: [PatternComponent], hour: Double, minute: Double, second: Double) -> AttributedString {
             // The number format does not contain rounding settings because it's handled on the value itself
-            var numberFormatStyle = FloatingPointFormatStyle<Double>(locale: locale)
+            var numberFormatStyle = FloatingPointFormatStyle<Double>(locale: locale).grouping(grouping)
             var result = AttributedString()
 
             let isNegative = hour < 0 || minute < 0 || second < 0
@@ -407,6 +416,100 @@ extension Duration.TimeFormatStyle {
             }
 
             return result
+        }
+    }
+}
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Duration.TimeFormatStyle {
+    /// Returns a modified style that applies the given `grouping` rule to the highest field in the
+    /// pattern.
+    public func grouping(_ grouping: NumberFormatStyleConfiguration.Grouping) -> Self {
+        var copy = self
+        copy._attributed.grouping = grouping
+        return copy
+    }
+
+    /// The `grouping` rule applied to high number values on the largest field in the pattern.
+    public var grouping: NumberFormatStyleConfiguration.Grouping {
+        get { _attributed.grouping }
+        set { _attributed.grouping = newValue }
+    }
+}
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Duration.TimeFormatStyle.Attributed {
+    /// Returns a modified style that applies the given `grouping` rule to the highest field in the
+    /// pattern.
+    public func grouping(_ grouping: NumberFormatStyleConfiguration.Grouping) -> Self {
+        var copy = self
+        copy.grouping = grouping
+        return copy
+    }
+}
+
+// MARK: Dynamic Member Lookup
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Duration.TimeFormatStyle.Attributed {
+    private var innerStyle: Duration.TimeFormatStyle {
+        get {
+            .init(self)
+        }
+        set {
+            self = newValue._attributed
+        }
+    }
+
+    public subscript<T>(dynamicMember key: KeyPath<Duration.TimeFormatStyle, T>) -> T {
+        innerStyle[keyPath: key]
+    }
+
+    public subscript<T>(dynamicMember key: WritableKeyPath<Duration.TimeFormatStyle, T>) -> T {
+        get {
+            innerStyle[keyPath: key]
+        }
+        set {
+            innerStyle[keyPath: key] = newValue
+        }
+    }
+}
+
+// MARK: DiscreteFormatStyle Conformance
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
+    public func discreteInput(before input: Duration) -> Duration? {
+        Duration.TimeFormatStyle(pattern: pattern, locale: locale).discreteInput(before: input)
+    }
+
+    public func discreteInput(after input: Duration) -> Duration? {
+        Duration.TimeFormatStyle(pattern: pattern, locale: locale).discreteInput(after: input)
+    }
+}
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Duration.TimeFormatStyle : DiscreteFormatStyle {
+    public func discreteInput(before input: Duration) -> Duration? {
+        let (bound, isIncluded) = Duration.bound(for: input, in: interval(for: input), countingDown: true, roundingRule: self.pattern.roundingRule)
+
+        return isIncluded ? bound.nextDown : bound
+    }
+
+    public func discreteInput(after input: Duration) -> Duration? {
+        let (bound, isIncluded) = Duration.bound(for: input, in: interval(for: input), countingDown: false, roundingRule: self.pattern.roundingRule)
+
+        return isIncluded ? bound.nextUp : bound
+    }
+
+    private func interval(for input: Duration) -> Duration {
+        switch pattern.fields {
+        case .hourMinute:
+            return .seconds(60)
+        case .hourMinuteSecond(fractionalSecondsLength: let length, _):
+            return Duration.interval(for: .seconds, fractionalDigits: length)
+        case .minuteSecond(fractionalSecondsLength: let length, _):
+            return Duration.interval(for: .seconds, fractionalDigits: length)
         }
     }
 }

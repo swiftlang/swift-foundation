@@ -27,9 +27,11 @@ public struct Predicate<each Input> : Sendable {
     }
 }
 
+#if hasFeature(Macros)
 @freestanding(expression)
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
+#endif
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Predicate {
@@ -50,7 +52,14 @@ extension Predicate {
 
 // Namespace for operator expressions
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-@frozen @_nonSendable public enum PredicateExpressions {}
+@frozen public enum PredicateExpressions {}
+
+@available(macOS, unavailable, introduced: 14.0)
+@available(iOS, unavailable, introduced: 17.0)
+@available(tvOS, unavailable, introduced: 17.0)
+@available(watchOS, unavailable, introduced: 10.0)
+@available(*, unavailable)
+extension PredicateExpressions : Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Sequence {

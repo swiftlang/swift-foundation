@@ -48,7 +48,7 @@ extension PredicateExpressions {
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.CollectionIndexSubscript : Sendable where Wrapped : Sendable, Index : Sendable {}
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.CollectionIndexSubscript : CustomStringConvertible {
     public var description: String {
         "CollectionIndexSubscript(wrapped: \(wrapped), index: \(index))"
@@ -113,7 +113,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.CollectionRangeSubscript : CustomStringConvertible {
     public var description: String {
         "CollectionRangeSubscript(wrapped: \(wrapped), range: \(range))"
@@ -174,7 +174,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.CollectionContainsCollection : CustomStringConvertible {
     public var description: String {
         "CollectionContainsCollection(base: \(base), other: \(other))"

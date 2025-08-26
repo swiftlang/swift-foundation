@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 @_spi(_Unicode) import Swift
-@_implementationOnly import CoreFoundation_Private.CFString
+internal import CoreFoundation_Private.CFString
 #endif // FOUNDATION_FRAMEWORK
 
 extension UnicodeScalar {

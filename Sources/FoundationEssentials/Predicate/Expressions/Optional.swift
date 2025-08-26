@@ -111,21 +111,21 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.OptionalFlatMap : CustomStringConvertible {
     public var description: String {
         "OptionalFlatMap(wrapped: \(wrapped), variable: \(variable), transform: \(transform))"
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.NilCoalesce : CustomStringConvertible {
     public var description: String {
         "NilCoalesce(lhs: \(lhs), rhs: \(rhs))"
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.ForcedUnwrap : CustomStringConvertible {
     public var description: String {
         "ForcedUnwrap(inner: \(inner))"

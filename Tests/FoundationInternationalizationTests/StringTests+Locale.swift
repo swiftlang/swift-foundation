@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Testing
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
@@ -17,26 +19,19 @@
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
 extension String {
     var _scalarViewDescription: String {
         return unicodeScalars.map { "\\u{\(String($0.value, radix: 16, uppercase: true))}" }.joined()
     }
 }
 
-final class StringLocaleTests: XCTestCase {
+@Suite("String (Locale)")
+private struct StringLocaleTests {
 
-    func testCapitalize_localized() {
+    @Test func capitalize_localized() {
         var locale: Locale?
-        // `extension StringProtocol { func capitalized(with: Locale) }` is
-        // declared twice on Darwin: once in FoundationInternationalization
-        // and once in SDK. Therefore it is ambiguous when building the package
-        // on Darwin. Workaround it by testing the internal implementation.
-        func test(_ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
-            XCTAssertEqual(string._capitalized(with: locale), expected, file: file, line: line)
+        func test(_ string: String, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(string.capitalized(with: locale) == expected, sourceLocation: sourceLocation)
         }
 
         do {
@@ -84,18 +79,18 @@ final class StringLocaleTests: XCTestCase {
         }
     }
 
-    func testUppercase_localized() {
+    @Test func uppercase_localized() {
 
-        func test(_ localeID: String?, _ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ localeID: String?, _ string: String, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let locale: Locale?
             if let localeID {
                 locale = Locale(identifier: localeID)
             } else {
                 locale = nil
             }
-            let actual = string._uppercased(with: locale)
+            let actual = string.uppercased(with: locale)
 
-            XCTAssertEqual(actual, expected, "actual: \(actual._scalarViewDescription), expected: \(expected._scalarViewDescription)", file: file, line: line)
+            #expect(actual == expected, "actual: \(actual._scalarViewDescription), expected: \(expected._scalarViewDescription)", sourceLocation: sourceLocation)
         }
 
         test(nil, "ﬄ", "FFL") // 0xFB04
@@ -128,21 +123,22 @@ final class StringLocaleTests: XCTestCase {
         test("el_GR", "\u{03B9}\u{0308}\u{0301}", "\u{0399}\u{0308}")
     }
 
-    func testLowercase_localized() {
-        func test(_ localeID: String?, _ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
+    @Test func lowercase_localized() {
+        func test(_ localeID: String?, _ string: String, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let locale: Locale?
             if let localeID {
                 locale = Locale(identifier: localeID)
             } else {
                 locale = nil
             }
-            let actual = string._lowercased(with: locale)
+            let actual = string.lowercased(with: locale)
 
-            XCTAssertEqual(actual, expected, "actual: \(actual._scalarViewDescription), expected: \(expected._scalarViewDescription)", file: file, line: line)
+            #expect(actual == expected, "actual: \(actual._scalarViewDescription), expected: \(expected._scalarViewDescription)", sourceLocation: sourceLocation)
         }
 
         test(nil, "ᾈ", "ᾀ")     // 0x1F88
         test("en", "ᾈ", "ᾀ")
+        test("en", "SOMEVERYVERYVERYVERYVERYVERYVERYVERYVERYLONGSTRING", "someveryveryveryveryveryveryveryveryverylongstring")
         test("el_GR", "ᾈ", "ᾀ")
 
         // Turkik
@@ -153,6 +149,14 @@ final class StringLocaleTests: XCTestCase {
         test(nil, "İİ", "i̇i̇")
         test("en", "İİ", "i̇i̇")
         test("tr", "İİ", "ii")
+    }
+
+    @Test func fuzzFailure() throws {
+        let data = try #require(Data(base64Encoded: "77+977+977+977+977+977+977+977+977+977+9Cg=="))
+        let input = try #require(String(data: data, encoding: .utf8))
+        _ = input.lowercased(with: Locale(identifier: "en_US"))
+        _ = input.capitalized(with: Locale(identifier: "en_US"))
+        _ = input.capitalized(with: Locale(identifier: "en_US"))
     }
 }
 

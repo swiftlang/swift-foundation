@@ -54,7 +54,7 @@ extension Decimal.ParseStrategy {
             numberFormatType = .percent(format.collection)
             locale = format.locale
         } else if let format = formatStyle as? Decimal.FormatStyle.Currency {
-            numberFormatType = .currency(format.collection)
+            numberFormatType = .currency(format.collection, currencyCode: format.currencyCode)
             locale = format.locale
         } else {
             // For some reason we've managed to accept a format style of a type that we don't own, which shouldn't happen. Fallback to the default decimal style and try anyways.
@@ -62,7 +62,9 @@ extension Decimal.ParseStrategy {
             locale = .autoupdatingCurrent
         }
 
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            return nil
+        }
         let substr = value[index..<range.upperBound]
         var upperBound = 0
         guard let value = parser.parseAsDecimal(substr, upperBound: &upperBound) else {
@@ -80,14 +82,8 @@ extension Decimal.ParseStrategy {
         } else {
             let exampleString1 = formatStyle.format(3.14)
             let exampleString2 = formatStyle.format(-12345)
-#if FOUNDATION_FRAMEWORK  // TODO: Move CocoaError
             throw CocoaError(CocoaError.formatting, userInfo: [
                 NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \"\(exampleString1)\" or \"\(exampleString2)\"" ])
-#else
-            throw CocoaError(
-                .formatting,
-                description: "Cannot parse \(value). String should adhere to the specified format, such as \"\(exampleString1)\" or \"\(exampleString2)\"")
-#endif // FOUNDATION_FRAMEWORK
         }
     }
 }

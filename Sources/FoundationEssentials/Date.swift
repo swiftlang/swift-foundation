@@ -12,10 +12,16 @@
 
 #if canImport(Darwin)
 import Darwin
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
 #elseif canImport(WinSDK)
 import WinSDK
+#elseif os(WASI)
+@preconcurrency import WASILibc
 #endif
 
 #if !FOUNDATION_FRAMEWORK
@@ -34,6 +40,9 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// The number of seconds from 1 January 1970 to the reference date, 1 January 2001.
     public static let timeIntervalBetween1970AndReferenceDate : TimeInterval = 978307200.0
+
+    /// The number of seconds from 1 January 1601 to the reference date, 1 January 2001.
+    internal static let timeIntervalBetween1601AndReferenceDate: TimeInterval = 12622780800.0
 
     /// The interval between 00:00:00 UTC on 1 January 2001 and the current date and time.
     public static var timeIntervalSinceReferenceDate : TimeInterval {
@@ -118,6 +127,10 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     */
     public var timeIntervalSince1970: TimeInterval {
         return self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1970AndReferenceDate
+    }
+
+    internal var timeIntervalSince1601: TimeInterval {
+        return self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1601AndReferenceDate
     }
 
     /// Return a new `Date` by adding a `TimeInterval` to this `Date`.
@@ -220,7 +233,7 @@ extension Date {
         li.LowPart = ft.dwLowDateTime
         li.HighPart = ft.dwHighDateTime
         // FILETIME represents 100-ns intervals since January 1, 1601 (UTC)
-        return TimeInterval((li.QuadPart - 1164447360_000_000) / 1_000_000_000)
+        return TimeInterval(Double(li.QuadPart) / 10_000_000.0 - Self.timeIntervalBetween1601AndReferenceDate)
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_REALTIME, &ts)
@@ -246,7 +259,7 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         // NSDate uses the constant format `uuuu-MM-dd HH:mm:ss '+0000'`
 
         // Glibc needs a non-standard format option to pad %Y to 4 digits
-#if canImport(Glibc)
+#if canImport(Glibc) && !os(FreeBSD)
         let format = "%4Y-%m-%d %H:%M:%S +0000"
 #else
         let format = "%Y-%m-%d %H:%M:%S +0000"
@@ -376,7 +389,7 @@ extension Date : _CustomPlaygroundQuickLookable {
 #endif // FOUNDATION_FRAMEWORK
 
 extension Date {
-    // Julian day 0 (-4713-01-01 12:00:00 +0000) in CFAbsoluteTime to 50000-01-01 00:00:00 +0000, smaller than the max time ICU supported.
+    // Julian day 0 (-4713-01-01 12:00:00 +0000) in CFAbsoluteTime to 506713-02-07 00:00:00 +0000, smaller than the max time ICU supported.
     package static let validCalendarRange = Date(timeIntervalSinceReferenceDate: TimeInterval(-211845067200.0))...Date(timeIntervalSinceReferenceDate: TimeInterval(15927175497600.0))
 
     // aka __CFCalendarValidateAndCapTimeRange
@@ -387,4 +400,21 @@ extension Date {
     package var isValidForEnumeration: Bool {
         Date.validCalendarRange.contains(self)
     }
+}
+
+@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+extension Date {
+    public typealias Stride = TimeInterval
+    
+    public func distance(to other: Date) -> TimeInterval {
+        return other.timeIntervalSinceReferenceDate - self.timeIntervalSinceReferenceDate
+    }
+    
+    public func advanced(by n: TimeInterval) -> Date {
+        return self + n
+    }
+}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Date: Strideable {
 }

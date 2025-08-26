@@ -56,7 +56,10 @@ extension Date {
         // MARK: - FormatStyle conformance
 
         public func format(_ v: Range<Date>) -> String {
-            ICUDateIntervalFormatter.formatter(for: self).string(from: v)
+            guard let formatter = ICUDateIntervalFormatter.formatter(for: self), let result = formatter.string(from: v) else {
+                return "\(v.lowerBound.description) - \(v.upperBound.description)"
+            }
+            return result
         }
 
         public func locale(_ locale: Locale) -> Self {

@@ -12,8 +12,12 @@
 
 #if canImport(Darwin)
 import Darwin
+#elseif canImport(Android)
+import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
 #elseif canImport(ucrt)
 import ucrt
 #endif
@@ -22,49 +26,50 @@ import ucrt
 import WinSDK
 #endif
 
+internal import _FoundationCShims
+
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import CoreFoundation_Private.CFNotificationCenter
+internal import _ForSwiftFoundation
+internal import CoreFoundation_Private.CFNotificationCenter
+#endif
+
+
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+internal func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+    _TimeZoneICU.self
+}
+internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
+    _TimeZoneGMTICU.self
+}
+#else
+dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+    nil
+}
+dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
+    _TimeZoneGMT.self
+}
+#endif
+
+#if os(Windows)
+dynamic package func _timeZoneIdentifier(forWindowsIdentifier windowsIdentifier: String) -> String? {
+    nil
+}
 #endif
 
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
-struct TimeZoneCache : Sendable {
-    
-    // MARK: - Concrete Classes
-    
-    // _TimeZoneICU, if present
-    static var timeZoneICUClass: _TimeZoneProtocol.Type? = {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
-        _TimeZoneICU.self
-#else
-        if let name = _typeByName("FoundationInternationalization._TimeZoneICU"), let t = name as? _TimeZoneProtocol.Type {
-            return t
-        } else {
-            return nil
-        }
-#endif
-    }()
-    
-    // _TimeZoneGMTICU or _TimeZoneGMT
-    static var timeZoneGMTClass: _TimeZoneProtocol.Type = {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
-        _TimeZoneGMTICU.self
-#else
-        if let name = _typeByName("FoundationInternationalization._TimeZoneGMTICU"), let t = name as? _TimeZoneProtocol.Type {
-            return t
-        } else {
-            return _TimeZoneGMT.self
-        }
-#endif
-    }()
-
+struct TimeZoneCache : Sendable, ~Copyable {
     // MARK: - State
     
     struct State {
+        
+        init() {
+#if FOUNDATION_FRAMEWORK
+            // On Darwin we listen for certain distributed notifications to reset the current TimeZone.
+            _CFNotificationCenterInitializeDependentNotificationIfNecessary(CFNotificationName.cfTimeZoneSystemTimeZoneDidChange!.rawValue)
+#endif
+        }
         // a.k.a. `systemTimeZone`
-        private var currentTimeZone: TimeZone!
-
-        private var autoupdatingCurrentTimeZone: _TimeZoneAutoupdating!
+        private var currentTimeZone: TimeZone?
         
         // If this is not set, the behavior is to fall back to the current time zone
         private var defaultTimeZone: TimeZone?
@@ -75,97 +80,66 @@ struct TimeZoneCache : Sendable {
         // This cache holds offset-specified time zones, but only a subset of the universe of possible values. See the implementation below for the policy.
         private var offsetTimeZones: [Int: any _TimeZoneProtocol] = [:]
 
-        private var noteCount = -1
         private var identifiers: [String]?
         private var abbreviations: [String : String]?
 
 #if FOUNDATION_FRAMEWORK
         // These are caches of the NSTimeZone subclasses for use from Objective-C (without allocating each time)
-        private var bridgedCurrentTimeZone: _NSSwiftTimeZone!
-        private var bridgedAutoupdatingCurrentTimeZone: _NSSwiftTimeZone!
+        private var bridgedCurrentTimeZone: _NSSwiftTimeZone?
         private var bridgedDefaultTimeZone: _NSSwiftTimeZone?
         private var bridgedFixedTimeZones: [String : _NSSwiftTimeZone] = [:]
         private var bridgedOffsetTimeZones: [Int : _NSSwiftTimeZone] = [:]
 #endif // FOUNDATION_FRAMEWORK
-
-        mutating func check() {
-#if FOUNDATION_FRAMEWORK
-            // On Darwin we listen for certain distributed notifications to reset the current TimeZone.
-            let newNoteCount = _CFLocaleGetNoteCount() + _CFTimeZoneGetNoteCount() + Int(_CFCalendarGetMidnightNoteCount())
-#else
-            let newNoteCount = 1
-#endif // FOUNDATION_FRAMEWORK
-
-            if newNoteCount != noteCount {
-                currentTimeZone = findCurrentTimeZone()
-                noteCount = newNoteCount
-#if FOUNDATION_FRAMEWORK
-                bridgedCurrentTimeZone = _NSSwiftTimeZone(timeZone: currentTimeZone)
-                _CFNotificationCenterInitializeDependentNotificationIfNecessary(CFNotificationName.cfTimeZoneSystemTimeZoneDidChange!.rawValue)
-#endif // FOUNDATION_FRAMEWORK
-            }
-        }
         
         mutating func reset() -> TimeZone? {
             let oldTimeZone = currentTimeZone
 
-            // Ensure we do not reuse the existing time zone
-            noteCount = -1
-            check()
-
+            currentTimeZone = nil
+#if FOUNDATION_FRAMEWORK
+            bridgedCurrentTimeZone = nil
+#endif
             return oldTimeZone
         }
 
         /// Reads from environment variables `TZFILE`, `TZ` and finally the symlink pointed at by the C macro `TZDEFAULT` to figure out what the current (aka "system") time zone is.
         mutating func findCurrentTimeZone() -> TimeZone {
 #if !NO_TZFILE
-            if let tzenv = getenv("TZFILE") {
-                if let name = String(validatingUTF8: tzenv) {
-                    if let result = fixed(name) {
-                        return TimeZone(inner: result)
-                    }
-                }
+            if let tzenv = ProcessInfo.processInfo.environment["TZFILE"], let result = fixed(tzenv) {
+                return TimeZone(inner: result)
             }
 
-            if let tz = getenv("TZ") {
-                if let name = String(validatingUTF8: tz) {
-                    // Try as an abbreviation first
-                    // Use cached function here to avoid recursive lock
-                    if let name2 = timeZoneAbbreviations()[name] {
-                        if let result = fixed(name2) {
-                            return TimeZone(inner: result)
-                        }
-                    }
-
-                    // Try with just the name
-                    if let result = fixed(name) {
-                        return TimeZone(inner: result)
-                    }
+            if let tz = ProcessInfo.processInfo.environment["TZ"] {
+                // Try as an abbreviation first
+                // Use cached function here to avoid recursive lock
+                if let name = timeZoneAbbreviations()[tz], let result = fixed(name) {
+                    return TimeZone(inner: result)
+                }
+                if let result = fixed(tz) {
+                    return TimeZone(inner: result)
                 }
             }
 
 #if os(Windows)
-            let hFile = TimeZone.TZDEFAULT.withCString(encodedAs: UTF16.self) {
-                CreateFileW($0, GENERIC_READ, DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE), nil, DWORD(OPEN_EXISTING), 0, nil)
-            }
-            defer { CloseHandle(hFile) }
-            let dwSize = GetFinalPathNameByHandleW(hFile, nil, 0, DWORD(VOLUME_NAME_DOS))
-            let path = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwSize)) {
-                _ = GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwSize, DWORD(VOLUME_NAME_DOS))
-                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
-            }
-            if let rangeOfZoneInfo = path._range(of: "\(TimeZone.TZDIR)\\", anchored: false, backwards: false) {
-                let name = path[rangeOfZoneInfo.upperBound...]
-                if let result = fixed(String(name)) {
+            var timeZoneInfo = TIME_ZONE_INFORMATION()
+            if GetTimeZoneInformation(&timeZoneInfo) != TIME_ZONE_ID_INVALID {
+                let windowsName = withUnsafePointer(to: &(timeZoneInfo.StandardName)) {
+                    $0.withMemoryRebound(to: WCHAR.self, capacity: 32) {
+                        String(decoding: UnsafeBufferPointer(start: $0, count: wcslen($0)), as: UTF16.self)
+                    }
+                }
+                if let identifier = _timeZoneIdentifier(forWindowsIdentifier: windowsName), let result = fixed(identifier) {
                     return TimeZone(inner: result)
                 }
             }
+#elseif os(WASI)
+            // WASI doesn't provide a way to get the current timezone for now, so
+            // just return the default GMT timezone.
 #else
             let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: Int(PATH_MAX + 1))
             defer { buffer.deallocate() }
             buffer.initialize(repeating: 0)
 
-            let ret = readlink(TimeZone.TZDEFAULT, buffer.baseAddress!, Int(PATH_MAX))
+            let ret = readlink(TZDEFAULT, buffer.baseAddress!, Int(PATH_MAX))
             if ret >= 0 {
                 // Null-terminate the value
                 buffer[ret] = 0
@@ -173,7 +147,12 @@ struct TimeZoneCache : Sendable {
 #if targetEnvironment(simulator) && (os(iOS) || os(tvOS) || os(watchOS))
                     let lookFor = "zoneinfo/"
 #else
-                    let lookFor = TimeZone.TZDIR + "/"
+                    let lookFor: String
+                    if let l = TZDIR.last, l == "/" {
+                        lookFor = TZDIR
+                    } else {
+                        lookFor = TZDIR + "/"
+                    }
 #endif
                     if let rangeOfZoneInfo = file._range(of: lookFor, anchored: false, backwards: false) {
                         let name = file[rangeOfZoneInfo.upperBound...]
@@ -183,6 +162,23 @@ struct TimeZoneCache : Sendable {
                     }
                 }
             }
+            
+#if os(Linux) || os(Android)
+            // Try localtime
+            tzset()
+            var t = time(nil)
+            var lt : tm = tm()
+            localtime_r(&t, &lt)
+
+            // tm_zone is nullable on Android.
+            let tm_zone: UnsafePointer<CChar>? = lt.tm_zone
+            if let tm_zone, let name = String(validatingUTF8: tm_zone) {
+                if let result = fixed(name) {
+                    return TimeZone(inner: result)
+                }
+            }
+#endif
+
 #endif
 #endif //!NO_TZFILE
             // Last option as a default is the GMT value (again, using the cached version directly to avoid recursive lock)
@@ -190,23 +186,24 @@ struct TimeZoneCache : Sendable {
         }
 
         mutating func current() -> TimeZone {
-            check()
-            return currentTimeZone
-        }
-
-        mutating func `default`() -> TimeZone {
-            check()
-            if let manuallySetDefault = defaultTimeZone {
-                return manuallySetDefault
-            } else {
+            if let currentTimeZone {
                 return currentTimeZone
+            } else {
+                let newCurrent = findCurrentTimeZone()
+                currentTimeZone = newCurrent
+                return newCurrent
             }
         }
 
-        mutating func setDefaultTimeZone(_ tz: TimeZone?) -> TimeZone? {
-            // Ensure we are listening for notifications from here on out
-            check()
-            let old = defaultTimeZone
+        mutating func `default`() -> TimeZone {
+            if let manuallySetDefault = defaultTimeZone {
+                return manuallySetDefault
+            } else {
+                return current()
+            }
+        }
+
+        mutating func setDefaultTimeZone(_ tz: TimeZone?) {
             defaultTimeZone = tz
 #if FOUNDATION_FRAMEWORK
             if let tz {
@@ -215,7 +212,6 @@ struct TimeZoneCache : Sendable {
                 bridgedDefaultTimeZone = nil
             }
 #endif // FOUNDATION_FRAMEWORK
-            return old
         }
         
         mutating func fixed(_ identifier: String) -> (any _TimeZoneProtocol)? {
@@ -225,7 +221,7 @@ struct TimeZoneCache : Sendable {
             } else if let cached = fixedTimeZones[identifier] {
                 return cached
             } else {
-                if let innerTz = TimeZoneCache.timeZoneICUClass?.init(identifier: identifier) {
+                if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
                     return innerTz
                 } else {
@@ -240,7 +236,7 @@ struct TimeZoneCache : Sendable {
             } else {
                 // In order to avoid bloating a cache with weird time zones, only cache values that are 30min offsets (including 1hr offsets).
                 let doCache = abs(offset) % 1800 == 0
-                if let innerTz = TimeZoneCache.timeZoneGMTClass.init(secondsFromGMT: offset) {
+                if let innerTz = _timeZoneGMTClass().init(secondsFromGMT: offset) {
                     if doCache {
                         offsetTimeZones[offset] = innerTz
                     }
@@ -251,15 +247,6 @@ struct TimeZoneCache : Sendable {
             }
         }
         
-        mutating func autoupdatingCurrent() -> _TimeZoneAutoupdating {
-            if let cached = autoupdatingCurrentTimeZone {
-                return cached
-            } else {
-                autoupdatingCurrentTimeZone = _TimeZoneAutoupdating()
-                return autoupdatingCurrentTimeZone
-            }
-        }
-
         mutating func timeZoneAbbreviations() -> [String : String] {
             if abbreviations == nil {
                 abbreviations = defaultAbbreviations
@@ -328,28 +315,20 @@ struct TimeZoneCache : Sendable {
 // MARK: - State Bridging
 #if FOUNDATION_FRAMEWORK
         mutating func bridgedCurrent() -> _NSSwiftTimeZone {
-            check()
-            return bridgedCurrentTimeZone
-        }
-
-        mutating func bridgedAutoupdatingCurrent() -> _NSSwiftTimeZone {
-            if let autoupdating = bridgedAutoupdatingCurrentTimeZone {
-                return autoupdating
+            if let bridgedCurrentTimeZone {
+                return bridgedCurrentTimeZone
             } else {
-                // Do not call TimeZone.autoupdatingCurrent, as it will recursively lock.
-                let tz = TimeZone(inner: autoupdatingCurrent())
-                let result = _NSSwiftTimeZone(timeZone: tz)
-                bridgedAutoupdatingCurrentTimeZone = result
-                return result
+                let newBridged = _NSSwiftTimeZone(timeZone: current())
+                bridgedCurrentTimeZone = newBridged
+                return newBridged
             }
         }
 
         mutating func bridgedDefault() -> _NSSwiftTimeZone {
-            check()
             if let manuallySetDefault = bridgedDefaultTimeZone {
                 return manuallySetDefault
             } else {
-                return bridgedCurrentTimeZone
+                return bridgedCurrent()
             }
         }
 
@@ -363,7 +342,7 @@ struct TimeZoneCache : Sendable {
                 bridgedFixedTimeZones[identifier] = bridged
                 return bridged
             }
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
             if let innerTz = _TimeZoneICU(identifier: identifier) {
                 // In this case, the identifier is unique and we need to cache it (in two places)
                 fixedTimeZones[identifier] = innerTz
@@ -385,7 +364,7 @@ struct TimeZoneCache : Sendable {
                 bridgedOffsetTimeZones[offset] = bridged
                 return bridged
             }
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
             let maybeInnerTz = _TimeZoneGMTICU(secondsFromGMT: offset)
 #else
             let maybeInnerTz = _TimeZoneGMT(secondsFromGMT: offset)
@@ -429,31 +408,27 @@ struct TimeZoneCache : Sendable {
     }
 
     func setDefault(_ tz: TimeZone?) {
-        let oldDefaultTimeZone = lock.withLock {
-            return $0.setDefaultTimeZone(tz)
-        }
+        lock.withLock { $0.setDefaultTimeZone(tz) }
 
-        CalendarCache.cache.reset()
-#if FOUNDATION_FRAMEWORK
-        if let oldDefaultTimeZone {
-            let noteName = CFNotificationName(rawValue: "kCFTimeZoneSystemTimeZoneDidChangeNotification-2" as CFString)
-            let oldAsNS = oldDefaultTimeZone as NSTimeZone
-            let unmanaged = Unmanaged.passRetained(oldAsNS).autorelease()
-            CFNotificationCenterPostNotification(CFNotificationCenterGetLocalCenter(), noteName, unmanaged.toOpaque(), nil, true)
-        }
-#endif // FOUNDATION_FRAMEWORK
+        // Reset any 'current' locales, calendars, time zones
+        LocaleNotifications.cache.reset()
     }
 
     func fixed(_ identifier: String) -> _TimeZoneProtocol? {
         lock.withLock { $0.fixed(identifier) }
     }
 
+    var gmt: (any _TimeZoneProtocol) = {
+        _timeZoneGMTClass().init(secondsFromGMT: 0)!
+    }()
+    
     func offsetFixed(_ seconds: Int) -> (any _TimeZoneProtocol)? {
         lock.withLock { $0.offsetFixed(seconds) }
     }
     
-    func autoupdatingCurrent() -> _TimeZoneAutoupdating {
-        lock.withLock { $0.autoupdatingCurrent() }
+    private static let _autoupdatingCurrentCache = _TimeZoneAutoupdating()
+    var autoupdatingCurrent: _TimeZoneAutoupdating {
+        return Self._autoupdatingCurrentCache
     }
 
     func timeZoneAbbreviations() -> [String : String] {
@@ -470,8 +445,9 @@ struct TimeZoneCache : Sendable {
         lock.withLock { $0.bridgedCurrent() }
     }
 
+    private static let _bridgedAutoupdatingCurrent = _NSSwiftTimeZone(timeZone: TimeZone(inner: TimeZoneCache.cache.autoupdatingCurrent))
     var bridgedAutoupdatingCurrent: _NSSwiftTimeZone {
-        lock.withLock { $0.bridgedAutoupdatingCurrent() }
+        Self._bridgedAutoupdatingCurrent
     }
 
     var bridgedDefault: _NSSwiftTimeZone {

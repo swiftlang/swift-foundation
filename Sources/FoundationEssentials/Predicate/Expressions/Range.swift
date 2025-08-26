@@ -45,7 +45,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Range : CustomStringConvertible {
     public var description: String {
         "Range(lower: \(lower), upper: \(upper))"
@@ -105,7 +105,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.ClosedRange : CustomStringConvertible {
     public var description: String {
         "ClosedRange(lower: \(lower), upper: \(upper))"
@@ -162,7 +162,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.RangeExpressionContains : CustomStringConvertible {
     public var description: String {
         "RangeExpressionContains(range: \(range), element: \(element))"

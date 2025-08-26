@@ -14,10 +14,13 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
+internal import _FoundationICU
+
+#if !FOUNDATION_FRAMEWORK
+@_dynamicReplacement(for: _timeZoneGMTClass())
+private func _timeZoneGMTClass_localized() -> _TimeZoneProtocol.Type {
+    return _TimeZoneGMTICU.self
+}
 #endif
 
 internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
@@ -66,7 +69,7 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
     }
 
     var debugDescription: String {
-        "gmt icu offset \(offset)"
+        "GMT (\(offset))"
     }
     
     package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {

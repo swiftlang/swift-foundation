@@ -10,14 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !FOUNDATION_MACROS_LIBRARY
 
 import SwiftSyntaxMacros
 import SwiftCompilerPlugin
 
 @main
 struct FoundationMacros: CompilerPlugin {
-  var providingMacros: [Macro.Type] = [PredicateMacro.self]
+    var providingMacros: [Macro.Type] = [
+        PredicateMacro.self,
+        ExpressionMacro.self,
+        BundleMacro.self
+    ]
 }
 
 #endif

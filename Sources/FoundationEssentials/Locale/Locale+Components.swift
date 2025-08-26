@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 extension Locale {
@@ -85,34 +85,70 @@ extension Locale {
         public init(languageCode: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil) {
             self.languageComponents = Language.Components(languageCode: languageCode, script: script, region: languageRegion)
         }
+
+        // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
+        // Must include every component stored by a `Locale.Components`, and be kept in sync with `init(identifier:)`.
+        package var icuIdentifier: String {
+
+            var keywords = [(ICULegacyKey, String)]()
+            if let id = calendar?.cldrIdentifier { keywords.append((Calendar.Identifier.legacyKeywordKey, id)) }
+            if let id = collation?._normalizedIdentifier { keywords.append((Locale.Collation.legacyKeywordKey, id)) }
+            if let id = currency?._normalizedIdentifier { keywords.append((Locale.Currency.legacyKeywordKey, id)) }
+            if let id = numberingSystem?._normalizedIdentifier { keywords.append((Locale.NumberingSystem.legacyKeywordKey, id)) }
+            if let id = firstDayOfWeek?.rawValue { keywords.append((Locale.Weekday.legacyKeywordKey, id)) }
+            if let id = hourCycle?.rawValue { keywords.append((Locale.HourCycle.legacyKeywordKey, id)) }
+            if let id = measurementSystem?._normalizedIdentifier { keywords.append((Locale.MeasurementSystem.legacyKeywordKey, id)) }
+            // No need for redundant region keyword
+            if let region = region, region != languageComponents.region {
+                // rg keyword value is actually a subdivision code
+                keywords.append((Locale.Region.legacyKeywordKey, Locale.Subdivision.subdivision(for: region)._normalizedIdentifier))
+            }
+            if let id = subdivision?._normalizedIdentifier { keywords.append((Locale.Subdivision.legacyKeywordKey, id)) }
+            if let id = timeZone?.identifier { keywords.append((TimeZone.legacyKeywordKey, id)) }
+            if let id = variant?._normalizedIdentifier { keywords.append((Locale.Variant.legacyKeywordKey, id)) }
+
+            var locID = languageComponents.identifier
+            let keywordCounts = keywords.count
+            if keywordCounts > 0 {
+                locID.append("@")
+            }
+
+            for (i, (key, val)) in keywords.enumerated() {
+                locID.append("\(key.key)=\(val)")
+                if i != keywordCounts - 1 {
+                    locID.append(";")
+                }
+            }
+            return locID
+        }
     }
 }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.LanguageCode : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Script : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Region : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Currency : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Collation : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.NumberingSystem : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Subdivision : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Variant : CustomDebugStringConvertible { }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.MeasurementSystem : CustomDebugStringConvertible { }
 
 extension Locale {
@@ -133,7 +169,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -218,7 +254,7 @@ extension Locale {
             }
         }
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -280,7 +316,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -359,7 +395,7 @@ extension Locale {
             }
         }
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -431,7 +467,7 @@ extension Locale {
             }
         }
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -497,7 +533,7 @@ extension Locale {
             }
         }
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -566,6 +602,13 @@ extension Locale {
             self = Self.weekdays[Int(icuIndex) - 1]
         }
 
+        package init?(_ localePrefIndex: Int) {
+            guard let innerSelf = Weekday(Int32(localePrefIndex)) else {
+                return nil
+            }
+            self = innerSelf
+        }
+
         package var icuIndex: Int {
             Self.weekdays.firstIndex(of: self)! + 1
         }
@@ -612,7 +655,7 @@ extension Locale {
             }
         }
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -691,7 +734,7 @@ extension Locale {
             }
         }
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -763,7 +806,7 @@ extension Locale {
             }
         }
 
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }

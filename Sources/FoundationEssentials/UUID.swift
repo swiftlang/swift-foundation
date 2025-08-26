@@ -9,11 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims // uuid.h
-#else
-package import _CShims // uuid.h
-#endif
+internal import _FoundationCShims // uuid.h
 
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
@@ -27,7 +23,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     public init() {
         withUnsafeMutablePointer(to: &uuid) {
             $0.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<uuid_t>.size) {
-                uuid_generate_random($0)
+                _foundation_uuid_generate_random($0)
             }
         }
     }
@@ -49,7 +45,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     public init?(uuidString string: __shared String) {
         let res = withUnsafeMutablePointer(to: &uuid) {
             $0.withMemoryRebound(to: UInt8.self, capacity: 16) {
-                return uuid_parse(string, $0)
+                return _foundation_uuid_parse(string, $0)
             }
         }
         if res != 0 {
@@ -68,7 +64,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         return withUUIDBytes { valBuffer in
             withUnsafeMutablePointer(to: &bytes) { strPtr in
                 strPtr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<uuid_string_t>.size) { str in
-                    uuid_unparse_upper(valBuffer.baseAddress!, str)
+                    _foundation_uuid_unparse_upper(valBuffer.baseAddress!, str)
                     return String(cString: str)
                 }
             }
@@ -80,6 +76,50 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
             hasher.combine(bytes: buffer)
         }
     }
+    
+    /// Generates a new random UUID.
+    ///
+    /// - Parameter generator: The random number generator to use when creating the new random value.
+    /// - Returns: A random UUID.
+    @available(FoundationPreview 6.3, *)
+    public static func random(
+        using generator: inout some RandomNumberGenerator
+    ) -> UUID {
+        let first = UInt64.random(in: .min ... .max, using: &generator)
+        let second = UInt64.random(in: .min ... .max, using: &generator)
+
+        var firstBits = first
+        var secondBits = second
+
+        // Set the version to 4 (0100 in binary)
+        firstBits &= 0b11111111_11111111_11111111_11111111_11111111_11111111_00001111_11111111 // Clear bits 48 through 51
+        firstBits |= 0b00000000_00000000_00000000_00000000_00000000_00000000_01000000_00000000 // Set the version bits to '0100' at the correct position
+        
+        // Set the variant to '10' (RFC9562 variant)
+        secondBits &= 0b00111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111 // Clear the 2 most significant bits
+        secondBits |= 0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 // Set the two MSB to '10'
+
+        let uuidBytes = (
+            UInt8(truncatingIfNeeded: firstBits >> 56),
+            UInt8(truncatingIfNeeded: firstBits >> 48),
+            UInt8(truncatingIfNeeded: firstBits >> 40),
+            UInt8(truncatingIfNeeded: firstBits >> 32),
+            UInt8(truncatingIfNeeded: firstBits >> 24),
+            UInt8(truncatingIfNeeded: firstBits >> 16),
+            UInt8(truncatingIfNeeded: firstBits >> 8),
+            UInt8(truncatingIfNeeded: firstBits),
+            UInt8(truncatingIfNeeded: secondBits >> 56),
+            UInt8(truncatingIfNeeded: secondBits >> 48),
+            UInt8(truncatingIfNeeded: secondBits >> 40),
+            UInt8(truncatingIfNeeded: secondBits >> 32),
+            UInt8(truncatingIfNeeded: secondBits >> 24),
+            UInt8(truncatingIfNeeded: secondBits >> 16),
+            UInt8(truncatingIfNeeded: secondBits >> 8),
+            UInt8(truncatingIfNeeded: secondBits)
+        )
+
+        return UUID(uuid: uuidBytes)
+    }
 
     public var description: String {
         return uuidString
@@ -90,22 +130,13 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 
     public static func ==(lhs: UUID, rhs: UUID) -> Bool {
-        return lhs.uuid.0 == rhs.uuid.0 &&
-            lhs.uuid.1 == rhs.uuid.1 &&
-            lhs.uuid.2 == rhs.uuid.2 &&
-            lhs.uuid.3 == rhs.uuid.3 &&
-            lhs.uuid.4 == rhs.uuid.4 &&
-            lhs.uuid.5 == rhs.uuid.5 &&
-            lhs.uuid.6 == rhs.uuid.6 &&
-            lhs.uuid.7 == rhs.uuid.7 &&
-            lhs.uuid.8 == rhs.uuid.8 &&
-            lhs.uuid.9 == rhs.uuid.9 &&
-            lhs.uuid.10 == rhs.uuid.10 &&
-            lhs.uuid.11 == rhs.uuid.11 &&
-            lhs.uuid.12 == rhs.uuid.12 &&
-            lhs.uuid.13 == rhs.uuid.13 &&
-            lhs.uuid.14 == rhs.uuid.14 &&
-            lhs.uuid.15 == rhs.uuid.15
+        withUnsafeBytes(of: lhs) { lhsPtr in
+            withUnsafeBytes(of: rhs) { rhsPtr in
+                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
+            }
+        }
     }
 }
 
@@ -138,9 +169,9 @@ extension UUID : Codable {
     }
 }
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension UUID : Comparable {
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public static func < (lhs: UUID, rhs: UUID) -> Bool {
         var leftUUID = lhs.uuid
         var rightUUID = rhs.uuid

@@ -36,4 +36,17 @@ extension BufferViewIterator: IteratorProtocol {
         }
         return curPointer.load(as: Element.self)
     }
+    
+    func peek() -> Element? {
+        guard curPointer < endPointer else { return nil }
+        if _isPOD(Element.self) {
+            return curPointer.loadUnaligned(as: Element.self)
+        }
+        return curPointer.load(as: Element.self)
+    }
+    
+    mutating func advance() {
+        guard curPointer < endPointer else { return }
+        curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)
+    }
 }

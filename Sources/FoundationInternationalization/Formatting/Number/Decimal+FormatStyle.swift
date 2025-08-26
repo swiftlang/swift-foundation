@@ -235,6 +235,17 @@ extension Decimal.FormatStyle {
             return new
         }
 
+        /// Modifies the format style to use the specified notation.
+        ///
+        /// - Parameter notation: The notation to apply to the format style.
+        /// - Returns: A decimal currency format style modified to use the specified notation.
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+        public func notation(_ notation: Configuration.Notation) -> Self {
+            var new = self
+            new.collection.notation = notation
+            return new
+        }
+
         // FormatStyle
         public func format(_ value: Decimal) -> String {
             if let f = ICUCurrencyNumberFormatter.create(for: self), let res = f.format(value) {
@@ -256,6 +267,10 @@ extension Decimal.FormatStyle {
             case decimal(Decimal.FormatStyle)
             case currency(Decimal.FormatStyle.Currency)
             case percent(Decimal.FormatStyle.Percent)
+            
+            private typealias DecimalCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
         }
 
         var style: Style

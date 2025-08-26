@@ -14,11 +14,7 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct ByteCountFormatStyle: FormatStyle, Sendable {
@@ -166,7 +162,9 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
                 }
 
                 let configuration = DescriptiveNumberFormatConfiguration.Collection(presentation: .cardinal, capitalizationContext: .beginningOfSentence)
-                let spellOutFormatter = ICULegacyNumberFormatter.formatter(for: .descriptive(configuration), locale: locale)
+                guard let spellOutFormatter = ICULegacyNumberFormatter.formatter(for: .descriptive(configuration), locale: locale) else {
+                    return attributedFormat
+                }
 
                 guard let zeroFormatted = spellOutFormatter.format(Int64.zero) else {
                     return attributedFormat
@@ -263,13 +261,19 @@ private func localizedParens(locale: Locale) -> (String, String) {
     let ulocdata = locale.identifier.withCString {
         ulocdata_open($0, &status)
     }
-    try! status.checkSuccess()
     defer { ulocdata_close(ulocdata) }
 
+    guard status.checkSuccessAndLogError("ulocdata_open failed.") else {
+        return (" (", ")")
+    }
+
     let exemplars = ulocdata_getExemplarSet(ulocdata, nil, 0, .punctuation, &status)
-    try! status.checkSuccess()
     defer { uset_close(exemplars) }
 
+    guard status.checkSuccessAndLogError("ulocdata_getExemplarSet failed.") else {
+        return (" (", ")")
+    }
+    
     let fullwidthLeftParenUTF32 = 0x0000FF08 as Int32
     let containsFullWidth = uset_contains(exemplars!, fullwidthLeftParenUTF32).boolValue
 

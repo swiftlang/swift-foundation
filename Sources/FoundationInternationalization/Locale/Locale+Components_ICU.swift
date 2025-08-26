@@ -11,49 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Components {
-    // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
-    internal var icuIdentifier: String {
-        var keywords: [ICULegacyKey: String] = [:]
-        if let id = calendar?.cldrIdentifier { keywords[Calendar.Identifier.legacyKeywordKey] = id }
-        if let id = collation?._normalizedIdentifier { keywords[Locale.Collation.legacyKeywordKey] = id }
-        if let id = currency?._normalizedIdentifier { keywords[Locale.Currency.legacyKeywordKey] = id }
-        if let id = numberingSystem?._normalizedIdentifier { keywords[Locale.NumberingSystem.legacyKeywordKey] = id }
-        if let id = firstDayOfWeek?.rawValue { keywords[Locale.Weekday.legacyKeywordKey] = id }
-        if let id = hourCycle?.rawValue { keywords[Locale.HourCycle.legacyKeywordKey] = id }
-        if let id = measurementSystem?._normalizedIdentifier { keywords[Locale.MeasurementSystem.legacyKeywordKey] = id }
-        // No need for redundant region keyword
-        if let region = region, region != languageComponents.region {
-            // rg keyword value is actually a subdivision code
-            keywords[Locale.Region.legacyKeywordKey] = Locale.Subdivision.subdivision(for: region)._normalizedIdentifier
-        }
-        if let id = subdivision?._normalizedIdentifier { keywords[Locale.Subdivision.legacyKeywordKey] = id }
-        if let id = timeZone?.identifier { keywords[TimeZone.legacyKeywordKey] = id }
-        if let id = variant?._normalizedIdentifier { keywords[Locale.Variant.legacyKeywordKey] = id }
 
-        var locID = languageComponents.identifier
-        for (key, val) in keywords {
-            // This uses legacy key-value pairs, like "collation=phonebook" instead of "-cu-phonebk", so be sure that the above values are `legacyKeywordKey`
-            // See Locale.Components.legacyKey(forKey:) for more info on performance costs
-            locID = Locale.identifierWithKeywordValue(locID, key: key, value: val)
-        }
-        return locID
-    }
-    
     /// - Parameter identifier: Unicode language identifier such as "en-u-nu-thai-ca-buddhist-kk-true"
     public init(identifier: String) {
         let languageComponents = Locale.Language.Components(identifier: identifier)
@@ -184,7 +153,7 @@ extension Locale.LanguageCode {
     }
     
     // This is sorted
-    internal static var _isoLanguageCodeStrings: [String] = {
+    internal static let _isoLanguageCodeStrings: [String] = {
         var result: [String] = []
         let langs = uloc_getISOLanguages()
         guard var langs else { return [] }
@@ -247,7 +216,11 @@ extension Locale.Region {
             return nil
         }
 
-        guard let code = String(validatingUTF8: uregion_getRegionCode(containingRegion)) else {
+        guard let region = uregion_getRegionCode(containingRegion) else {
+            return nil
+        }
+
+        guard let code = String(validatingUTF8: region) else {
             return nil
         }
 
@@ -267,7 +240,11 @@ extension Locale.Region {
             return nil
         }
 
-        guard let code = String(validatingUTF8: uregion_getRegionCode(containingContinent)) else {
+        guard let region = uregion_getRegionCode(containingContinent) else {
+            return nil
+        }
+
+        guard let code = String(validatingUTF8: region) else {
             return nil
         }
 
@@ -280,7 +257,7 @@ extension Locale.Region {
     }
 
     /// Used for deprecated ISO Country Code
-    internal static var isoCountries: [String] = {
+    internal static let isoCountries: [String] = {
         var result: [String] = []
         let langs = uloc_getISOCountries()
         guard var langs else { return [] }
@@ -292,9 +269,9 @@ extension Locale.Region {
         return result
     }()
 
-    internal static var _isoRegionCodes: [String] {
+    internal static let _isoRegionCodes: [String] = {
         var status = U_ZERO_ERROR
-        let types = [URGN_WORLD, URGN_CONTINENT, URGN_SUBCONTINENT, URGN_TERRITORY]
+        let types = [URGN_WORLD, URGN_CONTINENT, URGN_SUBCONTINENT, URGN_TERRITORY, URGN_GROUPING]
         var codes: [String] = []
         for t in types {
             status = U_ZERO_ERROR
@@ -305,6 +282,186 @@ extension Locale.Region {
             }
         }
         return codes
+    }()
+
+    /// Categories of a region. See https://www.unicode.org/reports/tr35/tr35-35/tr35-info.html#Territory_Data
+    @available(FoundationPreview 6.2, *)
+    public struct Category: Codable, Sendable, Hashable, CustomDebugStringConvertible {
+        public var debugDescription: String {
+            switch inner {
+            case .world:
+                return "world"
+            case .continent:
+                return "continent"
+            case .subcontinent:
+                return "subcontinent"
+            case .territory:
+                return "territory"
+            case .grouping:
+                return "grouping"
+            }
+        }
+
+        enum Inner {
+            case world
+            case continent
+            case subcontinent
+            case territory
+            case grouping
+        }
+
+        var inner: Inner
+        fileprivate init(_ inner: Inner) {
+            self.inner = inner
+        }
+
+        var uregionType: URegionType {
+            switch inner {
+            case .world:
+                return URGN_WORLD
+            case .continent:
+                return URGN_CONTINENT
+            case .subcontinent:
+                return URGN_SUBCONTINENT
+            case .territory:
+                return URGN_TERRITORY
+            case .grouping:
+                return URGN_GROUPING
+            }
+        }
+
+        fileprivate init?(uregionType: URegionType) {
+            switch uregionType {
+            case URGN_CONTINENT:
+                self = .init(.continent)
+            case URGN_WORLD:
+                self = .init(.world)
+            case URGN_SUBCONTINENT:
+                self = .init(.subcontinent)
+            case URGN_TERRITORY:
+                self = .init(.territory)
+            case URGN_GROUPING:
+                self = .init(.grouping)
+            default:
+                return nil
+            }
+        }
+
+        /// Category representing the whold world.
+        public static let world: Category = Category(.world)
+
+        /// Category representing a continent, regions contained directly by world.
+        public static let continent: Category = Category(.continent)
+
+        /// Category representing a sub-continent, regions contained directly by a continent.
+        public static let subcontinent: Category = Category(.subcontinent)
+
+        /// Category representing a territory.
+        public static let territory: Category = Category(.territory)
+
+        /// Category representing a grouping, regions that has a well defined membership.
+        public static let grouping: Category = Category(.grouping)
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let inner: Inner
+            switch try container.decode(Int.self) {
+            case 0:
+                inner = .world
+            case 1:
+                inner = .continent
+            case 2:
+                inner = .subcontinent
+            case 3:
+                inner = .territory
+            case 4:
+                inner = .grouping
+            default:
+                throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unknown Category"))
+            }
+            self = .init(inner)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch inner {
+            case .world:
+                try container.encode(0)
+            case .continent:
+                try container.encode(1)
+            case .subcontinent:
+                try container.encode(2)
+            case .territory:
+                try container.encode(3)
+            case .grouping:
+                try container.encode(4)
+
+            }
+        }
+    }
+
+    /// An array of regions matching the specified categories.
+    @available(FoundationPreview 6.2, *)
+    public static func isoRegions(ofCategory category: Category) -> [Locale.Region] {
+        var status = U_ZERO_ERROR
+        let values = uregion_getAvailable(category.uregionType, &status)
+        guard let values, status.isSuccess else {
+            return []
+        }
+        return ICU.Enumerator(enumerator: values).elements.map { Locale.Region($0) }
+    }
+
+    /// The category of the region.
+    @available(FoundationPreview 6.2, *)
+    public var category: Category? {
+        var status = U_ZERO_ERROR
+        let icuRegion = uregion_getRegionFromCode(identifier, &status)
+        guard status.isSuccess, let icuRegion else {
+            return nil
+        }
+        let type = uregion_getType(icuRegion)
+        return Category(uregionType: type)
+    }
+
+    /// An array of the sub-regions, matching the specified category of the region.
+    @available(FoundationPreview 6.2, *)
+    public func subRegions(ofCategoy category: Category) -> [Locale.Region] {
+        var status = U_ZERO_ERROR
+        let icuRegion = uregion_getRegionFromCode(identifier, &status)
+        guard let icuRegion, status.isSuccess else {
+            return []
+        }
+
+        status = U_ZERO_ERROR
+        let enumerator = uregion_getContainedRegionsOfType(icuRegion, category.uregionType, &status)
+        guard let enumerator, status.isSuccess else {
+            return []
+        }
+        return ICU.Enumerator(enumerator: enumerator).elements.map { Locale.Region($0) }
+    }
+
+    /// The subcontinent that contains this region, if any.
+    @available(FoundationPreview 6.2, *)
+    public var subcontinent: Locale.Region? {
+        var status = U_ZERO_ERROR
+        let icuRegion = uregion_getRegionFromCode(identifier, &status)
+        guard let icuRegion, status.isSuccess else {
+            return nil
+        }
+
+        guard let containing = uregion_getContainingRegionOfType(icuRegion, URGN_SUBCONTINENT) else {
+            return nil
+        }
+
+        guard let region = uregion_getRegionCode(containing) else {
+            return nil
+        }
+
+        guard let code = String(validatingCString: region) else {
+            return nil
+        }
+
+        return Locale.Region(code)
     }
 }
 
@@ -454,8 +611,8 @@ extension Locale.NumberingSystem {
         var status = U_ZERO_ERROR
         let numberingSystem = unumsys_open(localeIdentifier, &status)
         defer { unumsys_close(numberingSystem) }
-        if let numberingSystem, status.isSuccess {
-            self.init(String(cString: unumsys_getName(numberingSystem)))
+        if let numberingSystem, status.isSuccess, let name = unumsys_getName(numberingSystem) {
+            self.init(String(cString: name))
         } else {
             self = .latn
         }
@@ -529,6 +686,11 @@ extension Locale.Language {
     public var minimalIdentifier : String {
         let componentsIdentifier = components.identifier
 
+        guard !componentsIdentifier.isEmpty else {
+            // Just return "". Nothing to reduce.
+            return componentsIdentifier
+        }
+
         let localeIDWithLikelySubtags = _withFixedCharBuffer { buffer, size, status in
             return uloc_minimizeSubtags(componentsIdentifier, buffer, size, &status)
         }
@@ -547,6 +709,11 @@ extension Locale.Language {
     /// Returns a BCP-47 identifier that always includes the script: "zh-Hant-TW", "en-Latn-US"
     public var maximalIdentifier : String {
         let id = components.identifier
+        guard !id.isEmpty else {
+            // Just return "" instead of trying to fill it up
+            return id
+        }
+
         let localeIDWithLikelySubtags = _withFixedCharBuffer { buffer, size, status in
             return uloc_addLikelySubtags(id, buffer, size, &status)
         }

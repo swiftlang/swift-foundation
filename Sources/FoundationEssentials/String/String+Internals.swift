@@ -12,16 +12,83 @@
 
 #if FOUNDATION_FRAMEWORK
 @_spi(_Unicode) import Swift
-@_implementationOnly import Foundation_Private.NSString
+internal import Foundation_Private.NSString
 #endif
 
 #if canImport(Darwin)
 import Darwin
 #endif
 
+#if os(Windows)
+import WinSDK
+
+extension String {
+    /// Invokes `body` with a resolved and potentially `\\?\`-prefixed version of the pointee,
+    /// to ensure long paths greater than MAX_PATH (260) characters are handled correctly.
+    ///
+    /// - parameter relative: Returns the original path without transforming through GetFullPathNameW + PathCchCanonicalizeEx, if the path is relative.
+    /// - seealso: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    package func withNTPathRepresentation<Result>(relative: Bool = false, _ body: (UnsafePointer<WCHAR>) throws -> Result) throws -> Result {
+        guard !isEmpty else {
+            throw CocoaError.errorWithFilePath(.fileReadInvalidFileName, "")
+        }
+
+        var iter = self.utf8.makeIterator()
+        let bLeadingSlash = if [._slash, ._backslash].contains(iter.next()), iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
+
+        // Strip the leading `/` on a RFC8089 path (`/[drive-letter]:/...` ).  A
+        // leading slash indicates a rooted path on the drive for the current
+        // working directory.
+        return try Substring(self.utf8.dropFirst(bLeadingSlash ? 1 : 0)).withCString(encodedAs: UTF16.self) { pwszPath in
+            if relative && PathIsRelativeW(pwszPath) {
+                return try body(pwszPath)
+            }
+
+            // 1. Normalize the path first.
+            // Contrary to the documentation, this works on long paths independently
+            // of the registry or process setting to enable long paths (but it will also
+            // not add the \\?\ prefix required by other functions under these conditions).
+            let dwLength: DWORD = GetFullPathNameW(pwszPath, 0, nil, nil)
+            return try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { pwszFullPath in
+                guard (1..<dwLength).contains(GetFullPathNameW(pwszPath, DWORD(pwszFullPath.count), pwszFullPath.baseAddress, nil)) else {
+                    throw CocoaError.errorWithFilePath(self, win32: GetLastError(), reading: true)
+                }
+
+                // 1.5 Leave \\.\ prefixed paths alone since device paths are already an exact representation and PathCchCanonicalizeEx will mangle these.
+                if let base = pwszFullPath.baseAddress,
+                    base[0] == UInt16(UInt8._backslash),
+                    base[1] == UInt16(UInt8._backslash),
+                    base[2] == UInt16(UInt8._period),
+                    base[3] == UInt16(UInt8._backslash) {
+                    return try body(base)
+                }
+
+                // 2. Canonicalize the path.
+                // This will add the \\?\ prefix if needed based on the path's length.
+                var pwszCanonicalPath: LPWSTR?
+                let flags: ULONG = PATHCCH_ALLOW_LONG_PATHS
+                let result = PathAllocCanonicalize(pwszFullPath.baseAddress, flags, &pwszCanonicalPath)
+                if let pwszCanonicalPath {
+                    defer { LocalFree(pwszCanonicalPath) }
+                    if result == S_OK {
+                        // 3. Perform the operation on the normalized path.
+                        return try body(pwszCanonicalPath)
+                    }
+                }
+                throw CocoaError.errorWithFilePath(self, win32: WIN32_FROM_HRESULT(result), reading: true)
+            }
+        }
+    }
+}
+#endif
+
 extension String {
     package func _trimmingWhitespace() -> String {
-        String(unicodeScalars._trimmingCharacters {
+        if self.isEmpty {
+            return ""
+        }
+        
+        return String(unicodeScalars._trimmingCharacters {
             $0.properties.isWhitespace
         })
     }
@@ -83,29 +150,82 @@ extension String {
     
     #if canImport(Darwin) || FOUNDATION_FRAMEWORK
     fileprivate func _fileSystemRepresentation(into buffer: UnsafeMutableBufferPointer<CChar>) -> Bool {
-        let result = buffer.withMemoryRebound(to: UInt8.self) { uintBuffer in
-            let newBuffer = UnsafeMutableBufferPointer(start: uintBuffer.baseAddress, count: uintBuffer.count - 1)
-            return _decomposed(.hfsPlus, into: newBuffer, nullTerminated: true)
+        let result = buffer.withMemoryRebound(to: UInt8.self) { rebound in
+            _decomposed(.hfsPlus, into: rebound, nullTerminated: true)
         }
-        
         return result != nil
+    }
+    
+    private var maxFileSystemRepresentationSize: Int {
+        // The Darwin file system representation expands the UTF-8 contents to decomposed UTF-8 contents (only decomposing specific scalars)
+        // For any given scalar that we decompose, we will increase its UTF-8 length by at most a factor of 3 during decomposition
+        // (ex. U+0390 expands from 2 to 6 UTF-8 code-units, U+1D160 expands from 4 to 12 UTF-8 code-units)
+        // Therefore in the worst case scenario, the result will be the UTF-8 length multiplied by a factor of 3 plus an additional byte for the null byte
+        self.utf8.count * 3 + 1
     }
     #endif
     
     package func withFileSystemRepresentation<R>(_ block: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
         #if canImport(Darwin) || FOUNDATION_FRAMEWORK
-        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(PATH_MAX)) { buffer in
+        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: maxFileSystemRepresentationSize) { buffer in
             guard _fileSystemRepresentation(into: buffer) else {
                 return try block(nil)
             }
             return try block(buffer.baseAddress!)
         }
         #else
-        try self.withCString {
+#if os(Windows)
+        var iter = self.utf8.makeIterator()
+        let bLeadingSlash = if iter.next() == ._slash, iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
+        // Strip the leading `/` on a RFC8089 path (`/[drive-letter]:/...` ).  A
+        // leading slash indicates a rooted path on the drive for the current
+        // working directory.
+        return try Substring(self.utf8.dropFirst(bLeadingSlash ? 1 : 0)).replacing(._slash, with: ._backslash).withCString {
             try block($0)
+        }
+#else
+        return try withCString {
+            try block($0)
+        }
+#endif
+        #endif
+    }
+    
+    package func withMutableFileSystemRepresentation<R>(_ block: (UnsafeMutablePointer<CChar>?) throws -> R) rethrows -> R {
+        #if canImport(Darwin) || FOUNDATION_FRAMEWORK
+        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: maxFileSystemRepresentationSize) { buffer in
+            guard _fileSystemRepresentation(into: buffer) else {
+                return try block(nil)
+            }
+            return try block(buffer.baseAddress!)
+        }
+        #else
+#if os(Windows)
+        var iter = self.utf8.makeIterator()
+        let bLeadingSlash = if iter.next() == ._slash, iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
+        var mut: String =
+            Substring(self.utf8[self.utf8.index(self.utf8.startIndex, offsetBy: bLeadingSlash ? 1 : 0)...])
+                .replacing(._slash, with: ._backslash)
+#else
+        var mut: String = self
+#endif
+
+        return try mut.withUTF8 { utf8Buffer in
+            // Leave space for a null byte at the end
+            try withUnsafeTemporaryAllocation(of: CChar.self, capacity: utf8Buffer.count + 1) { temporaryBuffer in
+                try utf8Buffer.withMemoryRebound(to: CChar.self) { utf8CCharBuffer in
+                    let nullByteIndex = temporaryBuffer.initialize(fromContentsOf: utf8CCharBuffer)
+                    // Null-terminate
+                    temporaryBuffer.initializeElement(at: nullByteIndex, to: CChar(0))
+                    let result = try block(temporaryBuffer.baseAddress)
+                    temporaryBuffer.prefix(through: nullByteIndex).deinitialize()
+                    return result
+                }
+            }
         }
         #endif
     }
+
 }
 
 extension UnsafeBufferPointer {
@@ -132,13 +252,38 @@ extension UnsafeBufferPointer {
         var decoder = T()
         var iterator = self.makeIterator()
         
-        func appendOutput(_ values: some Sequence<UInt8>) throws {
-            let bufferPortion = UnsafeMutableBufferPointer(start: buffer.baseAddress!.advanced(by: bufferIdx), count: bufferLength - bufferIdx)
-            var (leftOver, idx) = bufferPortion.initialize(from: values)
-            bufferIdx += idx
-            if bufferIdx == bufferLength && leftOver.next() != nil {
+        guard !buffer.isEmpty else {
+            if !nullTerminated && iterator.next() == nil {
+                // No bytes to write, so an empty buffer is OK
+                return 0
+            } else {
                 throw DecompositionError.insufficientSpace
             }
+        }
+        
+        defer {
+            if nullTerminated {
+                // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
+                // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
+                if bufferIdx < bufferLength {
+                    // We still have space left in the buffer - if we haven't already null-terminated then add a null byte to the buffer
+                    // Since we have space, we only want to write the null byte when/where we have to since some clients provide buffer sizes that don't match the true buffer length
+                    if bufferIdx == buffer.startIndex || buffer[bufferIdx - 1] != 0 {
+                        buffer[bufferIdx] = 0
+                    }
+                } else {
+                    // The buffer is non-empty but we've completely filled it, overwrite the last written byte with a null byte to ensure null termination
+                    buffer[buffer.count - 1] = 0
+                }
+            }
+        }
+        
+        func appendOutput(_ values: some Collection<UInt8>) throws {
+            let bufferPortion = UnsafeMutableBufferPointer(start: buffer.baseAddress!.advanced(by: bufferIdx), count: bufferLength - bufferIdx)
+            guard bufferPortion.count >= values.count else {
+                throw DecompositionError.insufficientSpace
+            }
+            bufferIdx += bufferPortion.initialize(fromContentsOf: values)
         }
         
         func appendOutput(_ value: UInt8) throws {
@@ -227,32 +372,44 @@ extension UnsafeBufferPointer {
 extension NSString {
     @objc
     func __swiftFillFileSystemRepresentation(pointer: UnsafeMutablePointer<CChar>, maxLength: Int) -> Bool {
-        let buffer = UnsafeMutableBufferPointer(start: pointer, count: maxLength)
-        // See if we have a quick-access buffer we can just convert directly
-        if let fastCharacters = self._fastCharacterContents() {
-            // If we have quick access to UTF-16 contents, decompose from UTF-16
-            let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: self.length)
-            return (try? charsBuffer._decomposedRebinding(.hfsPlus, as: Unicode.UTF16.self, into: buffer, nullTerminated: true)) != nil
-        } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
-            // If we have quick access to ASCII contents, no need to decompose
-            let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
-
-            // We only allow embedded nulls if there are no non-null characters following the first null character
-            if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
-                if !utf8Buffer[embeddedNullIdx...].allSatisfy({ $0 == 0 }) {
-                    return false
-                }
-            }
+        autoreleasepool {
+            let buffer = UnsafeMutableBufferPointer(start: pointer, count: maxLength)
             
-            let next = buffer.initialize(fromContentsOf: utf8Buffer)
-            guard next < buffer.endIndex else {
+            guard !buffer.isEmpty else {
+                // No space for a null terminating byte, so it's not worth even trying to read the string contents
                 return false
             }
-            buffer[next] = 0
-            return true
-        } else {
-            // Otherwise, bridge to a String which will create a UTF-8 buffer
-            return String(self)._fileSystemRepresentation(into: buffer)
+            
+            // See if we have a quick-access buffer we can just convert directly
+            if let fastCharacters = self._fastCharacterContents() {
+                // If we have quick access to UTF-16 contents, decompose from UTF-16
+                let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: self.length)
+                return (try? charsBuffer._decomposedRebinding(.hfsPlus, as: Unicode.UTF16.self, into: buffer, nullTerminated: true)) != nil
+            } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
+                // If we have quick access to ASCII contents, no need to decompose
+                let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
+                
+                // We only allow embedded nulls if there are no non-null characters following the first null character
+                if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
+                    if !utf8Buffer[embeddedNullIdx...].allSatisfy({ $0 == 0 }) {
+                        // Ensure the buffer is always null-terminated even on failure to prevent buffer over-reads - at this point we know the buffer is non-empty
+                        buffer[0] = 0
+                        return false
+                    }
+                }
+                
+                var (leftoverIterator, next) = buffer.initialize(from: utf8Buffer)
+                guard leftoverIterator.next() == nil && next < buffer.endIndex else {
+                    // Ensure the buffer is always null-terminated even on failure to prevent buffer over-reads
+                    buffer[buffer.endIndex - 1] = 0
+                    return false
+                }
+                buffer[next] = 0
+                return true
+            } else {
+                // Otherwise, bridge to a String which will create a UTF-8 buffer
+                return String(self)._fileSystemRepresentation(into: buffer)
+            }
         }
     }
 }

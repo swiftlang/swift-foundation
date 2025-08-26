@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
-    @available(FoundationPreview 0.3, *)
+    @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
     public struct PredicateEvaluate<
         Condition : PredicateExpression,
         each Input : PredicateExpression
@@ -37,33 +37,37 @@ extension PredicateExpressions {
         }
     }
     
-    @available(FoundationPreview 0.3, *)
+    @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
     public static func build_evaluate<Condition, each Input>(_ predicate: Condition, _ input: repeat each Input) -> PredicateEvaluate<Condition, repeat each Input> {
         PredicateEvaluate<Condition, repeat each Input>(predicate: predicate, input: repeat each input)
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : CustomStringConvertible {
     public var description: String {
         "PredicateEvaluate(predicate: \(predicate), input: \(input))"
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : StandardPredicateExpression where Condition : StandardPredicateExpression, repeat each Input : StandardPredicateExpression {}
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Codable, repeat each Input : Codable {
     public func encode(to encoder: Encoder) throws {
-        throw EncodingError.invalidValue(self, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Encoding the PredicateEvaluate operator is not yet supported"))
+        var container = encoder.unkeyedContainer()
+        try container.encode(predicate)
+        repeat try container.encode(each input)
     }
     
     public init(from decoder: Decoder) throws {
-        throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Decoding the PredicateEvaluate operator is not yet supported"))
+        var container = try decoder.unkeyedContainer()
+        self.predicate = try container.decode(Condition.self)
+        self.input = (repeat try container.decode((each Input).self))
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : Sendable where Condition : Sendable, repeat each Input : Sendable {}
 #endif

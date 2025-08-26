@@ -10,10 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
+internal import _FoundationICU
+
+#if canImport(os)
+internal import os
+#endif
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
 #endif
 
 enum ICU { }
@@ -25,8 +29,17 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
     }
 
     var debugDescription: String {
-        String(validatingUTF8: u_errorName(code)) ?? "Unknown ICU error \(code.rawValue)"
+        guard let error = u_errorName(code) else {
+            return "Unknown ICU error \(code.rawValue)"
+        }
+        return String(cString: error)
     }
+
+#if canImport(os)
+    internal static let logger: Logger = {
+        Logger(subsystem: "com.apple.foundation", category: "icu")
+    }()
+#endif
 }
 
 extension UErrorCode {
@@ -38,6 +51,15 @@ extension UErrorCode {
 
     var isSuccess: Bool {
         self.rawValue <= U_ZERO_ERROR.rawValue
+    }
+
+    func checkSuccessAndLogError(_ message: @escaping @autoclosure () -> String) -> Bool {
+#if canImport(os)
+        if !isSuccess {
+            ICUError.logger.error("\(message()). Error: \(ICUError(code: self).debugDescription)")
+        }
+#endif
+        return isSuccess
     }
 }
 
@@ -89,7 +111,7 @@ internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_
 /// Allocate a buffer with `size` `CChar`s and execute the given block.
 /// The closure should return the actual length of the string, or nil if there is an error in the ICU call or the result is zero length.
 internal func _withResizingCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeMutablePointer<CChar>, Int32, inout UErrorCode) -> Int32?) -> String? {
-    withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(initialSize)) {
+    withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(initialSize + 1)) {
         buffer in
         var status = U_ZERO_ERROR
         if let len = body(buffer.baseAddress!, initialSize, &status) {
@@ -99,6 +121,7 @@ internal func _withResizingCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeMu
                     var innerStatus = U_ZERO_ERROR
                     if let innerLen = body(innerBuffer.baseAddress!, len + 1, &innerStatus) {
                         if innerStatus.isSuccess && innerLen > 0 {
+                            innerBuffer[Int(innerLen)] = 0
                             return String(validatingUTF8: innerBuffer.baseAddress!)
                         }
                     }
@@ -107,6 +130,7 @@ internal func _withResizingCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeMu
                     return nil
                 }
             } else if status.isSuccess && len > 0 {
+                buffer[Int(len)] = 0
                 return String(validatingUTF8: buffer.baseAddress!)
             }
         }
@@ -122,7 +146,7 @@ internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_K
         var status = U_ZERO_ERROR
         if let len = body(buffer.baseAddress!, size, &status) {
             if status.isSuccess && len > 0 {
-                buffer[Int(len + 1)] = 0
+                buffer[Int(len)] = 0
                 return String(validatingUTF8: buffer.baseAddress!)
             }
         }

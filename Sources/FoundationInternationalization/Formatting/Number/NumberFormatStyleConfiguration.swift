@@ -14,11 +14,7 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
@@ -92,7 +88,6 @@ public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
     }
 }
 
-@_nonSendable
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum NumberFormatStyleConfiguration {
     internal struct Collection : Codable, Hashable, Sendable {
@@ -145,8 +140,8 @@ public enum NumberFormatStyleConfiguration {
 
         // The maximum total length that ICU allows is 999.
         // We take one off to reserve one character for the non-zero digit skeleton (the "0" skeleton in the number format)
-        static var validPartLength = 0..<999
-        static var validSignificantDigits = 1..<999
+        static let validPartLength = 0..<999
+        static let validSignificantDigits = 1..<999
 
         // min 3, max 3: 12345 -> 12300
         // min 3, max 3: 0.12345 -> 0.123
@@ -309,13 +304,22 @@ public enum NumberFormatStyleConfiguration {
     }
 }
 
-@_nonSendable
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension NumberFormatStyleConfiguration : Sendable {}
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum CurrencyFormatStyleConfiguration {
     public typealias Grouping = NumberFormatStyleConfiguration.Grouping
     public typealias Precision = NumberFormatStyleConfiguration.Precision
     public typealias DecimalSeparatorDisplayStrategy = NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy
     public typealias RoundingRule = NumberFormatStyleConfiguration.RoundingRule
+    /// The type used to configure notation for currency format styles.
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public typealias Notation = NumberFormatStyleConfiguration.Notation
 
     internal typealias RoundingIncrement = NumberFormatStyleConfiguration.RoundingIncrement
     internal struct Collection : Codable, Hashable {
@@ -327,6 +331,7 @@ public enum CurrencyFormatStyleConfiguration {
         var rounding: RoundingRule?
         var roundingIncrement: RoundingIncrement?
         var presentation: Presentation
+        var notation: Notation?
     }
 
     public struct SignDisplayStrategy: Codable, Hashable, Sendable {
@@ -377,7 +382,13 @@ public enum CurrencyFormatStyleConfiguration {
     }
 }
 
-@_nonSendable
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension CurrencyFormatStyleConfiguration : Sendable {}
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum DescriptiveNumberFormatConfiguration {
     public typealias CapitalizationContext = FormatStyleCapitalizationContext
@@ -427,6 +438,13 @@ public enum DescriptiveNumberFormatConfiguration {
         }
     }
 }
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension DescriptiveNumberFormatConfiguration : Sendable {}
 
 // MARK: - Codable
 
@@ -629,7 +647,7 @@ extension NumberFormatStyleConfiguration.Precision {
 
     private func integerAndFractionalLengthSkeleton(minInt: Int?, maxInt: Int?, minFrac: Int?, maxFrac: Int?) -> String {
         var stem: String = ""
-        // Construct skeleton for fractonal part
+        // Construct skeleton for fractional part
         if minFrac != nil || maxFrac != nil {
             if maxFrac == 0 {
                 stem += "precision-integer"
@@ -845,6 +863,9 @@ extension CurrencyFormatStyleConfiguration.Collection {
         }
         if let rounding = rounding {
             s += rounding.skeleton + " "
+        }
+        if let notation = notation {
+            s += notation.skeleton + " "
         }
 
         return s._trimmingWhitespace()

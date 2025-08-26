@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+internal import Foundation_Private
+#endif
+
 extension Locale {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
@@ -34,20 +38,30 @@ extension Locale {
                 if let languageCode = languageCode {
                     result += languageCode._normalizedIdentifier
                 }
-                if let script = script {
+                if let script = script, !script.identifier.isEmpty {
                     result += "-"
                     result += script._normalizedIdentifier
                 }
-                if let region = region {
+                if let region = region, !region.identifier.isEmpty {
                     result += "_"
                     result += region._normalizedIdentifier
                 }
 
                 return result
             }
+            
+#if !FOUNDATION_FRAMEWORK
+            @_spi(SwiftCorelibsFoundation) public var _identifier: String { identifier }
+#endif
         }
 
         package var components: Language.Components
+        
+#if !FOUNDATION_FRAMEWORK
+        @_spi(SwiftCorelibsFoundation) public var _components: Language.Components {
+            components
+        }
+#endif
         
         public init(components: Language.Components) {
             self.components = components
@@ -59,7 +73,7 @@ extension Locale {
 
         /// Returns a list of system languages, includes the languages of all product localization for the current platform
         public static var systemLanguages: [Language] {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
             NSLocale.systemLanguages().map {
                 let comp = Components(identifier: $0 as! String)
                 return Language(components: comp)

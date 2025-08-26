@@ -10,49 +10,141 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
 #endif
 
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
 
-// Tests for _GregorianCalendar
-final class GregorianCalendarTests : XCTestCase {
+@Suite("Gregorian Calendar")
+private struct GregorianCalendarTests {
 
-    func testDateFromComponents_DST() {
-        // The expected dates were generated using ICU Calendar
+    // MARK: Basic
+    @Test func testNumberOfDaysInMonth() {
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        #expect(gregorianCalendar.numberOfDaysInMonth(2, year: 2023) == 28) // not leap year
+        #expect(gregorianCalendar.numberOfDaysInMonth(0, year: 2023) == 31) // equivalent to month: 12, year: 2022
+        #expect(gregorianCalendar.numberOfDaysInMonth(14, year: 2023) == 29) // equivalent to month: 2, year: 2024
 
-        let tz = TimeZone(identifier: "America/Los_Angeles")!
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        func test(_ dateComponents: DateComponents, expected: Date, file: StaticString = #file, line: UInt = #line) {
-            let date = gregorianCalendar.date(from: dateComponents)!
-            XCTAssertEqual(date, expected, "DateComponents: \(dateComponents)", file: file, line: line)
-        }
+        #expect(gregorianCalendar.numberOfDaysInMonth(2, year: 2024) == 29) // leap year
+        #expect(gregorianCalendar.numberOfDaysInMonth(-10, year: 2024) == 28) //  equivalent to month: 2, year: 2023, not leap
+        #expect(gregorianCalendar.numberOfDaysInMonth(14, year: 2024) == 28) //  equivalent to month: 2, year: 2025, not leap
 
-        test(.init(year: 2023, month: 10, day: 16), expected: Date(timeIntervalSince1970: 1697439600.0))
-        test(.init(year: 2023, month: 10, day: 16, hour: 1, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1697445292.0))
-        test(.init(year: 2023, month: 11, day: 6), expected: Date(timeIntervalSince1970: 1699257600.0))
-        test(.init(year: 2023, month: 3, day: 12), expected: Date(timeIntervalSince1970: 1678608000.0))
-        test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1678613692.0))
-        test(.init(year: 2023, month: 3, day: 12, hour: 2, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1678617292.0))
-        test(.init(year: 2023, month: 3, day: 12, hour: 3, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1678617292.0))
-        test(.init(year: 2023, month: 3, day: 13, hour: 0, minute: 0, second: 0), expected: Date(timeIntervalSince1970: 1678690800.0))
-        test(.init(year: 2023, month: 11, day: 5), expected: Date(timeIntervalSince1970: 1699167600.0))
-        test(.init(year: 2023, month: 11, day: 5, hour: 1, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1699173292.0))
-        test(.init(year: 2023, month: 11, day: 5, hour: 2, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1699180492.0))
-        test(.init(year: 2023, month: 11, day: 5, hour: 3, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1699184092.0))
+        #expect(gregorianCalendar.numberOfDaysInMonth(50, year: 2024) == 29) //  equivalent to month: 2, year: 2028, leap
     }
 
-    func testDateFromComponents() {
+    @Test func testRemoteJulianDayCrash() {
+        // Accessing the integer julianDay of a remote date should not crash
+        let d = Date(julianDate: 9223372036854775808) // Int64.max + 1
+        _ = d.julianDay
+    }
+
+    // MARK: Leap month
+    @Test func calendarUnitLeapMonth_gregorianCalendar() {
+        // Test leap month with a calendar that does not observe leap month
+
+        // Gregorian: 2023-03-22.
+        let date1 = Date(timeIntervalSinceReferenceDate: 701161200)
+        // Gregorian: 2023-03-02.
+        let date2 = Date(timeIntervalSinceReferenceDate: 699433200)
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+
+        let minRange = calendar.minimumRange(of: .isLeapMonth)
+        #expect(minRange?.lowerBound == 0)
+        #expect(minRange?.count == 1)
+
+        let maxRange = calendar.maximumRange(of: .isLeapMonth)
+        #expect(maxRange?.lowerBound == 0)
+        #expect(maxRange?.count == 1)
+
+        let leapMonthRange = calendar.range(of: .isLeapMonth, in: .year, for: date1)
+        #expect(leapMonthRange == nil)
+
+        let dateIntervial = calendar.dateInterval(of: .isLeapMonth, for: date1)
+        #expect(dateIntervial == nil)
+
+        // Invalid ordinality flag
+        let ordinal = calendar.ordinality(of: .isLeapMonth, in: .year, for: date1)
+        #expect(ordinal == nil)
+
+        // Invalid ordinality flag
+        let ordinal2 = calendar.ordinality(of: .day, in: .isLeapMonth, for: date1)
+        #expect(ordinal2 == nil)
+
+        let extractedComponents = calendar.dateComponents([.year, .month], from: date1)
+        #expect(extractedComponents.isLeapMonth == false)
+        #expect(extractedComponents.month == 3)
+
+        let isLeap = calendar.component(.isLeapMonth, from: date1)
+        #expect(isLeap == 0)
+
+        let extractedLeapMonthComponents_onlyLeapMonth = calendar.dateComponents([.isLeapMonth], from: date1)
+        #expect(extractedLeapMonthComponents_onlyLeapMonth.isLeapMonth == false)
+
+        let extractedLeapMonthComponents = calendar.dateComponents([.isLeapMonth, .month], from: date1)
+        #expect(extractedLeapMonthComponents.isLeapMonth == false)
+        #expect(extractedLeapMonthComponents.month == 3)
+
+        let isEqualMonth = calendar.isDate(date1, equalTo: date2, toGranularity: .month)
+        #expect(isEqualMonth) // Both are in month 3
+
+        let isEqualLeapMonth = calendar.isDate(date1, equalTo: date2, toGranularity: .isLeapMonth)
+        #expect(isEqualLeapMonth) // Both are not in leap month
+
+        // Invalid granularity flag. Return what we return for other invalid `Calendar.Component` inputs
+        let result = calendar.compare(date1, to: date2, toGranularity: .month)
+        #expect(result == .orderedSame)
+
+        // Invalid granularity flag. Return what we return for other invalid `Calendar.Component` inputs
+        let onlyLeapMonthComparisonResult = calendar.compare(date1, to: date2, toGranularity: .isLeapMonth)
+        #expect(onlyLeapMonthComparisonResult == .orderedSame)
+
+        let nextLeapMonthDate = calendar.nextDate(after: date1, matching: DateComponents(isLeapMonth: true), matchingPolicy: .strict)
+        #expect(nextLeapMonthDate == nil) // There is not a date in Gregorian that is a leap month
+
+#if FIXED_SINGLE_LEAPMONTH
+        let nextNonLeapMonthDate = calendar.nextDate(after: date1, matching: DateComponents(isLeapMonth: false), matchingPolicy: .strict)
+        #expect(nextNonLeapMonthDate == date1) // date1 matches the condition already
+#endif
+
+        var settingLeapMonthComponents = calendar.dateComponents([.year, .month, .day], from: date1)
+        settingLeapMonthComponents.isLeapMonth = true
+        let settingLeapMonthDate = calendar.date(from: settingLeapMonthComponents)
+        #expect(settingLeapMonthDate == nil) // There is not a date in Gregorian that is a leap month
+
+        var settingNonLeapMonthComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date1)
+        settingNonLeapMonthComponents.isLeapMonth = false
+        let settingNonLeapMonthDate = calendar.date(from: settingNonLeapMonthComponents)
+        #expect(settingNonLeapMonthDate == date1) // date1 matches the condition already
+
+        let diffComponents = calendar.dateComponents([.month, .day, .isLeapMonth], from: date1, to: date2)
+        #expect(diffComponents.month == 0)
+        #expect(diffComponents.isLeapMonth == nil)
+        #expect(diffComponents.day == -20)
+
+        let addedDate = calendar.date(byAdding: .isLeapMonth, value: 1, to: date1)
+        #expect(addedDate == nil)
+
+        // Invalid argument; cannot add a boolean component with an integer value
+        let addedDate_notLeap = calendar.date(byAdding: .isLeapMonth, value: 0, to: date1)
+        #expect(addedDate_notLeap == nil)
+    }
+
+    // MARK: Date from components
+
+    @Test func testDateFromComponents() {
         // The expected dates were generated using ICU Calendar
         let tz = TimeZone.gmt
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
-        func test(_ dateComponents: DateComponents, expected: Date, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = cal.date(from: dateComponents)
-            XCTAssertEqual(date, expected, "date components: \(dateComponents)", file: file, line: line)
+            #expect(date == expected, "date components: \(dateComponents)", sourceLocation: sourceLocation)
         }
 
         test(.init(year: 1582, month: -7, weekday: 5, weekdayOrdinal: 0), expected: Date(timeIntervalSince1970: -12264739200.0))
@@ -121,26 +213,26 @@ final class GregorianCalendarTests : XCTestCase {
     }
 
     // MARK: - DateComponents from date
-    func testDateComponentsFromDate() {
+    @Test func testDateComponentsFromDate() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 0)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
-        func test(_ date: Date, _ timeZone: TimeZone, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, file: StaticString = #file, line: UInt = #line) {
+        func test(_ date: Date, _ timeZone: TimeZone, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
             let dc = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date)
-            XCTAssertEqual(dc.era, era, file: file, line: line)
-            XCTAssertEqual(dc.year, year, file: file, line: line)
-            XCTAssertEqual(dc.month, month, file: file, line: line)
-            XCTAssertEqual(dc.day, day, file: file, line: line)
-            XCTAssertEqual(dc.hour, hour, file: file, line: line)
-            XCTAssertEqual(dc.minute, minute, file: file, line: line)
-            XCTAssertEqual(dc.second, second, file: file, line: line)
-            XCTAssertEqual(dc.weekday, weekday, file: file, line: line)
-            XCTAssertEqual(dc.weekdayOrdinal, weekdayOrdinal, file: file, line: line)
-            XCTAssertEqual(dc.weekOfMonth, weekOfMonth, file: file, line: line)
-            XCTAssertEqual(dc.weekOfYear, weekOfYear, file: file, line: line)
-            XCTAssertEqual(dc.yearForWeekOfYear, yearForWeekOfYear, file: file, line: line)
-            XCTAssertEqual(dc.quarter, quarter, file: file, line: line)
-            XCTAssertEqual(dc.nanosecond, nanosecond, file: file, line: line)
-            XCTAssertEqual(dc.isLeapMonth, isLeapMonth, file: file, line: line)
-            XCTAssertEqual(dc.timeZone, timeZone, file: file, line: line)
+            #expect(dc.era == era, sourceLocation: sourceLocation)
+            #expect(dc.year == year, sourceLocation: sourceLocation)
+            #expect(dc.month == month, sourceLocation: sourceLocation)
+            #expect(dc.day == day, sourceLocation: sourceLocation)
+            #expect(dc.hour == hour, sourceLocation: sourceLocation)
+            #expect(dc.minute == minute, sourceLocation: sourceLocation)
+            #expect(dc.second == second, sourceLocation: sourceLocation)
+            #expect(dc.weekday == weekday, sourceLocation: sourceLocation)
+            #expect(dc.weekdayOrdinal == weekdayOrdinal, sourceLocation: sourceLocation)
+            #expect(dc.weekOfMonth == weekOfMonth, sourceLocation: sourceLocation)
+            #expect(dc.weekOfYear == weekOfYear, sourceLocation: sourceLocation)
+            #expect(dc.yearForWeekOfYear == yearForWeekOfYear, sourceLocation: sourceLocation)
+            #expect(dc.quarter == quarter, sourceLocation: sourceLocation)
+            #expect(dc.nanosecond == nanosecond, sourceLocation: sourceLocation)
+            #expect(dc.isLeapMonth == isLeapMonth, sourceLocation: sourceLocation)
+            #expect(dc.timeZone == timeZone, sourceLocation: sourceLocation)
         }
         test(Date(timeIntervalSince1970: 852045787.0), .gmt, expectedEra: 1, year: 1996, month: 12, day: 31, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 3, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 5, weekOfYear: 53, yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-12-31T15:23:07Z
         test(Date(timeIntervalSince1970: 825607387.0), .gmt, expectedEra: 1, year: 1996, month: 2, day: 29, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 5, weekdayOrdinal: 5, quarter: 1, weekOfMonth: 4, weekOfYear: 9, yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-02-29T15:23:07Z
@@ -149,15 +241,43 @@ final class GregorianCalendarTests : XCTestCase {
         test(Date(timeIntervalSince1970: -62135852213.0), .gmt, expectedEra: 0, year: 1, month: 12, day: 31, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 6, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 4, weekOfYear: 52, yearForWeekOfYear: 0, isLeapMonth: false) // 0000-12-31T01:03:07Z
     }
 
+    @Test func testDateComponentsFromDate_DST() {
+
+        func test(_ date: Date, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
+            let dc = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date)
+            #expect(dc.era == era, "era should be equal", sourceLocation: sourceLocation)
+            #expect(dc.year == year, "era should be equal", sourceLocation: sourceLocation)
+            #expect(dc.month == month, "month should be equal", sourceLocation: sourceLocation)
+            #expect(dc.day == day, "day should be equal", sourceLocation: sourceLocation)
+            #expect(dc.hour == hour, "hour should be equal", sourceLocation: sourceLocation)
+            #expect(dc.minute == minute, "minute should be equal", sourceLocation: sourceLocation)
+            #expect(dc.second == second, "second should be equal", sourceLocation: sourceLocation)
+            #expect(dc.weekday == weekday, "weekday should be equal", sourceLocation: sourceLocation)
+            #expect(dc.weekdayOrdinal == weekdayOrdinal, "weekdayOrdinal should be equal", sourceLocation: sourceLocation)
+            #expect(dc.weekOfMonth == weekOfMonth, "weekOfMonth should be equal", sourceLocation: sourceLocation)
+            #expect(dc.weekOfYear == weekOfYear, "weekOfYear should be equal", sourceLocation: sourceLocation)
+            #expect(dc.yearForWeekOfYear == yearForWeekOfYear, "yearForWeekOfYear should be equal", sourceLocation: sourceLocation)
+            #expect(dc.quarter == quarter, "quarter should be equal", sourceLocation: sourceLocation)
+            #expect(dc.nanosecond == nanosecond, "nanosecond should be equal", sourceLocation: sourceLocation)
+            #expect(dc.isLeapMonth == isLeapMonth, "isLeapMonth should be equal", sourceLocation: sourceLocation)
+            #expect(dc.timeZone == calendar.timeZone, "timeZone should be equal", sourceLocation: sourceLocation)
+        }
+
+        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        test(Date(timeIntervalSince1970: -62135769600.0), expectedEra: 1, year: 1, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 7, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 1, isLeapMonth: false) // 0001-01-01T00:00:00Z
+        test(Date(timeIntervalSince1970: 64092211200.0), expectedEra: 1, year: 4001, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 4001, isLeapMonth: false)
+        test(Date(timeIntervalSince1970: -210866760000.0), expectedEra: 0, year: 4713, month: 1, day: 1, hour: 12, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: -4712, isLeapMonth: false)
+    }
+
     // MARK: - Add
 
-    func testAdd() {
+    @Test func testAdd() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         var date: Date
-        func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, _ file: StaticString = #file, _ line: UInt = #line) {
+        func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expectedDate, file: file, line: line)
+            #expect(result == expectedDate, sourceLocation: sourceLocation)
         }
 
         date = Date(timeIntervalSince1970: 825723300.0)
@@ -267,15 +387,19 @@ final class GregorianCalendarTests : XCTestCase {
         test(addField: .weekOfMonth, value: -7, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -12222748800.0))
         test(addField: .nanosecond, value: 720667058, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -12218515199.279333))
         test(addField: .nanosecond, value: -812249727, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -12218515200.81225))
+
+        // some distant date
+        date = Date(timeIntervalSince1970: -210866774822)
+        test(addField: .second, value: -1, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -210866774823))
     }
 
-    func testAdd_boundaries() {
+    @Test func testAdd_boundaries() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         var date: Date
-        func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, _ file: StaticString = #file, _ line: UInt = #line) {
+        func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expectedDate, file: file, line: line)
+            #expect(result == expectedDate, sourceLocation: sourceLocation)
         }
 
         date = Date(timeIntervalSince1970: 62135596800.0) // 3939-01-01
@@ -389,15 +513,18 @@ final class GregorianCalendarTests : XCTestCase {
         test(addField: .nanosecond, value: -1, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -62135769600.0))
     }
 
-    func testAddDateComponents() {
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 7, gregorianStartDate: nil)
+    @Test func testAddDateComponents() {
 
-        func testAdding(_ comp: DateComponents, to date: Date, wrap: Bool, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
+        let s = Date.ISO8601FormatStyle(timeZone: TimeZone(secondsFromGMT: 3600)!)
+        func testAdding(_ comp: DateComponents, to date: Date, wrap: Bool, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expected, file: file, line: line)
+            #expect(result == expected, "actual = \(result.timeIntervalSince1970), \(s.format(result))", sourceLocation: sourceLocation)
         }
 
-        let march1_1996 = Date(timeIntervalSince1970: 825723300)
+        var gregorianCalendar: _CalendarGregorian
+        gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 7, gregorianStartDate: nil)
+
+        let march1_1996 = Date(timeIntervalSince1970: 825723300) // 1996-03-01 23:35:00 +0000
         testAdding(.init(day: -1, hour: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825640500.0))
         testAdding(.init(month: -1, hour: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:823221300.0))
         testAdding(.init(month: -1, day: 30 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825809700.0))
@@ -413,1839 +540,60 @@ final class GregorianCalendarTests : XCTestCase {
         testAdding(.init(month: -1, day: 30 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:823304100.0))
         testAdding(.init(year: 4, day: -1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:951867300.0))
         testAdding(.init(day: -1, hour: 24 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825636900.0))
-        testAdding(.init(day: -1, weekday: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825723300.0))
-        testAdding(.init(day: -7, weekOfYear: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:828401700.0))
-        testAdding(.init(day: -7, weekOfMonth: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825982500.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:829006500.0))
+        testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: true, expected: march1_1996)
+        testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: true, expected: march1_1996)
+        testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: true, expected: march1_1996)
+        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:826328100.0))
 
-        let oct14_1582 = Date(timeIntervalSince1970: -12218515200.0)
-        testAdding(.init(day: -1, hour: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218598000.0))
-        testAdding(.init(month: -1, hour: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12220239600.0))
-        testAdding(.init(month: -1, day: 30), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217651200.0))
-        testAdding(.init(year: 4, day: -1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12092371200.0))
-        testAdding(.init(day: -1, hour: 24), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -1, weekday: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
+        let oct24_1582 = Date(timeIntervalSince1970: -12218515200.0) // Expect: 1582-10-24T00:00:00Z
+        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218598000.0))
+        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12220239600.0))
+        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217651200.0))
+        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12092371200.0))
+        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
+        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
 
-        testAdding(.init(day: -1, hour: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218598000.0))
-        testAdding(.init(month: -1, hour: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220239600.0))
-        testAdding(.init(month: -1, day: 30), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220243200.0))
-        testAdding(.init(year: 4, day: -1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12092371200.0))
-        testAdding(.init(day: -1, hour: 24), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218601600.0))
-        testAdding(.init(day: -1, weekday: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0))
-    }
+        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218598000.0))
+        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220239600.0))
+        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220243200.0))
+        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12092371200.0))
+        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218601600.0))
+        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
 
-    func testAddDateComponents_DST() {
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 2, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+        testAdding(.init(weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0)) // Expect: 1582-10-31 00:00:00Z
+        testAdding(.init(weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0))
+        testAdding(.init(weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217305600.0)) // Expect: 1582-11-07 00:00:00
+        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0)) // Expect: 1582-10-31 00:00:00 +0000
 
-        func testAdding(_ comp: DateComponents, to date: Date, wrap: Bool, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
-            let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expected, file: file, line: line)
+        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12215318400.0)) // expect: 1582-11-30 00:00:00 - adding 2 weeks is 1582-11-07, adding -7 days wraps around to 1582-11-30
+
+        do {
+            gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+
+            let date = Date(timeIntervalSinceReferenceDate: 2557249259.5) // 2082-1-13 19:00:59.5 +0000
+            testAdding(.init(day: 1), to: date, wrap: true, expected: Date(timeIntervalSinceReferenceDate: 2557335659.5))
+
+            let date2 = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+            testAdding(.init(month: 2), to: date2, wrap: false, expected: Date(timeIntervalSince1970: 983404800)) // 2001-03-01 00:00:00 UTC, 2001-02-28 16:00:00 PT
         }
-
-        let march1_1996 = Date(timeIntervalSince1970: 825723300)
-        testAdding(.init(day: -1, hour: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825640500.0))
-        testAdding(.init(month: -1, hour: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 823221300.0))
-        testAdding(.init(month: -1, day: 30), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825809700.0))
-        testAdding(.init(year: 4, day: -1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 951867300.0))
-        testAdding(.init(day: -1, hour: 24), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
-        testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 826328100.0))
-        
-        testAdding(.init(day: -1, hour: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 828318900.0))
-        testAdding(.init(month: -1, hour: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 823221300.0))
-        testAdding(.init(month: -1, day: 30), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 823304100.0))
-        testAdding(.init(year: 4, day: -1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 954545700.0))
-        testAdding(.init(day: -1, hour: 24), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 828315300.0))
-        testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 827796900.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 828401700.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 825982500.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 829002900.0))
-    }
-
-    func testAddDateComponents_DSTBoundaries() {
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
-
-        let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
-        func testAdding(_ comp: DateComponents, to date: Date, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
-            let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: false)!
-            XCTAssertEqual(result, expected, "result: \(fmt.format(result)); expected: \(fmt.format(expected))", file: file, line: line)
-        }
-
-        var date: Date
-        date = Date(timeIntervalSince1970: 814950000.0) // 1995-10-29T00:00:00-0700
-
-        // second equivalent
-        testAdding(.init(second: 1), to: date, expected: Date(timeIntervalSince1970: 814950001.0))
-        testAdding(.init(minute: 60, second: -59), to: date, expected: Date(timeIntervalSince1970: 814953541.0))
-        testAdding(.init(hour: 1, second: -59), to: date, expected: Date(timeIntervalSince1970: 814953541.0))
-        testAdding(.init(hour: 2, minute: -59, second: -59), to: date, expected: Date(timeIntervalSince1970: 814953601.0))
-        testAdding(.init(second: -1), to: date, expected: Date(timeIntervalSince1970: 814949999.0))
-        testAdding(.init(minute: -60, second: 59), to: date, expected: Date(timeIntervalSince1970: 814946459.0))
-        testAdding(.init(hour: -1, second: 59), to: date, expected: Date(timeIntervalSince1970: 814946459.0))
-        testAdding(.init(hour: -2, minute: 59, second: 59), to: date, expected: Date(timeIntervalSince1970: 814946399.0))
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814949940.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814949940.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814949940.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814949940.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815558400.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815558400.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815558400.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819187200.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815558400.0))
-
-        date = Date(timeIntervalSince1970: 814953540.0) // 1995-10-29T00:59:00-0700
-
-        // second equivalent
-        testAdding(.init(second: 1), to: date, expected: Date(timeIntervalSince1970: 814953541.0))
-        testAdding(.init(minute: 60, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957081.0))
-        testAdding(.init(hour: 1, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957081.0))
-        testAdding(.init(hour: 2, minute: -59, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957141.0))
-        testAdding(.init(second: -1), to: date, expected: Date(timeIntervalSince1970: 814953539.0))
-        testAdding(.init(minute: -60, second: 59), to: date, expected: Date(timeIntervalSince1970: 814949999.0))
-        testAdding(.init(hour: -1, second: 59), to: date, expected: Date(timeIntervalSince1970: 814949999.0))
-        testAdding(.init(hour: -2, minute: 59, second: 59), to: date, expected: Date(timeIntervalSince1970: 814949939.0))
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814957200.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814953480.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814953480.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953480.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953480.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815561940.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815561940.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815561940.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819190740.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815561940.0))
-
-        date = Date(timeIntervalSince1970: 814953599.0) // 1995-10-29T00:59:59-0700
-
-        // second equivalent
-        testAdding(.init(second: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(minute: 60, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957140.0))
-        testAdding(.init(hour: 1, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957140.0))
-        testAdding(.init(hour: 2, minute: -59, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957200.0))
-        testAdding(.init(second: -1), to: date, expected: Date(timeIntervalSince1970: 814953598.0))
-        testAdding(.init(minute: -60, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950058.0))
-        testAdding(.init(hour: -1, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950058.0))
-        testAdding(.init(hour: -2, minute: 59, second: 59), to: date, expected: Date(timeIntervalSince1970: 814949998.0))
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814953659.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814953659.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814953659.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814957259.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814953539.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814953539.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953539.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953539.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815561999.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815561999.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815561999.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819190799.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815561999.0))
-
-        date = Date(timeIntervalSince1970: 814953600.0) // 1995-10-29T01:00:00-0700
-
-        // second equivalent
-        testAdding(.init(second: 1), to: date, expected: Date(timeIntervalSince1970: 814953601.0))
-        testAdding(.init(minute: 60, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957141.0))
-        testAdding(.init(hour: 1, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957141.0))
-        testAdding(.init(hour: 2, minute: -59, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957201.0))
-        testAdding(.init(second: -1), to: date, expected: Date(timeIntervalSince1970: 814953599.0))
-        testAdding(.init(minute: -60, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950059.0))
-        testAdding(.init(hour: -1, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950059.0))
-        testAdding(.init(hour: -2, minute: 59, second: 59), to: date, expected: Date(timeIntervalSince1970: 814949999.0))
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819190800.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-
-        date = Date(timeIntervalSince1970: 814953660.0) // 1995-10-29T01:01:00-0700
-
-        // second equivalent
-        testAdding(.init(second: 1), to: date, expected: Date(timeIntervalSince1970: 814953661.0))
-        testAdding(.init(minute: 60, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957201.0))
-        testAdding(.init(hour: 1, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957201.0))
-        testAdding(.init(hour: 2, minute: -59, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957261.0))
-        testAdding(.init(second: -1), to: date, expected: Date(timeIntervalSince1970: 814953659.0))
-        testAdding(.init(minute: -60, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950119.0))
-        testAdding(.init(hour: -1, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950119.0))
-        testAdding(.init(hour: -2, minute: 59, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950059.0))
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814953720.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814953720.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814953720.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814957320.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819190860.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-
-        date = Date(timeIntervalSince1970: 814953660.0) // 1995-10-29T01:01:00-0700
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 814960860.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814960860.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 820137660.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 815040060.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815043660.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 815043660.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 815043660.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815043660.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815043660.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819190860.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846403260.0))
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 846403260.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 847011660.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783507660.0))
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 783504060.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 782899260.0))
-
-        date = Date(timeIntervalSince1970: 814957387.0) // 1995-10-29T01:03:07-0800
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814950187.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814950187.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 820141387.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815562187.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815562187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815562187.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819190987.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562187.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846403387.0))
-        // Current result:      1996-10-27T01:03:07-0800
-        // Calendar_ICU result: 1996-10-27T01:03:07-0700
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 846403387.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 847011787.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783507787.0))
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 783507787.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 782899387.0))
-
-        date = Date(timeIntervalSince1970: 814960987.0) // 1995-10-29T02:03:07-0800
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 820144987.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819194587.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846410587.0))
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 846410587.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 847015387.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783511387.0))
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 783511387.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 782902987.0))
-
-        date = Date(timeIntervalSince1970: 814964587.0) // 1995-10-29T03:03:07-0800
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 820148587.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819198187.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846414187.0))
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 846414187.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 847018987.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783514987.0))
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 783514987.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 782906587.0))
-
-        date = Date(timeIntervalSince1970: 814780860.0) // 1995-10-27T01:01:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815389260.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815389260.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815389260.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819018060.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815389260.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846403260.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 846403260.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 846230460.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 846316860.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 846403260.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783244860.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 783244860.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 783331260.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 783244860.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 783158460.0))
-
-        date = Date(timeIntervalSince1970: 814784587.0) // 1995-10-27T02:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819021787.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846410587.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 846410587.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 846234187.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 846320587.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 846410587.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783248587.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 783248587.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 783334987.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 783248587.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 783162187.0))
-
-        date = Date(timeIntervalSince1970: 814788187.0) // 1995-10-27T03:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819025387.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846414187.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 846414187.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 846237787.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 846324187.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 846414187.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783252187.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 783252187.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 783338587.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 783252187.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 783165787.0))
-
-        date = Date(timeIntervalSince1970: 814791787.0) // 1995-10-27T04:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 819028987.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846417787.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 846417787.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 846241387.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 846327787.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 846417787.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783255787.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 783255787.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 783342187.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 783255787.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 783169387.0))
-
-        date = Date(timeIntervalSince1970: 812358000.0) // 1995-09-29T00:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 812962800.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812962800.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 812962800.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816595200.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 812962800.0))
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815040000.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814777200.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815385600.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814777200.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815385600.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809679600.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809766000.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809679600.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 809938800.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809334000.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809938800.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809334000.0))
-
-        date = Date(timeIntervalSince1970: 812361600.0) // 1995-09-29T01:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 812966400.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812966400.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 812966400.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816598800.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 812966400.0))
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815043600.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814780800.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815389200.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814780800.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815389200.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809683200.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809769600.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809683200.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 809942400.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809337600.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809942400.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809337600.0))
-
-        date = Date(timeIntervalSince1970: 812365387.0) // 1995-09-29T02:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 812970187.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812970187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 812970187.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816602587.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 812970187.0))
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814784587.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814784587.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809686987.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809773387.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809686987.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 809946187.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809341387.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809946187.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809341387.0))
-
-        date = Date(timeIntervalSince1970: 812368987.0) // 1995-09-29T03:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 812973787.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812973787.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 812973787.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816606187.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 812973787.0))
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814788187.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814788187.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809690587.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809776987.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809690587.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 809949787.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809344987.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809949787.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809344987.0))
-
-        date = Date(timeIntervalSince1970: 812372587.0) // 1995-09-29T04:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 812977387.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812977387.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 812977387.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816609787.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 812977387.0))
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815054587.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814791787.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814791787.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809694187.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809780587.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809694187.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 809953387.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809348587.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809953387.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809348587.0))
-
-        date = Date(timeIntervalSince1970: 812530800.0) // 1995-10-01T00:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 813135600.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 813135600.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 813135600.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816768000.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 813135600.0))
-
-        date = Date(timeIntervalSince1970: 812534400.0) // 1995-10-01T01:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816771600.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-
-        date = Date(timeIntervalSince1970: 812538187.0) // 1995-10-01T02:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 813142987.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 813142987.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 813142987.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816775387.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 813142987.0))
-
-        date = Date(timeIntervalSince1970: 812541787.0) // 1995-10-01T03:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 813146587.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 813146587.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 813146587.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816778987.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 813146587.0))
-
-        date = Date(timeIntervalSince1970: 812545387.0) // 1995-10-01T04:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 813150187.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 813150187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 813150187.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 816782587.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 813150187.0))
-
-        date = Date(timeIntervalSince1970: 812530800.0) // 1995-10-01T00:00:00-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815212800.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815126400.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815212800.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815558400.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815558400.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809938800.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809938800.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809852400.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 810111600.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809506800.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810111600.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809506800.0))
-
-        date = Date(timeIntervalSince1970: 812534400.0) // 1995-10-01T01:00:00-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815216400.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815130000.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815216400.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809942400.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809942400.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809856000.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 810115200.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809510400.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810115200.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809510400.0))
-
-        date = Date(timeIntervalSince1970: 812538187.0) // 1995-10-01T02:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815220187.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815133787.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815220187.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809946187.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809946187.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809859787.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 810118987.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809514187.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810118987.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809514187.0))
-
-        date = Date(timeIntervalSince1970: 812541787.0) // 1995-10-01T03:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815223787.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815137387.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815223787.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809949787.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809949787.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809863387.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 810122587.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809517787.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810122587.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809517787.0))
-
-        date = Date(timeIntervalSince1970: 812545387.0) // 1995-10-01T04:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815227387.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815140987.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 815227387.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815572987.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815572987.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809953387.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 809953387.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 809866987.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 810126187.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 809521387.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810126187.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809521387.0))
-
-        date = Date(timeIntervalSince1970: 814345200.0) // 1995-10-22T00:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 818582400.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-
-        date = Date(timeIntervalSince1970: 814348800.0) // 1995-10-22T01:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 818586000.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-
-        date = Date(timeIntervalSince1970: 814352587.0) // 1995-10-22T02:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 818589787.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-
-        date = Date(timeIntervalSince1970: 814356187.0) // 1995-10-22T03:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 818593387.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-
-        date = Date(timeIntervalSince1970: 814359787.0) // 1995-10-22T04:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 818596987.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-    }
-
-    func testAddDateComponents_Wrapping_DSTBoundaries() {
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
-
-        let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
-        func testAdding(_ comp: DateComponents, to date: Date, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
-            let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: true)!
-            XCTAssertEqual(result, expected, "result: \(fmt.format(result)); expected: \(fmt.format(expected))", file: file, line: line)
-        }
-
-        var date: Date
-        date = Date(timeIntervalSince1970: 814950000.0) // 1995-10-29T00:00:00-0700
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 815043660.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 815036340.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814949940.0))
-
-        date = Date(timeIntervalSince1970: 814953599.0) // 1995-10-29T00:59:59-0700
-
-        // second equivalent
-        testAdding(.init(second: 1), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-        testAdding(.init(minute: 60, second: -59), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-        testAdding(.init(hour: 1, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957140.0))
-        testAdding(.init(hour: 2, minute: -59, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957200.0))
-        testAdding(.init(second: -1), to: date, expected: Date(timeIntervalSince1970: 814953598.0))
-        testAdding(.init(minute: -60, second: 59), to: date, expected: Date(timeIntervalSince1970: 814953598.0))
-        testAdding(.init(hour: -1, second: 59), to: date, expected: Date(timeIntervalSince1970: 815036398.0))
-        testAdding(.init(hour: -2, minute: 59, second: 59), to: date, expected: Date(timeIntervalSince1970: 815032738.0))
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814950059.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814953599.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814953659.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 815043659.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814953539.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814953599.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 815036339.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814949939.0))
-
-        date = Date(timeIntervalSince1970: 814953600.0) // 1995-10-29T01:00:00-0700
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 815047260.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814957140.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814953540.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814867140.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815130000.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812880000.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-
-        date = Date(timeIntervalSince1970: 814953660.0) // 1995-10-29T01:01:00-0700
-
-        // second equivalent
-        testAdding(.init(second: 1), to: date, expected: Date(timeIntervalSince1970: 814953661.0))
-        testAdding(.init(minute: 60, second: -59), to: date, expected: Date(timeIntervalSince1970: 814953661.0))
-        testAdding(.init(hour: 1, second: -59), to: date, expected: Date(timeIntervalSince1970: 814957261.0))
-        testAdding(.init(hour: 2, minute: -59, second: -59), to: date, expected: Date(timeIntervalSince1970: 814960921.0))
-        testAdding(.init(second: -1), to: date, expected: Date(timeIntervalSince1970: 814953719.0))
-        testAdding(.init(minute: -60, second: 59), to: date, expected: Date(timeIntervalSince1970: 814953719.0))
-        testAdding(.init(hour: -1, second: 59), to: date, expected: Date(timeIntervalSince1970: 814950119.0))
-        testAdding(.init(hour: -2, minute: 59, second: 59), to: date, expected: Date(timeIntervalSince1970: 815032859.0))
-
-        // minute equivalent
-        testAdding(.init(minute: 1), to: date, expected: Date(timeIntervalSince1970: 814953720.0))
-        testAdding(.init(second: 60), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(hour: 1, minute: -59), to: date, expected: Date(timeIntervalSince1970: 814957320.0))
-        testAdding(.init(day: 1, hour: -23, minute: -59), to: date, expected: Date(timeIntervalSince1970: 815047320.0))
-        testAdding(.init(minute: -1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(second: -60), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(hour: -1, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(day: -1, hour: 23, minute: 59), to: date, expected: Date(timeIntervalSince1970: 814863600.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815130060.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812880060.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 813139260.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-
-        date = Date(timeIntervalSince1970: 814953660.0) // 1995-10-29T01:01:00-0700
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814960860.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 815047260.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 815050860.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814950060.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 815032860.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814863660.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814946460.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815043660.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 817635660.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 849258060.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815040060.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815040060.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815130060.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812880060.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 813139260.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846403260.0))
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 814953660.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 815562060.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783507660.0))
-        // New:  1995-10-29T01:01:00-0700
-        // Old:  1995-10-29T01:01:00-0800
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 814957260.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 814348860.0))
-
-        date = Date(timeIntervalSince1970: 814957387.0) // 1995-10-29T01:03:07-0800
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 815036587.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814863787.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814946587.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 817635787.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 849258187.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815040187.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815130187.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812880187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 813142987.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815562187.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846403387.0))
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 815562187.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783507787.0))
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 814348987.0))
-
-        date = Date(timeIntervalSince1970: 814960987.0) // 1995-10-29T02:03:07-0800
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 815054587.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814953787.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814867387.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814863787.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 817639387.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 849261787.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815043787.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815133787.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812883787.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 813146587.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846410587.0))
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783511387.0))
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 814352587.0))
-
-        date = Date(timeIntervalSince1970: 814964587.0) // 1995-10-29T03:03:07-0800
-
-        // hour equivalent
-        testAdding(.init(hour: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(minute: 60), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(second: 3600), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(hour: 2, minute: -60), to: date, expected: Date(timeIntervalSince1970: 814971787.0))
-        testAdding(.init(day: 1, hour: -23), to: date, expected: Date(timeIntervalSince1970: 815054587.0))
-        testAdding(.init(day: 1, hour: -22, minute: -60), to: date, expected: Date(timeIntervalSince1970: 815058187.0))
-        testAdding(.init(hour: -1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(minute: -60), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(second: -3600), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(hour: -2, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814957387.0))
-        testAdding(.init(day: -1, hour: 23), to: date, expected: Date(timeIntervalSince1970: 814870987.0))
-        testAdding(.init(day: -1, hour: 22, minute: 60), to: date, expected: Date(timeIntervalSince1970: 814867387.0))
-
-        // day equivalent
-        testAdding(.init(minute: 86400), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(hour: 24), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 1), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(month: 1, day: -30), to: date, expected: Date(timeIntervalSince1970: 817642987.0))
-        testAdding(.init(year: 1, month: -11, day: -30), to: date, expected: Date(timeIntervalSince1970: 849265387.0))
-        testAdding(.init(weekday: 1), to: date, expected: Date(timeIntervalSince1970: 815050987.0))
-        testAdding(.init(day: -1, weekday: 2), to: date, expected: Date(timeIntervalSince1970: 815047387.0))
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815137387.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812887387.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 813150187.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(yearForWeekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 846414187.0))
-        testAdding(.init(weekOfYear: 52), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekOfYear: 53), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(yearForWeekOfYear: -1), to: date, expected: Date(timeIntervalSince1970: 783514987.0))
-        testAdding(.init(weekOfYear: -52), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekOfYear: -53), to: date, expected: Date(timeIntervalSince1970: 814356187.0))
-
-        date = Date(timeIntervalSince1970: 814780860.0) // 1995-10-27T01:01:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815130060.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812707260.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814780860.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 814176060.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815389260.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846403260.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 814780860.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 814089660.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 814176060.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 814262460.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783244860.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 814780860.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 812793660.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 812707260.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 812620860.0))
-
-        date = Date(timeIntervalSince1970: 814784587.0) // 1995-10-27T02:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815133787.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812710987.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814784587.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 814179787.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846410587.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 814784587.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 814093387.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 814179787.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 814266187.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783248587.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 814784587.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 812797387.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 812710987.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 812624587.0))
-
-        date = Date(timeIntervalSince1970: 814788187.0) // 1995-10-27T03:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815137387.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812714587.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814788187.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 814183387.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846414187.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 814788187.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 814096987.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 814183387.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 814269787.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783252187.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 814788187.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 812800987.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 812714587.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 812628187.0))
-
-        date = Date(timeIntervalSince1970: 814791787.0) // 1995-10-27T04:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 815140987.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 812718187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814791787.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 814186987.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(year: 1), to: date, expected: Date(timeIntervalSince1970: 846417787.0))
-        testAdding(.init(month: 12), to: date, expected: Date(timeIntervalSince1970: 814791787.0))
-        testAdding(.init(day: 364), to: date, expected: Date(timeIntervalSince1970: 814100587.0))
-        testAdding(.init(day: 365), to: date, expected: Date(timeIntervalSince1970: 814186987.0))
-        testAdding(.init(day: 366), to: date, expected: Date(timeIntervalSince1970: 814273387.0))
-        testAdding(.init(year: -1), to: date, expected: Date(timeIntervalSince1970: 783255787.0))
-        testAdding(.init(month: -12), to: date, expected: Date(timeIntervalSince1970: 814791787.0))
-        testAdding(.init(day: -364), to: date, expected: Date(timeIntervalSince1970: 812804587.0))
-        testAdding(.init(day: -365), to: date, expected: Date(timeIntervalSince1970: 812718187.0))
-        testAdding(.init(day: -366), to: date, expected: Date(timeIntervalSince1970: 812631787.0))
-
-        date = Date(timeIntervalSince1970: 812358000.0) // 1995-09-29T00:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 810543600.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 810370800.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 812358000.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 810543600.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 812962800.0))
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 812358000.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812444400.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 812358000.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 810543600.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814777200.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815385600.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809679600.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812358000.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812271600.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 812358000.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 811753200.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809938800.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809334000.0))
-
-        date = Date(timeIntervalSince1970: 812361600.0) // 1995-09-29T01:00:00-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 812361600.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812448000.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 812361600.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 810547200.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814780800.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815389200.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809683200.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812361600.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812275200.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 812361600.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 811756800.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809942400.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809337600.0))
-
-        date = Date(timeIntervalSince1970: 812365387.0) // 1995-09-29T02:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 812365387.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812451787.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 812365387.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 810550987.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814784587.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815392987.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809686987.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812365387.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812278987.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 812365387.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 811760587.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809946187.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809341387.0))
-
-        date = Date(timeIntervalSince1970: 812368987.0) // 1995-09-29T03:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 812368987.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812455387.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 812368987.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 810554587.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814788187.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815396587.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809690587.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812368987.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812282587.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 812368987.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 811764187.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809949787.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809344987.0))
-
-        date = Date(timeIntervalSince1970: 812372587.0) // 1995-09-29T04:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 812372587.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812458987.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 812372587.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 810558187.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814791787.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815400187.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809694187.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812372587.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812286187.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 812372587.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 811767787.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 809953387.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809348587.0))
-
-        date = Date(timeIntervalSince1970: 812534400.0) // 1995-10-01T01:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 812534400.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 813744000.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-
-        date = Date(timeIntervalSince1970: 812530800.0) // 1995-10-01T00:00:00-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815212800.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815126400.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812530800.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815126400.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815558400.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809938800.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812617200.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812530800.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 813135600.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 815126400.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810111600.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809506800.0))
-
-        date = Date(timeIntervalSince1970: 812534400.0) // 1995-10-01T01:00:00-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815216400.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815130000.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812534400.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815130000.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815562000.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809942400.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812620800.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812534400.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 813139200.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 815130000.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810115200.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809510400.0))
-
-        date = Date(timeIntervalSince1970: 812538187.0) // 1995-10-01T02:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815220187.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815133787.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812538187.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815133787.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815565787.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809946187.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812624587.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812538187.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 813142987.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 815133787.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810118987.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809514187.0))
-
-        date = Date(timeIntervalSince1970: 812541787.0) // 1995-10-01T03:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815223787.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815137387.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812541787.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815137387.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815569387.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809949787.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812628187.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812541787.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 813146587.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 815137387.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810122587.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809517787.0))
-
-        date = Date(timeIntervalSince1970: 812545387.0) // 1995-10-01T04:03:07-0700
-
-        // month equivalent
-        testAdding(.init(month: 1), to: date, expected: Date(timeIntervalSince1970: 815227387.0))
-        testAdding(.init(day: 30), to: date, expected: Date(timeIntervalSince1970: 815140987.0))
-        testAdding(.init(day: 31), to: date, expected: Date(timeIntervalSince1970: 812545387.0))
-        testAdding(.init(weekOfMonth: 4), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(weekOfMonth: 5), to: date, expected: Date(timeIntervalSince1970: 815140987.0))
-        testAdding(.init(weekOfYear: 4), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(weekOfYear: 5), to: date, expected: Date(timeIntervalSince1970: 815572987.0))
-        testAdding(.init(month: -1), to: date, expected: Date(timeIntervalSince1970: 809953387.0))
-        testAdding(.init(day: -30), to: date, expected: Date(timeIntervalSince1970: 812631787.0))
-        testAdding(.init(day: -31), to: date, expected: Date(timeIntervalSince1970: 812545387.0))
-        testAdding(.init(weekOfMonth: -4), to: date, expected: Date(timeIntervalSince1970: 813150187.0))
-        testAdding(.init(weekOfMonth: -5), to: date, expected: Date(timeIntervalSince1970: 815140987.0))
-        testAdding(.init(weekOfYear: -4), to: date, expected: Date(timeIntervalSince1970: 810126187.0))
-        testAdding(.init(weekOfYear: -5), to: date, expected: Date(timeIntervalSince1970: 809521387.0))
-
-        date = Date(timeIntervalSince1970: 814345200.0) // 1995-10-22T00:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814345200.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 812530800.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814950000.0))
-
-        date = Date(timeIntervalSince1970: 814348800.0) // 1995-10-22T01:00:00-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814348800.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 812534400.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814953600.0))
-
-        date = Date(timeIntervalSince1970: 814352587.0) // 1995-10-22T02:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814352587.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 812538187.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814960987.0))
-
-        date = Date(timeIntervalSince1970: 814356187.0) // 1995-10-22T03:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814356187.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 812541787.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814964587.0))
-
-        date = Date(timeIntervalSince1970: 814359787.0) // 1995-10-22T04:03:07-0700
-
-        // week equivalent
-        testAdding(.init(weekOfMonth: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(day: 7), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-        testAdding(.init(weekday: 7), to: date, expected: Date(timeIntervalSince1970: 814359787.0))
-        testAdding(.init(weekdayOrdinal: 7), to: date, expected: Date(timeIntervalSince1970: 812545387.0))
-        testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
-    }
-
-    func testAdd_DST() {
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
-
-        let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
-        func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, expectedDate: Date, _ file: StaticString = #file, _ line: UInt = #line) {
-            let components = DateComponents(component: field, value: value)!
-            let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: false)!
-            let actualDiff = result.timeIntervalSince(addingToDate)
-            let expectedDiff = expectedDate.timeIntervalSince(addingToDate)
-
-            let msg = "actual diff: \(actualDiff), expected: \(expectedDiff), actual ti = \(result.timeIntervalSince1970), expected ti = \(expectedDate.timeIntervalSince1970), actual = \(fmt.format(result)), expected = \(fmt.format(expectedDate))"
-            XCTAssertEqual(result, expectedDate, msg, file: file, line: line)
-        }
-
-        var date: Date
-
-        date = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860400187.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797241787.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860317387.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797414587.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 831456187.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 826189387.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828950587.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828781387.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828864187.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867847.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867727.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867788.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867786.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828950587.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828781387.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829468987.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828262987.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829468987.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828262987.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829468987.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828262987.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-
-        date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860407387.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797248987.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860320987.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797421787.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 831463387.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 826196587.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828957787.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828788587.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871447.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871327.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871388.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871386.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828957787.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828788587.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828270187.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828270187.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828270187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-
-        date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860410987.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797252587.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860324587.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797425387.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 831466987.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 826200187.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828961387.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828792187.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828878587.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828875047.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874927.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874988.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874986.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828961387.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828792187.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828273787.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828273787.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828273787.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-
-        date = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        // Previously this returns 1996-10-27T01:03:07-0800
-        // New behavior just returns the date unchanged, like other non-DST transition dates
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877942987.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814780987.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877852987.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 849085387.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 843811387.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846493387.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846316987.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846399787.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403447.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846403327.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403388.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846403386.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846493387.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846316987.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-
-        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
-        // Previously this returns 1996-10-27T01:03:07-0700
-        // Now it returns date unchanged, as other non-DST transition dates.
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877942987.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814780987.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877852987.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0)) // 1995-10-29T01:03:07-0800
-
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 849085387.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 843811387.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846493387.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846316987.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846407047.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406927.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406988.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406986.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846493387.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846316987.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-
-        date = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27T02:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877946587.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814784587.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877860187.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 849088987.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 843814987.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846496987.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846320587.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410647.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410527.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410588.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410586.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846496987.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846320587.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847015387.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847015387.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847015387.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-
-        date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27T03:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877950187.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814788187.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877863787.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 849092587.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 843818587.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846500587.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846324187.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846417787.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414247.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414127.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414188.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414186.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846500587.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846324187.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847018987.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847018987.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847018987.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-
-        date = Date(timeIntervalSince1970: 814953787.0) // 1995-10-29T01:03:07-0700
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
-        // Previously this returns 1995-10-29T01:03:07-0800
-        // New behavior just returns the date unchanged, like other non-DST transition dates
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846579787.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783417787.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783507787.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 817635787.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 812361787.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815043787.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814867387.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814950187.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814953847.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814953727.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814953788.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814953786.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815043787.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814867387.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
-
-        date = Date(timeIntervalSince1970: 814957387.0) // 1995-10-29T01:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846579787.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783417787.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783507787.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 817635787.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 812361787.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815043787.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814867387.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814957447.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957327.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814957388.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957386.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815043787.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814867387.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-
-        date = Date(timeIntervalSince1970: 814960987.0) // 1995-10-29T02:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846583387.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783421387.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783511387.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 817639387.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 812365387.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815047387.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814870987.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814961047.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960927.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814960988.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960986.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815047387.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814870987.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815565787.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814352587.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815565787.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814352587.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815565787.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814352587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-
-        date = Date(timeIntervalSince1970: 814964587.0) // 1995-10-29T03:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846586987.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783424987.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 783514987.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 817642987.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 812368987.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815050987.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814874587.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814968187.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814964647.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964527.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814964588.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964586.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815050987.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814874587.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815569387.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814356187.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815569387.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814356187.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815569387.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814356187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-    }
-
-    func testAdd_Wrap_DST() {
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
-
-        let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
-        func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, expectedDate: Date, _ file: StaticString = #file, _ line: UInt = #line) {
-            let components = DateComponents(component: field, value: value)!
-            let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: true)!
-            let msg = "actual = \(fmt.format(result)), expected = \(fmt.format(expectedDate))"
-            XCTAssertEqual(result, expectedDate, msg, file: file, line: line)
-        }
-
-        var date: Date
-        date = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860400187.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797241787.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860317387.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797414587.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 831456187.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 826189387.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828950587.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828781387.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828864187.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867847.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867727.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867788.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867786.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828954187.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828781387.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829472587.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830682187.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829468987.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828262987.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829468987.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830851387.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-
-        date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860407387.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797248987.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860320987.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797421787.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 831463387.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 826196587.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828957787.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828788587.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871447.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871327.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871388.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871386.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828957787.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828784987.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830685787.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828270187.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830858587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-
-        date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860410987.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797252587.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 860324587.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 797425387.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 831466987.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 826200187.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828961387.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828792187.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828878587.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828875047.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874927.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874988.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874986.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828961387.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828788587.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830689387.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828273787.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830862187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-
-        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877942987.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814780987.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877852987.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 849085387.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 843811387.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846493387.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846316987.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846407047.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406927.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406988.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406986.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846493387.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846320587.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 844592587.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846752587.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-
-        date = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27T02:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877946587.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814784587.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877860187.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 849088987.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 843814987.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846496987.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846320587.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410647.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410527.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410588.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410586.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846496987.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846324187.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 844596187.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847015387.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846756187.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-
-        date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27T03:03:07-0800
-        test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .era, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .year, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877950187.0))
-        test(addField: .year, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814788187.0))
-        test(addField: .yearForWeekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 877863787.0))
-        test(addField: .yearForWeekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-        test(addField: .month, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 849092587.0))
-        test(addField: .month, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 843818587.0))
-        test(addField: .day, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846500587.0))
-        test(addField: .day, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846324187.0))
-        test(addField: .hour, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846417787.0))
-        test(addField: .hour, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .minute, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414247.0))
-        test(addField: .minute, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414127.0))
-        test(addField: .second, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414188.0))
-        test(addField: .second, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414186.0))
-        test(addField: .weekday, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846500587.0))
-        test(addField: .weekday, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846327787.0))
-        test(addField: .weekdayOrdinal, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 844599787.0))
-        test(addField: .weekdayOrdinal, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845809387.0))
-        test(addField: .weekOfYear, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847018987.0))
-        test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846759787.0))
-        test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
     }
 
     // MARK: - Ordinality
 
-    func testOrdinality() {
+    // This test requires 64-bit integers
+    #if _pointerBitWidth(_64)
+    @Test func testOrdinality() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
-        func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Int?, file: StaticString = #file, line: UInt = #line) {
+        func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Int?, sourceLocation: SourceLocation = #_sourceLocation) {
             let result = cal.ordinality(of: small, in: large, for: date)
-            XCTAssertEqual(result, expected,  "small: \(small), large: \(large)", file: file, line: line)
+            #expect(result == expected,  "small: \(small), large: \(large)", sourceLocation: sourceLocation)
         }
 
         var date: Date
@@ -2354,75 +702,16 @@ final class GregorianCalendarTests : XCTestCase {
         test(.nanosecond, in: .minute, for: date, expected: 7000000001)
         test(.nanosecond, in: .second, for: date, expected: 1)
     }
+    #endif
 
-    func testOrdinality_DST() {
-        let cal = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
-
-        func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Int?, file: StaticString = #file, line: UInt = #line) {
-            let result = cal.ordinality(of: small, in: large, for: date)
-            XCTAssertEqual(result, expected,  "small: \(small), large: \(large)", file: file, line: line)
-        }
-
-        var date: Date
-
-        date = Date(timeIntervalSince1970: 851990400.0) // 1996-12-30T16:00:00-0800 (1996-12-31T00:00:00Z)
-        test(.hour, in: .month, for: date, expected: 713)
-        test(.minute, in: .month, for: date, expected: 42721)
-        test(.hour, in: .day, for: date, expected: 17)
-        test(.minute, in: .day, for: date, expected: 961)
-        test(.minute, in: .hour, for: date, expected: 1)
-
-        date = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01T00:00:00-0800 (1996-01-01T08:00:00Z)
-        test(.hour, in: .month, for: date, expected: 1)
-        test(.minute, in: .month, for: date, expected: 1)
-        test(.hour, in: .day, for: date, expected: 1)
-        test(.minute, in: .day, for: date, expected: 1)
-        test(.minute, in: .hour, for: date, expected: 1)
-
-        date = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800 (1996-04-07T09:03:07Z)
-        test(.hour, in: .month, for: date, expected: 146)
-        test(.minute, in: .month, for: date, expected: 8704)
-        test(.hour, in: .day, for: date, expected: 2)
-        test(.minute, in: .day, for: date, expected: 64)
-        test(.minute, in: .hour, for: date, expected: 4)
-
-        date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700 (1996-04-07T10:03:07Z)
-        test(.hour, in: .month, for: date, expected: 148)
-        test(.minute, in: .month, for: date, expected: 8824)
-        test(.hour, in: .day, for: date, expected: 4)
-        test(.minute, in: .day, for: date, expected: 184)
-        test(.minute, in: .hour, for: date, expected: 4)
-
-        date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700 (1996-04-07T11:03:07Z)
-        test(.hour, in: .month, for: date, expected: 149)
-        test(.minute, in: .month, for: date, expected: 8884)
-        test(.hour, in: .day, for: date, expected: 5)
-        test(.minute, in: .day, for: date, expected: 244)
-        test(.minute, in: .hour, for: date, expected: 4)
-
-        date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27T03:03:07-0800 (1996-10-27T11:03:07Z)
-        test(.hour, in: .day, for: date, expected: 4)
-        test(.minute, in: .day, for: date, expected: 184)
-        test(.hour, in: .month, for: date, expected: 628)
-        test(.minute, in: .month, for: date, expected: 37624)
-        test(.minute, in: .hour, for: date, expected: 4)
-
-        date = Date(timeIntervalSince1970: 845121787.0) // 1996-10-12T05:03:07-0700 (1996-10-12T12:03:07Z)
-        test(.hour, in: .day, for: date, expected: 6)
-        test(.minute, in: .day, for: date, expected: 304)
-        test(.hour, in: .month, for: date, expected: 270)
-        test(.minute, in: .month, for: date, expected: 16144)
-        test(.minute, in: .hour, for: date, expected: 4)
-    }
-
-    func testStartOf() {
+    @Test func testStartOf() {
         let firstWeekday = 2
         let minimumDaysInFirstWeek = 4
         let timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
-        func test(_ unit: Calendar.Component, at date: Date, expected: Date, file: StaticString = #file, line: UInt = #line) {
+        func test(_ unit: Calendar.Component, at date: Date, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let new = gregorianCalendar.start(of: unit, at: date)!
-            XCTAssertEqual(new, expected, file: file, line: line)
+            #expect(new == expected, sourceLocation: sourceLocation)
         }
 
         var date: Date
@@ -2448,101 +737,820 @@ final class GregorianCalendarTests : XCTestCase {
         test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844156800.0)) // expect: 1996-10-01 08:00:00 +0000
     }
 
-    func testStartOf_DST() {
-        let firstWeekday = 2
-        let minimumDaysInFirstWeek = 4
-        let timeZone = TimeZone(identifier: "America/Los_Angeles")!
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
-        func test(_ unit: Calendar.Component, at date: Date, expected: Date, file: StaticString = #file, line: UInt = #line) {
-            let new = gregorianCalendar.start(of: unit, at: date)!
-            XCTAssertEqual(new, expected, file: file, line: line)
+    // MARK: - Weekend
+
+    @Test func testIsDateInWeekend() {
+        let c = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+
+        let sat0000_mon0000 = WeekendRange(onsetTime: 0, ceaseTime: 0, start: 7, end: 2) // Sat 00:00:00 ..< Mon 00:00:00
+        let sat1200_sun1200 = WeekendRange(onsetTime: 43200, ceaseTime: 43200, start: 7, end: 1) // Sat 12:00:00 ..< Sun 12:00:00
+        let sat_sun = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1) // Sat 00:00:00 ... Sun 23:59:59
+        let mon = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 2, end: 2)
+        let sunPM = WeekendRange(onsetTime: 43200, ceaseTime: 86400, start: 1, end: 1) // Sun 12:00:00 ... Sun 23:59:59
+        let mon_tue = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 2, end: 3) // Mon 00:00:00 ... Tue 23:59:59
+
+        var date = Date(timeIntervalSince1970: 846320587) // 1996-10-26, Sat 09:03:07
+        #expect(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        #expect(!c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+
+        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27, Sun 09:03:07
+        #expect(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        #expect(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(!c.isDateInWeekend(date, weekendRange: sunPM))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846450187) // 1996-10-27, Sun 19:03:07
+        #expect(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        #expect(!c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sunPM))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846536587) // 1996-10-28, Mon 19:03:07
+        #expect(!c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        #expect(!c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        #expect(!c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(!c.isDateInWeekend(date, weekendRange: sunPM))
+        #expect(c.isDateInWeekend(date, weekendRange: mon))
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue))
+    }
+
+    @Test func testIsDateInWeekend_wholeDays() {
+        let c = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+
+        let sat_mon = WeekendRange(start: 7, end: 2)
+        let sat_sun = WeekendRange(start: 7, end: 1)
+        let mon = WeekendRange(start: 2, end: 2)
+        let sun = WeekendRange(start: 1, end: 1)
+        let mon_tue = WeekendRange(start: 2, end: 3)
+
+        var date = Date(timeIntervalSince1970: 846320587) // 1996-10-26, Sat 09:03:07
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(!c.isDateInWeekend(date, weekendRange: sun))
+
+        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27, Sun 09:03:07
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sun))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846450187) // 1996-10-27, Sun 19:03:07
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sun))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon))
+        #expect(!c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846536587) // 1996-10-28, Mon 19:03:07
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(!c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(!c.isDateInWeekend(date, weekendRange: sun))
+        #expect(c.isDateInWeekend(date, weekendRange: mon))
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue))
+    }
+
+    // MARK: - DateInterval
+
+    @Test func testDateInterval() {
+        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -28800)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
+
+        func test(_ c: Calendar.Component, _ date: Date, expectedStart start: Date?, end: Date?, sourceLocation: SourceLocation = #_sourceLocation) {
+            let new = calendar.dateInterval(of: c, for: date)
+            let new_start = new?.start
+            let new_end = new?.end
+
+            #expect(new_start == start, "interval start did not match", sourceLocation: sourceLocation)
+            #expect(new_end == end, "interval end did not match", sourceLocation: sourceLocation)
         }
 
         var date: Date
+        date = Date(timeIntervalSince1970: 820454400.0) // 1995-12-31T16:00:00-0800 (1996-01-01T00:00:00Z)
+        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
+        test(.year, date, expectedStart: Date(timeIntervalSince1970: 788947200.0), end: Date(timeIntervalSince1970: 820483200.0))
+        test(.month, date, expectedStart: Date(timeIntervalSince1970: 817804800.0), end: Date(timeIntervalSince1970: 820483200.0))
+        test(.day, date, expectedStart: Date(timeIntervalSince1970: 820396800.0), end: Date(timeIntervalSince1970: 820483200.0))
+        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820458000.0))
+        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820454460.0))
+        test(.second, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820454401.0))
+        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820454400.0))
+        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 820396800.0), end: Date(timeIntervalSince1970: 820483200.0))
+        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 820396800.0), end: Date(timeIntervalSince1970: 820483200.0))
+        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 812534400.0), end: Date(timeIntervalSince1970: 820483200.0))
+        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 819964800.0), end: Date(timeIntervalSince1970: 820569600.0))
+        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 819964800.0), end: Date(timeIntervalSince1970: 820569600.0))
+        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 789120000.0), end: Date(timeIntervalSince1970: 820569600.0))
+
+        date = Date(timeIntervalSince1970: 857174400.0) // 1997-02-28T16:00:00-0800 (1997-03-01T00:00:00Z)
+        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
+        test(.year, date, expectedStart: Date(timeIntervalSince1970: 852105600.0), end: Date(timeIntervalSince1970: 883641600.0))
+        test(.month, date, expectedStart: Date(timeIntervalSince1970: 854784000.0), end: Date(timeIntervalSince1970: 857203200.0))
+        test(.day, date, expectedStart: Date(timeIntervalSince1970: 857116800.0), end: Date(timeIntervalSince1970: 857203200.0))
+        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 857174400.0), end: Date(timeIntervalSince1970: 857178000.0))
+        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 857174400.0), end: Date(timeIntervalSince1970: 857174460.0))
+        test(.second, date, expectedStart: Date(timeIntervalSince1970: 857174400.0), end: Date(timeIntervalSince1970: 857174401.0))
+        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 857116800.0), end: Date(timeIntervalSince1970: 857203200.0))
+        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 857116800.0), end: Date(timeIntervalSince1970: 857203200.0))
+        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 852105600.0), end: Date(timeIntervalSince1970: 859881600.0))
+        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 856857600.0), end: Date(timeIntervalSince1970: 857462400.0))
+        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 856857600.0), end: Date(timeIntervalSince1970: 857462400.0))
+        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 852019200.0), end: Date(timeIntervalSince1970: 883468800.0))
+
+        date = Date(timeIntervalSince1970: -62135769600.0) // 0001-12-31T16:00:00-0800 (0001-01-01T00:00:00Z)
+        test(.era, date, expectedStart: Date(timeIntervalSince1970: -4460182107904.0), end: Date(timeIntervalSince1970: -62135596800.0))
+        test(.year, date, expectedStart: Date(timeIntervalSince1970: -62167363200.0), end: Date(timeIntervalSince1970: -62135740800.0))
+        test(.month, date, expectedStart: Date(timeIntervalSince1970: -62138419200.0), end: Date(timeIntervalSince1970: -62135740800.0))
+        test(.day, date, expectedStart: Date(timeIntervalSince1970: -62135827200.0), end: Date(timeIntervalSince1970: -62135740800.0))
+        test(.hour, date, expectedStart: Date(timeIntervalSince1970: -62135769600.0), end: Date(timeIntervalSince1970: -62135766000.0))
+        test(.minute, date, expectedStart: Date(timeIntervalSince1970: -62135769600.0), end: Date(timeIntervalSince1970: -62135769540.0))
+        test(.second, date, expectedStart: Date(timeIntervalSince1970: -62135769600.0), end: Date(timeIntervalSince1970: -62135769599.0))
+        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: -62135769600.00001), end: Date(timeIntervalSince1970: -62135769600.00001))
+        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: -62135827200.0), end: Date(timeIntervalSince1970: -62135740800.0))
+        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: -62135827200.0), end: Date(timeIntervalSince1970: -62135740800.0))
+        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: -62143689600.0), end: Date(timeIntervalSince1970: -62135740800.0))
+        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: -62136086400.0), end: Date(timeIntervalSince1970: -62135481600.0))
+        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: -62136086400.0), end: Date(timeIntervalSince1970: -62135481600.0))
+        test(.yearForWeekOfYear, date, expectedStart: nil, end: nil)
+    }
+
+    // MARK: - Day Of Year
+    @Test func test_dayOfYear() throws {
+        // An arbitrary date, for which we know the answers
+        let date = Date(timeIntervalSinceReferenceDate: 682898558) // 2022-08-22 22:02:38 UTC, day 234
+        let leapYearDate = Date(timeIntervalSinceReferenceDate: 745891200) // 2024-08-21 00:00:00 UTC, day 234
+        let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+
+        // Ordinality
+        #expect(cal.ordinality(of: .dayOfYear, in: .year, for: date) == 234)
+        #expect(cal.ordinality(of: .hour, in: .dayOfYear, for: date) == 23)
+        #expect(cal.ordinality(of: .minute, in: .dayOfYear, for: date) == 1323)
+        #expect(cal.ordinality(of: .second, in: .dayOfYear, for: date) == 79359)
+
+        // Nonsense ordinalities. Since day of year is already relative, we don't count the Nth day of year in an era.
+        #expect(cal.ordinality(of: .dayOfYear, in: .era, for: date) == nil)
+        #expect(cal.ordinality(of: .year, in: .dayOfYear, for: date) == nil)
+
+        // Interval
+        let interval = cal.dateInterval(of: .dayOfYear, for: date)
+        #expect(interval == DateInterval(start: Date(timeIntervalSinceReferenceDate: 682819200), duration: 86400))
+
+        // Specific component values
+        #expect(cal.dateComponent(.dayOfYear, from: date) == 234)
+
+
+        // Ranges
+        let min = cal.minimumRange(of: .dayOfYear)
+        let max = cal.maximumRange(of: .dayOfYear)
+        #expect(min == 1..<366) // hard coded for gregorian
+        #expect(max == 1..<367)
+
+        #expect(cal.range(of: .dayOfYear, in: .year, for: date) == 1..<366)
+        #expect(cal.range(of: .dayOfYear, in: .year, for: leapYearDate) == 1..<367)
+
+        // Addition
+        let d1 = try cal.add(.dayOfYear, to: date, amount: 1, inTimeZone: .gmt)
+        #expect(d1 == date + 86400)
+
+        let d2 = try cal.addAndWrap(.dayOfYear, to: date, amount: 365, inTimeZone: .gmt)
+        #expect(d2 == date)
+
+        // Conversion from DateComponents
+        var dc = DateComponents(year: 2022, hour: 22, minute: 2, second: 38)
+        dc.dayOfYear = 234
+        let d = cal.date(from: dc)
+        #expect(d == date)
+
+        var subtractMe = DateComponents()
+        subtractMe.dayOfYear = -1
+        let firstDay = Date(timeIntervalSinceReferenceDate: 662688000)
+        let previousDay = try #require(cal.date(byAdding: subtractMe, to:firstDay, wrappingComponents: false))
+        let previousDayComps = cal.dateComponents([.year, .dayOfYear], from: previousDay)
+        var previousDayExpectationComps = DateComponents()
+        previousDayExpectationComps.year = 2021
+        previousDayExpectationComps.dayOfYear = 365
+        #expect(previousDayComps == previousDayExpectationComps)
+    }
+
+    // MARK: - Range of
+
+    @Test func testRangeOf() {
+        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -28800)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+
+        func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Range<Int>?, sourceLocation: SourceLocation = #_sourceLocation) {
+            let new = calendar.range(of: small, in: large, for: date)
+            #expect(new == expected, sourceLocation: sourceLocation)
+        }
+
+        var date: Date
+        date = Date(timeIntervalSince1970: 820454400.0) // 1995-12-31T16:00:00-0800 (1996-01-01T00:00:00Z)
+        test(.month, in: .quarter, for: date, expected: 10..<13)
+        test(.day, in: .quarter, for: date, expected: 1..<93)
+        test(.weekday, in: .quarter, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .quarter, for: date, expected: 1..<16)
+        test(.weekOfMonth, in: .quarter, for: date, expected: 0..<15)
+        test(.weekOfYear, in: .quarter, for: date, expected: 40..<54)
+        test(.day, in: .weekOfYear, for: date, expected: nil)
+        test(.month, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.quarter, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekOfYear, in: .yearForWeekOfYear, for: date, expected: 1..<53)
+        test(.weekOfMonth, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekdayOrdinal, in: .yearForWeekOfYear, for: date, expected: 1..<66)
+        test(.day, in: .yearForWeekOfYear, for: date, expected: 1..<398)
+        test(.day, in: .year, for: date, expected: 1..<366)
+        test(.weekday, in: .year, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .year, for: date, expected: 1..<60)
+        test(.quarter, in: .year, for: date, expected: 1..<5)
+        test(.weekOfYear, in: .year, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .year, for: date, expected: 0..<58)
+        test(.day, in: .month, for: date, expected: 1..<32)
+        test(.weekdayOrdinal, in: .month, for: date, expected: 1..<6)
+        test(.weekOfMonth, in: .month, for: date, expected: 0..<6)
+        test(.weekOfYear, in: .month, for: date, expected: 48..<54)
+        test(.day, in: .weekOfMonth, for: date, expected: 31..<32)
+
+        date = Date(timeIntervalSince1970: 823132800.0) // 1996-01-31T16:00:00-0800 (1996-02-01T00:00:00Z)
+        test(.month, in: .quarter, for: date, expected: 1..<4)
+        test(.day, in: .quarter, for: date, expected: 1..<92)
+        test(.weekday, in: .quarter, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .quarter, for: date, expected: 1..<16)
+        test(.weekOfMonth, in: .quarter, for: date, expected: 0..<14)
+        test(.weekOfYear, in: .quarter, for: date, expected: 1..<15)
+        test(.day, in: .weekOfYear, for: date, expected: nil)
+        test(.month, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.quarter, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekOfYear, in: .yearForWeekOfYear, for: date, expected: 1..<53)
+        test(.weekOfMonth, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekdayOrdinal, in: .yearForWeekOfYear, for: date, expected: 1..<66)
+        test(.day, in: .yearForWeekOfYear, for: date, expected: 1..<398)
+        test(.day, in: .year, for: date, expected: 1..<367)
+        test(.weekday, in: .year, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .year, for: date, expected: 1..<61)
+        test(.quarter, in: .year, for: date, expected: 1..<5)
+        test(.weekOfYear, in: .year, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .year, for: date, expected: 0..<57)
+        test(.day, in: .month, for: date, expected: 1..<32)
+        test(.weekdayOrdinal, in: .month, for: date, expected: 1..<6)
+        test(.weekOfMonth, in: .month, for: date, expected: 1..<6)
+        test(.weekOfYear, in: .month, for: date, expected: 1..<6)
+        test(.day, in: .weekOfMonth, for: date, expected: 28..<32)
+
+        date = Date(timeIntervalSince1970: 825638400.0) // 1996-02-29T16:00:00-0800 (1996-03-01T00:00:00Z)
+        test(.month, in: .quarter, for: date, expected: 1..<4)
+        test(.day, in: .quarter, for: date, expected: 1..<92)
+        test(.weekday, in: .quarter, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .quarter, for: date, expected: 1..<16)
+        test(.weekOfMonth, in: .quarter, for: date, expected: 0..<14)
+        test(.weekOfYear, in: .quarter, for: date, expected: 1..<15)
+        test(.day, in: .weekOfYear, for: date, expected: nil)
+        test(.month, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.quarter, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekOfYear, in: .yearForWeekOfYear, for: date, expected: 1..<53)
+        test(.weekOfMonth, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekdayOrdinal, in: .yearForWeekOfYear, for: date, expected: 1..<66)
+        test(.day, in: .yearForWeekOfYear, for: date, expected: 1..<398)
+        test(.day, in: .year, for: date, expected: 1..<367)
+        test(.weekday, in: .year, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .year, for: date, expected: 1..<61)
+        test(.quarter, in: .year, for: date, expected: 1..<5)
+        test(.weekOfYear, in: .year, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .year, for: date, expected: 0..<57)
+        test(.day, in: .month, for: date, expected: 1..<30)
+        test(.weekdayOrdinal, in: .month, for: date, expected: 1..<6)
+        test(.weekOfMonth, in: .month, for: date, expected: 0..<5)
+        test(.weekOfYear, in: .month, for: date, expected: 5..<10)
+        test(.day, in: .weekOfMonth, for: date, expected: 25..<30)
+
+        date = Date(timeIntervalSince1970: 851990400.0) // 1996-12-30T16:00:00-0800 (1996-12-31T00:00:00Z)
+        test(.month, in: .quarter, for: date, expected: 10..<13)
+        test(.day, in: .quarter, for: date, expected: 1..<93)
+        test(.weekday, in: .quarter, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .quarter, for: date, expected: 1..<16)
+        test(.weekOfMonth, in: .quarter, for: date, expected: 0..<14)
+        test(.weekOfYear, in: .quarter, for: date, expected: 40..<54)
+        test(.day, in: .weekOfYear, for: date, expected: nil)
+        test(.month, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.quarter, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekOfYear, in: .yearForWeekOfYear, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekdayOrdinal, in: .yearForWeekOfYear, for: date, expected: 1..<70)
+        test(.day, in: .yearForWeekOfYear, for: date, expected: 1..<428)
+        test(.day, in: .year, for: date, expected: 1..<367)
+        test(.weekday, in: .year, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .year, for: date, expected: 1..<61)
+        test(.quarter, in: .year, for: date, expected: 1..<5)
+        test(.weekOfYear, in: .year, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .year, for: date, expected: 0..<57)
+        test(.day, in: .month, for: date, expected: 1..<32)
+        test(.weekdayOrdinal, in: .month, for: date, expected: 1..<6)
+        test(.weekOfMonth, in: .month, for: date, expected: 1..<6)
+        test(.weekOfYear, in: .month, for: date, expected: 49..<54)
+        test(.day, in: .weekOfMonth, for: date, expected: 29..<32)
+
+        date = Date(timeIntervalSince1970: 857174400.0) // 1997-02-28T16:00:00-0800 (1997-03-01T00:00:00Z)
+        test(.month, in: .quarter, for: date, expected: 1..<4)
+        test(.day, in: .quarter, for: date, expected: 1..<91)
+        test(.weekday, in: .quarter, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .quarter, for: date, expected: 1..<15)
+        test(.weekOfMonth, in: .quarter, for: date, expected: 0..<14)
+        test(.weekOfYear, in: .quarter, for: date, expected: 1..<15)
+        test(.day, in: .weekOfYear, for: date, expected: nil)
+        test(.month, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.quarter, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekOfYear, in: .yearForWeekOfYear, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekdayOrdinal, in: .yearForWeekOfYear, for: date, expected: 1..<70)
+        test(.day, in: .yearForWeekOfYear, for: date, expected: 1..<428)
+        test(.day, in: .year, for: date, expected: 1..<366)
+        test(.weekday, in: .year, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .year, for: date, expected: 1..<60)
+        test(.quarter, in: .year, for: date, expected: 1..<5)
+        test(.weekOfYear, in: .year, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .year, for: date, expected: 0..<58)
+        test(.day, in: .month, for: date, expected: 1..<29)
+        test(.weekdayOrdinal, in: .month, for: date, expected: 1..<5)
+        test(.weekOfMonth, in: .month, for: date, expected: 0..<5)
+        test(.weekOfYear, in: .month, for: date, expected: 5..<10)
+        test(.day, in: .weekOfMonth, for: date, expected: 23..<29)
+
         date = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01T00:00:00-0800 (1996-01-01T08:00:00Z)
-        test(.hour, at: date, expected: date)
-        test(.day, at: date, expected: date)
-        test(.month, at: date, expected: date)
-        test(.year, at: date, expected: date)
-        test(.yearForWeekOfYear, at: date, expected: date)
-        test(.weekOfYear, at: date, expected: date)
+        test(.month, in: .quarter, for: date, expected: 1..<4)
+        test(.day, in: .quarter, for: date, expected: 1..<92)
+        test(.weekday, in: .quarter, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .quarter, for: date, expected: 1..<16)
+        test(.weekOfMonth, in: .quarter, for: date, expected: 0..<14)
+        test(.weekOfYear, in: .quarter, for: date, expected: 1..<15)
+        test(.day, in: .weekOfYear, for: date, expected: nil)
+        test(.month, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.quarter, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekOfYear, in: .yearForWeekOfYear, for: date, expected: 1..<53)
+        test(.weekOfMonth, in: .yearForWeekOfYear, for: date, expected: nil)
+        test(.weekdayOrdinal, in: .yearForWeekOfYear, for: date, expected: 1..<66)
+        test(.day, in: .yearForWeekOfYear, for: date, expected: 1..<398)
+        test(.day, in: .year, for: date, expected: 1..<367)
+        test(.weekday, in: .year, for: date, expected: 1..<8)
+        test(.weekdayOrdinal, in: .year, for: date, expected: 1..<61)
+        test(.quarter, in: .year, for: date, expected: 1..<5)
+        test(.weekOfYear, in: .year, for: date, expected: 1..<54)
+        test(.weekOfMonth, in: .year, for: date, expected: 0..<57)
+        test(.day, in: .month, for: date, expected: 1..<32)
+        test(.weekdayOrdinal, in: .month, for: date, expected: 1..<6)
+        test(.weekOfMonth, in: .month, for: date, expected: 1..<6)
+        test(.weekOfYear, in: .month, for: date, expected: 1..<6)
+        test(.day, in: .weekOfMonth, for: date, expected: 1..<7)
+    }
 
-        date = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07 09:03:07 +0000
-        test(.second, at: date, expected: Date(timeIntervalSince1970: 828867787.0)) // expect: 1996-04-07 09:03:07 +0000
-        test(.minute, at: date, expected: Date(timeIntervalSince1970: 828867780.0)) // expect: 1996-04-07 09:03:00 +0000
-        test(.hour, at: date, expected: Date(timeIntervalSince1970: 828867600.0)) // expect: 1996-04-07 09:00:00 +0000
-        test(.day, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
-        test(.month, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
-        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+    // MARK: - Difference
 
-        date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07 10:03:07 +0000
-        test(.second, at: date, expected: Date(timeIntervalSince1970: 828871387.0)) // expect: 1996-04-07 10:03:07 +0000
-        test(.minute, at: date, expected: Date(timeIntervalSince1970: 828871380.0)) // expect: 1996-04-07 10:03:00 +0000
-        test(.hour, at: date, expected: Date(timeIntervalSince1970: 828871200.0)) // expect: 1996-04-07 10:00:00 +0000
-        test(.day, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
-        test(.month, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
-        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+    @Test func testDateComponentsFromStartToEnd() {
+        var calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+        var start: Date!
+        var end: Date!
+        func test(_ components: Calendar.ComponentSet, expected: DateComponents, sourceLocation: SourceLocation = #_sourceLocation) {
+            let actual = calendar.dateComponents(components, from: start, to: end)
+            #expect(actual == expected, sourceLocation: sourceLocation)
+        }
 
-        date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07 11:03:07 +0000
-        test(.second, at: date, expected: Date(timeIntervalSince1970: 828874987.0)) // expect: 1996-04-07 11:03:07 +0000
-        test(.minute, at: date, expected: Date(timeIntervalSince1970: 828874980.0)) // expect: 1996-04-07 11:03:00 +0000
-        test(.hour, at: date, expected: Date(timeIntervalSince1970: 828874800.0)) // expect: 1996-04-07 11:00:00 +0000
-        test(.day, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
-        test(.month, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
-        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
-        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        // non leap to leap
+        start = Date(timeIntervalSince1970: 788918400.0) // 1995-01-01
+        end = Date(timeIntervalSince1970: 825638400.0) // 1996-03-01
+        test([.year, .day, .month], expected: .init(year: 1, month: 2, day: 0))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 1, month: 2, weekday: 0, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: 8, yearForWeekOfYear: 1))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 1, month: 2, weekday: 0, weekdayOrdinal: 0))
 
-        date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27 11:03:07 +0000
-        test(.second, at: date, expected: Date(timeIntervalSince1970: 846414187.0)) // expect: 1996-10-27 11:03:07 +0000
-        test(.minute, at: date, expected: Date(timeIntervalSince1970: 846414180.0)) // expect: 1996-10-27 11:03:00 +0000
-        test(.hour, at: date, expected: Date(timeIntervalSince1970: 846414000.0)) // expect: 1996-10-27 11:00:00 +0000
-        test(.day, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
-        test(.month, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
-        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
-        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
-        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
-        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+        // leap to non leap
+        // positive year, negative month
+        start = Date(timeIntervalSince1970: 823132800.0) // 1996-02-01
+        end = Date(timeIntervalSince1970: 852076800.0) // 1997-01-01
+        test([.year, .day, .month], expected: .init(year: 0, month: 11, day: 0))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 11, weekday: 0, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: 47, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 11, weekday: 0, weekdayOrdinal: 0))
 
-        date = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27 10:03:07 +0000
-        test(.second, at: date, expected: Date(timeIntervalSince1970: 846410587.0)) // expect: 1996-10-27 10:03:07 +0000
-        test(.minute, at: date, expected: Date(timeIntervalSince1970: 846410580.0)) // expect: 1996-10-27 10:03:00 +0000
-        test(.hour, at: date, expected: Date(timeIntervalSince1970: 846410400.0)) // expect: 1996-10-27 10:00:00 +0000
-        test(.day, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
-        test(.month, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
-        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
-        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
-        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
-        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+        // within leap
+        // positive month, positive day
+        start = Date(timeIntervalSince1970: 822960000.0) // 1996-01-30
+        end = Date(timeIntervalSince1970: 825552000.0) // 1996-02-29
+        test([.year, .day, .month], expected: .init(year: 0, month: 1, day: 0))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 1, weekday: 0, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: 4, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 1, weekday: 0, weekdayOrdinal: 0))
 
-        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27 09:03:07 +0000
-        test(.second, at: date, expected: Date(timeIntervalSince1970: 846406987.0)) // expect: 1996-10-27 09:03:07 +0000
-        test(.minute, at: date, expected: Date(timeIntervalSince1970: 846406980.0)) // expect: 1996-10-27 09:03:00 +0000
-        test(.hour, at: date, expected: Date(timeIntervalSince1970: 846406800.0)) // expect: 1996-10-27 09:00:00 +0000
-        test(.day, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
-        test(.month, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
-        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
-        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
-        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
-        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
-        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+        // positive month, negative day
+        start = Date(timeIntervalSince1970: 823046400.0) // 1996-01-31
+        end = Date(timeIntervalSince1970: 825638400.0) // 1996-03-01
+        test([.year, .day, .month], expected: .init(year: 0, month: 1, day: 1))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 1, weekday: 1, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: 4, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 1, weekday: 1, weekdayOrdinal: 0))
+
+        // within non leap
+        // positive month, positive day
+        start = Date(timeIntervalSince1970: 788918400.0) // 1995-01-01
+        end = Date(timeIntervalSince1970: 794361600.0) // 1995-03-05
+        test([.year, .day, .month], expected: .init(year: 0, month: 2, day: 4))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 2, weekday: 4, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: 9, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 2, weekday: 4, weekdayOrdinal: 0))
+
+        // positive month, negative day
+        start = Date(timeIntervalSince1970: 791510400.0) // 1995-01-31
+        end = Date(timeIntervalSince1970: 794361600.0) // 1995-03-05
+        test([.year, .day, .month], expected: .init(year: 0, month: 1, day: 5))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 1, weekday: 5, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: 4, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 1, weekday: 5, weekdayOrdinal: 0))
+
+        // ---------
+        // Backwards
+        start = Date(timeIntervalSince1970: 852076800.0) // 1997-01-01
+        end = Date(timeIntervalSince1970: 851817600.0) // 1996-12-29
+        test([.year, .day, .month], expected: .init(year: 0, month: 0, day: -3))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 0, weekday: -3, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: 0, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 0, weekday: -3, weekdayOrdinal: 0))
+
+        // leap to non leap
+        // negative year, positive month
+        start = Date(timeIntervalSince1970: 825638400.0) // 1996-03-01
+        end = Date(timeIntervalSince1970: 817776000.0) // 1995-12-01
+        test([.year, .day, .month], expected: .init(year: 0, month: -3, day: 0))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: -3, weekday: 0, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: -13, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: -3, weekday: 0, weekdayOrdinal: 0))
+
+        // within leap
+        // negative month, negative day
+        start = Date(timeIntervalSince1970: 825984000.0) // 1996-03-05
+        end = Date(timeIntervalSince1970: 820454400.0) // 1996-01-01
+        test([.year, .day, .month], expected: .init(year: 0, month: -2, day: -4))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: -2, weekday: -4, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: -9, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: -2, weekday: -4, weekdayOrdinal: 0))
+
+        // negative month, positive day
+        start = Date(timeIntervalSince1970: 825552000.0) // 1996-02-29
+        end = Date(timeIntervalSince1970: 823046400.0) // 1996-01-31
+        test([.year, .day, .month], expected: .init(year: 0, month: 0, day: -29))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 0, weekday: -1, weekOfMonth: -4))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: -4, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 0, weekday: -29, weekdayOrdinal: 0))
+
+        // within non leap
+        // negative month, negative day
+        start = Date(timeIntervalSince1970: 794361600.0) // 1995-03-05
+        end = Date(timeIntervalSince1970: 788918400.0) // 1995-01-01
+        test([.year, .day, .month], expected: .init(year: 0, month: -2, day: -4))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: -2, weekday: -4, weekOfMonth: 0))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: -9, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: -2, weekday: -4, weekdayOrdinal: 0))
+
+        // negative month, positive day
+        start = Date(timeIntervalSince1970: 793929600.0) // 1995-02-28
+        end = Date(timeIntervalSince1970: 791510400.0) // 1995-01-31
+        test([.year, .day, .month], expected: .init(year: 0, month: 0, day: -28))
+        test([.weekday, .year, .month, .weekOfMonth], expected: .init(year: 0, month: 0, weekday: 0, weekOfMonth: -4))
+        test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: -4, yearForWeekOfYear: 0))
+        test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 0, weekday: -28, weekdayOrdinal: 0))
+
+        calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8*3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        start = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+        end = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
+        var expected = DateComponents(era: 0, year: 0, month: 2, day: 4, hour: 4, minute: 20, second: 22, nanosecond: 0, weekday: 0, weekdayOrdinal: 0, quarter: 0 , weekOfMonth: 0, weekOfYear: 0,  yearForWeekOfYear: 0)
+        // FIXME 123202377: This is wrong, but it's the same as Calendar_ICU's current behavior
+        expected.dayOfYear = 0
+        test([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], expected: expected)
+    }
+
+    @Test func testDifference() {
+        var calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -28800)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+        var start: Date!
+        var end: Date!
+        func test(_ component: Calendar.Component, expected: Int, sourceLocation: SourceLocation = #_sourceLocation) {
+            let (actualDiff, _) = try! calendar.difference(inComponent: component, from: start, to: end)
+            #expect(actualDiff == expected, sourceLocation: sourceLocation)
+        }
+
+        // non leap to leap
+        start = Date(timeIntervalSince1970: 788947200.0) // 1995-01-01
+        end = Date(timeIntervalSince1970: 825667200.0) // 1996-03-01
+        test(.era, expected: 0)
+        test(.year, expected: 1)
+        test(.month, expected: 14)
+        test(.day, expected: 425)
+        test(.hour, expected: 10200)
+        test(.weekday, expected: 425)
+        test(.weekdayOrdinal, expected: 60)
+        test(.weekOfMonth, expected: 60)
+        test(.weekOfYear, expected: 60)
+        test(.yearForWeekOfYear, expected: 1)
+        test(.dayOfYear, expected: 425)
+
+        // leap to non leap
+        start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
+        end = Date(timeIntervalSince1970: 852105600.0) // 1997-01-01
+        test(.era, expected: 0)
+        test(.year, expected: 1)
+        test(.month, expected: 12)
+        test(.day, expected: 366)
+        test(.hour, expected: 8784)
+        test(.weekday, expected: 366)
+        test(.weekdayOrdinal, expected: 52)
+        test(.weekOfMonth, expected: 52)
+        test(.weekOfYear, expected: 52)
+        test(.yearForWeekOfYear, expected: 1)
+        test(.dayOfYear, expected: 366)
+
+        // within leap
+        start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
+        end = Date(timeIntervalSince1970: 825580800.0) // 1996-02-29
+        test(.era, expected: 0)
+        test(.year, expected: 0)
+        test(.month, expected: 1)
+        test(.day, expected: 59)
+        test(.hour, expected: 1416)
+        test(.weekday, expected: 59)
+        test(.weekdayOrdinal, expected: 8)
+        test(.weekOfMonth, expected: 8)
+        test(.weekOfYear, expected: 8)
+        test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: 59)
+
+        start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
+        end = Date(timeIntervalSince1970: 825667200.0) // 1996-03-01
+        test(.era, expected: 0)
+        test(.year, expected: 0)
+        test(.month, expected: 2)
+        test(.day, expected: 60)
+        test(.hour, expected: 1440)
+        test(.weekday, expected: 60)
+        test(.weekdayOrdinal, expected: 8)
+        test(.weekOfMonth, expected: 8)
+        test(.weekOfYear, expected: 8)
+        test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: 60)
+
+        // within non leap
+        start = Date(timeIntervalSince1970: 788947200.0) // 1995-01-01
+        end = Date(timeIntervalSince1970: 794044800.0) // 1995-03-01
+        test(.era, expected: 0)
+        test(.year, expected: 0)
+        test(.month, expected: 2)
+        test(.day, expected: 59)
+        test(.hour, expected: 1416)
+        test(.weekday, expected: 59)
+        test(.weekdayOrdinal, expected: 8)
+        test(.weekOfMonth, expected: 8)
+        test(.weekOfYear, expected: 8)
+        test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: 59)
+
+        // Backwards
+        // non leap to leap
+        start = Date(timeIntervalSince1970: 825667200.0) // 1996-03-01
+        end = Date(timeIntervalSince1970: 788947200.0) // 1995-01-01
+        test(.era, expected: 0)
+        test(.year, expected: -1)
+        test(.month, expected: -14)
+        test(.day, expected: -425)
+        test(.hour, expected: -10200)
+        test(.weekday, expected: -425)
+        test(.weekdayOrdinal, expected: -60)
+        test(.weekOfMonth, expected: -60)
+        test(.weekOfYear, expected: -60)
+        test(.yearForWeekOfYear, expected: -1)
+        test(.dayOfYear, expected: -425)
+
+        // leap to non leap
+        start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
+        end = Date(timeIntervalSince1970: 788947200.0) // 1995-01-01
+        test(.era, expected: 0)
+        test(.year, expected: -1)
+        test(.month, expected: -12)
+        test(.day, expected: -365)
+        test(.hour, expected: -8760)
+        test(.weekday, expected: -365)
+        test(.weekdayOrdinal, expected: -52)
+        test(.weekOfMonth, expected: -52)
+        test(.weekOfYear, expected: -52)
+        test(.yearForWeekOfYear, expected: -1)
+        test(.dayOfYear, expected: -365)
+
+        // within leap
+        start = Date(timeIntervalSince1970: 825667200.0) // 1996-03-01
+        end = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
+        test(.era, expected: 0)
+        test(.year, expected: 0)
+        test(.month, expected: -2)
+        test(.day, expected: -60)
+        test(.hour, expected: -1440)
+        test(.weekday, expected: -60)
+        test(.weekdayOrdinal, expected: -8)
+        test(.weekOfMonth, expected: -8)
+        test(.weekOfYear, expected: -8)
+        test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: -60)
+
+        start = Date(timeIntervalSince1970: 825580800.0) // 1996-02-29
+        end = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
+        test(.era, expected: 0)
+        test(.year, expected: 0)
+        test(.month, expected: -1)
+        test(.day, expected: -59)
+        test(.hour, expected: -1416)
+        test(.weekday, expected: -59)
+        test(.weekdayOrdinal, expected: -8)
+        test(.weekOfMonth, expected: -8)
+        test(.weekOfYear, expected: -8)
+        test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: -59)
+
+        // within non leap
+        start = Date(timeIntervalSince1970: 794044800.0) // 1995-03-01
+        end = Date(timeIntervalSince1970: 788947200.0) // 1995-01-01
+        test(.era, expected: 0)
+        test(.year, expected: 0)
+        test(.month, expected: -2)
+        test(.day, expected: -59)
+        test(.hour, expected: -1416)
+        test(.weekday, expected: -59)
+        test(.weekdayOrdinal, expected: -8)
+        test(.weekOfMonth, expected: -8)
+        test(.weekOfYear, expected: -8)
+        test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: -59)
+
+        // Time
+
+        start = Date(timeIntervalSince1970: 820479600.0) // 1995-12-31 23:00:00
+        end = Date(timeIntervalSince1970: 825667200.0) // 1996-03-01 00:00:00
+        test(.hour, expected: 1441)
+        test(.minute, expected: 86460)
+        test(.second, expected: 5187600)
+        test(.nanosecond, expected: Int(Int32.max))
+
+        start = Date(timeIntervalSince1970: 852105540.0) // 1996-12-31 23:59:00
+        end = Date(timeIntervalSince1970: 857203205.0) // 1997-03-01 00:00:05
+        test(.hour, expected: 1416)
+        test(.minute, expected: 84961)
+        test(.second, expected: 5097665)
+        test(.nanosecond, expected: Int(Int32.max))
+
+        start = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
+        end = Date(timeIntervalSince1970: 825580805.0) // 1996-02-29 00:00:05
+        test(.hour, expected: 0)
+        test(.minute, expected: 1)
+        test(.second, expected: 85)
+        test(.nanosecond, expected: Int(Int32.max))
+
+        start = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
+        end = Date(timeIntervalSince1970: 825667205.0) // 1996-03-01 00:00:05
+        test(.hour, expected: 24)
+        test(.minute, expected: 1441)
+        test(.second, expected: 86485)
+        test(.nanosecond, expected: Int(Int32.max))
+
+        start = Date(timeIntervalSince1970: 794044710.0) // 1995-02-28 23:58:30
+        end = Date(timeIntervalSince1970: 794044805.0) // 1995-03-01 00:00:05
+        test(.hour, expected: 0)
+        test(.minute, expected: 1)
+        test(.second, expected: 95)
+        test(.nanosecond, expected: Int(Int32.max))
+
+        start = Date(timeIntervalSince1970: 857203205.0) // 1997-03-01 00:00:05
+        end = Date(timeIntervalSince1970: 852105520.0) // 1996-12-31 23:58:40
+        test(.hour, expected: -1416)
+        test(.minute, expected: -84961)
+        test(.second, expected: -5097685)
+        test(.nanosecond, expected: Int(Int32.min))
+
+        start = Date(timeIntervalSince1970: 825667205.0) // 1996-03-01 00:00:05
+        end = Date(timeIntervalSince1970: 820483120.0) // 1995-12-31 23:58:40
+        test(.hour, expected: -1440)
+        test(.minute, expected: -86401)
+        test(.second, expected: -5184085)
+        test(.nanosecond, expected: Int(Int32.min))
+
+        start = Date(timeIntervalSince1970: 825667205.0) // 1996-03-01 00:00:05
+        end = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
+        test(.hour, expected: -24)
+        test(.minute, expected: -1441)
+        test(.second, expected: -86485)
+        test(.nanosecond, expected: Int(Int32.min))
+
+        start = Date(timeIntervalSince1970: 825580805.0) // 1996-02-29 00:00:05
+        end = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
+        test(.hour, expected: 0)
+        test(.minute, expected: -1)
+        test(.second, expected: -85)
+        test(.nanosecond, expected: Int(Int32.min))
+
+        start = Date(timeIntervalSince1970: 825580805.0) // 1996-02-29 00:00:05
+        end = Date(timeIntervalSince1970: 820569520.0) // 1996-01-01 23:58:40
+        test(.hour, expected: -1392)
+        test(.minute, expected: -83521)
+        test(.second, expected: -5011285)
+        test(.nanosecond, expected: Int(Int32.min))
+
+        start = Date(timeIntervalSince1970: 794044805.0) // 1995-03-01 00:00:05
+        end = Date(timeIntervalSince1970: 794044710.0) // 1995-02-28 23:58:30
+        test(.hour, expected: 0)
+        test(.minute, expected: -1)
+        test(.second, expected: -95)
+        test(.nanosecond, expected: Int(Int32.min))
+
+        calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8*3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        start = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+        end = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
+        test(.month, expected: 2)
+        test(.dayOfYear, expected: 63)
+    }
+
+    @Test func testDifference_DST() {
+        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+
+        var start: Date!
+        var end: Date!
+        func test(_ component: Calendar.Component, expected: Int, sourceLocation: SourceLocation = #_sourceLocation) {
+            let (actualDiff, _) = try! calendar.difference(inComponent: component, from: start, to: end)
+            #expect(actualDiff == expected, sourceLocation: sourceLocation)
+        }
+
+        start = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800
+        end = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700
+        test(.hour, expected: 1)
+        test(.minute, expected: 60)
+        test(.second, expected: 3600)
+
+        start = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800
+        end = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700
+        test(.hour, expected: 2)
+        test(.minute, expected: 120)
+        test(.second, expected: 7200)
+
+        start = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
+        end = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
+        test(.hour, expected: 1)
+        test(.minute, expected: 60)
+        test(.second, expected: 3600)
+
+        start = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
+        end = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27T02:03:07-0800
+        test(.hour, expected: 2)
+        test(.minute, expected: 120)
+        test(.second, expected: 7200)
+
+        // backwards
+
+        start = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700
+        end = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800
+        test(.hour, expected: -1)
+        test(.minute, expected: -60)
+        test(.second, expected: -3600)
+
+        start = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700
+        end = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800
+        test(.hour, expected: -2)
+        test(.minute, expected: -120)
+        test(.second, expected: -7200)
+
+        start = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
+        end = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
+        test(.hour, expected: -1)
+        test(.minute, expected: -60)
+        test(.second, expected: -3600)
+
+        start = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27T02:03:07-0800
+        end = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
+        test(.hour, expected: -2)
+        test(.minute, expected: -120)
+        test(.second, expected: -7200)
+    }
+    
+    // MARK: ISO8601
+    
+    @Test func test_iso8601Gregorian() {
+        var calendar1 = Calendar(identifier: .iso8601)
+        calendar1.timeZone = .gmt
+        var calendar2 = Calendar(identifier: .iso8601)
+        calendar2.timeZone = .gmt
+        #expect(calendar1 == calendar2)
+        
+        #expect(calendar1.firstWeekday == 2)
+        #expect(calendar1.minimumDaysInFirstWeek == 4)
+        #expect(calendar1.locale == .unlocalized)
+        
+        // Verify that the properties are still mutable
+        let tz = TimeZone(secondsFromGMT: -3600)!
+        calendar1.timeZone = tz
+        #expect(calendar1 != calendar2)
+        
+        #expect(calendar1.timeZone == tz)
     }
 }
+

@@ -58,7 +58,7 @@ extension Date {
             self.twoDigitStartDate = twoDigitStartDate
         }
 
-        private var formatter: ICUDateFormatter {
+        private var formatter: ICUDateFormatter? {
             let dateFormatInfo = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale?.identifier, timeZoneIdentifier: timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format, parseLenient: isLenient, parseTwoDigitStartDate: twoDigitStartDate)
             return ICUDateFormatter.cachedFormatter(for: dateFormatInfo)
         }
@@ -77,6 +77,10 @@ extension Date.ParseStrategy : ParseStrategy {
     /// - Throws: Throws `NSFormattingError` if the string cannot be parsed.
     /// - Returns: A `Date` represented by `value`.
     public func parse(_ value: String) throws -> Date {
+        guard let formatter = self.formatter else {
+            throw CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: "Error creating icu date formatter" ])
+        }
+
         guard let date = formatter.parse(value) else {
             throw parseError(value, exampleFormattedString: formatter.format(Date.now))
         }
@@ -101,7 +105,10 @@ extension Date.ParseStrategy : CustomConsumingRegexComponent {
         guard index < bounds.upperBound else {
             return nil
         }
-        return formatter.parse(input, in: index..<bounds.upperBound)
+        guard let fmt = self.formatter else {
+            return nil
+        }
+        return fmt.parse(input, in: index..<bounds.upperBound)
     }
 }
 

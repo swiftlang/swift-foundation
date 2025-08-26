@@ -5,73 +5,70 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_intero
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class DateRelativeFormatStyleTests: XCTestCase {
+@Suite("Date.RelativeFormatStyle")
+private struct DateRelativeFormatStyleTests {
 
     let oneHour: TimeInterval = 60 * 60
     let oneDay: TimeInterval = 60 * 60 * 24
     let enUSLocale = Locale(identifier: "en_US")
-    var calendar = Calendar(identifier: .gregorian)
+    let calendar: Calendar
 
 
-    override func setUp() {
-        calendar.timeZone = TimeZone(abbreviation: "GMT")!
+    init() {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(abbreviation: "GMT")!
+        self.calendar = c
     }
 
-    func testDefaultStyle() throws {
+    @Test func defaultStyle() throws {
         let style = Date.RelativeFormatStyle(locale: enUSLocale, calendar: calendar)
-        XCTAssertEqual(style.format(Date()), "in 0 seconds")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneHour)), "in 1 hour")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneHour * 2)), "in 2 hours")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneDay)), "in 1 day")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneDay * 2)), "in 2 days")
+        #expect(style.format(Date()) == "in 0 seconds")
+        #expect(style.format(Date(timeIntervalSinceNow: oneHour)) == "in 1 hour")
+        #expect(style.format(Date(timeIntervalSinceNow: oneHour * 2)) == "in 2 hours")
+        #expect(style.format(Date(timeIntervalSinceNow: oneDay)) == "in 1 day")
+        #expect(style.format(Date(timeIntervalSinceNow: oneDay * 2)) == "in 2 days")
 
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: -oneHour)), "1 hour ago")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: -oneHour * 2)), "2 hours ago")
+        #expect(style.format(Date(timeIntervalSinceNow: -oneHour)) == "1 hour ago")
+        #expect(style.format(Date(timeIntervalSinceNow: -oneHour * 2)) == "2 hours ago")
 
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: -oneHour * 1.5)), "2 hours ago")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneHour * 1.5)), "in 2 hours")
+        #expect(style.format(Date(timeIntervalSinceNow: -oneHour * 1.5)) == "2 hours ago")
+        #expect(style.format(Date(timeIntervalSinceNow: oneHour * 1.5)) == "in 2 hours")
     }
 
-    func testDateRelativeFormatConvenience() throws {
-        let now = Date()
-        let tomorrow = Date(timeInterval: oneDay + oneHour * 2, since: now)
-        let future = Date(timeInterval: oneDay * 14 + oneHour * 3, since: now)
-        let past = Date(timeInterval: -(oneDay * 14 + oneHour * 2), since: now)
-
-        XCTAssertEqual(past.formatted(.relative(presentation: .named)), Date.RelativeFormatStyle(presentation: .named, unitsStyle: .wide).format(past))
-        XCTAssertEqual(tomorrow.formatted(.relative(presentation: .numeric)), Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .wide).format(tomorrow))
-        XCTAssertEqual(tomorrow.formatted(Date.RelativeFormatStyle(presentation: .named)), Date.RelativeFormatStyle(presentation: .named).format(tomorrow))
-
-        XCTAssertEqual(past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence)), Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).format(past))
-        XCTAssertEqual(future.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated)), Date.RelativeFormatStyle(unitsStyle: .abbreviated).format(future))
+    @Test func dateRelativeFormatConvenience() async {
+        await usingCurrentInternationalizationPreferences {
+            let now = Date()
+            let tomorrow = Date(timeInterval: oneDay + oneHour * 2, since: now)
+            let future = Date(timeInterval: oneDay * 14 + oneHour * 3, since: now)
+            let past = Date(timeInterval: -(oneDay * 14 + oneHour * 2), since: now)
+            
+            #expect(past.formatted(.relative(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named, unitsStyle: .wide).locale(enUSLocale).format(past))
+            #expect(tomorrow.formatted(.relative(presentation: .numeric).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .wide).locale(enUSLocale).format(tomorrow))
+            #expect(tomorrow.formatted(Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale).format(tomorrow))
+            
+            #expect(past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale).format(past))
+            #expect(future.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .abbreviated).locale(enUSLocale).format(future))
+        }
     }
 
-    func testNamedStyleRounding() throws {
+    @Test func namedStyleRounding() throws {
         let named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = Date(timeIntervalSinceReferenceDate: dateValue)
             let refDate = Date(timeIntervalSinceReferenceDate: relativeTo)
             let formatted = named._format(date, refDate: refDate)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         // Within a day
@@ -186,14 +183,14 @@ final class DateRelativeFormatStyleTests: XCTestCase {
         _verifyStyle(725759999.0, relativeTo: 645019200.0, expected: "in 2 years")
     }
 
-    func testNumericStyleRounding() throws {
+    @Test func numericStyleRounding() throws {
         let numeric = Date.RelativeFormatStyle(presentation: .numeric, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = Date(timeIntervalSinceReferenceDate: dateValue)
             let refDate = Date(timeIntervalSinceReferenceDate: relativeTo)
             let formatted = numeric._format(date, refDate: refDate)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         // Within a day
@@ -304,27 +301,692 @@ final class DateRelativeFormatStyleTests: XCTestCase {
 
     }
     
-    func testAutoupdatingCurrentChangesFormatResults() {
-        let locale = Locale.autoupdatingCurrent
-        let date = Date.now + 3600
-        
-        // Get a formatted result from es-ES
-        var prefs = LocalePreferences()
-        prefs.languages = ["es-ES"]
-        prefs.locale = "es_ES"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedSpanish = date.formatted(.relative(presentation: .named).locale(locale))
-        
-        // Get a formatted result from en-US
-        prefs.languages = ["en-US"]
-        prefs.locale = "en_US"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedEnglish = date.formatted(.relative(presentation: .named).locale(locale))
-        
-        // Reset to current preferences before any possibility of failing this test
-        LocaleCache.cache.reset()
-
-        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
-        XCTAssertNotEqual(formattedSpanish, formattedEnglish)
+    @Test func autoupdatingCurrentChangesFormatResults() async {
+        await usingCurrentInternationalizationPreferences {
+            let locale = Locale.autoupdatingCurrent
+            let date = Date.now + 3600
+            
+            // Get a formatted result from es-ES
+            var prefs = LocalePreferences()
+            prefs.languages = ["es-ES"]
+            prefs.locale = "es_ES"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            CalendarCache.cache.reset()
+            let formattedSpanish = date.formatted(.relative(presentation: .named).locale(locale))
+            
+            // Get a formatted result from en-US
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            CalendarCache.cache.reset()
+            let formattedEnglish = date.formatted(.relative(presentation: .named).locale(locale))
+            
+            // Reset to current preferences before any possibility of failing this test
+            LocaleCache.cache.reset()
+            CalendarCache.cache.reset()
+            
+            // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+            #expect(formattedSpanish != formattedEnglish)
+        }
     }
+
+    @Test func allowedFieldsNamed() throws {
+        var named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
+
+        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            let date = try! Date.ISO8601FormatStyle(timeZone: .gmt).parse(dateStr)
+            let refDate = try! Date.ISO8601FormatStyle(timeZone: .gmt).parse(relativeTo)
+            let formatted = named._format(date, refDate: refDate)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
+        }
+
+        named.allowedFields = [.year]
+        _verifyStyle("2021-06-10T12:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "this year")
+        _verifyStyle("2020-12-06T12:00:00Z", relativeTo: "2021-01-10T12:00:00Z", expected: "last year")
+        named.allowedFields = [.year, .hour]
+        _verifyStyle("2021-06-11T12:00:00Z", relativeTo: "2021-06-01T12:00:00Z", expected: "in 240 hours")
+        _verifyStyle("2020-12-06T12:00:00Z", relativeTo: "2021-01-10T12:00:00Z", expected: "840 hours ago")
+        _verifyStyle("2020-01-10T12:00:00Z", relativeTo: "2021-01-10T12:00:00Z", expected: "last year")
+        named.allowedFields = [.minute]
+        _verifyStyle("2021-06-10T11:59:31Z", relativeTo: "2021-06-10T12:00:00Z", expected: "this minute")
+        _verifyStyle("2021-06-10T11:59:30Z", relativeTo: "2021-06-10T12:00:00Z", expected: "1 minute ago")
+        _verifyStyle("2021-06-10T11:59:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "1 minute ago")
+        named.allowedFields = [.hour]
+        _verifyStyle("2021-06-10T11:50:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "this hour")
+        named.allowedFields = [.hour, .minute]
+        _verifyStyle("2021-06-10T11:49:30Z", relativeTo: "2021-06-10T12:00:00Z", expected: "11 minutes ago")
+        named.allowedFields = [.day]
+        _verifyStyle("2021-06-08T13:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "2 days ago")
+        _verifyStyle("2021-06-09T11:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "yesterday")
+
+        _verifyStyle("2021-06-09T13:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "yesterday")
+        _verifyStyle("2021-06-11T07:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "tomorrow")
+    }
+
+    @Test func allowedFieldsNumeric() throws {
+        var named = Date.RelativeFormatStyle(presentation: .numeric, locale: enUSLocale, calendar: calendar)
+
+        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            let date = try! Date.ISO8601FormatStyle().parse(dateStr)
+            let refDate = try! Date.ISO8601FormatStyle().parse(relativeTo)
+            let formatted = named._format(date, refDate: refDate)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
+        }
+
+        named.allowedFields = [.year]
+        _verifyStyle("2021-06-10T12:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "in 0 years")
+        _verifyStyle("2020-12-06T12:00:00Z", relativeTo: "2021-01-10T12:00:00Z", expected: "1 year ago")
+        named.allowedFields = [.minute]
+        _verifyStyle("2021-06-10T11:59:31Z", relativeTo: "2021-06-10T12:00:00Z", expected: "in 0 minutes")
+        _verifyStyle("2021-06-10T11:59:30Z", relativeTo: "2021-06-10T12:00:00Z", expected: "1 minute ago")
+        _verifyStyle("2021-06-10T11:59:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "1 minute ago")
+        named.allowedFields = [.hour]
+        _verifyStyle("2021-06-10T11:50:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "in 0 hours")
+        named.allowedFields = [.hour, .minute]
+        _verifyStyle("2021-06-10T11:49:30Z", relativeTo: "2021-06-10T12:00:00Z", expected: "11 minutes ago")
+        named.allowedFields = [.day]
+        _verifyStyle("2021-06-08T13:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "2 days ago")
+        _verifyStyle("2021-06-09T11:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "1 day ago")
+
+        _verifyStyle("2021-06-09T13:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "1 day ago")
+        _verifyStyle("2021-06-11T07:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "in 1 day")
+    }
+}
+
+// MARK: DiscreteFormatStyle conformance test
+
+@Suite("Date.AnchoredRelativeFormatStyle Discrete Conformance")
+private struct TestDateAnchoredRelativeDiscreteConformance {
+    let enUSLocale = Locale(identifier: "en_US")
+    var calendar = Calendar(identifier: .gregorian)
+
+    init() {
+        calendar.timeZone = TimeZone(abbreviation: "GMT")!
+    }
+
+    func date(_ string: String) -> Date {
+        try! Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZoneSeparator: .omitted, timeZone: .gmt).locale(enUSLocale).parse(string)
+    }
+
+    @Test func examples() throws {
+        var now = Date.now
+        var style = Date.AnchoredRelativeFormatStyle(anchor: now, calendar: calendar)
+            .locale(enUSLocale)
+
+        #expect(style.discreteInput(after: now.addingTimeInterval(1)) == now.addingTimeInterval(1.5))
+        #expect(style.discreteInput(before: now.addingTimeInterval(1)) == now.addingTimeInterval(0.5).nextDown)
+        #expect(style.discreteInput(after: now.addingTimeInterval(0.5)) == now.addingTimeInterval(1.5))
+        #expect(style.discreteInput(before: now.addingTimeInterval(0.5)) == now.addingTimeInterval(0.5).nextDown)
+        #expect(style.discreteInput(after: now.addingTimeInterval(0)) == now.addingTimeInterval(0.5))
+        #expect(style.discreteInput(before: now.addingTimeInterval(0)) == now.addingTimeInterval(-0.5))
+        #expect(style.discreteInput(after: now.addingTimeInterval(-0.5)) == now.addingTimeInterval(-0.5).nextUp)
+        #expect(style.discreteInput(before: now.addingTimeInterval(-0.5)) == now.addingTimeInterval(-1.5))
+        #expect(style.discreteInput(after: now.addingTimeInterval(-1)) == now.addingTimeInterval(-0.5).nextUp)
+        #expect(style.discreteInput(before: now.addingTimeInterval(-1)) == now.addingTimeInterval(-1.5))
+
+        now = date("2021-06-10 12:00:00Z")
+        style.anchor = now
+
+
+        #expect(style.discreteInput(before: date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp) == date("2021-06-10 11:58:30Z").addingTimeInterval(0.5))
+        #expect(style.discreteInput(after: date("2021-06-10 11:58:30Z").addingTimeInterval(0.5)) == date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp)
+        #expect(style.format(date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp) == "in 1 minute")
+        #expect(style.format(date("2021-06-10 11:58:30Z").addingTimeInterval(0.5)) == "in 2 minutes")
+
+        #expect(style.discreteInput(before: date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp) == date("2021-06-10 11:57:30Z").addingTimeInterval(0.5))
+        #expect(style.discreteInput(after: date("2021-06-10 11:57:30Z").addingTimeInterval(0.5)) == date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp)
+        #expect(style.format(date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp) == "in 2 minutes")
+        #expect(style.format(date("2021-06-10 11:57:30Z").addingTimeInterval(0.5)) == "in 3 minutes")
+
+        #expect(style.discreteInput(before: date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp) == date("2021-06-10 11:56:30Z").addingTimeInterval(0.5))
+        #expect(style.discreteInput(after: date("2021-06-10 11:56:30Z").addingTimeInterval(0.5)) == date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp)
+        #expect(style.format(date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp) == "in 3 minutes")
+        #expect(style.format(date("2021-06-10 11:56:30Z").addingTimeInterval(0.5)) == "in 4 minutes")
+
+
+
+        #expect(style.discreteInput(before: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5)) == date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown)
+        #expect(style.discreteInput(after: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown) == date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5))
+        #expect(style.format(date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown) == "1 minute ago")
+        #expect(style.format(date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5)) == "2 minutes ago")
+
+        #expect(style.discreteInput(before: date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5)) == date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown)
+        #expect(style.discreteInput(after: date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown) == date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5))
+        #expect(style.format(date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown) == "2 minutes ago")
+        #expect(style.format(date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5)) == "3 minutes ago")
+
+        #expect(style.discreteInput(before: date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5)) == date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown)
+        #expect(style.discreteInput(after: date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown) == date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5))
+        #expect(style.format(date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown) == "3 minutes ago")
+        #expect(style.format(date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5)) == "4 minutes ago")
+    }
+
+    @Test func counting() {
+        func assertEvaluation(of style: Date.AnchoredRelativeFormatStyle,
+                              in range: ClosedRange<Date>,
+                              includes expectedExcerpts: [String]...,
+                              sourceLocation: SourceLocation = #_sourceLocation) {
+            var style = style
+                .locale(enUSLocale)
+            style.calendar = calendar
+
+            verify(
+                sequence: style.evaluate(from: range.lowerBound, to: range.upperBound).lazy.map(\.output),
+                contains: expectedExcerpts,
+                "(lowerbound to upperbound)",
+                sourceLocation: sourceLocation)
+
+            verify(
+                sequence: style.evaluate(from: range.upperBound, to: range.lowerBound).lazy.map(\.output),
+                contains: expectedExcerpts
+                    .reversed()
+                    .map { $0.reversed() },
+                "(upperbound to lowerbound)",
+                sourceLocation: sourceLocation)
+        }
+
+        var now = try date("2021-06-10 12:00:00Z")
+
+        assertEvaluation(
+            of: .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated),
+            in: now.addingTimeInterval(-3)...now.addingTimeInterval(3),
+            includes: [
+                "in 3 sec.",
+                "in 2 sec.",
+                "in 1 sec.",
+                "in 0 sec.",
+                "1 sec. ago",
+                "2 sec. ago",
+                "3 sec. ago",
+            ])
+
+        assertEvaluation(
+            of: .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated),
+            in: now.addingTimeInterval(-180)...now.addingTimeInterval(180),
+            includes: [
+                "in 3 min.",
+                "in 2 min.",
+                "in 1 min.",
+                "in 0 min.",
+                "1 min. ago",
+                "2 min. ago",
+                "3 min. ago",
+            ])
+
+        assertEvaluation(
+            of: .init(anchor: now, allowedFields: [.minute, .second], presentation: .numeric, unitsStyle: .abbreviated),
+            in: now.addingTimeInterval(-120)...now.addingTimeInterval(120),
+            includes: [
+                "in 2 min.",
+                "in 1 min.",
+                "in 59 sec.",
+                "in 58 sec.",
+                "in 57 sec.",
+                "in 56 sec.",
+                "in 55 sec.",
+            ],
+            [
+                "in 2 sec.",
+                "in 1 sec.",
+                "in 0 sec.",
+                "1 sec. ago",
+                "2 sec. ago",
+            ],
+            [
+                "55 sec. ago",
+                "56 sec. ago",
+                "57 sec. ago",
+                "58 sec. ago",
+                "59 sec. ago",
+                "1 min. ago",
+                "2 min. ago",
+            ])
+
+        assertEvaluation(
+            of: .init(anchor: now, allowedFields: [.month], presentation: .numeric, unitsStyle: .abbreviated),
+            in: now.addingTimeInterval(-8 * 31 * 24 * 3600)...now.addingTimeInterval(8 * 31 * 24 * 3600),
+            includes: [
+                "in 8 mo.",
+                "in 7 mo.",
+                "in 6 mo.",
+                "in 5 mo.",
+                "in 4 mo.",
+                "in 3 mo.",
+                "in 2 mo.",
+                "in 1 mo.",
+                "in 0 mo.",
+                "1 mo. ago",
+                "2 mo. ago",
+                "3 mo. ago",
+                "4 mo. ago",
+                "5 mo. ago",
+                "6 mo. ago",
+                "7 mo. ago",
+                "8 mo. ago",
+            ])
+
+        now = try date("2023-05-15 08:47:20Z")
+
+        assertEvaluation(
+            of: .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated),
+            in: now.addingTimeInterval(-8 * 31 * 24 * 3600)...now.addingTimeInterval(8 * 31 * 24 * 3600),
+            includes: [
+                "in 8 mo.",
+                "in 7 mo.",
+                "in 6 mo.",
+                "in 5 mo.",
+                "in 4 mo.",
+                "in 3 mo.",
+                "in 2 mo.",
+                "in 1 mo.",
+                "in 4 wk.",
+                "in 3 wk.",
+                "in 2 wk.",
+                "in 1 wk.",
+                "in 0 wk.",
+                "1 wk. ago",
+                "2 wk. ago",
+                "3 wk. ago",
+                "1 mo. ago",
+                "2 mo. ago",
+                "3 mo. ago",
+                "4 mo. ago",
+                "5 mo. ago",
+                "6 mo. ago",
+                "7 mo. ago",
+                "8 mo. ago",
+            ])
+
+        assertEvaluation(
+            of: .init(anchor: now, allowedFields: [.month, .week, .day, .hour], presentation: .numeric, unitsStyle: .abbreviated),
+            in: now.addingTimeInterval(-8 * 31 * 24 * 3600)...now.addingTimeInterval(8 * 31 * 24 * 3600),
+            includes: [
+                "in 8 mo.",
+                "in 7 mo.",
+                "in 6 mo.",
+                "in 5 mo.",
+                "in 4 mo.",
+                "in 3 mo.",
+                "in 2 mo.",
+                "in 1 mo.",
+                "in 4 wk.",
+                "in 3 wk.",
+                "in 2 wk.",
+                "in 1 wk.",
+                "in 6 days",
+                "in 5 days",
+                "in 4 days",
+                "in 3 days",
+                "in 2 days",
+                "in 1 day",
+                "in 23 hr.",
+                "in 22 hr.",
+                "in 21 hr.",
+                "in 20 hr.",
+                "in 19 hr.",
+                "in 18 hr.",
+                "in 17 hr.",
+                "in 16 hr.",
+                "in 15 hr.",
+                "in 14 hr.",
+                "in 13 hr.",
+                "in 12 hr.",
+                "in 11 hr.",
+                "in 10 hr.",
+                "in 9 hr.",
+                "in 8 hr.",
+                "in 7 hr.",
+                "in 6 hr.",
+                "in 5 hr.",
+                "in 4 hr.",
+                "in 3 hr.",
+                "in 2 hr.",
+                "in 1 hr.",
+                "in 0 hr.",
+                "1 hr. ago",
+                "2 hr. ago",
+                "3 hr. ago",
+                "4 hr. ago",
+                "5 hr. ago",
+                "6 hr. ago",
+                "7 hr. ago",
+                "8 hr. ago",
+                "9 hr. ago",
+                "10 hr. ago",
+                "11 hr. ago",
+                "12 hr. ago",
+                "13 hr. ago",
+                "14 hr. ago",
+                "15 hr. ago",
+                "16 hr. ago",
+                "17 hr. ago",
+                "18 hr. ago",
+                "19 hr. ago",
+                "20 hr. ago",
+                "21 hr. ago",
+                "22 hr. ago",
+                "23 hr. ago",
+                "1 day ago",
+                "2 days ago",
+                "3 days ago",
+                "4 days ago",
+                "5 days ago",
+                "6 days ago",
+                "1 wk. ago",
+                "2 wk. ago",
+                "3 wk. ago",
+                "1 mo. ago",
+                "2 mo. ago",
+                "3 mo. ago",
+                "4 mo. ago",
+                "5 mo. ago",
+                "6 mo. ago",
+                "7 mo. ago",
+                "8 mo. ago",
+            ])
+
+        now = try date("2019-06-03 09:41:00Z")
+
+        assertEvaluation(
+            of: .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide),
+            in: now.addingTimeInterval(-2 * 24 * 3600)...now.addingTimeInterval(2 * 24 * 3600),
+            includes: [
+                "in 2 days",
+                "tomorrow",
+                "in 23 hours",
+                "in 22 hours",
+                "in 21 hours",
+                "in 20 hours",
+                "in 19 hours",
+                "in 18 hours",
+                "in 17 hours",
+                "in 16 hours",
+                "in 15 hours",
+                "in 14 hours",
+                "in 13 hours",
+                "in 12 hours",
+                "in 11 hours",
+                "in 10 hours",
+                "in 9 hours",
+                "in 8 hours",
+                "in 7 hours",
+                "in 6 hours",
+                "in 5 hours",
+                "in 4 hours",
+                "in 3 hours",
+                "in 2 hours",
+                "in 1 hour",
+                "in 59 minutes",
+                "in 58 minutes",
+                "in 57 minutes",
+                "in 56 minutes",
+                "in 55 minutes",
+                "in 54 minutes",
+                "in 53 minutes",
+                "in 52 minutes",
+                "in 51 minutes",
+                "in 50 minutes",
+                "in 49 minutes",
+                "in 48 minutes",
+                "in 47 minutes",
+                "in 46 minutes",
+                "in 45 minutes",
+                "in 44 minutes",
+                "in 43 minutes",
+                "in 42 minutes",
+                "in 41 minutes",
+                "in 40 minutes",
+                "in 39 minutes",
+                "in 38 minutes",
+                "in 37 minutes",
+                "in 36 minutes",
+                "in 35 minutes",
+                "in 34 minutes",
+                "in 33 minutes",
+                "in 32 minutes",
+                "in 31 minutes",
+                "in 30 minutes",
+                "in 29 minutes",
+                "in 28 minutes",
+                "in 27 minutes",
+                "in 26 minutes",
+                "in 25 minutes",
+                "in 24 minutes",
+                "in 23 minutes",
+                "in 22 minutes",
+                "in 21 minutes",
+                "in 20 minutes",
+                "in 19 minutes",
+                "in 18 minutes",
+                "in 17 minutes",
+                "in 16 minutes",
+                "in 15 minutes",
+                "in 14 minutes",
+                "in 13 minutes",
+                "in 12 minutes",
+                "in 11 minutes",
+                "in 10 minutes",
+                "in 9 minutes",
+                "in 8 minutes",
+                "in 7 minutes",
+                "in 6 minutes",
+                "in 5 minutes",
+                "in 4 minutes",
+                "in 3 minutes",
+                "in 2 minutes",
+                "in 1 minute",
+                "this minute",
+                "1 minute ago",
+                "2 minutes ago",
+                "3 minutes ago",
+                "4 minutes ago",
+                "5 minutes ago",
+                "6 minutes ago",
+                "7 minutes ago",
+                "8 minutes ago",
+                "9 minutes ago",
+                "10 minutes ago",
+                "11 minutes ago",
+                "12 minutes ago",
+                "13 minutes ago",
+                "14 minutes ago",
+                "15 minutes ago",
+                "16 minutes ago",
+                "17 minutes ago",
+                "18 minutes ago",
+                "19 minutes ago",
+                "20 minutes ago",
+                "21 minutes ago",
+                "22 minutes ago",
+                "23 minutes ago",
+                "24 minutes ago",
+                "25 minutes ago",
+                "26 minutes ago",
+                "27 minutes ago",
+                "28 minutes ago",
+                "29 minutes ago",
+                "30 minutes ago",
+                "31 minutes ago",
+                "32 minutes ago",
+                "33 minutes ago",
+                "34 minutes ago",
+                "35 minutes ago",
+                "36 minutes ago",
+                "37 minutes ago",
+                "38 minutes ago",
+                "39 minutes ago",
+                "40 minutes ago",
+                "41 minutes ago",
+                "42 minutes ago",
+                "43 minutes ago",
+                "44 minutes ago",
+                "45 minutes ago",
+                "46 minutes ago",
+                "47 minutes ago",
+                "48 minutes ago",
+                "49 minutes ago",
+                "50 minutes ago",
+                "51 minutes ago",
+                "52 minutes ago",
+                "53 minutes ago",
+                "54 minutes ago",
+                "55 minutes ago",
+                "56 minutes ago",
+                "57 minutes ago",
+                "58 minutes ago",
+                "59 minutes ago",
+                "1 hour ago",
+                "2 hours ago",
+                "3 hours ago",
+                "4 hours ago",
+                "5 hours ago",
+                "6 hours ago",
+                "7 hours ago",
+                "8 hours ago",
+                "9 hours ago",
+                "10 hours ago",
+                "11 hours ago",
+                "12 hours ago",
+                "13 hours ago",
+                "14 hours ago",
+                "15 hours ago",
+                "16 hours ago",
+                "17 hours ago",
+                "18 hours ago",
+                "19 hours ago",
+                "20 hours ago",
+                "21 hours ago",
+                "22 hours ago",
+                "23 hours ago",
+                "yesterday",
+                "2 days ago",
+            ])
+    }
+
+    @Test func regressions() throws {
+        var style: Date.AnchoredRelativeFormatStyle
+        var now: Date
+
+        now = Date(timeIntervalSinceReferenceDate: 724685580.417914)
+        style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 12176601839.415668))) > Date(timeIntervalSinceReferenceDate: 12176601839.415668))
+
+
+        now = Date(timeIntervalSinceReferenceDate: 724686086.706003)
+        style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -24141834543.08099))) < Date(timeIntervalSinceReferenceDate: -24141834543.08099))
+
+        now = Date(timeIntervalSinceReferenceDate: 724688507.315708)
+        style = .init(anchor: now, allowedFields: [.minute, .second], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 6013270816.926929))) > Date(timeIntervalSinceReferenceDate: 6013270816.926929))
+
+        now = Date(timeIntervalSinceReferenceDate: 724689590.234374)
+        style = .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722325435.4645464))) > Date(timeIntervalSinceReferenceDate: 722325435.4645464))
+
+        now = Date(timeIntervalSinceReferenceDate: 724701229.591328)
+        style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -7256167.2374657225)) returned Date(timeIntervalSinceReferenceDate: -31622400.5), but
+        /// Date(timeIntervalSinceReferenceDate: -31622400.49), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: -31622400.5)) = Date(timeIntervalSinceReferenceDate: -31622400.49),
+        /// already produces a different formatted output 'in 24 yr' compared to style.format(Date(timeIntervalSinceReferenceDate: -7256167.2374657225)), which is 'in 23 yr'
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -7256167.2374657225))) >= Date(timeIntervalSinceReferenceDate: -31622400.49))
+
+
+        now = Date(timeIntervalSinceReferenceDate: 724707086.436074)
+        style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        /// style.discreteInput(after: Date(timeIntervalSinceReferenceDate: -728.7911686889214)) returned Date(timeIntervalSinceReferenceDate: 0.9360740142747098), but
+        /// Date(timeIntervalSinceReferenceDate: 0.9260740142747098), which is a valid input, because style.input(before: Date(timeIntervalSinceReferenceDate: 0.9360740142747098)) = Date(timeIntervalSinceReferenceDate: 0.9260740142747098),
+        /// already produces a different formatted output 'in 22 yr' compared to style.format(Date(timeIntervalSinceReferenceDate: -728.7911686889214)), which is 'in 23 yr'
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: -728.7911686889214))) <= Date(timeIntervalSinceReferenceDate: 0.9260740142747098))
+
+
+        now = Date(timeIntervalSinceReferenceDate: 724707983.332096)
+        style = .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722086631.228182))) > Date(timeIntervalSinceReferenceDate: 722086631.228182))
+
+        now = Date(timeIntervalSinceReferenceDate: 725887340.112405)
+        style = .init(anchor: now, allowedFields: [.month, .week, .day, .hour], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 728224511.9413433)) returned Date(timeIntervalSinceReferenceDate: 727487999.6124048), but
+        /// Date(timeIntervalSinceReferenceDate: 727487999.6224048), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: 727487999.6124048)) = Date(timeIntervalSinceReferenceDate: 727487999.6224048),
+        /// already produces a different formatted output '3 wk ago' compared to style.format(Date(timeIntervalSinceReferenceDate: 728224511.9413433)), which is '1 mo ago'
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 728224511.9413433))) >= Date(timeIntervalSinceReferenceDate: 727487999.6224048))
+
+        now = Date(timeIntervalSinceReferenceDate: 725895690.016681)
+        style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 726561180.513301)) returned Date(timeIntervalSinceReferenceDate: 726364799.5166808), but
+        /// Date(timeIntervalSinceReferenceDate: 726364799.5266808), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: 726364799.5166808)) = Date(timeIntervalSinceReferenceDate: 726364799.5266808),
+        /// already produces a different formatted output '6 days ago' compared to style.format(Date(timeIntervalSinceReferenceDate: 726561180.513301)), which is '1 wk ago'
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 726561180.513301))) >= Date(timeIntervalSinceReferenceDate: 726364799.5266808))
+
+        now = Date(timeIntervalSinceReferenceDate: 725903036.660503)
+        style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        /// style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436)) returned Date(timeIntervalSinceReferenceDate: 725414400.1605031), but
+        /// Date(timeIntervalSinceReferenceDate: 725398549.919868), which is a valid input, because style.input(before: Date(timeIntervalSinceReferenceDate: 725414400.1605031)) = Date(timeIntervalSinceReferenceDate: 725414400.1505032),
+        /// already produces a different formatted output 'in 6 days' compared to style.format(Date(timeIntervalSinceReferenceDate: 725318223.6599436)), which is 'in 1 wk'
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436))) <= Date(timeIntervalSinceReferenceDate: 725398549.919868))
+    }
+
+#if FIXME_RANDOMIZED_SAMPLES_123465054
+    @Test func randomSamples() throws {
+        var style: Date.AnchoredRelativeFormatStyle
+        let now = Date.now
+
+        lazy var message = "now = Date(timeIntervalSinceReferenceDate: \(now.timeIntervalSinceReferenceDate))"
+
+        style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
+
+        style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
+
+        style = .init(anchor: now, allowedFields: [.minute, .second], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
+
+        style = .init(anchor: now, allowedFields: [.month], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
+
+        style = .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
+
+        style = .init(anchor: now, allowedFields: [.month, .week, .day, .hour], presentation: .numeric, unitsStyle: .abbreviated)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
+
+        style = .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide)
+        style.calendar = self.calendar
+        style.locale = enUSLocale
+        try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
+    }
+#endif
 }

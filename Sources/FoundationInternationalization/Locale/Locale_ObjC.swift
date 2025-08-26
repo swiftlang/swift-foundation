@@ -12,14 +12,14 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import os
+internal import os
 #if canImport(CoreFoundation_Private.CFLocale)
-@_implementationOnly import CoreFoundation_Private.CFLocale
+internal import CoreFoundation_Private.CFLocale
 #endif
 #if canImport(Foundation_Private.NSLocale)
-@_implementationOnly import Foundation_Private.NSLocale
+internal import Foundation_Private.NSLocale
 #endif
 
 /// Entry points for the ObjC and C code to call into the common Swift implementation.
@@ -27,7 +27,7 @@ import CoreFoundation
 extension NSLocale {
     @objc
     static var _autoupdatingCurrent: NSLocale {
-        LocaleCache.cache.autoupdatingCurrentNSLocale()
+        LocaleCache.autoupdatingCurrentNSLocale
     }
 
     @objc
@@ -37,7 +37,7 @@ extension NSLocale {
 
     @objc
     static var _system: NSLocale {
-        LocaleCache.cache.systemNSLocale()
+        LocaleCache.systemNSLocale
     }
 
     @objc
@@ -47,7 +47,7 @@ extension NSLocale {
 
     @objc
     private class func _newLocaleAsIfCurrent(_ name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> NSLocale? {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let inner = LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: overrides, disableBundleMatching: disableBundleMatching)
         return _NSSwiftLocale(inner)
 #else
@@ -65,7 +65,7 @@ extension NSLocale {
 
     @objc
     private class func _resetCurrent() {
-        LocaleCache.cache.reset()
+        LocaleNotifications.cache.reset()
     }
 
     @objc
@@ -73,7 +73,7 @@ extension NSLocale {
         LocaleCache.cache.preferredLanguages(forCurrentUser: forCurrentUser)
     }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
     @objc
     class var _availableLocaleIdentifiers: [String] {
         Locale.availableIdentifiers
@@ -99,7 +99,7 @@ extension NSLocale {
         Locale.isoCurrencyCodes
     }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
     @objc
     class var _commonISOCurrencyCodes: [String] {
         Locale.commonISOCurrencyCodes
@@ -134,7 +134,7 @@ extension NSLocale {
         Locale.canonicalLanguageIdentifier(from: string)
     }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
     @objc(_localeIdentifierFromWindowsLocaleCode:)
     class func _localeIdentifier(fromWindowsLocaleCode: UInt32) -> String? {
         guard let code = Int(exactly: fromWindowsLocaleCode) else {
@@ -166,7 +166,7 @@ extension NSLocale {
 
     @objc(_numberingSystemForLocaleIdentifier:)
     class func _numberingSystem(forLocaleIdentifier identifier: String) -> String? {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let components = Locale.Components(identifier: identifier)
         if let system = components.numberingSystem {
             return system.identifier
@@ -180,7 +180,7 @@ extension NSLocale {
 
     @objc(_validNumberingSystemsForLocaleIdentifier:)
     class func _validNumberingSystems(forLocaleIdentifier identifier: String) -> [String] {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.NumberingSystem.validNumberingSystems(for: identifier).map { $0.identifier }
 #else
         []
@@ -189,7 +189,7 @@ extension NSLocale {
 
     @objc(_localeIdentifierByReplacingLanguageCodeAndScriptCodeForLangCode:desiredComponents:)
     class func _localeIdentifierByReplacingLanguageCodeAndScriptCode(_ localeIDWithDesiredLangCode: String, desiredComponents localeIDWithDesiredComponents: String) -> String? {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.localeIdentifierByReplacingLanguageCodeAndScriptCode(localeIDWithDesiredLangCode: localeIDWithDesiredLangCode, localeIDWithDesiredComponents: localeIDWithDesiredComponents)
 #else
         nil
@@ -198,7 +198,7 @@ extension NSLocale {
 
     @objc(_localeIdentifierByAddingLikelySubtags:)
     class func _localeIdentifierByAddingLikelySubtags(_ localeID: String) -> String {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.localeIdentifierWithLikelySubtags(localeID)
 #else
         ""
@@ -218,19 +218,19 @@ extension NSLocale {
 
     @objc(_doesNotRequireSpecialCaseHandling)
     func _doesNotRequireSpecialCaseHandling() -> Bool {
-        // Unable to use cached locale; create a new one. Subclass `_NSSwiftLocale` implements a better version
-        return Locale(identifier: localeIdentifier).doesNotRequireSpecialCaseHandling
+        Locale.identifierDoesNotRequireSpecialCaseHandling(localeIdentifier)
     }
 }
 
 /// Wraps a Swift `struct Locale` with an `NSLocale`, so that it can be used from Objective-C.
 /// The goal is to forward as much of the implementation as possible into Swift.
 @objc(_NSSwiftLocale)
-internal class _NSSwiftLocale: _NSLocaleBridge {
+internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
     var locale: Locale
 
     internal init(_ locale: Locale) {
         self.locale = locale
+
         // The superclass does not care at all what the identifier is. Avoid a potentially recursive call into the Locale cache here by just using an empty string.
         super.init(localeIdentifier: "")
     }
@@ -244,7 +244,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
             return NSLocale.self
         }
     }
-    
+
     override init(localeIdentifier string: String) {
         self.locale = Locale(identifier: string)
         super.init(localeIdentifier: "")
@@ -308,7 +308,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
             switch locale.temperatureUnit {
             case .celsius: return NSLocaleTemperatureUnitCelsius
             case .fahrenheit: return NSLocaleTemperatureUnitFahrenheit
+#if !FOUNDATION_FRAMEWORK
+            // On non-framework builds, the enum is non-closed and `package` visibility, so we need a default
             default: return NSLocaleTemperatureUnitCelsius
+#endif
             }
         case .decimalSeparator: return self.decimalSeparator
         case .groupingSeparator: return self.groupingSeparator
@@ -360,7 +363,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
     // MARK: -
 
     override var localeIdentifier: String {
-        locale.identifier
+        @_effects(releasenone)
+        get {
+            return locale.identifier
+        }
     }
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
@@ -505,7 +511,11 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
     override func _numberingSystem() -> String! {
         locale.numberingSystem.identifier
     }
-    
+
+    override func _identifierCapturingPreferences() -> String {
+        locale.identifierCapturingPreferences
+    }
+
     override func _localeWithNewCalendarIdentifier(_ calendarIdentifier: String?) -> NSLocale? {
         guard let calendarIdentifier else {
             // No real need to copy here; Locale is immutable
@@ -520,8 +530,9 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         return _NSSwiftLocale(copy)
     }
     
+    @_effects(releasenone)
     override func _doesNotRequireSpecialCaseHandling() -> Bool {
-        return locale.doesNotRequireSpecialCaseHandling
+        Locale.identifierDoesNotRequireSpecialCaseHandling(locale.identifier)
     }
 }
 
@@ -578,7 +589,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     @available(watchOS, deprecated: 9, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     public static var isoLanguageCodes: [String] {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.LanguageCode._isoLanguageCodeStrings
 #else
         []
@@ -606,7 +617,7 @@ extension Locale {
     @available(watchOS, deprecated: 9, message: "Use `Locale.Region.isoRegions` instead")
     public static var isoRegionCodes: [String] {
         // This was renamed from Obj-C
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.Region.isoCountries
 #else
         []
@@ -619,7 +630,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Currency.isoCurrencies` instead")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Currency.isoCurrencies` instead")
     public static var isoCurrencyCodes: [String] {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.Currency.isoCurrencies.map { $0.identifier }
 #else
         []
@@ -632,7 +643,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Language(identifier:).characterDirection`")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Language(identifier:).characterDirection`")
     public static func characterDirection(forLanguage isoLangCode: String) -> Locale.LanguageDirection {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let language = Locale.Language(components: .init(identifier: isoLangCode))
         return language.characterDirection
 #else
@@ -646,7 +657,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Language(identifier:).lineLayoutDirection`")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Language(identifier:).lineLayoutDirection`")
     public static func lineDirection(forLanguage isoLangCode: String) -> Locale.LanguageDirection {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let language = Locale.Language(components: .init(identifier: isoLangCode))
         return language.lineLayoutDirection
 #else
@@ -658,8 +669,8 @@ extension Locale {
 
 extension NSLocale.Key {
     // Extra keys used by CoreFoundation
-    static var cfLocaleCollatorID = NSLocale.Key(rawValue: "locale:collator id")
-    static var languageIdentifier = NSLocale.Key(rawValue: "locale:languageIdentifier")
+    static let cfLocaleCollatorID = NSLocale.Key(rawValue: "locale:collator id")
+    static let languageIdentifier = NSLocale.Key(rawValue: "locale:languageIdentifier")
 }
 
 #endif // FOUNDATION_FRAMEWORK

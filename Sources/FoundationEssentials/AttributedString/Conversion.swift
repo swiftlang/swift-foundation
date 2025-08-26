@@ -13,10 +13,12 @@
 
 #if FOUNDATION_FRAMEWORK
 import Darwin
-@_implementationOnly import os
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
+internal import os
+@_spi(Unstable) internal import CollectionsInternal
+#elseif canImport(_RopeModule)
+internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 extension String {
@@ -27,7 +29,7 @@ extension String {
 
     #if false // FIXME: Make this public.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    @_alwaysEmitIntoClient
+    @backDeployed(before: macOS 14, iOS 17, tvOS 17, watchOS 10)
     public init(_ characters: AttributedString.CharacterView) {
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             self.init(_characters: characters)
@@ -39,7 +41,7 @@ extension String {
     }
     #endif
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
         self.init(_characters._characters)
@@ -109,7 +111,8 @@ extension AttributeContainer {
         for (key, value) in dictionary {
             if let type = attributeTable[key.rawValue] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
-                    storage[K.self] = try K._convertFromObjectiveCValue(value as AnyObject)
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    storage[assumingSendable: K.self] = try K._convertFromObjectiveCValue(value as AnyObject)
                 }
                 do {
                     try project(type)
@@ -138,24 +141,13 @@ extension Dictionary where Key == NSAttributedString.Key, Value == Any {
         try self.init(container, attributeTable: S.attributeKeyTypes())
     }
     
-    // These includingOnly SPI initializers were provided originally when conversion boxed attributes outside of the given scope as an AnyObject
-    // After rdar://80201634, these SPI initializers have the same behavior as the API initializers
-    @_spi(AttributedString)
-    public init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
-        try self.init(container, including: S.self)
-    }
-    
-    @_spi(AttributedString)
-    public init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: S.Type) throws {
-        try self.init(container, including: S.self)
-    }
-    
     fileprivate init(_ container: AttributeContainer, attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
         self.init()
         for key in container.storage.keys {
             if let type = attributeTable[key] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
-                    self[NSAttributedString.Key(rawValue: key)] = try K._convertToObjectiveCValue(container.storage[K.self]!)
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    self[NSAttributedString.Key(rawValue: key)] = try K._convertToObjectiveCValue(container.storage[assumingSendable: K.self]!)
                 }
                 do {
                     try project(type)
@@ -184,16 +176,6 @@ extension NSAttributedString {
         try self.init(attrStr, attributeTable: scope.attributeKeyTypes())
     }
     
-    @_spi(AttributedString)
-    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
-        try self.init(attrStr, including: S.self)
-    }
-    
-    @_spi(AttributedString)
-    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: S.Type) throws {
-        try self.init(attrStr, including: scope)
-    }
-    
     internal convenience init(
         _ attrStr: AttributedString,
         attributeTable: [String : any AttributedStringKey.Type],
@@ -207,9 +189,13 @@ extension NSAttributedString {
         for run in attrStr._guts.runs {
             let stringEnd = attrStr._guts.string.utf8.index(stringStart, offsetBy: run.length)
             let utf16Length = attrStr._guts.string.utf16.distance(from: stringStart, to: stringEnd)
-            let range = NSRange(location: nsStartIndex, length: utf16Length)
-            let attributes = try Dictionary(AttributeContainer(run.attributes), attributeTable: attributeTable, options: options)
-            result.setAttributes(attributes, range: range)
+            if !run.attributes.isEmpty {
+                let range = NSRange(location: nsStartIndex, length: utf16Length)
+                let attributes = try Dictionary(AttributeContainer(run.attributes), attributeTable: attributeTable, options: options)
+                if !attributes.isEmpty {
+                    result.setAttributes(attributes, range: range)
+                }
+            }
             nsStartIndex += utf16Length
             stringStart = stringEnd
         }
@@ -330,7 +316,7 @@ extension AttributedString.Index {
         }
         let j = target.__guts.string.index(roundingDown: i)
         guard j == i else { return nil }
-        self.init(j)
+        self.init(j, version: target.__guts.version)
     }
 }
 
@@ -454,14 +440,15 @@ extension Range where Bound == AttributedString.Index {
         guard range.location != NSNotFound else { return nil }
         guard range.location >= 0, range.length >= 0 else { return nil }
         let endOffset = range.location + range.length
-        let bstr = string.__guts.string
+        let bstrBounds = Range<BigString.Index>(uncheckedBounds: (string.startIndex._value, string.endIndex._value))
+        let bstr = string.__guts.string[bstrBounds]
         guard endOffset <= bstr.utf16.count else { return nil }
 
         let start = bstr.utf16.index(bstr.startIndex, offsetBy: range.location)
         let end = bstr.utf16.index(start, offsetBy: range.length)
 
         guard start >= string.startIndex._value, end <= string.endIndex._value else { return nil }
-        self.init(uncheckedBounds: (.init(start), .init(end)))
+        self.init(uncheckedBounds: (.init(start, version: string.__guts.version), .init(end, version: string.__guts.version)))
     }
 #endif // FOUNDATION_FRAMEWORK
 
@@ -500,7 +487,7 @@ extension Range where Bound == AttributedString.Index {
         else {
             return nil
         }
-        self.init(uncheckedBounds: (.init(lower), .init(upper)))
+        self.init(uncheckedBounds: (.init(lower, version: attributedString.__guts.version), .init(upper, version: attributedString.__guts.version)))
     }
 }
 
@@ -513,14 +500,20 @@ extension AttributedString {
         typealias Element = Index
         
         let string: Substring
-        init(_ string: Substring) { self.string = string }
+        let version: Guts.Version
+        
+        init(_ string: Substring, version: Guts.Version) {
+            self.string = string
+            self.version = version
+        }
+        
         subscript(position: Index) -> Index { position }
-        var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset)) }
-        var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset)) }
+        var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset), version: version) }
+        var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset), version: version) }
         func index(after i: Index) -> Index {
             let j = String.Index(_utf8Offset: i._value.utf8Offset)
             let k = string.index(after: j)
-            return Index(BigString.Index(_utf8Offset: k._utf8Offset))
+            return Index(BigString.Index(_utf8Offset: k._utf8Offset), version: version)
         }
     }
 }
@@ -540,7 +533,8 @@ extension Range where Bound == String.Index {
             return
         }
         let str = Substring(string)
-        let dummy = AttributedString._IndexConverterFromAttributedString(str)
+        // Due to the FIXME notes above, we do not have a valid version to supply here since we have no AttributedString, so instead we use a newly created version to maintain existing behavior
+        let dummy = AttributedString._IndexConverterFromAttributedString(str, version: AttributedString.Guts.createNewVersion())
         let range = region.relative(to: dummy)
         self.init(_range: range, in: str)
     }

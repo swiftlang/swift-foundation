@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
+@_spi(Unstable) internal import CollectionsInternal
+#elseif canImport(_RopeModule)
+internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 @dynamicMemberLookup
@@ -148,7 +150,10 @@ extension AttributedString {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString { // Equatable
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        AttributedString.Guts.characterwiseIsEqual(lhs._guts, to: rhs._guts)
+        if lhs._guts === rhs._guts {
+            return true
+        }
+        return AttributedString.Guts.characterwiseIsEqual(lhs._guts, to: rhs._guts)
     }
 }
 
@@ -201,9 +206,11 @@ extension AttributedString { // AttributedStringAttributeMutation
 extension AttributedString: AttributedStringProtocol {
     public struct Index : Comparable, Sendable {
         internal var _value: BigString.Index
+        internal var _version: AttributedString.Guts.Version
 
-        internal init(_ value: BigString.Index) {
+        internal init(_ value: BigString.Index, version: AttributedString.Guts.Version) {
             self._value = value
+            self._version = version
         }
 
         public static func == (left: Self, right: Self) -> Bool {
@@ -216,11 +223,11 @@ extension AttributedString: AttributedStringProtocol {
     }
     
     public var startIndex : Index {
-        Index(_guts.string.startIndex)
+        Index(_guts.string.startIndex, version: _guts.version)
     }
     
     public var endIndex : Index {
-        Index(_guts.string.endIndex)
+        Index(_guts.string.endIndex, version: _guts.version)
     }
     
     @preconcurrency
@@ -239,6 +246,7 @@ extension AttributedString: AttributedStringProtocol {
     }
     
     @preconcurrency
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
     ) -> K.Value? where K.Value: Sendable {
@@ -274,6 +282,7 @@ extension AttributedString {
         if !isKnownUniquelyReferenced(&_guts) {
             _guts = _guts.copy()
         }
+        _guts.incrementVersion()
     }
 
     public mutating func append(_ s: some AttributedStringProtocol) {
@@ -290,8 +299,9 @@ extension AttributedString {
 
     public mutating func replaceSubrange(_ range: some RangeExpression<Index>, with s: some AttributedStringProtocol) {
         ensureUniqueReference()
-        // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-        let subrange = range.relative(to: unicodeScalars)._bstringRange
+        // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+        // expressions using the characters view, to remain consistent with the stdlib.
+        let subrange = range.relative(to: characters)._bstringRange
         _guts.replaceSubrange(subrange, with: s)
     }
 }
@@ -325,14 +335,16 @@ extension AttributedString {
 extension AttributedString {
     public subscript(bounds: some RangeExpression<Index>) -> AttributedSubstring {
         get {
-            // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-            let bounds = bounds.relative(to: unicodeScalars)
+            // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+            // expressions using the characters view, to remain consistent with the stdlib.
+            let bounds = bounds.relative(to: characters)
             return AttributedSubstring(_guts, in: bounds._bstringRange)
         }
         _modify {
             ensureUniqueReference()
-            // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-            let bounds = bounds.relative(to: unicodeScalars)
+            // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+            // expressions using the characters view, to remain consistent with the stdlib.
+            let bounds = bounds.relative(to: characters)
             var substr = AttributedSubstring(_guts, in: bounds._bstringRange)
             let ident = Self._nextModifyIdentity
             substr._identity = ident
@@ -346,6 +358,10 @@ extension AttributedString {
             yield &substr
         }
         set {
+            // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+            // expressions using the characters view, to remain consistent with the stdlib.
+            let bounds = bounds.relative(to: characters)
+
             // FIXME: Why is this allowed if _modify traps on replacement?
             self.replaceSubrange(bounds, with: newValue)
         }
@@ -363,9 +379,27 @@ extension Range where Bound == AttributedString.Index {
     }
 }
 
+extension RangeSet where Bound == AttributedString.Index {
+    internal var _bstringIndices: RangeSet<BigString.Index> {
+        RangeSet<BigString.Index>(self.ranges.map(\._bstringRange))
+    }
+}
+
+extension RangeSet where Bound == BigString.Index {
+    internal func _attributedStringIndices(version: AttributedString.Guts.Version) -> RangeSet<AttributedString.Index> {
+        RangeSet<AttributedString.Index>(self.ranges.lazy.map {
+            $0._attributedStringRange(version: version)
+        })
+    }
+}
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Range where Bound == BigString.Index {
     internal var _utf8OffsetRange: Range<Int> {
         Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))
+    }
+    
+    internal func _attributedStringRange(version: AttributedString.Guts.Version) -> Range<AttributedString.Index> {
+        Range<AttributedString.Index>(uncheckedBounds: (AttributedString.Index(lowerBound, version: version), AttributedString.Index(upperBound, version: version)))
     }
 }

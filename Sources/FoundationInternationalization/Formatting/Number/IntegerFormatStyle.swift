@@ -201,6 +201,17 @@ extension IntegerFormatStyle {
             new.collection.presentation = p
             return new
         }
+
+        /// Modifies the format style to use the specified notation.
+        ///
+        /// - Parameter notation: The notation to apply to the format style.
+        /// - Returns: An integer currency format style modified to use the specified notation.
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+        public func notation(_ notation: Configuration.Notation) -> Self {
+            var new = self
+            new.collection.notation = notation
+            return new
+        }
     }
 }
 
@@ -481,6 +492,10 @@ extension IntegerFormatStyle {
             case integer(IntegerFormatStyle)
             case percent(IntegerFormatStyle.Percent)
             case currency(IntegerFormatStyle.Currency)
+            
+            private typealias IntegerCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
         }
 
         var style: Style
@@ -552,7 +567,7 @@ extension IntegerFormatStyle {
 extension IntegerFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 
@@ -560,7 +575,7 @@ extension IntegerFormatStyle : CustomConsumingRegexComponent {
 extension IntegerFormatStyle.Percent : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 
@@ -568,7 +583,7 @@ extension IntegerFormatStyle.Percent : CustomConsumingRegexComponent {
 extension IntegerFormatStyle.Currency : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 

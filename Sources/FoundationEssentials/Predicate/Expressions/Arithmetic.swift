@@ -14,6 +14,10 @@
 extension PredicateExpressions {
     public enum ArithmeticOperator: Codable, Sendable {
         case add, subtract, multiply
+        
+        private typealias AddCodingKeys = EmptyCodingKeys
+        private typealias SubtractCodingKeys = EmptyCodingKeys
+        private typealias MultiplyCodingKeys = EmptyCodingKeys
     }
     
     public struct Arithmetic<
@@ -56,7 +60,7 @@ extension PredicateExpressions {
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Arithmetic : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Arithmetic : CustomStringConvertible {
     public var description: String {
         "Arithmetic(lhs: \(lhs), operator: \(op), rhs: \(rhs))"

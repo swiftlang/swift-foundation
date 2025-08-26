@@ -5,83 +5,201 @@ import PackageDescription
 import CompilerPluginSupport
 
 // Availability Macros
-let availabilityMacros: [SwiftSetting] = [
-    "FoundationPreview 0.1:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.2:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.3:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.4:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
+
+let availabilityTags: [_Availability] = [
+    _Availability("FoundationPreview"), // Default FoundationPreview availability
+]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3"]
+
+// Availability Macro Utilities
+
+enum _OSAvailability: String {
+    case alwaysAvailable = "macOS 15, iOS 18, tvOS 18, watchOS 11" // This should match the package's deployment target
+    case macOS26 = "macOS 26, iOS 26, tvOS 26, watchOS 26"
+    // Use 10000 for future availability to avoid compiler magic around the 9999 version number but ensure it is greater than 9999
+    case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000"
+}
+struct _Availability {
+    let name: String
+    let osAvailability: _OSAvailability
+    
+    init(_ name: String, availability: _OSAvailability = .alwaysAvailable) {
+        self.name = name
+        self.osAvailability = availability
+    }
+}
+let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
+    availabilityTags.map {
+        .enableExperimentalFeature("AvailabilityMacro=\($0.name) \(version):\($0.osAvailability.rawValue)")
+    }
+}
+
+let featureSettings: [SwiftSetting] = [
+    .enableExperimentalFeature("StrictConcurrency"),
+    .enableExperimentalFeature("ImportMacroAliases"),
+    .enableUpcomingFeature("InferSendableFromCaptures"),
+    .enableUpcomingFeature("MemberImportVisibility")
+]
+
+var dependencies: [Package.Dependency] = []
+
+if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalDepsEnv.isEmpty {
+    let root: String
+    if useLocalDepsEnv == "1" {
+        root = ".."
+    } else {
+        root = useLocalDepsEnv
+    }
+    dependencies += 
+        [
+            .package(
+                name: "swift-collections",
+                path: "\(root)/swift-collections"),
+            .package(
+                name: "swift-foundation-icu",
+                path: "\(root)/swift-foundation-icu"),
+            .package(
+                name: "swift-syntax",
+                path: "\(root)/swift-syntax")
+        ]
+} else {
+    // These dependencies should match `update-checkout`
+    // See `update-checkout-config.json` for the `main` branch-scheme
+    dependencies += 
+        [
+            .package(
+                url: "https://github.com/apple/swift-collections",
+                from: "1.1.0"),
+            .package(
+                url: "https://github.com/apple/swift-foundation-icu",
+                branch: "main"),
+            .package(
+                url: "https://github.com/swiftlang/swift-syntax",
+                branch: "main")
+        ]
+}
+
+let wasiLibcCSettings: [CSetting] = [
+    .define("_WASI_EMULATED_SIGNAL", .when(platforms: [.wasi])),
+    .define("_WASI_EMULATED_MMAN", .when(platforms: [.wasi])),
+]
+
+let testOnlySwiftSettings: [SwiftSetting] = [
+    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
+]
 
 let package = Package(
-    name: "FoundationPreview",
-    platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
+    name: "swift-foundation",
+    platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")],
     products: [
-        // Products define the executables and libraries a package produces, and make them visible to other packages.
-        .library(name: "FoundationPreview", targets: ["FoundationPreview"]),
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
     ],
-    dependencies: [
-        .package(
-            url: "https://github.com/apple/swift-collections",
-            revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
-        .package(
-            url: "https://github.com/apple/swift-foundation-icu",
-            exact: "0.0.4"),
-        .package(
-            url: "https://github.com/apple/swift-syntax.git",
-            from: "509.0.2")
-    ],
+    dependencies: dependencies,
     targets: [
-        // Foundation (umbrella)
+        // _FoundationCShims (Internal)
         .target(
-            name: "FoundationPreview",
-            dependencies: [
-                "FoundationEssentials",
-                "FoundationInternationalization",
-            ],
-            path: "Sources/Foundation"),
-
-        // _CShims (Internal)
-        .target(name: "_CShims",
-                cSettings: [.define("_CRT_SECURE_NO_WARNINGS",
-                                    .when(platforms: [.windows]))]),
+            name: "_FoundationCShims",
+            cSettings: [
+                .define("_CRT_SECURE_NO_WARNINGS", .when(platforms: [.windows]))
+            ] + wasiLibcCSettings
+        ),
 
         // TestSupport (Internal)
-        .target(name: "TestSupport", dependencies: [
-            "FoundationEssentials",
-            "FoundationInternationalization",
-        ], swiftSettings: availabilityMacros),
+        .target(
+            name: "TestSupport",
+            path: "Tests/TestSupport",
+            cSettings: wasiLibcCSettings,
+            swiftSettings: availabilityMacros + featureSettings
+        ),
 
         // FoundationEssentials
         .target(
           name: "FoundationEssentials",
           dependencies: [
-            "_CShims",
+            "_FoundationCShims",
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
+            .product(name: "DequeModule", package: "swift-collections"),
+            .product(name: "OrderedCollections", package: "swift-collections"),
           ],
+          exclude: [
+            "Formatting/CMakeLists.txt",
+            "PropertyList/CMakeLists.txt",
+            "Decimal/CMakeLists.txt",
+            "String/CMakeLists.txt",
+            "Error/CMakeLists.txt",
+            "Locale/CMakeLists.txt",
+            "Data/CMakeLists.txt",
+            "TimeZone/CMakeLists.txt",
+            "JSON/CMakeLists.txt",
+            "AttributedString/CMakeLists.txt",
+            "Calendar/CMakeLists.txt",
+            "Predicate/CMakeLists.txt",
+            "CMakeLists.txt",
+            "ProcessInfo/CMakeLists.txt",
+            "FileManager/CMakeLists.txt",
+            "URL/CMakeLists.txt",
+            "NotificationCenter/CMakeLists.txt"
+          ],
+          cSettings: [
+            .define("_GNU_SOURCE", .when(platforms: [.linux]))
+          ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
+            .enableExperimentalFeature("LifetimeDependence"),
+            .enableExperimentalFeature("AddressableTypes"),
+            .enableExperimentalFeature("AllowUnsafeAttribute"),
+            .enableExperimentalFeature("BuiltinModule"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ] + availabilityMacros
+          ] + availabilityMacros + featureSettings,
+          linkerSettings: [
+            .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
+          ]
         ),
-        .testTarget(name: "FoundationEssentialsTests", dependencies: [
-            "TestSupport",
-            "FoundationEssentials"
-        ], swiftSettings: availabilityMacros),
+        .testTarget(
+            name: "FoundationEssentialsTests",
+            dependencies: [
+                "TestSupport",
+                "FoundationEssentials"
+            ],
+            resources: [
+                .copy("Resources")
+            ],
+            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+        ),
 
         // FoundationInternationalization
         .target(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
-                .target(name: "_CShims"),
-                .product(name: "FoundationICU", package: "swift-foundation-icu")
+                .target(name: "_FoundationCShims"),
+                .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
+            exclude: [
+                "String/CMakeLists.txt",
+                "TimeZone/CMakeLists.txt",
+                "ICU/CMakeLists.txt",
+                "Formatting/CMakeLists.txt",
+                "Locale/CMakeLists.txt",
+                "Calendar/CMakeLists.txt",
+                "CMakeLists.txt",
+                "Predicate/CMakeLists.txt"
+            ],
+            cSettings: wasiLibcCSettings,
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros
+            ] + availabilityMacros + featureSettings
+        ),
+        
+        .testTarget(
+            name: "FoundationInternationalizationTests",
+            dependencies: [
+                "TestSupport",
+                "FoundationInternationalization",
+            ],
+            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
         
         // FoundationMacros
@@ -95,26 +213,18 @@ let package = Package(
                 .product(name: "SwiftParserDiagnostics", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros
+            ] + availabilityMacros + featureSettings
         ),
+        
         .testTarget(
             name: "FoundationMacrosTests",
             dependencies: [
-                "FoundationMacros",
-                "TestSupport"
+                "FoundationMacros"
             ],
-            swiftSettings: availabilityMacros
+            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         )
     ]
 )
-
-#if canImport(RegexBuilder)
-package.targets.append(contentsOf: [
-    .testTarget(name: "FoundationInternationalizationTests", dependencies: [
-        "TestSupport",
-        "FoundationInternationalization"
-    ], swiftSettings: availabilityMacros),
-])
-#endif

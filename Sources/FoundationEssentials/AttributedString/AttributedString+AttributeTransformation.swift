@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
+@_spi(Unstable) internal import CollectionsInternal
+#elseif canImport(_RopeModule)
+internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -50,7 +52,9 @@ extension AttributedString {
         andChanged changed: AttributedString.SingleAttributeTransformer<K>,
         to attrStr: inout AttributedString,
         key: K.Type
-    ) {
+    ) 
+    where
+        K.Value : Sendable {
         if orig.range != changed.range || orig.attrName != changed.attrName {
             attrStr._guts.removeAttributeValue(forKey: K.self, in: orig.range._bstringRange) // If the range changed, we need to remove from the old range first.
         }
@@ -61,7 +65,7 @@ extension AttributedString {
         andChanged changed: AttributedString.SingleAttributeTransformer<K>,
         to attrStr: inout AttributedString,
         key: K.Type
-    ) {
+    ) where K.Value : Sendable {
         if orig.range != changed.range || orig.attrName != changed.attrName || orig.attr != changed.attr {
             if let newVal = changed.attr { // Then if there's a new value, we add it in.
                 // Unfortunately, we can't use the attrStr[range].set() provided by the AttributedStringProtocol, because we *don't know* the new type statically!
@@ -76,10 +80,13 @@ extension AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    @preconcurrency
     public func transformingAttributes<K>(
         _ k:  K.Type,
         _ c: (inout AttributedString.SingleAttributeTransformer<K>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString 
+    where 
+        K.Value : Sendable {
         let orig = AttributedString(_guts)
         var copy = orig
         copy.ensureUniqueReference() // ???: Is this best practice? We're going behind the back of the AttributedString mutation API surface, so it doesn't happen anywhere else. It's also aggressively speculative.
@@ -93,12 +100,16 @@ extension AttributedString {
         return copy
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2>(
         _ k:  K1.Type,
         _ k2: K2.Type,
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
               inout AttributedString.SingleAttributeTransformer<K2>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString 
+    where 
+        K1.Value : Sendable,
+        K2.Value : Sendable {
         let orig = AttributedString(_guts)
         var copy = orig
         copy.ensureUniqueReference() // ???: Is this best practice? We're going behind the back of the AttributedString mutation API surface, so it doesn't happen anywhere else. It's also aggressively speculative.
@@ -116,6 +127,7 @@ extension AttributedString {
         return copy
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2, K3>(
         _ k:  K1.Type,
         _ k2: K2.Type,
@@ -123,7 +135,11 @@ extension AttributedString {
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
               inout AttributedString.SingleAttributeTransformer<K2>,
               inout AttributedString.SingleAttributeTransformer<K3>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString 
+    where
+        K1.Value : Sendable,
+        K2.Value : Sendable,
+        K3.Value : Sendable {
         let orig = AttributedString(_guts)
         var copy = orig
         copy.ensureUniqueReference() // ???: Is this best practice? We're going behind the back of the AttributedString mutation API surface, so it doesn't happen anywhere else. It's also aggressively speculative.
@@ -145,6 +161,7 @@ extension AttributedString {
         return copy
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2, K3, K4>(
         _ k:  K1.Type,
         _ k2: K2.Type,
@@ -154,7 +171,12 @@ extension AttributedString {
               inout AttributedString.SingleAttributeTransformer<K2>,
               inout AttributedString.SingleAttributeTransformer<K3>,
               inout AttributedString.SingleAttributeTransformer<K4>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString
+    where
+        K1.Value : Sendable,
+        K2.Value : Sendable,
+        K3.Value : Sendable,
+        K4.Value : Sendable {
         let orig = AttributedString(_guts)
         var copy = orig
         copy.ensureUniqueReference() // ???: Is this best practice? We're going behind the back of the AttributedString mutation API surface, so it doesn't happen anywhere else. It's also aggressively speculative.
@@ -180,6 +202,7 @@ extension AttributedString {
         return copy
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2, K3, K4, K5>(
         _ k:  K1.Type,
         _ k2: K2.Type,
@@ -191,7 +214,13 @@ extension AttributedString {
               inout AttributedString.SingleAttributeTransformer<K3>,
               inout AttributedString.SingleAttributeTransformer<K4>,
               inout AttributedString.SingleAttributeTransformer<K5>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString
+    where
+        K1.Value : Sendable,
+        K2.Value : Sendable,
+        K3.Value : Sendable,
+        K4.Value : Sendable,
+        K5.Value : Sendable {
         let orig = AttributedString(_guts)
         var copy = orig
         copy.ensureUniqueReference() // ???: Is this best practice? We're going behind the back of the AttributedString mutation API surface, so it doesn't happen anywhere else. It's also aggressively speculative.
@@ -224,22 +253,30 @@ extension AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    @preconcurrency
     public func transformingAttributes<K>(
         _ k: KeyPath<AttributeDynamicLookup, K>,
         _ c: (inout AttributedString.SingleAttributeTransformer<K>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString
+    where
+        K.Value : Sendable {
         self.transformingAttributes(K.self, c)
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2>(
         _ k:  KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
               inout AttributedString.SingleAttributeTransformer<K2>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString
+    where
+        K1.Value : Sendable,
+        K2.Value : Sendable {
         self.transformingAttributes(K1.self, K2.self, c)
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2, K3>(
         _ k:  KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
@@ -247,10 +284,15 @@ extension AttributedString {
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
               inout AttributedString.SingleAttributeTransformer<K2>,
               inout AttributedString.SingleAttributeTransformer<K3>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString
+    where
+        K1.Value : Sendable,
+        K2.Value : Sendable,
+        K3.Value : Sendable {
         self.transformingAttributes(K1.self, K2.self, K3.self, c)
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2, K3, K4>(
         _ k:  KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
@@ -260,10 +302,16 @@ extension AttributedString {
               inout AttributedString.SingleAttributeTransformer<K2>,
               inout AttributedString.SingleAttributeTransformer<K3>,
               inout AttributedString.SingleAttributeTransformer<K4>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString
+    where
+        K1.Value : Sendable,
+        K2.Value : Sendable,
+        K3.Value : Sendable,
+        K4.Value : Sendable {
         self.transformingAttributes(K1.self, K2.self, K3.self, K4.self, c)
     }
 
+    @preconcurrency
     public func transformingAttributes<K1, K2, K3, K4, K5>(
         _ k:  KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
@@ -275,7 +323,13 @@ extension AttributedString {
               inout AttributedString.SingleAttributeTransformer<K3>,
               inout AttributedString.SingleAttributeTransformer<K4>,
               inout AttributedString.SingleAttributeTransformer<K5>) -> Void
-    ) -> AttributedString {
+    ) -> AttributedString 
+    where
+        K1.Value : Sendable,
+        K2.Value : Sendable,
+        K3.Value : Sendable,
+        K4.Value : Sendable,
+        K5.Value : Sendable {
         self.transformingAttributes(K1.self, K2.self, K3.self, K4.self, K5.self, c)
     }
 }

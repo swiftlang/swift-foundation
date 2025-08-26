@@ -12,10 +12,10 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import os
-@_implementationOnly import CoreFoundation_Private.CFLocale
+internal import os
+internal import CoreFoundation_Private.CFLocale
 
 extension NSCalendar.Unit {
     // Avoid the deprecation warning for .NSWeekCalendarUnit
@@ -74,11 +74,6 @@ extension NSCalendar {
             return nil
         }
         return _NSSwiftCalendar(calendar: Calendar(identifier: id))
-    }
-
-    @objc
-    class func _resetCurrent() {
-        CalendarCache.cache.reset()
     }
 }
 
@@ -611,10 +606,12 @@ private func _fromNSCalendarUnits(_ units : NSCalendar.Unit) -> Set<Calendar.Com
     if units.contains(.weekOfMonth) { result.insert(.weekOfMonth) }
     if units.contains(.weekOfYear) { result.insert(.weekOfYear) }
     if units.contains(.yearForWeekOfYear) { result.insert(.yearForWeekOfYear) }
+    if units.contains(.dayOfYear) { result.insert(.dayOfYear) }
     if units.contains(.nanosecond) { result.insert(.nanosecond) }
     if units.contains(.calendar) { result.insert(.calendar) }
     if units.contains(.timeZone) { result.insert(.timeZone) }
     if units.contains(.deprecatedWeekUnit) { result.insert(.weekOfYear) }
+    if units.contains(.isRepeatedDay) { result.insert(.isRepeatedDay)}
     return result
 }
 
@@ -633,10 +630,13 @@ private func _fromNSCalendarUnit(_ unit: NSCalendar.Unit) -> Calendar.Component?
     case .weekOfMonth: return .weekOfMonth
     case .weekOfYear: return .weekOfYear
     case .yearForWeekOfYear: return .yearForWeekOfYear
+    case .dayOfYear: return .dayOfYear
     case .nanosecond: return .nanosecond
     case .calendar: return .calendar
     case .timeZone: return .timeZone
     case .deprecatedWeekUnit: return .weekOfYear
+    case .isLeapMonth: return .isLeapMonth
+    case .isRepeatedDay: return .isRepeatedDay
     default:
         return nil
     }

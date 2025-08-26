@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import ReflectionInternal
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
-#endif
-
 // MARK: AttributedStringKey API
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
@@ -130,17 +123,8 @@ extension AttributedStringKey {
     public static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { nil }
 }
 
-extension AttributedStringKey {
-    // FIXME: ☠️ Allocating an Array here is not a good idea.
-    static var _constraintsInvolved: [AttributedString.AttributeRunBoundaries] {
-        guard let rb = runBoundaries else { return [] }
-        return [rb]
-    }
-}
-
 // MARK: Attribute Scopes
 
-@_nonSendable
 @dynamicMemberLookup @frozen
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public enum AttributeDynamicLookup {
@@ -148,6 +132,13 @@ public enum AttributeDynamicLookup {
         get { fatalError("Called outside of a dynamicMemberLookup subscript overload") }
     }
 }
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeDynamicLookup : Sendable {}
 
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)

@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
+@_spi(Unstable) internal import CollectionsInternal
+#elseif canImport(_RopeModule)
+internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -58,8 +60,8 @@ extension AttributedString.Runs.Run: CustomStringConvertible {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Run {
     public var range: Range<AttributedString.Index> {
-        let lower = AttributedString.Index(_range.lowerBound)
-        let upper = AttributedString.Index(_range.upperBound)
+        let lower = AttributedString.Index(_range.lowerBound, version: _guts.version)
+        let upper = AttributedString.Index(_range.upperBound, version: _guts.version)
         return Range(uncheckedBounds: (lower, upper))
     }
 
@@ -79,6 +81,7 @@ extension AttributedString.Runs.Run {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Run {
     @preconcurrency
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
     ) -> K.Value?

@@ -12,9 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import os
+internal import os
 
 /// Wraps an `NSTimeZone` with a more Swift-like `TimeZone` API.
 /// This is only used in the case where we have a custom Objective-C subclass of `NSTimeZone`.

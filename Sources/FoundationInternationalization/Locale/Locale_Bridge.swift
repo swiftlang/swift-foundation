@@ -12,11 +12,11 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import os
-@_implementationOnly import CoreFoundation_Private.CFLocale
-@_implementationOnly import Foundation_Private.NSLocale
+internal import os
+internal import CoreFoundation_Private.CFLocale
+internal import Foundation_Private.NSLocale
 
 /// Wraps an NSLocale with a more Swift-like `Locale` API.
 /// This is only used in the case where we have custom Objective-C subclasses of `NSLocale`. It is assumed that the subclass is Sendable.
@@ -50,7 +50,7 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     }
 
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         // Round trip through Locale.Components
         var comps = Locale.Components(identifier: self.identifier)
         comps.calendar = identifier
@@ -234,11 +234,19 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     var firstDayOfWeek: Locale.Weekday {
         LocaleCache.cache.fixed(identifier).firstDayOfWeek
     }
-    
+
+    var weekendRange: WeekendRange? {
+        LocaleCache.cache.fixed(identifier).weekendRange
+    }
+
     var language: Locale.Language {
         LocaleCache.cache.fixed(identifier).language
     }
-    
+
+    var minimumDaysInFirstWeek: Int {
+        LocaleCache.cache.fixed(identifier).minimumDaysInFirstWeek
+    }
+
     func identifier(_ type: Locale.IdentifierType) -> String {
         LocaleCache.cache.fixed(identifier).identifier(type)
     }
@@ -307,10 +315,6 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     
     func pref(for key: String) -> Any? {
         nil
-    }
-    
-    var doesNotRequireSpecialCaseHandling: Bool {
-        Locale.identifierDoesNotRequireSpecialCaseHandling(identifier)
     }
 }
 

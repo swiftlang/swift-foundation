@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
+@_spi(Unstable) internal import CollectionsInternal
+#elseif canImport(_RopeModule)
+internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -104,11 +106,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     public typealias Index = AttributedString.Index
 
     public var startIndex: AttributedString.Index {
-        .init(_range.lowerBound)
+        .init(_range.lowerBound, version: _guts.version)
     }
 
     public var endIndex: AttributedString.Index {
-        .init(_range.upperBound)
+        .init(_range.upperBound, version: _guts.version)
     }
 
     @_alwaysEmitIntoClient
@@ -121,7 +123,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultCount
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal var _count: Int {
         _characters.count
@@ -129,14 +131,14 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(before: i._value))
+        let j = Index(_guts.string.index(before: i._value), version: _guts.version)
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(after: i._value))
+        let j = Index(_guts.string.index(after: i._value), version: _guts.version)
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
     }
@@ -151,11 +153,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(i._value, offsetBy: distance))
+        let j = Index(_guts.string.index(i._value, offsetBy: distance), version: _guts.version)
         precondition(j >= startIndex && j <= endIndex, "AttributedString index out of bounds")
         return j
     }
@@ -174,7 +176,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -190,7 +192,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         }
         precondition(j >= startIndex._value && j <= endIndex._value,
                      "AttributedString index out of bounds")
-        return Index(j)
+        return Index(j, version: _guts.version)
     }
 
     @_alwaysEmitIntoClient
@@ -205,7 +207,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultDistance(from: start, to: end)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")

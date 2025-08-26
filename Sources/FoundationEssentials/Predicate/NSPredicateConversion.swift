@@ -13,8 +13,8 @@
 #if FOUNDATION_FRAMEWORK
 
 #if canImport(Foundation_Private.NSExpression)
-@_implementationOnly import Foundation_Private.NSExpression
-@_implementationOnly import Foundation_Private.NSPredicate
+internal import Foundation_Private.NSExpression
+internal import Foundation_Private.NSPredicate
 
 private struct NSPredicateConversionState {
     private var nextLocalVariable: UInt = 1
@@ -144,6 +144,8 @@ private func _expressionCompatibleValue(for value: Any) throws -> Any? {
         return value
     case let result as ComparisonResult:
         return result.rawValue
+    case let regex as PredicateExpressions.PredicateRegex:
+        return regex.stringRepresentation
     case let c as Character:
         return String(c)
     case let sequence as any Sequence:
@@ -195,6 +197,18 @@ extension PredicateExpressions.PredicateEvaluate : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         // Evaluate the subtree that provides the Predicate. We can only nest a predicate if the predicate is provided as a constant value
         guard let predicateValue = try? predicate.evaluate(.init()) else {
+            throw NSPredicateConversionError.unsupportedType
+        }
+        
+        repeat state[(each predicateValue.variable).key] = try (each input).convertToExpression(state: &state)
+        return try predicateValue.expression.convertToExpressionOrPredicate(state: &state)
+    }
+}
+
+extension PredicateExpressions.ExpressionEvaluate : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        // Evaluate the subtree that provides the Predicate. We can only nest a predicate if the predicate is provided as a constant value
+        guard let predicateValue = try? expression.evaluate(.init()) else {
             throw NSPredicateConversionError.unsupportedType
         }
         
@@ -480,6 +494,21 @@ extension PredicateExpressions.NilLiteral : ConvertibleExpression {
     }
 }
 
+extension PredicateExpressions.StringContainsRegex : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        .predicate(NSComparisonPredicate(leftExpression: try subject.convertToExpression(state: &state), rightExpression: try regex.convertToExpression(state: &state).mapRegexForContains(), modifier: .direct, type: .matches))
+    }
+}
+
+extension NSExpression {
+    fileprivate func mapRegexForContains() -> NSExpression {
+        guard let value = self.constantValue as? String else {
+            return self
+        }
+        return NSExpression(forConstantValue: ".*\(value).*")
+    }
+}
+
 extension ComparisonResult {
     fileprivate var expression: NSExpression {
         get throws {
@@ -531,6 +560,7 @@ extension OverwritingInitializable {
 }
 
 extension NSPredicate : OverwritingInitializable {}
+extension NSExpression : OverwritingInitializable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension NSPredicate {
@@ -538,6 +568,18 @@ extension NSPredicate {
         let variable = predicate.variable
         var state = NSPredicateConversionState(object: variable.key)
         guard let converted = try? predicate.expression.convertToPredicate(state: &state) else {
+            return nil
+        }
+        self.init(existing: converted as! Self)
+    }
+}
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension NSExpression {
+    public convenience init?<Input, Output>(_ expression: Expression<Input, Output>) where Input : NSObject {
+        let variable = expression.variable
+        var state = NSPredicateConversionState(object: variable.key)
+        guard let converted = try? expression.expression.convertToExpression(state: &state) else {
             return nil
         }
         self.init(existing: converted as! Self)

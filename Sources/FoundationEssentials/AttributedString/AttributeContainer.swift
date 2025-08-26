@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
-#endif
-
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributeContainer : Sendable {
@@ -39,6 +33,7 @@ extension AttributeContainer {
     }
 
     @preconcurrency
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
@@ -108,5 +103,35 @@ extension AttributeContainer: CustomStringConvertible {
 extension AttributeContainer {
     internal var _hasConstrainedAttributes: Bool {
         storage.hasConstrainedAttributes
+    }
+}
+
+@available(FoundationPreview 6.2, *)
+extension AttributeContainer {
+    /// Returns a copy of the attribute container with only attributes that specify the provided inheritance behavior.
+    /// - Parameter inheritedByAddedText: An `inheritedByAddedText` value to filter. Attributes matching this value are included in the returned container.
+    /// - Returns: A copy of the attribute container with only attributes whose `inheritedByAddedText` property matches the provided value.
+    public func filter(inheritedByAddedText: Bool) -> AttributeContainer {
+        var storage = self.storage
+        for (key, value) in storage.contents {
+            let inherited = value.inheritedByAddedText && !value.isInvalidatedOnTextChange
+            if inherited != inheritedByAddedText {
+                storage[key] = nil
+            }
+        }
+        return AttributeContainer(storage)
+    }
+    
+    /// Returns a copy of the attribute container with only attributes that have the provided run boundaries.
+    /// - Parameter runBoundaries: The required `runBoundaries` value of the filtered attributes. If `nil` is provided, only attributes not bound to any specific boundary will be returned.
+    /// - Returns: A copy of the attribute container with only attributes whose `runBoundaries` property matches the provided value.
+    public func filter(runBoundaries: AttributedString.AttributeRunBoundaries?) -> AttributeContainer {
+        var storage = self.storage
+        for (key, value) in storage.contents {
+            if value.runBoundaries != runBoundaries {
+                storage[key] = nil
+            }
+        }
+        return AttributeContainer(storage)
     }
 }

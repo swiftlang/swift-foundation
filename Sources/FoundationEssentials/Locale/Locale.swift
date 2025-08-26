@@ -65,7 +65,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     ///
     /// - note: The autoupdating Locale will only compare equal to another autoupdating Locale.
     public static var autoupdatingCurrent : Locale {
-        Locale(inner: LocaleCache.cache.autoupdatingCurrent)
+        Locale(inner: LocaleCache.autoupdatingCurrent)
     }
 
     /// Returns the user's current locale.
@@ -75,10 +75,15 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// System locale.
     internal static var system : Locale {
-        Locale(inner: LocaleCache.cache.system)
+        Locale(inner: LocaleCache.system)
+    }
+    
+    /// Unlocalized locale (`en_001`).
+    internal static var unlocalized : Locale {
+        Locale(inner: LocaleCache.unlocalized)
     }
 
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     internal static func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
         return LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: cfOverrides, disableBundleMatching: disableBundleMatching)
@@ -204,6 +209,12 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.currencySymbolDisplayName(for: currencySymbol)
     }
     
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public func _localizedString(forCurrencySymbol currencySymbol: String) -> String? {
+        localizedString(forCurrencySymbol: currencySymbol)
+    }
+#endif
+    
     /// Returns a localized string for a specified ICU collation identifier.
     ///
     /// For example, in the "en" locale, the result for `"phonebook"` is `"Phonebook Sort Order"`.
@@ -221,7 +232,10 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Returns the identifier of the locale.
     public var identifier: String {
-        _locale.identifier
+        @_effects(releasenone)
+        get {
+            _locale.identifier
+        }
     }
 
     /// Returns the language code of the locale, or nil if has none.
@@ -287,8 +301,10 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// Returns the calendar for the locale, or the Gregorian calendar as a fallback.
     public var calendar: Calendar {
         var cal = _locale.calendar
-        // TODO: This is a fairly expensive operation, because it recreates the Calendar's backing ICU object. However, we can't cache the value or we risk creating a retain cycle between _Calendar/_Locale. We'll need to sort out some way around this.
-        // TODO: Calendar doesn't store a Locale anymore!
+        // This is a fairly expensive operation, because it recreates the Calendar's backing ICU object.
+        // However, we can't cache `struct Calendar` because it would create a retain cycle between _Calendar/_Locale:
+        // struct Calendar -> inner _Calendar: any _CalendarProtocol -> struct Locale -> inner _Locale: any _LocaleProtocol -> struct Calendar...
+        // _Calendar holds a Locale for performance reasons
         cal.locale = self
         return cal
     }
@@ -298,6 +314,12 @@ public struct Locale : Hashable, Equatable, Sendable {
     package var _calendarIdentifier: Calendar.Identifier {
         _locale.calendarIdentifier
     }
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public var __calendarIdentifier: Calendar.Identifier {
+        _calendarIdentifier
+    }
+#endif
 
     /// Returns the collation identifier for the locale, or nil if it has none.
     ///
@@ -468,6 +490,14 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.variant
     }
 
+    internal var weekendRange: WeekendRange? {
+        _locale.weekendRange
+    }
+
+    internal var minimumDaysInFirstWeek: Int {
+        _locale.minimumDaysInFirstWeek
+    }
+    
     // MARK: - Preferences support (Internal)
 
     package var forceHourCycle: HourCycle? {
@@ -524,13 +554,22 @@ public struct Locale : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
-    /// Returns a list of the user's preferred languages.
+    /// Returns a list of the user's preferred languages, as specified in Language & Region settings, taking into account any per-app language overrides.
     ///
     /// - note: `Bundle` is responsible for determining the language that your application will run in, based on the result of this API and combined with the languages your application supports.
     /// - seealso: `Bundle.preferredLocalizations(from:)`
     /// - seealso: `Bundle.preferredLocalizations(from:forPreferences:)`
+    /// - seealso: `Locale.preferredLocales`
     public static var preferredLanguages: [String] {
         LocaleCache.cache.preferredLanguages(forCurrentUser: false)
+    }
+
+    /// Returns a list of the user’s preferred locales, as specified in Language & Region settings, taking into account any per-app language overrides.
+    @available(FoundationPreview 6.2, *)
+    public static var preferredLocales: [Locale] {
+        return self.preferredLanguages.compactMap {
+            Locale(identifier: $0)
+        }
     }
 
     private static let languageCodeKey = "kCFLocaleLanguageCodeKey"
@@ -715,18 +754,16 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// - "nl": Dutch
     /// - "el": Greek
     /// For all other locales such as en_US, this is `false`.
-    internal var doesNotRequireSpecialCaseHandling: Bool {
-        // We call into the _LocaleBase because this value is cached in many cases. They will defer the initial calculation to the below helper function.
-        _locale.doesNotRequireSpecialCaseHandling
-    }
-    
     package static func identifierDoesNotRequireSpecialCaseHandling(_ identifier: String) -> Bool {
-        guard identifier.count >= 2 else { return true }
-
-        let first = identifier.prefix(2)
-        switch first {
-        case "az", "lt", "tr", "nl", "el":
-            return false // Does require special handling
+        var byteIterator = identifier.utf8.makeIterator()
+        switch (byteIterator.next(), byteIterator.next()) {
+        case
+            (UInt8(ascii: "a"), UInt8(ascii: "z")),
+            (UInt8(ascii: "l"), UInt8(ascii: "t")),
+            (UInt8(ascii: "t"), UInt8(ascii: "r")),
+            (UInt8(ascii: "n"), UInt8(ascii: "l")),
+            (UInt8(ascii: "e"), UInt8(ascii: "l")):
+            return false
         default:
             return true // Does not require special handling
         }

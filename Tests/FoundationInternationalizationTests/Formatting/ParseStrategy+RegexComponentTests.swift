@@ -5,42 +5,39 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
 
 import RegexBuilder
+import Testing
 
-#if canImport(TestSupport)
-import TestSupport
+#if canImport(FoundationInternationalization)
+import FoundationEssentials
+import FoundationInternationalization
+#elseif FOUNDATION_FRAMEWORK
+import Foundation
 #endif
 
-final class ParseStrategyMatchTests: XCTestCase {
-
+@Suite("ParseStrategy Match")
+private struct ParseStrategyMatchTests {
     let enUS = Locale(identifier: "en_US")
     let enGB = Locale(identifier: "en_GB")
     let gmt = TimeZone(secondsFromGMT: 0)!
     let pst = TimeZone(secondsFromGMT: -3600*8)!
 
-    func testDate() {
+    @Test func date() throws {
         let regex = Regex {
             OneOrMore {
                 Capture { Date.ISO8601FormatStyle() }
             }
         }
 
-        guard let res = "💁🏽🏳️‍🌈2021-07-01T15:56:32Z".firstMatch(of: regex) else {
-            XCTFail()
-            return
-        }
+        let res = try #require("💁🏽🏳️‍🌈2021-07-01T15:56:32Z".firstMatch(of: regex))
 
-        XCTAssertEqual(res.output.0, "2021-07-01T15:56:32Z")
+        #expect(res.output.0 == "2021-07-01T15:56:32Z")
         // dateFormatter.date(from: "2021-07-01 15:56:32.000")!
-        XCTAssertEqual(res.output.1, Date(timeIntervalSinceReferenceDate: 646847792.0))
+        #expect(res.output.1 == Date(timeIntervalSinceReferenceDate: 646847792.0))
     }
 
-    func testAPIHTTPHeader() {
+    @Test func apiHTTPHeader() throws {
 
         let header = """
         HTTP/1.1 301 Redirect
@@ -57,20 +54,17 @@ final class ParseStrategyMatchTests: XCTestCase {
             }
         }
 
-        guard let res = header.firstMatch(of: regex) else {
-            XCTFail()
-            return
-        }
+        let res = try #require(header.firstMatch(of: regex))
 
         // dateFormatter.date(from: "2022-02-16 00:00:00.000")!
         let expectedDate = Date(timeIntervalSinceReferenceDate: 666662400.0)
-        XCTAssertEqual(res.output.0, "16 Feb 2022")
-        XCTAssertEqual(res.output.1, expectedDate)
+        #expect(res.output.0 == "16 Feb 2022")
+        #expect(res.output.1 == expectedDate)
     }
 
 // https://github.com/apple/swift-foundation/issues/60
 #if FOUNDATION_FRAMEWORK
-    func testAPIStatement() {
+    @Test func apiStatement() {
 
         let statement = """
 CREDIT    04/06/2020    Paypal transfer        $4.99
@@ -100,8 +94,8 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
 
 
         let money = statement.matches(of: regex)
-        XCTAssertEqual(money.map(\.output.0), ["$4.99", "$3,020.85", "$69.73", "($38.25)", "($27.44)", "($52,249.98)"])
-        XCTAssertEqual(money.map(\.output.1), expectedAmounts)
+        #expect(money.map(\.output.0) == ["$4.99", "$3,020.85", "$69.73", "($38.25)", "($27.44)", "($52,249.98)"])
+        #expect(money.map(\.output.1) == expectedAmounts)
 
         let dateRegex = Regex {
             Capture {
@@ -109,8 +103,8 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
             }
         }
         let dateMatches = statement.matches(of: dateRegex)
-        XCTAssertEqual(dateMatches.map(\.output.0), expectedDateStrings)
-        XCTAssertEqual(dateMatches.map(\.output.1), expectedDates)
+        #expect(dateMatches.map(\.output.0) == expectedDateStrings)
+        #expect(dateMatches.map(\.output.1) == expectedDates)
 
         let dot = try! Regex(#"."#)
         let dateCurrencyRegex = Regex {
@@ -126,7 +120,7 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
         }
 
         let matches = statement.matches(of: dateCurrencyRegex)
-        XCTAssertEqual(matches.map(\.output.0), [
+        #expect(matches.map(\.output.0) == [
             "04/06/2020    Paypal transfer        $4.99",
             "04/06/2020    REMOTE ONLINE DEPOSIT  $3,020.85",
             "04/03/2020    PAYROLL                $69.73",
@@ -134,18 +128,18 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
             "03/31/2020    Payment to BoA card    ($27.44)",
             "03/24/2020    IRX tax payment        ($52,249.98)",
         ])
-        XCTAssertEqual(matches.map(\.output.1), expectedDates)
-        XCTAssertEqual(matches.map(\.output.2), expectedAmounts)
+        #expect(matches.map(\.output.1) == expectedDates)
+        #expect(matches.map(\.output.2) == expectedAmounts)
 
 
         let numericMatches = statement.matches(of: Regex {
             Capture(.date(.numeric, locale: enUS, timeZone: gmt))
         })
-        XCTAssertEqual(numericMatches.map(\.output.0), expectedDateStrings)
-        XCTAssertEqual(numericMatches.map(\.output.1), expectedDates)
+        #expect(numericMatches.map(\.output.0) == expectedDateStrings)
+        #expect(numericMatches.map(\.output.1) == expectedDates)
     }
 
-    func testAPIStatements2() {
+    @Test func apiStatements2() {
         // Test dates and numbers appearing in unexpeted places
         let statement = """
 CREDIT   Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11
@@ -178,18 +172,18 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         let expectedAmounts = [Decimal(string:"21.11")!, Decimal(string:"3020.85")!, Decimal(string:"69.73")!, Decimal(string:"-38.25")!, Decimal(string:"-52249.98")!]
 
         let matches = statement.matches(of: dateCurrencyRegex)
-        XCTAssertEqual(matches.map(\.output.0), [
+        #expect(matches.map(\.output.0) == [
             "Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11",
             "Apr 06/20    GMT gain                     USD 3,020.85",
             "Apr 03/20    PAYROLL 03/29/20-04/02/20    USD 69.73",
             "Apr 02/20    ACH TRNSFR Apr 02/20         -USD 38.25",
             "Mar 31/20    March Payment to BoA         -USD 52,249.98",
         ])
-        XCTAssertEqual(matches.map(\.output.1), expectedDates)
-        XCTAssertEqual(matches.map(\.output.3), expectedAmounts)
+        #expect(matches.map(\.output.1) == expectedDates)
+        #expect(matches.map(\.output.3) == expectedAmounts)
     }
 
-    func testAPITestSuites() {
+    @Test func apiTestSuites() throws {
         let input = "Test Suite 'MergeableSetTests' started at 2021-07-08 10:19:35.418"
 
         let testSuiteLog = Regex {
@@ -213,37 +207,34 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         }
 
 
-        guard let match = input.wholeMatch(of: testSuiteLog) else {
-            XCTFail()
-            return
-        }
+        let match = try #require(input.wholeMatch(of: testSuiteLog))
 
-        XCTAssertEqual(match.output.0, "Test Suite 'MergeableSetTests' started at 2021-07-08 10:19:35.418")
-        XCTAssertEqual(match.output.1, "MergeableSetTests")
-        XCTAssertEqual(match.output.2, "started")
+        #expect(match.output.0 == "Test Suite 'MergeableSetTests' started at 2021-07-08 10:19:35.418")
+        #expect(match.output.1 == "MergeableSetTests")
+        #expect(match.output.2 == "started")
         // dateFormatter.date(from: "2021-07-08 10:19:35.418")!
-        XCTAssertEqual(match.output.3, Date(timeIntervalSinceReferenceDate: 647432375.418))
+        #expect(match.output.3 == Date(timeIntervalSinceReferenceDate: 647432375.418))
     }
 #endif
 
-    func testVariousDatesAndTimes() {
-        func verify(_ str: String, _ strategy: Date.ParseStrategy, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
+    @Test func variousDatesAndTimes() {
+        func verify(_ str: String, _ strategy: Date.ParseStrategy, _ expected: String?, sourceLocation: SourceLocation = #_sourceLocation) {
             let match = str.wholeMatch(of: strategy) // Regex<Date>.Match?
             if let expected {
                 guard let match else {
-                    XCTFail("<\(str)> did not match, but it should", file: file, line: line)
+                    var explanation = ""
                     do {
                         _ = try strategy.parse(str)
                     } catch {
-                        print(error)
+                        explanation = String(describing: error)
                     }
-
+                    Issue.record("<\(str)> did not match, but it should: \(explanation)", sourceLocation: sourceLocation)
                     return
                 }
                 let expectedDate = try! Date(expected, strategy: .iso8601)
-                XCTAssertEqual(match.0, expectedDate, file: file, line: line)
+                #expect(match.0 == expectedDate, sourceLocation: sourceLocation)
             } else {
-                XCTAssertNil(match, "<\(str)> should not match, but it did", file: file, line: line)
+                #expect(match == nil, "<\(str)> should not match, but it did", sourceLocation: sourceLocation)
             }
         }
 
@@ -269,8 +260,8 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         verify("03/05/2020", .date(.numeric, locale: enGB, timeZone: pst), "2020-05-03T00:00:00-08:00")
     }
 
-    func testMatchISO8601String() {
-        func verify(_ str: String, _ strategy: Date.ISO8601FormatStyle, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
+    @Test func matchISO8601String() {
+        func verify(_ str: String, _ strategy: Date.ISO8601FormatStyle, _ expected: String?, sourceLocation: SourceLocation = #_sourceLocation) {
 
             let match = str.wholeMatch(of: strategy) // Regex<Date>.Match?
             if let expected {
@@ -287,13 +278,13 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
                         message += "error: \(error)"
                     }
 
-                    XCTFail("<\(str)> did not match, but it should. Information: \(message)", file: file, line: line)
+                    Issue.record("<\(str)> did not match, but it should. Information: \(message)", sourceLocation: sourceLocation)
                     return
                 }
                 let expectedDate = try! Date(expected, strategy: .iso8601)
-                XCTAssertEqual(match.0, expectedDate, file: file, line: line)
+                #expect(match.0 == expectedDate, sourceLocation: sourceLocation)
             } else {
-                XCTAssertNil(match, "<\(str)> should not match, but it did", file: file, line: line)
+                #expect(match == nil, "<\(str)> should not match, but it did", sourceLocation: sourceLocation)
             }
         }
 

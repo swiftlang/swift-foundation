@@ -201,6 +201,17 @@ extension FloatingPointFormatStyle {
             new.collection.presentation = p
             return new
         }
+
+        /// Modifies the format style to use the specified notation.
+        ///
+        /// - Parameter notation: The notation to apply to the format style.
+        /// - Returns: A floating-point currency format style modified to use the specified notation.
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+        public func notation(_ notation: Configuration.Notation) -> Self {
+            var new = self
+            new.collection.notation = notation
+            return new
+        }
     }
 }
 
@@ -333,6 +344,10 @@ extension FloatingPointFormatStyle {
             case floatingPoint(FloatingPointFormatStyle)
             case currency(FloatingPointFormatStyle.Currency)
             case percent(FloatingPointFormatStyle.Percent)
+            
+            private typealias FloatingPointCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
 
             var formatter: ICUNumberFormatterBase? {
                 switch self {
@@ -407,7 +422,7 @@ extension FloatingPointFormatStyle {
 extension FloatingPointFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 
@@ -415,7 +430,7 @@ extension FloatingPointFormatStyle : CustomConsumingRegexComponent {
 extension FloatingPointFormatStyle.Percent : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 
@@ -423,7 +438,7 @@ extension FloatingPointFormatStyle.Percent : CustomConsumingRegexComponent {
 extension FloatingPointFormatStyle.Currency : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 

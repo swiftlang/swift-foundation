@@ -13,15 +13,10 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
-#else
-package import _CShims
-#endif
-
+internal import _FoundationCShims
 
 internal struct JSON5Scanner {
     let options: Options
@@ -435,79 +430,6 @@ extension JSON5Scanner {
             return bytes[unchecked: peekIndex]
         }
 
-        // These UTF-8 decoding functions are cribbed and specialized from the stdlib.
-
-        @inline(__always)
-        internal func _utf8ScalarLength(_ x: UInt8) -> Int? {
-            guard !UTF8.isContinuation(x) else { return nil }
-            if UTF8.isASCII(x) { return 1 }
-            return (~x).leadingZeroBitCount
-        }
-
-        @inline(__always)
-        internal func _continuationPayload(_ x: UInt8) -> UInt32 {
-            return UInt32(x & 0x3F)
-        }
-
-        @inline(__always)
-        internal func _decodeUTF8(_ x: UInt8) -> Unicode.Scalar? {
-            guard UTF8.isASCII(x) else { return nil }
-            return Unicode.Scalar(x)
-        }
-
-        @inline(__always)
-        internal func _decodeUTF8(_ x: UInt8, _ y: UInt8) -> Unicode.Scalar? {
-            assert(_utf8ScalarLength(x) == 2)
-            guard UTF8.isContinuation(y) else { return nil }
-            let x = UInt32(x)
-            let value = ((x & 0b0001_1111) &<< 6) | _continuationPayload(y)
-            return Unicode.Scalar(value).unsafelyUnwrapped
-        }
-
-        @inline(__always)
-        internal func _decodeUTF8(
-          _ x: UInt8, _ y: UInt8, _ z: UInt8
-        ) -> Unicode.Scalar? {
-            assert(_utf8ScalarLength(x) == 3)
-            guard UTF8.isContinuation(y), UTF8.isContinuation(z) else { return nil }
-            let x = UInt32(x)
-            let value = ((x & 0b0000_1111) &<< 12)
-            | (_continuationPayload(y) &<< 6)
-            | _continuationPayload(z)
-            return Unicode.Scalar(value).unsafelyUnwrapped
-        }
-
-        @inline(__always)
-        internal func _decodeUTF8(
-          _ x: UInt8, _ y: UInt8, _ z: UInt8, _ w: UInt8
-        ) -> Unicode.Scalar? {
-            assert(_utf8ScalarLength(x) == 4)
-            guard UTF8.isContinuation(y), UTF8.isContinuation(z), UTF8.isContinuation(w) else { return nil }
-            let x = UInt32(x)
-            let value = ((x & 0b0000_1111) &<< 18)
-            | (_continuationPayload(y) &<< 12)
-            | (_continuationPayload(z) &<< 6)
-            | _continuationPayload(w)
-            return Unicode.Scalar(value).unsafelyUnwrapped
-        }
-
-        internal func _decodeScalar(_ utf8: BufferView<UInt8>) -> (Unicode.Scalar?, scalarLength: Int) {
-            let cu0 = utf8[uncheckedOffset: 0]
-            guard let len = _utf8ScalarLength(cu0), utf8.count >= len else { return (nil, 0) }
-            switch len {
-            case 1:
-                return (_decodeUTF8(cu0), len)
-            case 2:
-                return (_decodeUTF8(cu0, utf8[uncheckedOffset: 1]), len)
-            case 3:
-                return (_decodeUTF8(cu0, utf8[uncheckedOffset: 1], utf8[uncheckedOffset: 2]), len)
-            case 4:
-                return (_decodeUTF8(cu0, utf8[uncheckedOffset: 1], utf8[uncheckedOffset: 2], utf8[uncheckedOffset: 3]), len)
-            default:
-                fatalError()
-            }
-        }
-
         func peekU32() throws -> (scalar: UnicodeScalar, length: Int)? {
             guard let firstChar = peek() else {
                 return nil
@@ -538,7 +460,7 @@ extension JSON5Scanner {
                 }
             }
 
-          let (scalar, length) = _decodeScalar(bytes[unchecked: readIndex..<endIndex])
+            let (scalar, length) = bytes[unchecked: readIndex..<endIndex]._decodeScalar()
             guard let scalar else {
                 throw JSONError.cannotConvertInputStringDataToUTF8(location: sourceLocation)
             }
@@ -986,7 +908,7 @@ extension JSON5Scanner {
         let digitBytes = jsonBytes.prefix(2)
         precondition(digitBytes.count == 2, "Scanning should have ensured that all escape sequences are valid shape")
 
-        guard let result: UInt8 = _parseJSONHexIntegerDigits(digitBytes, isNegative: false)
+        guard let result: UInt8 = _parseHexIntegerDigits(digitBytes, isNegative: false)
         else {
             let hexString = String(decoding: digitBytes, as: Unicode.UTF8.self)
             throw JSONError.invalidHexDigitSequence(hexString, location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
@@ -1159,7 +1081,7 @@ extension JSON5Scanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ _stringshims_strncasecmp_l($0, "0x", $1, nil) })
+        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ _stringshims_strncasecmp_clocale($0, "0x", $1) })
         if cmp == 0 {
             jsonBytes.formIndex(&index, offsetBy: 2)
 
@@ -1220,43 +1142,6 @@ extension JSON5Scanner {
     }
 }
 
-internal func _parseJSONHexIntegerDigits<Result: FixedWidthInteger>(
-    _ codeUnits: BufferView<UInt8>, isNegative: Bool
-) -> Result? {
-    guard _fastPath(!codeUnits.isEmpty) else { return nil }
-
-    // ASCII constants, named for clarity:
-    let _0 = 48 as UInt8, _A = 65 as UInt8, _a = 97 as UInt8
-
-    let numericalUpperBound = _0 &+ 10
-    let uppercaseUpperBound = _A &+ 6
-    let lowercaseUpperBound = _a &+ 6
-    let multiplicand: Result = 16
-
-    var result = 0 as Result
-    for digit in codeUnits {
-        let digitValue: Result
-        if _fastPath(digit >= _0 && digit < numericalUpperBound) {
-            digitValue = Result(truncatingIfNeeded: digit &- _0)
-        } else if _fastPath(digit >= _A && digit < uppercaseUpperBound) {
-            digitValue = Result(truncatingIfNeeded: digit &- _A &+ 10)
-        } else if _fastPath(digit >= _a && digit < lowercaseUpperBound) {
-            digitValue = Result(truncatingIfNeeded: digit &- _a &+ 10)
-        } else {
-            return nil
-        }
-
-        let overflow1: Bool
-        (result, overflow1) = result.multipliedReportingOverflow(by: multiplicand)
-        let overflow2: Bool
-        (result, overflow2) = isNegative
-        ? result.subtractingReportingOverflow(digitValue)
-        : result.addingReportingOverflow(digitValue)
-        guard _fastPath(!overflow1 && !overflow2) else { return nil }
-    }
-    return result
-}
-
 internal func _parseJSON5Integer<Result: FixedWidthInteger>(
     _ codeUnits: BufferView<UInt8>, isHex: Bool
 ) -> Result? {
@@ -1280,9 +1165,9 @@ internal func _parseJSON5Integer<Result: FixedWidthInteger>(
     // Trust the caller regarding whether this is valid hex data.
     if isHex {
         digitsToParse = digitsToParse.dropFirst(2)
-        return _parseJSONHexIntegerDigits(digitsToParse, isNegative: isNegative)
+        return _parseHexIntegerDigits(digitsToParse, isNegative: isNegative)
     } else {
-        return _parseIntegerDigits(codeUnits, isNegative: isNegative)
+        return _parseIntegerDigits(digitsToParse, isNegative: isNegative)
     }
 }
 
@@ -1304,6 +1189,7 @@ internal extension UInt8 {
     static var _singleQuote: UInt8 { UInt8(ascii: "'") }
     static var _dollar: UInt8 { UInt8(ascii: "$") }
     static var _underscore: UInt8 { UInt8(ascii: "_") }
+    static var _dot: UInt8 { UInt8(ascii: ".") }
 }
 
 var _json5Infinity: StaticString { "Infinity" }

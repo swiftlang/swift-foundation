@@ -11,38 +11,36 @@
 
 #if canImport(Darwin)
 import Darwin
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
 #elseif canImport(WinSDK)
 import WinSDK
 #elseif canImport(threads_h)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import threads_h
-#else
-package import threads_h
-#endif
+internal import threads_h
 #elseif canImport(threads)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import threads
-#else
-package import threads
-#endif
+internal import threads
 #endif
 
 struct _ThreadLocal {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
     fileprivate typealias PlatformKey = pthread_key_t
 #elseif USE_TSS
     fileprivate typealias PlatformKey = tss_t
 #elseif canImport(WinSDK)
     fileprivate typealias PlatformKey = DWORD
+#elseif os(WASI)
+    fileprivate typealias PlatformKey = UnsafeMutablePointer<UnsafeMutableRawPointer?>
 #endif
     
     struct Key<Value> {
         fileprivate let key: PlatformKey
         
         init() {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             var key = PlatformKey()
             pthread_key_create(&key, nil)
             self.key = key
@@ -52,28 +50,34 @@ struct _ThreadLocal {
             self.key = key
 #elseif canImport(WinSDK)
             key = FlsAlloc(nil)
+#elseif os(WASI)
+            key = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: 1)
 #endif
         }
     }
     
     private static subscript(_ key: PlatformKey) -> UnsafeMutableRawPointer? {
         get {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_getspecific(key)
 #elseif USE_TSS
             tss_get(key)
 #elseif canImport(WinSDK)
             FlsGetValue(key)
+#elseif os(WASI)
+            key.pointee
 #endif
         }
         
         set {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_setspecific(key, newValue)
 #elseif USE_TSS
             tss_set(key, newValue)
 #elseif canImport(WinSDK)
             FlsSetValue(key, newValue)
+#elseif os(WASI)
+            key.pointee = newValue
 #endif
         }
     }

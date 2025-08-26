@@ -5,53 +5,58 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
+
+import Testing
 
 #if canImport(TestSupport)
 import TestSupport
 #endif
 
-final class DateIntervalTests : XCTestCase {
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#elseif FOUNDATION_FRAMEWORK
+import Foundation
+#endif
 
-    func test_compareDateIntervals() {
+@Suite("DateInterval")
+private struct DateIntervalTests {
+
+    @Test func compareDateIntervals() {
         // dateWithString("2010-05-17 14:49:47 -0700")
         let start = Date(timeIntervalSinceReferenceDate: 295825787.0)
         let duration: TimeInterval = 10000000.0
         let testInterval1 = DateInterval(start: start, duration: duration)
         let testInterval2 = DateInterval(start: start, duration: duration)
-        XCTAssertEqual(testInterval1, testInterval2)
-        XCTAssertEqual(testInterval2, testInterval1)
-        XCTAssertEqual(testInterval1.compare(testInterval2), ComparisonResult.orderedSame)
+        #expect(testInterval1 == testInterval2)
+        #expect(testInterval2 == testInterval1)
+        #expect(testInterval1.compare(testInterval2) == .orderedSame)
 
         let testInterval3 = DateInterval(start: start, duration: 10000000000.0)
-        XCTAssertTrue(testInterval1 < testInterval3)
-        XCTAssertTrue(testInterval3 > testInterval1)
+        #expect(testInterval1 < testInterval3)
+        #expect(testInterval3 > testInterval1)
 
         // dateWithString("2009-05-17 14:49:47 -0700")
         let earlierStart = Date(timeIntervalSinceReferenceDate: 264289787.0)
         let testInterval4 = DateInterval(start: earlierStart, duration: duration)
 
-        XCTAssertTrue(testInterval4 < testInterval1)
-        XCTAssertTrue(testInterval1 > testInterval4)
+        #expect(testInterval4 < testInterval1)
+        #expect(testInterval1 > testInterval4)
     }
 
-    func test_isEqualToDateInterval() {
+    @Test func isEqualToDateInterval() {
         // dateWithString("2010-05-17 14:49:47 -0700")
         let start = Date(timeIntervalSinceReferenceDate: 295825787.0)
         let duration = 10000000.0
         let testInterval1 = DateInterval(start: start, duration: duration)
         let testInterval2 = DateInterval(start: start, duration: duration)
 
-        XCTAssertEqual(testInterval1, testInterval2)
+        #expect(testInterval1 == testInterval2)
 
         let testInterval3 = DateInterval(start: start, duration: 100.0)
-        XCTAssertNotEqual(testInterval1, testInterval3)
+        #expect(testInterval1 != testInterval3)
     }
 
-    func test_hashing() {
+    @Test func hashing() {
         // dateWithString("2019-04-04 17:09:23 -0700")
         let start1a = Date(timeIntervalSinceReferenceDate: 576115763.0)
         let start1b = Date(timeIntervalSinceReferenceDate: 576115763.0)
@@ -80,7 +85,7 @@ final class DateIntervalTests : XCTestCase {
         checkHashableGroups(intervals)
     }
 
-    func test_checkIntersection() {
+    @Test func checkIntersection() {
         // dateWithString("2010-05-17 14:49:47 -0700")
         let start1 = Date(timeIntervalSinceReferenceDate: 295825787.0)
         // dateWithString("2010-08-17 14:49:47 -0700")
@@ -95,7 +100,7 @@ final class DateIntervalTests : XCTestCase {
 
         let testInterval2 = DateInterval(start: start2, end: end2)
 
-        XCTAssertTrue(testInterval1.intersects(testInterval2))
+        #expect(testInterval1.intersects(testInterval2))
 
         // dateWithString("2010-10-17 14:49:47 -0700")
         let start3 = Date(timeIntervalSinceReferenceDate: 309044987.0)
@@ -104,10 +109,10 @@ final class DateIntervalTests : XCTestCase {
 
         let testInterval3 = DateInterval(start: start3, end: end3)
 
-        XCTAssertFalse(testInterval1.intersects(testInterval3))
+        #expect(!testInterval1.intersects(testInterval3))
     }
 
-    func test_validIntersections() {
+    @Test func validIntersections() {
         // dateWithString("2010-05-17 14:49:47 -0700")
         let start1 = Date(timeIntervalSinceReferenceDate: 295825787.0)
         // dateWithString("2010-08-17 14:49:47 -0700")
@@ -130,15 +135,13 @@ final class DateIntervalTests : XCTestCase {
         let testInterval3 = DateInterval(start: start3, end: end3)
 
         let intersection1 = testInterval2.intersection(with: testInterval1)
-        XCTAssertNotNil(intersection1)
-        XCTAssertEqual(testInterval3, intersection1)
+        #expect(testInterval3 == intersection1)
 
         let intersection2 = testInterval1.intersection(with: testInterval2)
-        XCTAssertNotNil(intersection2)
-        XCTAssertEqual(intersection1, intersection2)
+        #expect(intersection1 == intersection2)
     }
 
-    func test_containsDate() {
+    @Test func containsDate() {
         // dateWithString("2010-05-17 14:49:47 -0700")
         let start = Date(timeIntervalSinceReferenceDate: 295825787.0)
         let duration = 10000000.0
@@ -147,14 +150,14 @@ final class DateIntervalTests : XCTestCase {
         // dateWithString("2010-05-17 20:49:47 -0700")
         let containedDate = Date(timeIntervalSinceReferenceDate: 295847387.0)
 
-        XCTAssertTrue(testInterval.contains(containedDate))
+        #expect(testInterval.contains(containedDate))
 
         // dateWithString("2009-05-17 14:49:47 -0700")
         let earlierStart = Date(timeIntervalSinceReferenceDate: 264289787.0)
-        XCTAssertFalse(testInterval.contains(earlierStart))
+        #expect(!testInterval.contains(earlierStart))
     }
 
-    func test_AnyHashableContainingDateInterval() {
+    @Test func anyHashableContainingDateInterval() {
         // dateWithString("2010-05-17 14:49:47 -0700")
         let start = Date(timeIntervalSinceReferenceDate: 295825787.0)
         let duration = 10000000.0
@@ -164,18 +167,19 @@ final class DateIntervalTests : XCTestCase {
             DateInterval(start: start, duration: duration / 2),
         ]
         let anyHashables = values.map(AnyHashable.init)
-        expectEqual(DateInterval.self, type(of: anyHashables[0].base))
-        expectEqual(DateInterval.self, type(of: anyHashables[1].base))
-        expectEqual(DateInterval.self, type(of: anyHashables[2].base))
-        XCTAssertNotEqual(anyHashables[0], anyHashables[1])
-        XCTAssertEqual(anyHashables[1], anyHashables[2])
+        #expect(DateInterval.self == type(of: anyHashables[0].base))
+        #expect(DateInterval.self == type(of: anyHashables[1].base))
+        #expect(DateInterval.self == type(of: anyHashables[2].base))
+        #expect(anyHashables[0] != anyHashables[1])
+        #expect(anyHashables[1] == anyHashables[2])
     }
 }
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
-extension DateIntervalTests {
-    func test_AnyHashableCreatedFromNSDateInterval() {
+@Suite("DateInterval Bridging")
+private struct DateIntervalBridgingTests {
+    @Test func anyHashableCreatedFromNSDateInterval() {
         // dateWithString("2010-05-17 14:49:47 -0700")
         let start = Date(timeIntervalSinceReferenceDate: 295825787.0)
         let duration = 10000000.0
@@ -185,11 +189,11 @@ extension DateIntervalTests {
             NSDateInterval(start: start, duration: duration / 2),
         ]
         let anyHashables = values.map(AnyHashable.init)
-        expectEqual(DateInterval.self, type(of: anyHashables[0].base))
-        expectEqual(DateInterval.self, type(of: anyHashables[1].base))
-        expectEqual(DateInterval.self, type(of: anyHashables[2].base))
-        XCTAssertNotEqual(anyHashables[0], anyHashables[1])
-        XCTAssertEqual(anyHashables[1], anyHashables[2])
+        #expect(DateInterval.self == type(of: anyHashables[0].base))
+        #expect(DateInterval.self == type(of: anyHashables[1].base))
+        #expect(DateInterval.self == type(of: anyHashables[2].base))
+        #expect(anyHashables[0] != anyHashables[1])
+        #expect(anyHashables[1] == anyHashables[2])
     }
 }
 #endif

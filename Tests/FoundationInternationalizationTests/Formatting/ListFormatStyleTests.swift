@@ -5,14 +5,8 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
@@ -23,69 +17,69 @@ import TestSupport
 @testable import Foundation
 #endif
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-class ListFormatStyleTests : XCTestCase {
-    func test_orList() {
+@Suite("ListFormatStyle")
+private struct ListFormatStyleTests {
+    @Test func orList() {
         var style: ListFormatStyle<StringStyle, [String]> = .list(type: .or, width: .standard)
         style.locale = Locale(identifier: "en_US")
 
-        XCTAssertEqual(["one", "two"].formatted(style), "one or two")
-        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, or three")
+        #expect(["one", "two"].formatted(style) == "one or two")
+        #expect(["one", "two", "three"].formatted(style) == "one, two, or three")
     }
 
-    func test_andList() {
+    @Test func andList() {
         var style: ListFormatStyle<StringStyle, [String]> = .list(type: .and, width: .standard)
         style.locale = Locale(identifier: "en_US")
 
-        XCTAssertEqual(["one", "two"].formatted(style), "one and two")
-        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, and three")
+        #expect(["one", "two"].formatted(style) == "one and two")
+        #expect(["one", "two", "three"].formatted(style) == "one, two, and three")
     }
 
-    func test_narrowList() {
+    @Test func narrowList() {
         var style: ListFormatStyle<StringStyle, [String]> = .list(type: .and, width: .narrow)
         style.locale = Locale(identifier: "en_US")
 
-        XCTAssertEqual(["one", "two"].formatted(style), "one, two")
-        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, three")
+        #expect(["one", "two"].formatted(style) == "one, two")
+        #expect(["one", "two", "three"].formatted(style) == "one, two, three")
     }
 
-    func test_shortList() {
+    @Test func shortList() {
         var style: ListFormatStyle<StringStyle, [String]> = .list(type: .and, width: .short)
         style.locale = Locale(identifier: "en_US")
 
-        XCTAssertEqual(["one", "two"].formatted(style), "one & two")
-        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, & three")
+        #expect(["one", "two"].formatted(style) == "one & two")
+        #expect(["one", "two", "three"].formatted(style) == "one, two, & three")
     }
 
-#if FOUNDATION_FRAMEWORK // FIXME: rdar://104091257
-    func test_leadingDotSyntax() {
+    @Test func leadingDotSyntax() {
         let _ = ["one", "two"].formatted(.list(type: .and))
         let _ = ["one", "two"].formatted()
         let _ = [1, 2].formatted(.list(memberStyle: .number, type: .or, width: .standard))
     }
-#endif
     
-    func testAutoupdatingCurrentChangesFormatResults() {
-        let locale = Locale.autoupdatingCurrent
-        let list = ["one", "two", "three", "four"]
-        
-        // Get a formatted result from es-ES
-        var prefs = LocalePreferences()
-        prefs.languages = ["es-ES"]
-        prefs.locale = "es_ES"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedSpanish = list.formatted(.list(type: .and).locale(locale))
-        
-        // Get a formatted result from en-US
-        prefs.languages = ["en-US"]
-        prefs.locale = "en_US"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedEnglish = list.formatted(.list(type: .and).locale(locale))
-        
-        // Reset to current preferences before any possibility of failing this test
-        LocaleCache.cache.reset()
-
-        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
-        XCTAssertNotEqual(formattedSpanish, formattedEnglish)
+    @Test func autoupdatingCurrentChangesFormatResults() async {
+        await usingCurrentInternationalizationPreferences {
+            let locale = Locale.autoupdatingCurrent
+            let list = ["one", "two", "three", "four"]
+            
+            // Get a formatted result from es-ES
+            var prefs = LocalePreferences()
+            prefs.languages = ["es-ES"]
+            prefs.locale = "es_ES"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            let formattedSpanish = list.formatted(.list(type: .and).locale(locale))
+            
+            // Get a formatted result from en-US
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            let formattedEnglish = list.formatted(.list(type: .and).locale(locale))
+            
+            // Reset to current preferences before any possibility of failing this test
+            LocaleCache.cache.reset()
+            
+            // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+            #expect(formattedSpanish != formattedEnglish)
+        }
     }
 }

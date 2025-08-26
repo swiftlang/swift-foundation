@@ -10,17 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
-#endif
-
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal struct _AttributeValue : Hashable, CustomStringConvertible, Sendable {
-        typealias RawValue = any Sendable & Hashable
-        let rawValue: RawValue
+        private typealias RawValue = any Sendable & Hashable
+        private let _rawValue: RawValue
 
         // FIXME: If these are always tied to keys, then why are we caching these
         // FIXME: on each individual value? Move them to a separate
@@ -30,21 +24,29 @@ extension AttributedString {
         let inheritedByAddedText: Bool
         let invalidationConditions: Set<AttributeInvalidationCondition>?
         
-        var description: String { String(describing: rawValue) }
+        var description: String { String(describing: _rawValue) }
         
         init<K: AttributedStringKey>(_ value: K.Value, for key: K.Type) where K.Value : Sendable {
-            rawValue = value
+            _rawValue = value
             runBoundaries = K.runBoundaries
             inheritedByAddedText = K.inheritedByAddedText
             invalidationConditions = K.invalidationConditions
         }
         
-        private init<K: AttributedStringKey>(checkingValue value: RawValue, for key: K.Type) where K.Value : Sendable {
-            guard let trueValue = value as? K.Value else {
-                fatalError("\(#function) called with non-matching attribute value type")
-            }
-            self.init(trueValue, for: K.self)
+        #if FOUNDATION_FRAMEWORK
+        @inline(__always)
+        private static func _unsafeAssumeSendableRawValue<T>(_ value: T) -> RawValue {
+            // Perform this cast in a separate function unaware of the T: Hashable constraint to avoid compiler warnings when performing the Hashable --> Hashable & Sendable cast
+            value as! RawValue
         }
+        
+        fileprivate init<K: AttributedStringKey>(assumingSendable value: K.Value, for key: K.Type) {
+            _rawValue = Self._unsafeAssumeSendableRawValue(value)
+            runBoundaries = K.runBoundaries
+            inheritedByAddedText = K.inheritedByAddedText
+            invalidationConditions = K.invalidationConditions
+        }
+        #endif
 
         var isInvalidatedOnTextChange: Bool {
             invalidationConditions?.contains(.textChanged) ?? false
@@ -67,35 +69,41 @@ extension AttributedString {
         func rawValue<K: AttributedStringKey>(
             as key: K.Type
         ) -> K.Value where K.Value: Sendable {
-            rawValue as! K.Value
+            // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
+            guard let value = self._rawValue as? K.Value else {
+                preconditionFailure("Unable to read \(K.self) attribute: stored value of type \(type(of: self._rawValue)) is not key's value type (\(K.Value.self))")
+            }
+            return value
         }
         
-        static func ==(lhs: Self, rhs: Self) -> Bool {
-            Self.__equalAttributes(lhs.rawValue, rhs.rawValue)
+        #if FOUNDATION_FRAMEWORK
+        fileprivate func rawValueAssumingSendable<K: AttributedStringKey>(
+            as key: K.Type
+        ) -> K.Value {
+            // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
+            guard let value = self._rawValue as? K.Value else {
+                preconditionFailure("Unable to read \(K.self) attribute: stored value of type \(type(of: self._rawValue)) is not key's value type (\(K.Value.self))")
+            }
+            return value
+        }
+        #endif
+        
+        static func ==(left: Self, right: Self) -> Bool {
+            func openEquatableLHS<LeftValue: Hashable & Sendable>(_ leftValue: LeftValue) -> Bool {
+                func openEquatableRHS<RightValue: Hashable & Sendable>(_ rightValue: RightValue) -> Bool {
+                    // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
+                    guard let rightValueAsLeft = rightValue as? LeftValue else {
+                        return false
+                    }
+                    return rightValueAsLeft == leftValue
+                }
+                return openEquatableRHS(right._rawValue)
+            }
+            return openEquatableLHS(left._rawValue)
         }
         
         func hash(into hasher: inout Hasher) {
-            rawValue.hash(into: &hasher)
-        }
-
-        private static func __equalAttributes(_ lhs: RawValue?, _ rhs: RawValue?) -> Bool {
-            switch (lhs, rhs) {
-            case (.none, .none):
-                return true
-            case (.none, .some(_)):
-                return false
-            case (.some(_), .none):
-                return false
-            case (.some(let lhs), .some(let rhs)):
-                func openEquatable<LHS: Equatable>(_ equatableLHS: LHS) -> Bool {
-                    if let equatableRHS = rhs as? LHS {
-                        return equatableLHS == equatableRHS
-                    } else {
-                        return false
-                    }
-                }
-                return openEquatable(lhs)
-            }
+            _rawValue.hash(into: &hasher)
         }
     }
 }
@@ -192,12 +200,15 @@ extension AttributedString._AttributeStorage {
             invalidatableKeys.remove(key)
         }
 
-        guard old != new else { return }
+        // Lazy to ensure we only check if the value changed when we actually need to because we found a dependent attribute
+        // Unboxing the attribute value to call its == implementation can be expensive, so for text that doesn't contain dependent attributes avoid it when possible
+        lazy var valueChanged = { old != new }()
 
         for k in invalidatableKeys {
             guard k != key else { continue }
             guard let value = contents[k] else { continue }
             guard value.isInvalidatedOnChange(of: key) else { continue }
+            guard valueChanged else { return }
             // FIXME: ☠️ This subscript assignment is recursively calling this same method.
             // FIXME: Collect invalidated keys into a temporary set instead, and progressively
             // FIXME: extend that set until all its keys are gone.
@@ -209,6 +220,25 @@ extension AttributedString._AttributeStorage {
         get { self[T.name]?.rawValue(as: T.self) }
         set { self[T.name] = .wrapIfPresent(newValue, for: T.self) }
     }
+    
+    #if FOUNDATION_FRAMEWORK
+    /// Stores & retrieves an attribute value bypassing the T.Value : Sendable constraint
+    ///
+    /// In general, callers should _always_ use the subscript that contains a T.Value : Sendable constraint
+    /// This subscript should only be used in contexts when callers are forced to work around the lack of an AttributedStringKey.Value : Sendable constraint and assume the values are Sendable (ex. during NSAttributedString conversion while iterating scopes)
+    subscript <T: AttributedStringKey>(assumingSendable attribute: T.Type) -> T.Value? {
+        get {
+            self[T.name]?.rawValueAssumingSendable(as: T.self)
+        }
+        set {
+            guard let newValue else {
+                self[T.name] = nil
+                return
+            }
+            self[T.name] = _AttributeValue(assumingSendable: newValue, for: T.self)
+        }
+    }
+    #endif
 
     subscript (_ attributeName: String) -> _AttributeValue? {
         get { self.contents[attributeName] }
@@ -221,6 +251,12 @@ extension AttributedString._AttributeStorage {
             }
             _attributeModified(attributeName, old: oldValue, new: newValue)
         }
+    }
+    
+    mutating func removeValue<T: AttributedStringKey>(forKey: T.Type) -> Bool {
+        let oldValue = self.contents.removeValue(forKey: T.name)
+        _attributeModified(T.name, old: oldValue, new: nil)
+        return oldValue != nil
     }
 
     internal mutating func mergeIn(_ other: Self, mergePolicy: AttributeMergePolicy = .keepNew) {

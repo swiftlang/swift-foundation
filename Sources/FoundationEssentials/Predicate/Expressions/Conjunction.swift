@@ -40,7 +40,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Conjunction : CustomStringConvertible {
     public var description: String {
         "Conjunction(lhs: \(lhs), rhs: \(rhs))"

@@ -11,7 +11,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 
 #if canImport(Darwin.uuid)
 // Needed this for backward compatibility even though we don't use it.
@@ -65,7 +65,7 @@ extension NSUUID : _HasCustomAnyHashableRepresentation {
 }
 
 @objc(__NSConcreteUUID)
-internal class __NSConcreteUUID : _NSUUIDBridge {
+internal class __NSConcreteUUID : _NSUUIDBridge, @unchecked Sendable {
     final var _storage: UUID
 
     fileprivate init(value: Foundation.UUID) {

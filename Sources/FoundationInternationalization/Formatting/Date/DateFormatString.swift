@@ -56,23 +56,38 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         }
 
         mutating public func appendInterpolation(era: Date.FormatStyle.Symbol.Era) {
-            format.append(era.option.rawValue)
+            guard let option = era.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(year: Date.FormatStyle.Symbol.Year) {
-            format.append(year.option.rawValue)
+            guard let option = year.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(yearForWeekOfYear: Date.FormatStyle.Symbol.YearForWeekOfYear) {
-            format.append(yearForWeekOfYear.option.rawValue)
+            guard let option = yearForWeekOfYear.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(cyclicYear: Date.FormatStyle.Symbol.CyclicYear) {
-            format.append(cyclicYear.option.rawValue)
+            guard let option = cyclicYear.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(quarter: Date.FormatStyle.Symbol.Quarter) {
-            format.append(quarter.option.rawValue)
+            guard let option = quarter.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(standaloneQuarter: Date.FormatStyle.Symbol.StandaloneQuarter) {
@@ -80,7 +95,10 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         }
 
         mutating public func appendInterpolation(month: Date.FormatStyle.Symbol.Month) {
-            format.append(month.option.rawValue)
+            guard let option = month.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(standaloneMonth: Date.FormatStyle.Symbol.StandaloneMonth) {
@@ -88,19 +106,31 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         }
 
         mutating public func appendInterpolation(week: Date.FormatStyle.Symbol.Week) {
-            format.append(week.option.rawValue)
+            guard let option = week.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(day: Date.FormatStyle.Symbol.Day) {
-            format.append(day.option.rawValue)
+            guard let option = day.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(dayOfYear: Date.FormatStyle.Symbol.DayOfYear) {
-            format.append(dayOfYear.option.rawValue)
+            guard let option = dayOfYear.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(weekday: Date.FormatStyle.Symbol.Weekday) {
-            format.append(weekday.option.rawValue)
+            guard let option = weekday.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(standaloneWeekday: Date.FormatStyle.Symbol.StandaloneWeekday) {
@@ -108,7 +138,10 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         }
 
         mutating public func appendInterpolation(dayPeriod: Date.FormatStyle.Symbol.DayPeriod) {
-            format.append(dayPeriod.option.rawValue)
+            guard let option = dayPeriod.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(hour: Date.FormatStyle.Symbol.VerbatimHour) {
@@ -116,19 +149,31 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         }
 
         mutating public func appendInterpolation(minute: Date.FormatStyle.Symbol.Minute) {
-            format.append(minute.option.rawValue)
+            guard let option = minute.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(second: Date.FormatStyle.Symbol.Second) {
-            format.append(second.option.rawValue)
+            guard let option = second.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(secondFraction: Date.FormatStyle.Symbol.SecondFraction) {
-            format.append(secondFraction.option.rawValue)
+            guard let option = secondFraction.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
 
         mutating public func appendInterpolation(timeZone: Date.FormatStyle.Symbol.TimeZone) {
-            format.append(timeZone.option.rawValue)
+            guard let option = timeZone.option else {
+                return
+            }
+            format.append(option.rawValue)
         }
     }
 }

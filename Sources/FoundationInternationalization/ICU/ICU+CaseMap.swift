@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
+internal import _FoundationICU
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
 #endif
 
 extension ICU {
     final class CaseMap : @unchecked Sendable {
-        let casemap: OpaquePointer
+        let casemap: OpaquePointer?
         
         let lock: LockedState<Void>
         

@@ -34,7 +34,7 @@ struct RegexPatternCache: @unchecked Sendable {
                 return cached
             }
 
-            var r = try Regex(pattern)
+            var r = try Regex(pattern).wordBoundaryKind(.simple)
             if caseInsensitive {
                 r = r.ignoresCase()
             }

@@ -13,14 +13,16 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
 
-#if canImport(Glibc)
-import Glibc
+#if canImport(Bionic)
+@preconcurrency import Bionic
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(Darwin)
+import Darwin
 #endif
 
 /// Internal extensions on Date, for interop with ICU.

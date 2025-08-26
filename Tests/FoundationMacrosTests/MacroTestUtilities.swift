@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
+import Foundation
 import FoundationMacros
 import SwiftSyntax
 import SwiftSyntaxMacros
@@ -43,6 +44,15 @@ struct DiagnosticTest : ExpressibleByStringLiteral, Hashable, CustomStringConver
     let message: String
     let fixIts: [FixItTest]
     var description: String { message }
+    
+    var mappedToExpression: Self {
+        DiagnosticTest(
+            message.replacing("Predicate", with: "Expression").replacing("predicate", with: "expression"),
+            fixIts: fixIts.map {
+                FixItTest($0.message, result: $0.result.replacing("#Predicate", with: "#Expression"))
+            }
+        )
+    }
     
     init(stringLiteral value: StringLiteralType) {
         message = value
@@ -90,7 +100,7 @@ extension Diagnostic {
         } else {
             var result = "Message: \(debugDescription)\nFix-Its:\n"
             for fixIt in fixIts {
-                result += "\t\(fixIt.message.message)\n\t\(fixIt.changes.first!._result.replacingOccurrences(of: "\n", with: "\n\t"))"
+                result += "\t\(fixIt.message.message)\n\t\(fixIt.changes.first!._result.replacing("\n", with: "\n\t"))"
             }
             return result
         }
@@ -104,39 +114,59 @@ extension DiagnosticTest {
         } else {
             var result = "Message: \(message)\nFix-Its:\n"
             for fixIt in fixIts {
-                result += "\t\(fixIt.message)\n\t\(fixIt.result.replacingOccurrences(of: "\n", with: "\n\t"))"
+                result += "\t\(fixIt.message)\n\t\(fixIt.result.replacing("\n", with: "\n\t"))"
             }
             return result
         }
     }
 }
 
-func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #file, line: UInt = #line) {
-    let context = BasicMacroExpansionContext()
+func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], sourceLocation: Testing.SourceLocation = #_sourceLocation) {
     let origSourceFile = Parser.parse(source: source)
     let expandedSourceFile: Syntax
+    let context: BasicMacroExpansionContext
     do {
-        expandedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).expand(macros: macros, in: context)
+        let foldedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).cast(SourceFileSyntax.self)
+        context = BasicMacroExpansionContext(sourceFiles: [foldedSourceFile : .init(moduleName: testModuleName, fullFilePath: testFileName)])
+        expandedSourceFile = foldedSourceFile.expand(macros: macros) {
+            BasicMacroExpansionContext(sharingWith: context, lexicalContext: [$0])
+        }
     } catch {
-        XCTFail("Operator folding on input source failed with error \(error)")
+        Issue.record("Operator folding on input source failed with error \(error)")
         return
     }
     let expansionResult = expandedSourceFile.description
     if !context.diagnostics.contains(where: { $0.diagMessage.severity == .error }) {
-        XCTAssertEqual(expansionResult, result, file: file, line: line)
+        #expect(expansionResult == result, sourceLocation: sourceLocation)
     }
     for diagnostic in context.diagnostics {
         if !diagnostics.contains(where: { $0.matches(diagnostic) }) {
-            XCTFail("Produced extra diagnostic:\n\(diagnostic._assertionDescription)", file: file, line: line)
+            Issue.record("Produced extra diagnostic:\n\(diagnostic._assertionDescription)", sourceLocation: sourceLocation)
+        } else {
+            let location = context.location(of: diagnostic.node, at: .afterLeadingTrivia, filePathMode: .fileID)
+            #expect(location != nil, "Produced diagnostic without attached source information:\n\(diagnostic._assertionDescription)", sourceLocation: sourceLocation)
         }
     }
     for diagnostic in diagnostics {
         if !context.diagnostics.contains(where: { diagnostic.matches($0) }) {
-            XCTFail("Failed to produce diagnostic:\n\(diagnostic._assertionDescription)", file: file, line: line)
+            Issue.record("Failed to produce diagnostic:\n\(diagnostic._assertionDescription)", sourceLocation: sourceLocation)
         }
     }
 }
 
-func AssertPredicateExpansion(_ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #file, line: UInt = #line) {
-    AssertMacroExpansion(macros: ["Predicate": PredicateMacro.self], source, result, diagnostics: diagnostics, file: file, line: line)
+func AssertPredicateExpansion(_ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], sourceLocation: Testing.SourceLocation = #_sourceLocation) {
+    AssertMacroExpansion(
+        macros: ["Predicate": PredicateMacro.self],
+        source,
+        result,
+        diagnostics: diagnostics,
+        sourceLocation: sourceLocation
+    )
+    AssertMacroExpansion(
+        macros: ["Expression" : FoundationMacros.ExpressionMacro.self],
+        source.replacing("#Predicate", with: "#Expression"),
+        result.replacing(".Predicate", with: ".Expression"),
+        diagnostics: Set(diagnostics.map(\.mappedToExpression)),
+        sourceLocation: sourceLocation
+    )
 }

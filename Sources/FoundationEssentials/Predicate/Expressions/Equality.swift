@@ -40,7 +40,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Equal : CustomStringConvertible {
     public var description: String {
         "Equal(lhs: \(lhs), rhs: \(rhs))"

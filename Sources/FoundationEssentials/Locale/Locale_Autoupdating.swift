@@ -175,6 +175,14 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
         LocaleCache.cache.current.firstDayOfWeek
     }
     
+    var weekendRange: WeekendRange? {
+        LocaleCache.cache.current.weekendRange
+    }
+
+    var minimumDaysInFirstWeek: Int {
+        LocaleCache.cache.current.minimumDaysInFirstWeek
+    }
+
     var language: Locale.Language {
         LocaleCache.cache.current.language
     }
@@ -244,10 +252,7 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
     var identifierCapturingPreferences: String {
         LocaleCache.cache.current.identifierCapturingPreferences
     }
-    
-    var doesNotRequireSpecialCaseHandling: Bool {
-        LocaleCache.cache.current.doesNotRequireSpecialCaseHandling
-    }
+
     
 #if FOUNDATION_FRAMEWORK
     func pref(for key: String) -> Any? {
@@ -255,7 +260,7 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
     }
     
     func bridgeToNSLocale() -> NSLocale {
-        LocaleCache.cache.autoupdatingCurrentNSLocale()
+        LocaleCache.autoupdatingCurrentNSLocale
     }
 #endif
 

@@ -11,17 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import os
-#else
-package import os
-#endif
+internal import os
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(CRT)
+import CRT
+#elseif os(WASI)
+@preconcurrency import WASILibc
 #endif
 
-#if canImport(CRT)
-import CRT
+#if FOUNDATION_FRAMEWORK
+// For feature flag
+internal import _ForSwiftFoundation
 #endif
 
 /**
@@ -30,7 +35,7 @@ import CRT
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Calendar : Hashable, Equatable, Sendable {
     private var _calendar: any _CalendarProtocol & AnyObject
-    
+
     /// Calendar supports many different kinds of calendars. Each is identified by an identifier here.
     public enum Identifier : Sendable, CustomDebugStringConvertible {
         /// The common calendar in Europe, the Western Hemisphere, and elsewhere.
@@ -56,6 +61,67 @@ public struct Calendar : Hashable, Equatable, Sendable {
         /// The Islamic Umm al-Qura calendar used in Saudi Arabia. This is based on astronomical calculation, instead of tabular behavior.
         @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
         case islamicUmmAlQura
+
+        @available(FoundationPreview 6.2, *)
+        case bangla
+        
+        @available(FoundationPreview 6.2, *)
+        case gujarati
+        
+        @available(FoundationPreview 6.2, *)
+        case kannada
+        
+        @available(FoundationPreview 6.2, *)
+        case malayalam
+        
+        @available(FoundationPreview 6.2, *)
+        case marathi
+        
+        @available(FoundationPreview 6.2, *)
+        case odia
+        
+        @available(FoundationPreview 6.2, *)
+        case tamil
+        
+        @available(FoundationPreview 6.2, *)
+        case telugu
+        
+        @available(FoundationPreview 6.2, *)
+        case vikram
+        
+        @available(FoundationPreview 6.2, *)
+        case dangi
+        
+        @available(FoundationPreview 6.2, *)
+        case vietnamese
+        
+        private typealias GregorianCodingKeys = EmptyCodingKeys
+        private typealias ChineseCodingKeys = EmptyCodingKeys
+        private typealias BuddhistCodingKeys = EmptyCodingKeys
+        private typealias CopticCodingKeys = EmptyCodingKeys
+        private typealias EthiopicAmeteMihretCodingKeys = EmptyCodingKeys
+        private typealias EthiopicAmeteAlemCodingKeys = EmptyCodingKeys
+        private typealias HebrewCodingKeys = EmptyCodingKeys
+        private typealias Iso8601CodingKeys = EmptyCodingKeys
+        private typealias IndianCodingKeys = EmptyCodingKeys
+        private typealias IslamicCodingKeys = EmptyCodingKeys
+        private typealias IslamicCivilCodingKeys = EmptyCodingKeys
+        private typealias JapaneseCodingKeys = EmptyCodingKeys
+        private typealias PersianCodingKeys = EmptyCodingKeys
+        private typealias RepublicOfChinaCodingKeys = EmptyCodingKeys
+        private typealias IslamicTabularCodingKeys = EmptyCodingKeys
+        private typealias IslamicUmmAlQuraCodingKeys = EmptyCodingKeys
+        private typealias BanglaCodingKeys = EmptyCodingKeys
+        private typealias GujaratiCodingKeys = EmptyCodingKeys
+        private typealias KannadaCodingKeys = EmptyCodingKeys
+        private typealias MalayalamCodingKeys = EmptyCodingKeys
+        private typealias MarathiCodingKeys = EmptyCodingKeys
+        private typealias OdiaCodingKeys = EmptyCodingKeys
+        private typealias TamilCodingKeys = EmptyCodingKeys
+        private typealias TeluguCodingKeys = EmptyCodingKeys
+        private typealias VikramCodingKeys = EmptyCodingKeys
+        private typealias DangiCodingKeys = EmptyCodingKeys
+        private typealias VietnameseCodingKeys = EmptyCodingKeys
 
         package static let cldrKeywordKey = "ca"
         package static let legacyKeywordKey = ICULegacyKey("calendar")
@@ -84,6 +150,17 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case "roc": self = .republicOfChina
             case "islamic-tbla": self = .islamicTabular
             case "islamic-umalqura": self = .islamicUmmAlQura
+            case "bangla": self = .bangla
+            case "gujarati": self = .gujarati
+            case "kannada": self = .kannada
+            case "malayalam": self = .malayalam
+            case "marathi": self = .marathi
+            case "odia": self = .odia
+            case "tamil": self = .tamil
+            case "telugu": self = .telugu
+            case "vikram": self = .vikram
+            case "dangi": self = .dangi
+            case "vietnamese": self = .vietnamese
             default: return nil
             }
         }
@@ -106,6 +183,17 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .republicOfChina: return "roc"
             case .islamicTabular: return "islamic-tbla"
             case .islamicUmmAlQura: return "islamic-umalqura"
+            case .bangla: return "bangla"
+            case .gujarati: return "gujarati"
+            case .kannada: return "kannada"
+            case .malayalam: return "malayalam"
+            case .marathi: return "marathi"
+            case .odia: return "odia"
+            case .tamil: return "tamil"
+            case .telugu: return "telugu"
+            case .vikram: return "vikram"
+            case .dangi: return "dangi"
+            case .vietnamese: return "vietnamese"
             }
         }
 
@@ -128,8 +216,25 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .coptic: return "coptic"
             case .ethiopicAmeteMihret: return "ethiopic"
             case .ethiopicAmeteAlem: return "ethiopic-amete-alem"
+            case .bangla: return "bangla"
+            case .gujarati: return "gujarati"
+            case .kannada: return "kannada"
+            case .malayalam: return "malayalam"
+            case .marathi: return "marathi"
+            case .odia: return "odia"
+            case .tamil: return "tamil"
+            case .telugu: return "telugu"
+            case .vikram: return "vikram"
+            case .dangi: return "dangi"
+            case .vietnamese: return "vietnamese"
             }
         }
+        
+#if !FOUNDATION_FRAMEWORK        
+        @_spi(SwiftCorelibsFoundation) public var _cfCalendarIdentifier: String {
+            cfCalendarIdentifier
+        }
+#endif
     }
 
     /// Bitwise set of which components in a `DateComponents` are interesting to use. More efficient than`Set<Component>`.
@@ -170,6 +275,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
         package static let calendar = ComponentSet(rawValue: 1 << 14)
         package static let timeZone = ComponentSet(rawValue: 1 << 15)
         package static let isLeapMonth = ComponentSet(rawValue: 1 << 16)
+        package static let dayOfYear = ComponentSet(rawValue: 1 << 18)
+        package static let isRepeatedDay = ComponentSet(rawValue: 1 << 19)
 
         package var count: Int {
             rawValue.nonzeroBitCount
@@ -193,17 +300,16 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if contains(.nanosecond) { result.insert(.nanosecond) }
             if contains(.calendar) { result.insert(.calendar) }
             if contains(.timeZone) { result.insert(.timeZone) }
-            if contains(.isLeapMonth) { 
-                if #available(FoundationPreview 0.1, *) {
-                    result.insert(.isLeapMonth)
-                }
-            }
+            if contains(.isLeapMonth) { result.insert(.isLeapMonth) }
+            if contains(.isRepeatedDay) { result.insert(.isRepeatedDay) }
+            if contains(.dayOfYear) { result.insert(.dayOfYear) }
             return result
         }
 
         package var highestSetUnit: Calendar.Component? {
             if self.contains(.era) { return .era }
             if self.contains(.year) { return .year }
+            if self.contains(.dayOfYear) { return .dayOfYear }
             if self.contains(.quarter) { return .quarter }
             if self.contains(.month) { return .month }
             if self.contains(.day) { return .day }
@@ -217,10 +323,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if self.contains(.yearForWeekOfYear) { return .yearForWeekOfYear }
             if self.contains(.nanosecond) { return .nanosecond }
 
-            // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
-            if #available(FoundationPreview 0.1, *) {
-                if self.contains(.isLeapMonth) { return .isLeapMonth }
-            }
+            // The algorithms that call this function assume that isLeapMonth and isRepeatedDay can count as 'highest unit set', but they are ordered after nanosecond.
+            if self.contains(.isLeapMonth) { return .isLeapMonth }
+            if self.contains(.isRepeatedDay) { return .isRepeatedDay }
 
             // The calendar and timeZone properties do not count as a 'highest unit set', since they are not ordered in time like the others are.
             return nil
@@ -249,15 +354,20 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case nanosecond
         case calendar
         case timeZone
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         case isLeapMonth
-
+        @available(FoundationPreview 6.2, *)
+        case isRepeatedDay
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+        case dayOfYear
+        
         fileprivate var componentSetValue: ComponentSet.RawValue {
             switch self {
             case .era: return ComponentSet.era.rawValue
             case .year: return ComponentSet.year.rawValue
             case .month: return ComponentSet.month.rawValue
             case .day: return ComponentSet.day.rawValue
+            case .dayOfYear: return ComponentSet.dayOfYear.rawValue
             case .hour: return ComponentSet.hour.rawValue
             case .minute: return ComponentSet.minute.rawValue
             case .second: return ComponentSet.second.rawValue
@@ -271,6 +381,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .calendar: return ComponentSet.calendar.rawValue
             case .timeZone: return ComponentSet.timeZone.rawValue
             case .isLeapMonth: return ComponentSet.isLeapMonth.rawValue
+            case .isRepeatedDay: return ComponentSet.isRepeatedDay.rawValue
             }
         }
         
@@ -280,6 +391,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .year: "year"
             case .month: "month"
             case .day: "day"
+            case .dayOfYear: "dayOfYear"
             case .hour: "hour"
             case .minute: "minute"
             case .second: "second"
@@ -293,6 +405,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .calendar: "calendar"
             case .timeZone: "timeZone"
             case .isLeapMonth: "isLeapMonth"
+            case .isRepeatedDay: "isRepeatedDay"
             }
         }
     }
@@ -310,7 +423,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: The autoupdating Calendar will only compare equal to another autoupdating Calendar.
     public static var autoupdatingCurrent : Calendar {
-        Calendar(inner: CalendarCache.cache.autoupdatingCurrent)
+        Calendar(inner: CalendarCache.autoupdatingCurrent)
     }
 
     // MARK: -
@@ -324,7 +437,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
-    internal init(identifier: Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
+    internal init(identifier: Calendar.Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 
@@ -357,7 +470,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// The locale of the calendar.
     public var locale : Locale? {
         get {
-            _calendar.locale
+            _calendar.locale ?? Locale(identifier: "")
         }
         set {
             guard newValue != _calendar.locale else {
@@ -452,7 +565,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The range of absolute time values smaller can take on in larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func range(of smaller: Component, in larger: Component, for date: Date) -> Range<Int>? {
-        _calendar.range(of: smaller, in: larger, for: date)
+        _calendar.range(of: smaller, in: larger, for: date.capped)
     }
 
     /// Returns, via two inout parameters, the starting time and duration of a given calendar component that contains a given date.
@@ -465,7 +578,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The specified date.
     /// - returns: `true` if the starting time and duration of a component could be calculated, otherwise `false`.
     public func dateInterval(of component: Component, start: inout Date, interval: inout TimeInterval, for date: Date) -> Bool {
-        guard let timeRange = dateInterval(of: component, for: date) else {
+        guard let timeRange = dateInterval(of: component, for: date.capped) else {
             return false
         }
 
@@ -481,7 +594,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A new `DateInterval` if the starting time and duration of a component could be calculated, otherwise `nil`.
     @available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)
     public func dateInterval(of component: Component, for date: Date) -> DateInterval? {
-        _calendar.dateInterval(of: component, for: date)
+        _calendar.dateInterval(of: component, for: date.capped)
     }
 
     /// Returns, for a given absolute time, the ordinal number of a smaller calendar component (such as a day) within a specified larger calendar component (such as a week).
@@ -494,9 +607,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The ordinal number of smaller within larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func ordinality(of smaller: Component, in larger: Component, for date: Date) -> Int? {
-        _calendar.ordinality(of: smaller, in: larger, for: date)
+        _calendar.ordinality(of: smaller, in: larger, for: date.capped)
     }
 
+    // MARK: - Addition
+    
     /// Returns a new `Date` representing the date calculated by adding components to a given date.
     ///
     /// - parameter components: A set of values to add to the date.
@@ -504,7 +619,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
     /// - returns: A new date, or nil if a date could not be calculated with the given input.
     public func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool = false) -> Date? {
-        _calendar.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
+        _calendar.date(byAdding: components, to: date.capped, wrappingComponents: wrappingComponents)
     }
 
     /// Returns a new `Date` representing the date calculated by adding an amount of a specific component to a given date.
@@ -516,43 +631,60 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A new date, or nil if a date could not be calculated with the given input.
     @available(iOS 8.0, *)
     public func date(byAdding component: Component, value: Int, to date: Date, wrappingComponents: Bool = false) -> Date? {
-        var dc = DateComponents()
-        switch component {
-        case .era:
-            dc.era = value
-        case .year:
-            dc.year = value
-        case .month:
-            dc.month = value
-        case .day:
-            dc.day = value
-        case .hour:
-            dc.hour = value
-        case .minute:
-            dc.minute = value
-        case .second:
-            dc.second = value
-        case .weekday:
-            dc.weekday = value
-        case .weekdayOrdinal:
-            dc.weekdayOrdinal = value
-        case .quarter:
-            dc.quarter = value
-        case .weekOfMonth:
-            dc.weekOfMonth = value
-        case .weekOfYear:
-            dc.weekOfYear = value
-        case .yearForWeekOfYear:
-            dc.yearForWeekOfYear = value
-        case .nanosecond:
-            dc.nanosecond = value
-        case .calendar, .timeZone, .isLeapMonth:
+        guard let dc = DateComponents(component: component, value: value) else {
             return nil
         }
-
-        return self.date(byAdding: dc, to: date, wrappingComponents: wrappingComponents)
+        
+        let result = self.date(byAdding: dc, to: date.capped, wrappingComponents: wrappingComponents)
+#if FOUNDATION_FRAMEWORK
+        // Compatibility path - we found some apps depending on the result being non-nil
+        if Calendar.compatibility2 {
+            return result ?? date
+        }
+#endif
+        return result
     }
 
+    /// Returns a sequence of `Date`s, calculated by adding a scaled amount of `Calendar.Component`s to a starting `Date`.
+    /// If a range is supplied, the sequence terminates if the next result is not contained in the range. The starting point does not need to be contained in the range, but if the first result is outside of the range then the result will be an empty sequence.
+    ///
+    /// - parameter start: The starting point of the search.
+    /// - parameter range: The range of dates to allow in the result. The sequence terminates if the next result is not contained in this range. If `nil`, all results are allowed.
+    /// - parameter component: A component to add or subtract.
+    /// - parameter value: The value of the specified component to add or subtract. The default value is `1`. The value can be negative, which causes subtraction.
+    /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
+    /// - returns: A `Sequence` of `Date` values, or an empty sequence if no addition could be performed.
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public func dates(byAdding component: Calendar.Component,
+                      value: Int = 1,
+                      startingAt start: Date,
+                      in range: Range<Date>? = nil,
+                      wrappingComponents: Bool = false) -> some (Sequence<Date> & Sendable) {
+        guard let components = DateComponents(component: component, value: value) else {
+            preconditionFailure("Attempt to add with an invalid Calendar.Component argument")
+        }
+        
+        return DatesByAdding(calendar: self, start: start.capped, range: range, components: components, wrappingComponents: wrappingComponents)
+    }
+    
+    /// Returns a sequence of `Date`s, calculated by repeatedly adding an amount of `DateComponents` to a starting `Date` and then to each subsequent result.
+    /// If a range is supplied, the sequence terminates if the next result is not contained in the range. The starting point does not need to be contained in the range, but if the first result is outside of the range then the result will be an empty sequence.
+    ///
+    /// - parameter start: The starting point of the search.
+    /// - parameter range: The range of dates to allow in the result. The sequence terminates if the next result is not contained in this range. If `nil`, all results are allowed.
+    /// - parameter components: The components to add or subtract.
+    /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
+    /// - returns: A `Sequence` of `Date` values, or an empty sequence if no addition could be performed.
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public func dates(byAdding components: DateComponents,
+                      startingAt start: Date,
+                      in range: Range<Date>? = nil,
+                      wrappingComponents: Bool = false) -> some (Sequence<Date> & Sendable) {
+        DatesByAdding(calendar: self, start: start.capped, range: range, components: components, wrappingComponents: wrappingComponents)
+    }
+    
+    // MARK: -
+    
     /// Returns a date created from the specified components.
     ///
     /// - parameter components: Used as input to the search algorithm for finding a corresponding date.
@@ -567,7 +699,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The `Date` to use.
     /// - returns: The date components of the specified date.
     public func dateComponents(_ components: Set<Component>, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: date)
+        _dateComponents(Calendar.ComponentSet(components), from: date.capped)
+    }
+
+    /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
+    /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
+    internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
+        var dc = _calendar.dateComponents(components, from: date.capped)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -579,8 +717,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
     /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
-    internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents(components, from: date)
+    internal func _dateComponents(_ components: ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
+        var dc = _calendar.dateComponents(components, from: date.capped, in: timeZone)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -588,6 +726,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
 
         return dc
+    }
+
+    /// True if this is a lunisolar calendar that repeats the month number for a leap month, false otherwise.
+    var hasRepeatingMonths: Bool {
+        return identifier == .chinese || identifier == .dangi || identifier == .gujarati || identifier == .kannada || identifier == .marathi || identifier == .telugu || identifier == .vietnamese || identifier == .vikram
     }
 
     /// Returns all the date components of a date, as if in a given time zone (instead of the `Calendar` time zone).
@@ -599,7 +742,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: All components, calculated using the `Calendar` and `TimeZone`.
     @available(iOS 8.0, *)
     public func dateComponents(in timeZone: TimeZone, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date, in: timeZone)
+        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date.capped, in: timeZone)
 
         // Fill out the Calendar field of dateComponents (the above calls cannot insert this struct into the date components, because they don't know the right value).
         dc.calendar = self
@@ -613,7 +756,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter end: The ending date.
     /// - returns: The result of calculating the difference from start to end.
     public func dateComponents(_ components: Set<Component>, from start: Date, to end: Date) -> DateComponents {
-        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
+        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start.capped, to: end.capped)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -653,7 +796,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return DateComponents(calendar: self)
         }
 
-        return dateComponents(components, from: startDate, to: endDate)
+        return dateComponents(components, from: startDate.capped, to: endDate.capped)
     }
 
     /// Returns the value for one component of a date.
@@ -705,7 +848,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
 
         switch component {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return .orderedSame
         case .day, .hour:
             // Day here so we don't assume that time zone fall back situations don't fall back into a previous day
@@ -798,6 +941,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
         let comp1 = self.dateComponents(Set(units), from: date1)
         let comp2 = self.dateComponents(Set(units), from: date2)
 
+        // check if this is a lunisolar calendar that repeats the day number for a leap day
+        let hasRepeatingDays = identifier == .gujarati || identifier == .kannada || identifier == .marathi || identifier == .telugu || identifier == .vikram
+
         for c in units {
             guard let value1 = comp1.value(for: c), let value2 = comp2.value(for: c) else {
                 return fallback
@@ -809,13 +955,24 @@ public struct Calendar : Hashable, Equatable, Sendable {
                 return .orderedAscending
             }
 
-            if c == .month && identifier == .chinese {
+            if c == .month && hasRepeatingMonths {
                 let leap1 = comp1.isLeapMonth ?? false
                 let leap2 = comp2.isLeapMonth ?? false
 
                 if !leap1 && leap2 {
                     return .orderedAscending
                 } else if leap1 && !leap2 {
+                    return .orderedDescending
+                }
+            }
+
+            if c == .day && hasRepeatingDays {
+                let repeated1 = comp1.isRepeatedDay ?? false
+                let repeated2 = comp2.isRepeatedDay ?? false
+
+                if !repeated1 && repeated2 {
+                    return .orderedAscending
+                } else if repeated1 && !repeated2 {
                     return .orderedDescending
                 }
             }
@@ -897,7 +1054,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: `true` if the given date is within a weekend.
     @available(iOS 8.0, *)
     public func isDateInWeekend(_ date: Date) -> Bool {
-        _calendar.isDateInWeekend(date)
+        _calendar.isDateInWeekend(date.capped)
     }
 
     /// Finds the range of the weekend around the given date, and returns the starting date and duration of the weekend via two inout parameters.
@@ -978,9 +1135,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A `DateInterval`, or nil if weekends do not exist in the specific calendar or locale.
     @available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)
     public func nextWeekend(startingAfter date: Date, direction: SearchDirection = .forward) -> DateInterval? {
-        let weekend = _calendar.weekendRange()
-
-        guard let weekend else {
+        guard let weekend = locale?.weekendRange else {
             return nil
         }
 
@@ -998,9 +1153,17 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
 
         let weekendEndComponents = DateComponents(weekday: weekend.end)
-        // We only care about the end date to get the interval of the weekend, so we don't care if it falls ahead of the passed in date. Always search forward from here, since we just found the *beginning* of the weekend.
-        guard var end = nextDate(after: start, matching: weekendEndComponents, matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward) else {
-            return nil
+
+        var end: Date
+        if weekend.start == weekend.end {
+            // This locale has a 1-day weekend
+            end = start
+        } else {
+            // We only care about the end date to get the interval of the weekend, so we don't care if it falls ahead of the passed in date. Always search forward from here, since we just found the *beginning* of the weekend.
+            guard let possibleEnd = nextDate(after: start, matching: weekendEndComponents, matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward) else {
+                return nil
+            }
+            end = possibleEnd
         }
 
         if let ceaseTime = weekend.ceaseTime, ceaseTime > 0 {
@@ -1053,7 +1216,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// A hint to the search algorithm to control the method used for searching for dates.
-    public enum MatchingPolicy : Sendable {
+    public enum MatchingPolicy : Sendable, Equatable {
         /// If there is no matching time before the end of the next instance of the next higher component to the highest specified component in the `DateComponents` argument, the algorithm will return the next existing time which exists.
         ///
         /// For example, during a daylight saving transition there may be no 2:37am. The result would then be 3:00am, if that does exist.
@@ -1104,29 +1267,32 @@ public struct Calendar : Hashable, Equatable, Sendable {
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
         _enumerateDates(startingAfter: start, matching: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction, using: block)
     }
-
+    
     /// Computes the dates which match (or most closely match) a given set of components, returned as a `Sequence`.
     ///
-    /// There will be at least one intervening date which does not match all the components (or the given date itself must not match) between the given date and any result.
+    /// If `direction` is set to `.backward`, this method finds the previous match before the start date. The intent is that the same matches as for a `.forward` search will be found. For example, if you are searching forwards or backwards for each hour with minute "27", the seconds in the date you will get in both a `.forward` and `.backward` search would be `00`.  Similarly, for DST backwards jumps which repeat times, you'll get the first match by default, where "first" is defined from the point of view of searching forwards. Therefore, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of `59:59` for the matching hour but instead `00:00`.
     ///
-    /// If `direction` is set to `.backward`, this method finds the previous match before the given date. The intent is that the same matches as for a `.forward` search will be found (that is, if you are searching forwards or backwards for each hour with minute "27", the seconds in the date you will get in forwards search would be 00), and the same will be true in a backwards search in order to implement this rule.  Similarly for DST backwards jumps which repeats times, you'll get the first match by default, where "first" is defined from the point of view of searching forwards.  So, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of 59:59 for the matching hour (which would be the nominal first match within a given hour, given the other rules here, when searching backwards).
+    /// If a range is supplied, the sequence terminates if the next result is not contained in the range. The starting point does not need to be contained in the range, but if the first result is outside of the range then the result will be an empty sequence.
     ///
-    /// If an exact match is not possible, and requested with the `strict` option, the sequence ends.  (Logically, since an exact match searches indefinitely into the future, if no match is found there's no point in continuing the enumeration.)
+    /// If an exact match is not possible, and requested with the `strict` option, the sequence ends.
     ///
-    /// Result dates have an integer number of seconds (as if 0 was specified for the nanoseconds property of the `DateComponents` matching parameter), unless a value was set in the nanoseconds property, in which case the result date will have that number of nanoseconds (or as close as possible with floating point numbers).
+    /// Result dates have an integer number of seconds (as if 0 was specified for the nanoseconds property of the `DateComponents` matching parameter), unless a value was set in the nanoseconds property, in which case the result date will have that number of nanoseconds, or as close as possible with floating point numbers.
     /// - parameter start: The `Date` at which to start the search.
+    /// - parameter range: The range of dates to allow in the result. The sequence terminates if the next result is not contained in this range. If `nil`, all results are allowed.
     /// - parameter components: The `DateComponents` to use as input to the search algorithm.
     /// - parameter matchingPolicy: Determines the behavior of the search algorithm when the input produces an ambiguous result.
     /// - parameter repeatedTimePolicy: Determines the behavior of the search algorithm when the input produces a time that occurs twice on a particular day.
     /// - parameter direction: Which direction in time to search. The default value is `.forward`, which means later in time.
-    internal func dates(startingAfter start: Date,
-                        matching components: DateComponents,
-                        matchingPolicy: MatchingPolicy = .nextTime,
-                        repeatedTimePolicy: RepeatedTimePolicy = .first,
-                        direction: SearchDirection = .forward) -> DateSequence {
-        DateSequence(calendar: self, start: start, matchingComponents: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public func dates(byMatching components: DateComponents,
+                      startingAt start: Date,
+                      in range: Range<Date>? = nil,
+                      matchingPolicy: MatchingPolicy = .nextTime,
+                      repeatedTimePolicy: RepeatedTimePolicy = .first,
+                      direction: SearchDirection = .forward) -> some (Sequence<Date> & Sendable) {
+        DatesByMatching(calendar: self, start: start, range: range, matchingComponents: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction)
     }
-
+                
     /// Computes the next date which matches (or most closely matches) a given set of components.
     ///
     /// The general semantics follow those of the `enumerateDates` function.
@@ -1220,26 +1386,26 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: `true` if the date matches all of the components, otherwise `false`.
     @available(iOS 8.0, *)
     public func date(_ date: Date, matchesComponents components: DateComponents) -> Bool {
-        let comparedUnits: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond]
+        let comparedUnits: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .nanosecond]
+            
 
         let actualUnits = comparedUnits.filter { u in
             return components.value(for: u) != nil
         }
 
-        if actualUnits.isEmpty {
-            // Try leap month
-            if components.isLeapMonth != nil {
-                let monthComponents = _dateComponents(.month, from: date)
-                // Apparently, enough that it's set and we don't check the actual value
-                return monthComponents.isLeapMonth != nil
-            }
-        }
-
         var comp = dateComponents(actualUnits, from: date)
         var tempComp = components
 
-        if comp.isLeapMonth != nil && components.isLeapMonth != nil {
-            tempComp.isLeapMonth = comp.isLeapMonth
+        if components.isLeapMonth != nil {
+            // `isLeapMonth` isn't part of `actualUnits`, so we have to retrieve
+            // it separately
+            comp.isLeapMonth = _dateComponents(.month, from: date).isLeapMonth
+        }
+
+        if components.isRepeatedDay != nil {
+            // `isRepeatedDay` isn't part of `actualUnits`, so we have to retrieve
+            // it separately
+            comp.isRepeatedDay = _dateComponents(.isRepeatedDay, from: date).isRepeatedDay
         }
 
         // Apply an epsilon to comparison of nanosecond values
@@ -1299,6 +1465,28 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .islamicTabular
         case .islamicUmmAlQura:
             return .islamicUmmAlQura
+        case .bangla:
+            return .bangla
+        case .gujarati:
+            return .gujarati
+        case .kannada:
+            return .kannada
+        case .malayalam:
+            return .malayalam
+        case .marathi:
+            return .marathi
+        case .odia:
+            return .odia
+        case .tamil:
+            return .tamil
+        case .telugu:
+            return .telugu
+        case .vikram:
+            return .vikram
+        case .dangi: 
+            return .dangi
+        case .vietnamese:
+            return .vietnamese
         }
     }
 
@@ -1336,6 +1524,28 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .islamicTabular
         case .islamicUmmAlQura:
             return .islamicUmmAlQura
+        case .bangla:
+            return .bangla
+        case .gujarati:
+            return .gujarati
+        case .kannada:
+            return .kannada
+        case .malayalam:
+            return .malayalam
+        case .marathi:
+            return .marathi
+        case .odia:
+            return .odia
+        case .tamil:
+            return .tamil
+        case .telugu:
+            return .telugu
+        case .vikram:
+            return .vikram
+        case .dangi:
+            return .dangi
+        case .vietnamese:
+            return .vietnamese
         default:
             return nil
         }
@@ -1460,17 +1670,76 @@ extension Calendar : Codable {
 extension Calendar.Identifier : Codable {}
 
 /// Internal-use struct for holding the range of a Weekend
-package struct WeekendRange {
+package struct WeekendRange: Equatable, Hashable {
     package var onsetTime: TimeInterval?
     package var ceaseTime: TimeInterval?
     package var start: Int
     package var end: Int
-    
+
+    // start == end means a one-day weekend. There isn't a known use case for 7-day weekend.
     package init(onsetTime: TimeInterval? = nil, ceaseTime: TimeInterval? = nil, start: Int, end: Int) {
         self.onsetTime = onsetTime
         self.ceaseTime = ceaseTime
         self.start = start
         self.end = end
+    }
+}
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Calendar.MatchingPolicy: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        switch try container.decode(Int.self) {
+        case 0:
+            self = .nextTime
+        case 1:
+            self = .nextTimePreservingSmallerComponents
+        case 2:
+            self = .previousTimePreservingSmallerComponents
+        case 3:
+            self = .strict
+        default: 
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unknown MatchingPolicy"))
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .nextTime:
+            try container.encode(0)
+        case .nextTimePreservingSmallerComponents:
+            try container.encode(1)
+        case .previousTimePreservingSmallerComponents:
+            try container.encode(2)
+        case .strict:
+            try container.encode(3)
+        }
+    }
+}
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Calendar.RepeatedTimePolicy: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        switch try container.decode(Int.self) {
+        case 0:
+            self = .first
+        case 1:
+            self = .last
+        default: 
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unknown RepeatedTimePolicy"))
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .first:
+            try container.encode(0)
+        case .last:
+            try container.encode(1)
+        }
     }
 }
 
@@ -1515,4 +1784,5 @@ extension NSCalendar : _HasCustomAnyHashableRepresentation {
         return AnyHashable(self as Calendar)
     }
 }
+
 #endif // FOUNDATION_FRAMEWORK

@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
+@_spi(Unstable) internal import CollectionsInternal
+#elseif canImport(_RopeModule)
+internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 extension AttributedString {
@@ -27,14 +29,18 @@ extension AttributedString {
         typealias _AttributeValue = AttributedString._AttributeValue
         typealias _AttributeStorage = AttributedString._AttributeStorage
 
+        var version: Version
         var string: BigString
         var runs: _InternalRuns
+        var trackedRanges: [Range<BigString.Index>]
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
         init(string: BigString, runs: _InternalRuns) {
             precondition(string.isEmpty == runs.isEmpty, "An empty attributed string should not contain any runs")
+            self.version = Self.createNewVersion()
             self.string = string
             self.runs = runs
+            self.trackedRanges = []
         }
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
@@ -103,9 +109,30 @@ extension AttributedString.Guts {
         if left._guts === right._guts, left._strBounds == right._strBounds { return true }
 
         guard left.count == right.count else { return false }
+        guard !left.isEmpty else { return true }
+        
+        if !left._isPartial && !right._isPartial {
+            // For a full BigString, we can get the grapheme cluster count in constant time since
+            // the grapheme cluster count is cached at the node level in the tree. It is not
+            // possible for two AttributedStrings with differing character counts to be equal,
+            // so bail early if we detect that
+            //
+            // Note: we should not perform this check for cases where we are not knowingly working
+            // with the full string. Since character counts are only cached at the node level,
+            // to get the character count of a substring you would need to run the grapheme
+            // breaking algorithm over the partial first and last chunks. While this is
+            // technically done in constant time as chunks have a max of 255 UTF-8 scalars, grapheme
+            // breaking up to 510 UTF-8 scalars would not be cheap. In the future we can
+            // investigate best effort short cuts by comparing the counts of just the "middle"
+            // chunks that we can determine cheaply along with the knowledge that the partial
+            // first and last chunks have a character count no more than their UTF-8 counts.
+            guard left._guts.string.count == right._guts.string.count else {
+                return false
+            }
+        }
+        
 
-        var leftIndex = left._strBounds.lowerBound
-        var rightIndex = right._strBounds.lowerBound
+        guard var leftIndex = left._strBounds.ranges.first?.lowerBound, var rightIndex = right._strBounds.ranges.first?.lowerBound else { return false }
 
         var it1 = left.makeIterator()
         var it2 = right.makeIterator()
@@ -133,8 +160,8 @@ extension AttributedString.Guts {
                 return false
             }
         }
-        assert(leftIndex == left._strBounds.upperBound)
-        assert(rightIndex == right._strBounds.upperBound)
+        assert(leftIndex == left._strBounds.ranges.last?.upperBound)
+        assert(rightIndex == right._strBounds.ranges.last?.upperBound)
         return true
     }
 
@@ -157,6 +184,10 @@ extension AttributedString.Guts {
 
 extension AttributedString.Guts {
     internal func description(in range: Range<BigString.Index>) -> String {
+        self.description(in: RangeSet(range))
+    }
+    
+    internal func description(in range: RangeSet<BigString.Index>) -> String {
         var result = ""
         let runs = Runs(self, in: range)
         for run in runs {
@@ -389,7 +420,7 @@ extension AttributedString.Guts {
     ) where K.Value: Sendable {
         let utf8Range = unicodeScalarRange(roundingDown: range)._utf8OffsetRange
         self.runs(in: utf8Range).updateEach { attributes, range, mutated in
-            attributes[K.self] = nil
+            mutated = attributes.removeValue(forKey: K.self)
         }
         if K.runBoundaries != nil {
             self.enforceAttributeConstraintsAfterMutation(
@@ -416,18 +447,20 @@ extension AttributedString.Guts {
 
     func _prepareStringMutation(
         in range: Range<BigString.Index>
-    ) -> (oldUTF8Count: Int, invalidationRange: Range<Int>) {
+    ) -> (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>) {
         let utf8TargetRange = range._utf8OffsetRange
         let invalidationRange = self.enforceAttributeConstraintsBeforeMutation(to: utf8TargetRange)
+        self._prepareTrackedIndicesUpdate(mutationRange: range)
         assert(invalidationRange.lowerBound <= utf8TargetRange.lowerBound)
         assert(invalidationRange.upperBound >= utf8TargetRange.upperBound)
-        return (self.string.utf8.count, invalidationRange)
+        return (utf8TargetRange.lowerBound, utf8TargetRange.isEmpty, self.string.utf8.count, invalidationRange)
     }
 
     func _finalizeStringMutation(
-        _ state: (oldUTF8Count: Int, invalidationRange: Range<Int>)
+        _ state: (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>)
     ) {
         let utf8Delta = self.string.utf8.count - state.oldUTF8Count
+        self._finalizeTrackedIndicesUpdate(mutationStartOffset: state.mutationStartUTF8Offset, isInsertion: state.isInsertion, utf8LengthDelta: utf8Delta)
         let lower = state.invalidationRange.lowerBound
         let upper = state.invalidationRange.upperBound + utf8Delta
         self.enforceAttributeConstraintsAfterMutation(

@@ -10,15 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
 
 extension ICU {
     final class FieldPositer {
-        let positer: OpaquePointer
+        let positer: OpaquePointer?
 
         internal init() throws {
             var status = U_ZERO_ERROR

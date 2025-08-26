@@ -14,51 +14,20 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class ICULegacyNumberFormatter {
+internal final class ICULegacyNumberFormatter : @unchecked Sendable {
 
+    /// `Sendable` notes: `UNumberFormat` is safe to use from multple threads after initialization and configuration.
     let uformatter: UnsafeMutablePointer<UNumberFormat?>
 
-    private init(type: UNumberFormatStyle, localeIdentifier: String) throws {
-        var status = U_ZERO_ERROR
-        let result = unum_open(type, nil, 0, localeIdentifier, nil, &status)
-        guard let result else { throw ICUError(code: U_UNSUPPORTED_ERROR) }
-        try status.checkSuccess()
-        uformatter = result
+    private init(openedFormatter: UnsafeMutablePointer<UNumberFormat?>) {
+        uformatter = openedFormatter
     }
 
     deinit {
         unum_close(uformatter)
-    }
-
-    func setAttribute(_ attr: UNumberFormatAttribute, value: Double) {
-        if attr == .roundingIncrement {
-            // RoundingIncrement is the only attribute that takes a double value.
-            unum_setDoubleAttribute(uformatter, attr, value)
-        } else {
-            unum_setAttribute(uformatter, attr, Int32(value))
-        }
-    }
-
-    func setAttribute(_ attr: UNumberFormatAttribute, value: Int) {
-        unum_setAttribute(uformatter, attr, Int32(value))
-    }
-
-    func setAttribute(_ attr: UNumberFormatAttribute, value: Bool) {
-        unum_setAttribute(uformatter, attr, value ? 1 : 0)
-    }
-
-    func setTextAttribute(_ attr: UNumberFormatTextAttribute, value: String) throws {
-        let uvalue = Array(value.utf16)
-        var status = U_ZERO_ERROR
-        unum_setTextAttribute(uformatter, attr, uvalue, Int32(uvalue.count), &status)
-        try status.checkSuccess()
     }
 
     func parseAsInt(_ string: some StringProtocol) -> Int64? {
@@ -149,87 +118,17 @@ internal final class ICULegacyNumberFormatter {
         }
     }
 
-    // Attribute setters
-
-    func setPrecision(_ precision: NumberFormatStyleConfiguration.Precision?) {
-        guard let precision = precision else { return }
-
-        switch precision.option {
-        case .significantDigits(let min, let max):
-            setAttribute(.significantDigitsUsed, value: true)
-            setAttribute(.minSignificantDigits, value: min)
-            if let max = max {
-                setAttribute(.maxSignificantDigits, value: max)
-            }
-        case .integerAndFractionalLength(let minInt, let maxInt, let minFraction, let maxFraction):
-            setAttribute(.significantDigitsUsed, value: false)
-            if let minInt = minInt {
-                setAttribute(.minIntegerDigits, value: minInt)
-            }
-            if let maxInt = maxInt {
-                setAttribute(.maxIntegerDigits, value: maxInt)
-            }
-            if let minFraction = minFraction {
-                setAttribute(.minFractionDigits, value: minFraction)
-            }
-            if let maxFraction = maxFraction {
-                setAttribute(.maxFractionDigits, value: maxFraction)
-            }
-        }
-    }
-
-    func setMultiplier(_ multiplier: Double?) {
-        if let multiplier {
-            setAttribute(.multiplier, value: multiplier)
-        }
-    }
-
-    func setGrouping(_ group: NumberFormatStyleConfiguration.Grouping?) {
-        guard let group = group else { return }
-
-        switch group.option {
-        case .automatic:
-            break
-        case .hidden:
-            setAttribute(.groupingUsed, value: false)
-        }
-    }
-
-    func setDecimalSeparator(_ decimalSeparator: NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy?) {
-        guard let decimalSeparator = decimalSeparator else { return }
-
-        switch decimalSeparator.option {
-        case .automatic:
-            break
-        case .always:
-            setAttribute(.decimalAlwaysShown, value: true)
-        }
-    }
-
-    func setRoundingIncrement(_ increment: NumberFormatStyleConfiguration.RoundingIncrement?) {
-        guard let increment = increment else { return }
-
-        switch increment {
-        case .integer(let value):
-            setAttribute(.roundingIncrement, value: value)
-        case .floatingPoint(let value):
-            setAttribute(.roundingIncrement, value: value)
-        }
-    }
-
-    func setCapitalizationContext(_ context: FormatStyleCapitalizationContext) {
-        var status = U_ZERO_ERROR
-        unum_setContext(uformatter, context.icuContext, &status)
-        // status ignored, nothing to do on failure
-    }
-
     // MARK: - Cache utilities
 
     enum NumberFormatType : Hashable, Codable {
         case number(NumberFormatStyleConfiguration.Collection)
         case percent(NumberFormatStyleConfiguration.Collection)
-        case currency(CurrencyFormatStyleConfiguration.Collection)
+        case currency(CurrencyFormatStyleConfiguration.Collection, currencyCode: String)
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
+        
+        private typealias NumberCodingKeys = DefaultAssociatedValueCodingKeys1
+        private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+        private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
     }
 
     private struct Signature : Hashable {
@@ -237,7 +136,7 @@ internal final class ICULegacyNumberFormatter {
         let localeIdentifier: String
         let lenient: Bool
 
-        func createNumberFormatter() -> ICULegacyNumberFormatter {
+        func createNumberFormatter() throws -> ICULegacyNumberFormatter {
             var icuType: UNumberFormatStyle
             switch type {
             case .number(let config):
@@ -248,47 +147,54 @@ internal final class ICULegacyNumberFormatter {
                 }
             case .percent(_):
                 icuType = .percent
-            case .currency(let config):
+            case .currency(let config, _):
                 icuType = config.icuNumberFormatStyle
             case .descriptive(let config):
                 icuType = config.icuNumberFormatStyle
             }
 
-            let formatter = try! ICULegacyNumberFormatter(type: icuType, localeIdentifier: localeIdentifier)
-            formatter.setAttribute(.lenientParse, value: lenient)
+            var status = U_ZERO_ERROR
+            let formatter = unum_open(icuType, nil, 0, localeIdentifier, nil, &status)
+            guard let formatter else {
+                throw ICUError(code: U_UNSUPPORTED_ERROR)
+            }
+            try status.checkSuccess()
+
+            setAttribute(.lenientParse, formatter: formatter, value: lenient)
 
             switch type {
             case .number(let config):
                 fallthrough
             case .percent(let config):
-                formatter.setMultiplier(config.scale)
-                formatter.setPrecision(config.precision)
-                formatter.setGrouping(config.group)
-                formatter.setDecimalSeparator(config.decimalSeparatorStrategy)
-                formatter.setRoundingIncrement(config.roundingIncrement)
+                setMultiplier(config.scale, formatter: formatter)
+                setPrecision(config.precision, formatter: formatter)
+                setGrouping(config.group, formatter: formatter)
+                setDecimalSeparator(config.decimalSeparatorStrategy, formatter: formatter)
+                setRoundingIncrement(config.roundingIncrement, formatter: formatter)
 
                 // Decimal and percent style specific attributes
                 if let sign = config.signDisplayStrategy {
                     switch sign.positive {
                     case .always:
-                        formatter.setAttribute(.signAlwaysShown, value: true)
+                        setAttribute(.signAlwaysShown, formatter: formatter, value: true)
                     case .hidden:
                         break
                     }
                 }
 
-            case .currency(let config):
-                formatter.setMultiplier(config.scale)
-                formatter.setPrecision(config.precision)
-                formatter.setGrouping(config.group)
-                formatter.setDecimalSeparator(config.decimalSeparatorStrategy)
-                formatter.setRoundingIncrement(config.roundingIncrement)
+            case .currency(let config, let currencyCode):
+                setMultiplier(config.scale, formatter: formatter)
+                setPrecision(config.precision, formatter: formatter)
+                setGrouping(config.group, formatter: formatter)
+                setDecimalSeparator(config.decimalSeparatorStrategy, formatter: formatter)
+                setRoundingIncrement(config.roundingIncrement, formatter: formatter)
+                try setTextAttribute(.currencyCode, formatter: formatter, value: currencyCode)
 
                 // Currency specific attributes
                 if let sign = config.signDisplayStrategy {
                     switch sign.positive {
                     case .always:
-                        formatter.setAttribute(.signAlwaysShown, value: true)
+                        setAttribute(.signAlwaysShown, formatter: formatter, value: true)
                     case .hidden:
                         break
                     }
@@ -296,7 +202,7 @@ internal final class ICULegacyNumberFormatter {
                 
             case .descriptive(let config):
                 if let capitalizationContext = config.capitalizationContext {
-                    formatter.setCapitalizationContext(capitalizationContext)
+                    setCapitalizationContext(capitalizationContext, formatter: formatter)
                 }
                 
                 switch config.presentation.option {
@@ -306,23 +212,122 @@ internal final class ICULegacyNumberFormatter {
                     break
                 case .cardinal:
                     do {
-                        try formatter.setTextAttribute(.defaultRuleSet, value: "%spellout-cardinal")
+                        try setTextAttribute(.defaultRuleSet, formatter: formatter, value: "%spellout-cardinal")
                     } catch {
                         // the general cardinal rule isn't supported, so try a gendered cardinal. Note that a proper fix requires using the gender of the subsequent noun
-                        try? formatter.setTextAttribute(.defaultRuleSet, value: "%spellout-cardinal-masculine")
+                        try? setTextAttribute(.defaultRuleSet, formatter: formatter, value: "%spellout-cardinal-masculine")
                     }
                 }
             }
-            return formatter
+            
+            return ICULegacyNumberFormatter(openedFormatter: formatter)
         }
     }
 
     private static let cache = FormatterCache<Signature, ICULegacyNumberFormatter>()
     // lenient is only used for parsing
-    static func formatter(for type: NumberFormatType, locale: Locale, lenient: Bool = false) -> ICULegacyNumberFormatter {
+    static func formatter(for type: NumberFormatType, locale: Locale, lenient: Bool = false) -> ICULegacyNumberFormatter? {
         let sig = Signature(type: type, localeIdentifier: locale.identifier, lenient: lenient)
-        let formatter = ICULegacyNumberFormatter.cache.formatter(for: sig, creator: sig.createNumberFormatter)
+        let formatter = try? ICULegacyNumberFormatter.cache.formatter(for: sig, creator: sig.createNumberFormatter)
 
         return formatter
     }
+}
+
+// MARK: - Helper Setters
+
+private func setAttribute(_ attr: UNumberFormatAttribute, formatter: UnsafeMutablePointer<UNumberFormat?>, value: Double) {
+    if attr == .roundingIncrement {
+        // RoundingIncrement is the only attribute that takes a double value.
+        unum_setDoubleAttribute(formatter, attr, value)
+    } else {
+        unum_setAttribute(formatter, attr, Int32(value))
+    }
+}
+
+private func setAttribute(_ attr: UNumberFormatAttribute, formatter: UnsafeMutablePointer<UNumberFormat?>, value: Int) {
+    unum_setAttribute(formatter, attr, Int32(value))
+}
+
+private func setAttribute(_ attr: UNumberFormatAttribute, formatter: UnsafeMutablePointer<UNumberFormat?>, value: Bool) {
+    unum_setAttribute(formatter, attr, value ? 1 : 0)
+}
+
+private func setTextAttribute(_ attr: UNumberFormatTextAttribute, formatter: UnsafeMutablePointer<UNumberFormat?>, value: String) throws {
+    let uvalue = Array(value.utf16)
+    var status = U_ZERO_ERROR
+    unum_setTextAttribute(formatter, attr, uvalue, Int32(uvalue.count), &status)
+    try status.checkSuccess()
+}
+
+private func setPrecision(_ precision: NumberFormatStyleConfiguration.Precision?, formatter: UnsafeMutablePointer<UNumberFormat?>) {
+    guard let precision = precision else { return }
+
+    switch precision.option {
+    case .significantDigits(let min, let max):
+        setAttribute(.significantDigitsUsed, formatter: formatter, value: true)
+        setAttribute(.minSignificantDigits, formatter: formatter, value: min)
+        if let max = max {
+            setAttribute(.maxSignificantDigits, formatter: formatter, value: max)
+        }
+    case .integerAndFractionalLength(let minInt, let maxInt, let minFraction, let maxFraction):
+        setAttribute(.significantDigitsUsed, formatter: formatter, value: false)
+        if let minInt = minInt {
+            setAttribute(.minIntegerDigits, formatter: formatter, value: minInt)
+        }
+        if let maxInt = maxInt {
+            setAttribute(.maxIntegerDigits, formatter: formatter, value: maxInt)
+        }
+        if let minFraction = minFraction {
+            setAttribute(.minFractionDigits, formatter: formatter, value: minFraction)
+        }
+        if let maxFraction = maxFraction {
+            setAttribute(.maxFractionDigits, formatter: formatter, value: maxFraction)
+        }
+    }
+}
+
+private func setMultiplier(_ multiplier: Double?, formatter: UnsafeMutablePointer<UNumberFormat?>) {
+    if let multiplier {
+        setAttribute(.multiplier, formatter: formatter, value: multiplier)
+    }
+}
+
+private func setGrouping(_ group: NumberFormatStyleConfiguration.Grouping?, formatter: UnsafeMutablePointer<UNumberFormat?>) {
+    guard let group = group else { return }
+
+    switch group.option {
+    case .automatic:
+        break
+    case .hidden:
+        setAttribute(.groupingUsed, formatter: formatter, value: false)
+    }
+}
+
+private func setDecimalSeparator(_ decimalSeparator: NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy?, formatter: UnsafeMutablePointer<UNumberFormat?>) {
+    guard let decimalSeparator = decimalSeparator else { return }
+
+    switch decimalSeparator.option {
+    case .automatic:
+        break
+    case .always:
+        setAttribute(.decimalAlwaysShown, formatter: formatter, value: true)
+    }
+}
+
+private func setRoundingIncrement(_ increment: NumberFormatStyleConfiguration.RoundingIncrement?, formatter: UnsafeMutablePointer<UNumberFormat?>) {
+    guard let increment = increment else { return }
+
+    switch increment {
+    case .integer(let value):
+        setAttribute(.roundingIncrement, formatter: formatter, value: value)
+    case .floatingPoint(let value):
+        setAttribute(.roundingIncrement, formatter: formatter, value: value)
+    }
+}
+
+private func setCapitalizationContext(_ context: FormatStyleCapitalizationContext, formatter: UnsafeMutablePointer<UNumberFormat?>) {
+    var status = U_ZERO_ERROR
+    unum_setContext(formatter, context.icuContext, &status)
+    // status ignored, nothing to do on failure
 }

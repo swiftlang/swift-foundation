@@ -50,13 +50,6 @@ extension String {
         public static let utf32LittleEndian = Encoding(rawValue: 0x9c000100)
     }
 
-    // This is a workaround for Clang importer's ambiguous lookup issue since
-    // - Swift doesn't allow typealias to nested type
-    // - Swift doesn't allow typealias to builtin types like String
-    // We therefore rename String.Encoding to String._Encoding for package
-    // internal use so we can use `String._Encoding` to disambiguate.
-    internal typealias _Encoding = Encoding
-
 #if FOUNDATION_FRAMEWORK
     public typealias EncodingConversionOptions = NSString.EncodingConversionOptions
     public typealias EnumerationOptions = NSString.EnumerationOptions
@@ -100,7 +93,33 @@ extension String.Encoding : CustomStringConvertible {
 #if FOUNDATION_FRAMEWORK && !NO_LOCALIZATION
         return String.localizedName(of: self)
 #else
-        return "\(self)"
+        // swift-corelibs-foundation never returned an actually localized name here, but there does exist some test code which depends on these values.
+        switch self {
+            case .ascii: return "Western (ASCII)"
+            case .nextstep: return "Western (NextStep)"
+            case .japaneseEUC: return "Japanese (EUC)"
+            case .utf8: return "Unicode (UTF-8)"
+            case .isoLatin1: return "Western (ISO Latin 1)"
+            case .symbol: return "Symbol (Mac OS)"
+            case .nonLossyASCII: return "Non-lossy ASCII"
+            case .shiftJIS: return "Japanese (Windows, DOS)"
+            case .isoLatin2: return "Central European (ISO Latin 2)"
+            case .unicode: return "Unicode (UTF-16)"
+            case .windowsCP1251: return "Cyrillic (Windows)"
+            case .windowsCP1252: return "Western (Windows Latin 1)"
+            case .windowsCP1253: return "Greek (Windows)"
+            case .windowsCP1254: return "Turkish (Windows Latin 5)"
+            case .windowsCP1250: return "Central European (Windows Latin 2)"
+            case .iso2022JP: return "Japanese (ISO 2022-JP)"
+            case .macOSRoman: return "Western (Mac OS Roman)"
+            case .utf16: return "Unicode (UTF-16)"
+            case .utf16BigEndian: return "Unicode (UTF-16BE)"
+            case .utf16LittleEndian: return "Unicode (UTF-16LE)"
+            case .utf32: return "Unicode (UTF-32)"
+            case .utf32BigEndian: return "Unicode (UTF-32BE)"
+            case .utf32LittleEndian: return "Unicode (UTF-32LE)"
+            default: return "\(self.rawValue)"
+        }
 #endif
     }
 }

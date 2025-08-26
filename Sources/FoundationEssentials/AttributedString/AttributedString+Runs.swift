@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
-#else
-package import _RopeModule
+@_spi(Unstable) internal import CollectionsInternal
+#elseif canImport(_RopeModule)
+internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -24,44 +26,67 @@ extension AttributedString {
         internal typealias _InternalRuns = AttributedString._InternalRuns
         internal typealias AttributeRunBoundaries = AttributedString.AttributeRunBoundaries
 
-        internal var _guts: Guts
-        internal var _bounds: Range<Index>
-        internal var _strBounds: Range<BigString.Index>
-
+        internal let _guts: Guts
+        internal let _bounds: Range<Index>
+        internal let _strBounds: RangeSet<BigString.Index>
+        internal let _isDiscontiguous: Bool
+        
+        internal var _isPartial: Bool {
+            guard !_isDiscontiguous else {
+                return true
+            }
+            guard let lower = _bounds.lowerBound._stringIndex, let upper = _bounds.upperBound._stringIndex else {
+                preconditionFailure("AttributedString.Runs created with bounds that have un-set string indices")
+            }
+            return _guts.string.startIndex != lower || _guts.string.endIndex != upper
+        }
+        
         internal init(_ guts: Guts, in bounds: Range<BigString.Index>) {
+            self.init(guts, in: RangeSet(bounds))
+        }
+
+        internal init(_ guts: Guts, in bounds: RangeSet<BigString.Index>) {
             _guts = guts
 
-            let stringLowerBound = _guts.string.unicodeScalars.index(roundingDown: bounds.lowerBound)
-            let stringUpperBound = _guts.string.unicodeScalars.index(roundingDown: bounds.upperBound)
-            _strBounds = stringLowerBound ..< stringUpperBound
+            var roundedBounds = RangeSet<BigString.Index>()
+            for range in bounds.ranges {
+                let stringLowerBound = _guts.string.unicodeScalars.index(roundingDown: range.lowerBound)
+                let stringUpperBound = _guts.string.unicodeScalars.index(roundingDown: range.upperBound)
+                roundedBounds.insert(contentsOf: Range(uncheckedBounds: (stringLowerBound, stringUpperBound)))
+            }
+            _strBounds = roundedBounds
+            _isDiscontiguous = _strBounds.ranges.count > 1
+            
+            guard let first = _strBounds.ranges.first, let last = _strBounds.ranges.last else {
+                _bounds = Range(uncheckedBounds: (
+                    Index(_runIndex: _guts.runs.startIndex, startStringIndex: _guts.string.startIndex, stringIndex: _guts.string.startIndex, rangeOffset: -1, withinDiscontiguous: false),
+                    Index(_runIndex: _guts.runs.startIndex, startStringIndex: _guts.string.startIndex, stringIndex: _guts.string.startIndex, rangeOffset: -1, withinDiscontiguous: false)
+                ))
+                return
+            }
 
-            let lower = _guts.findRun(at: _strBounds.lowerBound)
-            let start = Index(_runIndex: lower.runIndex, stringIndex: lower.start)
+            let lower = _guts.findRun(at: first.lowerBound)
+            let start = Index(_runIndex: lower.runIndex, startStringIndex: lower.start, stringIndex: first.lowerBound, rangeOffset: 0, withinDiscontiguous: _isDiscontiguous)
 
             let end: Index
 
-            if _strBounds.upperBound == _guts.string.endIndex {
+            if last.upperBound == _guts.string.endIndex {
                 end = Index(
                     _runOffset: _guts.runs.count,
                     runIndex: _guts.runs.endIndex.base,
-                    stringIndex: _strBounds.upperBound)
-            } else if _strBounds.upperBound == _guts.string.startIndex {
-                assert(stringLowerBound == stringUpperBound)
-                end = start
+                    startStringIndex: last.upperBound,
+                    stringIndex: last.upperBound,
+                    rangeOffset: _strBounds.ranges.count,
+                    withinDiscontiguous: _isDiscontiguous)
             } else {
-                let last = _guts.runs.index(atUTF8Offset: _strBounds.upperBound.utf8Offset - 1).index
-                let next = _guts.runs.index(after: last)
-
-                let stringEnd = _guts.string.utf8.index(
-                    _strBounds.upperBound,
-                    offsetBy: next.utf8Offset - _strBounds.upperBound.utf8Offset)
-                end = Index(_runIndex: next, stringIndex: stringEnd)
+                let (run, runStartIdx) = _guts.findRun(at: last.upperBound)
+                end = Index(_runIndex: run, startStringIndex: runStartIdx, stringIndex: last.upperBound, rangeOffset: _strBounds.ranges.count, withinDiscontiguous: _isDiscontiguous)
             }
             assert(start._runIndex != nil && start._stringIndex != nil)
             assert(end._runIndex != nil && end._stringIndex != nil)
-            assert(start._stringIndex!.utf8Offset <= _strBounds.lowerBound.utf8Offset)
-            assert(end._stringIndex!.utf8Offset >= _strBounds.upperBound.utf8Offset)
-            self._bounds = start ..< end
+            assert(start._stringIndex!.utf8Offset <= first.lowerBound.utf8Offset)
+            assert(end == start || end._stringIndex!.utf8Offset >= last.upperBound.utf8Offset)
+            self._bounds = Range(uncheckedBounds: (start, end))
         }
     }
 
@@ -79,14 +104,16 @@ extension AttributedString.Runs: Equatable {
         // I.e., the runs of two equal attribute strings may or may not compare equal.
 
         // Shortcut: compare overall UTF-8 counts.
-        let leftUTF8Count = lhs._strBounds._utf8OffsetRange.count
-        let rightUTF8Count = rhs._strBounds._utf8OffsetRange.count
+        let leftUTF8Count = lhs._strBounds.ranges.map(\._utf8OffsetRange.count).reduce(0, +)
+        let rightUTF8Count = rhs._strBounds.ranges.map(\._utf8OffsetRange.count).reduce(0, +)
         guard leftUTF8Count == rightUTF8Count else { return false }
 
         // Shortcut: compare run counts.
-        let leftRunCount = lhs._bounds.upperBound._runOffset - lhs._bounds.lowerBound._runOffset
-        let rightRunCount = rhs._bounds.upperBound._runOffset - rhs._bounds.lowerBound._runOffset
-        guard leftRunCount == rightRunCount else { return false }
+        if !lhs._isDiscontiguous && !rhs._isDiscontiguous {
+            let leftRunCount = lhs._bounds.upperBound._runOffset - lhs._bounds.lowerBound._runOffset + (lhs._bounds.upperBound._isSliced ? 1 : 0)
+            let rightRunCount = rhs._bounds.upperBound._runOffset - rhs._bounds.lowerBound._runOffset + (rhs._bounds.upperBound._isSliced ? 1 : 0)
+            guard leftRunCount == rightRunCount else { return false }
+        }
 
         return lhs.elementsEqual(rhs)
     }
@@ -120,24 +147,40 @@ extension AttributedString.Runs {
         /// This may be nil if the index was advanced without going through the Collection APIs;
         /// in that case, the index can be restored using the offset, although
         /// at a log(count) cost.
+        internal var _startStringIndex: BigString.Index?
+        
         internal var _stringIndex: BigString.Index?
+        
+        internal var _rangesOffset: Int?
+        
+        internal var _withinDiscontiguous: Bool
+        
+        internal var _isSliced: Bool { _stringIndex != _startStringIndex }
 
-        internal init(_runOffset: Int) {
+        internal init(_runOffset: Int, withinDiscontiguous: Bool) {
             self._runOffset = _runOffset
             self._runIndex = nil
             self._stringIndex = nil
+            self._rangesOffset = nil
+            self._withinDiscontiguous = withinDiscontiguous
         }
 
-        internal init(_runOffset: Int, runIndex: _InternalRuns.Storage.Index, stringIndex: BigString.Index) {
+        internal init(_runOffset: Int, runIndex: _InternalRuns.Storage.Index, startStringIndex: BigString.Index, stringIndex: BigString.Index, rangeOffset: Int, withinDiscontiguous: Bool) {
             self._runOffset = _runOffset
             self._runIndex = runIndex
             self._stringIndex = stringIndex
+            self._startStringIndex = startStringIndex
+            self._rangesOffset = rangeOffset
+            self._withinDiscontiguous = withinDiscontiguous
         }
 
-        internal init(_runIndex: _InternalRuns.Index, stringIndex: BigString.Index) {
+        internal init(_runIndex: _InternalRuns.Index, startStringIndex: BigString.Index, stringIndex: BigString.Index, rangeOffset: Int, withinDiscontiguous: Bool) {
             self._runOffset = _runIndex.offset
             self._runIndex = _runIndex.base
             self._stringIndex = stringIndex
+            self._startStringIndex = startStringIndex
+            self._rangesOffset = rangeOffset
+            self._withinDiscontiguous = withinDiscontiguous
         }
     }
 }
@@ -145,26 +188,43 @@ extension AttributedString.Runs {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Index: Comparable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs._runOffset == rhs._runOffset
+        lhs._runOffset == rhs._runOffset && lhs._stringIndex == rhs._stringIndex
     }
     
     public static func < (lhs: Self, rhs: Self) -> Bool {
-        lhs._runOffset < rhs._runOffset
+        if lhs._runOffset < rhs._runOffset {
+            return true
+        } else if lhs._runOffset > rhs._runOffset {
+            return false
+        } else {
+            switch(lhs._stringIndex, rhs._stringIndex) {
+            case let (.some(lhsIdx), .some(rhsIdx)):
+                return lhsIdx < rhsIdx
+            case (.none, .some):
+                return true
+            case (_, .none):
+                return false
+            }
+        }
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(macOS, deprecated: 26, introduced: 12, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(iOS, deprecated: 26, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(tvOS, deprecated: 26, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(watchOS, deprecated: 26, introduced: 8, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(visionOS, deprecated: 26, introduced: 1, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(*, deprecated, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
 extension AttributedString.Runs.Index: Strideable {
-    // FIXME: `Index` conforming to `Strideable` was an unfortunate choice.
-    // It means we lose direct rope indices whenever someone advances a standalone index,
-    // slowing down subsequent access.
-
     public func distance(to other: Self) -> Int {
-        other._runOffset - self._runOffset
+        // This isn't perfect (since two non-sliced indices might have other sliced runs between them) but checking is better than nothing
+        precondition(!self._withinDiscontiguous && !other._withinDiscontiguous, "AttributedString.Runs.Index's Strideable conformance may not be used with discontiguous sliced runs")
+        return other._runOffset - self._runOffset
     }
-        
+    
     public func advanced(by n: Int) -> Self {
-        Self(_runOffset: self._runOffset + n)
+        precondition(!self._withinDiscontiguous, "AttributedString.Runs.Index's Strideable conformance may not be used with discontiguous sliced runs")
+        return Self(_runOffset: self._runOffset + n, withinDiscontiguous: false)
     }
 }
 
@@ -182,10 +242,11 @@ extension AttributedString.Runs: BidirectionalCollection {
     internal func _resolveRun(_ i: Index) -> _InternalRuns.Index {
         precondition(i >= _bounds.lowerBound && i <= _bounds.upperBound, "Index out of bounds")
         guard let ri = i._runIndex, _guts.runs._rope.isValid(ri) else {
+            precondition(!_isDiscontiguous, "Index created via Strideable conformance may not be used with discontiguous runs")
             return _guts.runs.index(atRunOffset: i._runOffset)
         }
         let utf8Offset = (
-            i._stringIndex.map { $0.utf8Offset }
+            i._startStringIndex.map { $0.utf8Offset }
             ?? _guts.runs._rope.offset(of: ri, in: _InternalRuns.UTF8Metric()))
         return _InternalRuns.Index(ri, offset: i._runOffset, utf8Offset: utf8Offset)
     }
@@ -193,7 +254,7 @@ extension AttributedString.Runs: BidirectionalCollection {
     internal func _resolve(_ i: Index) -> (runIndex: _InternalRuns.Index, start: BigString.Index) {
         let runIndex = _resolveRun(i)
         var start: BigString.Index
-        if let si = i._stringIndex, si.utf8Offset == runIndex.utf8Offset {
+        if let si = i._startStringIndex, si.utf8Offset == runIndex.utf8Offset {
             // Don't trust that the string index is still valid. Let BigString resolve it.
             start = _guts.string.utf8.index(roundingDown: si)
         } else {
@@ -213,25 +274,88 @@ extension AttributedString.Runs: BidirectionalCollection {
     public func index(after i: Index) -> Index {
         precondition(i >= _bounds.lowerBound, "AttributedString.Runs index out of bounds")
         precondition(i < _bounds.upperBound, "Can't advance AttributedString.Runs index beyond end")
-        let next = _guts.runs.index(after: _resolveRun(i))
-        let stringIndex = (
-            i._stringIndex.map { _guts.string.utf8.index($0, offsetBy: next.utf8Offset - $0.utf8Offset) }
-            ?? _guts.utf8Index(at: next.utf8Offset))
-        return Index(_runIndex: next, stringIndex: stringIndex)
+        let (resolvedIdx, runStartIdx) = _resolve(i)
+        let next = _guts.runs.index(after: resolvedIdx)
+        let currentRangeIdx: Int
+        let currentRange: Range<BigString.Index>
+        if let cachedRangeOffset = i._rangesOffset {
+            currentRangeIdx = cachedRangeOffset
+            currentRange = _strBounds.ranges[currentRangeIdx]
+        } else {
+            (currentRange, currentRangeIdx) = _strBounds.range(containing: i._stringIndex ?? runStartIdx)
+        }
+        if currentRange.upperBound.utf8Offset <= next.utf8Offset {
+            let nextRangeIdx = currentRangeIdx + 1
+            if nextRangeIdx == _strBounds.ranges.count {
+                return endIndex
+            } else {
+                let strIdx = _strBounds.ranges[nextRangeIdx].lowerBound
+                let (runIdx, startStringIdx) = _guts.findRun(at: strIdx)
+                return Index(_runIndex: runIdx, startStringIndex: startStringIdx, stringIndex: strIdx, rangeOffset: nextRangeIdx, withinDiscontiguous: _isDiscontiguous)
+            }
+        } else {
+            let stringIndex = (
+                i._startStringIndex.map { _guts.string.utf8.index($0, offsetBy: next.utf8Offset - $0.utf8Offset) }
+                ?? _guts.utf8Index(at: next.utf8Offset))
+            return Index(_runIndex: next, startStringIndex: stringIndex, stringIndex: stringIndex, rangeOffset: currentRangeIdx, withinDiscontiguous: _isDiscontiguous)
+        }
     }
 
     public func index(before i: Index) -> Index {
         precondition(i > _bounds.lowerBound, "Can't step AttributedString.Runs index below start")
-        let prev = _guts.runs.index(before: _resolveRun(i))
-        let stringIndex = (
-            i._stringIndex.map { _guts.string.utf8.index($0, offsetBy: prev.utf8Offset - $0.utf8Offset) }
-            ?? _guts.utf8Index(at: prev.utf8Offset))
-        return Index(_runIndex: prev, stringIndex: stringIndex)
+        let (resolvedIdx, runStartIdx) = _resolve(i)
+        let currentRangeIdx = i._rangesOffset ?? _strBounds.range(containing: i._stringIndex ?? runStartIdx).offset
+        if i == endIndex || runStartIdx.utf8Offset <= _strBounds.ranges[currentRangeIdx].lowerBound.utf8Offset {
+            // The current run starts on or before our current range, look up the next range
+            let previousRange = _strBounds.ranges[currentRangeIdx - 1]
+            let justInsideRangeIdx = _guts.string.utf8.index(before: previousRange.upperBound)
+            if justInsideRangeIdx < runStartIdx {
+                // We're outside the current logical run, so lookup the new one
+                let (previousRunIdx, runStartIdx) = _guts.findRun(at: justInsideRangeIdx)
+                let stringIndex = Swift.max(runStartIdx, previousRange.lowerBound)
+                return Index(_runIndex: previousRunIdx, startStringIndex: runStartIdx, stringIndex: stringIndex, rangeOffset: currentRangeIdx - 1, withinDiscontiguous: _isDiscontiguous)
+            } else {
+                // We're still inside the current logical run
+                let stringIndex = Swift.max(runStartIdx, previousRange.lowerBound)
+                return Index(_runIndex: resolvedIdx, startStringIndex: runStartIdx, stringIndex: stringIndex, rangeOffset: currentRangeIdx - 1, withinDiscontiguous: _isDiscontiguous)
+            }
+        } else {
+            // The current run stops within our range, lookup the prior run
+            let prev = _guts.runs.index(before: resolvedIdx)
+            let prevStartStringIdx = (
+                i._startStringIndex.map { _guts.string.utf8.index($0, offsetBy: prev.utf8Offset - $0.utf8Offset) }
+                ?? _guts.utf8Index(at: prev.utf8Offset))
+            let stringIndex = Swift.max(prevStartStringIdx, _strBounds.ranges[currentRangeIdx].lowerBound)
+            return Index(_runIndex: prev, startStringIndex: prevStartStringIdx, stringIndex: stringIndex, rangeOffset: currentRangeIdx, withinDiscontiguous: _isDiscontiguous)
+        }
     }
     
     @_alwaysEmitIntoClient
     public func distance(from start: Index, to end: Index) -> Int {
-        start.distance(to: end)
+        #if FOUNDATION_FRAMEWORK
+        if #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) {
+            _distance(from: start, to: end)
+        } else {
+            start.distance(to: end)
+        }
+        #else
+        _distance(from: start, to: end)
+        #endif
+    }
+    
+    @available(FoundationPreview 6.2, *)
+    @usableFromInline
+    internal func _distance(from start: Index, to end: Index) -> Int {
+        guard _isDiscontiguous else {
+            return end._runOffset - start._runOffset + (end._isSliced ? 1 : 0)
+        }
+        var dist = 0
+        var current = start
+        while current < end {
+            formIndex(after: &current)
+            dist += 1
+        }
+        return dist
     }
 
     @_alwaysEmitIntoClient
@@ -240,19 +364,30 @@ extension AttributedString.Runs: BidirectionalCollection {
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }
-    #endif
         return i.advanced(by: distance)
+    #else
+        return _index(i, offsetBy: distance)
+    #endif
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ index: Index, offsetBy distance: Int) -> Index {
-        let i = _guts.runs.index(_resolveRun(index), offsetBy: distance)
-        // Note: bounds checking of result is delayed until subscript.
-        let stringIndex = (
-            index._stringIndex.map { _guts.string.utf8.index($0, offsetBy: i.utf8Offset - $0.utf8Offset) }
-            ?? _guts.utf8Index(at: i.utf8Offset))
-        return Index(_runIndex: i, stringIndex: stringIndex)
+        guard _isDiscontiguous else {
+            // Fast path, we can just increment the run offset since we know there are no "gaps"
+            let i = _guts.runs.index(_resolveRun(index), offsetBy: distance)
+            // Note: bounds checking of result is delayed until subscript.
+            let stringIndex = (
+                index._startStringIndex.map { _guts.string.utf8.index($0, offsetBy: i.utf8Offset - $0.utf8Offset) }
+                ?? _guts.utf8Index(at: i.utf8Offset))
+            return Index(_runIndex: i, startStringIndex: stringIndex, stringIndex: stringIndex, rangeOffset: 0, withinDiscontiguous: false)
+        }
+        let op = distance < 0 ? self.formIndex(before:) : self.formIndex(after:)
+        var idx = index
+        for _ in 0 ..< Swift.abs(distance) {
+            op(&idx)
+        }
+        return idx
     }
 
     @_alwaysEmitIntoClient
@@ -269,29 +404,36 @@ extension AttributedString.Runs: BidirectionalCollection {
 
     public subscript(position: Index) -> Run {
         precondition(_bounds.contains(position), "AttributedString.Runs index is out of bounds")
-        return self[_unchecked: _resolve(position)]
+        let resolved = _resolve(position)
+        let containingRange: Range<BigString.Index>
+        let stringIdx: BigString.Index
+        if let cachedRangeOffset = position._rangesOffset {
+            containingRange = _strBounds.ranges[cachedRangeOffset]
+            if let cachedStringIdx = position._stringIndex {
+                precondition(containingRange.contains(cachedStringIdx), "AttributedString.Runs index is out of bounds")
+                stringIdx = cachedStringIdx
+            }
+        } else {
+            stringIdx = position._stringIndex ?? resolved.start
+            // No need to check that _strBounds contains stringIdx here, the below call will assert if it cannot find a range that contains the provided index
+            containingRange = _strBounds.range(containing: stringIdx).range
+        }
+        return self[_unchecked: resolved.runIndex, stringStartIdx: position._startStringIndex ?? resolved.start, stringIdx: position._stringIndex ?? resolved.start, containingRange: containingRange]
     }
 
     public subscript(position: AttributedString.Index) -> Run {
-        precondition(
-            _strBounds.contains(position._value),
-            "AttributedString index is out of bounds")
+        let containingRange = _strBounds.range(containing: position._value).range
         let r = _guts.findRun(at: position._value)
-        return self[_unchecked: r]
+        return self[_unchecked: r.runIndex, stringStartIdx: r.start, stringIdx: position._value, containingRange: containingRange]
     }
 
-    internal subscript(_unchecked i: (runIndex: _InternalRuns.Index, start: BigString.Index)) -> Run {
-        let run = _guts.runs[i.runIndex]
+    internal subscript(_unchecked i: _InternalRuns.Index, stringStartIdx stringStartIdx: BigString.Index, stringIdx stringIdx: BigString.Index, containingRange containingRange: Range<BigString.Index>) -> Run {
+        let run = _guts.runs[i]
         // Clamp the run into the bounds of self, using relative calculations.
-        let lowerBound = Swift.max(i.start, _strBounds.lowerBound)
-        let upperUTF8 = Swift.min(i.start.utf8Offset + run.length, _strBounds.upperBound.utf8Offset)
-        let upperBound = _guts.string.utf8.index(lowerBound, offsetBy: upperUTF8 - lowerBound.utf8Offset)
-        return Run(_attributes: run.attributes, lowerBound ..< upperBound, _guts)
-    }
-
-    internal subscript(internal position: Index) -> _InternalRun {
-        let i = _resolveRun(position)
-        return _guts.runs[i]
+        let lowerBound = Swift.max(stringStartIdx, containingRange.lowerBound)
+        let upperUTF8 = Swift.min(stringStartIdx.utf8Offset + run.length, containingRange.upperBound.utf8Offset)
+        let upperBound = _guts.string.utf8.index(stringIdx, offsetBy: upperUTF8 - stringIdx.utf8Offset)
+        return Run(_attributes: run.attributes, Range(uncheckedBounds: (lowerBound, upperBound)), _guts)
     }
 }
 
@@ -300,10 +442,12 @@ extension AttributedString.Runs {
     // FIXME: Make public, with a better name. (Probably no need to state "run" -- `index(containing:)`?)
     internal func indexOfRun(at position: AttributedString.Index) -> Index {
         precondition(
-            position._value >= _strBounds.lowerBound && position._value <= _strBounds.upperBound,
+            _strBounds.contains(position._value),
             "AttributedString index is out of bounds")
         let r = _guts.findRun(at: position._value)
-        return Index(_runIndex: r.runIndex, stringIndex: r.start)
+        let (range, rangeIdx) = _strBounds.range(containing: position._value)
+        let strIdx = Swift.max(range.lowerBound, r.start)
+        return Index(_runIndex: r.runIndex, startStringIndex: r.start, stringIndex: strIdx, rangeOffset: rangeIdx, withinDiscontiguous: _isDiscontiguous)
     }
     
     internal func _firstOfMatchingRuns(
@@ -329,12 +473,15 @@ extension AttributedString.Runs {
         comparing attributeNames: [String]
     ) -> _InternalRuns.Index {
         precondition(!attributeNames.isEmpty)
+        if i.offset == endIndex._runOffset && endIndex._isSliced {
+            return i
+        }
         precondition(i.offset < endIndex._runOffset)
         let attributes = _guts.runs[i].attributes
         var j = i
         while true {
             let next = _guts.runs.index(after: j)
-            if next.offset == endIndex._runOffset { break }
+            if next.offset > endIndex._runOffset || (next.offset == endIndex._runOffset && !endIndex._isSliced) { break }
             let a = _guts.runs[next].attributes
             if !attributes.isEqual(to: a, comparing: attributeNames) {
                 return j
@@ -350,59 +497,130 @@ extension AttributedString.Runs {
     internal func _slicedRunBoundary(
         after i: AttributedString.Index,
         attributeNames: [String],
-        constraints: [AttributeRunBoundaries]
+        constraints: Set<AttributeRunBoundaries?>,
+        endOfCurrent: Bool
     ) -> AttributedString.Index {
-        precondition(
-            self._strBounds.contains(i._value),
-            "AttributedString index is out of bounds")
+        // _strBounds.range(containing:) below validates that i._value is within the bounds of this slice
         precondition(!attributeNames.isEmpty)
         let r = _guts.findRun(at: i._value)
+        let (currentRange, currentRangeIdx) = _strBounds.range(containing: i._value)
+        
+        guard constraints.count != 1 || constraints.contains(nil) else {
+            // We have a single constraint and attributes are guaranteed to be consistent between constraint boundaries
+            // This means that we will not break until the next constraint boundary, so we don't need to enumerate the actual run contents
+            let constraintBreak = _guts.string._firstConstraintBreak(in: i._value ..< currentRange.upperBound, with: constraints)
+            if !endOfCurrent && constraintBreak == currentRange.upperBound {
+                // No constraint break, return the next subrange start or the end index
+                if currentRangeIdx == _strBounds.ranges.count - 1 {
+                    return .init(currentRange.upperBound, version: _guts.version)
+                } else {
+                    return .init(_strBounds.ranges[currentRangeIdx + 1].lowerBound, version: _guts.version)
+                }
+            } else {
+                return .init(constraintBreak, version: _guts.version)
+            }
+        }
+        
         let endRun = _lastOfMatchingRuns(with: r.runIndex, comparing: attributeNames)
         let utf8End = endRun.utf8Offset + _guts.runs[endRun].length
-        let stringEnd = Swift.min(
-            _guts.string.utf8.index(r.start, offsetBy: utf8End - r.start.utf8Offset),
-            _strBounds.upperBound)
-        return .init(_guts.string._firstConstraintBreak(in: i._value ..< stringEnd, with: constraints))
+        let strIndexEnd = _guts.string.utf8.index(r.start, offsetBy: utf8End - r.start.utf8Offset)
+        if strIndexEnd < currentRange.upperBound {
+            // The coalesced run ends within the current range, so just look for the next break in the coalesced run
+            return .init(_guts.string._firstConstraintBreak(in: i._value ..< strIndexEnd, with: constraints), version: _guts.version)
+        } else {
+            // The coalesced run extends beyond our range
+            // First determine if there's a constraint break to handle
+            let constraintBreak = _guts.string._firstConstraintBreak(in: i._value ..< currentRange.upperBound, with: constraints)
+            if constraintBreak == currentRange.upperBound {
+                if endOfCurrent { return .init(currentRange.upperBound, version: _guts.version) }
+                // No constraint break, return the next subrange start or the end index
+                if currentRangeIdx == _strBounds.ranges.count - 1 {
+                    return .init(currentRange.upperBound, version: _guts.version)
+                } else {
+                    return .init(_strBounds.ranges[currentRangeIdx + 1].lowerBound, version: _guts.version)
+                }
+            } else {
+                // There is a constraint break before the end of the subrange, so return that break
+                return .init(constraintBreak, version: _guts.version)
+            }
+        }
+        
     }
 
     internal func _slicedRunBoundary(
         before i: AttributedString.Index,
         attributeNames: [String],
-        constraints: [AttributeRunBoundaries]
+        constraints: Set<AttributeRunBoundaries?>,
+        endOfPrevious: Bool
     ) -> AttributedString.Index {
-        precondition(
-            i._value > self._strBounds.lowerBound && i._value <= self._strBounds.upperBound,
-            "AttributedString index is out of bounds")
+        // _strBounds.range(containing:) below validates that i._value is within the bounds of this slice
         precondition(!attributeNames.isEmpty)
-        let r = _guts.runs.index(atUTF8Offset: i._value.utf8Offset - 1)
+        var currentRangeIdx: Int
+        var currentRange: Range<BigString.Index>
+        if i._value == endIndex._stringIndex {
+            currentRangeIdx = _strBounds.ranges.count
+            currentRange = Range(uncheckedBounds: (endIndex._stringIndex!, endIndex._stringIndex!))
+        } else {
+            (currentRange, currentRangeIdx) = _strBounds.range(containing: i._value)
+        }
+        var currentStringIdx = i._value
+        if currentRange.lowerBound == i._value {
+            // We're at the beginning of a subrange, so look to the previous one
+            precondition(currentRangeIdx > 0, "Cannot move index before startIndex")
+            currentRangeIdx -= 1
+            currentRange = _strBounds.ranges[currentRangeIdx]
+            currentStringIdx = currentRange.upperBound
+            if endOfPrevious { return .init(currentStringIdx, version: _guts.version) }
+        }
+        
+        guard constraints.count != 1 || constraints.contains(nil) else {
+            return .init(_guts.string._lastConstraintBreak(in: currentRange.lowerBound ..< currentStringIdx, with: constraints), version: _guts.version)
+        }
+        
+        let beforeStringIdx = _guts.string.utf8.index(before: currentStringIdx)
+        let r = _guts.runs.index(atUTF8Offset: beforeStringIdx.utf8Offset)
         let startRun = _firstOfMatchingRuns(with: r.index, comparing: attributeNames)
-        let stringStart = Swift.max(
-            _guts.string.utf8.index(i._value, offsetBy: startRun.utf8Offset - i._value.utf8Offset),
-            _strBounds.lowerBound)
-        return .init(_guts.string._lastConstraintBreak(in: stringStart ..< i._value, with: constraints))
+        if startRun.utf8Offset >= currentRange.lowerBound.utf8Offset {
+            // The coalesced run begins within the current range, so just look for the next break in the coalesced run
+            let runStartStringIdx = _guts.string.utf8.index(beforeStringIdx, offsetBy: startRun.utf8Offset - beforeStringIdx.utf8Offset)
+            return .init(_guts.string._lastConstraintBreak(in: runStartStringIdx ..< currentStringIdx, with: constraints), version: _guts.version)
+        } else {
+            // The coalesced run starts before the current range, and we've already looked back once so we shouldn't look back again
+            return .init(_guts.string._lastConstraintBreak(in: currentRange.lowerBound ..< currentStringIdx, with: constraints), version: _guts.version)
+        }
     }
 
     internal func _slicedRunBoundary(
         roundingDown i: AttributedString.Index,
         attributeNames: [String],
-        constraints: [AttributeRunBoundaries]
+        constraints: Set<AttributeRunBoundaries?>
     ) -> (index: AttributedString.Index, runIndex: AttributedString._InternalRuns.Index) {
-        precondition(
-            i._value >= self._strBounds.lowerBound && i._value <= self._strBounds.upperBound,
-            "AttributedString index is out of bounds")
+        // _strBounds.range(containing:) below validates that i._value is within the bounds of this slice
         precondition(!attributeNames.isEmpty)
         let r = _guts.findRun(at: i._value)
-        if r.runIndex.offset == endIndex._runOffset {
-            return (i, r.runIndex)
+        let currentRange = _strBounds.range(containing: i._value).range
+        
+        guard constraints.count != 1 || constraints.contains(nil) else {
+            let nextIndex = _guts.string.unicodeScalars.index(after: i._value)
+            let constraintBreak = _guts.string._lastConstraintBreak(in: currentRange.lowerBound ..< nextIndex, with: constraints)
+            var runIdx = r.runIndex
+            while runIdx.utf8Offset > constraintBreak.utf8Offset {
+                _guts.runs.formIndex(before: &runIdx)
+            }
+            return (
+                .init(constraintBreak, version: _guts.version),
+                runIdx
+            )
         }
+        
         let startRun = _firstOfMatchingRuns(with: r.runIndex, comparing: attributeNames)
         let stringStart = Swift.max(
             _guts.string.utf8.index(r.start, offsetBy: startRun.utf8Offset - r.start.utf8Offset),
-            _strBounds.lowerBound)
+            currentRange.lowerBound)
 
         let j = _guts.string.unicodeScalars.index(after: i._value)
         let last = _guts.string._lastConstraintBreak(in: stringStart ..< j, with: constraints)
-        return (.init(last), r.runIndex)
+        return (.init(last, version: _guts.version), r.runIndex)
     }
 }
 
@@ -410,9 +628,9 @@ extension AttributedString.Runs {
 extension BigString {
     internal func _firstConstraintBreak(
         in range: Range<Index>,
-        with constraints: [AttributedString.AttributeRunBoundaries]
+        with constraints: Set<AttributedString.AttributeRunBoundaries?>
     ) -> Index {
-        guard !constraints.isEmpty, !range.isEmpty else { return range.upperBound }
+        guard !range.isEmpty else { return range.upperBound }
 
         var r = range
         if
@@ -425,7 +643,7 @@ extension BigString {
         if constraints._containsScalarConstraint {
             // Note: we need to slice runs on matching scalars even if they don't carry
             // the attributes we're looking for.
-            let scalars: [UnicodeScalar] = constraints.compactMap { $0._constrainedScalar }
+            let scalars: [UnicodeScalar] = constraints.compactMap { $0?._constrainedScalar }
             if let firstBreak = self.unicodeScalars[r]._findFirstScalarBoundary(for: scalars) {
                 r = r.lowerBound ..< firstBreak
             }
@@ -436,9 +654,9 @@ extension BigString {
 
     internal func _lastConstraintBreak(
         in range: Range<Index>,
-        with constraints: [AttributedString.AttributeRunBoundaries]
+        with constraints: Set<AttributedString.AttributeRunBoundaries?>
     ) -> Index {
-        guard !constraints.isEmpty, !range.isEmpty else { return range.lowerBound }
+        guard !range.isEmpty else { return range.lowerBound }
 
         var r = range
         if
@@ -451,7 +669,7 @@ extension BigString {
         if constraints._containsScalarConstraint {
             // Note: we need to slice runs on matching scalars even if they don't carry
             // the attributes we're looking for.
-            let scalars: [UnicodeScalar] = constraints.compactMap { $0._constrainedScalar }
+            let scalars: [UnicodeScalar] = constraints.compactMap { $0?._constrainedScalar }
             if let lastBreak = self.unicodeScalars[r]._findLastScalarBoundary(for: scalars) {
                 r = lastBreak ..< r.upperBound
             }
@@ -502,5 +720,24 @@ extension BigSubstring.UnicodeScalarView {
             i = j
         }
         return nil
+    }
+}
+
+extension RangeSet {
+    fileprivate func range(containing index: Bound) -> (range: Range<Bound>, offset: Int) {
+        var start = 0
+        var end = self.ranges.count
+        while start < end {
+            let middle = (start + end) / 2
+            let value = self.ranges[middle]
+            if value.contains(index) {
+                return (value, middle)
+            } else if index < value.lowerBound {
+                end = middle
+            } else {
+                start = middle + 1
+            }
+        }
+        preconditionFailure("AttributedString.Runs index is out of bounds")
     }
 }

@@ -22,10 +22,6 @@ internal final class _CalendarAutoupdating: _CalendarProtocol, @unchecked Sendab
         CalendarCache.cache.current.identifier
     }
     
-    var localeIdentifier: String {
-        CalendarCache.cache.current.localeIdentifier
-    }
-    
     var debugDescription: String {
         "autoupdating \(identifier)"
     }
@@ -103,10 +99,6 @@ internal final class _CalendarAutoupdating: _CalendarProtocol, @unchecked Sendab
     
     func isDateInWeekend(_ date: Date) -> Bool {
         CalendarCache.cache.current.isDateInWeekend(date)
-    }
-    
-    func weekendRange() -> WeekendRange? {
-        CalendarCache.cache.current.weekendRange()
     }
     
     func date(from components: DateComponents) -> Date? {

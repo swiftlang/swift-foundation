@@ -14,27 +14,12 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import _FoundationICU
+
+// MARK: Date Extensions
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
-    /// Converts `self` to its textual representation.
-    /// - Parameter format: The format for formatting `self`.
-    /// - Returns: A representation of `self` using the given `format`. The type of the representation is specified by `FormatStyle.FormatOutput`.
-#if FOUNDATION_FRAMEWORK
-    public func formatted<F: Foundation.FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == Date {
-        format.format(self)
-    }
-#else
-    public func formatted<F: FoundationEssentials.FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == Date {
-        format.format(self)
-    }
-#endif // FOUNDATION_FRAMEWORK
-
     /// Converts `self` to its textual representation that contains both the date and time parts. The exact format depends on the user's preferences.
     /// - Parameters:
     ///   - date: The style for describing the date part.
@@ -48,36 +33,9 @@ extension Date {
     public func formatted() -> String {
         self.formatted(Date.FormatStyle(date: .numeric, time: .shortened))
     }
-
-    // Parsing
-    /// Creates a new `Date` by parsing the given representation.
-    /// - Parameter value: A representation of a date. The type of the representation is specified by `ParseStrategy.ParseInput`.
-    /// - Parameters:
-    ///   - value: A representation of a date. The type of the representation is specified by `ParseStrategy.ParseInput`.
-    ///   - strategy: The parse strategy to parse `value` whose `ParseOutput` is `Date`.
-#if FOUNDATION_FRAMEWORK
-    public init<T: Foundation.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
-        self = try strategy.parse(value)
-    }
-#else
-    public init<T: FoundationEssentials.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
-        self = try strategy.parse(value)
-    }
-#endif // FOUNDATION_FRAMEWORK
-
-    /// Creates a new `Date` by parsing the given string representation.
-#if FOUNDATION_FRAMEWORK
-    @_disfavoredOverload
-    public init<T: Foundation.ParseStrategy, Value: StringProtocol>(_ value: Value, strategy: T) throws where T.ParseOutput == Self, T.ParseInput == String {
-        self = try strategy.parse(String(value))
-    }
-#else
-    @_disfavoredOverload
-    public init<T: FoundationEssentials.ParseStrategy, Value: StringProtocol>(_ value: Value, strategy: T) throws where T.ParseOutput == Self, T.ParseInput == String {
-        self = try strategy.parse(String(value))
-    }
-#endif // FOUNDATION_FRAMEWORK
 }
+
+// MARK: DateFieldCollection
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
@@ -252,18 +210,20 @@ extension Date.FormatStyle {
     }
 }
 
+// MARK: Date.FormatStyle Definition
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// Strategies for formatting a `Date`.
     public struct FormatStyle : Sendable {
 
-        var _symbols = DateFieldCollection()
+        var _symbols: DateFieldCollection?
         var symbols: DateFieldCollection {
-            if _symbols.empty {
-                return DateFieldCollection().collection(date: .numeric).collection(time: .shortened)
-            } else {
+            if let _symbols {
                 return _symbols
             }
+
+            return DateFieldCollection().collection(date: .numeric).collection(time: .shortened)
         }
 
         var _dateStyle: DateStyle? // For accessing locale pref's custom date format
@@ -280,7 +240,11 @@ extension Date {
         /// The capitalization formatting context used when formatting date and time values.
         public var capitalizationContext: FormatStyleCapitalizationContext
 
-        /// Returns
+        /// Returns a type erased attributed variant of this style.
+        @available(macOS, deprecated: 15, introduced: 12, message: "Use attributedStyle instead")
+        @available(iOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
+        @available(tvOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
+        @available(watchOS, deprecated: 11, introduced: 8, message: "Use attributedStyle instead")
         public var attributed: AttributedStyle {
             .init(style: .formatStyle(self))
         }
@@ -297,13 +261,13 @@ extension Date {
         ///   - capitalizationContext: The capitalization formatting context used when formatting date and time values.
         /// - Note: Always specify the date style, time style, or the date components to be included in the formatted string with the symbol modifiers. Otherwise, an empty string will be returned when you use the instance to format a `Date`.
         public init(date: DateStyle? = nil, time: TimeStyle? = nil, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, timeZone: TimeZone = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
-            if let dateStyle = date {
+            if let dateStyle = date, dateStyle != .omitted {
                 _dateStyle = dateStyle
-                _symbols = _symbols.collection(date: dateStyle)
+                _symbols = (_symbols ?? .init()).collection(date: dateStyle)
             }
 
-            if let timeStyle = time {
-                _symbols = _symbols.collection(time: timeStyle)
+            if let timeStyle = time, timeStyle != .omitted {
+                _symbols = (_symbols ?? .init()).collection(time: timeStyle)
             }
 
             self.locale = locale
@@ -322,12 +286,22 @@ extension Date {
         }
     }
 
+    // MARK: Type-Erased AttributedStyle
+
+    @available(macOS, deprecated: 15, introduced: 12, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    @available(iOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    @available(tvOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    @available(watchOS, deprecated: 11, introduced: 8, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     public struct AttributedStyle : Sendable {
 
         enum InnerStyle: Codable, Hashable {
             case formatStyle(Date.FormatStyle)
             case verbatimFormatStyle(VerbatimFormatStyle)
+            
+            private typealias FormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias VerbatimFormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
         }
+        
         var innerStyle: InnerStyle
 
         init(style: InnerStyle) {
@@ -336,7 +310,7 @@ extension Date {
 
         /// Returns an attributed string with `AttributeScopes.FoundationAttributes.DateFieldAttribute`
         public func format(_ value: Date) -> AttributedString {
-            let fm: ICUDateFormatter
+            let fm: ICUDateFormatter?
             switch innerStyle {
             case .formatStyle(let formatStyle):
                 fm = ICUDateFormatter.cachedFormatter(for: formatStyle)
@@ -344,34 +318,11 @@ extension Date {
                 fm = ICUDateFormatter.cachedFormatter(for: verbatimFormatStyle)
             }
 
-            var result: AttributedString
-            if let (str, attributes) = fm.attributedFormat(value) {
-                result = Self._attributedStringFromPositions(attributes, string: str)
-            } else {
-                result = AttributedString(value.description)
+            guard let fm, let (str, attributes) = fm.attributedFormat(value) else {
+                return AttributedString("")
             }
-
-            return result
-        }
-
-        static func _attributedStringFromPositions(_ positions: [ICUDateFormatter.AttributePosition], string: String) -> AttributedString {
-            typealias DateFieldAttribute = AttributeScopes.FoundationAttributes.DateFieldAttribute.Field
-
-            var attrstr = AttributedString(string)
-            for attr in positions {
-                let strRange = String.Index(utf16Offset: attr.begin, in: string) ..<
-                    String.Index(utf16Offset: attr.end, in: string)
-                let range = Range<AttributedString.Index>(strRange, in: attrstr)!
-
-                let field = attr.field
-                var container = AttributeContainer()
-                if let dateField = DateFieldAttribute(udateFormatField: field) {
-                    container.dateField = dateField
-                }
-                attrstr[range].mergeAttributes(container)
-            }
-
-            return attrstr
+            
+            return str._attributedStringFromPositions(attributes)
         }
 
         public func locale(_ locale: Locale) -> Self {
@@ -391,95 +342,354 @@ extension Date {
     }
 }
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(macOS, deprecated: 15, introduced: 12, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+@available(iOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+@available(tvOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+@available(watchOS, deprecated: 11, introduced: 8, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
 extension Date.AttributedStyle : FormatStyle {}
+
+// MARK: Typed Attributed Style
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Date.FormatStyle {
+    /// The type preserving attributed variant of this style.
+    ///
+    /// This style attributes the formatted date with the `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`.
+    @dynamicMemberLookup
+    public struct Attributed : FormatStyle, Sendable {
+        var base: Date.FormatStyle
+
+        public subscript<T>(dynamicMember key: KeyPath<Date.FormatStyle, T>) -> T {
+            base[keyPath: key]
+        }
+
+        public subscript<T>(dynamicMember key: WritableKeyPath<Date.FormatStyle, T>) -> T {
+            get {
+                base[keyPath: key]
+            }
+            set {
+                base[keyPath: key] = newValue
+            }
+        }
+
+        init(style: Date.FormatStyle) {
+            self.base = style
+        }
+
+        public func format(_ value: Date) -> AttributedString {
+            guard let fm = ICUDateFormatter.cachedFormatter(for: base), let (str, attributes) = fm.attributedFormat(value) else {
+                return AttributedString("")
+            }
+            return str._attributedStringFromPositions(attributes)
+        }
+
+        public func locale(_ locale: Locale) -> Self {
+            var new = self
+            new.base = base.locale(locale)
+            return new
+        }
+    }
+
+    /// Return the type preserving attributed variant of this style.
+    ///
+    /// This style attributes the formatted date with the `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`.
+    public var attributedStyle: Attributed {
+        .init(style: self)
+    }
+}
+
+// MARK: Symbol Modifiers
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
+    /// Change the representation of the era in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func era(_ format: Symbol.Era = .abbreviated) -> Self {
         var new = self
-        new._symbols.era = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.era = format.option
         return new
     }
 
+    /// Change the representation of the year in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func year(_ format: Symbol.Year = .defaultDigits) -> Self {
         var new = self
-        new._symbols.year = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.year = format.option
         return new
     }
 
+    /// Change the representation of the quarter in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func quarter(_ format: Symbol.Quarter = .abbreviated) -> Self {
         var new = self
-        new._symbols.quarter = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.quarter = format.option
         return new
     }
 
+    /// Change the representation of the month in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func month(_ format: Symbol.Month = .abbreviated) -> Self {
         var new = self
-        new._symbols.month = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.month = format.option
         return new
     }
 
+    /// Change the representation of the week in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func week(_ format: Symbol.Week = .defaultDigits) -> Self {
         var new = self
-        new._symbols.week = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.week = format.option
         return new
     }
 
+    /// Change the representation of the day of the month in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func day(_ format: Symbol.Day = .defaultDigits) -> Self {
         var new = self
-        new._symbols.day = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.day = format.option
         return new
     }
 
+    /// Change the representation of the day of the year in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func dayOfYear(_ format: Symbol.DayOfYear = .defaultDigits) -> Self {
         var new = self
-        new._symbols.dayOfYear = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.dayOfYear = format.option
         return new
     }
 
+    /// Change the representation of the weekday in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func weekday(_ format: Symbol.Weekday = .abbreviated) -> Self {
         var new = self
-        new._symbols.weekday = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.weekday = format.option
         return new
     }
 
+    /// Change the representation of the hour in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func hour(_ format: Symbol.Hour = .defaultDigits(amPM: .abbreviated)) -> Self {
         var new = self
-        new._symbols.hour = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.hour = format.option
         return new
     }
 
+    /// Change the representation of the minute in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func minute(_ format: Symbol.Minute = .defaultDigits) -> Self {
         var new = self
-        new._symbols.minute = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.minute = format.option
         return new
     }
 
+    /// Change the representation of the second in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func second(_ format: Symbol.Second = .defaultDigits) -> Self {
         var new = self
-        new._symbols.second = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.second = format.option
         return new
     }
 
+    /// Change the representation of the second fraction in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func secondFraction(_ format: Symbol.SecondFraction) -> Self {
         var new = self
-        new._symbols.secondFraction = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.secondFraction = format.option
         return new
     }
 
+    /// Change the representation of the time zone in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
     public func timeZone(_ format: Symbol.TimeZone = .specificName(.short)) -> Self {
         var new = self
-        new._symbols.timeZoneSymbol = format.option
+        if new._symbols == nil {
+            new._symbols = format.option == nil ? new.symbols : .init()
+        }
+        new._symbols?.timeZoneSymbol = format.option
         return new
     }
 }
 
+// MARK: Symbol Modifiers Attributed Style
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Date.FormatStyle.Attributed {
+    /// Change the representation of the era in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func era(_ format: Date.FormatStyle.Symbol.Era = .abbreviated) -> Self {
+        var new = self
+        new.base = base.era(format)
+        return new
+    }
+
+    /// Change the representation of the year in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func year(_ format: Date.FormatStyle.Symbol.Year = .defaultDigits) -> Self {
+        var new = self
+        new.base = base.year(format)
+        return new
+    }
+
+    /// Change the representation of the quarter in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func quarter(_ format: Date.FormatStyle.Symbol.Quarter = .abbreviated) -> Self {
+        var new = self
+        new.base = base.quarter(format)
+        return new
+    }
+
+    /// Change the representation of the month in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func month(_ format: Date.FormatStyle.Symbol.Month = .abbreviated) -> Self {
+        var new = self
+        new.base = base.month(format)
+        return new
+    }
+
+    /// Change the representation of the week in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func week(_ format: Date.FormatStyle.Symbol.Week = .defaultDigits) -> Self {
+        var new = self
+        new.base = base.week(format)
+        return new
+    }
+
+    /// Change the representation of the day of the month in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func day(_ format: Date.FormatStyle.Symbol.Day = .defaultDigits) -> Self {
+        var new = self
+        new.base = base.day(format)
+        return new
+    }
+
+    /// Change the representation of the day of the year in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func dayOfYear(_ format: Date.FormatStyle.Symbol.DayOfYear = .defaultDigits) -> Self {
+        var new = self
+        new.base = base.dayOfYear(format)
+        return new
+    }
+
+    /// Change the representation of the weekday in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func weekday(_ format: Date.FormatStyle.Symbol.Weekday = .abbreviated) -> Self {
+        var new = self
+        new.base = base.weekday(format)
+        return new
+    }
+
+    /// Change the representation of the hour in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func hour(_ format: Date.FormatStyle.Symbol.Hour = .defaultDigits(amPM: .abbreviated)) -> Self {
+        var new = self
+        new.base = base.hour(format)
+        return new
+    }
+
+    /// Change the representation of the minute in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func minute(_ format: Date.FormatStyle.Symbol.Minute = .defaultDigits) -> Self {
+        var new = self
+        new.base = base.minute(format)
+        return new
+    }
+
+    /// Change the representation of the second in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func second(_ format: Date.FormatStyle.Symbol.Second = .defaultDigits) -> Self {
+        var new = self
+        new.base = base.second(format)
+        return new
+    }
+
+    /// Change the representation of the second fraction in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func secondFraction(_ format: Date.FormatStyle.Symbol.SecondFraction) -> Self {
+        var new = self
+        new.base = base.secondFraction(format)
+        return new
+    }
+
+    /// Change the representation of the time zone in the format.
+    ///
+    /// - Parameter format: Set the symbol representation or pass `nil` to remove it.
+    public func timeZone(_ format: Date.FormatStyle.Symbol.TimeZone = .specificName(.short)) -> Self {
+        var new = self
+        new.base = base.timeZone(format)
+        return new
+    }
+}
+
+// MARK: FormatStyle Conformance
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : FormatStyle {
     public func format(_ value: Date) -> String {
-        let fm = ICUDateFormatter.cachedFormatter(for: self)
-        return fm.format(value) ?? value.description
+        guard let fm = ICUDateFormatter.cachedFormatter(for: self), let result = fm.format(value) else {
+            return ""
+        }
+        return result
     }
 
     public func locale(_ locale: Locale) -> Self {
@@ -489,11 +699,15 @@ extension Date.FormatStyle : FormatStyle {
     }
 }
 
+// MARK: ParseStrategy Conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : ParseStrategy {
     public func parse(_ value: String) throws -> Date {
-        let fm = ICUDateFormatter.cachedFormatter(for: self)
+        guard let fm = ICUDateFormatter.cachedFormatter(for: self) else {
+            throw CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: "Error creating icu date formatter" ])
+        }
+
         guard let date = fm.parse(value) else {
             throw parseError(value, exampleFormattedString: fm.format(Date.now))
         }
@@ -501,6 +715,8 @@ extension Date.FormatStyle : ParseStrategy {
         return date
     }
 }
+
+// MARK: Codable+Hashable Conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : Codable, Hashable {
@@ -536,6 +752,7 @@ extension Date.FormatStyle : Codable, Hashable {
     }
 }
 
+// MARK: Date/Time Style
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
@@ -601,6 +818,191 @@ public extension ParseStrategy where Self == Date.FormatStyle {
     @_disfavoredOverload
     static var dateTime: Self { .init() }
 }
+
+// MARK: DiscreteFormatStyle Conformance
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Date.FormatStyle : DiscreteFormatStyle {
+    public func discreteInput(before input: Date) -> Date? {
+        guard let (bound, isIncluded) = bound(for: input, isLower: true) else {
+            return nil
+        }
+
+        return isIncluded ? bound.nextDown : bound
+    }
+
+    public func discreteInput(after input: Date) -> Date? {
+        guard let (bound, isIncluded) = bound(for: input, isLower: false) else {
+            return nil
+        }
+
+        return isIncluded ? bound.nextUp : bound
+    }
+
+    func bound(for input: Date, isLower: Bool) -> (bound: Date, includedInRangeOfInput: Bool)? {
+        var calendar = calendar
+        calendar.timeZone = timeZone
+        return calendar.bound(for: input, isLower: isLower, updateSchedule: ICUDateFormatter.DateFormatInfo.cachedUpdateSchedule(for: self))
+    }
+
+    public func input(before input: Date) -> Date? {
+        let result = Calendar.nextAccuracyStep(for: input, direction: .backward)
+
+        return result < input ? result : nil
+    }
+
+    public func input(after input: Date) -> Date? {
+        let result = Calendar.nextAccuracyStep(for: input, direction: .forward)
+
+        return result > input ? result : nil
+    }
+}
+
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Date.FormatStyle.Attributed : DiscreteFormatStyle {
+    public func discreteInput(before input: Date) -> Date? {
+        base.discreteInput(before: input)
+    }
+
+    public func discreteInput(after input: Date) -> Date? {
+        base.discreteInput(after: input)
+    }
+
+    public func input(before input: Date) -> Date? {
+        base.input(before: input)
+    }
+
+    public func input(after input: Date) -> Date? {
+        base.input(after: input)
+    }
+}
+
+extension Calendar {
+    /// Gives an approximation for how inaccurate `date` might be in either `direction` if it was produced
+    /// by `bound(for:isLower:updateSchedule)`.
+    static func nextAccuracyStep(for date: Date, direction: Calendar.SearchDirection) -> Date {
+        let conversionLoss = abs(date.timeIntervalSince(date.nextDown)) + abs(date.timeIntervalSince(Date(udate: date.udate.nextDown)))
+        // 9 was determined by experimentation, but seems to be the maximum
+        // number of conversions between `Date` and `Udate` that can happen when
+        // calling `bound(for:isLower:updateSchedule)`
+        let inaccuracy = 9 * conversionLoss
+        return direction == .backward ? date - inaccuracy : date + inaccuracy
+    }
+
+    func bound(for input: Date, isLower: Bool, updateSchedule: ICUDateFormatter.DateFormatInfo.UpdateSchedule) -> (bound: Date, includedInRangeOfInput: Bool)? {
+        let zeroDate = self.date(from: .init()) ?? Date(timeIntervalSince1970: 0)
+
+        let towardZero = isLower ? input > zeroDate : input < zeroDate
+
+        var bound: Date?
+
+        for (component, multitude) in updateSchedule.updateIntervals {
+            if let next = self.advance(input, isLower ? .backward : .forward, by: multitude, component) {
+                if let prev = bound {
+                    bound = isLower ? max(next, prev) : min(next, prev)
+                } else {
+                    bound = next
+                }
+            }
+        }
+
+        guard let bound else {
+            return nil
+        }
+
+        return (bound, bound == input || towardZero)
+    }
+
+    private func advance(_ date: Date, _ direction: Calendar.SearchDirection, by value: Int, _ component: Component) -> Date? {
+        guard component != .nanosecond else {
+            // We work with the UDate here because we have to mimic the floating
+            // point rounding behavior of the ICU calendar, which is used by the
+            // ICU formatting logic. _Calendar_ICU has a special case for
+            // implementation for `.nanosecond` in which it does not actually
+            // use ICU to calculate the value, but does manual math on `Date`
+            // instead. We explicitly opt out of that special case handling and
+            // implement our own version of what ICU's calendar would do.
+            let udate = date.udate
+
+            let increment = 1e-6 * Double(value)
+
+            let floored = min((udate / increment).rounded(.down) * increment, udate)
+
+            switch direction {
+            case .forward:
+                return max(Date(udate: floored + increment), date)
+            case .backward:
+                return min(Date(udate: floored), date)
+            }
+        }
+
+        // Calendar.date(byAdding:value:to:) doesn't work with .era, so we just
+        // use nextDate, even though that often yields inprecise results when
+        // doing big jumps.
+        guard component != .era else {
+            guard let era = self.dateComponents([.era], from: date).era else {
+                return nil
+            }
+
+            return self.nextDate(
+                after: date,
+                matching: .init(era: direction == .backward ? era - value : era + value),
+                matchingPolicy: .nextTime,
+                direction: direction)
+        }
+
+        if direction == .backward {
+            // If we're searching for an earlier date, we first skip one whole
+            // component into the past, so we can then search for the start of
+            // the next component, which is the start of the original component,
+            // i.e. exactly what we want.
+            // `Calendar.nextDate(after:matching)` does have a `direction` option,
+            // but putting that to `.backward` would give us the _start_ of the
+            // previous component, not the _end_.
+            guard let shiftedDate = self.date(byAdding: component, value: -value, to: date) else {
+                return nil
+            }
+
+            var dateComponents = DateComponents()
+            dateComponents.setValue(self.dateComponents([component], from: date).value(for: component), for: component)
+
+            guard let prevDate = self.nextDate(after: shiftedDate, matching: dateComponents, matchingPolicy: .nextTime) else {
+                return nil
+            }
+
+            return prevDate
+        } else {
+            // If we're searching for a later date, `Calendar.nextDate(after:matching)`
+            // gives us exactly what we want, we just have to make sure we pass
+            // a valid target value. E.g. we cannot pass a target of 60 seconds,
+            // but have to manually calculate the modulo based on
+            // `Calendar.range(of:in:for:)`.
+            let currentValue = self.component(component, from: date)
+            let additiveValue = currentValue + value
+
+            let targetValue: Int
+
+            if let higherComponent = component.nextHigherUnit,
+               let validRange = self.range(of: component, in: higherComponent, for: date), !validRange.isEmpty {
+
+                if additiveValue >= validRange.upperBound {
+                    targetValue = validRange.lowerBound + (additiveValue % validRange.upperBound)
+                } else {
+                    targetValue = additiveValue
+                }
+            } else {
+                targetValue = additiveValue
+            }
+
+            var components = DateComponents()
+            components.setValue(targetValue, for: component)
+
+            return self.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
+        }
+    }
+}
+
+// MARK: Utils
 
 extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
     init?(udateFormatField: UDateFormatField) {
@@ -691,6 +1093,31 @@ extension Date.FormatStyle : CustomConsumingRegexComponent {
         guard index < bounds.upperBound else {
             return nil
         }
-        return ICUDateFormatter.cachedFormatter(for: self).parse(input, in: index..<bounds.upperBound)
+        guard let fmt = ICUDateFormatter.cachedFormatter(for: self) else {
+            return nil
+        }
+        return fmt.parse(input, in: index..<bounds.upperBound)
+    }
+}
+
+extension String {
+    func _attributedStringFromPositions(_ positions: [ICUDateFormatter.AttributePosition]) -> AttributedString {
+        typealias DateFieldAttribute = AttributeScopes.FoundationAttributes.DateFieldAttribute.Field
+
+        var attrstr = AttributedString(self)
+        for attr in positions {
+            let strRange = String.Index(utf16Offset: attr.begin, in: self) ..<
+                String.Index(utf16Offset: attr.end, in: self)
+            let range = Range<AttributedString.Index>(strRange, in: attrstr)!
+
+            let field = attr.field
+            var container = AttributeContainer()
+            if let dateField = DateFieldAttribute(udateFormatField: field) {
+                container.dateField = dateField
+            }
+            attrstr[range].mergeAttributes(container)
+        }
+
+        return attrstr
     }
 }

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 
 /// Wraps an `NSCalendar` with more Swift-like `Calendar` API. See also: `_NSSwiftCalendar`.
 /// This is only used in the case where we have custom Objective-C subclasses of `NSCalendar`. It is assumed that the subclass is Sendable.
@@ -214,11 +214,6 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     /// - returns: `true` if the given date is within a weekend.
     func isDateInWeekend(_ date: Date) -> Bool {
         _calendar.isDateInWeekend(date)
-    }
-
-    func weekendRange() -> WeekendRange? {
-        // This has no ObjC equivalent. Get it from a fixed calendar with same identifier.
-        CalendarCache.cache.fixed(identifier).weekendRange()
     }
     
     // MARK: -

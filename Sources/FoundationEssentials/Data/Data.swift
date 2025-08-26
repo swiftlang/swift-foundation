@@ -10,39 +10,75 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+@usableFromInline let calloc = ucrt.calloc
+@usableFromInline let malloc = ucrt.malloc
+@usableFromInline let free = ucrt.free
+@usableFromInline let memset = ucrt.memset
+@usableFromInline let memcpy = ucrt.memcpy
+@usableFromInline let memcmp = ucrt.memcmp
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
+@usableFromInline let calloc = Bionic.calloc
+@usableFromInline let malloc = Bionic.malloc
+@usableFromInline let free = Bionic.free
+@usableFromInline let memset = Bionic.memset
+@usableFromInline let memcpy = Bionic.memcpy
+@usableFromInline let memcmp = Bionic.memcmp
+#elseif canImport(Glibc)
+@usableFromInline let calloc = Glibc.calloc
+@usableFromInline let malloc = Glibc.malloc
+@usableFromInline let free = Glibc.free
+@usableFromInline let memset = Glibc.memset
+@usableFromInline let memcpy = Glibc.memcpy
+@usableFromInline let memcmp = Glibc.memcmp
+#elseif canImport(Musl)
+@usableFromInline let calloc = Musl.calloc
+@usableFromInline let malloc = Musl.malloc
+@usableFromInline let free = Musl.free
+@usableFromInline let memset = Musl.memset
+@usableFromInline let memcpy = Musl.memcpy
+@usableFromInline let memcmp = Musl.memcmp
+#elseif canImport(WASILibc)
+@usableFromInline let calloc = WASILibc.calloc
+@usableFromInline let malloc = WASILibc.malloc
+@usableFromInline let free = WASILibc.free
+@usableFromInline let memset = WASILibc.memset
+@usableFromInline let memcpy = WASILibc.memcpy
+@usableFromInline let memcmp = WASILibc.memcmp
+#endif
+
+internal import _FoundationCShims
+import Builtin
 
 #if canImport(Darwin)
 import Darwin
 
 internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointer, _ length: Int) {
     guard vm_deallocate(
-        mach_task_self_,
+        _platform_mach_task_self(),
         vm_address_t(UInt(bitPattern: mem)),
         vm_size_t(length)) == ERR_SUCCESS else {
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
     }
 }
+#endif
 
-#elseif canImport(Glibc)
-import Glibc
-
-private func malloc_good_size(_ size: Int) -> Int {
+#if !canImport(Darwin)
+@inlinable // This is @inlinable as trivially computable.
+internal func malloc_good_size(_ size: Int) -> Int {
     return size
 }
+#endif
 
+#if canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
 #elseif canImport(ucrt)
 import ucrt
-
-private func malloc_good_size(_ size: Int) -> Int {
-    return size
-}
-
-#elseif canImport(C)
-
-private func malloc_good_size(_ size: Int) -> Int {
-    return size
-}
-
+#elseif canImport(WASILibc)
+@preconcurrency import WASILibc
 #endif
 
 #if os(Windows)
@@ -162,7 +198,7 @@ internal final class __DataStorage : @unchecked Sendable {
     func withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
         return try apply(UnsafeRawBufferPointer(start: _bytes?.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
     }
-
+    
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
     @discardableResult
     func withUnsafeMutableBytes<Result>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
@@ -174,9 +210,41 @@ internal final class __DataStorage : @unchecked Sendable {
         return _bytes?.advanced(by: -_offset)
     }
 
+    @inlinable
+    static var copyWillRetainMask: Int {
+#if _pointerBitWidth(_64)
+        return Int(bitPattern: 0x8000000000000000)
+#elseif _pointerBitWidth(_32)
+        return Int(bitPattern: 0x80000000)
+#endif
+    }
+    
+    @inlinable
+    static var capacityMask: Int {
+#if _pointerBitWidth(_64)
+        return Int(bitPattern: 0x7FFFFFFFFFFFFFFF)
+#elseif _pointerBitWidth(_32)
+        return Int(bitPattern: 0x7FFFFFFF)
+#endif
+    }
+    
     @inlinable // This is @inlinable as trivially computable.
     var capacity: Int {
-        return _capacity
+        return _capacity & __DataStorage.capacityMask
+    }
+    
+    @inlinable
+    var _copyWillRetain: Bool {
+        get {
+            return _capacity & __DataStorage.copyWillRetainMask == 0
+        }
+        set {
+            if !newValue {
+                _capacity |= __DataStorage.copyWillRetainMask
+            } else {
+                _capacity &= __DataStorage.capacityMask
+            }
+        }
     }
 
     @inlinable // This is @inlinable as trivially computable.
@@ -286,7 +354,7 @@ internal final class __DataStorage : @unchecked Sendable {
             }
 
             if origLength < newLength && clear && !allocateCleared {
-                memset(newBytes!.advanced(by: origLength), 0, newLength - origLength)
+                _ = memset(newBytes!.advanced(by: origLength), 0, newLength - origLength)
             }
 
             /* _length set by caller */
@@ -320,10 +388,10 @@ internal final class __DataStorage : @unchecked Sendable {
     func setLength(_ length: Int) {
         let origLength = _length
         let newLength = length
-        if _capacity < newLength || _bytes == nil {
+        if capacity < newLength || _bytes == nil {
             ensureUniqueBufferReference(growingTo: newLength, clear: true)
         } else if origLength < newLength && _needToZero {
-            memset(_bytes! + origLength, 0, newLength - origLength)
+            _ = memset(_bytes! + origLength, 0, newLength - origLength)
         } else if newLength < origLength {
             _needToZero = true
         }
@@ -335,7 +403,7 @@ internal final class __DataStorage : @unchecked Sendable {
         precondition(length >= 0, "Length of appending bytes must not be negative")
         let origLength = _length
         let newLength = origLength + length
-        if _capacity < newLength || _bytes == nil {
+        if capacity < newLength || _bytes == nil {
             ensureUniqueBufferReference(growingTo: newLength, clear: false)
         }
         _length = newLength
@@ -362,7 +430,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
 
     #if FOUNDATION_FRAMEWORK
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     #endif
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     func replaceBytes(in range_: Range<Int>, with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
@@ -388,7 +456,7 @@ internal final class __DataStorage : @unchecked Sendable {
             if let replacementBytes = replacementBytes {
                 memmove(mutableBytes + start, replacementBytes, replacementLength)
             } else {
-                memset(mutableBytes + start, 0, replacementLength)
+                _ = memset(mutableBytes + start, 0, replacementLength)
             }
         }
 
@@ -402,14 +470,14 @@ internal final class __DataStorage : @unchecked Sendable {
         let range = range_.lowerBound - _offset ..< range_.upperBound - _offset
         if range.upperBound - range.lowerBound == 0 { return }
         if _length < range.upperBound {
-            if _capacity <= range.upperBound {
+            if capacity <= range.upperBound {
                 ensureUniqueBufferReference(growingTo: range.upperBound, clear: false)
             }
             _length = range.upperBound
         } else {
             ensureUniqueBufferReference()
         }
-        memset(_bytes!.advanced(by: range.lowerBound), 0, range.upperBound - range.lowerBound)
+        _ = memset(_bytes!.advanced(by: range.lowerBound), 0, range.upperBound - range.lowerBound)
     }
 
     @usableFromInline // This is not @inlinable as a non-trivial, non-convenience initializer.
@@ -537,6 +605,9 @@ internal final class __DataStorage : @unchecked Sendable {
 
 @frozen
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+#if compiler(>=6.2)
+@_addressableForDependencies
+#endif
 public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollection, RangeReplaceableCollection, MutableDataProtocol, ContiguousBytes, Sendable {
 
     public typealias Index = Int
@@ -547,11 +618,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @usableFromInline
     @frozen
     internal struct InlineData : Sendable {
-#if arch(x86_64) || arch(arm64) || arch(s390x) || arch(powerpc64) || arch(powerpc64le)
+#if _pointerBitWidth(_64)
         @usableFromInline typealias Buffer = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
                                               UInt8, UInt8, UInt8, UInt8, UInt8, UInt8) //len  //enum
         @usableFromInline var bytes: Buffer
-#elseif arch(i386) || arch(arm) || arch(arm64_32)
+#elseif _pointerBitWidth(_32)
         @usableFromInline typealias Buffer = (UInt8, UInt8, UInt8, UInt8,
                                               UInt8, UInt8) //len  //enum
         @usableFromInline var bytes: Buffer
@@ -582,9 +653,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         @inlinable // This is @inlinable as a trivial initializer.
         init(count: Int = 0) {
             assert(count <= MemoryLayout<Buffer>.size)
-#if arch(x86_64) || arch(arm64) || arch(s390x) || arch(powerpc64) || arch(powerpc64le)
+#if _pointerBitWidth(_64)
             bytes = (UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0))
-#elseif arch(i386) || arch(arm) || arch(arm64_32)
+#elseif _pointerBitWidth(_32)
             bytes = (UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0))
 #else
     #error ("Unsupported architecture: initialization for Buffer is required for this architecture")
@@ -769,9 +840,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
-#if arch(x86_64) || arch(arm64) || arch(s390x) || arch(powerpc64) || arch(powerpc64le)
+#if _pointerBitWidth(_64)
     @usableFromInline internal typealias HalfInt = Int32
-#elseif arch(i386) || arch(arm) || arch(arm64_32)
+#elseif _pointerBitWidth(_32)
     @usableFromInline internal typealias HalfInt = Int16
 #else
     #error ("Unsupported architecture: a definition of half of the pointer sized Int needs to be defined for this architecture")
@@ -1809,7 +1880,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     // A standard or custom deallocator for `Data`.
     ///
     /// When creating a `Data` with the no-copy initializer, you may specify a `Data.Deallocator` to customize the behavior of how the backing store is deallocated.
-    @_nonSendable
     public enum Deallocator {
         /// Use a virtual memory deallocator.
 #if canImport(Darwin)
@@ -1882,7 +1952,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     public init(repeating repeatedValue: UInt8, count: Int) {
         self.init(count: count)
         withUnsafeMutableBytes { (buffer: UnsafeMutableRawBufferPointer) -> Void in
-            memset(buffer.baseAddress!, Int32(repeatedValue), buffer.count)
+            _ = memset(buffer.baseAddress!, Int32(repeatedValue), buffer.count)
         }
     }
 
@@ -1928,7 +1998,17 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             deallocator._deallocator(bytes, count)
             _representation = .empty
         } else {
-            _representation = _Representation(__DataStorage(bytes: bytes, length: count, copy: false, deallocator: whichDeallocator, offset: 0), count: count)
+            let storage = __DataStorage(bytes: bytes, length: count, copy: false, deallocator: whichDeallocator, offset: 0)
+            switch deallocator {
+            // technically .custom can potential cause this too but there is a potential chance this is expected behavior
+            // commented out for now... revisit later
+            // case .custom: fallthrough
+            case .none:
+                storage._copyWillRetain = false
+            default:
+                break
+            }
+            _representation = _Representation(storage, count: count)
         }
     }
 
@@ -2004,6 +2084,81 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         _representation = representation
     }
 
+#if FOUNDATION_FRAMEWORK
+    public typealias ReadingOptions = NSData.ReadingOptions
+    public typealias WritingOptions = NSData.WritingOptions
+#else
+    public struct ReadingOptions : OptionSet, Sendable {
+        public let rawValue: UInt
+        public init(rawValue: UInt) { self.rawValue = rawValue }
+        
+        public static let mappedIfSafe = ReadingOptions(rawValue: 1 << 0)
+        public static let uncached = ReadingOptions(rawValue: 1 << 1)
+        public static let alwaysMapped = ReadingOptions(rawValue: 1 << 3)
+    }
+    
+    // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
+    public struct WritingOptions : OptionSet, Sendable {
+        public let rawValue: UInt
+        public init(rawValue: UInt) { self.rawValue = rawValue }
+
+        /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
+#if os(WASI)
+        @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#endif
+        public static let atomic = WritingOptions(rawValue: 1 << 0)
+        
+        /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
+        public static let withoutOverwriting = WritingOptions(rawValue: 1 << 1)
+        
+        /// An option to not encrypt the file when writing it out.
+        public static let noFileProtection = WritingOptions(rawValue: 0x10000000)
+        
+        /// An option to make the file accessible only while the device is unlocked.
+        public static let completeFileProtection = WritingOptions(rawValue: 0x20000000)
+        
+        /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
+        public static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
+        
+        /// An option to allow the file to be accessible after a user first unlocks the device.
+        public static let completeFileProtectionUntilFirstUserAuthentication = WritingOptions(rawValue: 0x40000000)
+        
+        /// An option the system uses when determining the file protection options that the system assigns to the data.
+        public static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
+    }
+#endif
+    
+    #if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation)
+    public dynamic init(_contentsOfRemote url: URL, options: ReadingOptions = []) throws {
+        assert(!url.isFileURL)
+        throw CocoaError(.fileReadUnsupportedScheme)
+    }
+    #endif
+
+    /// Initialize a `Data` with the contents of a `URL`.
+    ///
+    /// - parameter url: The `URL` to read.
+    /// - parameter options: Options for the read operation. Default value is `[]`.
+    /// - throws: An error in the Cocoa domain, if `url` cannot be read.
+    public init(contentsOf url: __shared URL, options: ReadingOptions = []) throws {
+        if url.isFileURL {
+            self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
+        } else {
+            #if FOUNDATION_FRAMEWORK
+            // Fallback to NSData, to read via NSURLSession
+            let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
+            self.init(referencing: d)
+            #else
+            try self.init(_contentsOfRemote: url, options: options)
+            #endif
+        }
+    }
+    
+    internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
+        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
+    }
+    
     // -----------------------------------
     // MARK: - Properties and Functions
 
@@ -2046,6 +2201,113 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public func withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
         return try _representation.withUnsafeBytes(body)
+    }
+
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public var bytes: RawSpan {
+        @lifetime(borrow self)
+        borrowing get {
+            let buffer: UnsafeRawBufferPointer
+            switch _representation {
+            case .empty:
+                buffer = UnsafeRawBufferPointer(start: nil, count: 0)
+            case .inline:
+                buffer = unsafe UnsafeRawBufferPointer(
+                  start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
+                  count: _representation.count
+                )
+            case .large(let slice):
+                buffer = unsafe UnsafeRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            case .slice(let slice):
+                buffer = unsafe UnsafeRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            }
+            let span = unsafe RawSpan(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, borrowing: self)
+        }
+    }
+
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public var span: Span<UInt8> {
+        @lifetime(borrow self)
+        borrowing get {
+            let span = unsafe bytes._unsafeView(as: UInt8.self)
+            return _overrideLifetime(span, borrowing: self)
+        }
+    }
+
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public var mutableBytes: MutableRawSpan {
+        @lifetime(&self)
+        mutating get {
+            let buffer: UnsafeMutableRawBufferPointer
+            switch _representation {
+            case .empty:
+                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            case .inline:
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
+                  count: _representation.count
+                )
+            case .large(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            case .slice(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            }
+            let span = unsafe MutableRawSpan(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, mutating: &self)
+        }
+    }
+
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public var mutableSpan: MutableSpan<UInt8> {
+        @lifetime(&self)
+        mutating get {
+#if false // see https://github.com/swiftlang/swift/issues/81218
+            var bytes = mutableBytes
+            let span = unsafe bytes._unsafeMutableView(as: UInt8.self)
+            return _overrideLifetime(span, mutating: &self)
+#else
+            let buffer: UnsafeMutableRawBufferPointer
+            switch _representation {
+            case .empty:
+                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            case .inline:
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
+                  count: _representation.count
+                )
+            case .large(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            case .slice(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            }
+            let span = unsafe MutableSpan<UInt8>(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, mutating: &self)
+#endif
+        }
+    }
+
+    @_alwaysEmitIntoClient
+    public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
+        return try _representation.withUnsafeBytes {
+            return try $0.withMemoryRebound(to: UInt8.self, body)
+        }
     }
 
     /// Mutate the bytes in the data.
@@ -2112,7 +2374,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             guard !r.isEmpty else { return 0 }
             copyRange = r.lowerBound..<(r.lowerBound + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, r.upperBound - r.lowerBound))
         } else {
-            copyRange = 0..<Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, cnt)
+            copyRange = startIndex..<(startIndex + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, cnt))
         }
 
         guard !copyRange.isEmpty else { return 0 }
@@ -2312,6 +2574,31 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     }
 
     // MARK: -
+    
+    /// Write the contents of the `Data` to a location.
+    ///
+    /// - parameter url: The location to write the data into.
+    /// - parameter options: Options for writing the data. Default value is `[]`.
+    /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
+    public func write(to url: URL, options: Data.WritingOptions = []) throws {
+#if !os(WASI) // `.atomic` is unavailable on WASI
+        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
+            fatalError("withoutOverwriting is not supported with atomic")
+        }
+#endif
+        
+        guard url.isFileURL else {
+            throw CocoaError(.fileWriteUnsupportedScheme)
+        }
+        
+#if !NO_FILESYSTEM
+        try writeToFile(path: .url(url), data: self, options: options, reportProgress: true)
+#else
+        throw CocoaError(.featureUnsupported)
+#endif
+    }
+
+    // MARK: -
     //
 
     /// The hash value for the data.
@@ -2490,20 +2777,72 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
+    // MARK: - Range
+    
+#if FOUNDATION_FRAMEWORK
+    /// Find the given `Data` in the content of this `Data`.
+    ///
+    /// - parameter dataToFind: The data to be searched for.
+    /// - parameter options: Options for the search. Default value is `[]`.
+    /// - parameter range: The range of this data in which to perform the search. Default value is `nil`, which means the entire content of this data.
+    /// - returns: A `Range` specifying the location of the found data, or nil if a match could not be found.
+    /// - precondition: `range` must be in the bounds of the Data.
+    public func range(of dataToFind: Data, options: Data.SearchOptions = [], in range: Range<Index>? = nil) -> Range<Index>? {
+        let nsRange : NSRange
+        if let r = range {
+            nsRange = NSRange(location: r.lowerBound - startIndex, length: r.upperBound - r.lowerBound)
+        } else {
+            nsRange = NSRange(location: 0, length: count)
+        }
+        let result = _representation.withInteriorPointerReference {
+            let opts = NSData.SearchOptions(rawValue: options.rawValue)
+            return $0.range(of: dataToFind, options: opts, in: nsRange)
+        }
+        if result.location == NSNotFound {
+            return nil
+        }
+        return (result.location + startIndex)..<((result.location + startIndex) + result.length)
+    }
+#else
+    // TODO: Implement range(of:options:in:) for Foundation package.
+#endif
+
     // MARK: -
     //
 
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
     public static func ==(d1 : Data, d2 : Data) -> Bool {
+        // See if both are empty
+        switch (d1._representation, d2._representation) {
+        case (.empty, .empty):
+            return true
+        default:
+            // Continue on to checks below
+            break
+        }
+        
         let length1 = d1.count
-        if length1 != d2.count {
+        let length2 = d2.count
+        
+        // Unequal length data can never be equal
+        guard length1 == length2 else {
             return false
         }
+        
         if length1 > 0 {
             return d1.withUnsafeBytes { (b1: UnsafeRawBufferPointer) in
                 return d2.withUnsafeBytes { (b2: UnsafeRawBufferPointer) in
-                    return memcmp(b1.baseAddress!, b2.baseAddress!, b2.count) == 0
+                    // If they have the same base address and same count, it is equal
+                    let b1Address = b1.baseAddress!
+                    let b2Address = b2.baseAddress!
+                    
+                    guard b1Address != b2Address else {
+                        return true
+                    }
+
+                    // Compare the contents
+                    return memcmp(b1Address, b2Address, b2.count) == 0
                 }
             }
         }
@@ -2511,79 +2850,16 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     }
 }
 
+@available(macOS, unavailable, introduced: 10.10)
+@available(iOS, unavailable, introduced: 8.0)
+@available(tvOS, unavailable, introduced: 9.0)
+@available(watchOS, unavailable, introduced: 2.0)
+@available(*, unavailable)
+extension Data.Deallocator : Sendable {}
+
 #if !FOUNDATION_FRAMEWORK
 // MARK: Exported Types
 extension Data {
-    public struct ReadingOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-        /// Hint to map the file in if possible and safe
-        public static let mappedIfSafe      = ReadingOptions(rawValue: 1 << 0)
-        /// Hint to get the file not to be cached in the kernel
-        public static let uncached          = ReadingOptions(rawValue: 1 << 1)
-        /// Hint to map the file in if possible. This takes precedence over `mappedIfSafe` if both are given.
-        @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let alwaysMapped      = ReadingOptions(rawValue: 1 << 3)
-        /// Deprecated name for `.mappedIfSafe`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "mappedIfSafe")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "mappedIfSafe")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        public static let dataReadingMapped = ReadingOptions.mappedIfSafe
-        /// Deprecated name for `.mappedIfSafe`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "mappedIfSafe")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "mappedIfSafe")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        public static let mappedRead        = ReadingOptions.mappedIfSafe
-        /// Deprecated name for `.uncached`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "uncached")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "uncached")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "uncached")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "uncached")
-        public static let uncachedRead      = ReadingOptions.uncached
-    }
-
-    public struct WritingOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-
-        /// Hint to use auxiliary file when saving;
-        public static let atomic    = WritingOptions(rawValue: 1 << 0)
-        /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
-        /// You can’t combine this constant with `atomic` because atomic allows the system
-        /// to overwrite the original file.
-        public static let withoutOverwriting        = WritingOptions(rawValue: 1 << 1)
-        /// An option to not encrypt the file when writing it out.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let noFileProtection          = WritingOptions(rawValue: 0x10000000)
-        /// An option to make the file accessible only while the device is unlocked.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let completeFileProtection    = WritingOptions(rawValue: 0x20000000)
-        /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
-        /// An option to allow the file to be accessible after a user first unlocks the device.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let completeFileProtectionUntilFirstUserAuthentication =
-            WritingOptions(rawValue: 0x40000000)
-        /// An option the system uses when determining the file protection options that the system assigns to the data.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let fileProtectionMask        = WritingOptions(rawValue: 0xf0000000)
-        /// Deprecated name for `.atomic`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "atomic")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "atomic")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "atomic")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "atomic")
-        public static let atomicWrite               = WritingOptions.atomic
-    }
-
     public struct SearchOptions : OptionSet, Sendable {
         public let rawValue: UInt
 
@@ -2623,6 +2899,14 @@ extension Data {
         /// Modify the decoding algorithm so that it ignores unknown non-Base-64 bytes, including line ending characters.
         public static let ignoreUnknownCharacters = Base64DecodingOptions(rawValue: 1 << 0)
     }
+}
+#else
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data {
+    // These types are typealiased to the `NSData` options for framework builds only.
+    public typealias SearchOptions = NSData.SearchOptions
+    public typealias Base64EncodingOptions = NSData.Base64EncodingOptions
+    public typealias Base64DecodingOptions = NSData.Base64DecodingOptions
 }
 #endif //!FOUNDATION_FRAMEWORK
 
