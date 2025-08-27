@@ -50,7 +50,7 @@ extension UInt32 {
 extension AnyKeyPath {
     private static var WORD_SIZE: Int { MemoryLayout<Int>.size }
     
-    func _validateForPredicateUsage(restrictArguments: Bool = true) {
+    func _validateForPredicateUsage() {
         var ptr = unsafeBitCast(self, to: UnsafeRawPointer.self)
         ptr = ptr.advanced(by: Self.WORD_SIZE * 3) // skip isa, type metadata, and KVC string pointers
         let header = ptr.load(as: UInt32.self)
@@ -72,9 +72,7 @@ extension AnyKeyPath {
                 componentWords += 1
             }
             if firstComponentHeader._keyPathComponentHeader_computedHasArguments {
-                if restrictArguments {
-                    fatalError("Predicate does not support keypaths with arguments")
-                }
+                // TODO: Ensure KeyPath only contains generic arguments and not subscript arguments (https://github.com/swiftlang/swift-foundation/issues/1482)
                 let capturesSize = ptr.advanced(by: Self.WORD_SIZE * componentWords).load(as: UInt.self)
                 componentWords += 2 + (Int(capturesSize) / Self.WORD_SIZE)
             }
