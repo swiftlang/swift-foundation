@@ -1214,7 +1214,7 @@ private extension __JSONEncoder {
             return self.wrap(url.absoluteString)
         } else if let decimal = value as? Decimal {
             return .number(decimal.description)
-        } else if let encodable = value as? _JSONStringDictionaryEncodableMarker {
+        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
             return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
         } else if let array = value as? _JSONDirectArrayEncodable {
             if options.outputFormatting.contains(.prettyPrinted) {
@@ -1464,5 +1464,16 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
         }
 
         return (writer.bytes, lengths: byteLengths)
+    }
+}
+
+private extension JSONEncoder.KeyEncodingStrategy {
+    var isDefault: Bool {
+        switch self {
+        case .useDefaultKeys:
+            return true
+        case .custom, .convertToSnakeCase:
+            return false
+        }
     }
 }
