@@ -271,35 +271,48 @@ extension _FileManagerImpl {
             SECURITY_ATTRIBUTES(nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size),
                                 lpSecurityDescriptor: nil,
                                 bInheritHandle: false)
-        // `SHCreateDirectoryExW` creates intermediate directories while `CreateDirectoryW` does not.
+        // `CreateDirectoryW` does not create intermediate directories, so we need to handle that manually.  
+        // Note: `SHCreateDirectoryExW` seems to have issues with long paths.
         if createIntermediates {
-            // `SHCreateDirectoryExW` requires an absolute path while `CreateDirectoryW` works based on the current working
-            // directory.
-            try path.withNTPathRepresentation { pwszPath in
-                let errorCode = SHCreateDirectoryExW(nil, pwszPath, &saAttributes)
-                guard let errorCode = DWORD(exactly: errorCode) else {
-                    // `SHCreateDirectoryExW` returns `Int` but all error codes are defined in terms of `DWORD`, aka
-                    // `UInt`. We received an unknown error code.
-                    throw CocoaError.errorWithFilePath(.fileWriteUnknown, path)
-                }
-                switch errorCode {
-                case ERROR_SUCCESS:
-                    if let attributes {
-                        try? fileManager.setAttributes(attributes, ofItemAtPath: path)
+            // Create intermediate directories recursively
+            func createDirectoryRecursively(at directoryPath: String) throws {
+                // Check if directory already exists
+                var isDirectory: Bool = false
+                if fileExists(atPath: directoryPath, isDirectory: &isDirectory) {
+                    if isDirectory {
+                        return // Directory already exists, nothing to do
+                    } else {
+                        // A file exists at this path, which is an error
+                        throw CocoaError.errorWithFilePath(directoryPath, win32: ERROR_ALREADY_EXISTS, reading: false)
                     }
-                case ERROR_ALREADY_EXISTS:
-                    var isDirectory: Bool = false
-                    if fileExists(atPath: path, isDirectory: &isDirectory), isDirectory {
-                        // A directory already exists at this path, which is not an error if we have
-                        // `createIntermediates == true`.
-                        break
-                    }
-                    // A file (not a directory) exists at the given path or the file creation failed and the item
-                    // at this path has been deleted before the call to `fileExists`. Throw the original error.
-                    fallthrough
-                default:
-                    throw CocoaError.errorWithFilePath(path, win32: errorCode, reading: false)
                 }
+                
+                // Get parent directory
+                let parentPath = directoryPath.deletingLastPathComponent()
+                if !parentPath.isEmpty && parentPath != directoryPath {
+                    // Recursively create parent directory first
+                    try createDirectoryRecursively(at: parentPath)
+                }
+                
+                // Create this directory
+                try directoryPath.withNTPathRepresentation { pwszPath in
+                    guard CreateDirectoryW(pwszPath, &saAttributes) else {
+                        let lastError = GetLastError()
+                        // If directory was created by another thread/process between our check and creation, that's OK
+                        if lastError == ERROR_ALREADY_EXISTS {
+                            var isDir: Bool = false
+                            if fileExists(atPath: directoryPath, isDirectory: &isDir), isDir {
+                                return // Directory now exists, success
+                            }
+                        }
+                        throw CocoaError.errorWithFilePath(directoryPath, win32: lastError, reading: false)
+                    }
+                }
+            }
+            
+            try createDirectoryRecursively(at: path)
+            if let attributes {
+                try? fileManager.setAttributes(attributes, ofItemAtPath: path)
             }
         } else {
             try path.withNTPathRepresentation { pwszPath in
@@ -497,9 +510,14 @@ extension _FileManagerImpl {
         // This is solely to minimize the number of allocations and number of bytes allocated versus starting with a hardcoded value like MAX_PATH.
         // We should NOT early-return if this returns 0, in order to avoid TOCTOU issues.
         let dwSize = GetCurrentDirectoryW(0, nil)
-        return try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
+        let cwd = try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
             GetCurrentDirectoryW(DWORD($0.count), $0.baseAddress)
         }
+        
+        // Handle Windows NT object namespace prefix
+        // The \\??\ prefix is used by Windows NT for device paths and may appear
+        // in current working directory paths. We strip it to return a standard path.
+        return cwd?.removingNTObjectNamespacePrefix()
 #else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
