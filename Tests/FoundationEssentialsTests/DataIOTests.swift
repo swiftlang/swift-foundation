@@ -193,6 +193,24 @@ private final class DataIOTests {
         let maps = try String(contentsOfFile: "/proc/self/maps", encoding: .utf8)
         #expect(!maps.isEmpty)
     }
+
+    @Test
+    func atomicWrite() async throws {
+        let data = generateTestData()
+
+        await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0 ..< 8 {
+                group.addTask { [url] in
+                    #expect(throws: Never.self) {
+                        try data.write(to: url, options: [.atomic])
+                    }
+                }
+            }
+        }
+
+        let readData = try Data(contentsOf: url, options: [])
+        #expect(readData == data)
+    }
 }
 
 extension LargeDataTests {
