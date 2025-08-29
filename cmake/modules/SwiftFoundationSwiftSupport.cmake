@@ -70,8 +70,8 @@ function(_swift_foundation_install_target module)
   endif()
 
   install(TARGETS ${module}
-    ARCHIVE DESTINATION lib/${swift}/${SwiftFoundation_PLATFORM}/${SwiftFoundation_ARCH}
-    LIBRARY DESTINATION lib/${swift}/${SwiftFoundation_PLATFORM}/${SwiftFoundation_ARCH}
+    ARCHIVE DESTINATION lib/${swift}/${SwiftFoundation_PLATFORM}$<$<BOOL:${SwiftFoundation_INSTALL_ARCH_SUBDIR}>:/${SwiftFoundation_ARCH}>
+    LIBRARY DESTINATION lib/${swift}/${SwiftFoundation_PLATFORM}$<$<BOOL:${SwiftFoundation_INSTALL_ARCH_SUBDIR}>:/${SwiftFoundation_ARCH}>
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   if(type STREQUAL EXECUTABLE)
     return()
