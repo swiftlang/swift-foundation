@@ -149,6 +149,26 @@ private struct UUIDTests {
         let fourthUUID = UUID.random(using: &generator)
         #expect(fourthUUID == UUID(uuidString: "2B29542E-F719-4D58-87B9-C6291ADD4541"))
     }
+    
+    func test_UUIDUniqueness() {
+        let uuidsAtTimeRangeT0 = (0...9999).reduce(into: [UUID: UUID]()) { result, _ in
+            let uuid = UUID()
+            return result[uuid] = uuid
+        }
+        
+        let uuidsAtTimeRangeT1 = (0...9999).reduce(into: [UUID: UUID]()) { result, _ in
+            let uuid = UUID()
+            return result[uuid] = uuid
+        }
+        
+        uuidsAtTimeRangeT1.values.forEach { uuid in
+            if uuid == uuidsAtTimeRangeT0[uuid] {
+                XCTFail("Uniqueness failed")
+            } else {
+                XCTAssertTrue(true, "Uniqueness passed")
+            }
+        }
+    }
 }
 
 extension UUID {
