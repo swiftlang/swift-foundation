@@ -43,7 +43,7 @@ if(NOT SwiftSyntax_FOUND)
     # If building at desk, check out and link against the SwiftSyntax repo's targets
     FetchContent_Declare(SwiftSyntax
         GIT_REPOSITORY https://github.com/swiftlang/swift-syntax.git
-        GIT_TAG main)
+        GIT_TAG release/6.2)
     FetchContent_MakeAvailable(SwiftSyntax)
 else()
   message(STATUS "SwiftSyntax_DIR provided, using swift-syntax from ${SwiftSyntax_DIR}")
