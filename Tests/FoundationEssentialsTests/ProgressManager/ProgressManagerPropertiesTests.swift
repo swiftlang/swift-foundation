@@ -974,3 +974,104 @@ extension ProgressManager.Properties {
         #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42, 26, 24])
     }
 }
+
+extension ProgressManager.Properties {
+    var viralIndeterminate: ViralIndeterminate.Type { ViralIndeterminate.self }
+    struct ViralIndeterminate: Sendable, ProgressManager.Property {
+        typealias Value = Int
+        
+        typealias Summary = Int
+        
+        static var key: String { "MyApp.ViralIndeterminate" }
+        
+        static var defaultValue: Int { 1 }
+        
+        static var defaultSummary: Int { 1 }
+        
+        static func reduce(into summary: inout Int, value: Int) {
+            summary = min(summary, value)
+        }
+        
+        static func merge(_ summary1: Int, _ summary2: Int) -> Int {
+            min(summary1, summary2)
+        }
+        
+        static func finalSummary(_ parentSummary: Int, _ childSummary: Int) -> Int {
+            min(parentSummary, childSummary)
+        }
+    }
+}
+
+
+@Suite("Progress Manager Viral Indeterminate Property", .tags(.progressManager)) struct ProgressManagerViralIndeterminateProperties {
+    // Tests the use of additional property to virally propagate property from leaf to root
+    func doSomething(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 3)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.viralIndeterminate = 0
+            
+            properties.completedCount += 1
+            
+            properties.completedCount += 1
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+    }
+    
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.viralIndeterminate = 1
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+    }
+    
+    @Test func discreteManager() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.viralIndeterminate = 1
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 1)
+    }
+    
+    @Test func twoLevelManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.viralIndeterminate = 1
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+    }
+    
+    @Test func threeLevelManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount = 1
+            properties.viralIndeterminate = 1
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+    }
+}
