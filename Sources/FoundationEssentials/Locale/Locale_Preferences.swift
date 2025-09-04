@@ -453,13 +453,9 @@ extension LocalePreferences: Codable {
             }
             return result as CFDictionary
         }
-        var icuSymbolsAndStrings = try container.decodeIfPresent(ICUSymbolsAndStrings.self, forKey: .icuSymbolsAndStrings)
-        if (icuDateFormats != nil || icuNumberSymbols != nil) && icuSymbolsAndStrings == nil {
-            // Ensure that we have a value to store these in even if the archive didn't contain any serialized info
-            icuSymbolsAndStrings = ICUSymbolsAndStrings()
-        }
-        icuSymbolsAndStrings?.icuDateFormatStrings = icuDateFormats
-        icuSymbolsAndStrings?.icuNumberSymbols = icuNumberSymbols
+        var icuSymbolsAndStrings = try container.decodeIfPresent(ICUSymbolsAndStrings.self, forKey: .icuSymbolsAndStrings) ?? ICUSymbolsAndStrings()
+        icuSymbolsAndStrings.icuDateFormatStrings = icuDateFormats
+        icuSymbolsAndStrings.icuNumberSymbols = icuNumberSymbols
         
         self.init(
             metricUnits: metricUnits,
@@ -475,7 +471,7 @@ extension LocalePreferences: Codable {
             force12Hour: force12Hour,
             numberSymbols: numberSymbols,
             dateFormats: dateFormats,
-            icuSymbolsAndStrings: icuSymbolsAndStrings ?? .init()
+            icuSymbolsAndStrings: icuSymbolsAndStrings
         )
         #else
         self.init(
