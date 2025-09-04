@@ -301,6 +301,18 @@ extension ProgressManager {
         }
         
         // MARK: Clean up dirty paths
+        internal struct FileCountUpdateInfo {
+            let currentSummary: Int
+            let dirtyChildren: [(index: Int, manager: ProgressManager)]
+            let nonDirtySummaries: [(index: Int, summary: Int, isAlive: Bool)]
+            let type: CountType
+        }
+        
+        internal struct FileCountUpdate {
+            let index: Int
+            let updatedSummary: Int
+        }
+        
         internal struct ByteCountUpdateInfo {
             let currentSummary: UInt64
             let dirtyChildren: [(index: Int, manager: ProgressManager)]
@@ -333,6 +345,111 @@ extension ProgressManager {
         internal struct EstimatedTimeRemainingUpdate {
             let index: Int
             let updatedSummary: Duration
+        }
+        
+        internal mutating func getFileCountUpdateInfo(type: CountType) -> FileCountUpdateInfo {
+            let currentSummary: Int
+            var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
+            var nonDirtySummaries: [(index: Int, summary: Int, isAlive: Bool)] = []
+            
+            switch type {
+            case .total:
+                var value: Int = 0
+                ProgressManager.Properties.TotalFileCount.reduce(into: &value, value: totalFileCount)
+                currentSummary = value
+                
+                guard !children.isEmpty else {
+                    return FileCountUpdateInfo(
+                        currentSummary: currentSummary,
+                        dirtyChildren: [],
+                        nonDirtySummaries: [],
+                        type: type
+                    )
+                }
+                
+                for (idx, childState) in children.enumerated() {
+                    if childState.totalFileCount.isDirty {
+                        if let child = childState.child {
+                            dirtyChildren.append((idx, child))
+                        }
+                    } else {
+                        let isAlive = childState.child != nil
+                        nonDirtySummaries.append((idx, childState.totalFileCount.value, isAlive))
+                    }
+                }
+                
+            case .completed:
+                var value: Int = 0
+                ProgressManager.Properties.CompletedFileCount.reduce(into: &value, value: completedFileCount)
+                currentSummary = value
+                
+                guard !children.isEmpty else {
+                    return FileCountUpdateInfo(
+                        currentSummary: currentSummary,
+                        dirtyChildren: [],
+                        nonDirtySummaries: [],
+                        type: type
+                    )
+                }
+                
+                for (idx, childState) in children.enumerated() {
+                    if childState.completedFileCount.isDirty {
+                        if let child = childState.child {
+                            dirtyChildren.append((idx, child))
+                        }
+                    } else {
+                        let isAlive = childState.child != nil
+                        nonDirtySummaries.append((idx, childState.completedFileCount.value, isAlive))
+                    }
+                }
+            }
+            
+            return FileCountUpdateInfo(
+                currentSummary: currentSummary,
+                dirtyChildren: dirtyChildren,
+                nonDirtySummaries: nonDirtySummaries,
+                type: type
+            )
+        }
+        
+        internal mutating func updateFileCount(_ updateInfo: FileCountUpdateInfo, _ childUpdates: [FileCountUpdate]) -> Int {
+            var value = updateInfo.currentSummary
+            
+            switch updateInfo.type {
+            case .total:
+                // Apply updates from children that were dirty
+                for update in childUpdates {
+                    children[update.index].totalFileCount = PropertyStateInt(value: update.updatedSummary, isDirty: false)
+                    value = ProgressManager.Properties.TotalFileCount.merge(value, update.updatedSummary)
+                }
+                
+                // Apply values from non-dirty children
+                for (_, childSummary, isAlive) in updateInfo.nonDirtySummaries {
+                    if isAlive {
+                        value = ProgressManager.Properties.TotalFileCount.merge(value, childSummary)
+                    } else {
+                        value = ProgressManager.Properties.TotalFileCount.finalSummary(value, childSummary)
+                    }
+                }
+                
+            case .completed:
+                // Apply updates from children that were dirty
+                for update in childUpdates {
+                    children[update.index].completedFileCount = PropertyStateInt(value: update.updatedSummary, isDirty: false)
+                    value = ProgressManager.Properties.CompletedFileCount.merge(value, update.updatedSummary)
+                }
+                
+                // Apply values from non-dirty children
+                for (_, childSummary, isAlive) in updateInfo.nonDirtySummaries {
+                    if isAlive {
+                        value = ProgressManager.Properties.CompletedFileCount.merge(value, childSummary)
+                    } else {
+                        value = ProgressManager.Properties.CompletedFileCount.finalSummary(value, childSummary)
+                    }
+                }
+            }
+            
+            return value
         }
         
         internal mutating func getByteCountUpdateInfo(type: CountType) -> ByteCountUpdateInfo {
