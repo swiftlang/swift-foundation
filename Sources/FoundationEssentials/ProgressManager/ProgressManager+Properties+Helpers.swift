@@ -20,71 +20,6 @@ extension ProgressManager {
     }
     
     //MARK: Helper Methods for Updating Dirty Path
-    internal func getUpdatedFileCount(type: CountType) -> Int {
-        switch type {
-        case .total:
-            state.withLock { state in
-                // Get self's totalFileCount as part of summary
-                var value: Int = 0
-                ProgressManager.Properties.TotalFileCount.reduce(into: &value, value: state.totalFileCount)
-                
-                guard !state.children.isEmpty else {
-                    return value
-                }
-                
-                for (idx, childState) in state.children.enumerated() {
-                    if childState.totalFileCount.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedFileCount(type: type)
-                            let newTotalFileCountState = PropertyStateInt(value: updatedSummary, isDirty: false)
-                            state.children[idx].totalFileCount =  newTotalFileCountState
-                            value = ProgressManager.Properties.TotalFileCount.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = ProgressManager.Properties.TotalFileCount.merge(value, childState.totalFileCount.value)
-                        } else {
-                            value = ProgressManager.Properties.TotalFileCount.finalSummary(value, childState.totalFileCount.value)
-                        }
-                    }
-                }
-                return value
-            }
-        case .completed:
-            state.withLock { state in
-                // Get self's completedFileCount as part of summary
-                var value: Int = 0
-                ProgressManager.Properties.CompletedFileCount.reduce(into: &value, value: state.completedFileCount)
-                
-                guard !state.children.isEmpty else {
-                    return value
-                }
-                
-                for (idx, childState) in state.children.enumerated() {
-                    if childState.completedFileCount.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedFileCount(type: type)
-                            let newCompletedFileCountState = PropertyStateInt(value: updatedSummary, isDirty: false)
-                            state.children[idx].completedFileCount =  newCompletedFileCountState
-                            value = ProgressManager.Properties.CompletedFileCount.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = ProgressManager.Properties.CompletedFileCount.merge(value, childState.completedFileCount.value)
-                        } else {
-                            value = ProgressManager.Properties.CompletedFileCount.finalSummary(value, childState.completedFileCount.value)
-                        }
-                    }
-                }
-                return value
-            }
-        }
-    }
-    
     internal func getUpdatedIntSummary(property: MetatypeWrapper<Int, Int>) -> Int {
         return state.withLock { state in
             
@@ -294,6 +229,23 @@ extension ProgressManager {
                 }
             }
             return value
+        }
+    }
+    
+    internal func getUpdatedFileCount(type: CountType) -> Int {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getFileCountUpdateInfo(type: type)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.FileCountUpdate(index: index, updatedSummary: child.getUpdatedFileCount(type: type))
+        }
+        
+        // Consolidate updated values
+        return state.withLock { state in
+            state.updateFileCount(updateInfo, updatedSummaries)
         }
     }
     
