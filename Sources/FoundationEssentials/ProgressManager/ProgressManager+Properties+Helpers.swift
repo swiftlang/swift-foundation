@@ -298,67 +298,19 @@ extension ProgressManager {
     }
     
     internal func getUpdatedByteCount(type: CountType) -> UInt64 {
-        switch type {
-        case .total:
-            return state.withLock { state in
-                // Get self's totalByteCount as part of summary
-                var value: UInt64 = 0
-                ProgressManager.Properties.TotalByteCount.reduce(into: &value, value: state.totalByteCount)
-                
-                guard !state.children.isEmpty else {
-                    return value
-                }
-                
-                for (idx, childState) in state.children.enumerated() {
-                    if childState.totalByteCount.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedByteCount(type: type)
-                            let newTotalByteCountState = PropertyStateUInt64(value: updatedSummary, isDirty: false)
-                            state.children[idx].totalByteCount =  newTotalByteCountState
-                            value = ProgressManager.Properties.TotalByteCount.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = ProgressManager.Properties.TotalByteCount.merge(value, childState.totalByteCount.value)
-                        } else {
-                            value = ProgressManager.Properties.TotalByteCount.finalSummary(value, childState.totalByteCount.value)
-                        }
-                    }
-                }
-                return value
-            }
-        case .completed:
-            return state.withLock { state in
-                // Get self's completedByteCount as part of summary
-                var value: UInt64 = 0
-                ProgressManager.Properties.CompletedByteCount.reduce(into: &value, value: state.completedByteCount)
-                
-                guard !state.children.isEmpty else {
-                    return value
-                }
-                
-                for (idx, childState) in state.children.enumerated() {
-                    if childState.completedByteCount.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedByteCount(type: type)
-                            let newCompletedByteCountState = PropertyStateUInt64(value: updatedSummary, isDirty: false)
-                            state.children[idx].completedByteCount =  newCompletedByteCountState
-                            value = ProgressManager.Properties.CompletedByteCount.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = ProgressManager.Properties.CompletedByteCount.merge(value, childState.completedByteCount.value)
-                        } else {
-                            value = ProgressManager.Properties.CompletedByteCount.finalSummary(value, childState.completedByteCount.value)
-                        }
-                    }
-                }
-                return value
-            }
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getByteCountUpdateInfo(type: type)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.ByteCountUpdate(index: index, updatedSummary: child.getUpdatedByteCount(type: type))
+        }
+        
+        // Consolidate updated values
+        return state.withLock { state in
+            state.updateByteCount(updateInfo, updatedSummaries)
         }
     }
     
