@@ -38,170 +38,70 @@ extension ProgressManager {
     }
     
     internal func getUpdatedDoubleSummary(property: MetatypeWrapper<Double, Double>) -> Double {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getDoubleSummaryUpdateInfo(property: property)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.DoubleSummaryUpdate(index: index, updatedSummary: child.getUpdatedDoubleSummary(property: property))
+        }
+        
+        // Consolidate updated values
         return state.withLock { state in
-            
-            var value: Double = property.defaultSummary
-            property.reduce(&value, state.propertiesDouble[property] ?? property.defaultValue)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-            
-            for (idx, childState) in state.children.enumerated() {
-                if let childPropertyState = childState.childPropertiesDouble[property] {
-                    if childPropertyState.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedDoubleSummary(property: property)
-                            let newChildPropertyState = PropertyStateDouble(value: updatedSummary, isDirty: false)
-                            state.children[idx].childPropertiesDouble[property] = newChildPropertyState
-                            value = property.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = property.merge(value, childPropertyState.value)
-                        } else {
-                            value = property.finalSummary(value, childPropertyState.value)
-                        }
-                    }
-                } else {
-                    // First fetch of value
-                    if let child = childState.child {
-                        let childSummary = child.getUpdatedDoubleSummary(property: property)
-                        let newChildPropertyState = PropertyStateDouble(value: childSummary, isDirty: false)
-                        state.children[idx].childPropertiesDouble[property] = newChildPropertyState
-                        value = property.merge(value, childSummary)
-                    }
-                }
-            }
-            return value
+            state.updateDoubleSummary(updateInfo, updatedSummaries)
         }
     }
     
     internal func getUpdatedStringSummary(property: MetatypeWrapper<String?, [String?]>) -> [String?] {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getStringSummaryUpdateInfo(property: property)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.StringSummaryUpdate(index: index, updatedSummary: child.getUpdatedStringSummary(property: property))
+        }
+        
+        // Consolidate updated values
         return state.withLock { state in
-            
-            var value: [String?] = property.defaultSummary
-            property.reduce(&value, state.propertiesString[property] ?? property.defaultValue)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-            
-            for (idx, childState) in state.children.enumerated() {
-                if let childPropertyState = childState.childPropertiesString[property] {
-                    if childPropertyState.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedStringSummary(property: property)
-                            let newChildPropertyState = PropertyStateString(value: updatedSummary, isDirty: false)
-                            state.children[idx].childPropertiesString[property] = newChildPropertyState
-                            value = property.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = property.merge(value, childPropertyState.value)
-                        } else {
-                            value = property.finalSummary(value, childPropertyState.value)
-                        }
-                    }
-                } else {
-                    // First fetch of value
-                    if let child = childState.child {
-                        let childSummary = child.getUpdatedStringSummary(property: property)
-                        let newChildPropertyState = PropertyStateString(value: childSummary, isDirty: false)
-                        state.children[idx].childPropertiesString[property] = newChildPropertyState
-                        value = property.merge(value, childSummary)
-                    }
-                }
-            }
-            return value
+            state.updateStringSummary(updateInfo, updatedSummaries)
         }
     }
     
     internal func getUpdatedURLSummary(property: MetatypeWrapper<URL?, [URL?]>) -> [URL?] {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getURLSummaryUpdateInfo(property: property)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.URLSummaryUpdate(index: index, updatedSummary: child.getUpdatedURLSummary(property: property))
+        }
+        
+        // Consolidate updated values
         return state.withLock { state in
-            
-            var value: [URL?] = property.defaultSummary
-            property.reduce(&value, state.propertiesURL[property] ?? property.defaultValue)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-            
-            for (idx, childState) in state.children.enumerated() {
-                if let childPropertyState = childState.childPropertiesURL[property] {
-                    if childPropertyState.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedURLSummary(property: property)
-                            let newChildPropertyState = PropertyStateURL(value: updatedSummary, isDirty: false)
-                            state.children[idx].childPropertiesURL[property] = newChildPropertyState
-                            value = property.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = property.merge(value, childPropertyState.value)
-                        } else {
-                            value = property.finalSummary(value, childPropertyState.value)
-                        }
-                    }
-                } else {
-                    // First fetch of value
-                    if let child = childState.child {
-                        let childSummary = child.getUpdatedURLSummary(property: property)
-                        let newChildPropertyState = PropertyStateURL(value: childSummary, isDirty: false)
-                        state.children[idx].childPropertiesURL[property] = newChildPropertyState
-                        value = property.merge(value, childSummary)
-                    }
-                }
-            }
-            return value
+            state.updateURLSummary(updateInfo, updatedSummaries)
         }
     }
     
     internal func getUpdatedUInt64Summary(property: MetatypeWrapper<UInt64, [UInt64]>) -> [UInt64] {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getUInt64SummaryUpdateInfo(property: property)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.UInt64SummaryUpdate(index: index, updatedSummary: child.getUpdatedUInt64Summary(property: property))
+        }
+        
+        // Consolidate updated values
         return state.withLock { state in
-            
-            var value: [UInt64] = property.defaultSummary
-            property.reduce(&value, state.propertiesUInt64[property] ?? property.defaultValue)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-            
-            for (idx, childState) in state.children.enumerated() {
-                if let childPropertyState = childState.childPropertiesUInt64[property] {
-                    if childPropertyState.isDirty {
-                        // Update dirty path
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedUInt64Summary(property: property)
-                            let newChildPropertyState = PropertyStateThroughput(value: updatedSummary, isDirty: false)
-                            state.children[idx].childPropertiesUInt64[property] = newChildPropertyState
-                            value = property.merge(value, updatedSummary)
-                        }
-                    } else {
-                        if let _ = childState.child {
-                            // Merge non-dirty, updated value
-                            value = property.merge(value, childPropertyState.value)
-                        } else {
-                            value = property.finalSummary(value, childPropertyState.value)
-                        }
-                    }
-                } else {
-                    // First fetch of value
-                    if let child = childState.child {
-                        let childSummary = child.getUpdatedUInt64Summary(property: property)
-                        let newChildPropertyState = PropertyStateThroughput(value: childSummary, isDirty: false)
-                        state.children[idx].childPropertiesUInt64[property] = newChildPropertyState
-                        value = property.merge(value, childSummary)
-                    }
-                }
-            }
-            return value
+            state.updateUInt64Summary(updateInfo, updatedSummaries)
         }
     }
     
