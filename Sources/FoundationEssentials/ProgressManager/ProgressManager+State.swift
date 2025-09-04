@@ -312,6 +312,17 @@ extension ProgressManager {
             let updatedSummary: [UInt64]
         }
         
+        internal struct EstimatedTimeRemainingUpdateInfo {
+            let currentSummary: Duration
+            let dirtyChildren: [(index: Int, manager: ProgressManager)]
+            let nonDirtySummaries: [(index: Int, summary: Duration, isAlive: Bool)]
+        }
+        
+        internal struct EstimatedTimeRemainingUpdate {
+            let index: Int
+            let updatedSummary: Duration
+        }
+        
         internal mutating func getThroughputUpdateInfo() -> ThroughputUpdateInfo {
             var currentSummary = ProgressManager.Properties.Throughput.defaultSummary
             ProgressManager.Properties.Throughput.reduce(into: &currentSummary, value: throughput)
@@ -360,6 +371,60 @@ extension ProgressManager {
                     value = ProgressManager.Properties.Throughput.merge(value, childSummary)
                 } else {
                     value = ProgressManager.Properties.Throughput.finalSummary(value, childSummary)
+                }
+            }
+            
+            return value
+        }
+        
+        internal mutating func getEstimatedTimeRemainingUpdateInfo() -> EstimatedTimeRemainingUpdateInfo {
+            var currentSummary: Duration = Duration.seconds(0)
+            ProgressManager.Properties.EstimatedTimeRemaining.reduce(into: &currentSummary, value: estimatedTimeRemaining)
+            
+            guard !children.isEmpty else {
+                return EstimatedTimeRemainingUpdateInfo(
+                    currentSummary: currentSummary,
+                    dirtyChildren: [],
+                    nonDirtySummaries: []
+                )
+            }
+            
+            var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
+            var nonDirtySummaries: [(index: Int, summary: Duration, isAlive: Bool)] = []
+            
+            for (idx, childState) in children.enumerated() {
+                if childState.estimatedTimeRemaining.isDirty {
+                    if let child = childState.child {
+                        dirtyChildren.append((idx, child))
+                    }
+                } else {
+                    let isAlive = childState.child != nil
+                    nonDirtySummaries.append((idx, childState.estimatedTimeRemaining.value, isAlive))
+                }
+            }
+            
+            return EstimatedTimeRemainingUpdateInfo(
+                currentSummary: currentSummary,
+                dirtyChildren: dirtyChildren,
+                nonDirtySummaries: nonDirtySummaries
+            )
+        }
+        
+        internal mutating func updateEstimatedTimeRemaining(_ updateInfo: EstimatedTimeRemainingUpdateInfo, _ childUpdates: [EstimatedTimeRemainingUpdate]) -> Duration {
+            var value = updateInfo.currentSummary
+            
+            // Apply updates from children that were dirty
+            for update in childUpdates {
+                children[update.index].estimatedTimeRemaining = PropertyStateDuration(value: update.updatedSummary, isDirty: false)
+                value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, update.updatedSummary)
+            }
+            
+            // Apply values from non-dirty children
+            for (_, childSummary, isAlive) in updateInfo.nonDirtySummaries {
+                if isAlive {
+                    value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, childSummary)
+                } else {
+                    value = ProgressManager.Properties.EstimatedTimeRemaining.finalSummary(value, childSummary)
                 }
             }
             
