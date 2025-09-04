@@ -363,34 +363,19 @@ extension ProgressManager {
     }
     
     internal func getUpdatedThroughput() -> [UInt64] {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getThroughputUpdateInfo()
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.ThroughputUpdate(index: index, updatedSummary: child.getUpdatedThroughput())
+        }
+        
+        // Consolidate updated values
         return state.withLock { state in
-            // Get self's throughput as part of summary
-            var value = ProgressManager.Properties.Throughput.defaultSummary
-            ProgressManager.Properties.Throughput.reduce(into: &value, value: state.throughput)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-            
-            for (idx, childState) in state.children.enumerated() {
-                if childState.throughput.isDirty {
-                    // Update dirty path
-                    if let child = childState.child {
-                        let updatedSummary = child.getUpdatedThroughput()
-                        let newThroughputState = PropertyStateThroughput(value: updatedSummary, isDirty: false)
-                        state.children[idx].throughput = newThroughputState
-                        value = ProgressManager.Properties.Throughput.merge(value, updatedSummary)
-                    }
-                } else {
-                    if let _ = childState.child {
-                        // Merge non-dirty, updated value
-                        value = ProgressManager.Properties.Throughput.merge(value, childState.throughput.value)
-                    } else {
-                        value = ProgressManager.Properties.Throughput.finalSummary(value, childState.throughput.value)
-                    }
-                }
-            }
-            return value
+            state.getUpdatedThroughput(updateInfo, updatedSummaries)
         }
     }
     
@@ -518,88 +503,77 @@ extension ProgressManager {
     
     internal func markChildDirty(property: MetatypeWrapper<Int, Int>, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].childPropertiesInt[property]?.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: MetatypeWrapper<Double, Double>, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].childPropertiesDouble[property]?.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: MetatypeWrapper<String?, [String?]>, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].childPropertiesString[property]?.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: MetatypeWrapper<URL?, [URL?]>, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].childPropertiesURL[property]?.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: MetatypeWrapper<UInt64, [UInt64]>, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].childPropertiesUInt64[property]?.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
 
     internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].totalFileCount.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].completedFileCount.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].totalByteCount.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].completedByteCount.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].throughput.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) {
         let parents = state.withLock { state in
-            state.children[position].estimatedTimeRemaining.isDirty = true
-            return state.parents
+            state.markChildDirty(property: property, at: position)
         }
         markSelfDirty(property: property, parents: parents)
     }
