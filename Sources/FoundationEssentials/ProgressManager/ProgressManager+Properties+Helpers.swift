@@ -380,34 +380,19 @@ extension ProgressManager {
     }
     
     internal func getUpdatedEstimatedTimeRemaining() -> Duration {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getEstimatedTimeRemainingUpdateInfo()
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.EstimatedTimeRemainingUpdate(index: index, updatedSummary: child.getUpdatedEstimatedTimeRemaining())
+        }
+        
+        // Consolidate updated values
         return state.withLock { state in
-            // Get self's estimatedTimeRemaining as part of summary
-            var value: Duration = Duration.seconds(0)
-            ProgressManager.Properties.EstimatedTimeRemaining.reduce(into: &value, value: state.estimatedTimeRemaining)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-            
-            for (idx, childState) in state.children.enumerated() {
-                if childState.estimatedTimeRemaining.isDirty {
-                    // Update dirty path
-                    if let child = childState.child {
-                        let updatedSummary = child.getUpdatedEstimatedTimeRemaining()
-                        let newDurationState = PropertyStateDuration(value: updatedSummary, isDirty: false)
-                        state.children[idx].estimatedTimeRemaining = newDurationState
-                        value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, updatedSummary)
-                    }
-                } else {
-                    if let _ = childState.child {
-                        // Merge non-dirty, updated value
-                        value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, childState.estimatedTimeRemaining.value)
-                    } else {
-                        value = ProgressManager.Properties.EstimatedTimeRemaining.finalSummary(value, childState.estimatedTimeRemaining.value)
-                    }
-                }
-            }
-            return value
+            state.updateEstimatedTimeRemaining(updateInfo, updatedSummaries)
         }
     }
     
