@@ -75,7 +75,7 @@ else()
     message(STATUS "_SwiftFoundationICU_SourceDIR not provided, checking out local copy of swift-foundation-icu")
     FetchContent_Declare(SwiftFoundationICU
         GIT_REPOSITORY https://github.com/apple/swift-foundation-icu.git
-        GIT_TAG release/6.2)
+        GIT_TAG main)
 endif()
 
 if (_SwiftCollections_SourceDIR)
