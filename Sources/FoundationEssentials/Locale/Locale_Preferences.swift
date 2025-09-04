@@ -17,7 +17,7 @@ internal import _ForSwiftFoundation
 
 /// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identifier locales never have preferences.
 package struct LocalePreferences: Hashable, Sendable {
-    package enum MeasurementUnit {
+    package enum MeasurementUnit: Int, Codable {
         case centimeters
         case inches
 
@@ -38,7 +38,7 @@ package struct LocalePreferences: Hashable, Sendable {
         }
     }
 
-    package enum TemperatureUnit {
+    package enum TemperatureUnit: Int, Codable {
         case fahrenheit
         case celsius
 
@@ -66,7 +66,7 @@ package struct LocalePreferences: Hashable, Sendable {
     package var firstWeekday: [Calendar.Identifier : Int]?
     package var minDaysInFirstWeek: [Calendar.Identifier : Int]?
 #if FOUNDATION_FRAMEWORK
-    struct ICUSymbolsAndStrings : Hashable, @unchecked Sendable {
+    package struct ICUSymbolsAndStrings : Hashable, @unchecked Sendable {
         // The following `CFDictionary` ivars are used directly by `CFDateFormatter`. Keep them as `CFDictionary` to avoid bridging them into and out of Swift. We don't need to access them from Swift at all.
         
         package var icuDateTimeSymbols: CFDictionary?
@@ -91,6 +91,8 @@ package struct LocalePreferences: Hashable, Sendable {
     package var temperatureUnit: TemperatureUnit?
     package var force24Hour: Bool?
     package var force12Hour: Bool?
+    
+    // Note: When adding new preferences, be sure to include them in the serialized format via the Codable conformance below
 
     package init() { }
     
@@ -108,7 +110,8 @@ package struct LocalePreferences: Hashable, Sendable {
          force24Hour: Bool? = nil,
          force12Hour: Bool? = nil,
          numberSymbols: [UInt32 : String]? = nil,
-         dateFormats: [Date.FormatStyle.DateStyle: String]? = nil) {
+         dateFormats: [Date.FormatStyle.DateStyle: String]? = nil,
+         icuSymbolsAndStrings: ICUSymbolsAndStrings = ICUSymbolsAndStrings()) {
 
         self.metricUnits = metricUnits
         self.languages = languages
@@ -123,6 +126,7 @@ package struct LocalePreferences: Hashable, Sendable {
         self.force12Hour = force12Hour
         self.numberSymbols = numberSymbols
         self.dateFormats = dateFormats
+        self.icuSymbolsAndStrings = icuSymbolsAndStrings
     }
 #else
     package init(metricUnits: Bool? = nil,
@@ -331,3 +335,192 @@ package struct LocalePreferences: Hashable, Sendable {
         }
     }
 }
+
+extension LocalePreferences: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case metricUnits = "metric"
+        case languages = "langs"
+        case locale
+        case collationOrder = "coll"
+        case firstWeekday = "weekFirst"
+        case minDaysInFirstWeek = "weekMin"
+        case icuSymbolsAndStrings = "icu"
+        case dateFormats = "dates"
+        case numberSymbols = "nums"
+        case country
+        case measurementUnits = "meas"
+        case temperatureUnit = "temp"
+        case force24Hour = "24h"
+        case force12Hour = "12h"
+    }
+    
+    package func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(metricUnits, forKey: .metricUnits)
+        try container.encodeIfPresent(languages, forKey: .languages)
+        try container.encodeIfPresent(locale, forKey: .locale)
+        try container.encodeIfPresent(collationOrder, forKey: .collationOrder)
+        let firstWeekdayMapped = self.firstWeekday.map {
+            var result = [String : Int]()
+            for (identifier, day) in $0 {
+                result[identifier.cfCalendarIdentifier] = day
+            }
+            return result
+        }
+        try container.encodeIfPresent(firstWeekdayMapped, forKey: .firstWeekday)
+        let minDaysInFirstWeekMapped = self.minDaysInFirstWeek.map {
+            var result = [String : Int]()
+            for (identifier, days) in $0 {
+                result[identifier.cldrIdentifier] = days
+            }
+            return result
+        }
+        try container.encodeIfPresent(minDaysInFirstWeekMapped, forKey: .minDaysInFirstWeek)
+#if FOUNDATION_FRAMEWORK
+        if icuSymbolsAndStrings.containsValuesToSerialize {
+            try container.encodeIfPresent(icuSymbolsAndStrings, forKey: .icuSymbolsAndStrings)
+        }
+#if !NO_FORMATTERS
+        try container.encodeIfPresent(dateFormats.map {
+            var result = [UInt : String]()
+            for (format, value) in $0 {
+                result[format.rawValue] = value
+            }
+            return result
+        }, forKey: .dateFormats)
+#endif
+#endif
+        try container.encodeIfPresent(numberSymbols, forKey: .numberSymbols)
+        try container.encodeIfPresent(country, forKey: .country)
+        try container.encodeIfPresent(measurementUnits, forKey: .measurementUnits)
+        try container.encodeIfPresent(temperatureUnit, forKey: .temperatureUnit)
+        try container.encodeIfPresent(force24Hour, forKey: .force24Hour)
+        try container.encodeIfPresent(force12Hour, forKey: .force12Hour)
+    }
+    
+    package init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let metricUnits = try container.decodeIfPresent(Bool.self, forKey: .metricUnits)
+        let languages = try container.decodeIfPresent([String].self, forKey: .languages)
+        let locale = try container.decodeIfPresent(String.self, forKey: .locale)
+        let collationOrder = try container.decodeIfPresent(String.self, forKey: .collationOrder)
+        let firstWeekday = try container.decodeIfPresent([String : Int].self, forKey: .firstWeekday).map {
+            var result = [Calendar.Identifier : Int]()
+            for (stringIdentifier, day) in $0 {
+                guard let identifier = Calendar.Identifier(identifierString: stringIdentifier) else {
+                    throw DecodingError.dataCorruptedError(forKey: .firstWeekday, in: container, debugDescription: "Unknown calendar identifier '\(stringIdentifier)'")
+                }
+                result[identifier] = day
+            }
+            return result
+        }
+        let minDaysInFirstWeek = try container.decodeIfPresent([String : Int].self, forKey: .minDaysInFirstWeek).map {
+            var result = [Calendar.Identifier : Int]()
+            for (stringIdentifier, days) in $0 {
+                guard let identifier = Calendar.Identifier(identifierString: stringIdentifier) else {
+                    throw DecodingError.dataCorruptedError(forKey: .minDaysInFirstWeek, in: container, debugDescription: "Unknown calendar identifier '\(stringIdentifier)'")
+                }
+                result[identifier] = days
+            }
+            return result
+        }
+        let country = try container.decodeIfPresent(String.self, forKey: .country)
+        let measurementUnits = try container.decodeIfPresent(MeasurementUnit.self, forKey: .measurementUnits)
+        let temperatureUnit = try container.decodeIfPresent(TemperatureUnit.self, forKey: .temperatureUnit)
+        let force24Hour = try container.decodeIfPresent(Bool.self, forKey: .force24Hour)
+        let force12Hour = try container.decodeIfPresent(Bool.self, forKey: .force12Hour)
+        let numberSymbols = try container.decodeIfPresent([UInt32 : String].self, forKey: .numberSymbols)
+        
+        #if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
+        let dateFormats = try container.decodeIfPresent([UInt: String].self, forKey: .dateFormats).map {
+            var result = [Date.FormatStyle.DateStyle : String]()
+            for (rawValue, format) in $0 {
+                result[Date.FormatStyle.DateStyle(rawValue: rawValue)] = format
+            }
+            return result
+        }
+        let icuDateFormats = dateFormats.map {
+            var cfResult = [String : String]()
+            for (style, format) in $0 {
+                cfResult["\(style.rawValue)"] = format
+            }
+            return cfResult as CFDictionary
+        }
+        let icuNumberSymbols = numberSymbols.map {
+            var result = [String : String]()
+            for (rawValue, symbol) in $0 {
+                result["\(rawValue)"] = symbol
+            }
+            return result as CFDictionary
+        }
+        var icuSymbolsAndStrings = try container.decodeIfPresent(ICUSymbolsAndStrings.self, forKey: .icuSymbolsAndStrings) ?? ICUSymbolsAndStrings()
+        icuSymbolsAndStrings.icuDateFormatStrings = icuDateFormats
+        icuSymbolsAndStrings.icuNumberSymbols = icuNumberSymbols
+        
+        self.init(
+            metricUnits: metricUnits,
+            languages: languages,
+            locale: locale,
+            collationOrder: collationOrder,
+            firstWeekday: firstWeekday,
+            minDaysInFirstWeek: minDaysInFirstWeek,
+            country: country,
+            measurementUnits: measurementUnits,
+            temperatureUnit: temperatureUnit,
+            force24Hour: force24Hour,
+            force12Hour: force12Hour,
+            numberSymbols: numberSymbols,
+            dateFormats: dateFormats,
+            icuSymbolsAndStrings: icuSymbolsAndStrings
+        )
+        #else
+        self.init(
+            metricUnits: metricUnits,
+            languages: languages,
+            locale: locale,
+            collationOrder: collationOrder,
+            firstWeekday: firstWeekday,
+            minDaysInFirstWeek: minDaysInFirstWeek,
+            country: country,
+            measurementUnits: measurementUnits,
+            temperatureUnit: temperatureUnit,
+            force24Hour: force24Hour,
+            force12Hour: force12Hour,
+            numberSymbols: numberSymbols
+        )
+        #endif
+    }
+}
+
+#if FOUNDATION_FRAMEWORK
+extension LocalePreferences.ICUSymbolsAndStrings: Codable {
+    var containsValuesToSerialize: Bool {
+        icuDateTimeSymbols != nil || icuTimeFormatStrings != nil || icuNumberFormatStrings != nil
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case icuDateTimeSymbols = "dtSym"
+        case icuTimeFormatStrings = "times"
+        case icuNumberFormatStrings = "nums"
+    }
+    
+    package func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(icuDateTimeSymbols.map { $0 as? [String : [String]] }, forKey: .icuDateTimeSymbols)
+        try container.encodeIfPresent(icuTimeFormatStrings.map { $0 as? [String : String] }, forKey: .icuTimeFormatStrings)
+        try container.encodeIfPresent(icuNumberFormatStrings.map { $0 as? [String : String] }, forKey: .icuNumberFormatStrings)
+    }
+    
+    package init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.icuDateTimeSymbols = try container.decodeIfPresent([String : [String]].self, forKey: .icuDateTimeSymbols).map { $0 as CFDictionary }
+        self.icuTimeFormatStrings = try container.decodeIfPresent([String : String].self, forKey: .icuTimeFormatStrings).map { $0 as CFDictionary }
+        self.icuNumberFormatStrings = try container.decodeIfPresent([String : String].self, forKey: .icuNumberFormatStrings).map { $0 as CFDictionary }
+        
+        // Will be filled in by LocalePreferences serialized value
+        self.icuDateFormatStrings = nil
+        self.icuNumberSymbols = nil
+    }
+}
+#endif

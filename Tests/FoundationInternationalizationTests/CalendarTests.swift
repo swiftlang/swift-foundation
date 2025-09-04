@@ -230,6 +230,34 @@ private struct CalendarTests {
             let decodedModified = try decodeHelper(modified)
             #expect(decodedModified != autoupdatingCurrent)
             #expect(modified == decodedModified)
+            
+            do {
+                // Calendar does not decode the current as a sentinel value
+                var prefs = LocalePreferences()
+                prefs.languages = ["en-US"]
+                prefs.locale = "en_US"
+                prefs.minDaysInFirstWeek = [.gregorian : 5]
+                LocaleCache.cache.resetCurrent(to: prefs)
+                CalendarCache.cache.reset()
+                
+                let encodedCurrent = try JSONEncoder().encode(Calendar.current)
+                let encodedAutoupdatingCurrent = try JSONEncoder().encode(Calendar.autoupdatingCurrent)
+                
+                prefs = LocalePreferences()
+                prefs.languages = ["es-ES"]
+                prefs.locale = "es_ES"
+                prefs.minDaysInFirstWeek = [.gregorian : 3]
+                LocaleCache.cache.resetCurrent(to: prefs)
+                CalendarCache.cache.reset()
+                
+                let decodedCurrent = try JSONDecoder().decode(Calendar.self, from: encodedCurrent)
+                let decodedAutoupdatingCurrent = try JSONDecoder().decode(Calendar.self, from: encodedAutoupdatingCurrent)
+                
+                #expect(decodedCurrent.minimumDaysInFirstWeek == 5)
+                #expect(decodedCurrent.locale?.identifier == "en_US")
+                #expect(decodedAutoupdatingCurrent.minimumDaysInFirstWeek == 3)
+                #expect(decodedAutoupdatingCurrent.locale?.identifier == "es_ES")
+            }
         }
     }
 

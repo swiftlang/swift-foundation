@@ -335,6 +335,9 @@ extension TimeZone : Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         // Even if we are autoupdatingCurrent, encode the identifier for backward compatibility
         try container.encode(self.identifier, forKey: .identifier)
+        
+        // Autoupdating current timezones are treated as sentinel values, but the current TimeZone is encoded as a fixed TimeZone
+        // This is the same behavior as Locale/Calendar except it did not previously encode as a sentinel value before FoundationPreview 6.3, so no extra key is encoded for the current time zone
         if _tz.isAutoupdating {
             try container.encode(true, forKey: .autoupdating)
         }

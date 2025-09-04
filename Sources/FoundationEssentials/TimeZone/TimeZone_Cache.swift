@@ -100,6 +100,13 @@ struct TimeZoneCache : Sendable, ~Copyable {
 #endif
             return oldTimeZone
         }
+        
+        mutating func resetCurrent(to newValue: TimeZone) {
+            currentTimeZone = newValue
+#if FOUNDATION_FRAMEWORK
+            bridgedCurrentTimeZone = nil
+#endif
+        }
 
         /// Reads from environment variables `TZFILE`, `TZ` and finally the symlink pointed at by the C macro `TZDEFAULT` to figure out what the current (aka "system") time zone is.
         mutating func findCurrentTimeZone() -> TimeZone {
@@ -397,6 +404,10 @@ struct TimeZoneCache : Sendable, ~Copyable {
 
     func reset() -> TimeZone? {
         return lock.withLock { $0.reset() }
+    }
+    
+    func resetCurrent(to newValue: TimeZone) {
+        return lock.withLock { $0.resetCurrent(to: newValue) }
     }
 
     var current: TimeZone {
