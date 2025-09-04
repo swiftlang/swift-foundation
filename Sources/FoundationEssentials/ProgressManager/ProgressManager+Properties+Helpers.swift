@@ -21,46 +21,19 @@ extension ProgressManager {
     
     //MARK: Helper Methods for Updating Dirty Path
     internal func getUpdatedIntSummary(property: MetatypeWrapper<Int, Int>) -> Int {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getIntSummaryUpdateInfo(property: property)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.IntSummaryUpdate(index: index, updatedSummary: child.getUpdatedIntSummary(property: property))
+        }
+        
+        // Consolidate updated values
         return state.withLock { state in
-            
-            var value: Int = property.defaultSummary
-            property.reduce(&value, state.propertiesInt[property] ?? property.defaultValue)
-            
-            guard !state.children.isEmpty else {
-                return value
-            }
-             
-            for (idx, childState) in state.children.enumerated() {
-                if let childPropertyState = childState.childPropertiesInt[property] {
-                    if childPropertyState.isDirty {
-                        // Dirty, needs to fetch value
-                        if let child = childState.child {
-                            let updatedSummary = child.getUpdatedIntSummary(property: property)
-                            let newChildPropertyState = PropertyStateInt(value: updatedSummary, isDirty: false)
-                            state.children[idx].childPropertiesInt[property] = newChildPropertyState
-                            value = property.merge(value, updatedSummary)
-                        }
-                    } else {
-                        // Not dirty, use value directly
-                        if let _ = childState.child {
-                            value = property.merge(value, childPropertyState.value)
-                        } else {
-                            // TODO: What to do after terminate? Set to nil?
-                            value = property.finalSummary(value, childPropertyState.value)
-                        }
-                    }
-                } else {
-                    // Said property doesn't even get cached yet, but children might have been set
-                    if let child = childState.child {
-                        // If there is a child
-                        let childSummary = child.getUpdatedIntSummary(property: property)
-                        let newChildPropertyState = PropertyStateInt(value: childSummary, isDirty: false)
-                        state.children[idx].childPropertiesInt[property] = newChildPropertyState
-                        value = property.merge(value, childSummary)
-                    }
-                }
-            }
-            return value
+            state.updateIntSummary(updateInfo, updatedSummaries)
         }
     }
     
