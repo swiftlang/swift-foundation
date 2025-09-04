@@ -227,11 +227,7 @@ internal import _FoundationCollections
     
     private func markChildDirty(at position: Int) {
         let parents: [ParentState]? = state.withLock { state in
-            guard !state.children[position].isDirty else {
-                return nil
-            }
-            state.children[position].isDirty = true
-            return state.parents
+            state.markChildDirty(at: position)
         }
         if let parents = parents {
             markSelfDirty(parents: parents)
