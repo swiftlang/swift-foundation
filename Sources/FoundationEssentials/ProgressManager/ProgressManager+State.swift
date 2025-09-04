@@ -191,16 +191,27 @@ extension ProgressManager {
             guard !children.isEmpty else {
                 return
             }
+            
             for (idx, childState) in children.enumerated() {
                 if childState.isDirty {
                     if let child = childState.child {
                         let updatedProgressFraction = child.getUpdatedProgressFraction()
+                        let wasFinished = children[idx].childFraction.isFinished
                         children[idx].childFraction = updatedProgressFraction
-                        if updatedProgressFraction.isFinished {
+                        // Only add to selfFraction if transitioning from unfinished to finished
+                        if updatedProgressFraction.isFinished && !wasFinished {
                             selfFraction.completed += children[idx].portionOfTotal
                         }
                     } else {
-                        selfFraction.completed += children[idx].portionOfTotal
+                        let wasFinished = children[idx].childFraction.isFinished
+                        if !wasFinished {
+                            selfFraction.completed += children[idx].portionOfTotal
+                            // Mark nil child as finished to avoid any double counting
+                            children[idx].childFraction = ProgressFraction(
+                                completed: children[idx].portionOfTotal,
+                                total: children[idx].portionOfTotal
+                            )
+                        }
                     }
                     children[idx].isDirty = false
                 }
