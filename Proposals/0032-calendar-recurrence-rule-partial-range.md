@@ -1,9 +1,9 @@
 # Search for recurrence in partial ranges
 
-* Proposal: SF-NNNN
+* Proposal: SF-0032
 * Author: Hristo Staykov <https://github.com/hristost>
 * Implementation: [#1456](https://github.com/swiftlang/swift-foundation/pull/1456)
-* Status: **Draft**
+* Status: **Review: 2025-09-04...2025-09-11**
 
 ## Revision history
 
