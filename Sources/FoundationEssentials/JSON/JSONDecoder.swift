@@ -610,8 +610,13 @@ extension JSONDecoderImpl: Decoder {
         if type == Decimal.self {
             return try self.unwrapDecimal(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
-        if T.self is _JSONStringDictionaryDecodableMarker.Type {
-            return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
+        switch options.keyDecodingStrategy {
+        case .useDefaultKeys:
+            break
+        case .convertFromSnakeCase, .custom:
+            if T.self is _JSONStringDictionaryDecodableMarker.Type {
+                return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
+            }
         }
 
         return try self.with(value: mapValue, path: codingPathNode.appending(additionalKey)) {
