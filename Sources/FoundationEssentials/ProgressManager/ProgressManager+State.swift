@@ -235,5 +235,135 @@ extension ProgressManager {
             }
 #endif
         }
+        
+        // MARK: Mark paths dirty
+        internal mutating func markChildDirty(at position: Int) -> [ParentState]? {
+            guard !children[position].isDirty else {
+                return nil
+            }
+            children[position].isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: MetatypeWrapper<Int, Int>, at position: Int) -> [ParentState] {
+            children[position].childPropertiesInt[property]?.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: MetatypeWrapper<Double, Double>, at position: Int) -> [ParentState] {
+            children[position].childPropertiesDouble[property]?.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: MetatypeWrapper<String?, [String?]>, at position: Int) -> [ParentState] {
+            children[position].childPropertiesString[property]?.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: MetatypeWrapper<URL?, [URL?]>, at position: Int) -> [ParentState] {
+            children[position].childPropertiesURL[property]?.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, [UInt64]>, at position: Int) -> [ParentState] {
+            children[position].childPropertiesUInt64[property]?.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) -> [ParentState] {
+            children[position].totalFileCount.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) -> [ParentState] {
+            children[position].completedFileCount.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) -> [ParentState] {
+            children[position].totalByteCount.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) -> [ParentState] {
+            children[position].completedByteCount.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) -> [ParentState] {
+            children[position].throughput.isDirty = true
+            return parents
+        }
+        
+        internal mutating func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) -> [ParentState] {
+            children[position].estimatedTimeRemaining.isDirty = true
+            return parents
+        }
+        
+        // MARK: Clean up dirty paths
+        internal struct ThroughputUpdateInfo {
+            let currentSummary: [UInt64]
+            let dirtyChildren: [(index: Int, manager: ProgressManager)]
+            let nonDirtySummaries: [(index: Int, summary: [UInt64], isAlive: Bool)]
+        }
+        
+        internal struct ThroughputUpdate {
+            let index: Int
+            let updatedSummary: [UInt64]
+        }
+        
+        internal mutating func getThroughputUpdateInfo() -> ThroughputUpdateInfo {
+            var currentSummary = ProgressManager.Properties.Throughput.defaultSummary
+            ProgressManager.Properties.Throughput.reduce(into: &currentSummary, value: throughput)
+            
+            guard !children.isEmpty else {
+                return ThroughputUpdateInfo(
+                    currentSummary: currentSummary,
+                    dirtyChildren: [],
+                    nonDirtySummaries: []
+                )
+            }
+            
+            var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
+            var nonDirtySummaries: [(index: Int, summary: [UInt64], isAlive: Bool)] = []
+            
+            for (idx, childState) in children.enumerated() {
+                if childState.throughput.isDirty {
+                    if let child = childState.child {
+                        dirtyChildren.append((idx, child))
+                    }
+                } else {
+                    let isAlive = childState.child != nil
+                    nonDirtySummaries.append((idx, childState.throughput.value, isAlive))
+                }
+            }
+            
+            return ThroughputUpdateInfo(
+                currentSummary: currentSummary,
+                dirtyChildren: dirtyChildren,
+                nonDirtySummaries: nonDirtySummaries
+            )
+        }
+        
+        internal mutating func getUpdatedThroughput(_ updateInfo: ThroughputUpdateInfo, _ childUpdates: [ThroughputUpdate]) -> [UInt64] {
+            var value = updateInfo.currentSummary
+            
+            // Apply updates from children that were dirty
+            for update in childUpdates {
+                children[update.index].throughput = PropertyStateThroughput(value: update.updatedSummary, isDirty: false)
+                value = ProgressManager.Properties.Throughput.merge(value, update.updatedSummary)
+            }
+            
+            // Apply values from non-dirty children
+            for (_, childSummary, isAlive) in updateInfo.nonDirtySummaries {
+                if isAlive {
+                    value = ProgressManager.Properties.Throughput.merge(value, childSummary)
+                } else {
+                    value = ProgressManager.Properties.Throughput.finalSummary(value, childSummary)
+                }
+            }
+            
+            return value
+        }
     }
 }
