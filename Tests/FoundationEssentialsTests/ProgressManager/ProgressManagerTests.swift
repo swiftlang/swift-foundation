@@ -408,3 +408,343 @@ extension Tag {
         #expect(manager.fractionCompleted == 1.0)
     }
 }
+
+// MARK: - Thread Safety and Concurrent Access Tests
+@Suite("Progress Manager Thread Safety Tests", .tags(.progressManager)) struct ProgressManagerThreadSafetyTests {
+    
+    @Test func concurrentBasicPropertiesAccess() async throws {
+        let manager = ProgressManager(totalCount: 10)
+        manager.complete(count: 5)
+        
+        await withThrowingTaskGroup(of: Void.self) { group in
+            
+            group.addTask {
+                for _ in 1...10 {
+                    let fraction = manager.fractionCompleted
+                    #expect(fraction == 0.5)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...10 {
+                    let completed = manager.completedCount
+                    #expect(completed == 5)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...10 {
+                    let total = manager.totalCount
+                    #expect(total == 10)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...10 {
+                    let isFinished = manager.isFinished
+                    #expect(isFinished == false)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...10 {
+                    let isIndeterminate = manager.isIndeterminate
+                    #expect(isIndeterminate == false)
+                }
+            }
+        }
+    }
+    
+    @Test func concurrentMultipleChildrenUpdatesAndParentReads() async throws {
+        let manager = ProgressManager(totalCount: 100)
+        let child1 = manager.subprogress(assigningCount: 30).start(totalCount: 10)
+        let child2 = manager.subprogress(assigningCount: 40).start(totalCount: 8)
+        let child3 = manager.subprogress(assigningCount: 30).start(totalCount: 6)
+        
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for _ in 1...10 {
+                    child1.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...8 {
+                    child2.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...6 {
+                    child3.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...50 {
+                    let _ = manager.fractionCompleted
+                    let _ = manager.completedCount
+                    let _ = manager.isFinished
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...30 {
+                    let _ = child1.fractionCompleted
+                    let _ = child2.completedCount
+                    let _ = child3.isFinished
+                }
+            }
+        }
+        
+        #expect(child1.isFinished == true)
+        #expect(child2.isFinished == true)
+        #expect(child3.isFinished == true)
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func concurrentSingleChildUpdatesAndParentReads() async throws {
+        let manager = ProgressManager(totalCount: 50)
+        let child = manager.subprogress(assigningCount: 50).start(totalCount: 100)
+        
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for i in 1...100 {
+                    child.complete(count: 1)
+                    if i % 10 == 0 {
+                        try? await Task.sleep(nanoseconds: 1_000_000)
+                    }
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...200 {
+                    let _ = manager.fractionCompleted
+                    let _ = manager.completedCount
+                    let _ = manager.totalCount
+                    let _ = manager.isFinished
+                    let _ = manager.isIndeterminate
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...150 {
+                    let _ = child.fractionCompleted
+                    let _ = child.completedCount
+                    let _ = child.isFinished
+                }
+            }
+        }
+        
+        #expect(child.isFinished == true)
+        #expect(manager.fractionCompleted == 1.0)
+    }
+    
+    @Test func concurrentGrandchildrenUpdates() async throws {
+        let parent = ProgressManager(totalCount: 60)
+        let child1 = parent.subprogress(assigningCount: 20).start(totalCount: 10)
+        let child2 = parent.subprogress(assigningCount: 20).start(totalCount: 8)
+        let child3 = parent.subprogress(assigningCount: 20).start(totalCount: 6)
+        
+        let grandchild1 = child1.subprogress(assigningCount: 5).start(totalCount: 4)
+        let grandchild2 = child2.subprogress(assigningCount: 4).start(totalCount: 3)
+        let grandchild3 = child3.subprogress(assigningCount: 3).start(totalCount: 2)
+        
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for _ in 1...4 {
+                    grandchild1.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...3 {
+                    grandchild2.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...2 {
+                    grandchild3.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...5 {
+                    child1.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...4 {
+                    child2.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...3 {
+                    child3.complete(count: 1)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...100 {
+                    let _ = parent.fractionCompleted
+                    let _ = child1.fractionCompleted
+                    let _ = grandchild1.completedCount
+                }
+            }
+        }
+        
+        #expect(grandchild1.isFinished == true)
+        #expect(grandchild2.isFinished == true)
+        #expect(grandchild3.isFinished == true)
+        #expect(parent.isFinished == true)
+    }
+    
+    @Test func concurrentReadDuringIndeterminateToDeterminateTransition() async throws {
+        let manager = ProgressManager(totalCount: nil)
+        
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for _ in 1...50 {
+                    let _ = manager.fractionCompleted
+                    let _ = manager.isIndeterminate
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...10 {
+                    manager.complete(count: 1)
+                }
+            }
+            
+            // Task 3: Change to determinate after a delay
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 1_000_000)
+                manager.withProperties { p in
+                    p.totalCount = 20
+                }
+                
+                for _ in 1...30 {
+                    let _ = manager.fractionCompleted
+                    let _ = manager.isIndeterminate
+                }
+            }
+        }
+        
+        #expect(manager.totalCount == 20)
+        #expect(manager.completedCount == 10)
+        #expect(manager.isIndeterminate == false)
+    }
+    
+    @Test func concurrentReadDuringExcessiveCompletion() async throws {
+        let manager = ProgressManager(totalCount: 5)
+        
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for _ in 1...20 {
+                    manager.complete(count: 1)
+                    try? await Task.sleep(nanoseconds: 100_000)
+                }
+            }
+            
+            group.addTask {
+                for _ in 1...100 {
+                    let fraction = manager.fractionCompleted
+                    let completed = manager.completedCount
+                    
+                    #expect(completed >= 0 && completed <= 20)
+                    #expect(fraction >= 0.0 && fraction <= 4.0)
+                }
+            }
+        }
+        
+        #expect(manager.completedCount == 20)
+        #expect(manager.fractionCompleted == 4.0)
+        #expect(manager.isFinished == true)
+    }
+    
+    @Test func concurrentChildrenDeinitializationAndParentReads() async throws {
+        let manager = ProgressManager(totalCount: 100)
+        
+        await withThrowingTaskGroup(of: Void.self) { group in
+            // Create and destroy children rapidly
+            for batch in 1...10 {
+                group.addTask {
+                    for i in 1...5 {
+                        func createAndDestroyChild() {
+                            let child = manager.subprogress(assigningCount: 2).start(totalCount: 3)
+                            child.complete(count: 2 + (i % 2)) // Complete 2 or 3
+                            // child deinits here
+                        }
+                        
+                        createAndDestroyChild()
+                        try? await Task.sleep(nanoseconds: 200_000 * UInt64(batch))
+                    }
+                }
+            }
+            
+            // Continuously read manager state during child lifecycle
+            group.addTask {
+                for _ in 1...300 {
+                    let fraction = manager.fractionCompleted
+                    let completed = manager.completedCount
+                    
+                    // Properties should be stable and valid
+                    #expect(fraction >= 0.0)
+                    #expect(completed >= 0)
+                    
+                    try? await Task.sleep(nanoseconds: 50_000)
+                }
+            }
+        }
+        
+        // Manager should reach completion
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.completedCount == 100)
+    }
+    
+    @Test func concurrentReadAndWriteAndCycleDetection() async throws {
+        let manager1 = ProgressManager(totalCount: 10)
+        let manager2 = ProgressManager(totalCount: 10)
+        let manager3 = ProgressManager(totalCount: 10)
+        
+        // Create initial chain: manager1 -> manager2 -> manager3
+        manager1.assign(count: 5, to: manager2.reporter)
+        manager2.assign(count: 5, to: manager3.reporter)
+        
+        await withTaskGroup(of: Void.self) { group in
+            // Task 1: Try to detect cycles continuously
+            group.addTask {
+                for _ in 1...50 {
+                    let wouldCycle1 = manager1.isCycle(reporter: manager3.reporter)
+                    let wouldCycle2 = manager2.isCycle(reporter: manager1.reporter)
+                    let wouldCycle3 = manager3.isCycle(reporter: manager2.reporter)
+                    
+                    #expect(wouldCycle1 == false) // No cycle yet
+                    #expect(wouldCycle2 == true) // Would create cycle
+                    #expect(wouldCycle3 == true) // Would create cycle
+                }
+            }
+            
+            // Task 2: Complete work in all managers
+            group.addTask {
+                for _ in 1...5 {
+                    manager1.complete(count: 1)
+                    manager2.complete(count: 1)
+                    manager3.complete(count: 1)
+                }
+            }
+            
+            // Task 3: Access properties during cycle detection
+            group.addTask {
+                for _ in 1...100 {
+                    let _ = manager1.fractionCompleted
+                    let _ = manager2.completedCount
+                    let _ = manager3.isFinished
+                }
+            }
+        }
+    }
+}
