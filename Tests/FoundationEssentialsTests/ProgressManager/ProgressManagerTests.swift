@@ -407,6 +407,29 @@ extension Tag {
         subprogress = nil
         #expect(manager.fractionCompleted == 1.0)
     }
+    
+    @Test func deallocatedChild() async throws {
+        let manager = ProgressManager(totalCount: 100)
+        
+        var child: ProgressManager? = manager.subprogress(assigningCount: 50).start(totalCount: 10)
+        child!.complete(count: 5)
+        
+        let fractionBeforeDeallocation = manager.fractionCompleted
+        #expect(fractionBeforeDeallocation == 0.25)
+        
+        child = nil
+        
+        for _ in 1...10 {
+            _ = manager.fractionCompleted
+        }
+        
+        let fractionAfterDeallocation = manager.fractionCompleted
+        
+        #expect(fractionAfterDeallocation == 0.5, "Deallocated child should be assumed completed.")
+        
+        manager.complete(count: 50)
+        #expect(manager.fractionCompleted == 1.0)
+    }
 }
 
 // MARK: - Thread Safety and Concurrent Access Tests
@@ -746,5 +769,29 @@ extension Tag {
                 }
             }
         }
+    }
+    
+    @Test func concurrentSubprogressCreation() async throws {
+        let manager = ProgressManager(totalCount: 1000)
+
+        await withThrowingTaskGroup(of: Void.self) { group in
+            // Create 20 concurrent tasks, each creating multiple subprogresses
+            for _ in 1...20 {
+                group.addTask {
+                    for i in 1...10 {
+                        let child = manager.subprogress(assigningCount: 5).start(totalCount: 4)
+                        child.complete(count: 4)
+
+                        // Immediately access properties
+                        let _ = child.fractionCompleted
+                        let _ = manager.fractionCompleted
+
+                        try? await Task.sleep(nanoseconds: 100_000 * UInt64(i))
+                    }
+                }
+            }
+        }
+
+        #expect(manager.completedCount == 1000)
     }
 }
