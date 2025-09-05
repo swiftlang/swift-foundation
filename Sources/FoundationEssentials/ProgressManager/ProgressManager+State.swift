@@ -106,12 +106,10 @@ extension ProgressManager {
         var overallFraction: ProgressFraction {
             var overallFraction = selfFraction
             for childState in children {
-                if let _ = childState.child {
-                    if !childState.childFraction.isFinished {
-                        let multiplier = ProgressFraction(completed: childState.portionOfTotal, total: selfFraction.total)
-                        if let additionalFraction = multiplier * childState.childFraction {
-                            overallFraction = overallFraction + additionalFraction
-                        }
+                if !childState.childFraction.isFinished {
+                    let multiplier = ProgressFraction(completed: childState.portionOfTotal, total: selfFraction.total)
+                    if let additionalFraction = multiplier * childState.childFraction {
+                        overallFraction = overallFraction + additionalFraction
                     }
                 }
             }
