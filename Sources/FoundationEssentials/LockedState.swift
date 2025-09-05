@@ -23,6 +23,8 @@ internal import C.os.lock
 @preconcurrency import Musl
 #elseif canImport(WinSDK)
 import WinSDK
+#elseif canImport(wasi_pthread)
+import wasi_pthread
 #endif
 
 package struct LockedState<State> {
@@ -33,7 +35,7 @@ package struct LockedState<State> {
         typealias Primitive = os_unfair_lock
 #elseif os(FreeBSD) || os(OpenBSD)
         typealias Primitive = pthread_mutex_t?
-#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl) || canImport(wasi_pthread)
         typealias Primitive = pthread_mutex_t
 #elseif canImport(WinSDK)
         typealias Primitive = SRWLOCK
@@ -48,7 +50,7 @@ package struct LockedState<State> {
         fileprivate static func initialize(_ platformLock: PlatformLock) {
 #if canImport(os)
             platformLock.initialize(to: os_unfair_lock())
-#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl) || canImport(wasi_pthread)
             pthread_mutex_init(platformLock, nil)
 #elseif canImport(WinSDK)
             InitializeSRWLock(platformLock)
@@ -69,7 +71,7 @@ package struct LockedState<State> {
         static fileprivate func lock(_ platformLock: PlatformLock) {
 #if canImport(os)
             os_unfair_lock_lock(platformLock)
-#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl) || canImport(wasi_pthread)
             pthread_mutex_lock(platformLock)
 #elseif canImport(WinSDK)
             AcquireSRWLockExclusive(platformLock)
@@ -83,7 +85,7 @@ package struct LockedState<State> {
         static fileprivate func unlock(_ platformLock: PlatformLock) {
 #if canImport(os)
             os_unfair_lock_unlock(platformLock)
-#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl) || canImport(wasi_pthread)
             pthread_mutex_unlock(platformLock)
 #elseif canImport(WinSDK)
             ReleaseSRWLockExclusive(platformLock)
