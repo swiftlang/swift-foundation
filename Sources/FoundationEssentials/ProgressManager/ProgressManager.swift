@@ -92,10 +92,11 @@ internal import _FoundationCollections
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
             propertiesInt: [:],
+            propertiesUInt64: [:],
             propertiesDouble: [:],
             propertiesString: [:],
             propertiesURL: [:],
-            propertiesUInt64: [:],
+            propertiesUInt64Array: [:],
             observers: [],
             interopType: .interopObservation(InteropObservation(subprogressBridge: subprogressBridge))
         )
@@ -114,10 +115,11 @@ internal import _FoundationCollections
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
             propertiesInt: [:],
+            propertiesUInt64: [:],
             propertiesDouble: [:],
             propertiesString: [:],
             propertiesURL: [:],
-            propertiesUInt64: [:],
+            propertiesUInt64Array: [:],
         )
         self.state = Mutex(state)
     }
@@ -255,10 +257,11 @@ internal import _FoundationCollections
                                         throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
                                         estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
                                         childPropertiesInt: [:],
+                                        childPropertiesUInt64: [:],
                                         childPropertiesDouble: [:],
                                         childPropertiesString: [:],
                                         childPropertiesURL: [:],
-                                        childPropertiesUInt64: [:])
+                                        childPropertiesUInt64Array: [:])
             state.children.append(childState)
             return (state.children.count - 1, state.parents)
         }
@@ -309,14 +312,20 @@ internal import _FoundationCollections
     
     deinit {
                 
-        let (propertiesInt, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64, parents) = state.withLock { state in
-            return (state.propertiesInt, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64, state.parents)
+        let (propertiesInt, propertiesUInt64, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64Array, parents) = state.withLock { state in
+            return (state.propertiesInt, state.propertiesUInt64, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64Array, state.parents)
         }
         
         var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
         for property in propertiesInt.keys {
             let updatedSummary = self.getUpdatedIntSummary(property: property)
             finalSummaryInt[property] = updatedSummary
+        }
+        
+        var finalSummaryUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64] = [:]
+        for property in propertiesUInt64.keys {
+            let updatedSummary = self.getUpdatedUInt64Summary(property: property)
+            finalSummaryUInt64[property] = updatedSummary
         }
         
         var finalSummaryDouble: [MetatypeWrapper<Double, Double>: Double] = [:]
@@ -337,10 +346,10 @@ internal import _FoundationCollections
             finalSummaryURL[property] = updatedSummary
         }
         
-        var finalSummaryUInt64: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]] = [:]
-        for property in propertiesUInt64.keys {
-            let updatedSummary = self.getUpdatedUInt64Summary(property: property)
-            finalSummaryUInt64[property] = updatedSummary
+        var finalSummaryUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]] = [:]
+        for property in propertiesUInt64Array.keys {
+            let updatedSummary = self.getUpdatedUInt64ArraySummary(property: property)
+            finalSummaryUInt64Array[property] = updatedSummary
         }
         
         let totalFileCount = self.getUpdatedFileCount(type: .total)
@@ -364,10 +373,11 @@ internal import _FoundationCollections
                 throughput: throughput,
                 estimatedTimeRemaining: estimatedTimeRemaining,
                 propertiesInt: finalSummaryInt,
+                propertiesUInt64: finalSummaryUInt64,
                 propertiesDouble: finalSummaryDouble,
                 propertiesString: finalSummaryString,
                 propertiesURL: finalSummaryURL,
-                propertiesUInt64: finalSummaryUInt64
+                propertiesUInt64Array: finalSummaryUInt64Array
             )
         }
     }

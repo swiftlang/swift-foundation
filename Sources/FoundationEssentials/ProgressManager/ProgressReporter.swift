@@ -90,6 +90,18 @@ import Observation
         manager.summary(of: property)
     }
     
+    /// Returns a summary for the specified unsigned integer property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom unsigned integer property from the underlying progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the unsigned property to summarize. Must be a property
+    ///   where both the value and summary types are `UInt64`.
+    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
+        manager.summary(of: property)
+    }
+    
     /// Returns a summary for the specified double property across the progress subtree.
     ///
     /// This method aggregates the values of a custom double property from the underlying progress manager
