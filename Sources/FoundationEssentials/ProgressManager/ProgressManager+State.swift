@@ -90,10 +90,11 @@ extension ProgressManager {
         var throughput: PropertyStateThroughput
         var estimatedTimeRemaining: PropertyStateDuration
         var childPropertiesInt: [MetatypeWrapper<Int, Int>: PropertyStateInt]
+        var childPropertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: PropertyStateUInt64]
         var childPropertiesDouble: [MetatypeWrapper<Double, Double>: PropertyStateDouble]
         var childPropertiesString: [MetatypeWrapper<String?, [String?]>: PropertyStateString]
         var childPropertiesURL: [MetatypeWrapper<URL?, [URL?]>: PropertyStateURL]
-        var childPropertiesUInt64: [MetatypeWrapper<UInt64, [UInt64]>: PropertyStateThroughput]
+        var childPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: PropertyStateThroughput]
     }
     
     internal struct ParentState {
@@ -124,10 +125,11 @@ extension ProgressManager {
         var throughput: UInt64
         var estimatedTimeRemaining: Duration
         var propertiesInt: [MetatypeWrapper<Int, Int>: Int]
+        var propertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64]
         var propertiesDouble: [MetatypeWrapper<Double, Double>: Double]
         var propertiesString: [MetatypeWrapper<String?, [String?]>: String?]
         var propertiesURL: [MetatypeWrapper<URL?, [URL?]>: URL?]
-        var propertiesUInt64: [MetatypeWrapper<UInt64, [UInt64]>: UInt64]
+        var propertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: UInt64]
 #if FOUNDATION_FRAMEWORK
         var observers: [@Sendable (ObserverState) -> Void]
         var interopType: InteropType?
@@ -259,6 +261,11 @@ extension ProgressManager {
             return parents
         }
         
+        internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, UInt64>, at position: Int) -> [ParentState] {
+            children[position].childPropertiesUInt64[property]?.isDirty = true
+            return parents
+        }
+        
         internal mutating func markChildDirty(property: MetatypeWrapper<Double, Double>, at position: Int) -> [ParentState] {
             children[position].childPropertiesDouble[property]?.isDirty = true
             return parents
@@ -275,7 +282,7 @@ extension ProgressManager {
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, [UInt64]>, at position: Int) -> [ParentState] {
-            children[position].childPropertiesUInt64[property]?.isDirty = true
+            children[position].childPropertiesUInt64Array[property]?.isDirty = true
             return parents
         }
         
@@ -322,6 +329,18 @@ extension ProgressManager {
             let updatedSummary: Int
         }
         
+        internal struct UInt64SummaryUpdateInfo {
+            let currentSummary: UInt64
+            let dirtyChildren: [(index: Int, manager: ProgressManager)]
+            let nonDirtySummaries: [(index: Int, summary: UInt64, isAlive: Bool)]
+            let property: MetatypeWrapper<UInt64, UInt64>
+        }
+        
+        internal struct UInt64SummaryUpdate {
+            let index: Int
+            let updatedSummary: UInt64
+        }
+        
         internal struct DoubleSummaryUpdateInfo {
             let currentSummary: Double
             let dirtyChildren: [(index: Int, manager: ProgressManager)]
@@ -358,14 +377,14 @@ extension ProgressManager {
             let updatedSummary: [URL?]
         }
         
-        internal struct UInt64SummaryUpdateInfo {
+        internal struct UInt64ArraySummaryUpdateInfo {
             let currentSummary: [UInt64]
             let dirtyChildren: [(index: Int, manager: ProgressManager)]
             let nonDirtySummaries: [(index: Int, summary: [UInt64], isAlive: Bool)]
             let property: MetatypeWrapper<UInt64, [UInt64]>
         }
         
-        internal struct UInt64SummaryUpdate {
+        internal struct UInt64ArraySummaryUpdate {
             let index: Int
             let updatedSummary: [UInt64]
         }
@@ -464,6 +483,69 @@ extension ProgressManager {
             // Apply updates from children that were dirty
             for update in childUpdates {
                 children[update.index].childPropertiesInt[updateInfo.property] = PropertyStateInt(value: update.updatedSummary, isDirty: false)
+                value = updateInfo.property.merge(value, update.updatedSummary)
+            }
+            
+            // Apply values from non-dirty children
+            for (_, childSummary, isAlive) in updateInfo.nonDirtySummaries {
+                if isAlive {
+                    value = updateInfo.property.merge(value, childSummary)
+                } else {
+                    value = updateInfo.property.finalSummary(value, childSummary)
+                }
+            }
+            
+            return value
+        }
+        
+        internal mutating func getUInt64SummaryUpdateInfo(property: MetatypeWrapper<UInt64, UInt64>) -> UInt64SummaryUpdateInfo {
+            var currentSummary: UInt64 = property.defaultSummary
+            property.reduce(&currentSummary, propertiesUInt64[property] ?? property.defaultValue)
+            
+            guard !children.isEmpty else {
+                return UInt64SummaryUpdateInfo(
+                    currentSummary: currentSummary,
+                    dirtyChildren: [],
+                    nonDirtySummaries: [],
+                    property: property
+                )
+            }
+            
+            var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
+            var nonDirtySummaries: [(index: Int, summary: UInt64, isAlive: Bool)] = []
+            
+            for (idx, childState) in children.enumerated() {
+                if let childPropertyState = childState.childPropertiesUInt64[property] {
+                    if childPropertyState.isDirty {
+                        if let child = childState.child {
+                            dirtyChildren.append((idx, child))
+                        }
+                    } else {
+                        let isAlive = childState.child != nil
+                        nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
+                    }
+                } else {
+                    // Property doesn't exist yet in child - need to fetch it
+                    if let child = childState.child {
+                        dirtyChildren.append((idx, child))
+                    }
+                }
+            }
+            
+            return UInt64SummaryUpdateInfo(
+                currentSummary: currentSummary,
+                dirtyChildren: dirtyChildren,
+                nonDirtySummaries: nonDirtySummaries,
+                property: property
+            )
+        }
+        
+        internal mutating func updateUInt64Summary(_ updateInfo: UInt64SummaryUpdateInfo, _ childUpdates: [UInt64SummaryUpdate]) -> UInt64 {
+            var value = updateInfo.currentSummary
+            
+            // Apply updates from children that were dirty
+            for update in childUpdates {
+                children[update.index].childPropertiesUInt64[updateInfo.property] = PropertyStateUInt64(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -668,12 +750,12 @@ extension ProgressManager {
             return value
         }
         
-        internal mutating func getUInt64SummaryUpdateInfo(property: MetatypeWrapper<UInt64, [UInt64]>) -> UInt64SummaryUpdateInfo {
+        internal mutating func getUInt64ArraySummaryUpdateInfo(property: MetatypeWrapper<UInt64, [UInt64]>) -> UInt64ArraySummaryUpdateInfo {
             var currentSummary: [UInt64] = property.defaultSummary
-            property.reduce(&currentSummary, propertiesUInt64[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, propertiesUInt64Array[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
-                return UInt64SummaryUpdateInfo(
+                return UInt64ArraySummaryUpdateInfo(
                     currentSummary: currentSummary,
                     dirtyChildren: [],
                     nonDirtySummaries: [],
@@ -685,7 +767,7 @@ extension ProgressManager {
             var nonDirtySummaries: [(index: Int, summary: [UInt64], isAlive: Bool)] = []
             
             for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesUInt64[property] {
+                if let childPropertyState = childState.childPropertiesUInt64Array[property] {
                     if childPropertyState.isDirty {
                         if let child = childState.child {
                             dirtyChildren.append((idx, child))
@@ -702,7 +784,7 @@ extension ProgressManager {
                 }
             }
             
-            return UInt64SummaryUpdateInfo(
+            return UInt64ArraySummaryUpdateInfo(
                 currentSummary: currentSummary,
                 dirtyChildren: dirtyChildren,
                 nonDirtySummaries: nonDirtySummaries,
@@ -710,12 +792,12 @@ extension ProgressManager {
             )
         }
         
-        internal mutating func updateUInt64Summary(_ updateInfo: UInt64SummaryUpdateInfo, _ childUpdates: [UInt64SummaryUpdate]) -> [UInt64] {
+        internal mutating func updateUInt64ArraySummary(_ updateInfo: UInt64ArraySummaryUpdateInfo, _ childUpdates: [UInt64ArraySummaryUpdate]) -> [UInt64] {
             var value = updateInfo.currentSummary
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesUInt64[updateInfo.property] = PropertyStateThroughput(value: update.updatedSummary, isDirty: false)
+                children[update.index].childPropertiesUInt64Array[updateInfo.property] = PropertyStateThroughput(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             

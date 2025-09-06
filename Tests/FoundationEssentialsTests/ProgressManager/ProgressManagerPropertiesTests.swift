@@ -487,6 +487,111 @@ extension ProgressManager.Properties {
 }
 
 extension ProgressManager.Properties {
+    var byteSize: ByteSize.Type { ByteSize.self }
+    struct ByteSize: Sendable, ProgressManager.Property {
+        
+        typealias Value = UInt64
+        
+        typealias Summary = UInt64
+        
+        static var key: String { return "ByteSize" }
+        
+        static var defaultValue: UInt64 { return 0 }
+        
+        static var defaultSummary: UInt64 { return 0 }
+        
+        static func reduce(into summary: inout UInt64, value: UInt64) {
+            summary += value
+        }
+        
+        static func merge(_ summary1: UInt64, _ summary2: UInt64) -> UInt64 {
+            return summary1 + summary2
+        }
+        
+        static func finalSummary(_ parentSummary: UInt64, _ childSummary: UInt64) -> UInt64 {
+            return parentSummary + childSummary
+        }
+    }
+}
+
+
+@Suite("Progress Manager UInt64 Properties", .tags(.progressManager)) struct ProgressManagerUInt64PropertiesTests {
+
+func doSomething(subprogress: consuming Subprogress) async {
+    let manager = subprogress.start(totalCount: 3)
+    
+    manager.withProperties { properties in
+        properties.completedCount += 1
+        properties.byteSize += 1024
+        
+        properties.completedCount += 1
+        properties.byteSize += 2048
+        
+        properties.completedCount += 1
+        properties.byteSize += 4096
+    }
+    
+    #expect(manager.fractionCompleted == 1.0)
+    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 7168)
+}
+
+func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+    let manager = subprogress.start(totalCount: 2)
+    
+    manager.complete(count: 1)
+    
+    manager.withProperties { properties in
+        properties.byteSize = 8192
+    }
+    
+    await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+
+    #expect(manager.fractionCompleted == 1.0)
+    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 15360)
+}
+
+@Test func discreteManager() async throws {
+    let manager = ProgressManager(totalCount: 1)
+    
+    manager.withProperties { properties in
+        properties.completedCount += 1
+        properties.byteSize += 16384
+    }
+    
+    #expect(manager.fractionCompleted == 1.0)
+    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 16384)
+}
+
+@Test func twoLevelManager() async throws {
+    let manager = ProgressManager(totalCount: 2)
+    
+    manager.withProperties { properties in
+        properties.completedCount += 1
+        properties.byteSize += 32768
+    }
+    
+    await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+    
+    #expect(manager.fractionCompleted == 1.0)
+    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 39936)
+}
+
+@Test func threeLevelManager() async throws {
+    let manager = ProgressManager(totalCount: 2)
+    
+    manager.withProperties { properties in
+        properties.completedCount += 1
+        properties.byteSize += 65536
+    }
+    
+    await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+    
+    #expect(manager.fractionCompleted == 1.0)
+    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 80896)
+}
+}
+
+extension ProgressManager.Properties {
     
     var justADouble: JustADouble.Type { JustADouble.self }
     struct JustADouble: Sendable, ProgressManager.Property {
@@ -909,7 +1014,7 @@ extension ProgressManager.Properties {
     }
 }
 
-@Suite("Progress Manager UInt64 (Retaining) Properties", .tags(.progressManager)) struct ProgressManagerUInt64Properties {
+@Suite("Progress Manager UInt64 Array (Retaining) Properties", .tags(.progressManager)) struct ProgressManagerUInt64ArrayProperties {
     
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 1)

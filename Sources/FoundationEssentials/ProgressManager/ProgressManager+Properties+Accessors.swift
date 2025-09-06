@@ -28,10 +28,11 @@ extension ProgressManager {
         let throughputDirty: Bool
         let estimatedTimeRemainingDirty: Bool
         let dirtyPropertiesInt: [MetatypeWrapper<Int, Int>]
+        let dirtyPropertiesUInt64: [MetatypeWrapper<UInt64, UInt64>]
         let dirtyPropertiesDouble: [MetatypeWrapper<Double, Double>]
         let dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>]
         let dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>]
-        let dirtyPropertiesUInt64: [MetatypeWrapper<UInt64, [UInt64]>]
+        let dirtyPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>]
 #if FOUNDATION_FRAMEWORK
         let observerState: ObserverState?
         let interopType: InteropType?
@@ -61,10 +62,11 @@ extension ProgressManager {
                 throughput: ProgressManager.Properties.Throughput.defaultValue,
                 estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
                 propertiesInt: [:],
+                propertiesUInt64: [:],
                 propertiesDouble: [:],
                 propertiesString: [:],
                 propertiesURL: [:],
-                propertiesUInt64: [:],
+                propertiesUInt64Array: [:],
                 observers: [],
                 interopType: nil,
             )
@@ -80,10 +82,11 @@ extension ProgressManager {
                 throughput: ProgressManager.Properties.Throughput.defaultValue,
                 estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
                 propertiesInt: [:],
+                propertiesUInt64: [:],
                 propertiesDouble: [:],
                 propertiesString: [:],
                 propertiesURL: [:],
-                propertiesUInt64: [:]
+                propertiesUInt64Array: [:]
             )
 #endif
             let result = try closure(&values)
@@ -100,10 +103,11 @@ extension ProgressManager {
                 throughputDirty: values.throughputDirty,
                 estimatedTimeRemainingDirty: values.estimatedTimeRemainingDirty,
                 dirtyPropertiesInt: values.dirtyPropertiesInt,
+                dirtyPropertiesUInt64: values.dirtyPropertiesUInt64,
                 dirtyPropertiesDouble: values.dirtyPropertiesDouble,
                 dirtyPropertiesString: values.dirtyPropertiesString,
                 dirtyPropertiesURL: values.dirtyPropertiesURL,
-                dirtyPropertiesUInt64: values.dirtyPropertiesUInt64,
+                dirtyPropertiesUInt64Array: values.dirtyPropertiesUInt64Array,
                 observerState: values.observerState,
                 interopType: state.interopType
             )
@@ -118,10 +122,11 @@ extension ProgressManager {
                 throughputDirty: values.throughputDirty,
                 estimatedTimeRemainingDirty: values.estimatedTimeRemainingDirty,
                 dirtyPropertiesInt: values.dirtyPropertiesInt,
+                dirtyPropertiesUInt64: values.dirtyPropertiesUInt64,
                 dirtyPropertiesDouble: values.dirtyPropertiesDouble,
                 dirtyPropertiesString: values.dirtyPropertiesString,
                 dirtyPropertiesURL: values.dirtyPropertiesURL,
-                dirtyPropertiesUInt64: values.dirtyPropertiesUInt64
+                dirtyPropertiesUInt64Array: values.dirtyPropertiesUInt64Array
             )
 #endif
 
@@ -180,6 +185,12 @@ extension ProgressManager {
             }
         }
         
+        if dirtyInfo.dirtyPropertiesUInt64.count > 0 {
+            for property in dirtyInfo.dirtyPropertiesInt {
+                markSelfDirty(property: property, parents: dirtyInfo.parents)
+            }
+        }
+        
         if dirtyInfo.dirtyPropertiesDouble.count > 0 {
             for property in dirtyInfo.dirtyPropertiesDouble {
                 markSelfDirty(property: property, parents: dirtyInfo.parents)
@@ -198,8 +209,8 @@ extension ProgressManager {
             }
         }
             
-        if dirtyInfo.dirtyPropertiesUInt64.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesUInt64 {
+        if dirtyInfo.dirtyPropertiesUInt64Array.count > 0 {
+            for property in dirtyInfo.dirtyPropertiesUInt64Array {
                 markSelfDirty(property: property, parents: dirtyInfo.parents)
             }
         }
@@ -219,10 +230,11 @@ extension ProgressManager {
         internal var throughputDirty = false
         internal var estimatedTimeRemainingDirty = false
         internal var dirtyPropertiesInt: [MetatypeWrapper<Int, Int>] = []
+        internal var dirtyPropertiesUInt64: [MetatypeWrapper<UInt64, UInt64>] = []
         internal var dirtyPropertiesDouble: [MetatypeWrapper<Double, Double>] = []
         internal var dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>] = []
         internal var dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>] = []
-        internal var dirtyPropertiesUInt64: [MetatypeWrapper<UInt64, [UInt64]>] = []
+        internal var dirtyPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>] = []
 #if FOUNDATION_FRAMEWORK
         internal var observerState: ObserverState?
 #endif
@@ -401,6 +413,29 @@ extension ProgressManager {
             }
         }
         
+        /// Gets or sets custom integer properties.
+        ///
+        /// This subscript provides read-write access to custom progress properties where both the value
+        /// and summary types are `UInt64`. If the property has not been set, the getter returns the
+        /// property's default value.
+        ///
+        /// - Parameter key: A key path to the custom integer property type.
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
+            get {
+                return state.propertiesUInt64[MetatypeWrapper(P.self)] ?? P.defaultValue
+            }
+            
+            set {
+                guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
+                    return
+                }
+                   
+                state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
+
+                dirtyPropertiesUInt64.append(MetatypeWrapper(P.self))
+            }
+        }
+        
         /// Gets or sets custom double properties.
         ///
         /// This subscript provides read-write access to custom progress properties where both the value
@@ -479,17 +514,17 @@ extension ProgressManager {
         /// - Parameter key: A key path to the custom UInt64 property type.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64? where P.Value == UInt64, P.Summary == [UInt64] {
             get {
-                return state.propertiesUInt64[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+                return state.propertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.self.defaultValue
             }
 
             set {
-                guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
+                guard newValue != state.propertiesUInt64Array[MetatypeWrapper(P.self)] else {
                     return
                 }
 
-                state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
+                state.propertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
 
-                dirtyPropertiesUInt64.append(MetatypeWrapper(P.self))
+                dirtyPropertiesUInt64Array.append(MetatypeWrapper(P.self))
             }
         }
         
@@ -529,9 +564,21 @@ extension ProgressManager {
     ///   where both the value and summary types are `Int`.
     /// - Returns: An `Int` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
-        //        self[fakeKeypath: MetatypeWrapper(P.self)]
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
         return getUpdatedIntSummary(property: MetatypeWrapper(property))
+    }
+    
+    /// Returns a summary for a custom unsigned integer property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom integer property from this progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the integer property to summarize. Must be a property
+    ///   where both the value and summary types are `UInt64`.
+    /// - Returns: An `UInt64` summary value for the specified property.
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == UInt64 {
+        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+        return getUpdatedUInt64Summary(property: MetatypeWrapper(property))
     }
     
     /// Returns a summary for a custom double property across the progress subtree.
@@ -583,7 +630,7 @@ extension ProgressManager {
     /// - Returns: A `[UInt64]` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedUInt64Summary(property: MetatypeWrapper(property))
+        return getUpdatedUInt64ArraySummary(property: MetatypeWrapper(property))
     }
     
     /// Returns the total file count across the progress subtree.
