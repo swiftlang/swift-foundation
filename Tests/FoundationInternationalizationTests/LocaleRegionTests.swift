@@ -43,14 +43,14 @@ struct LocaleRegionTests {
     }
 
     @Test func subRegionOfCategory() async throws {
-        #expect(Locale.Region.unknown.subRegions(ofCategoy: .world) == [])
-        #expect(Locale.Region.unknown.subRegions(ofCategoy: .territory) == [])
+        #expect(Locale.Region.unknown.subRegions(ofCategory: .world) == [])
+        #expect(Locale.Region.unknown.subRegions(ofCategory: .territory) == [])
 
-        #expect(Set(Locale.Region.world.subRegions(ofCategoy: .continent)) == Set(Locale.Region.isoRegions(ofCategory: .continent)))
+        #expect(Set(Locale.Region.world.subRegions(ofCategory: .continent)) == Set(Locale.Region.isoRegions(ofCategory: .continent)))
 
-        #expect(Locale.Region.argentina.subRegions(ofCategoy: .continent) == [])
-        #expect(Locale.Region.argentina.subRegions(ofCategoy: .territory) == Locale.Region.argentina.subRegions)
+        #expect(Locale.Region.argentina.subRegions(ofCategory: .continent) == [])
+        #expect(Locale.Region.argentina.subRegions(ofCategory: .territory) == Locale.Region.argentina.subRegions)
 
-        #expect(Locale.Region("not a region").subRegions(ofCategoy: .territory) == [])
+        #expect(Locale.Region("not a region").subRegions(ofCategory: .territory) == [])
     }
 }
