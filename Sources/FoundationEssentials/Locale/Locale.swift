@@ -860,15 +860,19 @@ extension Locale : Codable {
             self.init(identifier: identifier)
         }
     }
-
-    public func encode(to encoder: Encoder) throws {
+    
+    // currentIsSentinel specifies whether .current should be encoded as a sentinel for compatibility with older runtimes
+    // When true and encoding the current locale, decoding the archive on an older runtime will decode as the new "current"
+    // When false and encoding the current locale, the locale is encoded as a fixed locale with preferences
+    // When not encoding the current locale, this parameter has no effect
+    internal func _encode(to encoder: Encoder, currentIsSentinel: Bool) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         // Even if we are current/autoupdatingCurrent, encode the identifier for backward compatibility
         try container.encode(self.identifier, forKey: .identifier)
-
+        
         if self == Locale.autoupdatingCurrent {
             try container.encode(Current.autoupdatingCurrent, forKey: .current)
-        } else if self == Locale.current {
+        } else if currentIsSentinel && self == Locale.current {
             // Always encode .current for the current locale to preserve existing decoding behavior of .current when decoding on older runtimes prior to FoundationPreview 6.3 releases
             try container.encode(Current.current, forKey: .current)
         } else {
@@ -879,5 +883,9 @@ extension Locale : Codable {
             // Encode preferences (if present) so that when decoding on newer runtimes (FoundationPreview 6.3 releases and later) we create a locale with the preferences as they are at encode time
             try container.encode(prefs, forKey: .preferences)
         }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try _encode(to: encoder, currentIsSentinel: true)
     }
 }
