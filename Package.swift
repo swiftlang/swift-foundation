@@ -140,7 +140,8 @@ let package = Package(
             "ProcessInfo/CMakeLists.txt",
             "FileManager/CMakeLists.txt",
             "URL/CMakeLists.txt",
-            "NotificationCenter/CMakeLists.txt"
+            "NotificationCenter/CMakeLists.txt",
+            "ProgressManager/CMakeLists.txt",
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux]))
@@ -185,7 +186,7 @@ let package = Package(
                 "Locale/CMakeLists.txt",
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
-                "Predicate/CMakeLists.txt"
+                "Predicate/CMakeLists.txt",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
