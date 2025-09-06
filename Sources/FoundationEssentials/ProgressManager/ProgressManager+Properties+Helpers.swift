@@ -122,6 +122,23 @@ extension ProgressManager {
         }
     }
     
+    internal func getUpdatedDurationSummary(property: MetatypeWrapper<Duration, Duration>) -> Duration {
+        // Collect information from state
+        let updateInfo = state.withLock { state in
+            state.getDurationSummaryUpdateInfo(property: property)
+        }
+        
+        // Get updated summary for each dirty child
+        let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
+            State.DurationSummaryUpdate(index: index, updatedSummary: child.getUpdatedDurationSummary(property: property))
+        }
+        
+        // Consolidate updated values
+        return state.withLock { state in
+            state.updateDurationSummary(updateInfo, updatedSummaries)
+        }
+    }
+    
     internal func getUpdatedFileCount(type: CountType) -> Int {
         // Collect information from state
         let updateInfo = state.withLock { state in
@@ -240,6 +257,14 @@ extension ProgressManager {
         }
     }
     
+    internal func markSelfDirty(property: MetatypeWrapper<Duration, Duration>, parents: [ParentState]) {
+        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+            for parentState in parents {
+                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+            }
+        }
+    }
+    
     internal func markSelfDirty(property: ProgressManager.Properties.TotalFileCount.Type, parents: [ParentState]) {
         mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
             for parentState in parents {
@@ -329,6 +354,13 @@ extension ProgressManager {
         }
         markSelfDirty(property: property, parents: parents)
     }
+    
+    internal func markChildDirty(property: MetatypeWrapper<Duration, Duration>, at position: Int) {
+        let parents = state.withLock { state in
+            state.markChildDirty(property: property, at: position)
+        }
+        markSelfDirty(property: property, parents: parents)
+    }
 
     internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
         let parents = state.withLock { state in
@@ -373,7 +405,7 @@ extension ProgressManager {
     }
     
     //MARK: Method to preserve values of properties upon deinit
-    internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, propertiesInt: [MetatypeWrapper<Int, Int>: Int], propertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64], propertiesDouble: [MetatypeWrapper<Double, Double>: Double], propertiesString: [MetatypeWrapper<String?, [String?]>: [String?]], propertiesURL: [MetatypeWrapper<URL?, [URL?]>: [URL?]], propertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]]) {
+    internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, propertiesInt: [MetatypeWrapper<Int, Int>: Int], propertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64], propertiesDouble: [MetatypeWrapper<Double, Double>: Double], propertiesString: [MetatypeWrapper<String?, [String?]>: [String?]], propertiesURL: [MetatypeWrapper<URL?, [URL?]>: [URL?]], propertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]], propertiesDuration: [MetatypeWrapper<Duration, Duration>: Duration]) {
         state.withLock { state in
             state.children[position].totalFileCount = PropertyStateInt(value: totalFileCount, isDirty: false)
             state.children[position].completedFileCount = PropertyStateInt(value: completedFileCount, isDirty: false)
@@ -404,6 +436,10 @@ extension ProgressManager {
             
             for (propertyKey, propertyValue) in propertiesUInt64Array {
                 state.children[position].childPropertiesUInt64Array[propertyKey] = PropertyStateThroughput(value: propertyValue, isDirty: false)
+            }
+            
+            for (propertyKey, propertyValue) in propertiesDuration {
+                state.children[position].childPropertiesDuration[propertyKey] = PropertyStateDuration(value: propertyValue, isDirty: false)
             }
         }
     }
