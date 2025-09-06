@@ -390,7 +390,7 @@ extension ProgressManager.Properties {
         
         typealias Summary = Int
         
-        static var key: String { return "Counter" }
+        static var key: String { return "MyApp.Counter" }
         
         static var defaultValue: Int { return 0 }
         
@@ -494,7 +494,7 @@ extension ProgressManager.Properties {
         
         typealias Summary = UInt64
         
-        static var key: String { return "ByteSize" }
+        static var key: String { return "MyApp.ByteSize" }
         
         static var defaultValue: UInt64 { return 0 }
         
@@ -600,7 +600,7 @@ extension ProgressManager.Properties {
         
         typealias Summary = Double
         
-        static var key: String { return "JustADouble" }
+        static var key: String { return "MyApp.JustADouble" }
 
         static var defaultValue: Double { return 0.0 }
         
@@ -803,7 +803,7 @@ extension ProgressManager.Properties {
         
         typealias Summary = [String?]
         
-        static var key: String { return "ProcessingFile" }
+        static var key: String { return "MyApp.ProcessingFile" }
         
         static var defaultValue: String? { return "" }
         
@@ -1180,3 +1180,159 @@ extension ProgressManager.Properties {
         #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
     }
 }
+
+extension ProgressManager.Properties {
+    var processTime: ProcessTime.Type { ProcessTime.self }
+    struct ProcessTime: Sendable, ProgressManager.Property {
+        
+        typealias Value = Duration
+        
+        typealias Summary = Duration
+        
+        static var key: String { return "MyApp.ProcessTime" }
+        
+        static var defaultValue: Duration { return .zero }
+        
+        static var defaultSummary: Duration { return .zero }
+        
+        static func reduce(into summary: inout Duration, value: Duration) {
+            summary += value
+        }
+        
+        static func merge(_ summary1: Duration, _ summary2: Duration) -> Duration {
+            return summary1 + summary2
+        }
+        
+        static func finalSummary(_ parentSummary: Duration, _ childSummary: Duration) -> Duration {
+            return parentSummary + childSummary
+        }
+    }
+}
+
+@Suite("Progress Manager Duration Properties", .tags(.progressManager)) struct ProgressManagerDurationPropertiesTests {
+    
+    func doSomething(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 3)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processTime += Duration.seconds(10)
+            
+            properties.completedCount += 1
+            properties.processTime += Duration.seconds(15)
+            
+            properties.completedCount += 1
+            properties.processTime += Duration.seconds(25)
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(50))
+    }
+    
+    func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 2)
+        
+        manager.complete(count: 1)
+        
+        manager.withProperties { properties in
+            properties.processTime = Duration.seconds(30)
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+    
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(80))
+    }
+    
+    @Test func discreteManager() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processTime += Duration.milliseconds(500)
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.milliseconds(500))
+    }
+    
+    @Test func twoLevelManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processTime += Duration.seconds(120)
+        }
+        
+        await doSomething(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(170))
+    }
+    
+    @Test func threeLevelManager() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processTime += Duration.microseconds(1000000) // 1 second
+        }
+        
+        await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(81))
+    }
+    
+    @Test func zeroDurationHandling() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processTime = Duration.zero
+        }
+        
+        let childProgress = manager.subprogress(assigningCount: 1)
+        let childManager = childProgress.start(totalCount: 1)
+        
+        childManager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processTime = Duration.seconds(42)
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(42))
+    }
+    
+    @Test func negativeDurationHandling() async throws {
+        let manager = ProgressManager(totalCount: 1)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            // Test with negative duration (though this might be unusual in practice)
+            properties.processTime = Duration.seconds(-5)
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(-5))
+    }
+    
+    @Test func mixedDurationUnits() async throws {
+        let manager = ProgressManager(totalCount: 3)
+        
+        manager.withProperties { properties in
+            properties.completedCount += 1
+            properties.processTime = Duration.seconds(1) // 1 second
+            
+            properties.completedCount += 1
+            properties.processTime += Duration.milliseconds(500) // + 0.5 seconds
+            
+            properties.completedCount += 1
+            properties.processTime += Duration.microseconds(500000) // + 0.5 seconds
+        }
+        
+        #expect(manager.fractionCompleted == 1.0)
+        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(2))
+    }
+}
+

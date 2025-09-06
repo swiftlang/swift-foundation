@@ -33,6 +33,7 @@ extension ProgressManager {
         let dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>]
         let dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>]
         let dirtyPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>]
+        let dirtyPropertiesDuration: [MetatypeWrapper<Duration, Duration>]
 #if FOUNDATION_FRAMEWORK
         let observerState: ObserverState?
         let interopType: InteropType?
@@ -67,6 +68,7 @@ extension ProgressManager {
                 propertiesString: [:],
                 propertiesURL: [:],
                 propertiesUInt64Array: [:],
+                propertiesDuration: [:],
                 observers: [],
                 interopType: nil,
             )
@@ -86,7 +88,8 @@ extension ProgressManager {
                 propertiesDouble: [:],
                 propertiesString: [:],
                 propertiesURL: [:],
-                propertiesUInt64Array: [:]
+                propertiesUInt64Array: [:],
+                propertiesDuration: [:]
             )
 #endif
             let result = try closure(&values)
@@ -108,6 +111,7 @@ extension ProgressManager {
                 dirtyPropertiesString: values.dirtyPropertiesString,
                 dirtyPropertiesURL: values.dirtyPropertiesURL,
                 dirtyPropertiesUInt64Array: values.dirtyPropertiesUInt64Array,
+                dirtyPropertiesDuration: values.dirtyPropertiesDuration,
                 observerState: values.observerState,
                 interopType: state.interopType
             )
@@ -126,7 +130,8 @@ extension ProgressManager {
                 dirtyPropertiesDouble: values.dirtyPropertiesDouble,
                 dirtyPropertiesString: values.dirtyPropertiesString,
                 dirtyPropertiesURL: values.dirtyPropertiesURL,
-                dirtyPropertiesUInt64Array: values.dirtyPropertiesUInt64Array
+                dirtyPropertiesUInt64Array: values.dirtyPropertiesUInt64Array,
+                dirtyPropertiesDuration: values.dirtyPropertiesDuration
             )
 #endif
 
@@ -214,6 +219,13 @@ extension ProgressManager {
                 markSelfDirty(property: property, parents: dirtyInfo.parents)
             }
         }
+        
+        if dirtyInfo.dirtyPropertiesDuration.count > 0 {
+            for property in dirtyInfo.dirtyPropertiesDuration {
+                markSelfDirty(property: property, parents: dirtyInfo.parents)
+            }
+        }
+        
         return result
     }
     
@@ -235,6 +247,7 @@ extension ProgressManager {
         internal var dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>] = []
         internal var dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>] = []
         internal var dirtyPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>] = []
+        internal var dirtyPropertiesDuration: [MetatypeWrapper<Duration, Duration>] = []
 #if FOUNDATION_FRAMEWORK
         internal var observerState: ObserverState?
 #endif
@@ -528,6 +541,29 @@ extension ProgressManager {
             }
         }
         
+        /// Gets or sets custom Duration properties.
+        ///
+        /// This subscript provides read-write access to custom progress properties where the value
+        /// type is `Duration` and the summary type is `Duration`. If the property has not been set,
+        /// the getter returns the property's default value.
+        ///
+        /// - Parameter key: A key path to the custom Duration property type.
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration {
+            get {
+                return state.propertiesDuration[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+            }
+
+            set {
+                guard newValue != state.propertiesDuration[MetatypeWrapper(P.self)] else {
+                    return
+                }
+
+                state.propertiesDuration[MetatypeWrapper(P.self)] = newValue
+
+                dirtyPropertiesDuration.append(MetatypeWrapper(P.self))
+            }
+        }
+        
 #if FOUNDATION_FRAMEWORK
         private mutating func interopNotifications() {
             switch state.interopType {
@@ -631,6 +667,19 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
         return getUpdatedUInt64ArraySummary(property: MetatypeWrapper(property))
+    }
+    
+    /// Returns a summary for a custom Duration property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom Duration property from this progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the Duration property to summarize. Must be a property
+    ///   where the value type is `Duration` and the summary type is `Duration`.
+    /// - Returns: A `Duration` summary value for the specified property.
+    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration {
+        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+        return getUpdatedDurationSummary(property: MetatypeWrapper(property))
     }
     
     /// Returns the total file count across the progress subtree.
