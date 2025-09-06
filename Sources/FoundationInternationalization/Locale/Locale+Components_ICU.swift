@@ -417,7 +417,11 @@ extension Locale.Region {
 
     /// An array of the sub-regions, matching the specified category of the region.
     @available(FoundationPreview 6.2, *)
-    public func subRegions(ofCategoy category: Category) -> [Locale.Region] {
+#if FOUNDATION_FRAMEWORK
+    // Renamed in 6.2.1
+    @abi(func subRegions(ofCategoy category: Category) -> [Locale.Region])
+#endif
+    public func subRegions(ofCategory category: Category) -> [Locale.Region] {
         var status = U_ZERO_ERROR
         let icuRegion = uregion_getRegionFromCode(identifier, &status)
         guard let icuRegion, status.isSuccess else {
