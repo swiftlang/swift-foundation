@@ -97,6 +97,7 @@ internal import _FoundationCollections
             propertiesString: [:],
             propertiesURL: [:],
             propertiesUInt64Array: [:],
+            propertiesDuration: [:],
             observers: [],
             interopType: .interopObservation(InteropObservation(subprogressBridge: subprogressBridge))
         )
@@ -120,6 +121,7 @@ internal import _FoundationCollections
             propertiesString: [:],
             propertiesURL: [:],
             propertiesUInt64Array: [:],
+            propertiesDuration: [:]
         )
         self.state = Mutex(state)
     }
@@ -261,7 +263,8 @@ internal import _FoundationCollections
                                         childPropertiesDouble: [:],
                                         childPropertiesString: [:],
                                         childPropertiesURL: [:],
-                                        childPropertiesUInt64Array: [:])
+                                        childPropertiesUInt64Array: [:],
+                                        childPropertiesDuration: [:])
             state.children.append(childState)
             return (state.children.count - 1, state.parents)
         }
@@ -312,8 +315,8 @@ internal import _FoundationCollections
     
     deinit {
                 
-        let (propertiesInt, propertiesUInt64, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64Array, parents) = state.withLock { state in
-            return (state.propertiesInt, state.propertiesUInt64, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64Array, state.parents)
+        let (propertiesInt, propertiesUInt64, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64Array, propertiesDuration, parents) = state.withLock { state in
+            return (state.propertiesInt, state.propertiesUInt64, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64Array, state.propertiesDuration, state.parents)
         }
         
         var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
@@ -352,6 +355,12 @@ internal import _FoundationCollections
             finalSummaryUInt64Array[property] = updatedSummary
         }
         
+        var finalSummaryDuration: [MetatypeWrapper<Duration, Duration>: Duration] = [:]
+        for property in propertiesDuration.keys {
+            let updatedSummary = self.getUpdatedDurationSummary(property: property)
+            finalSummaryDuration[property] = updatedSummary
+        }
+        
         let totalFileCount = self.getUpdatedFileCount(type: .total)
         let completedFileCount = self.getUpdatedFileCount(type: .completed)
         let totalByteCount = self.getUpdatedByteCount(type: .total)
@@ -377,7 +386,8 @@ internal import _FoundationCollections
                 propertiesDouble: finalSummaryDouble,
                 propertiesString: finalSummaryString,
                 propertiesURL: finalSummaryURL,
-                propertiesUInt64Array: finalSummaryUInt64Array
+                propertiesUInt64Array: finalSummaryUInt64Array,
+                propertiesDuration: finalSummaryDuration
             )
         }
     }
