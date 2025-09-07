@@ -157,9 +157,37 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
     
     let pidString = String(ProcessInfo.processInfo.processIdentifier, radix: 16, uppercase: true)
     let template = directoryPath + prefix + pidString + ".XXXXXX"
-    var count = 0
     let maxCount = 7
-    repeat {
+    for _ in 0 ..< maxCount {
+#if FOUNDATION_FRAMEWORK
+        let (sandboxResult, amkrErrno) = inPath.withFileSystemRepresentation { inPathFileSystemRep -> ((Int32, String)?, Int32?) in
+            guard let inPathFileSystemRep else {
+                return (nil, nil)
+            }
+            // First, try _amkrtemp to carry over any sandbox extensions for inPath to the temporary file (even if the application isn't sandboxed)
+            guard let uniqueTempFile = _amkrtemp(inPathFileSystemRep) else {
+                return (nil, errno)
+            }
+            defer { free(uniqueTempFile) }
+            let fd = openFileDescriptorProtected(path: uniqueTempFile, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
+            if fd >= 0 {
+                // Got a good fd
+                return ((fd, String(cString: uniqueTempFile)), nil)
+            }
+            return (nil, errno)
+        }
+        
+        // If _amkrtemp succeeded, return its result
+        if let sandboxResult {
+            return sandboxResult
+        }
+        // If _amkrtemp failed with EEXIST, just retry
+        if amkrErrno == EEXIST {
+            continue
+        }
+        // Otherwise, fall through to mktemp below
+#endif
+        
         let result = try template.withMutableFileSystemRepresentation { templateFileSystemRep -> (Int32, String)? in
             guard let templateFileSystemRep else {
                 throw CocoaError(.fileWriteInvalidFileName)
@@ -187,7 +215,12 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             
             // If the file exists, we repeat. Otherwise throw the error.
             if errno != EEXIST {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
+                #if FOUNDATION_FRAMEWORK
+                let debugDescription = "Creating a temporary file via mktemp failed. Creating the temporary file via _amkrtemp previously also failed with errno \(amkrErrno)"
+                #else
+                let debugDescription: String? = nil
+                #endif
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant, debugDescription: debugDescription)
             }
 
             // Try again
@@ -196,14 +229,10 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
         
         if let result {
             return result
-        } else {
-            count += 1
-            if count > maxCount {
-                // Prevent an infinite loop; even if the error is obscure
-                throw CocoaError(.fileWriteUnknown)
-            }
         }
-    } while true
+    }
+    // We hit max count, prevent an infinite loop; even if the error is obscure
+    throw CocoaError(.fileWriteUnknown)
 #endif // os(WASI)
 }
 
@@ -358,44 +387,88 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
     // TODO: Somehow avoid copying back and forth to a String to hold the path
 
 #if os(Windows)
-    try inPath.path.withNTPathRepresentation { pwszPath in
-        var (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: inPath.path, inPath: inPath, options: options, variant: "Folder")
+    var (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: inPath.path, inPath: inPath, options: options, variant: "Folder")
 
-        // Cleanup temporary directory
-        defer { cleanupTemporaryDirectory(at: temporaryDirectoryPath) }
+    // Cleanup temporary directory
+    defer { cleanupTemporaryDirectory(at: temporaryDirectoryPath) }
 
-        guard fd >= 0 else {
+    guard fd >= 0 else {
+        throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+    }
+
+    defer { if fd >= 0 { _close(fd) } }
+
+    let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+
+    do {
+        try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
+    } catch {
+        try auxPath.withNTPathRepresentation { pwszAuxPath in
+            _ = DeleteFileW(pwszAuxPath)
+        }
+
+        if callback?.isCancelled ?? false {
+            throw CocoaError(.userCancelled)
+        } else {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
+    }
 
-        defer { if fd >= 0 { _close(fd) } }
+    writeExtendedAttributes(fd: fd, attributes: attributes)
 
-        let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+    _close(fd)
+    fd = -1
 
-        do {
-            try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
-        } catch {
-            try auxPath.withNTPathRepresentation { pwszAuxPath in
-                _ = DeleteFileW(pwszAuxPath)
-            }
+    try auxPath.withNTPathRepresentation { pwszAuxiliaryPath in
+        defer { _ = DeleteFileW(pwszAuxiliaryPath) }
 
-            if callback?.isCancelled ?? false {
-                throw CocoaError(.userCancelled)
-            } else {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+        var hFile = CreateFileW(pwszAuxiliaryPath, DELETE,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                nil, OPEN_EXISTING,
+                                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                                nil)
+        if hFile == INVALID_HANDLE_VALUE {
+            throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+        }
+
+        defer {
+            switch hFile {
+            case INVALID_HANDLE_VALUE:
+                break
+            default:
+                _ = CloseHandle(hFile)
             }
         }
 
-        writeExtendedAttributes(fd: fd, attributes: attributes)
+        try inPath.path.withNTPathRepresentation { pwszPath in
+            let cchLength = wcslen(pwszPath)
+            let cbSize = cchLength * MemoryLayout<WCHAR>.size
+            let dwSize = DWORD(MemoryLayout<FILE_RENAME_INFO>.size + cbSize + MemoryLayout<WCHAR>.size)
+            try withUnsafeTemporaryAllocation(byteCount: Int(dwSize),
+                                              alignment: MemoryLayout<FILE_RENAME_INFO>.alignment) { pBuffer in
+                var pInfo = pBuffer.baseAddress?.bindMemory(to: FILE_RENAME_INFO.self, capacity: 1)
+                pInfo?.pointee.Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS
+                pInfo?.pointee.RootDirectory = nil
+                pInfo?.pointee.FileNameLength = DWORD(cbSize)
+                pBuffer.baseAddress?.advanced(by: MemoryLayout<FILE_RENAME_INFO>.offset(of: \.FileName)!)
+                                    .withMemoryRebound(to: WCHAR.self, capacity: cchLength + 1) {
+                    wcscpy_s($0, cchLength + 1, pwszPath)
+                }
 
-        _close(fd)
-        fd = -1
+                if !SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) {
+                    let dwError = GetLastError()
+                    guard dwError == ERROR_NOT_SAME_DEVICE else {
+                        throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
+                    }
 
-        try auxPath.withNTPathRepresentation { pwszAuxiliaryPath in
-            guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) else {
-                let dwError = GetLastError()
-                _ = DeleteFileW(pwszAuxiliaryPath)
-                throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
+                    _ = CloseHandle(hFile)
+                    hFile = INVALID_HANDLE_VALUE
+
+                    // The move is across volumes.
+                    guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) else {
+                        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+                    }
+                }
             }
         }
     }

@@ -31,12 +31,12 @@ import WinSDK
 // MARK: - Error Creation with CocoaError.Code
 
 extension CocoaError {
-    static func errorWithFilePath(_ code: CocoaError.Code, _ path: String, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
-        CocoaError(code, path: path, variant: variant, source: source, destination: destination)
+    static func errorWithFilePath(_ code: CocoaError.Code, _ path: String, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        CocoaError(code, path: path, variant: variant, source: source, destination: destination, debugDescription: debugDescription)
     }
     
-    static func errorWithFilePath(_ code: CocoaError.Code, _ url: URL, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
-        CocoaError(code, url: url, variant: variant, source: source, destination: destination)
+    static func errorWithFilePath(_ code: CocoaError.Code, _ url: URL, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        CocoaError(code, url: url, variant: variant, source: source, destination: destination, debugDescription: debugDescription)
     }
 }
 
@@ -81,21 +81,21 @@ extension POSIXError {
 }
 
 extension CocoaError {
-    static func errorWithFilePath(_ pathOrURL: PathOrURL, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
+    static func errorWithFilePath(_ pathOrURL: PathOrURL, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
         switch pathOrURL {
         case .path(let path):
-            return Self.errorWithFilePath(path, errno: errno, reading: reading, variant: variant, source: source, destination: destination)
+            return Self.errorWithFilePath(path, errno: errno, reading: reading, variant: variant, source: source, destination: destination, debugDescription: debugDescription)
         case .url(let url):
-            return Self.errorWithFilePath(url, errno: errno, reading: reading, variant: variant, source: source, destination: destination)
+            return Self.errorWithFilePath(url, errno: errno, reading: reading, variant: variant, source: source, destination: destination, debugDescription: debugDescription)
         }
     }
     
-    static func errorWithFilePath(_ path: String, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
-        CocoaError(Code(fileErrno: errno, reading: reading), path: path, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination)
+    static func errorWithFilePath(_ path: String, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        CocoaError(Code(fileErrno: errno, reading: reading), path: path, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
     }
     
-    static func errorWithFilePath(_ url: URL, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
-        CocoaError(Code(fileErrno: errno, reading: reading), url: url, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination)
+    static func errorWithFilePath(_ url: URL, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        CocoaError(Code(fileErrno: errno, reading: reading), url: url, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
     }
 }
 
@@ -144,18 +144,18 @@ extension CocoaError.Code {
 }
 
 extension CocoaError {
-    static func errorWithFilePath(_ path: PathOrURL, win32 dwError: DWORD, reading: Bool) -> CocoaError {
+    static func errorWithFilePath(_ path: PathOrURL, win32 dwError: DWORD, reading: Bool, debugDescription: String? = nil) -> CocoaError {
         switch path {
         case let .path(path):
-            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path.isEmpty), path: path, underlying: Win32Error(dwError))
+            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path.isEmpty), path: path, underlying: Win32Error(dwError), debugDescription: debugDescription)
         case let .url(url):
             let pathStr = url.withUnsafeFileSystemRepresentation { String(cString: $0!) }
-            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: pathStr.isEmpty), path: pathStr, url: url, underlying: Win32Error(dwError))
+            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: pathStr.isEmpty), path: pathStr, url: url, underlying: Win32Error(dwError), debugDescription: debugDescription)
         }
     }
     
-    static func errorWithFilePath(_ path: String? = nil, win32 dwError: DWORD, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
-        return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path?.isEmpty), path: path, underlying: Win32Error(dwError), variant: variant, source: source, destination: destination)
+    static func errorWithFilePath(_ path: String? = nil, win32 dwError: DWORD, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path?.isEmpty), path: path, underlying: Win32Error(dwError), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
     }
 }
 #endif
@@ -190,7 +190,8 @@ extension CocoaError {
         underlying: (some Error)? = Optional<CocoaError>.none,
         variant: String? = nil,
         source: String? = nil,
-        destination: String? = nil
+        destination: String? = nil,
+        debugDescription: String? = nil
     ) {
         self.init(
             code,
@@ -199,7 +200,8 @@ extension CocoaError {
             underlying: underlying,
             variant: variant,
             source: source,
-            destination: destination
+            destination: destination,
+            debugDescription: debugDescription
         )
     }
     
@@ -209,7 +211,8 @@ extension CocoaError {
         underlying: (some Error)? = Optional<CocoaError>.none,
         variant: String? = nil,
         source: String? = nil,
-        destination: String? = nil
+        destination: String? = nil,
+        debugDescription: String? = nil
     ) {
         self.init(
             code,
@@ -218,7 +221,8 @@ extension CocoaError {
             underlying: underlying,
             variant: variant,
             source: source,
-            destination: destination
+            destination: destination,
+            debugDescription: debugDescription
         )
     }
     
@@ -229,10 +233,11 @@ extension CocoaError {
         underlying: (some Error)? = Optional<CocoaError>.none,
         variant: String? = nil,
         source: String? = nil,
-        destination: String? = nil
+        destination: String? = nil,
+        debugDescription: String? = nil
     ) {
         #if FOUNDATION_FRAMEWORK
-        self.init(_uncheckedNSError: NSError._cocoaError(withCode: code.rawValue, path: path, url: url, underlying: underlying, variant: variant, source: source, destination: destination) as NSError)
+        self.init(_uncheckedNSError: NSError._cocoaError(withCode: code.rawValue, path: path, url: url, underlying: underlying, variant: variant, source: source, destination: destination, debugDescription: debugDescription) as NSError)
         #else
         var userInfo: [String : Any] = [:]
         if let path {
@@ -252,6 +257,9 @@ extension CocoaError {
         }
         if let variant {
             userInfo[NSUserStringVariantErrorKey] = [variant]
+        }
+        if let debugDescription {
+            userInfo[NSDebugDescriptionErrorKey] = debugDescription
         }
         
         self.init(code, userInfo: userInfo)

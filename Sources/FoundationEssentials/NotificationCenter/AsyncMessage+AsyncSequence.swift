@@ -34,7 +34,7 @@ extension NotificationCenter {
         of subject: Message.Subject,
         for identifier: Identifier,
         bufferSize limit: Int = 10
-    ) -> some AsyncSequence<Message, Never> where Identifier.MessageType == Message, Message.Subject: AnyObject {
+    ) -> some AsyncSequence<Message, Never> & Sendable where Identifier.MessageType == Message, Message.Subject: AnyObject {
         return AsyncMessageSequence<Message>(self, subject, limit)
     }
     
@@ -48,7 +48,7 @@ extension NotificationCenter {
         of subject: Message.Subject.Type,
         for identifier: Identifier,
         bufferSize limit: Int = 10
-    ) -> some AsyncSequence<Message, Never> where Identifier.MessageType == Message {
+    ) -> some AsyncSequence<Message, Never> & Sendable where Identifier.MessageType == Message {
         return AsyncMessageSequence<Message>(self, nil, limit)
     }
     
@@ -62,7 +62,7 @@ extension NotificationCenter {
         of subject: Message.Subject? = nil,
         for messageType: Message.Type,
         bufferSize limit: Int = 10
-    ) -> some AsyncSequence<Message, Never> where Message.Subject: AnyObject {
+    ) -> some AsyncSequence<Message, Never> & Sendable where Message.Subject: AnyObject {
         return AsyncMessageSequence<Message>(self, subject, limit)
     }
 }

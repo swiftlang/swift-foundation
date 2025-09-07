@@ -310,7 +310,7 @@ extension PredicateCodableConfiguration {
             guard root == rootReflectionType.partial, let constructed = constructor(rootReflectionType.genericArguments) else {
                 return nil
             }
-            constructed._validateForPredicateUsage(restrictArguments: false)
+            constructed._validateForPredicateUsage()
             return constructed
         }
     }

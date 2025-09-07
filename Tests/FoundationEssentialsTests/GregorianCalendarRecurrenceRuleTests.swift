@@ -26,6 +26,42 @@ private struct GregorianCalendarRecurrenceRuleTests {
         gregorian.timeZone = .gmt
         return gregorian
     }()
+  
+    @Test func roundtripEncoding() throws {
+        // These are not necessarily valid recurrence rule, they are constructed
+        // in a way to test all encoding paths
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = .init(identifier: "en_001")
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        
+        var recurrenceRule1 = Calendar.RecurrenceRule(calendar: calendar, frequency: .daily)
+        recurrenceRule1.interval = 2
+        recurrenceRule1.months = [1, 2, Calendar.RecurrenceRule.Month(4, isLeap: true)]
+        recurrenceRule1.weeks = [2, 3]
+        recurrenceRule1.weekdays = [.every(.monday), .nth(1, .wednesday)]
+        recurrenceRule1.end = .afterOccurrences(5)
+        
+        var recurrenceRule2 = Calendar.RecurrenceRule(calendar: calendar, frequency: .daily)
+        recurrenceRule2.months = [2, 10]
+        recurrenceRule2.weeks = [1, -1]
+        recurrenceRule2.setPositions = [1]
+        recurrenceRule2.hours = [14]
+        recurrenceRule2.minutes = [30]
+        recurrenceRule2.seconds = [0]
+        recurrenceRule2.daysOfTheYear = [1]
+        recurrenceRule2.daysOfTheMonth = [4]
+        recurrenceRule2.weekdays = [.every(.monday), .nth(1, .wednesday)]
+        recurrenceRule2.end = .afterDate(.distantFuture)
+        
+        let recurrenceRule1JSON = try JSONEncoder().encode(recurrenceRule1)
+        let recurrenceRule2JSON = try JSONEncoder().encode(recurrenceRule2)
+        let decoded1 = try JSONDecoder().decode(Calendar.RecurrenceRule.self, from: recurrenceRule1JSON)
+        let decoded2 = try JSONDecoder().decode(Calendar.RecurrenceRule.self, from: recurrenceRule2JSON)
+        
+        #expect(recurrenceRule1 == decoded1)
+        #expect(recurrenceRule2 == decoded2)
+        #expect(recurrenceRule1 != recurrenceRule2)
+    }
     
     @Test func simpleDailyRecurrence() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000

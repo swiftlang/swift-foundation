@@ -39,6 +39,22 @@ struct PredicateTestObject2 {
     var a: Bool
 }
 
+
+fileprivate protocol PredicateProducer {
+    var prop: Int { get }
+    func getPredicate() -> Predicate<Self>
+}
+
+fileprivate struct PredicateProducerConformer : PredicateProducer {
+    let prop = 2
+}
+
+extension PredicateProducer {
+    func getPredicate() -> Predicate<Self> {
+        #Predicate { $0.prop == 2 }
+    }
+}
+
 @Suite("Predicate")
 private struct PredicateTests {
     typealias Object = PredicateTestObject
@@ -310,6 +326,123 @@ private struct PredicateTests {
             $0.a == $0.c && $0.b == now
         }
     }
+    
+    @Test func finalKeyPaths() {
+        final class Foo {
+            var id: Int = 1
+        }
+        _ = #Predicate<Foo> { $0.id == 2 }
+    }
+    
+    @Test func genericKeyPaths() {
+        let obj = PredicateProducerConformer()
+        // Ensure forming a predicate to a generic type does not cause crashes when validating keypaths
+        _ = obj.getPredicate()
+    }
+    
+#if FOUNDATION_EXIT_TESTS
+    @Test func unsupportedKeyPaths() async {
+        struct Sample {
+            let stored: Sample2
+            var immutableComputed: Sample2 { fatalError() }
+            var mutableComputed: Sample2 {
+                get { fatalError() }
+                set { fatalError() }
+            }
+            var optional: Sample2? { fatalError() }
+            
+            subscript(_ arg: Int) -> Sample2 { fatalError() }
+            subscript() -> Sample2 { fatalError() }
+        }
+        
+        struct Sample2 {
+            var prop: Int
+        }
+        
+        // multiple components
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.stored.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.immutableComputed.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.mutableComputed.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional?.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.[1].prop
+            )
+        }
+        
+        // subscripts with arguments
+        // This keypath is currently allow but should be considered invalid (https://github.com/swiftlang/swift-foundation/issues/1482)
+        #if false
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.[0]
+            )
+        }
+        #endif
+        
+        // Optional chaining
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional?
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.?
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.?.stored
+            )
+        }
+        
+        // Force unwrapping
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional!
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.!
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.!.stored
+            )
+        }
+    }
+#endif
 
     @Test
     func regex() throws {

@@ -1,9 +1,9 @@
 # String Encoding Names
 
-* Proposal: Not assigned yet <!-- [FOU-NNNN](NNNN-filename.md) -->
+* Proposal: FOU-0033
 * Author(s): [YOCKOW](https://GitHub.com/YOCKOW)
 * Review Manager: TBD
-* Status: **Awaiting review**
+* Status: **Review: 2025-09-04...2025-09-11**
 <!-- * Bug: *if applicable* [apple/swift#NNNN](https://github.com/apple/swift-foundation/issues/NNNNN) -->
 * Implementation: [swiftlang/swift-foundation#1286](https://github.com/swiftlang/swift-foundation/pull/1286)
 <!-- * Previous Proposal: *if applicable* [FOU-XXXX](XXXX-filename.md) -->
