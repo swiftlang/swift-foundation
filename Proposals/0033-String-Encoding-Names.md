@@ -224,7 +224,7 @@ Accordingly, this proposal suggests just simple correspondence between `String.E
 
 ### Name to `String.Encoding`
 
-- `init(ianaName:)` adopts case-insensitive comparison with *Preferred MIME Name*, *Name*, and *Aliases*.
+- `init(ianaName:)` adopts ASCII case-insensitive comparison with *Preferred MIME Name*, *Name*, and *Aliases*.
 
 
 ## Source compatibility
