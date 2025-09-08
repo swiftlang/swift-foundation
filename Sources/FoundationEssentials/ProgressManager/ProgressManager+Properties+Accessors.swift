@@ -601,7 +601,13 @@ extension ProgressManager {
     /// - Returns: An `Int` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedIntSummary(property: MetatypeWrapper(property))
+        if property.self == ProgressManager.Properties.TotalFileCount.self {
+            return getUpdatedFileCount(type: .total)
+        } else if property.self == ProgressManager.Properties.CompletedFileCount.self {
+            return getUpdatedFileCount(type: .completed)
+        } else {
+            return getUpdatedIntSummary(property: MetatypeWrapper(property))
+        }
     }
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
@@ -614,7 +620,13 @@ extension ProgressManager {
     /// - Returns: An `UInt64` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == UInt64 {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedUInt64Summary(property: MetatypeWrapper(property))
+        if property.self == ProgressManager.Properties.TotalByteCount.self {
+            return getUpdatedByteCount(type: .total)
+        } else if property.self == ProgressManager.Properties.CompletedByteCount.self {
+            return getUpdatedByteCount(type: .completed)
+        } else {
+            return getUpdatedUInt64Summary(property: MetatypeWrapper(property))
+        }
     }
     
     /// Returns a summary for a custom double property across the progress subtree.
@@ -666,7 +678,11 @@ extension ProgressManager {
     /// - Returns: A `[UInt64]` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedUInt64ArraySummary(property: MetatypeWrapper(property))
+        if property.self == ProgressManager.Properties.Throughput.self {
+            return getUpdatedThroughput()
+        } else {
+            return getUpdatedUInt64ArraySummary(property: MetatypeWrapper(property))
+        }
     }
     
     /// Returns a summary for a custom Duration property across the progress subtree.
@@ -679,66 +695,10 @@ extension ProgressManager {
     /// - Returns: A `Duration` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedDurationSummary(property: MetatypeWrapper(property))
-    }
-    
-    /// Returns the total file count across the progress subtree.
-    ///
-    /// - Parameter property: The `TotalFileCount` property type.
-    /// - Returns: The sum of all total file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
-        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedFileCount(type: .total)
-    }
-    
-    /// Returns the completed file count across the progress subtree.
-    ///
-    /// - Parameter property: The `CompletedFileCount` property type.
-    /// - Returns: The sum of all completed file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int {
-        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedFileCount(type: .completed)
-    }
-    
-    /// Returns the total byte count across the progress subtree.
-    ///
-    /// - Parameter property: The `TotalByteCount` property type.
-    /// - Returns: The sum of all total byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> UInt64 {
-        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedByteCount(type: .total)
-    }
-    
-    /// Returns the completed byte count across the progress subtree.
-    ///
-    /// - Parameter property: The `CompletedByteCount` property type.
-    /// - Returns: The sum of all completed byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> UInt64 {
-        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedByteCount(type: .completed)
-    }
-    
-    /// Returns the average throughput across the progress subtree.
-    ///
-    /// - Parameter property: The `Throughput` property type.
-    /// - Returns: The average throughput across the entire progress subtree, in bytes per second.
-    ///
-    /// - Note: The throughput is calculated as the sum of all throughput values divided by the count
-    ///   of progress managers that have throughput data.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64] {
-        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedThroughput()
-    }
-    
-    /// Returns the maximum estimated time remaining for completion across the progress subtree.
-    ///
-    /// - Parameter property: The `EstimatedTimeRemaining` property type.
-    /// - Returns: The estimated duration until completion for the entire progress subtree.
-    ///
-    /// - Note: The estimation is based on current throughput and remaining work. The accuracy
-    ///   depends on the consistency of the processing rate.
-    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration {
-        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedEstimatedTimeRemaining()
+        if property.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
+            return getUpdatedEstimatedTimeRemaining()
+        } else {
+            return getUpdatedDurationSummary(property: MetatypeWrapper(property))
+        }
     }
 }

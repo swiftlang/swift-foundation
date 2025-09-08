@@ -138,54 +138,6 @@ import Observation
         return manager.summary(of: property)
     }
     
-    /// Returns the total file count across the progress subtree.
-    ///
-    /// - Parameter property: The `TotalFileCount` property type.
-    /// - Returns: The sum of all total file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int {
-        return manager.summary(of: property)
-    }
-    
-    /// Returns the completed file count across the progress subtree.
-    ///
-    /// - Parameter property: The `CompletedFileCount` property type.
-    /// - Returns: The sum of all completed file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int {
-        manager.summary(of: property)
-    }
-    
-    /// Returns the total byte count across the progress subtree.
-    ///
-    /// - Parameter property: The `TotalByteCount` property type.
-    /// - Returns: The sum of all total byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> UInt64 {
-        manager.summary(of: property)
-    }
-    
-    /// Returns the completed byte count across the progress subtree.
-    ///
-    /// - Parameter property: The `CompletedByteCount` property type.
-    /// - Returns: The sum of all completed byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> UInt64 {
-        manager.summary(of: property)
-    }
-    
-    /// Returns the average throughput across the progress subtree.
-    ///
-    /// - Parameter property: The `Throughput` property type.
-    /// - Returns: The average throughput across the entire progress subtree, in bytes per second.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64] {
-        manager.summary(of: property)
-    }
-    
-    /// Returns the maximum estimated time remaining for completion across the progress subtree.
-    ///
-    /// - Parameter property: The `EstimatedTimeRemaining` property type.
-    /// - Returns: The estimated duration until completion for the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration {
-        manager.summary(of: property)
-    }
-    
     internal let manager: ProgressManager
     
     internal init(manager: ProgressManager) {
