@@ -501,7 +501,7 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
 
 ```swift
 /// An object that conveys ongoing progress to the user for a specified task.
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 @Observable public final class ProgressManager : Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     
     /// The total units of work.
@@ -570,7 +570,7 @@ You call `ProgressManager`'s `subprogress(assigningCount:)` to create a `Subprog
 The callee will consume `Subprogress` and get the `ProgressManager` by calling `start(totalCount:)`. That `ProgressManager` is used for the function's own progress updates.
 
 ```swift
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 /// Subprogress is used to establish parent-child relationship between two instances of `ProgressManager`.
 ///
 /// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressManager.
@@ -599,7 +599,7 @@ public struct Subprogress: ~Copyable, Sendable {
 This list of allowed (Value, Summary) pairs may be expanded in the future. Based on pre-existing use cases of additional properties on `Progress`, we believe that the currently allowed (Value, Summary) pairs should suffice for most use cases. 
 
 ```swift 
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
 
     /// A type that conveys additional task-specific information on progress.
@@ -699,7 +699,7 @@ We pre-declare some of these additional properties that are commonly desired in 
 If you would like to report additional metadata or properties that are not part of the pre-declared additional properties, you can declare additional properties into `ProgressManager.Properties`, similar to how the pre-declared additional properties are declared. These additional properties can only have `Value` - `Summary` pairs that are either `Int` - `Int`, `Double` - `Double`, `String?` - `[String?]`, `URL?` - `[URL?]`, or `UInt64` - `[UInt64]`.
 
 ```swift
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
 
     public struct Properties {
@@ -842,7 +842,7 @@ extension ProgressManager {
 `ProgressManager` contains a method that reads and writes additional properties on a single `ProgressManager`.
 
 ```swift
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
 
     /// Accesses or mutates any properties that convey additional information about progress.
@@ -855,7 +855,7 @@ extension ProgressManager {
 `ProgressManager` contains a struct `Values` that uses `@dynamicMemberLookup` to access or mutate, at runtime, custom `ProgressManager.Property` types that you may declare. `Values` is only accessed or mutated from within the `withProperties` closure. 
 
 ```swift 
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
 
     /// A container that holds values for properties that convey information about progress.
@@ -936,7 +936,7 @@ extension ProgressManager {
 `ProgressManager` contains methods that summarize additional properties of across a subtree rooted by the `ProgressManager` they are called from.
 
 ```swift
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
 
     /// Returns a summary for a custom integer property across the progress subtree.
@@ -1016,7 +1016,7 @@ extension ProgressManager {
 `ProgressReporter` is a read-only instance of its underlying `ProgressManager`. It is also used as an adapter to add a `ProgressManager` as a child to more than one parent `ProgressManager` by calling the `assign(count:to:)` method on a parent `ProgressManager`. 
 
 ```swift 
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 /// ProgressReporter is used to observe progress updates from a `ProgressManager`. It may also be used to incorporate those updates into another `ProgressManager`.
 /// 
 /// It is read-only and can be added as a child of another ProgressManager. 
@@ -1162,7 +1162,7 @@ To add an instance of `Foundation.Progress` as a child to an instance of `Progre
 >The choice of naming the interop method as `subprogress(assigningCount: to:)` is to keep the syntax consistent with the method used to add a `ProgressManager` instance to the progress tree using this new API, `subprogress(assigningCount:)`. 
 
 ```swift 
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
     /// Adds a Foundation's `Progress` instance as a child which constitutes a certain `count` of `self`'s `totalCount`.
     /// 
@@ -1180,7 +1180,7 @@ To add an instance of `ProgressManager` as a child to an instance of the existin
 >The choice of naming the interop methods as `makeChild(withPendingUnitCount:)` and `addChild(_:withPendingUnitCount` is to keep the syntax consistent with the method used to add a `Foundation.Progress` instance as a child to another `Foundation.Progress`. 
 
 ```swift 
-@available(FoundationPreview 6.2.3, *)
+@available(FoundationPreview 6.3, *)
 extension Progress {
     /// Returns a Subprogress which can be passed to any method that reports progress
     /// and can be initialized into a child `ProgressManager` to the `self`.
