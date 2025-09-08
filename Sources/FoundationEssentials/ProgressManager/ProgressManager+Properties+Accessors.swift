@@ -12,7 +12,7 @@
 
 internal import Synchronization
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
     
     // MARK: Methods to Read & Write Additional Properties of single ProgressManager node

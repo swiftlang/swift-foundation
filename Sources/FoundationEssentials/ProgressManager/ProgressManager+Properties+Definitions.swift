@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
     
     /// A type that conveys additional task-specific information on progress.

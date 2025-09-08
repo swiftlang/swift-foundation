@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 internal import Synchronization
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager {
     
     internal enum CountType {
