@@ -396,7 +396,7 @@ extension ProgressManager.Properties {
         }
         
         static func finalSummary(_ parentSummary: [String?], _ selfSummary: [String?]) -> [String?] {
-            parentSummary
+            parentSummary + selfSummary
         }
     }
 }
@@ -423,7 +423,7 @@ func doSomething(subprogress: consuming Subprogress? = nil) async {
 }
 
 let filenames = manager.summary(of: ProgressManager.Properties.Filename.self) // get summary of filename in subtree
-print(filenames) // ["Capybara.jpg", "Snail.jpg"]
+print(filenames) // get ["Capybara.jpg", "Snail.jpg"] since we defined `finalSummary` to include filename cumulatively
 ```
 
 ### Interoperability with Existing `Progress` 
