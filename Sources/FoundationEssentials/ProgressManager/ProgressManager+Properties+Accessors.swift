@@ -293,116 +293,6 @@ extension ProgressManager {
             }
         }
         
-        /// Gets or sets the total file count property.
-        /// - Parameter key: A key path to the `TotalFileCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalFileCount.Type>) -> Int {
-            get {
-                return state.totalFileCount
-            }
-            
-            set {
-                
-                guard newValue != state.totalFileCount else {
-                    return
-                }
-                
-                state.totalFileCount = newValue
-                
-                totalFileCountDirty = true
-            }
-        }
-        
-        /// Gets or sets the completed file count property.
-        /// - Parameter key: A key path to the `CompletedFileCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedFileCount.Type>) -> Int {
-            get {
-                return state.completedFileCount
-            }
-            
-            set {
-                
-                guard newValue != state.completedFileCount else {
-                    return
-                }
-                
-                state.completedFileCount = newValue
-                
-                completedFileCountDirty = true
-            }
-        }
-        
-        /// Gets or sets the total byte count property.
-        /// - Parameter key: A key path to the `TotalByteCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalByteCount.Type>) -> UInt64 {
-            get {
-                return state.totalByteCount
-            }
-            
-            set {
-                guard newValue != state.totalByteCount else {
-                    return
-                }
-                
-                state.totalByteCount = newValue
-
-                totalByteCountDirty = true
-            }
-        }
-        
-        /// Gets or sets the completed byte count property.
-        /// - Parameter key: A key path to the `CompletedByteCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedByteCount.Type>) -> UInt64 {
-            get {
-                return state.completedByteCount
-            }
-            
-            set {
-                guard newValue != state.completedByteCount else {
-                    return
-                }
-                
-                state.completedByteCount = newValue
-
-                completedByteCountDirty = true
-            }
-        }
-        
-        /// Gets or sets the throughput property.
-        /// - Parameter key: A key path to the `Throughput` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.Throughput.Type>) -> UInt64 {
-            get {
-                return state.throughput
-            }
-            
-            set {
-                guard newValue != state.throughput else {
-                    return
-                }
-                
-                state.throughput = newValue
-
-                throughputDirty = true
-            }
-        }
-        
-        /// Gets or sets the estimated time remaining property.
-        /// - Parameter key: A key path to the `EstimatedTimeRemaining` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.EstimatedTimeRemaining.Type>) -> Duration {
-            get {
-                return state.estimatedTimeRemaining
-            }
-            
-            set {
-                guard newValue != state.estimatedTimeRemaining else {
-                    return
-                }
-                
-                state.estimatedTimeRemaining = newValue
-
-                estimatedTimeRemainingDirty = true
-            }
-        }
-        
         /// Gets or sets custom integer properties.
         ///
         /// This subscript provides read-write access to custom progress properties where both the value
@@ -412,17 +302,42 @@ extension ProgressManager {
         /// - Parameter key: A key path to the custom integer property type.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int, P.Summary == Int {
             get {
-                return state.propertiesInt[MetatypeWrapper(P.self)] ?? P.defaultValue
+                if P.self == ProgressManager.Properties.TotalFileCount.self {
+                    return state.totalFileCount
+                } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
+                    return state.completedFileCount
+                } else {
+                    return state.propertiesInt[MetatypeWrapper(P.self)] ?? P.defaultValue
+                }
             }
             
             set {
-                guard newValue != state.propertiesInt[MetatypeWrapper(P.self)] else {
-                    return
-                }
-                   
-                state.propertiesInt[MetatypeWrapper(P.self)] = newValue
+                if P.self == ProgressManager.Properties.TotalFileCount.self {
+                    guard newValue != state.totalFileCount else {
+                        return
+                    }
+                    
+                    state.totalFileCount = newValue
+                    
+                    totalFileCountDirty = true
+                } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
+                    guard newValue != state.completedFileCount else {
+                        return
+                    }
+                    
+                    state.completedFileCount = newValue
+                    
+                    completedFileCountDirty = true
+                } else {
+                    guard newValue != state.propertiesInt[MetatypeWrapper(P.self)] else {
+                        return
+                    }
+                       
+                    state.propertiesInt[MetatypeWrapper(P.self)] = newValue
 
-                dirtyPropertiesInt.append(MetatypeWrapper(P.self))
+                    dirtyPropertiesInt.append(MetatypeWrapper(P.self))
+                }
+                
             }
         }
         
@@ -435,17 +350,42 @@ extension ProgressManager {
         /// - Parameter key: A key path to the custom integer property type.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
             get {
-                return state.propertiesUInt64[MetatypeWrapper(P.self)] ?? P.defaultValue
+                if P.self == ProgressManager.Properties.TotalByteCount.self {
+                    return state.totalByteCount
+                } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
+                    return state.completedByteCount
+                } else {
+                    return state.propertiesUInt64[MetatypeWrapper(P.self)] ?? P.defaultValue
+                }
             }
             
             set {
-                guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
-                    return
-                }
-                   
-                state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
+                if P.self == ProgressManager.Properties.TotalByteCount.self {
+                    guard newValue != state.totalByteCount else {
+                        return
+                    }
+                    
+                    state.totalByteCount = newValue
 
-                dirtyPropertiesUInt64.append(MetatypeWrapper(P.self))
+                    totalByteCountDirty = true
+                } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
+                    guard newValue != state.completedByteCount else {
+                        return
+                    }
+                    
+                    state.completedByteCount = newValue
+
+                    completedByteCountDirty = true
+                } else {
+                    guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
+                        return
+                    }
+                       
+                    state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
+
+                    dirtyPropertiesUInt64.append(MetatypeWrapper(P.self))
+
+                }
             }
         }
         
@@ -525,19 +465,33 @@ extension ProgressManager {
         /// the getter returns the property's default value.
         ///
         /// - Parameter key: A key path to the custom UInt64 property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64? where P.Value == UInt64, P.Summary == [UInt64] {
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == [UInt64] {
             get {
-                return state.propertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+                if P.self == ProgressManager.Properties.Throughput.self {
+                    return state.throughput
+                } else {
+                    return state.propertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+                }
             }
 
             set {
-                guard newValue != state.propertiesUInt64Array[MetatypeWrapper(P.self)] else {
-                    return
+                if P.self == ProgressManager.Properties.Throughput.self {
+                    guard newValue != state.throughput else {
+                        return
+                    }
+                    
+                    state.throughput = newValue
+
+                    throughputDirty = true
+                } else {
+                    guard newValue != state.propertiesUInt64Array[MetatypeWrapper(P.self)] else {
+                        return
+                    }
+
+                    state.propertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
+
+                    dirtyPropertiesUInt64Array.append(MetatypeWrapper(P.self))
                 }
-
-                state.propertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
-
-                dirtyPropertiesUInt64Array.append(MetatypeWrapper(P.self))
             }
         }
         
@@ -550,17 +504,31 @@ extension ProgressManager {
         /// - Parameter key: A key path to the custom Duration property type.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration {
             get {
-                return state.propertiesDuration[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+                if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
+                    return state.estimatedTimeRemaining
+                } else {
+                    return state.propertiesDuration[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+                }
             }
 
             set {
-                guard newValue != state.propertiesDuration[MetatypeWrapper(P.self)] else {
-                    return
+                if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
+                    guard newValue != state.estimatedTimeRemaining else {
+                        return
+                    }
+                    
+                    state.estimatedTimeRemaining = newValue
+
+                    estimatedTimeRemainingDirty = true
+                } else {
+                    guard newValue != state.propertiesDuration[MetatypeWrapper(P.self)] else {
+                        return
+                    }
+
+                    state.propertiesDuration[MetatypeWrapper(P.self)] = newValue
+
+                    dirtyPropertiesDuration.append(MetatypeWrapper(P.self))
                 }
-
-                state.propertiesDuration[MetatypeWrapper(P.self)] = newValue
-
-                dirtyPropertiesDuration.append(MetatypeWrapper(P.self))
             }
         }
         
