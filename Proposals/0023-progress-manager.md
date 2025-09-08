@@ -1032,54 +1032,6 @@ extension ProgressManager {
     ///   where both the value and summary types are `Duration`.
     /// - Returns: An `Duration` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration
-    
-    /// Returns the total file count across the progress subtree.
-    ///
-    /// This includes the total file count of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `TotalFileCount` property type.
-    /// - Returns: An `Int` summary value for total file count.
-    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int
-
-    /// Returns the completed file count across the progress subtree.
-    ///
-    /// This includes the completed file count of `ProgressManager`s that are finished. 
-    ///
-    /// - Parameter property: The `CompletedFileCount` property type.
-    /// - Returns: An `Int` summary value for completed file count.
-    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int
-
-    /// Returns the total byte count across the progress subtree.
-    ///
-    /// This includes the total byte count of `ProgressManager`s that are finished. 
-    ///
-    /// - Parameter property: The `TotalByteCount` property type.
-    /// - Returns: A `UInt64` summary value for total byte count.
-    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> UInt64
-
-    /// Returns the completed byte count across the progress subtree.
-    ///
-    /// This includes the completed byte count of `ProgressManager`s that are finished. 
-    ///
-    /// - Parameter property: The `CompletedByteCount` property type.
-    /// - Returns: A `UInt64` summary value for completed byte count.
-    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> UInt64
-
-    /// Returns throughput values across the progress subtree.
-    ///
-    /// This includes the throughput of `ProgressManager`s that are finished. 
-    ///
-    /// - Parameter property: The `Throughput` property type.
-    /// - Returns: A `[UInt64]` summary value for throughput.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64]
-
-    /// Returns the maximum estimated time remaining for completion across the progress subtree.
-    ///
-    /// This does not include the estimated time remaining of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `EstimatedTimeRemaining` property type.
-    /// - Returns: A `Duration` summary value for estimated time remaining to completion.
-    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration
 }
 ```
 
@@ -1195,54 +1147,6 @@ extension ProgressManager {
     ///   where both the value and summary types are `Duration`.
     /// - Returns: An `Duraton` summary value for the specified property.
     public func summary<P: ProgressManager.Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration
-    
-    /// Returns the total file count across the progress subtree.
-    ///
-    /// This includes the total file count of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `TotalFileCount` property type.
-    /// - Returns: The sum of all total file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.TotalFileCount.Type) -> Int
-
-    /// Returns the completed file count across the progress subtree.
-    ///
-    /// This includes the completed file count of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `CompletedFileCount` property type.
-    /// - Returns: The sum of all completed file counts across the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.CompletedFileCount.Type) -> Int
-
-    /// Returns the total byte count across the progress subtree.
-    ///
-    /// This includes the total byte count of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `TotalByteCount` property type.
-    /// - Returns: The sum of all total byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.TotalByteCount.Type) -> UInt64
-
-    /// Returns the completed byte count across the progress subtree.
-    ///
-    /// This includes the completed byte count of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `CompletedByteCount` property type.
-    /// - Returns: The sum of all completed byte counts across the entire progress subtree, in bytes.
-    public func summary(of property: ProgressManager.Properties.CompletedByteCount.Type) -> UInt64
-
-    /// Returns the average throughput across the progress subtree.
-    ///
-    /// This includes the throughput of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `Throughput` property type.
-    /// - Returns: An array of throughput across the entire progress subtree, in bytes per second.
-    public func summary(of property: ProgressManager.Properties.Throughput.Type) -> [UInt64]
-
-    /// Returns the maximum estimated time remaining for completion across the progress subtree.
-    ///
-    /// This does not include the estimated time remaining of `ProgressManager`s that are finished. 
-    /// 
-    /// - Parameter property: The `EstimatedTimeRemaining` property type.
-    /// - Returns: The estimated duration until completion for the entire progress subtree.
-    public func summary(of property: ProgressManager.Properties.EstimatedTimeRemaining.Type) -> Duration
 }
 ```
 
