@@ -929,30 +929,6 @@ extension ProgressManager {
         ///
         /// - Parameter key: A key path to the custom double property type.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration { get set }
-        
-        /// Gets or sets the total file count property.
-        /// - Parameter key: A key path to the `TotalFileCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalFileCount.Type>) -> Int { get set }
-
-        /// Gets or sets the completed file count property.
-        /// - Parameter key: A key path to the `CompletedFileCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedFileCount.Type>) -> Int { get set }
-
-        /// Gets or sets the total byte count property.
-        /// - Parameter key: A key path to the `TotalByteCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.TotalByteCount.Type>) -> UInt64 { get set }
-
-        /// Gets or sets the completed byte count property.
-        /// - Parameter key: A key path to the `CompletedByteCount` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.CompletedByteCount.Type>) -> UInt64 { get set }
-
-        /// Gets or sets the throughput property.
-        /// - Parameter key: A key path to the `Throughput` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.Throughput.Type>) -> UInt64 { get set }
-
-        /// Gets or sets the estimated time remaining property.
-        /// - Parameter key: A key path to the `EstimatedTimeRemaining` property type.
-        public subscript(dynamicMember key: KeyPath<ProgressManager.Properties, ProgressManager.Properties.EstimatedTimeRemaining.Type>) -> Duration { get set }
     }
 }
 ```
