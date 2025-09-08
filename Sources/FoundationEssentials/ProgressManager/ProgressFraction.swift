@@ -16,6 +16,8 @@ internal import _ForSwiftFoundation
 internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvertible {
     var completed : Int
     var total : Int?
+    /// Indicates whether mathematical operations on this fraction have exceeded integer limits,
+    /// causing the fraction to fall back to floating-point representation for accuracy.
     private(set) var overflowed : Bool
     
     init() {
@@ -69,7 +71,13 @@ internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvert
         }
     }
     
-    static private func _math(lhs: ProgressFraction, rhs: ProgressFraction, whichOperator: (_ lhs : Double, _ rhs : Double) -> Double, whichOverflow : (_ lhs: Int, _ rhs: Int) -> (Int, overflow: Bool)) -> ProgressFraction {
+    /// A closure that performs floating-point arithmetic operations
+    private typealias FloatingPointOperation = (_ lhs: Double, _ rhs: Double) -> Double
+    
+    /// A closure that performs integer arithmetic operations with overflow detection
+    private typealias OverflowReportingOperation = (_ lhs: Int, _ rhs: Int) -> (Int, overflow: Bool)
+    
+    static private func _math(lhs: ProgressFraction, rhs: ProgressFraction, operation: FloatingPointOperation, overflowOperation: OverflowReportingOperation) -> ProgressFraction {
         // Mathematically, it is nonsense to add or subtract something with a denominator of 0. However, for the purposes of implementing Progress' fractions, we just assume that a zero-denominator fraction is "weightless" and return the other value. We still need to check for the case where they are both nonsense though.
         precondition(!(lhs.total == 0 && rhs.total == 0), "Attempt to add or subtract invalid fraction")
         guard let lhsTotal = lhs.total, lhsTotal != 0 else {
@@ -81,14 +89,14 @@ internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvert
         
         guard !lhs.overflowed && !rhs.overflowed else {
             // If either has overflowed already, we preserve that
-            return ProgressFraction(double: whichOperator(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
+            return ProgressFraction(double: operation(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
         }
 
         //TODO: rdar://148758226 Overflow check 
         if let lcm = _leastCommonMultiple(lhsTotal, rhsTotal) {
-            let result = whichOverflow(lhs.completed * (lcm / lhsTotal), rhs.completed * (lcm / rhsTotal))
+            let result = overflowOperation(lhs.completed * (lcm / lhsTotal), rhs.completed * (lcm / rhsTotal))
             if result.overflow {
-                return ProgressFraction(double: whichOperator(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
+                return ProgressFraction(double: operation(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
             } else {
                 return ProgressFraction(completed: result.0, total: lcm)
             }
@@ -102,30 +110,30 @@ internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvert
                   let lhsSimplifiedTotal = lhsSimplified.total,
                   let rhsSimplifiedTotal = rhsSimplified.total else {
                 // Simplification failed, fall back to double math
-                return ProgressFraction(double: whichOperator(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
+                return ProgressFraction(double: operation(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
             }
             
             if let lcm = _leastCommonMultiple(lhsSimplifiedTotal, rhsSimplifiedTotal) {
-                let result = whichOverflow(lhsSimplified.completed * (lcm / lhsSimplifiedTotal), rhsSimplified.completed * (lcm / rhsSimplifiedTotal))
+                let result = overflowOperation(lhsSimplified.completed * (lcm / lhsSimplifiedTotal), rhsSimplified.completed * (lcm / rhsSimplifiedTotal))
                 if result.overflow {
                     // Use original lhs/rhs here
-                    return ProgressFraction(double: whichOperator(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
+                    return ProgressFraction(double: operation(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
                 } else {
                     return ProgressFraction(completed: result.0, total: lcm)
                 }
             } else {
                 // Still overflow
-                return ProgressFraction(double: whichOperator(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
+                return ProgressFraction(double: operation(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
             }
         }
     }
     
     static internal func +(lhs: ProgressFraction, rhs: ProgressFraction) -> ProgressFraction {
-        return _math(lhs: lhs, rhs: rhs, whichOperator: +, whichOverflow: { $0.addingReportingOverflow($1) })
+        return _math(lhs: lhs, rhs: rhs, operation: +, overflowOperation: { $0.addingReportingOverflow($1) })
     }
     
     static internal func -(lhs: ProgressFraction, rhs: ProgressFraction) -> ProgressFraction {
-        return _math(lhs: lhs, rhs: rhs, whichOperator: -, whichOverflow: { $0.subtractingReportingOverflow($1) })
+        return _math(lhs: lhs, rhs: rhs, operation: -, overflowOperation: { $0.subtractingReportingOverflow($1) })
     }
     
     static internal func *(lhs: ProgressFraction, rhs: ProgressFraction) -> ProgressFraction? {
