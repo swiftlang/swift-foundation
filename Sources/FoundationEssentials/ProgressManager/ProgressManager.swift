@@ -21,7 +21,7 @@ internal import OrderedCollections
 internal import _FoundationCollections
 #endif
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.3, *)
 /// An object that conveys ongoing progress to the user for a specified task.
 @Observable public final class ProgressManager: Sendable {
     
@@ -393,7 +393,7 @@ internal import _FoundationCollections
     }
 }
     
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager: Hashable, Equatable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(self))
@@ -405,7 +405,7 @@ extension ProgressManager: Hashable, Equatable {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.3, *)
 extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         return """
