@@ -12,7 +12,7 @@
 
 import Observation
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.3, *)
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
