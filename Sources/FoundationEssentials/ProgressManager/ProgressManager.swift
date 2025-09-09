@@ -22,7 +22,7 @@ internal import _FoundationCollections
 #endif
 
 /// An object that conveys ongoing progress to the user for a specified task.
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.2, *)
 @Observable public final class ProgressManager: Sendable {
     
     internal let state: Mutex<State>
@@ -395,7 +395,7 @@ internal import _FoundationCollections
     }
 }
     
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.2, *)
 extension ProgressManager: Hashable, Equatable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(self))
@@ -407,7 +407,7 @@ extension ProgressManager: Hashable, Equatable {
     }
 }
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.2, *)
 extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible {
     /// A description.
     public var description: String {

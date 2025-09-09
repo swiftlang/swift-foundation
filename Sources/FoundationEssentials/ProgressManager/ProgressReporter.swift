@@ -15,8 +15,11 @@ import Observation
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.2, *)
 @Observable public final class ProgressReporter: Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
+    
+    public typealias Values = ProgressManager.Values
+    public typealias Property = ProgressManager.Property
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -81,7 +84,7 @@ import Observation
     
     /// Reads properties that convey additional information about progress.
     public func withProperties<T, E: Error>(
-        _ closure: (sending ProgressManager.Values) throws(E) -> sending T
+        _ closure: (sending Values) throws(E) -> sending T
     ) throws(E) -> T {
         return try manager.getProperties(closure)
     }
@@ -94,7 +97,7 @@ import Observation
     /// - Parameter property: The type of the integer property to summarize. Must be a property
     ///   where both the value and summary types are `Int`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int {
+    public func summary<P: Property>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int {
         manager.summary(of: property)
     }
     
@@ -106,7 +109,7 @@ import Observation
     /// - Parameter property: The type of the unsigned property to summarize. Must be a property
     ///   where both the value and summary types are `UInt64`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
+    public func summary<P: Property>(of property: P.Type) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
         manager.summary(of: property)
     }
     
@@ -118,7 +121,7 @@ import Observation
     /// - Parameter property: The type of the double property to summarize. Must be a property
     ///   where both the value and summary types are `Double`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Double where P.Value == Double, P.Summary == Double {
+    public func summary<P: Property>(of property: P.Type) -> Double where P.Value == Double, P.Summary == Double {
         manager.summary(of: property)
     }
     
@@ -130,7 +133,7 @@ import Observation
     /// - Parameter property: The type of the string property to summarize. Must be a property
     ///   where both the value and summary types are `String`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [String?] where P.Value == String?, P.Summary == [String?] {
+    public func summary<P: Property>(of property: P.Type) -> [String?] where P.Value == String?, P.Summary == [String?] {
         return manager.summary(of: property)
     }
     
@@ -142,7 +145,7 @@ import Observation
     /// - Parameter property: The type of the URL property to summarize. Must be a property
     ///   where both the value and summary types are `URL?` and `[URL?]` respectively.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [URL?] where P.Value == URL?, P.Summary == [URL?] {
+    public func summary<P: Property>(of property: P.Type) -> [URL?] where P.Value == URL?, P.Summary == [URL?] {
         return manager.summary(of: property)
     }
     
@@ -154,7 +157,7 @@ import Observation
     /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
     ///   where the value type is `UInt64` and the summary type is `[UInt64]`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64] {
+    public func summary<P: Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64] {
         return manager.summary(of: property)
     }
     
@@ -166,7 +169,7 @@ import Observation
     /// - Parameter property: The type of the duration property to summarize. Must be a property
     ///   where both the value and summary types are `Duration`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration {
+    public func summary<P: Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration {
         return manager.summary(of: property)
     }
     
