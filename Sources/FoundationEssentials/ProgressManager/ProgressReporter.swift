@@ -12,10 +12,10 @@
 
 import Observation
 
-@available(FoundationPreview 6.3, *)
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
+@available(FoundationPreview 6.3, *)
 @Observable public final class ProgressReporter: Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     
     /// The total units of work.
@@ -48,6 +48,10 @@ import Observation
         manager.isFinished
     }
     
+    /// A textual representation of the progress reporter.
+    /// 
+    /// This property provides a comprehensive description including the class name, object identifier,
+    /// underlying progress manager details, and various progress metrics and properties.
     public var description: String {
         return """
         Class Name: ProgressReporter
@@ -67,6 +71,10 @@ import Observation
         """
     }
     
+    /// A textual representation of the progress reporter suitable for debugging.
+    /// 
+    /// This property returns the same value as `description`, providing detailed information
+    /// about the progress reporter's state for debugging purposes.
     public var debugDescription: String {
         return self.description
     }
@@ -83,7 +91,7 @@ import Observation
     /// This method aggregates the values of a custom integer property from the underlying progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the double property to summarize. Must be a property
+    /// - Parameter property: The type of the integer property to summarize. Must be a property
     ///   where both the value and summary types are `Int`.
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
     public func summary<P: ProgressManager.Property>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int {
@@ -126,14 +134,38 @@ import Observation
         return manager.summary(of: property)
     }
     
+    /// Returns a summary for the specified URL property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom URL property from the underlying progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the URL property to summarize. Must be a property
+    ///   where both the value and summary types are `URL?` and `[URL?]` respectively.
+    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
     public func summary<P: ProgressManager.Property>(of property: P.Type) -> [URL?] where P.Value == URL?, P.Summary == [URL?] {
         return manager.summary(of: property)
     }
     
+    /// Returns a summary for the specified unsigned integer array property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom unsigned integer property from the underlying progress manager
+    /// and all its children, returning a consolidated summary value as an array.
+    ///
+    /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
+    ///   where the value type is `UInt64` and the summary type is `[UInt64]`.
+    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
     public func summary<P: ProgressManager.Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64] {
         return manager.summary(of: property)
     }
     
+    /// Returns a summary for the specified duration property across the progress subtree.
+    ///
+    /// This method aggregates the values of a custom duration property from the underlying progress manager
+    /// and all its children, returning a consolidated summary value.
+    ///
+    /// - Parameter property: The type of the duration property to summarize. Must be a property
+    ///   where both the value and summary types are `Duration`.
+    /// - Returns: The aggregated summary value for the specified property across the entire subtree.
     public func summary<P: ProgressManager.Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration {
         return manager.summary(of: property)
     }
