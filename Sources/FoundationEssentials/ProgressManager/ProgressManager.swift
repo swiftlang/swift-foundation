@@ -21,8 +21,8 @@ internal import OrderedCollections
 internal import _FoundationCollections
 #endif
 
-@available(FoundationPreview 6.3, *)
 /// An object that conveys ongoing progress to the user for a specified task.
+@available(FoundationPreview 6.3, *)
 @Observable public final class ProgressManager: Sendable {
     
     internal let state: Mutex<State>
@@ -38,7 +38,6 @@ internal import _FoundationCollections
     }
     
     /// The completed units of work.
-    /// If `self` is indeterminate, the value will be 0.
     public var completedCount: Int {
         _$observationRegistrar.access(self, keyPath: \.completedCount)
         return state.withLock { state in
@@ -48,7 +47,7 @@ internal import _FoundationCollections
     
     /// The proportion of work completed.
     /// This takes into account the fraction completed in its children instances if children are present.
-    /// If `self` is indeterminate, the value will be 0.
+    /// If `self` is indeterminate, the value will be 0.0.
     public var fractionCompleted: Double {
         _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
         return state.withLock { state in
@@ -151,7 +150,7 @@ internal import _FoundationCollections
     /// If the `Subprogress` is not converted into a `ProgressManager` (for example, due to an error or early return),
     /// then the assigned count is marked as completed in the parent `ProgressManager`.
     ///
-    /// - Parameter count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
+    /// - Parameter count: The portion of `totalCount` to be delegated to the `Subprogress`.
     /// - Returns: A `Subprogress` instance.
     public func subprogress(assigningCount portionOfParent: Int) -> Subprogress {
         precondition(portionOfParent > 0, "Giving out zero units is not a valid operation.")
@@ -160,9 +159,12 @@ internal import _FoundationCollections
     }
     
     /// Adds a `ProgressReporter` as a child, with its progress representing a portion of `self`'s progress.
+    ///
+    /// If a cycle is detected, this will cause a crash at runtime.
+    ///
     /// - Parameters:
-    ///   - reporter: A `ProgressReporter` instance.
     ///   - count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
+    ///   - reporter: A `ProgressReporter` instance.
     public func assign(count: Int, to reporter: ProgressReporter) {
         precondition(isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
         
@@ -407,6 +409,7 @@ extension ProgressManager: Hashable, Equatable {
 
 @available(FoundationPreview 6.3, *)
 extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible {
+    /// A description.
     public var description: String {
         return """
         Class Name: ProgressManager
@@ -425,6 +428,7 @@ extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible
         """
     }
     
+    /// A debug description.
     public var debugDescription: String {
         return self.description
     }
