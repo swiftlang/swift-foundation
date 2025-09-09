@@ -508,12 +508,11 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
     public var totalCount: Int? { get }
 
     /// The completed units of work.
-    /// If `self` is indeterminate, the value will be 0.
     public var completedCount: Int { get }
 
     /// The proportion of work completed.
     /// This takes into account the fraction completed in its children instances if children are present.
-    /// If `self` is indeterminate, the value will be 0.
+    /// If `self` is indeterminate, the value will be 0.0.
     public var fractionCompleted: Double { get }
 
     /// The state of initialization of `totalCount`.
