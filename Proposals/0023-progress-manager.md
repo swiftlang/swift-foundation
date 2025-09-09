@@ -884,7 +884,7 @@ extension ProgressManager {
         /// - Parameter key: A key path to the custom unsigned integer property type.            
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 { get set }
         
-        /// Gets or sets custom UInt64 properties.
+        /// Gets or sets custom unsigned integer properties.
         ///
         /// This subscript provides read-write access to custom progress properties where the value
         /// type is `UInt64` and the summary type is `[UInt64]`. If the property has not been set,
