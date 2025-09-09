@@ -121,7 +121,7 @@ public func makeSalad() async {
 public func chopFruits() async -> Progress {}
 ```
 
-We are forced to await the `chopFruits()` call before receiving  the `Progress` instance. However, the `Progress` instance that is returned from `chopFruits` already has its `completedUnitCount` equal to `totalUnitCount`. Since the `chopSubprogress` would have been completed before being added as a child to its parent `Progress`, it fails to show incremental progress as the code runs to completion within the method.
+We are forced to await the `chopFruits()` call before receiving the `Progress` instance. However, the `Progress` instance that is returned from `chopFruits` already has its `completedUnitCount` equal to `totalUnitCount`. Since the `chopSubprogress` would have been completed before being added as a child to its parent `Progress`, it fails to show incremental progress as the code runs to completion within the method.
 
 While it may be possible to use the existing `Progress` to report progress in an `async` function to show incremental progress, by passing `Progress` as an argument to the function reporting progress, it is more error-prone, as shown below: 
 
@@ -701,12 +701,12 @@ If you would like to report additional metadata or properties that are not part 
 @available(FoundationPreview 6.3, *)
 extension ProgressManager {
 
-    public struct Properties {
+    public enum Properties {
 
         /// The total number of files.
         public var totalFileCount: TotalFileCount.Type { get }
 
-        public struct TotalFileCount : Sendable, Property {
+        public enum TotalFileCount : Sendable, Property {
 
             public typealias Value = Int
 
@@ -728,7 +728,7 @@ extension ProgressManager {
         /// The number of completed files.
         public var completedFileCount: CompletedFileCount.Type { get }
 
-        public struct CompletedFileCount : Sendable, Property {
+        public enum CompletedFileCount : Sendable, Property {
 
             public typealias Value = Int
 
@@ -750,7 +750,7 @@ extension ProgressManager {
         /// The total number of bytes.
         public var totalByteCount: TotalByteCount.Type { get }
 
-        public struct TotalByteCount : Sendable, Property {
+        public enum TotalByteCount : Sendable, Property {
 
             public typealias Value = UInt64
 
@@ -772,7 +772,7 @@ extension ProgressManager {
         /// The number of completed bytes.
         public var completedByteCount: CompletedByteCount.Type { get }
 
-        public struct CompletedByteCount : Sendable, Property {
+        public enum CompletedByteCount : Sendable, Property {
 
             public typealias Value = UInt64
 
@@ -794,7 +794,7 @@ extension ProgressManager {
         /// The throughput, in bytes per second.
         public var throughput: Throughput.Type { get }
 
-        public struct Throughput : Sendable, Property {
+        public enum Throughput : Sendable, Property {
 
             public typealias Value = UInt64
 
@@ -813,10 +813,10 @@ extension ProgressManager {
             public static func finalSummary(_ parentSummary: [UInt64], _ selfSummary: [UInt64]) -> [UInt64]
         }
 
-        /// The amount of time remaining in the processing of files.
+        /// The amount of time remaining in operation.
         public var estimatedTimeRemaining: EstimatedTimeRemaining.Type { get }
 
-        public struct EstimatedTimeRemaining : Sendable, Property {
+        public enum EstimatedTimeRemaining : Sendable, Property {
 
             public typealias Value = Duration
 
@@ -901,7 +901,7 @@ extension ProgressManager {
         ///
         /// - Parameter key: A key path to the custom duration property type.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration { get set }
-        
+
         /// Gets or sets custom double properties.
         ///
         /// This subscript provides read-write access to custom progress properties where both the value
@@ -977,7 +977,7 @@ extension ProgressManager {
     ///   where both the value and summary types are `Duration`.
     /// - Returns: An `Duration` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration
-    
+
     /// Returns a summary for a custom double property across the progress subtree.
     ///
     /// This method aggregates the values of a custom double property from this progress manager
@@ -1025,7 +1025,6 @@ extension ProgressManager {
     public var totalCount: Int? { get }
 
     /// The completed units of work.
-    /// If `self` is indeterminate, the value will be 0.
     public var completedCount: Int { get }
 
     /// The proportion of work completed.
