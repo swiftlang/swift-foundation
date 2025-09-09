@@ -1021,6 +1021,9 @@ extension ProgressManager {
 @available(FoundationPreview 6.3, *)
 @Observable public final class ProgressReporter : Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
 
+    public typealias Values = ProgressManager.Values
+    public typealias Property = ProgressManager.Property
+
     /// The total units of work.
     public var totalCount: Int? { get }
 
