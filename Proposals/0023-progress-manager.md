@@ -1048,7 +1048,7 @@ extension ProgressManager {
 
     /// Reads properties that convey additional information about progress.
     public func withProperties<T, E: Error>(
-        _ closure: (sending ProgressManager.Values) throws(E) -> sending T
+        _ closure: (sending Values) throws(E) -> sending T
     ) throws(E) -> T
 
     /// Returns a summary for a custom integer property across the progress subtree.
@@ -1059,7 +1059,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the integer property to summarize. Must be a property
     ///   where both the value and summary types are `Int`.
     /// - Returns: An `Int` summary value for the specified property.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int
+    public func summary<P: Property>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
@@ -1069,7 +1069,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
     ///   where both the value and summary types are `UInt64`.
     /// - Returns: An `UInt64` summary value for the specified property.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> UInt64 where P.Value == UInt64, P.Summary == UInt64
+    public func summary<P: Property>(of property: P.Type) -> UInt64 where P.Value == UInt64, P.Summary == UInt64
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
@@ -1079,7 +1079,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
     ///   where the value type is `UInt64` and the summary type is `[UInt64]`.
     /// - Returns: A `[UInt64]` summary value for the specified property.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64]
+    public func summary<P: Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64]
     
     /// Returns a summary for a custom duration property across the progress subtree.
     ///
@@ -1089,7 +1089,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the duration property to summarize. Must be a property
     ///   where both the value and summary types are `Duration`.
     /// - Returns: An `Duraton` summary value for the specified property.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration
+    public func summary<P: Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration
     
     /// Returns a summary for a custom double property across the progress subtree.
     ///
@@ -1099,7 +1099,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the double property to summarize. Must be a property
     ///   where both the value and summary types are `Double`.
     /// - Returns: A `Double` summary value for the specified property.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> Double where P.Value == Double, P.Summary == Double
+    public func summary<P: Property>(of property: P.Type) -> Double where P.Value == Double, P.Summary == Double
 
     /// Returns a summary for a custom string property across the progress subtree.
     ///
@@ -1109,7 +1109,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the string property to summarize. Must be a property
     ///   where both the value type is `String?` and the summary type is `[String?]`.
     /// - Returns: A `[String?]` summary value for the specified property.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [String?] where P.Value == String?, P.Summary == [String?]
+    public func summary<P: Property>(of property: P.Type) -> [String?] where P.Value == String?, P.Summary == [String?]
     
     
     /// Returns a summary for a custom URL property across the progress subtree.
@@ -1120,7 +1120,7 @@ extension ProgressManager {
     /// - Parameter property: The type of the URL property to summarize. Must be a property
     ///   where the value type is `URL?` and the summary type is `[URL?]`.
     /// - Returns: A `[URL?]` summary value for the specified property.
-    public func summary<P: ProgressManager.Property>(of property: P.Type) -> [URL?] where P.Value == URL?, P.Summary == [URL?]
+    public func summary<P: Property>(of property: P.Type) -> [URL?] where P.Value == URL?, P.Summary == [URL?]
 }
 ```
 
