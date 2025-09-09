@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPreview 6.3, *)
-/// Subprogress is a nested ~Copyable struct used to establish parent-child relationship between two instances of ProgressManager.
+/// Subprogress is used to establish parent-child relationship between two instances of `ProgressManager`.
 ///
 /// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressManager.
-/// A child ProgressManager is then returned by calling`manager(totalCount:)` on a Subprogress.
+/// A child ProgressManager is then returned by calling `start(totalCount:)` on a Subprogress.
+@available(FoundationPreview 6.3, *)
 public struct Subprogress: ~Copyable, Sendable {
     internal var parent: ProgressManager
     internal var portionOfParent: Int
