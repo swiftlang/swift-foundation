@@ -62,6 +62,14 @@ extension _NSSwiftProcessInfo {
         return false
 #endif
     }
+    
+    override var isiOSAppOnVision: Bool {
+#if os(visionOS)
+        return dyld_get_active_platform() == PLATFORM_IOS || dyld_get_active_platform() == PLATFORM_IOSSIMULATOR
+#else
+        return false
+#endif
+    }
 }
 
 // MARK: - Accessing User Information
