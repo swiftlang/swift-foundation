@@ -701,11 +701,13 @@ If you would like to report additional metadata or properties that are not part 
 @available(FoundationPreview 6.3, *)
 extension ProgressManager {
 
+    @frozen
     public enum Properties {
 
         /// The total number of files.
         public var totalFileCount: TotalFileCount.Type { get }
 
+        @frozen
         public enum TotalFileCount : Sendable, Property {
 
             public typealias Value = Int
@@ -727,7 +729,8 @@ extension ProgressManager {
 
         /// The number of completed files.
         public var completedFileCount: CompletedFileCount.Type { get }
-
+        
+        @frozen
         public enum CompletedFileCount : Sendable, Property {
 
             public typealias Value = Int
@@ -750,6 +753,7 @@ extension ProgressManager {
         /// The total number of bytes.
         public var totalByteCount: TotalByteCount.Type { get }
 
+        @frozen
         public enum TotalByteCount : Sendable, Property {
 
             public typealias Value = UInt64
@@ -772,6 +776,7 @@ extension ProgressManager {
         /// The number of completed bytes.
         public var completedByteCount: CompletedByteCount.Type { get }
 
+        @frozen
         public enum CompletedByteCount : Sendable, Property {
 
             public typealias Value = UInt64
@@ -794,6 +799,7 @@ extension ProgressManager {
         /// The throughput, in bytes per second.
         public var throughput: Throughput.Type { get }
 
+        @frozen
         public enum Throughput : Sendable, Property {
 
             public typealias Value = UInt64
@@ -816,6 +822,7 @@ extension ProgressManager {
         /// The amount of time remaining in operation.
         public var estimatedTimeRemaining: EstimatedTimeRemaining.Type { get }
 
+        @frozen
         public enum EstimatedTimeRemaining : Sendable, Property {
 
             public typealias Value = Duration
