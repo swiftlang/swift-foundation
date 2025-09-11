@@ -384,7 +384,7 @@ import Testing
 extension ProgressManager.Properties {
 
     var counter: Counter.Type { Counter.self }
-    struct Counter: Sendable, Property {
+    struct Counter: Sendable, ProgressManager.Property {
         
         typealias Value = Int
         
@@ -488,7 +488,7 @@ extension ProgressManager.Properties {
 
 extension ProgressManager.Properties {
     var byteSize: ByteSize.Type { ByteSize.self }
-    struct ByteSize: Sendable, Property {
+    struct ByteSize: Sendable, ProgressManager.Property {
         
         typealias Value = UInt64
         
@@ -594,7 +594,7 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
 extension ProgressManager.Properties {
     
     var justADouble: JustADouble.Type { JustADouble.self }
-    struct JustADouble: Sendable, Property {
+    struct JustADouble: Sendable, ProgressManager.Property {
         
         typealias Value = Double
         
@@ -697,7 +697,7 @@ extension ProgressManager.Properties {
 extension ProgressManager.Properties {
     
     var downloadedFile: DownloadedFile.Type { DownloadedFile.self }
-    struct DownloadedFile: Sendable, Property {
+    struct DownloadedFile: Sendable, ProgressManager.Property {
         
         typealias Value = String?
         
@@ -797,7 +797,7 @@ extension ProgressManager.Properties {
 extension ProgressManager.Properties {
     
     var processingFile: ProcessingFile.Type { ProcessingFile.self }
-    struct ProcessingFile: Sendable, Property {
+    struct ProcessingFile: Sendable, ProgressManager.Property {
                 
         typealias Value = String?
         
@@ -896,7 +896,7 @@ extension ProgressManager.Properties {
 
 extension ProgressManager.Properties {
     var imageURL: ImageURL.Type { ImageURL.self }
-    struct ImageURL: Sendable, Property {
+    struct ImageURL: Sendable, ProgressManager.Property {
         
         typealias Value = URL?
         
@@ -989,7 +989,7 @@ extension ProgressManager.Properties {
 
 extension ProgressManager.Properties {
     var totalPixelCount: TotalPixelCount.Type { TotalPixelCount.self }
-    struct TotalPixelCount: Sendable, Property {
+    struct TotalPixelCount: Sendable, ProgressManager.Property {
         typealias Value = UInt64
         
         typealias Summary = [UInt64]
@@ -1082,7 +1082,7 @@ extension ProgressManager.Properties {
 
 extension ProgressManager.Properties {
     var viralIndeterminate: ViralIndeterminate.Type { ViralIndeterminate.self }
-    struct ViralIndeterminate: Sendable, Property {
+    struct ViralIndeterminate: Sendable, ProgressManager.Property {
         typealias Value = Int
         
         typealias Summary = Int
@@ -1183,7 +1183,7 @@ extension ProgressManager.Properties {
 
 extension ProgressManager.Properties {
     var processTime: ProcessTime.Type { ProcessTime.self }
-    struct ProcessTime: Sendable, Property {
+    struct ProcessTime: Sendable, ProgressManager.Property {
         
         typealias Value = Duration
         
