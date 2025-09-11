@@ -100,10 +100,12 @@ extension ProgressManager {
     }
     
     // Namespace for properties specific to operations reported on
+    @frozen
     public enum Properties: Sendable {
         
         /// The total number of files.
         public var totalFileCount: TotalFileCount.Type { TotalFileCount.self }
+        @frozen
         public enum TotalFileCount: Sendable, Property {
             
             public typealias Value = Int
@@ -131,6 +133,7 @@ extension ProgressManager {
         
         /// The number of completed files.
         public var completedFileCount: CompletedFileCount.Type { CompletedFileCount.self }
+        @frozen
         public enum CompletedFileCount: Sendable, Property {
 
             public typealias Value = Int
@@ -158,6 +161,7 @@ extension ProgressManager {
         
         /// The total number of bytes.
         public var totalByteCount: TotalByteCount.Type { TotalByteCount.self }
+        @frozen
         public enum TotalByteCount: Sendable, Property {
         
             public typealias Value = UInt64
@@ -185,6 +189,7 @@ extension ProgressManager {
         
         /// The number of completed bytes.
         public var completedByteCount: CompletedByteCount.Type { CompletedByteCount.self }
+        @frozen
         public enum CompletedByteCount: Sendable, Property {
                     
             public typealias Value = UInt64
@@ -212,6 +217,7 @@ extension ProgressManager {
         
         /// The throughput, in bytes per second.
         public var throughput: Throughput.Type { Throughput.self }
+        @frozen
         public enum Throughput: Sendable, Property {
             public typealias Value = UInt64
             
@@ -238,6 +244,7 @@ extension ProgressManager {
         
         /// The amount of time remaining in the processing of files.
         public var estimatedTimeRemaining: EstimatedTimeRemaining.Type { EstimatedTimeRemaining.self }
+        @frozen
         public enum EstimatedTimeRemaining: Sendable, Property {
             
             public typealias Value = Duration
