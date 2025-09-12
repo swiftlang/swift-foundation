@@ -375,7 +375,7 @@ You can declare a custom additional property that has a `String?` `Value` type a
 extension ProgressManager.Properties {
     var filename: Filename.Type { Filename.self }
     
-    struct Filename: Sendable, ProgressManager.Property {
+    enum Filename: Sendable, ProgressManager.Property {
 
         typealias Value = String?
      
