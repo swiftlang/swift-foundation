@@ -2887,7 +2887,6 @@ extension Data {
         public static let endLineWithCarriageReturn = Base64EncodingOptions(rawValue: 1 << 4)
         /// When a maximum line length is set, specify that the line ending to insert should include a line feed.
         public static let endLineWithLineFeed       = Base64EncodingOptions(rawValue: 1 << 5)
-
     }
 
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
