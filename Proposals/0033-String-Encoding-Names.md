@@ -159,11 +159,11 @@ We introduce a computed property that returns the name, and the initializer that
 ```swift
 extension String.Encoding {
   /// The name of this encoding that is compatible with the one of the IANA registry "charset".
-  @available(FoundationPreview 6.2, *)
+  @available(FoundationPreview 6.3, *)
   public var ianaName: String?
 
   /// Creates an instance from the name of the IANA registry "charset".
-  @available(FoundationPreview 6.2, *)
+  @available(FoundationPreview 6.3, *)
   public init?(ianaName: String)
 }
 ```
