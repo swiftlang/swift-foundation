@@ -1216,12 +1216,12 @@ private extension __JSONEncoder {
             return .number(decimal.description)
         } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
             return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
-        } else if let array = value as? _JSONDirectArrayEncodable {
+        } else if let directArrayEncodable = _asDirectArrayEncoding(value, for: additionalKey) {
             if options.outputFormatting.contains(.prettyPrinted) {
-                let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
+                let (bytes, lengths) = try directArrayEncodable.individualElementRepresentation(encoder: self, additionalKey)
                 return .directArray(bytes, lengths: lengths)
             } else {
-                return .nonPrettyDirectArray(try array.nonPrettyJSONRepresentation(encoder: self, additionalKey))
+                return .nonPrettyDirectArray(try directArrayEncodable.nonPrettyJSONRepresentation(encoder: self, additionalKey))
             }
         }
 
@@ -1244,6 +1244,43 @@ private extension __JSONEncoder {
         }
         try encode(encoder)
         return encoder.takeValue()
+    }
+
+    func _asDirectArrayEncoding<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) -> _JSONDirectArrayEncodable? {
+        switch value {
+        case let array as [Int8]:
+             array
+        case let array as [Int16]:
+             array
+        case let array as [Int32]:
+            array
+        case let array as [Int64]:
+            array
+        case let array as [Int128]:
+            array
+        case let array as [Int]:
+            array
+        case let array as [UInt8]:
+            array
+        case let array as [UInt16]:
+            array
+        case let array as [UInt32]:
+            array
+        case let array as [UInt64]:
+            array
+        case let array as [UInt128]:
+            array
+        case let array as [UInt]:
+            array
+        case let array as [String]:
+            array
+        case let array as [Float]:
+            array
+        case let array as [Double]:
+            array
+        default:
+            nil
+        }
     }
 
     @inline(__always)
