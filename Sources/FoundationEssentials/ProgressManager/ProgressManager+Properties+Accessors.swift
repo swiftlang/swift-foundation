@@ -570,11 +570,11 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
         if property.self == ProgressManager.Properties.TotalFileCount.self {
-            return getUpdatedFileCount(type: .total)
+            return updatedFileCount(type: .total)
         } else if property.self == ProgressManager.Properties.CompletedFileCount.self {
-            return getUpdatedFileCount(type: .completed)
+            return updatedFileCount(type: .completed)
         } else {
-            return getUpdatedIntSummary(property: MetatypeWrapper(property))
+            return updatedIntSummary(property: MetatypeWrapper(property))
         }
     }
     
@@ -589,11 +589,11 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == UInt64 {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
         if property.self == ProgressManager.Properties.TotalByteCount.self {
-            return getUpdatedByteCount(type: .total)
+            return updatedByteCount(type: .total)
         } else if property.self == ProgressManager.Properties.CompletedByteCount.self {
-            return getUpdatedByteCount(type: .completed)
+            return updatedByteCount(type: .completed)
         } else {
-            return getUpdatedUInt64Summary(property: MetatypeWrapper(property))
+            return updatedUInt64Summary(property: MetatypeWrapper(property))
         }
     }
     
@@ -607,7 +607,7 @@ extension ProgressManager {
     /// - Returns: A `Double` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedDoubleSummary(property: MetatypeWrapper(property))
+        return updatedDoubleSummary(property: MetatypeWrapper(property))
     }
     
     /// Returns a summary for a custom string property across the progress subtree.
@@ -620,7 +620,7 @@ extension ProgressManager {
     /// - Returns: A `[String?]` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String?, P.Summary == [String?] {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedStringSummary(property: MetatypeWrapper(property))
+        return updatedStringSummary(property: MetatypeWrapper(property))
     }
     
     /// Returns a summary for a custom URL property across the progress subtree.
@@ -633,7 +633,7 @@ extension ProgressManager {
     /// - Returns: A `[URL?]` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        return getUpdatedURLSummary(property: MetatypeWrapper(property))
+        return updatedURLSummary(property: MetatypeWrapper(property))
     }
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
@@ -647,9 +647,9 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
         if property.self == ProgressManager.Properties.Throughput.self {
-            return getUpdatedThroughput()
+            return updatedThroughput()
         } else {
-            return getUpdatedUInt64ArraySummary(property: MetatypeWrapper(property))
+            return updatedUInt64ArraySummary(property: MetatypeWrapper(property))
         }
     }
     
@@ -664,9 +664,9 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration {
         accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
         if property.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
-            return getUpdatedEstimatedTimeRemaining()
+            return updatedEstimatedTimeRemaining()
         } else {
-            return getUpdatedDurationSummary(property: MetatypeWrapper(property))
+            return updatedDurationSummary(property: MetatypeWrapper(property))
         }
     }
 }
