@@ -362,7 +362,7 @@ internal struct RFC3986Parser {
         }
     }
 
-    private static func validate(string: some StringProtocol, component: URLComponentAllowedMask, percentEncodingAllowed: Bool = true) -> Bool {
+    private static func validate(string: some StringProtocol, component: URLComponentSet, percentEncodingAllowed: Bool = true) -> Bool {
         let isValid = string.utf8.withContiguousStorageIfAvailable {
             validate(buffer: $0, component: component, percentEncodingAllowed: percentEncodingAllowed)
         }
@@ -378,9 +378,9 @@ internal struct RFC3986Parser {
         return validate(buffer: string.utf8, component: component, percentEncodingAllowed: percentEncodingAllowed)
     }
 
-    private static func validate<T: Collection>(buffer: T, component allowedMask: URLComponentAllowedMask, percentEncodingAllowed: Bool = true) -> Bool where T.Element: UnsignedInteger {
+    private static func validate<T: Collection>(buffer: T, component: URLComponentSet, percentEncodingAllowed: Bool = true) -> Bool where T.Element: UnsignedInteger {
         guard percentEncodingAllowed else {
-            return buffer.allSatisfy { $0 < 128 && allowedMask.contains(UInt8($0)) }
+            return buffer.allSatisfy { $0 < 128 && UInt8($0).isAllowedIn(component) }
         }
         var hexDigitsRequired = 0
         for v in buffer {
@@ -392,7 +392,7 @@ internal struct RFC3986Parser {
                     return false
                 }
                 hexDigitsRequired = 2
-            } else if !allowedMask.contains(UInt8(v)) {
+            } else if !UInt8(v).isAllowedIn(component) {
                 return false
             } else if hexDigitsRequired > 0 {
                 guard UInt8(v).isValidHexDigit else {
@@ -1040,7 +1040,7 @@ fileprivate func asciiToHex(_ ascii: UInt8) -> UInt8? {
 
 fileprivate extension StringProtocol {
 
-    func addingPercentEncoding(forURLComponent component: URLComponentAllowedMask, skipAlreadyEncoded: Bool = false) -> String {
+    func addingPercentEncoding(forURLComponent component: URLComponentSet, skipAlreadyEncoded: Bool = false) -> String {
         let fastResult = utf8.withContiguousStorageIfAvailable {
             addingPercentEncoding(utf8Buffer: $0, component: component, skipAlreadyEncoded: skipAlreadyEncoded)
         }
@@ -1051,7 +1051,7 @@ fileprivate extension StringProtocol {
         }
     }
 
-    func addingPercentEncoding(utf8Buffer: some Collection<UInt8>, component allowedMask: URLComponentAllowedMask, skipAlreadyEncoded: Bool = false) -> String {
+    func addingPercentEncoding(utf8Buffer: some Collection<UInt8>, component: URLComponentSet, skipAlreadyEncoded: Bool = false) -> String {
         let percent = UInt8(ascii: "%")
         let maxLength = utf8Buffer.count * 3
         return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxLength) { outputBuffer -> String in
@@ -1059,7 +1059,7 @@ fileprivate extension StringProtocol {
             var index = utf8Buffer.startIndex
             while index != utf8Buffer.endIndex {
                 let v = utf8Buffer[index]
-                if allowedMask.contains(v) {
+                if v.isAllowedIn(component) {
                     outputBuffer[i] = v
                     i += 1
                 } else if skipAlreadyEncoded, v == percent,
@@ -1137,7 +1137,7 @@ extension RFC3986Parser {
     /// characters like `;` or `/` to optionally be encoded, even though they're allowed in
     /// the path according to RFC 3986.
     static func percentEncode(pathComponent: some StringProtocol, including: Set<UInt8> = []) -> String {
-        precondition(including.allSatisfy { URLComponentAllowedMask.path.contains($0) })
+        precondition(including.allSatisfy { $0.isAllowedIn(.path) })
         let encoded = pathComponent.addingPercentEncoding(forURLComponent: .path)
         if including.isEmpty {
             return encoded
@@ -1166,69 +1166,137 @@ extension RFC3986Parser {
 
 // MARK: - Validation Extensions
 
-// ===------------------------------------------------------------------------------------=== //
-// URLComponentAllowedMask uses the following grammar from RFC 3986:
-//
-// let ALPHA       = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-// let DIGIT       = "0123456789"
-// let HEXDIG      = DIGIT + "ABCDEFabcdef"
-// let gen_delims  = ":/?#[]@"
-// let sub_delims  = "!$&'()*+,;="
-// let unreserved  = ALPHA + DIGIT + "-._~"
-// let reserved    = gen_delims + sub_delims
-// NOTE: "%" is allowed in pchar and reg_name, but we must validate that 2 HEXDIG follow it
-// let pchar       = unreserved + sub_delims + ":" + "@"
-// let reg_name    = unreserved + sub_delims
-//
-// let schemeAllowed            = CharacterSet(charactersIn: ALPHA + DIGIT + "+-.")
-// let userinfoAllowed          = CharacterSet(charactersIn: unreserved + sub_delims + ":")
-// let hostAllowed              = CharacterSet(charactersIn: reg_name)
-// let hostIPvFutureAllowed     = CharacterSet(charactersIn: unreserved + sub_delims + ":")
-// let hostZoneIDAllowed        = CharacterSet(charactersIn: unreserved)
-// let portAllowed              = CharacterSet(charactersIn: DIGIT)
-// let pathAllowed              = CharacterSet(charactersIn: pchar + "/")
-// let pathFirstSegmentAllowed  = pathAllowed.subtracting(CharacterSet(charactersIn: ":"))
-// let queryAllowed             = CharacterSet(charactersIn: pchar + "/?")
-// let queryItemAllowed         = queryAllowed.subtracting(CharacterSet(charactersIn: "=&"))
-// let fragmentAllowed          = CharacterSet(charactersIn: pchar + "/?")
-// ===------------------------------------------------------------------------------------=== //
-
-internal struct URLComponentAllowedMask: RawRepresentable {
-    let rawValue: UInt128
-
-    static let alpha            = Self(rawValue: 0x07fffffe07fffffe0000000000000000)
-    static let scheme           = Self(rawValue: 0x07fffffe07fffffe03ff680000000000)
+fileprivate struct URLComponentSet: OptionSet {
+    let rawValue: UInt8
+    static let scheme           = URLComponentSet(rawValue: 1 << 0)
 
     // user, password, and hostIPvFuture use the same allowed character set.
-    static let user             = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
-    static let password         = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
-    static let hostIPvFuture    = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
+    static let user             = URLComponentSet(rawValue: 1 << 1)
+    static let password         = URLComponentSet(rawValue: 1 << 1)
+    static let hostIPvFuture    = URLComponentSet(rawValue: 1 << 1)
 
-    static let host             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
-    static let hostZoneID       = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
-    static let path             = Self(rawValue: 0x47fffffe87ffffff2fffffd200000000)
-    static let pathFirstSegment = Self(rawValue: 0x47fffffe87ffffff2bffffd200000000)
+    static let host             = URLComponentSet(rawValue: 1 << 2)
+    static let hostZoneID       = URLComponentSet(rawValue: 1 << 3)
+    static let path             = URLComponentSet(rawValue: 1 << 4)
+    static let pathFirstSegment = URLComponentSet(rawValue: 1 << 5)
 
     // query and fragment use the same allowed character set.
-    static let query            = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
-    static let fragment         = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
+    static let query            = URLComponentSet(rawValue: 1 << 6)
+    static let fragment         = URLComponentSet(rawValue: 1 << 6)
 
-    static let queryItem        = Self(rawValue: 0x47fffffe87ffffff8fffff9200000000)
+    static let queryItem        = URLComponentSet(rawValue: 1 << 7)
+}
 
-    // `unreserved` character set from RFC 3986.
-    static let unreserved       = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
+extension UTF8.CodeUnit {
+    fileprivate func isAllowedIn(_ component: URLComponentSet) -> Bool {
+        return allowedURLComponents & component.rawValue != 0
+    }
 
-    // `unreserved` + `reserved` character sets from RFC 3986.
-    static let anyValid         = Self(rawValue: 0x47fffffeafffffffafffffda00000000)
+    // ===------------------------------------------------------------------------------------=== //
+    // allowedURLComponents was written programmatically using the following grammar from RFC 3986:
+    //
+    // let ALPHA       = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    // let DIGIT       = "0123456789"
+    // let HEXDIG      = DIGIT + "ABCDEFabcdef"
+    // let gen_delims  = ":/?#[]@"
+    // let sub_delims  = "!$&'()*+,;="
+    // let unreserved  = ALPHA + DIGIT + "-._~"
+    // let reserved    = gen_delims + sub_delims
+    // NOTE: "%" is allowed in pchar and reg_name, but we must validate that 2 HEXDIG follow it
+    // let pchar       = unreserved + sub_delims + ":" + "@"
+    // let reg_name    = unreserved + sub_delims
+    //
+    // let schemeAllowed            = CharacterSet(charactersIn: ALPHA + DIGIT + "+-.")
+    // let userinfoAllowed          = CharacterSet(charactersIn: unreserved + sub_delims + ":")
+    // let hostAllowed              = CharacterSet(charactersIn: reg_name)
+    // let hostIPvFutureAllowed     = CharacterSet(charactersIn: unreserved + sub_delims + ":")
+    // let hostZoneIDAllowed        = CharacterSet(charactersIn: unreserved)
+    // let portAllowed              = CharacterSet(charactersIn: DIGIT)
+    // let pathAllowed              = CharacterSet(charactersIn: pchar + "/")
+    // let pathFirstSegmentAllowed  = pathAllowed.subtracting(CharacterSet(charactersIn: ":"))
+    // let queryAllowed             = CharacterSet(charactersIn: pchar + "/?")
+    // let queryItemAllowed         = queryAllowed.subtracting(CharacterSet(charactersIn: "=&"))
+    // let fragmentAllowed          = CharacterSet(charactersIn: pchar + "/?")
+    // ===------------------------------------------------------------------------------------=== //
+    fileprivate var allowedURLComponents: URLComponentSet.RawValue {
+        switch self {
+        case UInt8(ascii: "!"):
+            return 0b11110110
+        case UInt8(ascii: "$"):
+            return 0b11110110
+        case UInt8(ascii: "&"):
+            return 0b01110110
+        case UInt8(ascii: "'"):
+            return 0b11110110
+        case UInt8(ascii: "("):
+            return 0b11110110
+        case UInt8(ascii: ")"):
+            return 0b11110110
+        case UInt8(ascii: "*"):
+            return 0b11110110
+        case UInt8(ascii: "+"):
+            return 0b11110111
+        case UInt8(ascii: ","):
+            return 0b11110110
+        case UInt8(ascii: "-"):
+            return 0b11111111
+        case UInt8(ascii: "."):
+            return 0b11111111
+        case UInt8(ascii: "/"):
+            return 0b11110000
+        case UInt8(ascii: "0")...UInt8(ascii: "9"):
+            return 0b11111111
+        case UInt8(ascii: ":"):
+            return 0b11010010
+        case UInt8(ascii: ";"):
+            return 0b11110110
+        case UInt8(ascii: "="):
+            return 0b01110110
+        case UInt8(ascii: "?"):
+            return 0b11000000
+        case UInt8(ascii: "@"):
+            return 0b11110000
+        case UInt8(ascii: "A")...UInt8(ascii: "Z"):
+            return 0b11111111
+        case UInt8(ascii: "_"):
+            return 0b11111110
+        case UInt8(ascii: "a")...UInt8(ascii: "z"):
+            return 0b11111111
+        case UInt8(ascii: "~"):
+            return 0b11111110
+        default:
+            return 0
+        }
+    }
 
-    func contains(_ codeUnit: UInt8) -> Bool {
-        return codeUnit < 128 && ((rawValue & (UInt128(1) << codeUnit)) != 0)
+    /// Is the character in `unreserved + reserved` from RFC 3986.
+    internal var isValidURLCharacter: Bool {
+        guard self < 128 else { return false }
+        if self < 64 {
+            let allowed = UInt64(12682136387466559488)
+            return (allowed & (UInt64(1) << self)) != 0
+        } else {
+            let allowed = UInt64(5188146765093666815)
+            return (allowed & (UInt64(1) << (self - 64))) != 0
+        }
+    }
+
+    /// Is the character in `unreserved` from RFC 3986.
+    internal var isUnreservedURLCharacter: Bool {
+        guard self < 128 else { return false }
+        let allowed: UInt128 = 0x47fffffe87fffffe03ff600000000000
+        return allowed & (UInt128(1) << self) != 0
     }
 }
 
 internal extension UInt8 {
     var isAlpha: Bool {
-        URLComponentAllowedMask.alpha.contains(self)
+        switch self {
+        case UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"):
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -1409,7 +1477,7 @@ extension RFC3986Parser {
                         return parseInfo
                     }
                     break
-                } else if !URLComponentAllowedMask.scheme.contains(v) {
+                } else if !v.isAllowedIn(.scheme) {
                     // For compatibility, now treat this as a relative-ref.
                     currentIndex = buffer.startIndex
                     break
@@ -1460,7 +1528,7 @@ extension RFC3986Parser {
                 if let portRange = parseInfo.portRange {
                     // For compatibility, allow the port to have any ASCII
                     // character you might see in some part of a URL.
-                    guard buffer[portRange].allSatisfy({ URLComponentAllowedMask.anyValid.contains($0) }) else {
+                    guard buffer[portRange].allSatisfy({ $0.isValidURLCharacter }) else {
                         return nil
                     }
                 }

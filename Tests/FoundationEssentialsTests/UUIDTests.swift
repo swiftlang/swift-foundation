@@ -124,8 +124,7 @@ private struct UUIDTests {
         #expect(uuid2 <= uuid1)
         #expect(uuid2 == uuid1)
     }
-
-    @available(FoundationPreview 6.3, *)
+    
     @Test func randomVersionAndVariant() {
         var generator = SystemRandomNumberGenerator()
         for _ in 0..<10000 {
@@ -134,8 +133,7 @@ private struct UUIDTests {
             #expect(uuid.varint == 0b10)
         }
     }
-
-    @available(FoundationPreview 6.3, *)
+    
     @Test func deterministicRandomGeneration() {
         var generator = PCGRandomNumberGenerator(seed: 123456789)
         

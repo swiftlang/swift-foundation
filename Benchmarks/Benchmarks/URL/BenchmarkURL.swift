@@ -32,38 +32,38 @@ let benchmarks = {
 
     // MARK: - String Parsing
 
-    Benchmark("URL.ParseValidASCII") { benchmark in
+    Benchmark("URL-ParseValidASCII") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(URL(string: validURLString))
         }
     }
 
-    Benchmark("URLComponents.ParseValidASCII") { benchmark in
+    Benchmark("URLComponents-ParseValidASCII") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(URLComponents(string: validURLString))
         }
     }
 
-    Benchmark("URL.ParseInvalid") { benchmark in
+    Benchmark("URL-ParseInvalid") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(URL(string: invalidURLString))
         }
     }
 
-    Benchmark("URLComponents.ParseInvalid") { benchmark in
+    Benchmark("URLComponents-ParseInvalid") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(URLComponents(string: invalidURLString))
         }
     }
 
     #if os(macOS) || compiler(>=6)
-    Benchmark("URL.ParseAndEncode") { benchmark in
+    Benchmark("URL-ParseAndEncode") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(URL(string: encodableURLString))
         }
     }
 
-    Benchmark("URLComponents.ParseAndEncode") { benchmark in
+    Benchmark("URLComponents-ParseAndEncode") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(URLComponents(string: encodableURLString))
         }
@@ -87,7 +87,7 @@ let benchmarks = {
 
     #if os(macOS) || compiler(>=6)
     // Component functions, e.g. path(), are available in macOS 13 and Swift 6
-    Benchmark("URL.GetEncodedComponents") { benchmark in
+    Benchmark("URL-GetEncodedComponents") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(encodedURL.scheme)
             blackHole(encodedURL.user())
@@ -100,7 +100,7 @@ let benchmarks = {
     }
     #endif
 
-    Benchmark("URLComponents.GetEncodedComponents") { benchmark in
+    Benchmark("URLComponents-GetEncodedComponents") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(encodedComp.scheme)
             blackHole(encodedComp.percentEncodedUser)
@@ -116,7 +116,7 @@ let benchmarks = {
         }
     }
 
-    Benchmark("URL.GetDecodedComponents") { benchmark in
+    Benchmark("URL-GetDecodedComponents") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(encodedURL.scheme)
             blackHole(encodedURL.user)
@@ -128,7 +128,7 @@ let benchmarks = {
         }
     }
 
-    Benchmark("URLComponents.GetDecodedComponents") { benchmark in
+    Benchmark("URLComponents-GetDecodedComponents") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(encodedComp.scheme)
             blackHole(encodedComp.user)
@@ -141,7 +141,7 @@ let benchmarks = {
     }
 
     let validComp = URLComponents(string: validURLString)!
-    Benchmark("URLComponents.GetComponentRanges") { benchmark in
+    Benchmark("URLComponents-GetComponentRanges") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(validComp.rangeOfScheme)
             blackHole(validComp.rangeOfUser)
@@ -156,7 +156,7 @@ let benchmarks = {
 
     // MARK: - Set URL Components
 
-    Benchmark("URLComponents.SetComponents") { benchmark in
+    Benchmark("URLComponents-SetComponents") { benchmark in
         for _ in benchmark.scaledIterations {
             var comp = URLComponents()
             comp.scheme = "scheme"
@@ -171,7 +171,7 @@ let benchmarks = {
         }
     }
 
-    Benchmark("URLComponents.SetEncodableComponents") { benchmark in
+    Benchmark("URLComponents-SetEncodableComponents") { benchmark in
         for _ in benchmark.scaledIterations {
             var comp = URLComponents()
             comp.scheme = "scheme"
@@ -200,7 +200,7 @@ let benchmarks = {
         URLQueryItem(name: "name with no value", value: nil)
     ]
 
-    Benchmark("URLComponents.SetQueryItems") { benchmark in
+    Benchmark("URLComponents-SetQueryItems") { benchmark in
         for _ in benchmark.scaledIterations {
             var comp = URLComponents()
             comp.queryItems = validQueryItems
@@ -208,7 +208,7 @@ let benchmarks = {
         }
     }
 
-    Benchmark("URLComponents.SetEncodableQueryItems") { benchmark in
+    Benchmark("URLComponents-SetEncodableQueryItems") { benchmark in
         for _ in benchmark.scaledIterations {
             var comp = URLComponents()
             comp.queryItems = encodableQueryItems
@@ -219,21 +219,19 @@ let benchmarks = {
     var queryComp = URLComponents()
     queryComp.queryItems = encodableQueryItems
 
-    Benchmark("URLComponents.GetEncodedQueryItems") { benchmark in
+    Benchmark("URLComponents-GetEncodedQueryItems") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(queryComp.percentEncodedQueryItems)
         }
     }
 
-    Benchmark("URLComponents.GetDecodedQueryItems") { benchmark in
+    Benchmark("URLComponents-GetDecodedQueryItems") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(queryComp.queryItems)
         }
     }
 
-    // MARK: - URL.Template
-
-    Benchmark("URL.TemplateParsing") { benchmark in
+    Benchmark("URL-Template-parsing") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(URL.Template("/api/{version}/accounts/{accountId}/transactions/{transactionId}{?expand*,fields*,embed*,format}")!)
             blackHole(URL.Template("/special/{+a}/details")!)
@@ -272,7 +270,7 @@ let benchmarks = {
         .init("empty_keys"): [:],
     ]
 
-    Benchmark("URL.TemplateExpansion") { benchmark in
+    Benchmark("URL-Template-expansion") { benchmark in
         for _ in benchmark.scaledIterations {
             for t in templates {
                 blackHole(URL(template: t, variables: variables))

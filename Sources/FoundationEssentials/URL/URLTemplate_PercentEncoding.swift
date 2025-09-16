@@ -192,9 +192,9 @@ extension URL.Template.Expression.Operator.AllowedCharacters {
     func isAllowedCodeUnit(_ unit: UTF8.CodeUnit) -> Bool {
         switch self {
         case .unreserved:
-            return URLComponentAllowedMask.unreserved.contains(unit)
+            return unit.isUnreservedURLCharacter
         case .unreservedReserved:
-            return URLComponentAllowedMask.anyValid.contains(unit)
+            return unit.isValidURLCharacter
         }
     }
 }
