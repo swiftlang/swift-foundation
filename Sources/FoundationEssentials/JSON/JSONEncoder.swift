@@ -1247,38 +1247,37 @@ private extension __JSONEncoder {
     }
 
     func _asDirectArrayEncoding<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) -> _JSONDirectArrayEncodable? {
-        switch value {
-        case let array as [Int8]:
-             array
-        case let array as [Int16]:
-             array
-        case let array as [Int32]:
+        return if let array = _specializingCast(array, to: [Int8].self) {
             array
-        case let array as [Int64]:
+        } else if let array = _specializingCast(array, to: [Int16].self) {
             array
-        case let array as [Int128]:
+        } else if let array = _specializingCast(array, to: [Int32].self) {
             array
-        case let array as [Int]:
+        } else if let array = _specializingCast(array, to: [Int64].self) {
             array
-        case let array as [UInt8]:
+        } else if let array = _specializingCast(array, to: [Int128].self) {
             array
-        case let array as [UInt16]:
+        } else if let array = _specializingCast(array, to: [Int].self) {
             array
-        case let array as [UInt32]:
+        } else if let array = _specializingCast(array, to: [UInt8].self) {
             array
-        case let array as [UInt64]:
+        } else if let array = _specializingCast(array, to: [UInt16].self) {
             array
-        case let array as [UInt128]:
+        } else if let array = _specializingCast(array, to: [UInt32].self) {
             array
-        case let array as [UInt]:
+        } else if let array = _specializingCast(array, to: [UInt64].self) {
             array
-        case let array as [String]:
+        } else if let array = _specializingCast(array, to: [UInt128].self) {
             array
-        case let array as [Float]:
+        } else if let array = _specializingCast(array, to: [UInt].self) {
             array
-        case let array as [Double]:
+        } else if let array = _specializingCast(array, to: [String].self) {
             array
-        default:
+        } else if let array = _specializingCast(array, to: [Float].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Double].self) {
+            array
+        } else {
             nil
         }
     }
