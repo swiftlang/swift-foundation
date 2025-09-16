@@ -187,9 +187,7 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
         self.progress = progress
         super.init(parent: nil, userInfo: nil)
         
-        managerBridge.withProperties { properties in
-            properties.completedCount = Int(progress.completedUnitCount)
-        }
+        managerBridge.completedCount(Int(progress.completedUnitCount))
         
         let position = manager.addChild(
             child: managerBridge,
@@ -202,11 +200,8 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
     // Overrides the _updateChild func that Foundation.Progress calls to update parent
     // so that the parent that gets updated is the ProgressManager parent
     override func _updateChild(_ child: Foundation.Progress, fraction: _NSProgressFractionTuple, portion: Int64) {
-        managerBridge.withProperties { properties in
-            properties.totalCount = Int(fraction.next.total)
-            properties.completedCount = Int(fraction.next.completed)
-        }
-        
+        managerBridge.totalCount(Int(fraction.next.total))
+        managerBridge.completedCount(Int(fraction.next.completed))
         managerBridge.markSelfDirty()
     }
 }

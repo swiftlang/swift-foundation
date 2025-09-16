@@ -16,292 +16,16 @@ internal import Synchronization
 extension ProgressManager {
     
     // MARK: Methods to Read & Write Additional Properties of single ProgressManager node
-    
-    /// Internal struct to collect dirty tracking information from within the lock
-    private struct DirtyTrackingInfo {
-        let parents: [ParentState]
-        let fractionalCountDirty: Bool
-        let totalFileCountDirty: Bool
-        let completedFileCountDirty: Bool
-        let totalByteCountDirty: Bool
-        let completedByteCountDirty: Bool
-        let throughputDirty: Bool
-        let estimatedTimeRemainingDirty: Bool
-        let dirtyPropertiesInt: [MetatypeWrapper<Int, Int>]
-        let dirtyPropertiesUInt64: [MetatypeWrapper<UInt64, UInt64>]
-        let dirtyPropertiesDouble: [MetatypeWrapper<Double, Double>]
-        let dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>]
-        let dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>]
-        let dirtyPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>]
-        let dirtyPropertiesDuration: [MetatypeWrapper<Duration, Duration>]
-#if FOUNDATION_FRAMEWORK
-        let observerState: ObserverState?
-        let interopType: InteropType?
-#endif
-    }
-    
-    /// Mutates any settable properties that convey information about progress.
-    public func withProperties<T, E: Error>(
-        _ closure: (inout sending Values) throws(E) -> sending T
-    ) throws(E) -> sending T {
-        // Collect dirty flags and parent information within the lock
-        accessObservation(keyPath: \.totalCount)
-        accessObservation(keyPath: \.completedCount)
-        accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
-        let (result, dirtyInfo) = try state.withLock { (state) throws(E) -> (T, DirtyTrackingInfo) in
-            var values = Values(state: state)
-            // This is done to avoid copy on write later
-#if FOUNDATION_FRAMEWORK
-            state = State(
-                selfFraction: ProgressFraction(),
-                children: [],
-                parents: [],
-                totalFileCount: ProgressManager.Properties.TotalFileCount.defaultValue,
-                completedFileCount: ProgressManager.Properties.CompletedFileCount.defaultValue,
-                totalByteCount: ProgressManager.Properties.TotalByteCount.defaultValue,
-                completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
-                throughput: ProgressManager.Properties.Throughput.defaultValue,
-                estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
-                propertiesInt: [:],
-                propertiesUInt64: [:],
-                propertiesDouble: [:],
-                propertiesString: [:],
-                propertiesURL: [:],
-                propertiesUInt64Array: [:],
-                propertiesDuration: [:],
-                observers: [],
-                interopType: nil,
-            )
-#else
-            state = State(
-                selfFraction: ProgressFraction(),
-                children: [],
-                parents: [],
-                totalFileCount: ProgressManager.Properties.TotalFileCount.defaultValue,
-                completedFileCount: ProgressManager.Properties.CompletedFileCount.defaultValue,
-                totalByteCount: ProgressManager.Properties.TotalByteCount.defaultValue,
-                completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
-                throughput: ProgressManager.Properties.Throughput.defaultValue,
-                estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
-                propertiesInt: [:],
-                propertiesUInt64: [:],
-                propertiesDouble: [:],
-                propertiesString: [:],
-                propertiesURL: [:],
-                propertiesUInt64Array: [:],
-                propertiesDuration: [:]
-            )
-#endif
-            let result = try closure(&values)
-            
-#if FOUNDATION_FRAMEWORK
-            // Collect all dirty information
-            let dirtyInfo = DirtyTrackingInfo(
-                parents: values.state.parents,
-                fractionalCountDirty: values.fractionalCountDirty,
-                totalFileCountDirty: values.totalFileCountDirty,
-                completedFileCountDirty: values.completedFileCountDirty,
-                totalByteCountDirty: values.totalByteCountDirty,
-                completedByteCountDirty: values.completedByteCountDirty,
-                throughputDirty: values.throughputDirty,
-                estimatedTimeRemainingDirty: values.estimatedTimeRemainingDirty,
-                dirtyPropertiesInt: values.dirtyPropertiesInt,
-                dirtyPropertiesUInt64: values.dirtyPropertiesUInt64,
-                dirtyPropertiesDouble: values.dirtyPropertiesDouble,
-                dirtyPropertiesString: values.dirtyPropertiesString,
-                dirtyPropertiesURL: values.dirtyPropertiesURL,
-                dirtyPropertiesUInt64Array: values.dirtyPropertiesUInt64Array,
-                dirtyPropertiesDuration: values.dirtyPropertiesDuration,
-                observerState: values.observerState,
-                interopType: state.interopType
-            )
-#else
-            let dirtyInfo = DirtyTrackingInfo(
-                parents: values.state.parents,
-                fractionalCountDirty: values.fractionalCountDirty,
-                totalFileCountDirty: values.totalFileCountDirty,
-                completedFileCountDirty: values.completedFileCountDirty,
-                totalByteCountDirty: values.totalByteCountDirty,
-                completedByteCountDirty: values.completedByteCountDirty,
-                throughputDirty: values.throughputDirty,
-                estimatedTimeRemainingDirty: values.estimatedTimeRemainingDirty,
-                dirtyPropertiesInt: values.dirtyPropertiesInt,
-                dirtyPropertiesUInt64: values.dirtyPropertiesUInt64,
-                dirtyPropertiesDouble: values.dirtyPropertiesDouble,
-                dirtyPropertiesString: values.dirtyPropertiesString,
-                dirtyPropertiesURL: values.dirtyPropertiesURL,
-                dirtyPropertiesUInt64Array: values.dirtyPropertiesUInt64Array,
-                dirtyPropertiesDuration: values.dirtyPropertiesDuration
-            )
-#endif
-
-            
-#if FOUNDATION_FRAMEWORK
-            if let observerState = values.observerState {
-                switch state.interopType {
-                case .interopObservation(let observation):
-                    if let _ = observation.reporterBridge {
-                        notifyObservers(with: observerState)
-                    }
-                case .interopMirror:
-                    break
-                default:
-                    break
-                }
-            }
-#endif
-            state = values.state
-            return (result, dirtyInfo)
-        }
-        
-        // Now handle all the dirty marking outside the lock
-        // Mark all dirty properties outside the lock
-        if dirtyInfo.fractionalCountDirty {
-            markSelfDirty(parents: dirtyInfo.parents)
-        }
-        
-        if dirtyInfo.totalFileCountDirty {
-            markSelfDirty(property: Properties.TotalFileCount.self, parents: dirtyInfo.parents)
-        }
-        
-        if dirtyInfo.completedFileCountDirty {
-            markSelfDirty(property: Properties.CompletedFileCount.self, parents: dirtyInfo.parents)
-        }
-        
-        if dirtyInfo.totalByteCountDirty {
-            markSelfDirty(property: Properties.TotalByteCount.self, parents: dirtyInfo.parents)
-        }
-        
-        if dirtyInfo.completedByteCountDirty {
-            markSelfDirty(property: Properties.CompletedByteCount.self, parents: dirtyInfo.parents)
-        }
-        
-        if dirtyInfo.throughputDirty {
-            markSelfDirty(property: Properties.Throughput.self, parents: dirtyInfo.parents)
-        }
-        
-        if dirtyInfo.estimatedTimeRemainingDirty {
-            markSelfDirty(property: Properties.EstimatedTimeRemaining.self, parents: dirtyInfo.parents)
-        }
-        
-        if dirtyInfo.dirtyPropertiesInt.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesInt {
-                markSelfDirty(property: property, parents: dirtyInfo.parents)
-            }
-        }
-        
-        if dirtyInfo.dirtyPropertiesUInt64.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesInt {
-                markSelfDirty(property: property, parents: dirtyInfo.parents)
-            }
-        }
-        
-        if dirtyInfo.dirtyPropertiesDouble.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesDouble {
-                markSelfDirty(property: property, parents: dirtyInfo.parents)
-            }
-        }
-        
-        if dirtyInfo.dirtyPropertiesString.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesString {
-                markSelfDirty(property: property, parents: dirtyInfo.parents)
-            }
-        }
-        
-        if dirtyInfo.dirtyPropertiesURL.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesURL {
-                markSelfDirty(property: property, parents: dirtyInfo.parents)
-            }
-        }
-            
-        if dirtyInfo.dirtyPropertiesUInt64Array.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesUInt64Array {
-                markSelfDirty(property: property, parents: dirtyInfo.parents)
-            }
-        }
-        
-        if dirtyInfo.dirtyPropertiesDuration.count > 0 {
-            for property in dirtyInfo.dirtyPropertiesDuration {
-                markSelfDirty(property: property, parents: dirtyInfo.parents)
-            }
-        }
-        
-        return result
-    }
-    
-    /// A container that holds values for properties that specify information on progress.
-    @dynamicMemberLookup
-    public struct Values : Sendable {
-        //TODO: rdar://149225947 Non-escapable conformance
-        internal var state: State
-        internal var fractionalCountDirty = false
-        internal var totalFileCountDirty = false
-        internal var completedFileCountDirty = false
-        internal var totalByteCountDirty = false
-        internal var completedByteCountDirty = false
-        internal var throughputDirty = false
-        internal var estimatedTimeRemainingDirty = false
-        internal var dirtyPropertiesInt: [MetatypeWrapper<Int, Int>] = []
-        internal var dirtyPropertiesUInt64: [MetatypeWrapper<UInt64, UInt64>] = []
-        internal var dirtyPropertiesDouble: [MetatypeWrapper<Double, Double>] = []
-        internal var dirtyPropertiesString: [MetatypeWrapper<String?, [String?]>] = []
-        internal var dirtyPropertiesURL: [MetatypeWrapper<URL?, [URL?]>] = []
-        internal var dirtyPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>] = []
-        internal var dirtyPropertiesDuration: [MetatypeWrapper<Duration, Duration>] = []
-#if FOUNDATION_FRAMEWORK
-        internal var observerState: ObserverState?
-#endif
-                
-        /// The total units of work.
-        public var totalCount: Int? {
-            get {
-                state.getTotalCount()
-            }
-            
-            set {
-                guard newValue != state.selfFraction.total else {
-                    return
-                }
-                
-                state.selfFraction.total = newValue
-                
-#if FOUNDATION_FRAMEWORK
-                interopNotifications()
-#endif
-                
-                fractionalCountDirty = true
-            }
-        }
-        
-        /// The completed units of work.
-        public var completedCount: Int {
-            mutating get {
-                state.getCompletedCount()
-            }
-            
-            set {
-                guard newValue != state.selfFraction.completed else {
-                    return
-                }
-                
-                state.selfFraction.completed = newValue
-                
-#if FOUNDATION_FRAMEWORK
-                interopNotifications()
-#endif
-                fractionalCountDirty = true
-            }
-        }
-        
-        /// Gets or sets custom integer properties.
-        ///
-        /// This subscript provides read-write access to custom progress properties where both the value
-        /// and summary types are `Int`. If the property has not been set, the getter returns the
-        /// property's default value.
-        ///
-        /// - Parameter key: A key path to the custom integer property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int, P.Summary == Int {
-            get {
+    /// Gets or sets custom integer properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where both the value
+    /// and summary types are `Int`. If the property has not been set, the getter returns the
+    /// property's default value.
+    ///
+    /// - Parameter key: A key path to the custom integer property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int, P.Summary == Int {
+        get {
+            state.withLock { state in
                 if P.self == ProgressManager.Properties.TotalFileCount.self {
                     return state.totalFileCount
                 } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
@@ -310,46 +34,53 @@ extension ProgressManager {
                     return state.propertiesInt[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
-            
-            set {
-                if P.self == ProgressManager.Properties.TotalFileCount.self {
-                    guard newValue != state.totalFileCount else {
-                        return
-                    }
-                    
-                    state.totalFileCount = newValue
-                    
-                    totalFileCountDirty = true
-                } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
-                    guard newValue != state.completedFileCount else {
-                        return
-                    }
-                    
-                    state.completedFileCount = newValue
-                    
-                    completedFileCountDirty = true
-                } else {
-                    guard newValue != state.propertiesInt[MetatypeWrapper(P.self)] else {
-                        return
-                    }
-                       
-                    state.propertiesInt[MetatypeWrapper(P.self)] = newValue
-
-                    dirtyPropertiesInt.append(MetatypeWrapper(P.self))
-                }
-                
-            }
         }
         
-        /// Gets or sets custom unsigned integer properties.
-        ///
-        /// This subscript provides read-write access to custom progress properties where both the value
-        /// and summary types are `UInt64`. If the property has not been set, the getter returns the
-        /// property's default value.
-        ///
-        /// - Parameter key: A key path to the custom unsigned integer property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
-            get {
+        set {
+            let parents: [ParentState]? = state.withLock { state in
+                if P.self == ProgressManager.Properties.TotalFileCount.self {
+                    guard newValue != state.totalFileCount else {
+                        return nil
+                    }
+                    state.totalFileCount = newValue
+                    return state.parents
+                    
+                } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
+                    guard newValue != state.completedFileCount else {
+                        return nil
+                    }
+                    state.completedFileCount = newValue
+                    return state.parents
+                } else {
+                    guard newValue != state.propertiesInt[MetatypeWrapper(P.self)] else {
+                        return nil
+                    }
+                    state.propertiesInt[MetatypeWrapper(P.self)] = newValue
+                    return state.parents
+                }
+            }
+            if let parents = parents {
+                if P.self == ProgressManager.Properties.TotalFileCount.self {
+                    markSelfDirty(property: ProgressManager.Properties.TotalFileCount.self, parents: parents)
+                } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
+                    markSelfDirty(property: ProgressManager.Properties.CompletedFileCount.self, parents: parents)
+                } else {
+                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                }
+            }
+        }
+    }
+    
+    /// Gets or sets custom unsigned integer properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where both the value
+    /// and summary types are `UInt64`. If the property has not been set, the getter returns the
+    /// property's default value.
+    ///
+    /// - Parameter key: A key path to the custom unsigned integer property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
+        get {
+            state.withLock { state in
                 if P.self == ProgressManager.Properties.TotalByteCount.self {
                     return state.totalByteCount
                 } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
@@ -358,202 +89,211 @@ extension ProgressManager {
                     return state.propertiesUInt64[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
-            
-            set {
+        }
+        
+        set {
+            let parents: [ParentState]? = state.withLock { state in
                 if P.self == ProgressManager.Properties.TotalByteCount.self {
                     guard newValue != state.totalByteCount else {
-                        return
+                        return nil
                     }
-                    
                     state.totalByteCount = newValue
-
-                    totalByteCountDirty = true
+                    return state.parents
                 } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
                     guard newValue != state.completedByteCount else {
-                        return
+                        return nil
                     }
-                    
                     state.completedByteCount = newValue
-
-                    completedByteCountDirty = true
+                    return state.parents
                 } else {
                     guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
-                        return
+                        return nil
                     }
-                       
                     state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
-
-                    dirtyPropertiesUInt64.append(MetatypeWrapper(P.self))
-
+                    return state.parents
+                }
+            }
+            if let parents = parents {
+                if P.self == ProgressManager.Properties.TotalByteCount.self {
+                    markSelfDirty(property: ProgressManager.Properties.TotalByteCount.self, parents: parents)
+                } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
+                    markSelfDirty(property: ProgressManager.Properties.CompletedByteCount.self, parents: parents)
+                } else {
+                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
                 }
             }
         }
-        
-        /// Gets or sets custom double properties.
-        ///
-        /// This subscript provides read-write access to custom progress properties where both the value
-        /// and summary types are `Double`. If the property has not been set, the getter returns the
-        /// property's default value.
-        ///
-        /// - Parameter key: A key path to the custom double property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Double, P.Summary == Double {
-            get {
+    }
+    
+    /// Gets or sets custom double properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where both the value
+    /// and summary types are `Double`. If the property has not been set, the getter returns the
+    /// property's default value.
+    ///
+    /// - Parameter key: A key path to the custom double property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Double, P.Summary == Double {
+        get {
+            state.withLock { state in
                 return state.propertiesDouble[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
-            
-            set {
-                guard newValue != state.propertiesDouble[MetatypeWrapper(P.self)] else {
-                    return
-                }
-                
-                state.propertiesDouble[MetatypeWrapper(P.self)] = newValue
-                
-                dirtyPropertiesDouble.append(MetatypeWrapper(P.self))
-            }
         }
         
-        /// Gets or sets custom string properties.
-        ///
-        /// This subscript provides read-write access to custom progress properties where the value
-        /// type is `String?` and the summary type is `[String?]`. If the property has not been set,
-        /// the getter returns the property's default value.
-        ///
-        /// - Parameter key: A key path to the custom string property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String? where P.Value == String?, P.Summary == [String?] {
-            get {
+        set {
+            let parents: [ParentState]? = state.withLock { state in
+                guard newValue != state.propertiesDouble[MetatypeWrapper(P.self)] else {
+                    return nil
+                }
+                state.propertiesDouble[MetatypeWrapper(P.self)] = newValue
+                return state.parents
+            }
+            if let parents = parents {
+                markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+            }
+        }
+    }
+    
+    /// Gets or sets custom string properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `String?` and the summary type is `[String?]`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom string property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String? where P.Value == String?, P.Summary == [String?] {
+        get {
+            state.withLock { state in
                 return state.propertiesString[MetatypeWrapper(P.self)] ?? P.self.defaultValue
             }
+        }
 
-            set {
+        set {
+            let parents: [ParentState]? = state.withLock { state in
                 guard newValue != state.propertiesString[MetatypeWrapper(P.self)] else {
-                    return
+                    return nil
                 }
-
                 state.propertiesString[MetatypeWrapper(P.self)] = newValue
-
-                dirtyPropertiesString.append(MetatypeWrapper(P.self))
+                return state.parents
+            }
+            if let parents = parents {
+                markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
             }
         }
-        
-        /// Gets or sets custom URL properties.
-        ///
-        /// This subscript provides read-write access to custom progress properties where the value
-        /// type is `URL?` and the summary type is `[URL?]`. If the property has not been set,
-        /// the getter returns the property's default value.
-        ///
-        /// - Parameter key: A key path to the custom URL property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> URL? where P.Value == URL?, P.Summary == [URL?] {
-            get {
+    }
+    
+    /// Gets or sets custom URL properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `URL?` and the summary type is `[URL?]`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom URL property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> URL? where P.Value == URL?, P.Summary == [URL?] {
+        get {
+            state.withLock { state in
                 return state.propertiesURL[MetatypeWrapper(P.self)] ?? P.self.defaultValue
             }
+        }
 
-            set {
+        set {
+            let parents: [ParentState]? = state.withLock { state in
                 guard newValue != state.propertiesURL[MetatypeWrapper(P.self)] else {
-                    return
+                    return nil
                 }
-
                 state.propertiesURL[MetatypeWrapper(P.self)] = newValue
-
-                dirtyPropertiesURL.append(MetatypeWrapper(P.self))
+                return state.parents
+            }
+            if let parents = parents {
+                markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
             }
         }
-        
-        /// Gets or sets custom unsigned integer properties.
-        ///
-        /// This subscript provides read-write access to custom progress properties where the value
-        /// type is `UInt64` and the summary type is `[UInt64]`. If the property has not been set,
-        /// the getter returns the property's default value.
-        ///
-        /// - Parameter key: A key path to the custom unsigned integer property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == [UInt64] {
-            get {
+    }
+    
+    /// Gets or sets custom unsigned integer properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `UInt64` and the summary type is `[UInt64]`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom unsigned integer property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == [UInt64] {
+        get {
+            state.withLock { state in
                 if P.self == ProgressManager.Properties.Throughput.self {
                     return state.throughput
                 } else {
                     return state.propertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.self.defaultValue
                 }
             }
+        }
 
-            set {
+        set {
+            let parents: [ParentState]? = state.withLock { state in
                 if P.self == ProgressManager.Properties.Throughput.self {
                     guard newValue != state.throughput else {
-                        return
+                        return nil
                     }
-                    
                     state.throughput = newValue
-
-                    throughputDirty = true
+                    return state.parents
                 } else {
                     guard newValue != state.propertiesUInt64Array[MetatypeWrapper(P.self)] else {
-                        return
+                        return nil
                     }
-
                     state.propertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
-
-                    dirtyPropertiesUInt64Array.append(MetatypeWrapper(P.self))
+                    return state.parents
+                }
+            }
+            if let parents = parents {
+                if P.self == ProgressManager.Properties.Throughput.self {
+                    markSelfDirty(property: ProgressManager.Properties.Throughput.self, parents: parents)
+                } else {
+                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
                 }
             }
         }
-        
-        /// Gets or sets custom duration properties.
-        ///
-        /// This subscript provides read-write access to custom progress properties where the value
-        /// type is `Duration` and the summary type is `Duration`. If the property has not been set,
-        /// the getter returns the property's default value.
-        ///
-        /// - Parameter key: A key path to the custom duration property type.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration {
-            get {
+    }
+    
+    /// Gets or sets custom duration properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `Duration` and the summary type is `Duration`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom duration property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration {
+        get {
+            state.withLock { state in
                 if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
                     return state.estimatedTimeRemaining
                 } else {
                     return state.propertiesDuration[MetatypeWrapper(P.self)] ?? P.self.defaultValue
                 }
             }
+        }
 
-            set {
+        set {
+            let parents: [ParentState]? = state.withLock { state in
                 if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
                     guard newValue != state.estimatedTimeRemaining else {
-                        return
+                        return nil
                     }
-                    
                     state.estimatedTimeRemaining = newValue
-
-                    estimatedTimeRemainingDirty = true
+                    return state.parents
                 } else {
                     guard newValue != state.propertiesDuration[MetatypeWrapper(P.self)] else {
-                        return
+                        return nil
                     }
-
                     state.propertiesDuration[MetatypeWrapper(P.self)] = newValue
-
-                    dirtyPropertiesDuration.append(MetatypeWrapper(P.self))
+                    return state.parents
                 }
             }
-        }
-        
-#if FOUNDATION_FRAMEWORK
-        private mutating func interopNotifications() {
-            switch state.interopType {
-            case .interopObservation(let observation):
-                observation.subprogressBridge?.manager.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed))
-                self.observerState = .fractionUpdated(totalCount: state.selfFraction.total ?? 0, completedCount: state.selfFraction.completed)
-            case .interopMirror:
-                break
-            default:
-                break 
+            if let parents = parents {
+                if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
+                    markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.self, parents: parents)
+                } else {
+                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                }
             }
-        }
-#endif
-    }
-    
-    internal func getProperties<T, E: Error>(
-        _ closure: (sending Values) throws(E) -> sending T
-    ) throws(E) -> sending T {
-        try state.withLock { state throws(E) -> T in
-            let values = Values(state: state)
-            let result = try closure(values)
-            return result
         }
     }
     

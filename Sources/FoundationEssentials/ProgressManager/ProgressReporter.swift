@@ -16,9 +16,9 @@ import Observation
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
 @available(FoundationPreview 6.2, *)
+@dynamicMemberLookup
 @Observable public final class ProgressReporter: Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     
-    public typealias Values = ProgressManager.Values
     public typealias Property = ProgressManager.Property
     
     /// The total units of work.
@@ -80,13 +80,6 @@ import Observation
     /// about the progress reporter's state for debugging purposes.
     public var debugDescription: String {
         return self.description
-    }
-    
-    /// Reads properties that convey additional information about progress.
-    public func withProperties<T, E: Error>(
-        _ closure: (sending Values) throws(E) -> sending T
-    ) throws(E) -> T {
-        return try manager.getProperties(closure)
     }
     
     /// Returns a summary for the specified integer property across the progress subtree.
@@ -171,6 +164,97 @@ import Observation
     /// - Returns: The aggregated summary value for the specified property across the entire subtree.
     public func summary<P: Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration {
         return manager.summary(of: property)
+    }
+    
+    /// Gets or sets custom integer properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where both the value
+    /// and summary types are `Int`. If the property has not been set, the getter returns the
+    /// property's default value.
+    ///
+    /// - Parameter key: A key path to the custom integer property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int, P.Summary == Int {
+        get {
+            manager[dynamicMember: key]
+        }
+    }
+    
+    /// Gets or sets custom unsigned integer properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where both the value
+    /// and summary types are `UInt64`. If the property has not been set, the getter returns the
+    /// property's default value.
+    ///
+    /// - Parameter key: A key path to the custom unsigned integer property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
+        get {
+            manager[dynamicMember: key]
+        }
+    }
+    
+    /// Gets or sets custom double properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where both the value
+    /// and summary types are `Double`. If the property has not been set, the getter returns the
+    /// property's default value.
+    ///
+    /// - Parameter key: A key path to the custom double property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Double, P.Summary == Double {
+        get {
+            manager[dynamicMember: key]
+        }
+    }
+    
+    /// Gets or sets custom string properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `String?` and the summary type is `[String?]`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom string property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String? where P.Value == String?, P.Summary == [String?] {
+        get {
+            manager[dynamicMember: key]
+        }
+    }
+    
+    /// Gets or sets custom URL properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `URL?` and the summary type is `[URL?]`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom URL property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> URL? where P.Value == URL?, P.Summary == [URL?] {
+        get {
+            manager[dynamicMember: key]
+        }
+    }
+    
+    /// Gets or sets custom unsigned integer properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `UInt64` and the summary type is `[UInt64]`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom unsigned integer property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == [UInt64] {
+        get {
+            manager[dynamicMember: key]
+        }
+    }
+    
+    /// Gets or sets custom duration properties.
+    ///
+    /// This subscript provides read-write access to custom progress properties where the value
+    /// type is `Duration` and the summary type is `Duration`. If the property has not been set,
+    /// the getter returns the property's default value.
+    ///
+    /// - Parameter key: A key path to the custom duration property type.
+    public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration {
+        get {
+            manager[dynamicMember: key]
+        }
     }
     
     internal let manager: ProgressManager

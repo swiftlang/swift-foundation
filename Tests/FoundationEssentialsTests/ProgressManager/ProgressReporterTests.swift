@@ -32,15 +32,11 @@ import Testing
         manager.complete(count: 1)
         #expect(reporter.completedCount == 3)
         
-        let fileCount = reporter.withProperties { properties in
-            properties.totalFileCount
-        }
+        let fileCount = reporter.totalFileCount
         #expect(fileCount == 0)
         
-        manager.withProperties { properties in
-            properties.totalFileCount = 6
-        }
-        #expect(reporter.withProperties(\.totalFileCount) == 6)
+        manager.totalFileCount = 6
+        #expect(reporter.totalFileCount == 6)
         
         let summaryTotalFile = manager.summary(of: ProgressManager.Properties.TotalFileCount.self)
         #expect(summaryTotalFile == 6)
@@ -77,9 +73,7 @@ import Testing
         overall.assign(count: 20, to: child2.reporter)
         child2.complete(count: 20)
         
-        overall.withProperties { properties in
-            properties.totalCount = 30
-        }
+        overall.totalCount(30)
         #expect(overall.completedCount == 20)
         #expect(overall.fractionCompleted == Double(25) / Double(30))
         
@@ -100,9 +94,7 @@ import Testing
         
         #expect(reporter2.fractionCompleted == 0.5)
         
-        overall.withProperties { properties in
-            properties.totalCount = 30
-        }
+        overall.totalCount(30)
         
         #expect(overall.totalCount == 30)
         #expect(overall.fractionCompleted == 0.5)
