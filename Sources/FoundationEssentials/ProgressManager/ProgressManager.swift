@@ -240,7 +240,7 @@ internal import _FoundationCollections
         }
     }
     
-    internal func getUpdatedProgressFraction() -> ProgressFraction {
+    internal func updatedProgressFraction() -> ProgressFraction {
         return state.withLock { state in
             state.updateChildrenProgressFraction()
             return state.overallFraction
@@ -323,52 +323,52 @@ internal import _FoundationCollections
         
         var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
         for property in propertiesInt.keys {
-            let updatedSummary = self.getUpdatedIntSummary(property: property)
+            let updatedSummary = self.updatedIntSummary(property: property)
             finalSummaryInt[property] = updatedSummary
         }
         
         var finalSummaryUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64] = [:]
         for property in propertiesUInt64.keys {
-            let updatedSummary = self.getUpdatedUInt64Summary(property: property)
+            let updatedSummary = self.updatedUInt64Summary(property: property)
             finalSummaryUInt64[property] = updatedSummary
         }
         
         var finalSummaryDouble: [MetatypeWrapper<Double, Double>: Double] = [:]
         for property in propertiesDouble.keys {
-            let updatedSummary = self.getUpdatedDoubleSummary(property: property)
+            let updatedSummary = self.updatedDoubleSummary(property: property)
             finalSummaryDouble[property] = updatedSummary
         }
 
         var finalSummaryString: [MetatypeWrapper<String?, [String?]>: [String?]] = [:]
         for property in propertiesString.keys {
-            let updatedSummary = self.getUpdatedStringSummary(property: property)
+            let updatedSummary = self.updatedStringSummary(property: property)
             finalSummaryString[property] = updatedSummary
         }
         
         var finalSummaryURL: [MetatypeWrapper<URL?, [URL?]>: [URL?]] = [:]
         for property in propertiesURL.keys {
-            let updatedSummary = self.getUpdatedURLSummary(property: property)
+            let updatedSummary = self.updatedURLSummary(property: property)
             finalSummaryURL[property] = updatedSummary
         }
         
         var finalSummaryUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]] = [:]
         for property in propertiesUInt64Array.keys {
-            let updatedSummary = self.getUpdatedUInt64ArraySummary(property: property)
+            let updatedSummary = self.updatedUInt64ArraySummary(property: property)
             finalSummaryUInt64Array[property] = updatedSummary
         }
         
         var finalSummaryDuration: [MetatypeWrapper<Duration, Duration>: Duration] = [:]
         for property in propertiesDuration.keys {
-            let updatedSummary = self.getUpdatedDurationSummary(property: property)
+            let updatedSummary = self.updatedDurationSummary(property: property)
             finalSummaryDuration[property] = updatedSummary
         }
         
-        let totalFileCount = self.getUpdatedFileCount(type: .total)
-        let completedFileCount = self.getUpdatedFileCount(type: .completed)
-        let totalByteCount = self.getUpdatedByteCount(type: .total)
-        let completedByteCount = self.getUpdatedByteCount(type: .completed)
-        let throughput = self.getUpdatedThroughput()
-        let estimatedTimeRemaining = self.getUpdatedEstimatedTimeRemaining()
+        let totalFileCount = self.updatedFileCount(type: .total)
+        let completedFileCount = self.updatedFileCount(type: .completed)
+        let totalByteCount = self.updatedByteCount(type: .total)
+        let completedByteCount = self.updatedByteCount(type: .completed)
+        let throughput = self.updatedThroughput()
+        let estimatedTimeRemaining = self.updatedEstimatedTimeRemaining()
         
         if !isFinished {
             markSelfDirty(parents: parents)

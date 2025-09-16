@@ -197,7 +197,7 @@ extension ProgressManager {
             for (idx, childState) in children.enumerated() {
                 if childState.isDirty {
                     if let child = childState.child {
-                        let updatedProgressFraction = child.getUpdatedProgressFraction()
+                        let updatedProgressFraction = child.updatedProgressFraction()
                         let wasFinished = children[idx].childFraction.isFinished
                         children[idx].childFraction = updatedProgressFraction
                         // Only add to selfFraction if transitioning from unfinished to finished
@@ -1138,7 +1138,7 @@ extension ProgressManager {
             )
         }
         
-        internal mutating func getUpdatedThroughput(_ updateInfo: ThroughputUpdateInfo, _ childUpdates: [ThroughputUpdate]) -> [UInt64] {
+        internal mutating func updatedThroughput(_ updateInfo: ThroughputUpdateInfo, _ childUpdates: [ThroughputUpdate]) -> [UInt64] {
             var value = updateInfo.currentSummary
             
             // Apply updates from children that were dirty
