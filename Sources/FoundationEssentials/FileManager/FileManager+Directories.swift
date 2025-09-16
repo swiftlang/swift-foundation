@@ -516,7 +516,7 @@ extension _FileManagerImpl {
         // Handle Windows NT object namespace prefix
         // The \\?\ prefix is used by Windows NT for device paths and may appear
         // in current working directory paths. We strip it to return a standard path.
-        return cwd?.removingNTPathPrefix()
+        return cwd
 #else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
