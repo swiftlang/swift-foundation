@@ -1214,14 +1214,14 @@ private extension __JSONEncoder {
             return self.wrap(url.absoluteString)
         } else if let decimal = value as? Decimal {
             return .number(decimal.description)
-        } else if let encodable = value as? _JSONStringDictionaryEncodableMarker {
+        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
             return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
-        } else if let array = value as? _JSONDirectArrayEncodable {
+        } else if let directArrayEncodable = _asDirectArrayEncoding(value, for: additionalKey) {
             if options.outputFormatting.contains(.prettyPrinted) {
-                let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
+                let (bytes, lengths) = try directArrayEncodable.individualElementRepresentation(encoder: self, additionalKey)
                 return .directArray(bytes, lengths: lengths)
             } else {
-                return .nonPrettyDirectArray(try array.nonPrettyJSONRepresentation(encoder: self, additionalKey))
+                return .nonPrettyDirectArray(try directArrayEncodable.nonPrettyJSONRepresentation(encoder: self, additionalKey))
             }
         }
 
@@ -1244,6 +1244,42 @@ private extension __JSONEncoder {
         }
         try encode(encoder)
         return encoder.takeValue()
+    }
+
+    func _asDirectArrayEncoding<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) -> _JSONDirectArrayEncodable? {
+        return if let array = _specializingCast(array, to: [Int8].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Int16].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Int32].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Int64].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Int128].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Int].self) {
+            array
+        } else if let array = _specializingCast(array, to: [UInt8].self) {
+            array
+        } else if let array = _specializingCast(array, to: [UInt16].self) {
+            array
+        } else if let array = _specializingCast(array, to: [UInt32].self) {
+            array
+        } else if let array = _specializingCast(array, to: [UInt64].self) {
+            array
+        } else if let array = _specializingCast(array, to: [UInt128].self) {
+            array
+        } else if let array = _specializingCast(array, to: [UInt].self) {
+            array
+        } else if let array = _specializingCast(array, to: [String].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Float].self) {
+            array
+        } else if let array = _specializingCast(array, to: [Double].self) {
+            array
+        } else {
+            nil
+        }
     }
 
     @inline(__always)
@@ -1464,5 +1500,16 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
         }
 
         return (writer.bytes, lengths: byteLengths)
+    }
+}
+
+private extension JSONEncoder.KeyEncodingStrategy {
+    var isDefault: Bool {
+        switch self {
+        case .useDefaultKeys:
+            return true
+        case .custom, .convertToSnakeCase:
+            return false
+        }
     }
 }
