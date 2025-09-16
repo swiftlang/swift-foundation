@@ -21,21 +21,17 @@ import Testing
 @Suite("Progress Manager File Properties", .tags(.progressManager)) struct ProgressManagerAdditionalPropertiesTests {
     func doFileOperation(reportTo subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 100)
-        manager.withProperties { properties in
-            properties.totalFileCount = 100
-        }
+        manager.totalFileCount = 100
         
-        #expect(manager.withProperties(\.totalFileCount) == 100)
+        #expect(manager.totalFileCount == 100)
         
         manager.complete(count: 100)
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.isFinished == true)
         
-        manager.withProperties { properties in
-            properties.completedFileCount = 100
-        }
-        #expect(manager.withProperties(\.completedFileCount) == 100)
-        #expect(manager.withProperties(\.totalFileCount) == 100)
+        manager.completedFileCount = 100
+        #expect(manager.completedFileCount == 100)
+        #expect(manager.totalFileCount == 100)
     }
     
     @Test func discreteReporterWithFileProperties() async throws {
@@ -44,8 +40,8 @@ import Testing
         #expect(fileProgressManager.fractionCompleted == 1.0)
         #expect(fileProgressManager.completedCount == 3)
         #expect(fileProgressManager.isFinished == true)
-        #expect(fileProgressManager.withProperties(\.totalFileCount) == 0)
-        #expect(fileProgressManager.withProperties(\.completedFileCount) == 0)
+        #expect(fileProgressManager.totalFileCount == 0)
+        #expect(fileProgressManager.completedFileCount == 0)
         
         let summaryTotalFile = fileProgressManager.summary(of: ProgressManager.Properties.TotalFileCount.self)
         #expect(summaryTotalFile == 100)
@@ -59,17 +55,15 @@ import Testing
         
         let progress1 = overall.subprogress(assigningCount: 1)
         let manager1 = progress1.start(totalCount: 10)
-        manager1.withProperties { properties in
-            properties.totalFileCount = 10
-            properties.completedFileCount = 0
-        }
+        manager1.totalFileCount = 10
+        manager1.completedFileCount = 0
         manager1.complete(count: 10)
         
         #expect(overall.fractionCompleted == 0.5)
         
-        #expect(overall.withProperties(\.totalFileCount) == 0)
-        #expect(manager1.withProperties(\.totalFileCount) == 10)
-        #expect(manager1.withProperties(\.completedFileCount) == 0)
+        #expect(overall.totalFileCount == 0)
+        #expect(manager1.totalFileCount == 10)
+        #expect(manager1.completedFileCount == 0)
         
         let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
         #expect(summaryTotalFile == 10)
@@ -84,22 +78,18 @@ import Testing
         let progress1 = overall.subprogress(assigningCount: 1)
         let manager1 = progress1.start(totalCount: 10)
         
-        manager1.withProperties { properties in
-            properties.totalFileCount = 11
-            properties.completedFileCount = 0
-        }
+        manager1.totalFileCount = 11
+        manager1.completedFileCount = 0
         
         let progress2 = overall.subprogress(assigningCount: 1)
         let manager2 = progress2.start(totalCount: 10)
         
-        manager2.withProperties { properties in
-            properties.totalFileCount = 9
-            properties.completedFileCount = 0
-        }
+        manager2.totalFileCount = 9
+        manager2.completedFileCount = 0
         
         #expect(overall.fractionCompleted == 0.0)
-        #expect(overall.withProperties(\.totalFileCount) == 0)
-        #expect(overall.withProperties(\.completedFileCount) == 0)
+        #expect(overall.totalFileCount == 0)
+        #expect(overall.completedFileCount == 0)
         
         let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
         #expect(summaryTotalFile == 20)
@@ -108,15 +98,11 @@ import Testing
         #expect(summaryCompletedFile == 0)
         
         // Update FileCounts
-        manager1.withProperties { properties in
-            properties.completedFileCount = 1
-        }
+        manager1.completedFileCount = 1
         
-        manager2.withProperties { properties in
-            properties.completedFileCount = 1
-        }
+        manager2.completedFileCount = 1
         
-        #expect(overall.withProperties(\.completedFileCount) == 0)
+        #expect(overall.completedFileCount == 0)
         let summaryCompletedFileUpdated = overall.summary(of: ProgressManager.Properties.CompletedFileCount.self)
         #expect(summaryCompletedFileUpdated == 2)
     }
@@ -130,29 +116,23 @@ import Testing
         
         let childProgress1 = manager1.subprogress(assigningCount: 3)
         let childManager1 = childProgress1.start(totalCount: nil)
-        childManager1.withProperties { properties in
-            properties.totalFileCount += 10
-        }
-        #expect(childManager1.withProperties(\.totalFileCount) == 10)
+        childManager1.totalFileCount += 10
+        #expect(childManager1.totalFileCount == 10)
         
         let summaryTotalFileInitial = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
         #expect(summaryTotalFileInitial == 10)
         
         let childProgress2 = manager1.subprogress(assigningCount: 2)
         let childManager2 = childProgress2.start(totalCount: nil)
-        childManager2.withProperties { properties in
-            properties.totalFileCount += 10
-        }
-        #expect(childManager2.withProperties(\.totalFileCount) == 10)
+        childManager2.totalFileCount += 10
+        #expect(childManager2.totalFileCount == 10)
 
         // Tests that totalFileCount propagates to root level
-        #expect(overall.withProperties(\.totalFileCount) == 0)
+        #expect(overall.totalFileCount == 0)
         let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
         #expect(summaryTotalFile == 20)
         
-        manager1.withProperties { properties in
-            properties.totalFileCount += 999
-        }
+        manager1.totalFileCount += 999
         let summaryTotalFileUpdated = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
         #expect(summaryTotalFileUpdated == 1019)
     }
@@ -162,18 +142,16 @@ import Testing
     
     func doSomething(subprogress: consuming Subprogress) async throws {
         let manager = subprogress.start(totalCount: 3)
-        manager.withProperties { properties in
-            properties.totalByteCount = 300000
-            
-            properties.completedCount += 1
-            properties.completedByteCount += 100000
-            
-            properties.completedCount += 1
-            properties.completedByteCount += 100000
-            
-            properties.completedCount += 1
-            properties.completedByteCount += 100000
-        }
+        manager.totalByteCount = 300000
+        
+        manager.complete(count: 1)
+        manager.completedByteCount += 100000
+        
+        manager.complete(count: 1)
+        manager.completedByteCount += 100000
+        
+        manager.complete(count: 1)
+        manager.completedByteCount += 100000
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 300000)
@@ -184,10 +162,8 @@ import Testing
         let manager = subprogress.start(totalCount: 2)
         
         manager.complete(count: 1)
-        manager.withProperties { properties in
-            properties.totalByteCount = 200000
-            properties.completedByteCount = 200000
-        }
+        manager.totalByteCount = 200000
+        manager.completedByteCount = 200000
         
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -200,10 +176,8 @@ import Testing
         let manager = ProgressManager(totalCount: 2)
         
         manager.complete(count: 1)
-        manager.withProperties { properties in
-            properties.totalByteCount = 2000
-            properties.completedByteCount = 1000
-        }
+        manager.totalByteCount = 2000
+        manager.completedByteCount = 1000
         
         #expect(manager.fractionCompleted == 0.5)
         #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 2000)
@@ -216,10 +190,8 @@ import Testing
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         manager.complete(count: 1)
-        manager.withProperties { properties in
-            properties.totalByteCount = 500000
-            properties.completedByteCount = 499999
-        }
+        manager.totalByteCount = 500000
+        manager.completedByteCount = 499999
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 800000)
@@ -230,10 +202,8 @@ import Testing
         let manager = ProgressManager(totalCount: 2)
         
         manager.complete(count: 1)
-        manager.withProperties { properties in
-            properties.totalByteCount = 100000
-            properties.completedByteCount = 99999
-        }
+        manager.totalByteCount = 100000
+        manager.completedByteCount = 99999
         
         try await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -247,13 +217,11 @@ import Testing
     
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 2)
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.throughput += 1000
-            
-            properties.completedCount += 1
-            properties.throughput += 1000
-        }
+        manager.complete(count: 1)
+        manager.throughput += 1000
+        
+        manager.complete(count: 1)
+        manager.throughput += 1000
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [2000])
@@ -262,10 +230,8 @@ import Testing
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.throughput = 1000
-        }
+        manager.complete(count: 1)
+        manager.throughput = 1000
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
@@ -277,10 +243,8 @@ import Testing
         let manager = ProgressManager(totalCount: 1)
         
         manager.complete(count: 1)
-        manager.withProperties { properties in
-            properties.throughput = 1000
-            properties.throughput += 2000
-        }
+        manager.throughput = 1000
+        manager.throughput += 2000
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [3000])
@@ -289,9 +253,7 @@ import Testing
     @Test func twoLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         manager.complete(count: 1)
-        manager.withProperties { properties in
-            properties.throughput = 1000
-        }
+        manager.throughput = 1000
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -303,9 +265,7 @@ import Testing
         let manager = ProgressManager(totalCount: 2)
         manager.complete(count: 1)
         
-        manager.withProperties { properties in
-            properties.throughput = 1000
-        }
+        manager.throughput = 1000
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -319,13 +279,11 @@ import Testing
     func doSomething(subprogress: consuming Subprogress) async throws {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.estimatedTimeRemaining = Duration.seconds(3000)
-            
-            properties.completedCount += 1
-            properties.estimatedTimeRemaining += Duration.seconds(3000)
-        }
+        manager.complete(count: 1)
+        manager.estimatedTimeRemaining = Duration.seconds(3000)
+        
+        manager.complete(count: 1)
+        manager.estimatedTimeRemaining += Duration.seconds(3000)
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(6000))
@@ -334,10 +292,8 @@ import Testing
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.estimatedTimeRemaining = Duration.seconds(1000)
-        }
+        manager.complete(count: 1)
+        manager.estimatedTimeRemaining = Duration.seconds(1000)
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(1000))
@@ -346,10 +302,8 @@ import Testing
     @Test func twoLevelManagerWithFinishedChild() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.estimatedTimeRemaining = Duration.seconds(1)
-        }
+        manager.complete(count: 1)
+        manager.estimatedTimeRemaining = Duration.seconds(1)
         
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -360,16 +314,12 @@ import Testing
     @Test func twoLevelManagerWithUnfinishedChild() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.estimatedTimeRemaining = Duration.seconds(200)
-        }
+        manager.complete(count: 1)
+        manager.estimatedTimeRemaining = Duration.seconds(200)
         
         var child: ProgressManager? = manager.subprogress(assigningCount: 1).start(totalCount: 2)
-        child?.withProperties { properties in
-            properties.completedCount = 1
-            properties.estimatedTimeRemaining = Duration.seconds(80000)
-        }
+        child?.complete(count: 1)
+        child?.estimatedTimeRemaining = Duration.seconds(80000)
         
         #expect(manager.fractionCompleted == 0.75)
         #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(80000))
@@ -415,16 +365,14 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 3)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.counter += 10
-            
-            properties.completedCount += 1
-            properties.counter += 10
-            
-            properties.completedCount += 1
-            properties.counter += 10
-        }
+        manager.complete(count: 1)
+        manager.counter += 10
+        
+        manager.complete(count: 1)
+        manager.counter += 10
+        
+        manager.complete(count: 1)
+        manager.counter += 10
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 30)
@@ -435,9 +383,7 @@ extension ProgressManager.Properties {
         
         manager.complete(count: 1)
         
-        manager.withProperties { properties in
-            properties.counter = 15
-        }
+        manager.counter = 15
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
@@ -448,10 +394,8 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.counter += 10
-        }
+        manager.complete(count: 1)
+        manager.counter += 10
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 10)
@@ -460,10 +404,8 @@ extension ProgressManager.Properties {
     @Test func twoLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.counter += 10
-        }
+        manager.complete(count: 1)
+        manager.counter += 10
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -474,10 +416,8 @@ extension ProgressManager.Properties {
     @Test func threeLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.counter += 10
-        }
+        manager.complete(count: 1)
+        manager.counter += 10
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -520,16 +460,14 @@ extension ProgressManager.Properties {
 func doSomething(subprogress: consuming Subprogress) async {
     let manager = subprogress.start(totalCount: 3)
     
-    manager.withProperties { properties in
-        properties.completedCount += 1
-        properties.byteSize += 1024
-        
-        properties.completedCount += 1
-        properties.byteSize += 2048
-        
-        properties.completedCount += 1
-        properties.byteSize += 4096
-    }
+    manager.complete(count: 1)
+    manager.byteSize += 1024
+    
+    manager.complete(count: 1)
+    manager.byteSize += 2048
+    
+    manager.complete(count: 1)
+    manager.byteSize += 4096
     
     #expect(manager.fractionCompleted == 1.0)
     #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 7168)
@@ -540,9 +478,7 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
     
     manager.complete(count: 1)
     
-    manager.withProperties { properties in
-        properties.byteSize = 8192
-    }
+    manager.byteSize = 8192
     
     await doSomething(subprogress: manager.subprogress(assigningCount: 1))
 
@@ -553,10 +489,8 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
 @Test func discreteManager() async throws {
     let manager = ProgressManager(totalCount: 1)
     
-    manager.withProperties { properties in
-        properties.completedCount += 1
-        properties.byteSize += 16384
-    }
+    manager.complete(count: 1)
+    manager.byteSize += 16384
     
     #expect(manager.fractionCompleted == 1.0)
     #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 16384)
@@ -565,10 +499,8 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
 @Test func twoLevelManager() async throws {
     let manager = ProgressManager(totalCount: 2)
     
-    manager.withProperties { properties in
-        properties.completedCount += 1
-        properties.byteSize += 32768
-    }
+    manager.complete(count: 1)
+    manager.byteSize += 32768
     
     await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
@@ -579,10 +511,8 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
 @Test func threeLevelManager() async throws {
     let manager = ProgressManager(totalCount: 2)
     
-    manager.withProperties { properties in
-        properties.completedCount += 1
-        properties.byteSize += 65536
-    }
+    manager.complete(count: 1)
+    manager.byteSize += 65536
     
     await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
     
@@ -625,16 +555,14 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async throws {
         let manager = subprogress.start(totalCount: 3)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.justADouble += 10.0
-            
-            properties.completedCount += 1
-            properties.justADouble += 10.0
-            
-            properties.completedCount += 1
-            properties.justADouble += 10.0
-        }
+        manager.complete(count: 1)
+        manager.justADouble += 10.0
+        
+        manager.complete(count: 1)
+        manager.justADouble += 10.0
+        
+        manager.complete(count: 1)
+        manager.justADouble += 10.0
         
         #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 30.0)
     }
@@ -642,10 +570,8 @@ extension ProgressManager.Properties {
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async throws {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.justADouble = 7.0
-        }
+        manager.complete(count: 1)
+        manager.justADouble = 7.0
         
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -655,10 +581,8 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.justADouble = 80.0
-        }
+        manager.complete(count: 1)
+        manager.justADouble = 80.0
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 80.0)
@@ -667,10 +591,8 @@ extension ProgressManager.Properties {
     @Test func twoLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.justADouble = 80.0
-        }
+        manager.complete(count: 1)
+        manager.justADouble = 80.0
         
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -682,10 +604,8 @@ extension ProgressManager.Properties {
         
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.justADouble = 80.0
-        }
+        manager.complete(count: 1)
+        manager.justADouble = 80.0
         
         try await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -729,10 +649,8 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.downloadedFile = "Melon.jpg"
-        }
+        manager.complete(count: 1)
+        manager.downloadedFile = "Melon.jpg"
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Melon.jpg"])
@@ -741,10 +659,8 @@ extension ProgressManager.Properties {
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.downloadedFile = "Cherry.jpg"
-        }
+        manager.complete(count: 1)
+        manager.downloadedFile = "Cherry.jpg"
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -755,23 +671,19 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.downloadedFile = "Grape.jpg"
-        }
+        manager.complete(count: 1)
+        manager.downloadedFile = "Grape.jpg"
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.withProperties { $0.downloadedFile } == "Grape.jpg")
+        #expect(manager.downloadedFile == "Grape.jpg")
         #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Grape.jpg"])
     }
     
     @Test func twoLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.downloadedFile = "Watermelon.jpg"
-        }
+        manager.complete(count: 1)
+        manager.downloadedFile = "Watermelon.jpg"
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -782,10 +694,8 @@ extension ProgressManager.Properties {
     @Test func threeLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.downloadedFile = "Watermelon.jpg"
-        }
+        manager.complete(count: 1)
+        manager.downloadedFile = "Watermelon.jpg"
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -828,10 +738,8 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processingFile = "Hello.jpg"
-        }
+        manager.complete(count: 1)
+        manager.processingFile = "Hello.jpg"
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Hello.jpg"])
@@ -840,10 +748,8 @@ extension ProgressManager.Properties {
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.processingFile = "Hi.jpg"
-        }
+        manager.complete(count: 1)
+        manager.processingFile = "Hi.jpg"
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -854,23 +760,19 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processingFile = "Howdy.jpg"
-        }
+        manager.complete(count: 1)
+        manager.processingFile = "Howdy.jpg"
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.withProperties { $0.processingFile } == "Howdy.jpg")
+        #expect(manager.processingFile == "Howdy.jpg")
         #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Howdy.jpg"])
     }
     
     @Test func twoLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.processingFile = "Howdy.jpg"
-        }
+        manager.complete(count: 1)
+        manager.processingFile = "Howdy.jpg"
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -881,10 +783,8 @@ extension ProgressManager.Properties {
     @Test func threeLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.processingFile = "Howdy.jpg"
-        }
+        manager.complete(count: 1)
+        manager.processingFile = "Howdy.jpg"
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -926,10 +826,8 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.imageURL = URL(string: "112.jpg")
-        }
+        manager.complete(count: 1)
+        manager.imageURL = URL(string: "112.jpg")
         
         #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "112.jpg")])
     }
@@ -937,10 +835,8 @@ extension ProgressManager.Properties {
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.imageURL = URL(string: "114.jpg")
-        }
+        manager.complete(count: 1)
+        manager.imageURL = URL(string: "114.jpg")
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -950,9 +846,7 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.imageURL = URL(string: "116.jpg")
-        }
+        manager.imageURL = URL(string: "116.jpg")
         
         #expect(manager.fractionCompleted == 0.0)
         #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "116.jpg")])
@@ -961,10 +855,8 @@ extension ProgressManager.Properties {
     @Test func twoLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.imageURL = URL(string: "116.jpg")
-        }
+        manager.complete(count: 1)
+        manager.imageURL = URL(string: "116.jpg")
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -975,10 +867,8 @@ extension ProgressManager.Properties {
     @Test func threeLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.imageURL = URL(string: "116.jpg")
-        }
+        manager.complete(count: 1)
+        manager.imageURL = URL(string: "116.jpg")
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1019,10 +909,8 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.totalPixelCount = 24
-        }
+        manager.complete(count: 1)
+        manager.totalPixelCount = 24
         
         #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [24])
     }
@@ -1030,10 +918,8 @@ extension ProgressManager.Properties {
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.totalPixelCount = 26
-        }
+        manager.complete(count: 1)
+        manager.totalPixelCount = 26
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1043,9 +929,7 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.totalPixelCount = 42
-        }
+        manager.totalPixelCount = 42
         
         #expect(manager.fractionCompleted == 0.0)
         #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42])
@@ -1054,10 +938,8 @@ extension ProgressManager.Properties {
     @Test func twoLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.totalPixelCount = 42
-        }
+        manager.complete(count: 1)
+        manager.totalPixelCount = 42
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1068,10 +950,8 @@ extension ProgressManager.Properties {
     @Test func threeLevelsManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.totalPixelCount = 42
-        }
+        manager.complete(count: 1)
+        manager.totalPixelCount = 42
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1113,14 +993,12 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 3)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.viralIndeterminate = 0
-            
-            properties.completedCount += 1
-            
-            properties.completedCount += 1
-        }
+        manager.complete(count: 1)
+        manager.viralIndeterminate = 0
+        
+        manager.complete(count: 1)
+        
+        manager.complete(count: 1)
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
@@ -1129,10 +1007,8 @@ extension ProgressManager.Properties {
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.viralIndeterminate = 1
-        }
+        manager.complete(count: 1)
+        manager.viralIndeterminate = 1
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1143,10 +1019,8 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.viralIndeterminate = 1
-        }
+        manager.complete(count: 1)
+        manager.viralIndeterminate = 1
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 1)
@@ -1155,10 +1029,8 @@ extension ProgressManager.Properties {
     @Test func twoLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.viralIndeterminate = 1
-        }
+        manager.complete(count: 1)
+        manager.viralIndeterminate = 1
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1169,10 +1041,8 @@ extension ProgressManager.Properties {
     @Test func threeLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount = 1
-            properties.viralIndeterminate = 1
-        }
+        manager.complete(count: 1)
+        manager.viralIndeterminate = 1
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1214,16 +1084,14 @@ extension ProgressManager.Properties {
     func doSomething(subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 3)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processTime += Duration.seconds(10)
-            
-            properties.completedCount += 1
-            properties.processTime += Duration.seconds(15)
-            
-            properties.completedCount += 1
-            properties.processTime += Duration.seconds(25)
-        }
+        manager.complete(count: 1)
+        manager.processTime += Duration.seconds(10)
+        
+        manager.complete(count: 1)
+        manager.processTime += Duration.seconds(15)
+        
+        manager.complete(count: 1)
+        manager.processTime += Duration.seconds(25)
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(50))
@@ -1234,9 +1102,7 @@ extension ProgressManager.Properties {
         
         manager.complete(count: 1)
         
-        manager.withProperties { properties in
-            properties.processTime = Duration.seconds(30)
-        }
+        manager.processTime = Duration.seconds(30)
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
@@ -1247,10 +1113,8 @@ extension ProgressManager.Properties {
     @Test func discreteManager() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processTime += Duration.milliseconds(500)
-        }
+        manager.complete(count: 1)
+        manager.processTime += Duration.milliseconds(500)
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.milliseconds(500))
@@ -1259,10 +1123,8 @@ extension ProgressManager.Properties {
     @Test func twoLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processTime += Duration.seconds(120)
-        }
+        manager.complete(count: 1)
+        manager.processTime += Duration.seconds(120)
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1273,10 +1135,8 @@ extension ProgressManager.Properties {
     @Test func threeLevelManager() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processTime += Duration.microseconds(1000000) // 1 second
-        }
+        manager.complete(count: 1)
+        manager.processTime += Duration.microseconds(1000000) // 1 second
         
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
@@ -1287,18 +1147,14 @@ extension ProgressManager.Properties {
     @Test func zeroDurationHandling() async throws {
         let manager = ProgressManager(totalCount: 2)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processTime = Duration.zero
-        }
+        manager.complete(count: 1)
+        manager.processTime = Duration.zero
         
         let childProgress = manager.subprogress(assigningCount: 1)
         let childManager = childProgress.start(totalCount: 1)
         
-        childManager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processTime = Duration.seconds(42)
-        }
+        childManager.complete(count: 1)
+        childManager.processTime = Duration.seconds(42)
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(42))
@@ -1307,11 +1163,9 @@ extension ProgressManager.Properties {
     @Test func negativeDurationHandling() async throws {
         let manager = ProgressManager(totalCount: 1)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            // Test with negative duration (though this might be unusual in practice)
-            properties.processTime = Duration.seconds(-5)
-        }
+        manager.complete(count: 1)
+        // Test with negative duration (though this might be unusual in practice)
+        manager.processTime = Duration.seconds(-5)
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(-5))
@@ -1320,16 +1174,14 @@ extension ProgressManager.Properties {
     @Test func mixedDurationUnits() async throws {
         let manager = ProgressManager(totalCount: 3)
         
-        manager.withProperties { properties in
-            properties.completedCount += 1
-            properties.processTime = Duration.seconds(1) // 1 second
-            
-            properties.completedCount += 1
-            properties.processTime += Duration.milliseconds(500) // + 0.5 seconds
-            
-            properties.completedCount += 1
-            properties.processTime += Duration.microseconds(500000) // + 0.5 seconds
-        }
+        manager.complete(count: 1)
+        manager.processTime = Duration.seconds(1) // 1 second
+        
+        manager.complete(count: 1)
+        manager.processTime += Duration.milliseconds(500) // + 0.5 seconds
+        
+        manager.complete(count: 1)
+        manager.processTime += Duration.microseconds(500000) // + 0.5 seconds
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(2))

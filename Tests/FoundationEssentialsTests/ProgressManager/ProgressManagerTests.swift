@@ -69,20 +69,16 @@ extension Tag {
         #expect(overall.fractionCompleted == 0.5)
         #expect(overall.isIndeterminate == false)
         
-        overall.withProperties { p in
-            p.totalCount = nil
-            p.completedCount += 1
-        }
+        overall.totalCount(nil)
+        overall.complete(count: 1)
         #expect(overall.completedCount == 6)
         #expect(overall.totalCount == nil)
         #expect(overall.fractionCompleted == 0.0)
         #expect(overall.isIndeterminate == true)
         #expect(overall.isFinished == false)
         
-        overall.withProperties { p in
-            p.totalCount = 12
-            p.completedCount += 2
-        }
+        overall.totalCount(12)
+        overall.complete(count: 2)
         #expect(overall.completedCount == 8)
         #expect(overall.totalCount == 12)
         #expect(overall.fractionCompleted == Double(8) / Double(12))
@@ -114,9 +110,7 @@ extension Tag {
         #expect(overall.isIndeterminate == true)
         #expect(overall.isFinished == false)
         
-        overall.withProperties { p in
-            p.totalCount = 5
-        }
+        overall.totalCount(5)
         #expect(overall.completedCount == 2)
         #expect(overall.totalCount == 5)
         #expect(overall.fractionCompleted == 0.4)
@@ -148,17 +142,13 @@ extension Tag {
         #expect(overall.fractionCompleted == 0.5)
         #expect(childManager.isIndeterminate == false)
         
-        childManager.withProperties { properties in
-            properties.totalCount = nil
-        }
+        childManager.totalCount(nil)
         
         #expect(overall.fractionCompleted == 0.0)
         #expect(childManager.isIndeterminate == true)
         #expect(childManager.completedCount == 2)
         
-        childManager.withProperties { properties in
-            properties.totalCount = 5
-        }
+        childManager.totalCount(5)
         childManager.complete(count: 2)
         
         #expect(overall.fractionCompleted == 0.8)
@@ -183,9 +173,7 @@ extension Tag {
         let manager = ProgressManager(totalCount: nil)
         #expect(manager.isIndeterminate == true)
         
-        manager.withProperties { p in
-            p.totalCount = 10
-        }
+        manager.totalCount(10)
         #expect(manager.isIndeterminate == false)
         #expect(manager.totalCount == 10)
         
@@ -220,13 +208,11 @@ extension Tag {
         
         let progress2 = overall.subprogress(assigningCount: 1)
         let manager2 = progress2.start(totalCount: 5)
-        manager2.withProperties { properties in
-            properties.totalFileCount = 10
-        }
+        manager2.totalFileCount = 10
         
         #expect(overall.fractionCompleted == 0.5)
         // Parent is expected to get totalFileCount from one of the children with a totalFileCount
-        #expect(overall.withProperties(\.totalFileCount) == 0)
+        #expect(overall.totalFileCount == 0)
     }
     
     @Test func twoLevelTreeWithMultipleChildren() async throws {
@@ -645,9 +631,7 @@ extension Tag {
             // Task 3: Change to determinate after a delay
             group.addTask {
                 try? await Task.sleep(nanoseconds: 1_000_000)
-                manager.withProperties { p in
-                    p.totalCount = 20
-                }
+                manager.totalCount(20)
                 
                 for _ in 1...30 {
                     let _ = manager.fractionCompleted

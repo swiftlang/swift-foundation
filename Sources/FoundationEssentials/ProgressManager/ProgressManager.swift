@@ -23,6 +23,7 @@ internal import _FoundationCollections
 
 /// An object that conveys ongoing progress to the user for a specified task.
 @available(FoundationPreview 6.2, *)
+@dynamicMemberLookup
 @Observable public final class ProgressManager: Sendable {
     
     internal let state: Mutex<State>
@@ -183,6 +184,36 @@ internal import _FoundationCollections
             }
             
             state.complete(by: count)
+            
+            return state.parents
+        }
+        if let parents = parents {
+            markSelfDirty(parents: parents)
+        }
+    }
+    
+    public func completedCount(_ count: Int) {
+        let parents: [ParentState]? = state.withLock { state in
+            guard state.selfFraction.completed != count else {
+                return nil
+            }
+            
+            state.completedCount(count)
+            
+            return state.parents
+        }
+        if let parents = parents {
+            markSelfDirty(parents: parents)
+        }
+    }
+    
+    public func totalCount(_ count: Int?) {
+        let parents: [ParentState]? = state.withLock { state in
+            guard state.selfFraction.total != count else {
+                return nil
+            }
+            
+            state.totalCount(count)
             
             return state.parents
         }

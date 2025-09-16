@@ -249,6 +249,64 @@ extension ProgressManager {
 #endif
         }
         
+        internal mutating func completedCount(_ count: Int) {
+            selfFraction.completed = count
+
+#if FOUNDATION_FRAMEWORK
+            switch interopType {
+            case .interopObservation(let observation):
+                observation.subprogressBridge?.manager.notifyObservers(
+                    with: .fractionUpdated(
+                        totalCount: selfFraction.total ?? 0,
+                        completedCount: selfFraction.completed
+                    )
+                )
+                
+                if let _ = observation.reporterBridge {
+                    notifyObservers(
+                        with: .fractionUpdated(
+                            totalCount: selfFraction.total ?? 0,
+                            completedCount: selfFraction.completed
+                        )
+                    )
+                }
+            case .interopMirror:
+                break
+            default:
+                break
+            }
+#endif
+        }
+        
+        internal mutating func totalCount(_ count: Int?) {
+            selfFraction.total = count
+
+#if FOUNDATION_FRAMEWORK
+            switch interopType {
+            case .interopObservation(let observation):
+                observation.subprogressBridge?.manager.notifyObservers(
+                    with: .fractionUpdated(
+                        totalCount: selfFraction.total ?? 0,
+                        completedCount: selfFraction.completed
+                    )
+                )
+                
+                if let _ = observation.reporterBridge {
+                    notifyObservers(
+                        with: .fractionUpdated(
+                            totalCount: selfFraction.total ?? 0,
+                            completedCount: selfFraction.completed
+                        )
+                    )
+                }
+            case .interopMirror:
+                break
+            default:
+                break
+            }
+#endif
+        }
+        
         // MARK: Mark paths dirty
         internal mutating func markChildDirty(at position: Int) -> [ParentState]? {
             guard !children[position].isDirty else {
