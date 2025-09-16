@@ -25,7 +25,8 @@ extension ProgressManager {
     /// - Parameter key: A key path to the custom integer property type.
     public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int, P.Summary == Int {
         get {
-            state.withLock { state in
+            accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+            return state.withLock { state in
                 if P.self == ProgressManager.Properties.TotalFileCount.self {
                     return state.totalFileCount
                 } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
@@ -37,35 +38,37 @@ extension ProgressManager {
         }
         
         set {
-            let parents: [ParentState]? = state.withLock { state in
-                if P.self == ProgressManager.Properties.TotalFileCount.self {
-                    guard newValue != state.totalFileCount else {
-                        return nil
+            mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let parents: [ParentState]? = state.withLock { state in
+                    if P.self == ProgressManager.Properties.TotalFileCount.self {
+                        guard newValue != state.totalFileCount else {
+                            return nil
+                        }
+                        state.totalFileCount = newValue
+                        return state.parents
+                        
+                    } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
+                        guard newValue != state.completedFileCount else {
+                            return nil
+                        }
+                        state.completedFileCount = newValue
+                        return state.parents
+                    } else {
+                        guard newValue != state.propertiesInt[MetatypeWrapper(P.self)] else {
+                            return nil
+                        }
+                        state.propertiesInt[MetatypeWrapper(P.self)] = newValue
+                        return state.parents
                     }
-                    state.totalFileCount = newValue
-                    return state.parents
-                    
-                } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
-                    guard newValue != state.completedFileCount else {
-                        return nil
-                    }
-                    state.completedFileCount = newValue
-                    return state.parents
-                } else {
-                    guard newValue != state.propertiesInt[MetatypeWrapper(P.self)] else {
-                        return nil
-                    }
-                    state.propertiesInt[MetatypeWrapper(P.self)] = newValue
-                    return state.parents
                 }
-            }
-            if let parents = parents {
-                if P.self == ProgressManager.Properties.TotalFileCount.self {
-                    markSelfDirty(property: ProgressManager.Properties.TotalFileCount.self, parents: parents)
-                } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
-                    markSelfDirty(property: ProgressManager.Properties.CompletedFileCount.self, parents: parents)
-                } else {
-                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                if let parents = parents {
+                    if P.self == ProgressManager.Properties.TotalFileCount.self {
+                        markSelfDirty(property: ProgressManager.Properties.TotalFileCount.self, parents: parents)
+                    } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
+                        markSelfDirty(property: ProgressManager.Properties.CompletedFileCount.self, parents: parents)
+                    } else {
+                        markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                    }
                 }
             }
         }
@@ -80,7 +83,8 @@ extension ProgressManager {
     /// - Parameter key: A key path to the custom unsigned integer property type.
     public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64 {
         get {
-            state.withLock { state in
+            accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+            return state.withLock { state in
                 if P.self == ProgressManager.Properties.TotalByteCount.self {
                     return state.totalByteCount
                 } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
@@ -92,34 +96,36 @@ extension ProgressManager {
         }
         
         set {
-            let parents: [ParentState]? = state.withLock { state in
-                if P.self == ProgressManager.Properties.TotalByteCount.self {
-                    guard newValue != state.totalByteCount else {
-                        return nil
+            mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let parents: [ParentState]? = state.withLock { state in
+                    if P.self == ProgressManager.Properties.TotalByteCount.self {
+                        guard newValue != state.totalByteCount else {
+                            return nil
+                        }
+                        state.totalByteCount = newValue
+                        return state.parents
+                    } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
+                        guard newValue != state.completedByteCount else {
+                            return nil
+                        }
+                        state.completedByteCount = newValue
+                        return state.parents
+                    } else {
+                        guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
+                            return nil
+                        }
+                        state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
+                        return state.parents
                     }
-                    state.totalByteCount = newValue
-                    return state.parents
-                } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
-                    guard newValue != state.completedByteCount else {
-                        return nil
-                    }
-                    state.completedByteCount = newValue
-                    return state.parents
-                } else {
-                    guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
-                        return nil
-                    }
-                    state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
-                    return state.parents
                 }
-            }
-            if let parents = parents {
-                if P.self == ProgressManager.Properties.TotalByteCount.self {
-                    markSelfDirty(property: ProgressManager.Properties.TotalByteCount.self, parents: parents)
-                } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
-                    markSelfDirty(property: ProgressManager.Properties.CompletedByteCount.self, parents: parents)
-                } else {
-                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                if let parents = parents {
+                    if P.self == ProgressManager.Properties.TotalByteCount.self {
+                        markSelfDirty(property: ProgressManager.Properties.TotalByteCount.self, parents: parents)
+                    } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
+                        markSelfDirty(property: ProgressManager.Properties.CompletedByteCount.self, parents: parents)
+                    } else {
+                        markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                    }
                 }
             }
         }
@@ -134,21 +140,24 @@ extension ProgressManager {
     /// - Parameter key: A key path to the custom double property type.
     public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value where P.Value == Double, P.Summary == Double {
         get {
-            state.withLock { state in
+            accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+            return state.withLock { state in
                 return state.propertiesDouble[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
         }
         
         set {
-            let parents: [ParentState]? = state.withLock { state in
-                guard newValue != state.propertiesDouble[MetatypeWrapper(P.self)] else {
-                    return nil
+            mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let parents: [ParentState]? = state.withLock { state in
+                    guard newValue != state.propertiesDouble[MetatypeWrapper(P.self)] else {
+                        return nil
+                    }
+                    state.propertiesDouble[MetatypeWrapper(P.self)] = newValue
+                    return state.parents
                 }
-                state.propertiesDouble[MetatypeWrapper(P.self)] = newValue
-                return state.parents
-            }
-            if let parents = parents {
-                markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                if let parents = parents {
+                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                }
             }
         }
     }
@@ -162,21 +171,24 @@ extension ProgressManager {
     /// - Parameter key: A key path to the custom string property type.
     public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> String? where P.Value == String?, P.Summary == [String?] {
         get {
-            state.withLock { state in
-                return state.propertiesString[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+            accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+            return state.withLock { state in
+                return state.propertiesString[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
         }
 
         set {
-            let parents: [ParentState]? = state.withLock { state in
-                guard newValue != state.propertiesString[MetatypeWrapper(P.self)] else {
-                    return nil
+            mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let parents: [ParentState]? = state.withLock { state in
+                    guard newValue != state.propertiesString[MetatypeWrapper(P.self)] else {
+                        return nil
+                    }
+                    state.propertiesString[MetatypeWrapper(P.self)] = newValue
+                    return state.parents
                 }
-                state.propertiesString[MetatypeWrapper(P.self)] = newValue
-                return state.parents
-            }
-            if let parents = parents {
-                markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                if let parents = parents {
+                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                }
             }
         }
     }
@@ -190,21 +202,24 @@ extension ProgressManager {
     /// - Parameter key: A key path to the custom URL property type.
     public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> URL? where P.Value == URL?, P.Summary == [URL?] {
         get {
-            state.withLock { state in
-                return state.propertiesURL[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+            accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+            return state.withLock { state in
+                return state.propertiesURL[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
         }
 
         set {
-            let parents: [ParentState]? = state.withLock { state in
-                guard newValue != state.propertiesURL[MetatypeWrapper(P.self)] else {
-                    return nil
+            mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let parents: [ParentState]? = state.withLock { state in
+                    guard newValue != state.propertiesURL[MetatypeWrapper(P.self)] else {
+                        return nil
+                    }
+                    state.propertiesURL[MetatypeWrapper(P.self)] = newValue
+                    return state.parents
                 }
-                state.propertiesURL[MetatypeWrapper(P.self)] = newValue
-                return state.parents
-            }
-            if let parents = parents {
-                markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                if let parents = parents {
+                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                }
             }
         }
     }
@@ -218,36 +233,39 @@ extension ProgressManager {
     /// - Parameter key: A key path to the custom unsigned integer property type.
     public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == [UInt64] {
         get {
-            state.withLock { state in
+            accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+            return state.withLock { state in
                 if P.self == ProgressManager.Properties.Throughput.self {
                     return state.throughput
                 } else {
-                    return state.propertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+                    return state.propertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
         }
 
         set {
-            let parents: [ParentState]? = state.withLock { state in
-                if P.self == ProgressManager.Properties.Throughput.self {
-                    guard newValue != state.throughput else {
-                        return nil
+            mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let parents: [ParentState]? = state.withLock { state in
+                    if P.self == ProgressManager.Properties.Throughput.self {
+                        guard newValue != state.throughput else {
+                            return nil
+                        }
+                        state.throughput = newValue
+                        return state.parents
+                    } else {
+                        guard newValue != state.propertiesUInt64Array[MetatypeWrapper(P.self)] else {
+                            return nil
+                        }
+                        state.propertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
+                        return state.parents
                     }
-                    state.throughput = newValue
-                    return state.parents
-                } else {
-                    guard newValue != state.propertiesUInt64Array[MetatypeWrapper(P.self)] else {
-                        return nil
-                    }
-                    state.propertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
-                    return state.parents
                 }
-            }
-            if let parents = parents {
-                if P.self == ProgressManager.Properties.Throughput.self {
-                    markSelfDirty(property: ProgressManager.Properties.Throughput.self, parents: parents)
-                } else {
-                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                if let parents = parents {
+                    if P.self == ProgressManager.Properties.Throughput.self {
+                        markSelfDirty(property: ProgressManager.Properties.Throughput.self, parents: parents)
+                    } else {
+                        markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                    }
                 }
             }
         }
@@ -262,36 +280,39 @@ extension ProgressManager {
     /// - Parameter key: A key path to the custom duration property type.
     public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration {
         get {
-            state.withLock { state in
+            accessObservation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 })
+            return state.withLock { state in
                 if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
                     return state.estimatedTimeRemaining
                 } else {
-                    return state.propertiesDuration[MetatypeWrapper(P.self)] ?? P.self.defaultValue
+                    return state.propertiesDuration[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
         }
 
         set {
-            let parents: [ParentState]? = state.withLock { state in
-                if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
-                    guard newValue != state.estimatedTimeRemaining else {
-                        return nil
+            mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let parents: [ParentState]? = state.withLock { state in
+                    if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
+                        guard newValue != state.estimatedTimeRemaining else {
+                            return nil
+                        }
+                        state.estimatedTimeRemaining = newValue
+                        return state.parents
+                    } else {
+                        guard newValue != state.propertiesDuration[MetatypeWrapper(P.self)] else {
+                            return nil
+                        }
+                        state.propertiesDuration[MetatypeWrapper(P.self)] = newValue
+                        return state.parents
                     }
-                    state.estimatedTimeRemaining = newValue
-                    return state.parents
-                } else {
-                    guard newValue != state.propertiesDuration[MetatypeWrapper(P.self)] else {
-                        return nil
-                    }
-                    state.propertiesDuration[MetatypeWrapper(P.self)] = newValue
-                    return state.parents
                 }
-            }
-            if let parents = parents {
-                if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
-                    markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.self, parents: parents)
-                } else {
-                    markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                if let parents = parents {
+                    if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
+                        markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.self, parents: parents)
+                    } else {
+                        markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
+                    }
                 }
             }
         }
