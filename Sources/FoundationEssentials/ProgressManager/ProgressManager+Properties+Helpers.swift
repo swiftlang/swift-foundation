@@ -210,106 +210,80 @@ extension ProgressManager {
     //MARK: Helper Methods for Setting Dirty Paths
     
     internal func markSelfDirty(property: MetatypeWrapper<Int, Int>, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: MetatypeWrapper<UInt64, UInt64>, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: MetatypeWrapper<Double, Double>, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: MetatypeWrapper<String?, [String?]>, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: MetatypeWrapper<URL?, [URL?]>, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: MetatypeWrapper<UInt64, [UInt64]>, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: MetatypeWrapper<Duration, Duration>, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: ProgressManager.Properties.TotalFileCount.Type, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: ProgressManager.Properties.CompletedFileCount.Type, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: ProgressManager.Properties.TotalByteCount.Type, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: ProgressManager.Properties.CompletedByteCount.Type, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: ProgressManager.Properties.Throughput.Type, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
     internal func markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, parents: [ParentState]) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            for parentState in parents {
-                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
-            }
+        for parentState in parents {
+            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
         }
     }
     
