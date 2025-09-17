@@ -73,7 +73,9 @@ import Testing
         overall.assign(count: 20, to: child2.reporter)
         child2.complete(count: 20)
         
-        overall.totalCount(30)
+        overall.setCounts { _, total in
+            total = 30
+        }
         #expect(overall.completedCount == 20)
         #expect(overall.fractionCompleted == Double(25) / Double(30))
         
@@ -94,7 +96,9 @@ import Testing
         
         #expect(reporter2.fractionCompleted == 0.5)
         
-        overall.totalCount(30)
+        overall.setCounts { _, total in
+            total = 30
+        }
         
         #expect(overall.totalCount == 30)
         #expect(overall.fractionCompleted == 0.5)

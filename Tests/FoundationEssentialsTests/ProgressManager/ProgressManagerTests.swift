@@ -69,7 +69,9 @@ extension Tag {
         #expect(overall.fractionCompleted == 0.5)
         #expect(overall.isIndeterminate == false)
         
-        overall.totalCount(nil)
+        overall.setCounts { _, total in
+            total = nil
+        }
         overall.complete(count: 1)
         #expect(overall.completedCount == 6)
         #expect(overall.totalCount == nil)
@@ -77,7 +79,9 @@ extension Tag {
         #expect(overall.isIndeterminate == true)
         #expect(overall.isFinished == false)
         
-        overall.totalCount(12)
+        overall.setCounts { _, total in
+            total = 12
+        }
         overall.complete(count: 2)
         #expect(overall.completedCount == 8)
         #expect(overall.totalCount == 12)
@@ -110,7 +114,9 @@ extension Tag {
         #expect(overall.isIndeterminate == true)
         #expect(overall.isFinished == false)
         
-        overall.totalCount(5)
+        overall.setCounts { _, total in
+            total = 5
+        }
         #expect(overall.completedCount == 2)
         #expect(overall.totalCount == 5)
         #expect(overall.fractionCompleted == 0.4)
@@ -142,13 +148,17 @@ extension Tag {
         #expect(overall.fractionCompleted == 0.5)
         #expect(childManager.isIndeterminate == false)
         
-        childManager.totalCount(nil)
+        childManager.setCounts { _, total in
+            total = nil
+        }
         
         #expect(overall.fractionCompleted == 0.0)
         #expect(childManager.isIndeterminate == true)
         #expect(childManager.completedCount == 2)
         
-        childManager.totalCount(5)
+        childManager.setCounts { _, total in
+            total = 5
+        }
         childManager.complete(count: 2)
         
         #expect(overall.fractionCompleted == 0.8)
@@ -173,7 +183,9 @@ extension Tag {
         let manager = ProgressManager(totalCount: nil)
         #expect(manager.isIndeterminate == true)
         
-        manager.totalCount(10)
+        manager.setCounts { _, total in
+            total = 10
+        }
         #expect(manager.isIndeterminate == false)
         #expect(manager.totalCount == 10)
         
@@ -631,7 +643,9 @@ extension Tag {
             // Task 3: Change to determinate after a delay
             group.addTask {
                 try? await Task.sleep(nanoseconds: 1_000_000)
-                manager.totalCount(20)
+                manager.setCounts { _, total in
+                    total = 20
+                }
                 
                 for _ in 1...30 {
                     let _ = manager.fractionCompleted

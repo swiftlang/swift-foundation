@@ -196,39 +196,29 @@ internal import _FoundationCollections
         }
     }
     
-    public func completedCount(_ count: Int) {
+    public func setCounts(_ counts: (_ completed: inout Int, _ total: inout Int?) -> Void) {
         _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
             _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
-                let parents: [ParentState]? = state.withLock { state in
-                    guard state.selfFraction.completed != count else {
-                        return nil
+                _$observationRegistrar.withMutation(of: self, keyPath: \.totalCount) {
+                    let parents: [ParentState]? = state.withLock { state in
+                        var completed = state.selfFraction.completed
+                        var total = state.selfFraction.total
+                        
+                        counts(&completed, &total)
+                        
+                        guard state.selfFraction.completed != completed || state.selfFraction.total != total else {
+                            return nil
+                        }
+                        
+                        state.selfFraction.completed = completed
+                        state.selfFraction.total = total
+                        
+                        return state.parents
                     }
                     
-                    state.completedCount(count)
-                    
-                    return state.parents
-                }
-                if let parents = parents {
-                    markSelfDirty(parents: parents)
-                }
-            }
-        }
-    }
-    
-    public func totalCount(_ count: Int?) {
-        _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
-            _$observationRegistrar.withMutation(of: self, keyPath: \.totalCount) {
-                let parents: [ParentState]? = state.withLock { state in
-                    guard state.selfFraction.total != count else {
-                        return nil
+                    if let parents = parents {
+                        markSelfDirty(parents: parents)
                     }
-                    
-                    state.totalCount(count)
-                    
-                    return state.parents
-                }
-                if let parents = parents {
-                    markSelfDirty(parents: parents)
                 }
             }
         }
