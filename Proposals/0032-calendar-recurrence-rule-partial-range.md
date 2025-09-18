@@ -3,7 +3,9 @@
 * Proposal: SF-0032
 * Author: Hristo Staykov <https://github.com/hristost>
 * Implementation: [#1456](https://github.com/swiftlang/swift-foundation/pull/1456)
-* Status: **Review: 2025-09-04...2025-09-11**
+* Review Manager: Tina L
+* Review: [Pitch](https://forums.swift.org/t/pitch-search-for-recurrence-in-partial-ranges/81954), [Review](https://forums.swift.org/t/review-sf-0032-search-for-recurrence-in-partial-ranges/81966)
+* Status: **Accepted**
 
 ## Revision history
 
