@@ -828,4 +828,106 @@ private struct GregorianCalendarRecurrenceRuleTests {
             #expect(results == expectedResults, "Failed for nanoseconds \(nsec)")
         }
     }
+
+    @available(FoundationPreview 6.3, *)
+    @Test func closedRange() {
+        let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily, end: .never)
+        
+        let eventStart = Date(timeIntervalSince1970: 1285077600.0) // 2010-09-21T14:00:00-0000
+        let sept28 = Date(timeIntervalSince1970: 1285682400.0) // 2010-09-28T14:00:00-0000
+        let oct3 = Date(timeIntervalSince1970: 1286114400.0) // 2010-10-03T14:00:00-0000
+
+        let results = Array(rule.recurrences(of: eventStart, in: sept28...oct3))
+
+        let expectedResults = [
+            Date(timeIntervalSince1970: 1285682400.0), // 2010-09-28T14:00:00-0000
+            Date(timeIntervalSince1970: 1285768800.0), // 2010-09-29T14:00:00-0000
+            Date(timeIntervalSince1970: 1285855200.0), // 2010-09-30T14:00:00-0000
+            Date(timeIntervalSince1970: 1285941600.0), // 2010-10-01T14:00:00-0000
+            Date(timeIntervalSince1970: 1286028000.0), // 2010-10-02T14:00:00-0000
+            Date(timeIntervalSince1970: 1286114400.0), // 2010-10-03T14:00:00-0000
+        ]
+        
+        #expect(results == expectedResults)
+    }
+
+    @available(FoundationPreview 6.3, *)
+    @Test func partialRangeUpTo() {
+        let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily, end: .never)
+        
+        let eventStart = Date(timeIntervalSince1970: 1285077600.0) // 2010-09-21T14:00:00-0000
+        let oct3 = Date(timeIntervalSince1970: 1286114400.0) // 2010-10-03T14:00:00-0000
+
+        let results = Array(rule.recurrences(of: eventStart, in: ..<oct3))
+
+        let expectedResults = [
+            Date(timeIntervalSince1970: 1285077600.0), // 2010-09-21T14:00:00-0000
+            Date(timeIntervalSince1970: 1285164000.0), // 2010-09-22T14:00:00-0000
+            Date(timeIntervalSince1970: 1285250400.0), // 2010-09-23T14:00:00-0000
+            Date(timeIntervalSince1970: 1285336800.0), // 2010-09-24T14:00:00-0000
+            Date(timeIntervalSince1970: 1285423200.0), // 2010-09-25T14:00:00-0000
+            Date(timeIntervalSince1970: 1285509600.0), // 2010-09-26T14:00:00-0000
+            Date(timeIntervalSince1970: 1285596000.0), // 2010-09-27T14:00:00-0000
+            Date(timeIntervalSince1970: 1285682400.0), // 2010-09-28T14:00:00-0000
+            Date(timeIntervalSince1970: 1285768800.0), // 2010-09-29T14:00:00-0000
+            Date(timeIntervalSince1970: 1285855200.0), // 2010-09-30T14:00:00-0000
+            Date(timeIntervalSince1970: 1285941600.0), // 2010-10-01T14:00:00-0000
+            Date(timeIntervalSince1970: 1286028000.0), // 2010-10-02T14:00:00-0000
+        ]
+        
+        #expect(results == expectedResults)
+    }
+
+    @available(FoundationPreview 6.3, *)
+    @Test func partialRangeThrough() {
+        let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily, end: .never)
+        
+        let eventStart = Date(timeIntervalSince1970: 1285077600.0) // 2010-09-21T14:00:00-0000
+        let oct3 = Date(timeIntervalSince1970: 1286114400.0) // 2010-10-03T14:00:00-0000
+
+        let results = Array(rule.recurrences(of: eventStart, in: ...oct3))
+
+        let expectedResults = [
+            Date(timeIntervalSince1970: 1285077600.0), // 2010-09-21T14:00:00-0000
+            Date(timeIntervalSince1970: 1285164000.0), // 2010-09-22T14:00:00-0000
+            Date(timeIntervalSince1970: 1285250400.0), // 2010-09-23T14:00:00-0000
+            Date(timeIntervalSince1970: 1285336800.0), // 2010-09-24T14:00:00-0000
+            Date(timeIntervalSince1970: 1285423200.0), // 2010-09-25T14:00:00-0000
+            Date(timeIntervalSince1970: 1285509600.0), // 2010-09-26T14:00:00-0000
+            Date(timeIntervalSince1970: 1285596000.0), // 2010-09-27T14:00:00-0000
+            Date(timeIntervalSince1970: 1285682400.0), // 2010-09-28T14:00:00-0000
+            Date(timeIntervalSince1970: 1285768800.0), // 2010-09-29T14:00:00-0000
+            Date(timeIntervalSince1970: 1285855200.0), // 2010-09-30T14:00:00-0000
+            Date(timeIntervalSince1970: 1285941600.0), // 2010-10-01T14:00:00-0000
+            Date(timeIntervalSince1970: 1286028000.0), // 2010-10-02T14:00:00-0000
+            Date(timeIntervalSince1970: 1286114400.0), // 2010-10-03T14:00:00-0000
+        ]
+        
+        #expect(results == expectedResults)
+    }
+
+    @available(FoundationPreview 6.3, *)
+    @Test func partialRangeFrom() {
+        let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily, end: .never)
+        
+        let eventStart = Date(timeIntervalSince1970: 1285077600.0) // 2010-09-21T14:00:00-0000
+        let oct3 = Date(timeIntervalSince1970: 1286114400.0) // 2010-10-03T14:00:00-0000
+
+        var results = rule.recurrences(of: eventStart, in: oct3...).makeIterator()
+
+        #expect(results.next() == Date(timeIntervalSince1970: 1286114400.0)) // 2010-10-03T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286200800.0)) // 2010-10-04T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286287200.0)) // 2010-10-05T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286373600.0)) // 2010-10-06T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286460000.0)) // 2010-10-07T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286546400.0)) // 2010-10-08T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286632800.0)) // 2010-10-09T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286719200.0)) // 2010-10-10T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286805600.0)) // 2010-10-11T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286892000.0)) // 2010-10-12T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1286978400.0)) // 2010-10-13T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1287064800.0)) // 2010-10-14T14:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1287151200.0)) // 2010-10-15T14:00:00-0000
+        // No upper bound
+    }
 }
