@@ -50,7 +50,8 @@ internal import _FoundationCollections
     /// This takes into account the fraction completed in its children instances if children are present.
     /// If `self` is indeterminate, the value will be 0.0.
     public var fractionCompleted: Double {
-        _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
+        _$observationRegistrar.access(self, keyPath: \.totalCount)
+        _$observationRegistrar.access(self, keyPath: \.completedCount)
         return state.withLock { state in
             state.getFractionCompleted()
         }
@@ -59,7 +60,7 @@ internal import _FoundationCollections
     /// The state of initialization of `totalCount`.
     /// If `totalCount` is `nil`, the value will be `true`.
     public var isIndeterminate: Bool {
-        _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
+        _$observationRegistrar.access(self, keyPath: \.totalCount)
         return state.withLock { state in
             state.getIsIndeterminate()
         }
@@ -68,7 +69,8 @@ internal import _FoundationCollections
     /// The state of completion of work.
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool {
-        _$observationRegistrar.access(self, keyPath: \.isFinished)
+        _$observationRegistrar.access(self, keyPath: \.totalCount)
+        _$observationRegistrar.access(self, keyPath: \.completedCount)
         return state.withLock { state in
             state.getIsFinished()
         }
@@ -178,47 +180,43 @@ internal import _FoundationCollections
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
-        _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
-            _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
-                let parents: [ParentState]? = state.withLock { state in
-                    guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
-                        return nil
-                    }
-                    
-                    state.complete(by: count)
-                    
-                    return state.parents
+        _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
+            let parents: [ParentState]? = state.withLock { state in
+                guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
+                    return nil
                 }
-                if let parents = parents {
-                    markSelfDirty(parents: parents)
-                }
+                
+                state.complete(by: count)
+                
+                return state.parents
+            }
+            if let parents = parents {
+                markSelfDirty(parents: parents)
             }
         }
     }
     
     public func setCounts(_ counts: (_ completed: inout Int, _ total: inout Int?) -> Void) {
-        _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
-            _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
-                _$observationRegistrar.withMutation(of: self, keyPath: \.totalCount) {
-                    let parents: [ParentState]? = state.withLock { state in
-                        var completed = state.selfFraction.completed
-                        var total = state.selfFraction.total
-                        
-                        counts(&completed, &total)
-                        
-                        guard state.selfFraction.completed != completed || state.selfFraction.total != total else {
-                            return nil
-                        }
-                        
-                        state.selfFraction.completed = completed
-                        state.selfFraction.total = total
-                        
-                        return state.parents
+        _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
+            _$observationRegistrar.withMutation(of: self, keyPath: \.totalCount) {
+                let parents: [ParentState]? = state.withLock { state in
+                    var completed = state.selfFraction.completed
+                    var total = state.selfFraction.total
+                    
+                    counts(&completed, &total)
+                    
+                    guard state.selfFraction.completed != completed || state.selfFraction.total != total else {
+                        return nil
                     }
                     
-                    if let parents = parents {
-                        markSelfDirty(parents: parents)
-                    }
+                    state.selfFraction.completed = completed
+                    state.selfFraction.total = total
+                    
+                    return state.parents
+                }
+                
+                if let parents = parents {
+                    markSelfDirty(parents: parents)
                 }
             }
         }
@@ -242,7 +240,6 @@ internal import _FoundationCollections
     internal func getProgressFraction() -> ProgressFraction {
         return state.withLock { state in
             return state.selfFraction
-            
         }
     }
     
@@ -263,11 +260,13 @@ internal import _FoundationCollections
     }
     
     private func markChildDirty(at position: Int) {
-        let parents: [ParentState]? = state.withLock { state in
-            state.markChildDirty(at: position)
-        }
-        if let parents = parents {
-            markSelfDirty(parents: parents)
+        _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
+            let parents: [ParentState]? = state.withLock { state in
+                state.markChildDirty(at: position)
+            }
+            if let parents = parents {
+                markSelfDirty(parents: parents)
+            }
         }
     }
     
