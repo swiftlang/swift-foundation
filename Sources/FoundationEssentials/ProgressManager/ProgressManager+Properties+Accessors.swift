@@ -422,12 +422,14 @@ extension ProgressManager {
     ///   where both the value and summary types are `Int`.
     /// - Returns: An `Int` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
-        self.access(keyPath: \.additionalPropertiesSink)
         if property.self == ProgressManager.Properties.TotalFileCount.self {
+            self.access(keyPath: \.totalFileCount)
             return updatedFileCount(type: .total)
         } else if property.self == ProgressManager.Properties.CompletedFileCount.self {
+            self.access(keyPath: \.completedFileCount)
             return updatedFileCount(type: .completed)
         } else {
+            self.access(keyPath: \.additionalPropertiesSink)
             return updatedIntSummary(property: MetatypeWrapper(property))
         }
     }
@@ -443,16 +445,12 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == UInt64 {
         if property.self == ProgressManager.Properties.TotalByteCount.self {
             self.access(keyPath: \.totalByteCount)
-        } else if property.self == ProgressManager.Properties.CompletedByteCount.self {
-            self.access(keyPath: \.completedByteCount)
-        } else {
-            self.access(keyPath: \.additionalPropertiesSink)
-        }
-        if property.self == ProgressManager.Properties.TotalByteCount.self {
             return updatedByteCount(type: .total)
         } else if property.self == ProgressManager.Properties.CompletedByteCount.self {
+            self.access(keyPath: \.completedByteCount)
             return updatedByteCount(type: .completed)
         } else {
+            self.access(keyPath: \.additionalPropertiesSink)
             return updatedUInt64Summary(property: MetatypeWrapper(property))
         }
     }
@@ -507,12 +505,9 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
         if property.self == ProgressManager.Properties.Throughput.self {
             self.access(keyPath: \.throughput)
-        } else {
-            self.access(keyPath: \.additionalPropertiesSink)
-        }
-        if property.self == ProgressManager.Properties.Throughput.self {
             return updatedThroughput()
         } else {
+            self.access(keyPath: \.additionalPropertiesSink)
             return updatedUInt64ArraySummary(property: MetatypeWrapper(property))
         }
     }
@@ -528,12 +523,9 @@ extension ProgressManager {
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration {
         if property.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
             self.access(keyPath: \.estimatedTimeRemaining)
-        } else {
-            self.access(keyPath: \.additionalPropertiesSink)
-        }
-        if property.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
             return updatedEstimatedTimeRemaining()
         } else {
+            self.access(keyPath: \.additionalPropertiesSink)
             return updatedDurationSummary(property: MetatypeWrapper(property))
         }
     }
