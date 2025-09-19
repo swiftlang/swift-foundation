@@ -28,7 +28,6 @@ internal import _FoundationCollections
     
     internal let state: Mutex<State>
     internal let additionalPropertiesSink: Void
-    internal static let additionalPropertiesKeyPath: Mutex<KeyPath<ProgressManager, Void>> = Mutex(\ProgressManager.additionalPropertiesSink)
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -235,6 +234,15 @@ internal import _FoundationCollections
             }
         }
     }
+    
+    //MARK: Observation Methods
+    internal func willSet<T>(keyPath: KeyPath<ProgressManager, T>) {
+        _$observationRegistrar.willSet(self, keyPath: keyPath)
+    }
+    
+    internal func didSet<T>(keyPath: KeyPath<ProgressManager, T>) {
+        _$observationRegistrar.didSet(self, keyPath: keyPath)
+    }
 
     //MARK: Fractional Properties Methods
     internal func getProgressFraction() -> ProgressFraction {
@@ -278,32 +286,30 @@ internal import _FoundationCollections
     //MARK: Parent - Child Relationship Methods
     internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
         self.withMutation(keyPath: \.completedCount) {
-            self.withMutation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-                let (index, parents) = state.withLock { state in
-                    let childState = ChildState(child: child,
-                                                portionOfTotal: portion,
-                                                childFraction: childFraction,
-                                                isDirty: true,
-                                                totalFileCount: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
-                                                completedFileCount: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
-                                                totalByteCount: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
-                                                completedByteCount: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
-                                                throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
-                                                estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
-                                                childPropertiesInt: [:],
-                                                childPropertiesUInt64: [:],
-                                                childPropertiesDouble: [:],
-                                                childPropertiesString: [:],
-                                                childPropertiesURL: [:],
-                                                childPropertiesUInt64Array: [:],
-                                                childPropertiesDuration: [:])
-                    state.children.append(childState)
-                    return (state.children.count - 1, state.parents)
-                }
-                // Mark dirty all the way up to the root so that if the branch was marked not dirty right before this it will be marked dirty again (for optimization to work)
-                markSelfDirty(parents: parents)
-                return index
+            let (index, parents) = state.withLock { state in
+                let childState = ChildState(child: child,
+                                            portionOfTotal: portion,
+                                            childFraction: childFraction,
+                                            isDirty: true,
+                                            totalFileCount: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
+                                            completedFileCount: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
+                                            totalByteCount: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
+                                            completedByteCount: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
+                                            throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
+                                            estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
+                                            childPropertiesInt: [:],
+                                            childPropertiesUInt64: [:],
+                                            childPropertiesDouble: [:],
+                                            childPropertiesString: [:],
+                                            childPropertiesURL: [:],
+                                            childPropertiesUInt64Array: [:],
+                                            childPropertiesDuration: [:])
+                state.children.append(childState)
+                return (state.children.count - 1, state.parents)
             }
+            // Mark dirty all the way up to the root so that if the branch was marked not dirty right before this it will be marked dirty again (for optimization to work)
+            markSelfDirty(parents: parents)
+            return index
         }
     }
     
