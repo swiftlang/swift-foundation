@@ -32,7 +32,7 @@ internal import _FoundationCollections
     
     /// The total units of work.
     public var totalCount: Int? {
-        _$observationRegistrar.access(self, keyPath: \.totalCount)
+        self.access(keyPath: \.totalCount)
         return state.withLock { state in
             state.getTotalCount()
         }
@@ -40,27 +40,36 @@ internal import _FoundationCollections
     
     /// The completed units of work.
     public var completedCount: Int {
-        _$observationRegistrar.access(self, keyPath: \.completedCount)
-        return state.withLock { state in
-            state.getCompletedCount()
+        self.access(keyPath: \.completedCount)
+        let (children, completedCount) =  state.withLock { state in
+            (state.children.compactMap { $0.child }, state.getCompletedCount())
         }
+        for child in children {
+            child.access(keyPath: \.completedCount)
+        }
+        return completedCount
     }
     
     /// The proportion of work completed.
     /// This takes into account the fraction completed in its children instances if children are present.
     /// If `self` is indeterminate, the value will be 0.0.
     public var fractionCompleted: Double {
-        _$observationRegistrar.access(self, keyPath: \.totalCount)
-        _$observationRegistrar.access(self, keyPath: \.completedCount)
-        return state.withLock { state in
-            state.getFractionCompleted()
+        self.access(keyPath: \.totalCount)
+        self.access(keyPath: \.completedCount)
+        let (children, fractionCompleted) = state.withLock { state in
+            (state.children.compactMap { $0.child }, state.getFractionCompleted())
         }
+        for child in children {
+            child.access(keyPath: \.totalCount)
+            child.access(keyPath: \.completedCount)
+        }
+        return fractionCompleted
     }
     
     /// The state of initialization of `totalCount`.
     /// If `totalCount` is `nil`, the value will be `true`.
     public var isIndeterminate: Bool {
-        _$observationRegistrar.access(self, keyPath: \.totalCount)
+        self.access(keyPath: \.totalCount)
         return state.withLock { state in
             state.getIsIndeterminate()
         }
@@ -69,11 +78,16 @@ internal import _FoundationCollections
     /// The state of completion of work.
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool {
-        _$observationRegistrar.access(self, keyPath: \.totalCount)
-        _$observationRegistrar.access(self, keyPath: \.completedCount)
-        return state.withLock { state in
-            state.getIsFinished()
+        self.access(keyPath: \.totalCount)
+        self.access(keyPath: \.completedCount)
+        let (children, isFinished) = state.withLock { state in
+            (state.children.compactMap { $0.child }, state.getIsFinished())
         }
+        for child in children {
+            child.access(keyPath: \.totalCount)
+            child.access(keyPath: \.completedCount)
+        }
+        return isFinished
     }
     
     /// A `ProgressReporter` instance, used for providing read-only observation of progress updates or composing into other `ProgressManager`s.
@@ -180,7 +194,7 @@ internal import _FoundationCollections
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
-        _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
+        self.withMutation(keyPath: \.completedCount) {
             let parents: [ParentState]? = state.withLock { state in
                 guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
                     return nil
@@ -197,8 +211,8 @@ internal import _FoundationCollections
     }
     
     public func setCounts(_ counts: (_ completed: inout Int, _ total: inout Int?) -> Void) {
-        _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
-            _$observationRegistrar.withMutation(of: self, keyPath: \.totalCount) {
+        self.withMutation(keyPath: \.completedCount) {
+            self.withMutation(keyPath: \.totalCount) {
                 let parents: [ParentState]? = state.withLock { state in
                     var completed = state.selfFraction.completed
                     var total = state.selfFraction.total
@@ -220,20 +234,6 @@ internal import _FoundationCollections
                 }
             }
         }
-    }
-    
-    // MARK: Internal Observation Support for Extensions
-    
-    /// Provides access to the observation registrar for use in extensions.
-    /// This allows extensions to properly register observation access.
-    internal func accessObservation<T>(keyPath: KeyPath<ProgressManager, T>) {
-        _$observationRegistrar.access(self, keyPath: keyPath)
-    }
-    
-    /// Provides mutation access to the observation registrar for use in extensions.
-    /// This allows extensions to properly register observation mutations.
-    internal func mutateObservation<T>(of keyPath: KeyPath<ProgressManager, T>, _ mutation: () -> Void) {
-        _$observationRegistrar.withMutation(of: self, keyPath: keyPath, mutation)
     }
 
     //MARK: Fractional Properties Methods
@@ -260,13 +260,11 @@ internal import _FoundationCollections
     }
     
     private func markChildDirty(at position: Int) {
-        _$observationRegistrar.withMutation(of: self, keyPath: \.completedCount) {
-            let parents: [ParentState]? = state.withLock { state in
-                state.markChildDirty(at: position)
-            }
-            if let parents = parents {
-                markSelfDirty(parents: parents)
-            }
+        let parents: [ParentState]? = state.withLock { state in
+            state.markChildDirty(at: position)
+        }
+        if let parents = parents {
+            markSelfDirty(parents: parents)
         }
     }
     
@@ -279,30 +277,34 @@ internal import _FoundationCollections
     
     //MARK: Parent - Child Relationship Methods
     internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
-        let (index, parents) = state.withLock { state in
-            let childState = ChildState(child: child,
-                                        portionOfTotal: portion,
-                                        childFraction: childFraction,
-                                        isDirty: true,
-                                        totalFileCount: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
-                                        completedFileCount: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
-                                        totalByteCount: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
-                                        completedByteCount: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
-                                        throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
-                                        estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
-                                        childPropertiesInt: [:],
-                                        childPropertiesUInt64: [:],
-                                        childPropertiesDouble: [:],
-                                        childPropertiesString: [:],
-                                        childPropertiesURL: [:],
-                                        childPropertiesUInt64Array: [:],
-                                        childPropertiesDuration: [:])
-            state.children.append(childState)
-            return (state.children.count - 1, state.parents)
+        self.withMutation(keyPath: \.completedCount) {
+            self.withMutation(keyPath: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
+                let (index, parents) = state.withLock { state in
+                    let childState = ChildState(child: child,
+                                                portionOfTotal: portion,
+                                                childFraction: childFraction,
+                                                isDirty: true,
+                                                totalFileCount: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
+                                                completedFileCount: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
+                                                totalByteCount: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
+                                                completedByteCount: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
+                                                throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
+                                                estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
+                                                childPropertiesInt: [:],
+                                                childPropertiesUInt64: [:],
+                                                childPropertiesDouble: [:],
+                                                childPropertiesString: [:],
+                                                childPropertiesURL: [:],
+                                                childPropertiesUInt64Array: [:],
+                                                childPropertiesDuration: [:])
+                    state.children.append(childState)
+                    return (state.children.count - 1, state.parents)
+                }
+                // Mark dirty all the way up to the root so that if the branch was marked not dirty right before this it will be marked dirty again (for optimization to work)
+                markSelfDirty(parents: parents)
+                return index
+            }
         }
-        // Mark dirty all the way up to the root so that if the branch was marked not dirty right before this it will be marked dirty again (for optimization to work)
-        markSelfDirty(parents: parents)
-        return index
     }
     
     internal func addParent(parent: ProgressManager, positionInParent: Int) {

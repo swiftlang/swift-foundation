@@ -337,57 +337,45 @@ extension ProgressManager {
     }
 
     internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            let parents = state.withLock { state in
-                state.markChildDirty(property: property, at: position)
-            }
-            markSelfDirty(property: property, parents: parents)
+        let parents = state.withLock { state in
+            state.markChildDirty(property: property, at: position)
         }
+        markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            let parents = state.withLock { state in
-                state.markChildDirty(property: property, at: position)
-            }
-            markSelfDirty(property: property, parents: parents)
+        let parents = state.withLock { state in
+            state.markChildDirty(property: property, at: position)
         }
+        markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            let parents = state.withLock { state in
-                state.markChildDirty(property: property, at: position)
-            }
-            markSelfDirty(property: property, parents: parents)
+        let parents = state.withLock { state in
+            state.markChildDirty(property: property, at: position)
         }
+        markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            let parents = state.withLock { state in
-                state.markChildDirty(property: property, at: position)
-            }
-            markSelfDirty(property: property, parents: parents)
+        let parents = state.withLock { state in
+            state.markChildDirty(property: property, at: position)
         }
+        markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            let parents = state.withLock { state in
-                state.markChildDirty(property: property, at: position)
-            }
-            markSelfDirty(property: property, parents: parents)
+        let parents = state.withLock { state in
+            state.markChildDirty(property: property, at: position)
         }
+        markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) {
-        mutateObservation(of: ProgressManager.additionalPropertiesKeyPath.withLock { $0 }) {
-            let parents = state.withLock { state in
-                state.markChildDirty(property: property, at: position)
-            }
-            markSelfDirty(property: property, parents: parents)
+        let parents = state.withLock { state in
+            state.markChildDirty(property: property, at: position)
         }
+        markSelfDirty(property: property, parents: parents)
     }
     
     //MARK: Method to preserve values of properties upon deinit
