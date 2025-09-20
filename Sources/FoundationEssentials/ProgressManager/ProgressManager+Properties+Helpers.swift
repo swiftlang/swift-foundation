@@ -145,6 +145,10 @@ extension ProgressManager {
             state.getFileCountUpdateInfo(type: type)
         }
         
+//        for child in updateInfo.dirtyChildren.compactMap({ $0.manager }) {
+//            child.access(keyPath: \.summarySink)
+//        }
+        
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
             State.FileCountUpdate(index: index, updatedSummary: child.updatedFileCount(type: type))
@@ -337,10 +341,11 @@ extension ProgressManager {
     }
 
     internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
-        let parents = state.withLock { state in
-            state.markChildDirty(property: property, at: position)
-        }
-        markSelfDirty(property: property, parents: parents)
+        self.willSet(keyPath: \.summarySink)
+            let parents = state.withLock { state in
+                state.markChildDirty(property: property, at: position)
+            }
+            markSelfDirty(property: property, parents: parents)
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) {

@@ -413,6 +413,7 @@ extension ProgressManager {
     
     // MARK: Methods to Read Additional Properties of Subtree with ProgressManager as root
     
+
     /// Returns a summary for a custom integer property across the progress subtree.
     ///
     /// This method aggregates the values of a custom integer property from this progress manager
@@ -423,7 +424,9 @@ extension ProgressManager {
     /// - Returns: An `Int` summary value for the specified property.
     public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
         if property.self == ProgressManager.Properties.TotalFileCount.self {
+            self.access(keyPath: \.summarySink)
             self.access(keyPath: \.totalFileCount)
+            self.didSet(keyPath: \.summarySink)
             return updatedFileCount(type: .total)
         } else if property.self == ProgressManager.Properties.CompletedFileCount.self {
             self.access(keyPath: \.completedFileCount)
