@@ -409,13 +409,17 @@ extension String.Encoding {
     }
 
     /// The name of this encoding that is compatible with the one of the IANA registry "charset".
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationPreview 6.3, *)
     public var ianaName: String? {
         return _ianaCharset?.representativeName
     }
 
     /// Creates an instance from the name of the IANA registry "charset".
-    @available(FoundationPreview 6.2, *)
+    ///
+    /// - Note: The given name is compared to each IANA "charset" name
+    ///         with ASCII case-insensitive collation
+    ///         to determine which encoding is suitable.
+    @available(FoundationPreview 6.3, *)
     public init?(ianaName charsetName: String) {
         func __determineEncoding() -> String.Encoding? {
             func __matches(_ charsets: IANACharset...) -> Bool {
