@@ -14,15 +14,15 @@
 // MARK: - Private extensions for parsing encoding names
 
 private extension Unicode.Scalar {
-  /// Returns the Boolean value that indicates whether or not `self` is "ASCII whitespace".
-  ///
-  /// Reference: https://infra.spec.whatwg.org/#ascii-whitespace
-  var _isASCIIWhitespace: Bool {
-    switch self.value {
-    case 0x09, 0x0A, 0x0C, 0x0D, 0x20: true
-    default: false
+    /// Returns the Boolean value that indicates whether or not `self` is "ASCII whitespace".
+    ///
+    /// Reference: https://infra.spec.whatwg.org/#ascii-whitespace
+    var _isASCIIWhitespace: Bool {
+        switch self.value {
+        case 0x09, 0x0A, 0x0C, 0x0D, 0x20: true
+        default: false
+        }
     }
-  }
 }
 
 private extension String {
@@ -95,9 +95,9 @@ extension StringEncodingNameTokenizer where Self: ~Copyable {
 private struct ASCIICaseInsensitiveTokenizer: StringEncodingNameTokenizer, ~Copyable {
     typealias Token = ASCIICaseInsensitiveUnicodeScalar
 
-      enum Error: Swift.Error {
-          case nonASCII
-      }
+    enum Error: Swift.Error {
+        case nonASCII
+    }
 
     let scalars: Substring.UnicodeScalarView
 
