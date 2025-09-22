@@ -15,7 +15,7 @@ import Observation
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 @dynamicMemberLookup
 @Observable public final class ProgressReporter: Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     

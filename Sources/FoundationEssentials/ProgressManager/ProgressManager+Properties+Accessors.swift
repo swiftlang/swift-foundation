@@ -12,7 +12,7 @@
 
 internal import Synchronization
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension ProgressManager {
     
     private var totalFileCount: Int {

@@ -14,7 +14,7 @@
 ///
 /// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressManager.
 /// A child ProgressManager is then returned by calling `start(totalCount:)` on a Subprogress.
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 public struct Subprogress: ~Copyable, Sendable {
     internal var parent: ProgressManager
     internal var portionOfParent: Int

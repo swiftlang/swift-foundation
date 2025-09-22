@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 internal import Synchronization
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension ProgressManager {
     
     internal struct MetatypeWrapper<V: Sendable, S: Sendable>: Hashable, Equatable, Sendable {
