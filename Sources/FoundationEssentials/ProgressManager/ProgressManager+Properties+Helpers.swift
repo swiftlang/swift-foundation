@@ -145,10 +145,6 @@ extension ProgressManager {
             state.getFileCountUpdateInfo(type: type)
         }
         
-//        for child in updateInfo.dirtyChildren.compactMap({ $0.manager }) {
-//            child.access(keyPath: \.summarySink)
-//        }
-        
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
             State.FileCountUpdate(index: index, updatedSummary: child.updatedFileCount(type: type))
@@ -292,6 +288,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: MetatypeWrapper<Int, Int>, at position: Int) {
+        self.willSet(keyPath: \.additionalPropertiesSummarySink)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -299,6 +296,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: MetatypeWrapper<UInt64, UInt64>, at position: Int) {
+        self.willSet(keyPath: \.additionalPropertiesSummarySink)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -306,6 +304,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: MetatypeWrapper<Double, Double>, at position: Int) {
+        self.willSet(keyPath: \.additionalPropertiesSummarySink)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -313,6 +312,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: MetatypeWrapper<String?, [String?]>, at position: Int) {
+        self.willSet(keyPath: \.additionalPropertiesSummarySink)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -320,6 +320,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: MetatypeWrapper<URL?, [URL?]>, at position: Int) {
+        self.willSet(keyPath: \.additionalPropertiesSummarySink)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -327,6 +328,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: MetatypeWrapper<UInt64, [UInt64]>, at position: Int) {
+        self.willSet(keyPath: \.additionalPropertiesSummarySink)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -334,6 +336,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: MetatypeWrapper<Duration, Duration>, at position: Int) {
+        self.willSet(keyPath: \.additionalPropertiesSummarySink)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -341,7 +344,7 @@ extension ProgressManager {
     }
 
     internal func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) {
-        self.willSet(keyPath: \.summarySink)
+        self.willSet(keyPath: \.totalFileCountSummary)
             let parents = state.withLock { state in
                 state.markChildDirty(property: property, at: position)
             }
@@ -349,6 +352,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) {
+        self.willSet(keyPath: \.completedFileCountSummary)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -356,6 +360,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) {
+        self.willSet(keyPath: \.totalByteCountSummary)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -363,6 +368,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) {
+        self.willSet(keyPath: \.completedByteCountSummary)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -370,6 +376,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) {
+        self.willSet(keyPath: \.throughputSummary)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
@@ -377,6 +384,7 @@ extension ProgressManager {
     }
     
     internal func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) {
+        self.willSet(keyPath: \.estimatedTimeRemainingSummary)
         let parents = state.withLock { state in
             state.markChildDirty(property: property, at: position)
         }
