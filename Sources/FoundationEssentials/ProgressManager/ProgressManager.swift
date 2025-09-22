@@ -28,7 +28,13 @@ internal import _FoundationCollections
     
     internal let state: Mutex<State>
     internal let additionalPropertiesSink: Void
-    internal let summarySink: Void 
+    internal let additionalPropertiesSummarySink: Void
+    internal let totalFileCountSummary: Void
+    internal let completedFileCountSummary: Void
+    internal let totalByteCountSummary: Void
+    internal let completedByteCountSummary: Void
+    internal let throughputSummary: Void
+    internal let estimatedTimeRemainingSummary: Void
     
     /// The total units of work.
     public var totalCount: Int? {
