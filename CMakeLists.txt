@@ -102,6 +102,7 @@ list(APPEND _SwiftFoundation_versions
     "6.1"
     "6.2"
     "6.3"
+    "6.4"
     )
 
 # Each availability name to define
