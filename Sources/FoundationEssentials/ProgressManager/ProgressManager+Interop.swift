@@ -15,7 +15,7 @@ internal import _ForSwiftFoundation
 internal import Synchronization
 
 //MARK: Progress Parent - Subprogress / ProgressReporter Child Interop
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension Progress {
     
     /// Returns a Subprogress which can be passed to any method that reports progress
@@ -91,7 +91,7 @@ extension Progress {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 //MARK: ProgressManager Parent - Progress Child Interop
 extension ProgressManager {
 
@@ -117,7 +117,7 @@ extension ProgressManager {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 internal final class SubprogressBridge: Sendable {
     
     internal let progressBridge: Progress
@@ -142,7 +142,7 @@ internal final class SubprogressBridge: Sendable {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 internal final class ProgressReporterBridge: Sendable {
     
     internal let progressBridge: Progress
@@ -174,7 +174,7 @@ internal final class ProgressReporterBridge: Sendable {
     
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 internal final class NSProgressBridge: Progress, @unchecked Sendable {
 
     internal let manager: ProgressManager
@@ -210,7 +210,7 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension ProgressManager {
     // Keeping this as an enum in case we have other states to track in the future.
     internal enum ObserverState {
@@ -274,7 +274,7 @@ extension ProgressManager {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension ProgressManager.State {
     internal func notifyObservers(with observerState: ProgressManager.ObserverState) {
         for observer in observers {
@@ -283,7 +283,7 @@ extension ProgressManager.State {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension ProgressManager {
     //MARK: Interop Methods
     /// Adds `observer` to list of `_observers` in `self`.

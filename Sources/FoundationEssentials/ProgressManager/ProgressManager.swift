@@ -22,7 +22,7 @@ internal import _FoundationCollections
 #endif
 
 /// An object that conveys ongoing progress to the user for a specified task.
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 @dynamicMemberLookup
 @Observable public final class ProgressManager: Sendable {
     
@@ -440,7 +440,7 @@ internal import _FoundationCollections
     }
 }
     
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension ProgressManager: Hashable, Equatable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(self))
@@ -452,7 +452,7 @@ extension ProgressManager: Hashable, Equatable {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationPreview 6.4, *)
 extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible {
     /// A description.
     public var description: String {
