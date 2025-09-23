@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 import Observation
+#if canImport(Synchronization)
 internal import Synchronization
+#endif
 
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
