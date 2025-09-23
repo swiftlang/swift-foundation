@@ -457,6 +457,19 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
 
                 if !SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) {
                     let dwError = GetLastError()
+                    if dwError == ERROR_ACCESS_DENIED {
+                        let dwAttributes = GetFileAttributesW(pwszPath)
+                        if dwAttributes > 0,
+                                dwAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM) != 0 {
+                            if SetFileAttributesW(pwszPath, dwAttributes & ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) {
+                                if SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) {
+                                    return
+                                }
+                                // Try to restore the attributes, but ignore any error
+                                _ = SetFileAttributesW(pwszPath, dwAttributes)
+                            }
+                        }
+                    }
                     guard dwError == ERROR_NOT_SAME_DEVICE else {
                         throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
                     }
