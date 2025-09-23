@@ -1216,12 +1216,12 @@ private extension __JSONEncoder {
             return .number(decimal.description)
         } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
             return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
-        } else if let directArrayEncodable = _asDirectArrayEncoding(value, for: additionalKey) {
+        } else if let array = _asDirectArrayEncodable(value, for: additionalKey) {
             if options.outputFormatting.contains(.prettyPrinted) {
-                let (bytes, lengths) = try directArrayEncodable.individualElementRepresentation(encoder: self, additionalKey)
+                let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
                 return .directArray(bytes, lengths: lengths)
             } else {
-                return .nonPrettyDirectArray(try directArrayEncodable.nonPrettyJSONRepresentation(encoder: self, additionalKey))
+                return .nonPrettyDirectArray(try array.nonPrettyJSONRepresentation(encoder: self, additionalKey))
             }
         }
 
@@ -1246,7 +1246,7 @@ private extension __JSONEncoder {
         return encoder.takeValue()
     }
 
-    func _asDirectArrayEncoding<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) -> _JSONDirectArrayEncodable? {
+    func _asDirectArrayEncodable<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) -> _JSONDirectArrayEncodable? {
         return if let array = _specializingCast(array, to: [Int8].self) {
             array
         } else if let array = _specializingCast(array, to: [Int16].self) {

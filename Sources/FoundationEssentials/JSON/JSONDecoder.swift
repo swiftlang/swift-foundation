@@ -610,13 +610,8 @@ extension JSONDecoderImpl: Decoder {
         if type == Decimal.self {
             return try self.unwrapDecimal(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
-        switch options.keyDecodingStrategy {
-        case .useDefaultKeys:
-            break
-        case .convertFromSnakeCase, .custom:
-            if T.self is _JSONStringDictionaryDecodableMarker.Type {
-                return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
-            }
+        if !options.keyDecodingStrategy.isDefault, T.self is _JSONStringDictionaryDecodableMarker.Type {
+            return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
         }
 
         return try self.with(value: mapValue, path: codingPathNode.appending(additionalKey)) {
@@ -1861,6 +1856,15 @@ extension EncodingError {
          self = value
      }
  }
+
+extension JSONDecoder.KeyDecodingStrategy {
+    fileprivate var isDefault: Bool {
+        switch self {
+        case .useDefaultKeys: true
+        default: false
+        }
+    }
+}
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension JSONDecoder : @unchecked Sendable {}
