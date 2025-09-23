@@ -1857,8 +1857,8 @@ extension EncodingError {
      }
  }
 
-extension JSONDecoder.KeyDecodingStrategy {
-    fileprivate var isDefault: Bool {
+fileprivate extension JSONDecoder.KeyDecodingStrategy {
+    var isDefault: Bool {
         switch self {
         case .useDefaultKeys: true
         default: false

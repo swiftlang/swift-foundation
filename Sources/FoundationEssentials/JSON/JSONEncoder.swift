@@ -1503,7 +1503,7 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
     }
 }
 
-private extension JSONEncoder.KeyEncodingStrategy {
+fileprivate extension JSONEncoder.KeyEncodingStrategy {
     var isDefault: Bool {
         switch self {
         case .useDefaultKeys:
