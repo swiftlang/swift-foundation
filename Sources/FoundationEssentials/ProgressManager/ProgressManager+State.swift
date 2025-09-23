@@ -17,6 +17,7 @@ internal import Synchronization
 @available(FoundationPreview 6.4, *)
 extension ProgressManager {
     
+//    @_specialize(where V == Int, S == Int)
     internal struct MetatypeWrapper<V: Sendable, S: Sendable>: Hashable, Equatable, Sendable {
         
         let reduce: @Sendable (inout S, V) -> ()
@@ -81,28 +82,32 @@ extension ProgressManager {
         var isDirty: Bool
     }
     
-    internal struct ChildState {
-        weak var child: ProgressManager?
-        var portionOfTotal: Int
-        var childFraction: ProgressFraction
-        var isDirty: Bool
-        var totalFileCount: PropertyStateInt
-        var completedFileCount: PropertyStateInt
-        var totalByteCount: PropertyStateUInt64
-        var completedByteCount: PropertyStateUInt64
-        var throughput: PropertyStateThroughput
-        var estimatedTimeRemaining: PropertyStateDuration
-        var childPropertiesInt: [MetatypeWrapper<Int, Int>: PropertyStateInt]
-        var childPropertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: PropertyStateUInt64]
-        var childPropertiesDouble: [MetatypeWrapper<Double, Double>: PropertyStateDouble]
-        var childPropertiesString: [MetatypeWrapper<String?, [String?]>: PropertyStateString]
-        var childPropertiesURL: [MetatypeWrapper<URL?, [URL?]>: PropertyStateURL]
-        var childPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: PropertyStateThroughput]
-        var childPropertiesDuration: [MetatypeWrapper<Duration, Duration>: PropertyStateDuration]
+    internal struct Child {
+        weak var manager: ProgressManager?
+        // portion of self's totalCount assigned to child
+        var assignedCount: Int
+        var fraction: ProgressFraction
+        var isFractionDirty: Bool
+        // Summary of additional properties
+        var totalFileCountSummary: PropertyStateInt
+        var completedFileCountSummary: PropertyStateInt
+        var totalByteCountSummary: PropertyStateUInt64
+        var completedByteCountSummary: PropertyStateUInt64
+        var throughputSummary: PropertyStateThroughput
+        var estimatedTimeRemainingSummary: PropertyStateDuration
+        // Summary of custom additional properties
+        var customPropertiesIntSummary: [MetatypeWrapper<Int, Int>: PropertyStateInt]
+        var customPropertiesUInt64Summary: [MetatypeWrapper<UInt64, UInt64>: PropertyStateUInt64]
+        var customPropertiesDoubleSummary: [MetatypeWrapper<Double, Double>: PropertyStateDouble]
+        var customPropertiesStringSummary: [MetatypeWrapper<String?, [String?]>: PropertyStateString]
+        var customPropertiesURLSummary: [MetatypeWrapper<URL?, [URL?]>: PropertyStateURL]
+        var customPropertiesUInt64ArraySummary: [MetatypeWrapper<UInt64, [UInt64]>: PropertyStateThroughput]
+        var customPropertiesDurationSummary: [MetatypeWrapper<Duration, Duration>: PropertyStateDuration]
     }
     
-    internal struct ParentState {
-        var parent: ProgressManager
+    internal struct Parent {
+        var manager: ProgressManager
+        // self's position in parent's children list
         var positionInParent: Int
     }
     
@@ -110,31 +115,33 @@ extension ProgressManager {
         var selfFraction: ProgressFraction
         var overallFraction: ProgressFraction {
             var overallFraction = selfFraction
-            for childState in children {
-                if !childState.childFraction.isFinished {
-                    let multiplier = ProgressFraction(completed: childState.portionOfTotal, total: selfFraction.total)
-                    if let additionalFraction = multiplier * childState.childFraction {
+            for child in children {
+                if !child.fraction.isFinished {
+                    let multiplier = ProgressFraction(completed: child.assignedCount, total: selfFraction.total)
+                    if let additionalFraction = multiplier * child.fraction {
                         overallFraction = overallFraction + additionalFraction
                     }
                 }
             }
             return overallFraction
         }
-        var children: [ChildState]
-        var parents: [ParentState]
+        var children: [Child]
+        var parents: [Parent]
+        // Value of additional properties
         var totalFileCount: Int
         var completedFileCount: Int
         var totalByteCount: UInt64
         var completedByteCount: UInt64
         var throughput: UInt64
         var estimatedTimeRemaining: Duration
-        var propertiesInt: [MetatypeWrapper<Int, Int>: Int]
-        var propertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64]
-        var propertiesDouble: [MetatypeWrapper<Double, Double>: Double]
-        var propertiesString: [MetatypeWrapper<String?, [String?]>: String?]
-        var propertiesURL: [MetatypeWrapper<URL?, [URL?]>: URL?]
-        var propertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: UInt64]
-        var propertiesDuration: [MetatypeWrapper<Duration, Duration>: Duration]
+        // Value of custom additional properties
+        var customPropertiesInt: [MetatypeWrapper<Int, Int>: Int]
+        var customPropertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64]
+        var customPropertiesDouble: [MetatypeWrapper<Double, Double>: Double]
+        var customPropertiesString: [MetatypeWrapper<String?, [String?]>: String?]
+        var customPropertiesURL: [MetatypeWrapper<URL?, [URL?]>: URL?]
+        var customPropertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: UInt64]
+        var customPropertiesDuration: [MetatypeWrapper<Duration, Duration>: Duration]
 #if FOUNDATION_FRAMEWORK
         var observers: [@Sendable (ObserverState) -> Void]
         var interopType: InteropType?
@@ -197,28 +204,28 @@ extension ProgressManager {
                 return
             }
             
-            for (idx, childState) in children.enumerated() {
-                if childState.isDirty {
-                    if let child = childState.child {
+            for (idx, child) in children.enumerated() {
+                if child.isFractionDirty {
+                    if let child = child.manager {
                         let updatedProgressFraction = child.updatedProgressFraction()
-                        let wasFinished = children[idx].childFraction.isFinished
-                        children[idx].childFraction = updatedProgressFraction
+                        let wasFinished = children[idx].fraction.isFinished
+                        children[idx].fraction = updatedProgressFraction
                         // Only add to selfFraction if transitioning from unfinished to finished
                         if updatedProgressFraction.isFinished && !wasFinished {
-                            selfFraction.completed += children[idx].portionOfTotal
+                            selfFraction.completed += children[idx].assignedCount
                         }
                     } else {
-                        let wasFinished = children[idx].childFraction.isFinished
+                        let wasFinished = children[idx].fraction.isFinished
                         if !wasFinished {
-                            selfFraction.completed += children[idx].portionOfTotal
+                            selfFraction.completed += children[idx].assignedCount
                             // Mark nil child as finished to avoid any double counting
-                            children[idx].childFraction = ProgressFraction(
-                                completed: children[idx].portionOfTotal,
-                                total: children[idx].portionOfTotal
+                            children[idx].fraction = ProgressFraction(
+                                completed: children[idx].assignedCount,
+                                total: children[idx].assignedCount
                             )
                         }
                     }
-                    children[idx].isDirty = false
+                    children[idx].isFractionDirty = false
                 }
             }
         }
@@ -253,118 +260,118 @@ extension ProgressManager {
         }
         
         // MARK: Mark paths dirty
-        internal mutating func markChildDirty(at position: Int) -> [ParentState]? {
+        internal mutating func markChildDirty(at position: Int) -> [Parent]? {
             guard position >= 0 && position < children.count else {
                 return nil
             }
-            guard !children[position].isDirty else {
+            guard !children[position].isFractionDirty else {
                 return nil
             }
-            children[position].isDirty = true
+            children[position].isFractionDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: MetatypeWrapper<Int, Int>, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: MetatypeWrapper<Int, Int>, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].childPropertiesInt[property]?.isDirty = true
+            children[position].customPropertiesIntSummary[property]?.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, UInt64>, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, UInt64>, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].childPropertiesUInt64[property]?.isDirty = true
+            children[position].customPropertiesUInt64Summary[property]?.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: MetatypeWrapper<Double, Double>, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: MetatypeWrapper<Double, Double>, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].childPropertiesDouble[property]?.isDirty = true
+            children[position].customPropertiesDoubleSummary[property]?.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: MetatypeWrapper<String?, [String?]>, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: MetatypeWrapper<String?, [String?]>, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].childPropertiesString[property]?.isDirty = true
+            children[position].customPropertiesStringSummary[property]?.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: MetatypeWrapper<URL?, [URL?]>, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: MetatypeWrapper<URL?, [URL?]>, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].childPropertiesURL[property]?.isDirty = true
+            children[position].customPropertiesURLSummary[property]?.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, [UInt64]>, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, [UInt64]>, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].childPropertiesUInt64Array[property]?.isDirty = true
+            children[position].customPropertiesUInt64ArraySummary[property]?.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: MetatypeWrapper<Duration, Duration>, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: MetatypeWrapper<Duration, Duration>, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].childPropertiesDuration[property]?.isDirty = true
+            children[position].customPropertiesDurationSummary[property]?.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].totalFileCount.isDirty = true
+            children[position].totalFileCountSummary.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].completedFileCount.isDirty = true
+            children[position].completedFileCountSummary.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].totalByteCount.isDirty = true
+            children[position].totalByteCountSummary.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].completedByteCount.isDirty = true
+            children[position].completedByteCountSummary.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].throughput.isDirty = true
+            children[position].throughputSummary.isDirty = true
             return parents
         }
         
-        internal mutating func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) -> [ParentState] {
+        internal mutating func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) -> [Parent] {
             guard position >= 0 && position < children.count else {
                 return parents
             }
-            children[position].estimatedTimeRemaining.isDirty = true
+            children[position].estimatedTimeRemainingSummary.isDirty = true
             return parents
         }
         
@@ -501,7 +508,7 @@ extension ProgressManager {
         
         internal mutating func getIntSummaryUpdateInfo(property: MetatypeWrapper<Int, Int>) -> IntSummaryUpdateInfo {
             var currentSummary: Int = property.defaultSummary
-            property.reduce(&currentSummary, propertiesInt[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, customPropertiesInt[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
                 return IntSummaryUpdateInfo(
@@ -515,19 +522,19 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: Int, isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesInt[property] {
+            for (idx, child) in children.enumerated() {
+                if let childPropertyState = child.customPropertiesIntSummary[property] {
                     if childPropertyState.isDirty {
-                        if let child = childState.child {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
+                        let isAlive = child.manager != nil
                         nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                     }
                 } else {
                     // Property doesn't exist yet in child - need to fetch it
-                    if let child = childState.child {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 }
@@ -546,7 +553,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesInt[updateInfo.property] = PropertyStateInt(value: update.updatedSummary, isDirty: false)
+                children[update.index].customPropertiesIntSummary[updateInfo.property] = PropertyStateInt(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -564,7 +571,7 @@ extension ProgressManager {
         
         internal mutating func getUInt64SummaryUpdateInfo(property: MetatypeWrapper<UInt64, UInt64>) -> UInt64SummaryUpdateInfo {
             var currentSummary: UInt64 = property.defaultSummary
-            property.reduce(&currentSummary, propertiesUInt64[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, customPropertiesUInt64[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
                 return UInt64SummaryUpdateInfo(
@@ -578,19 +585,19 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: UInt64, isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesUInt64[property] {
+            for (idx, child) in children.enumerated() {
+                if let childPropertyState = child.customPropertiesUInt64Summary[property] {
                     if childPropertyState.isDirty {
-                        if let child = childState.child {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
+                        let isAlive = child.manager != nil
                         nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                     }
                 } else {
                     // Property doesn't exist yet in child - need to fetch it
-                    if let child = childState.child {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 }
@@ -609,7 +616,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesUInt64[updateInfo.property] = PropertyStateUInt64(value: update.updatedSummary, isDirty: false)
+                children[update.index].customPropertiesUInt64Summary[updateInfo.property] = PropertyStateUInt64(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -627,7 +634,7 @@ extension ProgressManager {
         
         internal mutating func getDoubleSummaryUpdateInfo(property: MetatypeWrapper<Double, Double>) -> DoubleSummaryUpdateInfo {
             var currentSummary: Double = property.defaultSummary
-            property.reduce(&currentSummary, propertiesDouble[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, customPropertiesDouble[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
                 return DoubleSummaryUpdateInfo(
@@ -641,19 +648,19 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: Double, isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesDouble[property] {
+            for (idx, child) in children.enumerated() {
+                if let childPropertyState = child.customPropertiesDoubleSummary[property] {
                     if childPropertyState.isDirty {
-                        if let child = childState.child {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
+                        let isAlive = child.manager != nil
                         nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                     }
                 } else {
                     // Property doesn't exist yet in child - need to fetch it
-                    if let child = childState.child {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 }
@@ -672,7 +679,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesDouble[updateInfo.property] = PropertyStateDouble(value: update.updatedSummary, isDirty: false)
+                children[update.index].customPropertiesDoubleSummary[updateInfo.property] = PropertyStateDouble(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -690,7 +697,7 @@ extension ProgressManager {
         
         internal mutating func getStringSummaryUpdateInfo(property: MetatypeWrapper<String?, [String?]>) -> StringSummaryUpdateInfo {
             var currentSummary: [String?] = property.defaultSummary
-            property.reduce(&currentSummary, propertiesString[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, customPropertiesString[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
                 return StringSummaryUpdateInfo(
@@ -704,19 +711,19 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: [String?], isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesString[property] {
+            for (idx, child) in children.enumerated() {
+                if let childPropertyState = child.customPropertiesStringSummary[property] {
                     if childPropertyState.isDirty {
-                        if let child = childState.child {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
+                        let isAlive = child.manager != nil
                         nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                     }
                 } else {
                     // Property doesn't exist yet in child - need to fetch it
-                    if let child = childState.child {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 }
@@ -735,7 +742,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesString[updateInfo.property] = PropertyStateString(value: update.updatedSummary, isDirty: false)
+                children[update.index].customPropertiesStringSummary[updateInfo.property] = PropertyStateString(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -753,7 +760,7 @@ extension ProgressManager {
         
         internal mutating func getURLSummaryUpdateInfo(property: MetatypeWrapper<URL?, [URL?]>) -> URLSummaryUpdateInfo {
             var currentSummary: [URL?] = property.defaultSummary
-            property.reduce(&currentSummary, propertiesURL[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, customPropertiesURL[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
                 return URLSummaryUpdateInfo(
@@ -767,19 +774,19 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: [URL?], isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesURL[property] {
+            for (idx, child) in children.enumerated() {
+                if let childPropertyState = child.customPropertiesURLSummary[property] {
                     if childPropertyState.isDirty {
-                        if let child = childState.child {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
+                        let isAlive = child.manager != nil
                         nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                     }
                 } else {
                     // Property doesn't exist yet in child - need to fetch it
-                    if let child = childState.child {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 }
@@ -798,7 +805,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesURL[updateInfo.property] = PropertyStateURL(value: update.updatedSummary, isDirty: false)
+                children[update.index].customPropertiesURLSummary[updateInfo.property] = PropertyStateURL(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -816,7 +823,7 @@ extension ProgressManager {
         
         internal mutating func getUInt64ArraySummaryUpdateInfo(property: MetatypeWrapper<UInt64, [UInt64]>) -> UInt64ArraySummaryUpdateInfo {
             var currentSummary: [UInt64] = property.defaultSummary
-            property.reduce(&currentSummary, propertiesUInt64Array[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, customPropertiesUInt64Array[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
                 return UInt64ArraySummaryUpdateInfo(
@@ -830,19 +837,19 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: [UInt64], isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesUInt64Array[property] {
+            for (idx, child) in children.enumerated() {
+                if let childPropertyState = child.customPropertiesUInt64ArraySummary[property] {
                     if childPropertyState.isDirty {
-                        if let child = childState.child {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
+                        let isAlive = child.manager != nil
                         nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                     }
                 } else {
                     // Property doesn't exist yet in child - need to fetch it
-                    if let child = childState.child {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 }
@@ -861,7 +868,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesUInt64Array[updateInfo.property] = PropertyStateThroughput(value: update.updatedSummary, isDirty: false)
+                children[update.index].customPropertiesUInt64ArraySummary[updateInfo.property] = PropertyStateThroughput(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -879,7 +886,7 @@ extension ProgressManager {
         
         internal mutating func getDurationSummaryUpdateInfo(property: MetatypeWrapper<Duration, Duration>) -> DurationSummaryUpdateInfo {
             var currentSummary: Duration = property.defaultSummary
-            property.reduce(&currentSummary, propertiesDuration[property] ?? property.defaultValue)
+            property.reduce(&currentSummary, customPropertiesDuration[property] ?? property.defaultValue)
             
             guard !children.isEmpty else {
                 return DurationSummaryUpdateInfo(
@@ -893,19 +900,19 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: Duration, isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if let childPropertyState = childState.childPropertiesDuration[property] {
+            for (idx, child) in children.enumerated() {
+                if let childPropertyState = child.customPropertiesDurationSummary[property] {
                     if childPropertyState.isDirty {
-                        if let child = childState.child {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
+                        let isAlive = child.manager != nil
                         nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                     }
                 } else {
                     // Property doesn't exist yet in child - need to fetch it
-                    if let child = childState.child {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 }
@@ -924,7 +931,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].childPropertiesDuration[updateInfo.property] = PropertyStateDuration(value: update.updatedSummary, isDirty: false)
+                children[update.index].customPropertiesDurationSummary[updateInfo.property] = PropertyStateDuration(value: update.updatedSummary, isDirty: false)
                 value = updateInfo.property.merge(value, update.updatedSummary)
             }
             
@@ -960,14 +967,14 @@ extension ProgressManager {
                     )
                 }
                 
-                for (idx, childState) in children.enumerated() {
-                    if childState.totalFileCount.isDirty {
-                        if let child = childState.child {
+                for (idx, child) in children.enumerated() {
+                    if child.totalFileCountSummary.isDirty {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
-                        nonDirtySummaries.append((idx, childState.totalFileCount.value, isAlive))
+                        let isAlive = child.manager != nil
+                        nonDirtySummaries.append((idx, child.totalFileCountSummary.value, isAlive))
                     }
                 }
                 
@@ -985,14 +992,14 @@ extension ProgressManager {
                     )
                 }
                 
-                for (idx, childState) in children.enumerated() {
-                    if childState.completedFileCount.isDirty {
-                        if let child = childState.child {
+                for (idx, child) in children.enumerated() {
+                    if child.completedFileCountSummary.isDirty {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
-                        nonDirtySummaries.append((idx, childState.completedFileCount.value, isAlive))
+                        let isAlive = child.manager != nil
+                        nonDirtySummaries.append((idx, child.completedFileCountSummary.value, isAlive))
                     }
                 }
             }
@@ -1012,7 +1019,7 @@ extension ProgressManager {
             case .total:
                 // Apply updates from children that were dirty
                 for update in childUpdates {
-                    children[update.index].totalFileCount = PropertyStateInt(value: update.updatedSummary, isDirty: false)
+                    children[update.index].totalFileCountSummary = PropertyStateInt(value: update.updatedSummary, isDirty: false)
                     value = ProgressManager.Properties.TotalFileCount.merge(value, update.updatedSummary)
                 }
                 
@@ -1028,7 +1035,7 @@ extension ProgressManager {
             case .completed:
                 // Apply updates from children that were dirty
                 for update in childUpdates {
-                    children[update.index].completedFileCount = PropertyStateInt(value: update.updatedSummary, isDirty: false)
+                    children[update.index].completedFileCountSummary = PropertyStateInt(value: update.updatedSummary, isDirty: false)
                     value = ProgressManager.Properties.CompletedFileCount.merge(value, update.updatedSummary)
                 }
                 
@@ -1065,14 +1072,14 @@ extension ProgressManager {
                     )
                 }
                 
-                for (idx, childState) in children.enumerated() {
-                    if childState.totalByteCount.isDirty {
-                        if let child = childState.child {
+                for (idx, child) in children.enumerated() {
+                    if child.totalByteCountSummary.isDirty {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
-                        nonDirtySummaries.append((idx, childState.totalByteCount.value, isAlive))
+                        let isAlive = child.manager != nil
+                        nonDirtySummaries.append((idx, child.totalByteCountSummary.value, isAlive))
                     }
                 }
                 
@@ -1090,14 +1097,14 @@ extension ProgressManager {
                     )
                 }
                 
-                for (idx, childState) in children.enumerated() {
-                    if childState.completedByteCount.isDirty {
-                        if let child = childState.child {
+                for (idx, child) in children.enumerated() {
+                    if child.completedByteCountSummary.isDirty {
+                        if let child = child.manager {
                             dirtyChildren.append((idx, child))
                         }
                     } else {
-                        let isAlive = childState.child != nil
-                        nonDirtySummaries.append((idx, childState.completedByteCount.value, isAlive))
+                        let isAlive = child.manager != nil
+                        nonDirtySummaries.append((idx, child.completedByteCountSummary.value, isAlive))
                     }
                 }
             }
@@ -1117,7 +1124,7 @@ extension ProgressManager {
             case .total:
                 // Apply updates from children that were dirty
                 for update in childUpdates {
-                    children[update.index].totalByteCount = PropertyStateUInt64(value: update.updatedSummary, isDirty: false)
+                    children[update.index].totalByteCountSummary = PropertyStateUInt64(value: update.updatedSummary, isDirty: false)
                     value = ProgressManager.Properties.TotalByteCount.merge(value, update.updatedSummary)
                 }
                 
@@ -1133,7 +1140,7 @@ extension ProgressManager {
             case .completed:
                 // Apply updates from children that were dirty
                 for update in childUpdates {
-                    children[update.index].completedByteCount = PropertyStateUInt64(value: update.updatedSummary, isDirty: false)
+                    children[update.index].completedByteCountSummary = PropertyStateUInt64(value: update.updatedSummary, isDirty: false)
                     value = ProgressManager.Properties.CompletedByteCount.merge(value, update.updatedSummary)
                 }
                 
@@ -1165,14 +1172,14 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: [UInt64], isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if childState.throughput.isDirty {
-                    if let child = childState.child {
+            for (idx, child) in children.enumerated() {
+                if child.throughputSummary.isDirty {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 } else {
-                    let isAlive = childState.child != nil
-                    nonDirtySummaries.append((idx, childState.throughput.value, isAlive))
+                    let isAlive = child.manager != nil
+                    nonDirtySummaries.append((idx, child.throughputSummary.value, isAlive))
                 }
             }
             
@@ -1188,7 +1195,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].throughput = PropertyStateThroughput(value: update.updatedSummary, isDirty: false)
+                children[update.index].throughputSummary = PropertyStateThroughput(value: update.updatedSummary, isDirty: false)
                 value = ProgressManager.Properties.Throughput.merge(value, update.updatedSummary)
             }
             
@@ -1219,14 +1226,14 @@ extension ProgressManager {
             var dirtyChildren: [(index: Int, manager: ProgressManager)] = []
             var nonDirtySummaries: [(index: Int, summary: Duration, isAlive: Bool)] = []
             
-            for (idx, childState) in children.enumerated() {
-                if childState.estimatedTimeRemaining.isDirty {
-                    if let child = childState.child {
+            for (idx, child) in children.enumerated() {
+                if child.estimatedTimeRemainingSummary.isDirty {
+                    if let child = child.manager {
                         dirtyChildren.append((idx, child))
                     }
                 } else {
-                    let isAlive = childState.child != nil
-                    nonDirtySummaries.append((idx, childState.estimatedTimeRemaining.value, isAlive))
+                    let isAlive = child.manager != nil
+                    nonDirtySummaries.append((idx, child.estimatedTimeRemainingSummary.value, isAlive))
                 }
             }
             
@@ -1242,7 +1249,7 @@ extension ProgressManager {
             
             // Apply updates from children that were dirty
             for update in childUpdates {
-                children[update.index].estimatedTimeRemaining = PropertyStateDuration(value: update.updatedSummary, isDirty: false)
+                children[update.index].estimatedTimeRemainingSummary = PropertyStateDuration(value: update.updatedSummary, isDirty: false)
                 value = ProgressManager.Properties.EstimatedTimeRemaining.merge(value, update.updatedSummary)
             }
             

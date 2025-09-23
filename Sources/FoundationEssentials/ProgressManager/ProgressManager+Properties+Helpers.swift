@@ -212,81 +212,81 @@ extension ProgressManager {
     
     //MARK: Helper Methods for Setting Dirty Paths
     
-    internal func markSelfDirty(property: MetatypeWrapper<Int, Int>, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: MetatypeWrapper<Int, Int>, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: MetatypeWrapper<UInt64, UInt64>, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: MetatypeWrapper<UInt64, UInt64>, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: MetatypeWrapper<Double, Double>, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: MetatypeWrapper<Double, Double>, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: MetatypeWrapper<String?, [String?]>, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: MetatypeWrapper<String?, [String?]>, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: MetatypeWrapper<URL?, [URL?]>, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: MetatypeWrapper<URL?, [URL?]>, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: MetatypeWrapper<UInt64, [UInt64]>, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: MetatypeWrapper<UInt64, [UInt64]>, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: MetatypeWrapper<Duration, Duration>, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: MetatypeWrapper<Duration, Duration>, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: ProgressManager.Properties.TotalFileCount.Type, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: ProgressManager.Properties.TotalFileCount.Type, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: ProgressManager.Properties.CompletedFileCount.Type, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: ProgressManager.Properties.CompletedFileCount.Type, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: ProgressManager.Properties.TotalByteCount.Type, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: ProgressManager.Properties.TotalByteCount.Type, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: ProgressManager.Properties.CompletedByteCount.Type, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: ProgressManager.Properties.CompletedByteCount.Type, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: ProgressManager.Properties.Throughput.Type, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: ProgressManager.Properties.Throughput.Type, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
-    internal func markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
+    internal func markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, parents: [Parent]) {
+        for parent in parents {
+            parent.manager.markChildDirty(property: property, at: parent.positionInParent)
         }
     }
     
@@ -397,39 +397,39 @@ extension ProgressManager {
     //MARK: Method to preserve values of properties upon deinit
     internal func setChildDeclaredAdditionalProperties(at position: Int, totalFileCount: Int, completedFileCount: Int, totalByteCount: UInt64, completedByteCount: UInt64, throughput: [UInt64], estimatedTimeRemaining: Duration, propertiesInt: [MetatypeWrapper<Int, Int>: Int], propertiesUInt64: [MetatypeWrapper<UInt64, UInt64>: UInt64], propertiesDouble: [MetatypeWrapper<Double, Double>: Double], propertiesString: [MetatypeWrapper<String?, [String?]>: [String?]], propertiesURL: [MetatypeWrapper<URL?, [URL?]>: [URL?]], propertiesUInt64Array: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]], propertiesDuration: [MetatypeWrapper<Duration, Duration>: Duration]) {
         state.withLock { state in
-            state.children[position].totalFileCount = PropertyStateInt(value: totalFileCount, isDirty: false)
-            state.children[position].completedFileCount = PropertyStateInt(value: completedFileCount, isDirty: false)
-            state.children[position].totalByteCount = PropertyStateUInt64(value: totalByteCount, isDirty: false)
-            state.children[position].completedByteCount = PropertyStateUInt64(value: completedByteCount, isDirty: false)
-            state.children[position].throughput = PropertyStateThroughput(value: throughput, isDirty: false)
-            state.children[position].estimatedTimeRemaining = PropertyStateDuration(value: estimatedTimeRemaining, isDirty: false)
+            state.children[position].totalFileCountSummary = PropertyStateInt(value: totalFileCount, isDirty: false)
+            state.children[position].completedFileCountSummary = PropertyStateInt(value: completedFileCount, isDirty: false)
+            state.children[position].totalByteCountSummary = PropertyStateUInt64(value: totalByteCount, isDirty: false)
+            state.children[position].completedByteCountSummary = PropertyStateUInt64(value: completedByteCount, isDirty: false)
+            state.children[position].throughputSummary = PropertyStateThroughput(value: throughput, isDirty: false)
+            state.children[position].estimatedTimeRemainingSummary = PropertyStateDuration(value: estimatedTimeRemaining, isDirty: false)
             
             for (propertyKey, propertyValue) in propertiesInt {
-                state.children[position].childPropertiesInt[propertyKey] = PropertyStateInt(value: propertyValue, isDirty: false)
+                state.children[position].customPropertiesIntSummary[propertyKey] = PropertyStateInt(value: propertyValue, isDirty: false)
             }
             
             for (propertyKey, propertyValue) in propertiesUInt64 {
-                state.children[position].childPropertiesUInt64[propertyKey] = PropertyStateUInt64(value: propertyValue, isDirty: false)
+                state.children[position].customPropertiesUInt64Summary[propertyKey] = PropertyStateUInt64(value: propertyValue, isDirty: false)
             }
             
             for (propertyKey, propertyValue) in propertiesDouble {
-                state.children[position].childPropertiesDouble[propertyKey] = PropertyStateDouble(value: propertyValue, isDirty: false)
+                state.children[position].customPropertiesDoubleSummary[propertyKey] = PropertyStateDouble(value: propertyValue, isDirty: false)
             }
             
             for (propertyKey, propertyValue) in propertiesString {
-                state.children[position].childPropertiesString[propertyKey] = PropertyStateString(value: propertyValue, isDirty: false)
+                state.children[position].customPropertiesStringSummary[propertyKey] = PropertyStateString(value: propertyValue, isDirty: false)
             }
             
             for (propertyKey, propertyValue) in propertiesURL {
-                state.children[position].childPropertiesURL[propertyKey] = PropertyStateURL(value: propertyValue, isDirty: false)
+                state.children[position].customPropertiesURLSummary[propertyKey] = PropertyStateURL(value: propertyValue, isDirty: false)
             }
             
             for (propertyKey, propertyValue) in propertiesUInt64Array {
-                state.children[position].childPropertiesUInt64Array[propertyKey] = PropertyStateThroughput(value: propertyValue, isDirty: false)
+                state.children[position].customPropertiesUInt64ArraySummary[propertyKey] = PropertyStateThroughput(value: propertyValue, isDirty: false)
             }
             
             for (propertyKey, propertyValue) in propertiesDuration {
-                state.children[position].childPropertiesDuration[propertyKey] = PropertyStateDuration(value: propertyValue, isDirty: false)
+                state.children[position].customPropertiesDurationSummary[propertyKey] = PropertyStateDuration(value: propertyValue, isDirty: false)
             }
         }
     }

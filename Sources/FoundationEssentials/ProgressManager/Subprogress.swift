@@ -63,12 +63,12 @@ public struct Subprogress: ~Copyable, Sendable {
 #endif
 
         let position = parent.addChild(
-            child: childManager,
-            portion: portionOfParent,
+            childManager: childManager,
+            assignedCount: portionOfParent,
             childFraction: childManager.getProgressFraction()
         )
         childManager.addParent(
-            parent: parent,
+            parentManager: parent,
             positionInParent: position
         )
         

@@ -50,7 +50,7 @@ internal import _FoundationCollections
     public var completedCount: Int {
         self.access(keyPath: \.completedCount)
         let (children, completedCount) =  state.withLock { state in
-            (state.children.compactMap { $0.child }, state.completedCount())
+            (state.children.compactMap { $0.manager }, state.completedCount())
         }
         for child in children {
             child.access(keyPath: \.completedCount)
@@ -65,7 +65,7 @@ internal import _FoundationCollections
         self.access(keyPath: \.totalCount)
         self.access(keyPath: \.completedCount)
         let (children, fractionCompleted) = state.withLock { state in
-            (state.children.compactMap { $0.child }, state.fractionCompleted())
+            (state.children.compactMap { $0.manager }, state.fractionCompleted())
         }
         for child in children {
             child.access(keyPath: \.totalCount)
@@ -89,7 +89,7 @@ internal import _FoundationCollections
         self.access(keyPath: \.totalCount)
         self.access(keyPath: \.completedCount)
         let (children, isFinished) = state.withLock { state in
-            (state.children.compactMap { $0.child }, state.isFinished())
+            (state.children.compactMap { $0.manager }, state.isFinished())
         }
         for child in children {
             child.access(keyPath: \.totalCount)
@@ -115,13 +115,13 @@ internal import _FoundationCollections
             completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
-            propertiesInt: [:],
-            propertiesUInt64: [:],
-            propertiesDouble: [:],
-            propertiesString: [:],
-            propertiesURL: [:],
-            propertiesUInt64Array: [:],
-            propertiesDuration: [:],
+            customPropertiesInt: [:],
+            customPropertiesUInt64: [:],
+            customPropertiesDouble: [:],
+            customPropertiesString: [:],
+            customPropertiesURL: [:],
+            customPropertiesUInt64Array: [:],
+            customPropertiesDuration: [:],
             observers: [],
             interopType: .interopObservation(InteropObservation(subprogressBridge: subprogressBridge))
         )
@@ -139,13 +139,13 @@ internal import _FoundationCollections
             completedByteCount: ProgressManager.Properties.CompletedByteCount.defaultValue,
             throughput: ProgressManager.Properties.Throughput.defaultValue,
             estimatedTimeRemaining: ProgressManager.Properties.EstimatedTimeRemaining.defaultValue,
-            propertiesInt: [:],
-            propertiesUInt64: [:],
-            propertiesDouble: [:],
-            propertiesString: [:],
-            propertiesURL: [:],
-            propertiesUInt64Array: [:],
-            propertiesDuration: [:]
+            customPropertiesInt: [:],
+            customPropertiesUInt64: [:],
+            customPropertiesDouble: [:],
+            customPropertiesString: [:],
+            customPropertiesURL: [:],
+            customPropertiesUInt64Array: [:],
+            customPropertiesDuration: [:]
         )
         self.state = Mutex(state)
     }
@@ -195,15 +195,15 @@ internal import _FoundationCollections
         
         let actualManager = reporter.manager
         
-        let position = self.addChild(child: actualManager, portion: count, childFraction: actualManager.getProgressFraction())
-        actualManager.addParent(parent: self, positionInParent: position)
+        let position = self.addChild(childManager: actualManager, assignedCount: count, childFraction: actualManager.getProgressFraction())
+        actualManager.addParent(parentManager: self, positionInParent: position)
     }
     
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
         self.withMutation(keyPath: \.completedCount) {
-            let parents: [ParentState]? = state.withLock { state in
+            let parents: [Parent]? = state.withLock { state in
                 guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
                     return nil
                 }
@@ -221,7 +221,7 @@ internal import _FoundationCollections
     public func setCounts(_ counts: (_ completed: inout Int, _ total: inout Int?) -> Void) {
         self.withMutation(keyPath: \.completedCount) {
             self.withMutation(keyPath: \.totalCount) {
-                let parents: [ParentState]? = state.withLock { state in
+                let parents: [Parent]? = state.withLock { state in
                     var completed = state.selfFraction.completed
                     var total = state.selfFraction.total
                     
@@ -268,16 +268,16 @@ internal import _FoundationCollections
         markSelfDirty(parents: parents)
     }
     
-    internal func markSelfDirty(parents: [ParentState]) {
+    internal func markSelfDirty(parents: [Parent]) {
         if parents.count > 0 {
-            for parentState in parents {
-                parentState.parent.markChildDirty(at: parentState.positionInParent)
+            for parent in parents {
+                parent.manager.markChildDirty(at: parent.positionInParent)
             }
         }
     }
     
     private func markChildDirty(at position: Int) {
-        let parents: [ParentState]? = state.withLock { state in
+        let parents: [Parent]? = state.withLock { state in
             state.markChildDirty(at: position)
         }
         if let parents = parents {
@@ -293,27 +293,27 @@ internal import _FoundationCollections
     }
     
     //MARK: Parent - Child Relationship Methods
-    internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
+    internal func addChild(childManager: ProgressManager, assignedCount: Int, childFraction: ProgressFraction) -> Int {
         self.withMutation(keyPath: \.completedCount) {
             let (index, parents) = state.withLock { state in
-                let childState = ChildState(child: child,
-                                            portionOfTotal: portion,
-                                            childFraction: childFraction,
-                                            isDirty: true,
-                                            totalFileCount: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
-                                            completedFileCount: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
-                                            totalByteCount: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
-                                            completedByteCount: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
-                                            throughput: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
-                                            estimatedTimeRemaining: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
-                                            childPropertiesInt: [:],
-                                            childPropertiesUInt64: [:],
-                                            childPropertiesDouble: [:],
-                                            childPropertiesString: [:],
-                                            childPropertiesURL: [:],
-                                            childPropertiesUInt64Array: [:],
-                                            childPropertiesDuration: [:])
-                state.children.append(childState)
+                let child = Child(manager: childManager,
+                                  assignedCount: assignedCount,
+                                  fraction: childFraction,
+                                  isFractionDirty: true,
+                                  totalFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
+                                  completedFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
+                                  totalByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
+                                  completedByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
+                                  throughputSummary: PropertyStateThroughput(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
+                                  estimatedTimeRemainingSummary: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
+                                  customPropertiesIntSummary: [:],
+                                  customPropertiesUInt64Summary: [:],
+                                  customPropertiesDoubleSummary: [:],
+                                  customPropertiesStringSummary: [:],
+                                  customPropertiesURLSummary: [:],
+                                  customPropertiesUInt64ArraySummary: [:],
+                                  customPropertiesDurationSummary: [:])
+                state.children.append(child)
                 return (state.children.count - 1, state.parents)
             }
             // Mark dirty all the way up to the root so that if the branch was marked not dirty right before this it will be marked dirty again (for optimization to work)
@@ -322,10 +322,10 @@ internal import _FoundationCollections
         }
     }
     
-    internal func addParent(parent: ProgressManager, positionInParent: Int) {
+    internal func addParent(parentManager: ProgressManager, positionInParent: Int) {
         state.withLock { state in
-            let parentState = ParentState(parent: parent, positionInParent: positionInParent)
-            state.parents.append(parentState)
+            let parent = Parent(manager: parentManager, positionInParent: positionInParent)
+            state.parents.append(parent)
         }
     }
     
@@ -338,9 +338,9 @@ internal import _FoundationCollections
         let updatedVisited = visited.union([self])
         
         return state.withLock { state in
-            for parentState in state.parents {
-                if !updatedVisited.contains(parentState.parent) {
-                    if (parentState.parent.isCycle(reporter: reporter, visited: updatedVisited)) {
+            for parent in state.parents {
+                if !updatedVisited.contains(parent.manager) {
+                    if (parent.manager.isCycle(reporter: reporter, visited: updatedVisited)) {
                         return true
                     }
                 }
@@ -351,9 +351,9 @@ internal import _FoundationCollections
     
     internal func isCycleInterop(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
         return state.withLock { state in
-            for parentState in state.parents {
-                if !visited.contains(parentState.parent) {
-                    if (parentState.parent.isCycle(reporter: reporter, visited: visited)) {
+            for parent in state.parents {
+                if !visited.contains(parent.manager) {
+                    if (parent.manager.isCycle(reporter: reporter, visited: visited)) {
                         return true
                     }
                 }
@@ -365,7 +365,7 @@ internal import _FoundationCollections
     deinit {
                 
         let (propertiesInt, propertiesUInt64, propertiesDouble, propertiesString, propertiesURL, propertiesUInt64Array, propertiesDuration, parents) = state.withLock { state in
-            return (state.propertiesInt, state.propertiesUInt64, state.propertiesDouble, state.propertiesString, state.propertiesURL, state.propertiesUInt64Array, state.propertiesDuration, state.parents)
+            return (state.customPropertiesInt, state.customPropertiesUInt64, state.customPropertiesDouble, state.customPropertiesString, state.customPropertiesURL, state.customPropertiesUInt64Array, state.customPropertiesDuration, state.parents)
         }
         
         var finalSummaryInt: [MetatypeWrapper<Int, Int>: Int] = [:]
@@ -421,9 +421,9 @@ internal import _FoundationCollections
             markSelfDirty(parents: parents)
         }
         
-        for parentState in parents {
-            parentState.parent.setChildDeclaredAdditionalProperties(
-                at: parentState.positionInParent,
+        for parent in parents {
+            parent.manager.setChildDeclaredAdditionalProperties(
+                at: parent.positionInParent,
                 totalFileCount: totalFileCount,
                 completedFileCount: completedFileCount,
                 totalByteCount: totalByteCount,

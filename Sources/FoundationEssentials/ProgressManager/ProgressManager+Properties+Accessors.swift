@@ -76,13 +76,13 @@ extension ProgressManager {
                 } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
                     return state.completedFileCount
                 } else {
-                    return state.propertiesInt[MetatypeWrapper(P.self)] ?? P.defaultValue
+                    return state.customPropertiesInt[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
         }
         
         set {
-            var parents: [ParentState]?
+            var parents: [Parent]?
             if P.self == ProgressManager.Properties.TotalFileCount.self {
                 self.withMutation(keyPath: \.totalFileCount) {
                     parents = state.withLock { state in
@@ -106,10 +106,10 @@ extension ProgressManager {
             } else {
                 self.withMutation(keyPath: \.additionalPropertiesSink) {
                     parents = state.withLock { state in
-                        guard newValue != state.propertiesInt[MetatypeWrapper(P.self)] else {
+                        guard newValue != state.customPropertiesInt[MetatypeWrapper(P.self)] else {
                             return nil
                         }
-                        state.propertiesInt[MetatypeWrapper(P.self)] = newValue
+                        state.customPropertiesInt[MetatypeWrapper(P.self)] = newValue
                         return state.parents
                     }
                 }
@@ -149,13 +149,13 @@ extension ProgressManager {
                 } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
                     return state.completedByteCount
                 } else {
-                    return state.propertiesUInt64[MetatypeWrapper(P.self)] ?? P.defaultValue
+                    return state.customPropertiesUInt64[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
         }
         
         set {
-            var parents: [ParentState]?
+            var parents: [Parent]?
             if P.self == ProgressManager.Properties.TotalByteCount.self {
                 self.withMutation(keyPath: \.totalByteCount) {
                     parents = state.withLock { state in
@@ -179,10 +179,10 @@ extension ProgressManager {
             } else {
                 self.withMutation(keyPath: \.additionalPropertiesSink) {
                     parents = state.withLock { state in
-                        guard newValue != state.propertiesUInt64[MetatypeWrapper(P.self)] else {
+                        guard newValue != state.customPropertiesUInt64[MetatypeWrapper(P.self)] else {
                             return nil
                         }
-                        state.propertiesUInt64[MetatypeWrapper(P.self)] = newValue
+                        state.customPropertiesUInt64[MetatypeWrapper(P.self)] = newValue
                         return state.parents
                     }
                 }
@@ -211,18 +211,18 @@ extension ProgressManager {
         get {
             self.access(keyPath: \.additionalPropertiesSink)
             return state.withLock { state in
-                return state.propertiesDouble[MetatypeWrapper(P.self)] ?? P.defaultValue
+                return state.customPropertiesDouble[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
         }
         
         set {
-            var parents: [ParentState]?
+            var parents: [Parent]?
             self.withMutation(keyPath: \.additionalPropertiesSink) {
                 parents = state.withLock { state in
-                    guard newValue != state.propertiesDouble[MetatypeWrapper(P.self)] else {
+                    guard newValue != state.customPropertiesDouble[MetatypeWrapper(P.self)] else {
                         return nil
                     }
-                    state.propertiesDouble[MetatypeWrapper(P.self)] = newValue
+                    state.customPropertiesDouble[MetatypeWrapper(P.self)] = newValue
                     return state.parents
                 }
             }
@@ -244,18 +244,18 @@ extension ProgressManager {
         get {
             self.access(keyPath: \.additionalPropertiesSink)
             return state.withLock { state in
-                return state.propertiesString[MetatypeWrapper(P.self)] ?? P.defaultValue
+                return state.customPropertiesString[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
         }
 
         set {
-            var parents: [ParentState]?
+            var parents: [Parent]?
             self.withMutation(keyPath: \.additionalPropertiesSink) {
                 parents = state.withLock { state in
-                    guard newValue != state.propertiesString[MetatypeWrapper(P.self)] else {
+                    guard newValue != state.customPropertiesString[MetatypeWrapper(P.self)] else {
                         return nil
                     }
-                    state.propertiesString[MetatypeWrapper(P.self)] = newValue
+                    state.customPropertiesString[MetatypeWrapper(P.self)] = newValue
                     return state.parents
                 }
             }
@@ -277,18 +277,18 @@ extension ProgressManager {
         get {
             self.access(keyPath: \.additionalPropertiesSink)
             return state.withLock { state in
-                return state.propertiesURL[MetatypeWrapper(P.self)] ?? P.defaultValue
+                return state.customPropertiesURL[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
         }
 
         set {
-            var parents: [ParentState]?
+            var parents: [Parent]?
             self.withMutation(keyPath: \.additionalPropertiesSink) {
                 parents = state.withLock { state in
-                    guard newValue != state.propertiesURL[MetatypeWrapper(P.self)] else {
+                    guard newValue != state.customPropertiesURL[MetatypeWrapper(P.self)] else {
                         return nil
                     }
-                    state.propertiesURL[MetatypeWrapper(P.self)] = newValue
+                    state.customPropertiesURL[MetatypeWrapper(P.self)] = newValue
                     return state.parents
                 }
             }
@@ -317,13 +317,13 @@ extension ProgressManager {
                 if P.self == ProgressManager.Properties.Throughput.self {
                     return state.throughput
                 } else {
-                    return state.propertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.defaultValue
+                    return state.customPropertiesUInt64Array[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
         }
 
         set {
-            var parents: [ParentState]?
+            var parents: [Parent]?
             if P.self == ProgressManager.Properties.Throughput.self {
                 self.withMutation(keyPath: \.throughput) {
                     parents = state.withLock { state in
@@ -337,10 +337,10 @@ extension ProgressManager {
             } else {
                 self.withMutation(keyPath: \.additionalPropertiesSink) {
                     parents = state.withLock { state in
-                        guard newValue != state.propertiesUInt64Array[MetatypeWrapper(P.self)] else {
+                        guard newValue != state.customPropertiesUInt64Array[MetatypeWrapper(P.self)] else {
                             return nil
                         }
-                        state.propertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
+                        state.customPropertiesUInt64Array[MetatypeWrapper(P.self)] = newValue
                         return state.parents
                     }
                 }
@@ -374,13 +374,13 @@ extension ProgressManager {
                 if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
                     return state.estimatedTimeRemaining
                 } else {
-                    return state.propertiesDuration[MetatypeWrapper(P.self)] ?? P.defaultValue
+                    return state.customPropertiesDuration[MetatypeWrapper(P.self)] ?? P.defaultValue
                 }
             }
         }
 
         set {
-            var parents: [ParentState]?
+            var parents: [Parent]?
             if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
                 self.withMutation(keyPath: \.estimatedTimeRemaining) {
                     parents = state.withLock { state in
@@ -394,10 +394,10 @@ extension ProgressManager {
             } else {
                 self.withMutation(keyPath: \.additionalPropertiesSink) {
                     parents = state.withLock { state in
-                        guard newValue != state.propertiesDuration[MetatypeWrapper(P.self)] else {
+                        guard newValue != state.customPropertiesDuration[MetatypeWrapper(P.self)] else {
                             return nil
                         }
-                        state.propertiesDuration[MetatypeWrapper(P.self)] = newValue
+                        state.customPropertiesDuration[MetatypeWrapper(P.self)] = newValue
                         return state.parents
                     }
                 }

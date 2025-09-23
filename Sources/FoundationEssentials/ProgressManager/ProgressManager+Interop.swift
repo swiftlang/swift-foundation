@@ -108,7 +108,7 @@ extension ProgressManager {
         let progressBridge = NSProgressBridge(
             manager: self,
             progress: progress,
-            portion: count
+            assignedCount: count
         )
         
         // Add bridge as a parent
@@ -177,7 +177,7 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
     internal let managerBridge: ProgressManager
     internal let progress: Progress
 
-    init(manager: ProgressManager, progress: Progress, portion: Int) {
+    init(manager: ProgressManager, progress: Progress, assignedCount: Int) {
         self.manager = manager
         self.managerBridge = ProgressManager(totalCount: Int(clamping: progress.totalUnitCount))
         self.progress = progress
@@ -188,11 +188,11 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
         }
         
         let position = manager.addChild(
-            child: managerBridge,
-            portion: portion,
+            childManager: managerBridge,
+            assignedCount: assignedCount,
             childFraction: ProgressFraction(completed: Int(clamping: completedUnitCount), total: Int(clamping: totalUnitCount))
         )
-        managerBridge.addParent(parent: manager, positionInParent: position)
+        managerBridge.addParent(parentManager: manager, positionInParent: position)
     }
 
     // Overrides the _updateChild func that Foundation.Progress calls to update parent
