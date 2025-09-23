@@ -71,7 +71,7 @@ extension Progress {
     
     // MARK: Cycle detection
     private func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
-        if self._parent() == nil {
+        guard let parent = self._parent() else {
             return false
         }
         
@@ -132,12 +132,9 @@ internal final class SubprogressBridge: Sendable {
                 return
             }
             
-            switch observerState {
-            case .fractionUpdated(let totalCount, let completedCount):
-                // This needs to change totalUnitCount before completedUnitCount otherwise progressBridge will finish and mess up the math
-                self.progressBridge.totalUnitCount = Int64(totalCount)
-                self.progressBridge.completedUnitCount = Int64(completedCount)
-            }
+            // This needs to change totalUnitCount before completedUnitCount otherwise progressBridge will finish and mess up the math
+            self.progressBridge.totalUnitCount = Int64(observerState.totalCount)
+            self.progressBridge.completedUnitCount = Int64(observerState.completedCount)
         }
     }
 }
@@ -164,11 +161,8 @@ internal final class ProgressReporterBridge: Sendable {
                 return
             }
             
-            switch observerState {
-            case .fractionUpdated(let totalCount, let completedCount):
-                self.progressBridge.totalUnitCount = Int64(totalCount)
-                self.progressBridge.completedUnitCount = Int64(completedCount)
-            }
+            self.progressBridge.totalUnitCount = Int64(observerState.totalCount)
+            self.progressBridge.completedUnitCount = Int64(observerState.completedCount)
         }
     }
     
@@ -183,18 +177,18 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
 
     init(manager: ProgressManager, progress: Progress, portion: Int) {
         self.manager = manager
-        self.managerBridge = ProgressManager(totalCount: Int(progress.totalUnitCount))
+        self.managerBridge = ProgressManager(totalCount: Int(clamping: progress.totalUnitCount))
         self.progress = progress
         super.init(parent: nil, userInfo: nil)
         
         managerBridge.setCounts { completed, total in
-            completed = Int(progress.completedUnitCount)
+            completed = Int(clamping: progress.completedUnitCount)
         }
         
         let position = manager.addChild(
             child: managerBridge,
             portion: portion,
-            childFraction: ProgressFraction(completed: Int(completedUnitCount), total: Int(totalUnitCount))
+            childFraction: ProgressFraction(completed: Int(clamping: completedUnitCount), total: Int(clamping: totalUnitCount))
         )
         managerBridge.addParent(parent: manager, positionInParent: position)
     }
@@ -203,8 +197,8 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
     // so that the parent that gets updated is the ProgressManager parent
     override func _updateChild(_ child: Foundation.Progress, fraction: _NSProgressFractionTuple, portion: Int64) {
         managerBridge.setCounts { completed, total in
-            completed = Int(fraction.next.completed)
-            total = Int(fraction.next.total)
+            completed = Int(clamping: fraction.next.completed)
+            total = Int(clamping: fraction.next.total)
         }
         managerBridge.markSelfDirty()
     }
@@ -213,8 +207,9 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
 @available(FoundationPreview 6.4, *)
 extension ProgressManager {
     // Keeping this as an enum in case we have other states to track in the future.
-    internal enum ObserverState {
-        case fractionUpdated(totalCount: Int, completedCount: Int)
+    internal struct ObserverState {
+        var totalCount: Int
+        var completedCount: Int
     }
     
     internal struct InteropObservation {

@@ -40,7 +40,7 @@ internal import _FoundationCollections
     public var totalCount: Int? {
         self.access(keyPath: \.totalCount)
         return state.withLock { state in
-            state.getTotalCount()
+            state.totalCount
         }
     }
     
@@ -48,7 +48,7 @@ internal import _FoundationCollections
     public var completedCount: Int {
         self.access(keyPath: \.completedCount)
         let (children, completedCount) =  state.withLock { state in
-            (state.children.compactMap { $0.child }, state.getCompletedCount())
+            (state.children.compactMap { $0.child }, state.completedCount())
         }
         for child in children {
             child.access(keyPath: \.completedCount)
@@ -63,7 +63,7 @@ internal import _FoundationCollections
         self.access(keyPath: \.totalCount)
         self.access(keyPath: \.completedCount)
         let (children, fractionCompleted) = state.withLock { state in
-            (state.children.compactMap { $0.child }, state.getFractionCompleted())
+            (state.children.compactMap { $0.child }, state.fractionCompleted())
         }
         for child in children {
             child.access(keyPath: \.totalCount)
@@ -77,7 +77,7 @@ internal import _FoundationCollections
     public var isIndeterminate: Bool {
         self.access(keyPath: \.totalCount)
         return state.withLock { state in
-            state.getIsIndeterminate()
+            state.isIndeterminate
         }
     }
     
@@ -87,7 +87,7 @@ internal import _FoundationCollections
         self.access(keyPath: \.totalCount)
         self.access(keyPath: \.completedCount)
         let (children, isFinished) = state.withLock { state in
-            (state.children.compactMap { $0.child }, state.getIsFinished())
+            (state.children.compactMap { $0.child }, state.isFinished())
         }
         for child in children {
             child.access(keyPath: \.totalCount)
