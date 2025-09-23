@@ -12,7 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
+#if canImport(Synchronization)
 internal import Synchronization
+#endif
 
 //MARK: Progress Parent - Subprogress / ProgressReporter Child Interop
 @available(FoundationPreview 6.4, *)

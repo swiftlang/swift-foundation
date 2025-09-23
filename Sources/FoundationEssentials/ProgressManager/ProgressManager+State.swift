@@ -9,7 +9,10 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+
+#if canImport(Synchronization)
 internal import Synchronization
+#endif
 
 @available(FoundationPreview 6.4, *)
 extension ProgressManager {
