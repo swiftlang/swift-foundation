@@ -139,7 +139,7 @@ extension ProgressManager {
 
         /// Returns nil if `self` was instantiated without total units;
         /// returns a `Int` value otherwise.
-        internal func getTotalCount() -> Int? {
+        internal var totalCount: Int? {
 #if FOUNDATION_FRAMEWORK
             if let interopTotalCount = interopType?.totalCount {
                 return interopTotalCount
@@ -150,7 +150,7 @@ extension ProgressManager {
         
         /// Returns 0 if `self` has `nil` total units;
         /// returns a `Int` value otherwise.
-        internal mutating func getCompletedCount() -> Int {
+        internal mutating func completedCount() -> Int {
 #if FOUNDATION_FRAMEWORK
             if let interopCompletedCount = interopType?.completedCount {
                 return interopCompletedCount
@@ -160,7 +160,7 @@ extension ProgressManager {
             return selfFraction.completed
         }
         
-        internal mutating func getFractionCompleted() -> Double {
+        internal mutating func fractionCompleted() -> Double {
 #if FOUNDATION_FRAMEWORK
             if let interopFractionCompleted = interopType?.fractionCompleted {
                 return interopFractionCompleted
@@ -170,7 +170,7 @@ extension ProgressManager {
             return overallFraction.fractionCompleted
         }
         
-        internal func getIsIndeterminate() -> Bool {
+        internal var isIndeterminate: Bool {
 #if FOUNDATION_FRAMEWORK
             if let interopIsIndeterminate = interopType?.isIndeterminate {
                 return interopIsIndeterminate
@@ -179,7 +179,7 @@ extension ProgressManager {
             return selfFraction.isIndeterminate
         }
         
-        internal mutating func getIsFinished() -> Bool {
+        internal mutating func isFinished() -> Bool {
 #if FOUNDATION_FRAMEWORK
             if let interopIsFinished = interopType?.isFinished {
                 return interopIsFinished
@@ -227,7 +227,7 @@ extension ProgressManager {
             switch interopType {
             case .interopObservation(let observation):
                 observation.subprogressBridge?.manager.notifyObservers(
-                    with: .fractionUpdated(
+                    with: ObserverState(
                         totalCount: selfFraction.total ?? 0,
                         completedCount: selfFraction.completed
                     )
@@ -235,7 +235,7 @@ extension ProgressManager {
                 
                 if let _ = observation.reporterBridge {
                     notifyObservers(
-                        with: .fractionUpdated(
+                        with: ObserverState(
                             totalCount: selfFraction.total ?? 0,
                             completedCount: selfFraction.completed
                         )
@@ -251,6 +251,9 @@ extension ProgressManager {
         
         // MARK: Mark paths dirty
         internal mutating func markChildDirty(at position: Int) -> [ParentState]? {
+            guard position >= 0 && position < children.count else {
+                return nil
+            }
             guard !children[position].isDirty else {
                 return nil
             }
@@ -259,66 +262,105 @@ extension ProgressManager {
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<Int, Int>, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].childPropertiesInt[property]?.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, UInt64>, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].childPropertiesUInt64[property]?.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<Double, Double>, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].childPropertiesDouble[property]?.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<String?, [String?]>, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].childPropertiesString[property]?.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<URL?, [URL?]>, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].childPropertiesURL[property]?.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<UInt64, [UInt64]>, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].childPropertiesUInt64Array[property]?.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: MetatypeWrapper<Duration, Duration>, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].childPropertiesDuration[property]?.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: ProgressManager.Properties.TotalFileCount.Type, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].totalFileCount.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedFileCount.Type, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].completedFileCount.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: ProgressManager.Properties.TotalByteCount.Type, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].totalByteCount.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: ProgressManager.Properties.CompletedByteCount.Type, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].completedByteCount.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: ProgressManager.Properties.Throughput.Type, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].throughput.isDirty = true
             return parents
         }
         
         internal mutating func markChildDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.Type, at position: Int) -> [ParentState] {
+            guard position >= 0 && position < children.count else {
+                return parents
+            }
             children[position].estimatedTimeRemaining.isDirty = true
             return parents
         }

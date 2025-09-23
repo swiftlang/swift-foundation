@@ -92,7 +92,6 @@ internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvert
             return ProgressFraction(double: operation(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
         }
 
-        //TODO: rdar://148758226 Overflow check 
         if let lcm = _leastCommonMultiple(lhsTotal, rhsTotal) {
             let result = overflowOperation(lhs.completed * (lcm / lhsTotal), rhs.completed * (lcm / rhsTotal))
             if result.overflow {
