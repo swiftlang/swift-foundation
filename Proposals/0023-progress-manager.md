@@ -1433,21 +1433,21 @@ There were discussions about representing indeterminate state in `ProgressManage
 We initially allowed the full flexibility of allowing developers to declare `ProgressManager.Property` types to be of any type, including structs. However, we realized that this has a severely negative impact on performance of the API. Thus, for now, we allow developers to only declare `ProgressManager.Property` with only certain `Value` and `Summary` types. 
 
 ### Use `withProperties` closure as entry point to mutate custom `ProgressManager.Property` types 
-We initially introduced the `withProperties` closure as a means to mutate custom `ProgressManager.Property` types together in the same closure. However, we realized that the way we set up `Observation` conformance to make each custom `ProgressManager.Property` type observable means that we need to register all the updates of each custom property on one keypath, instead of a keypath for each individual property because `access` and `withMutation` calls on the `ObservationRegistrar` cannot be called from wihin a locked context. Registering all updates of each custom property on one keypath can cause unnecessary UI redraws, which means that developers pay performance cost by using custom properties. Thus, we decided to move the `@dynamicMemberLookup` attribute to `ProgressManager` to allow for registration of changes in each custom `ProgressManager.Property` to happen on their respective keypaths to improve performance. Additionally, this also allows developers to access custom `ProgressManager.Property` types via dot syntax, making the API for accessing and mutating custom `ProgressManager.Property` types more discoverable. The `withProperties` closure is replaced with `setCounts` to preserve the same behavior for mutations of `totalCount` and `completedCount`. 
+We initially introduced the `withProperties` closure as a means to mutate custom `ProgressManager.Property` types. However, with the use of `withProperties` closure, and the fact that `access` and `withMutation` calls should not be called from within a locked context, we need to register all the updates of each custom property on one keypath. Registering all updates of custom properties on one keypath can cause unnecessary UI redraws, whihc can negatively affect performance. Therefore, we decided to move the `@dynamicMemberLookup` attribute to `ProgressManager` to allow each custom `ProgressManager.Property` to be individually observable. Additionally, this also allows developers to access custom `ProgressManager.Property` types via dot syntax, improving the discoverability and ergonomics of accessing and mutating custom `ProgressManager.Property` types. The `withProperties` closure is replaced with `setCounts` to preserve the same atomic behavior for mutations of `totalCount` and `completedCount`. 
 
 ### Minimal requirements for `ProgressManager.Property` protocol 
-We initially considered a simpler version of the `ProgressManager.Property` protocol that had two requirements:
+We initially considered a version of the `ProgressManager.Property` protocol that only had two requirements:
 
 - `Value` - The type for individual property values
 - `defaultValue` - A default value when the property isn't explicitly set
 
-In this approach, the `ProgressManager` API handles additional properties by:
+In this approach, the `ProgressManager` API handles custom `ProgressManager.Property` types by:
 - Aggregating all values throughout a progress tree into `Array<Value>`
 - Providing access via `values(of:)` method returning arrays of individual values
 - Providing access via `total(of:)` method returning computed summaries (e.g., `Int` for `totalFileCount`)
 - Deciding whether values are dropped or retained when `ProgressManager` instances are deinitialized
 
-However, we realized that this approach offers much less flexibility for specifying the `Summary` type that we need, and the accompanying summarization and cleanup behavior we need.
+However, after extensive performance testing, we realized that this approach of supporting arbitrary types is less performant and offers much less flexibility for specifying the summarization behavior that developers may need.
 
 We decided to introduce additional requirements that would yield better performance and provide more flexibility: 
 - `Summary` - Explicit type for summaries
@@ -1455,7 +1455,7 @@ We decided to introduce additional requirements that would yield better performa
 - `merge(_:_:)` - Custom logic for combining summaries from different `ProgressManager` instances
 - `finalSummary(_:_:)` - Custom behavior when `ProgressManager` instances are deinitialized
 
-With these additional requirements, custom `ProgressManager.Property` types can be much more useful with greater flexibility to define behaviors according to specific needs.
+With these additional requirements, the support for custom `ProgressManager.Property` types balances performance and flexibility.
 
 ## Acknowledgements 
 Thanks to 
