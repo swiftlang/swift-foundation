@@ -1447,16 +1447,16 @@ We ultimately decided to replace this approach with a more streamlined design:
 With this change, we can atomically update `totalCount` and `completedCount` via the `setCounts` closure, and access and mutate additional properties via dot syntax. 
 
 ### Minimal requirements for `ProgressManager.Property` protocol 
-We initially considered a simpler version of the ProgressManager.Property protocol that had two requirements:
+We initially considered a simpler version of the `ProgressManager.Property` protocol that had two requirements:
 
 - `Value` - The type for individual property values
 - `defaultValue` - A default value when the property isn't explicitly set
 
-In this approach, the `ProgressManager` API handles additional properties as such:
-- Aggregate all values throughout a progress tree into `Array<Value>`
-- Provide access via `values(of:)` method returning arrays of individual values
-- Provide access via `total(of:)` method returning computed summaries (e.g., `Int` for `totalFileCount`)
-- Decide whether values are dropped or retained when `ProgressManager` instances are deinitialized
+In this approach, the `ProgressManager` API handles additional properties by:
+- Aggregating all values throughout a progress tree into `Array<Value>`
+- Providing access via `values(of:)` method returning arrays of individual values
+- Providing access via `total(of:)` method returning computed summaries (e.g., `Int` for `totalFileCount`)
+- Deciding whether values are dropped or retained when `ProgressManager` instances are deinitialized
 
 However, we realized that this approach offers much less flexibility for specifying the `Summary` type that we need, and the accompanying summarization and cleanup behavior we need.
 
