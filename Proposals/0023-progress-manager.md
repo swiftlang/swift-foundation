@@ -42,7 +42,7 @@
     - Expanded Alternatives Considered
 * **v6** Minor Updates:
     - Replaced `withProperties` method with `setCounts`
-    - Added `@dynamicMemberLookup` attribute to `ProgressManager` and `ProgressReporter`
+    - Moved `@dynamicMemberLookup` attribute to `ProgressManager` and `ProgressReporter`
     - Changed behavior of API so that additional properties are restricted to either `Int`, `Double`, `String?`, `URL?`, `UInt64` or `Duration` types instead of `any Sendable` types
     - Added requirements to `ProgressManager.Property` protocol to define summarization and cleanup (deinit) behavior
     - Replaced `total(of:)` with overloads for `summary(of:)` to account for all available types and removed `values(of:)` method
