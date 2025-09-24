@@ -3,12 +3,12 @@
 * Proposal: FOU-0033
 * Author(s): [YOCKOW](https://GitHub.com/YOCKOW)
 * Review Manager: TBD
-* Status: **Review: 2025-09-04...2025-09-11**
+* Status: **Accepted**
 <!-- * Bug: *if applicable* [apple/swift#NNNN](https://github.com/apple/swift-foundation/issues/NNNNN) -->
 * Implementation: [swiftlang/swift-foundation#1286](https://github.com/swiftlang/swift-foundation/pull/1286)
 <!-- * Previous Proposal: *if applicable* [FOU-XXXX](XXXX-filename.md) -->
 <!-- * Previous Revision: *if applicable* [1](https://github.com/apple/swift-evolution/blob/...commit-ID.../proposals/NNNN-filename.md) -->
-* Review: ([Pitch](https://forums.swift.org/t/pitch-foundation-string-encoding-names/74623))
+* Review: ([Pitch](https://forums.swift.org/t/pitch-foundation-string-encoding-names/74623), [Review](https://forums.swift.org/t/review-sf-0033-string-encoding-names/81965/10))
 
 
 ## Revision History
