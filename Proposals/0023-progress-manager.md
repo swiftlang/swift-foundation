@@ -42,11 +42,9 @@
     - Expanded Alternatives Considered
 * **v6** Minor Updates:
     - Replaced `withProperties` method with `setCounts`
-    - Removed `ProgressManager.Values` struct
-    - Made `ProgressManager` conform to `@dynamicMemberLookup` and moved `subscript(dynamicMember:)` methods from `ProgressManager.Values` to `ProgressManager`
+    - Added `@dynamicMemberLookup` attribute to `ProgressManager` and `ProgressReporter`
     - Changed behavior of API so that additional properties are restricted to either `Int`, `Double`, `String?`, `URL?`, `UInt64` or `Duration` types instead of `any Sendable` types
-    - Added overloads for `subscript(dynamicMember:)` to account for currently-allowed types 
-    - Added requirements to `ProgressManager.Property` protocol to define summarization and termination (deinit) behavior
+    - Added requirements to `ProgressManager.Property` protocol to define summarization and cleanup (deinit) behavior
     - Replaced `total(of:)` with overloads for `summary(of:)` to account for all available types and removed `values(of:)` method
     
 ## Table of Contents 
@@ -1433,6 +1431,43 @@ There were discussions about representing indeterminate state in `ProgressManage
 
 ### Allow declared custom additional property to be any type that can be casted as `any Sendable`  
 We initially allowed the full flexibility of allowing developers to declare `ProgressManager.Property` types to be of any type, including structs. However, we realized that this has a severely negative impact on performance of the API. Thus, for now, we allow developers to only declare `ProgressManager.Property` with only certain `Value` and `Summary` types. 
+
+### Introduce `withProperties` closure as an entry point to atomically mutate multiple properties
+We initially considered introducing a withProperties closure as an entry point to atomically mutate multiple properties. This approach would have used a dedicated ProgressManager.Values struct with `@dynamicMemberLookup` to provide a unified interface for modifying all properties within a single atomic operation. 
+
+However, this design had several drawbacks:
+- Limited atomicity: While it allowed atomic mutation of `totalCount` and `completedCount`, it could not achieve the same atomicity for additional properties due to their differences in backing storage
+- Less intuitive API: The withProperties closure promoted a less natural pattern for accessing and mutating additional properties, particularly when combined with `@dynamicMemberLookup` on the nested `ProgressManager.Values` struct
+- Inconsistent access patterns: We would need to use different patterns for accessing fraction-related properties and additional properties
+
+We ultimately decided to replace this approach with a more streamlined design:
+- `setCounts` closure: Atomically update `totalCount` and `completedCount` 
+- `ProgressManager` directly using `@dynamicMemberLookup`: Applied directly to the ProgressManager class, enabling intuitive dot-syntax access for all additional properties (e.g., manager.totalFileCount = 100)
+- Consistent access pattern: Both accessing and mutating additional properties now use the same dot-syntax pattern, making the API more discoverable and natural to use
+
+With this change, we can atomically update `totalCount` and `completedCount` via the `setCounts` closure, and access and mutate additional properties via dot syntax. 
+
+### Minimal requirements for `ProgressManager.Property` protocol 
+We initially considered a simpler version of the ProgressManager.Property protocol that required only two components:
+
+- `Value` - The type for individual property values
+- `defaultValue` - A default value when the property isn't explicitly set
+
+In this simplified approach, the framework would automatically:
+- Aggregate all values throughout a progress tree into `Array<Value>`
+- Provide access via `values(of:)` method returning arrays of individual values
+- Provide access via `total(of:)` method returning computed summaries (e.g., `Int` for `totalFileCount`)
+- Decide whether values are dropped or retained when `ProgressManager` instances are deinitialized
+
+However, we realized that there were performance issues with the automatic aggregation of additional properties into an `Array`, and also that there is much less flexibility for specifying the `Summary` type they need, and summarization and cleanup behavior we need for their custom `ProgressManager.Property` type.
+
+We decided to introduce additional requirements that would yield better performance and provide more flexibility: 
+- `Summary` - Explicit type for summaries
+- `reduce(into:value:)` - Custom logic for incorporating individual values into summaries
+- `merge(_:_:)` - Custom logic for combining summaries from different `ProgressManager` instances
+- `finalSummary(_:_:)` - Custom behavior when `ProgressManager` instances are deinitialized
+
+With these additional requirements, custom `ProgressManager.Property` types can be much more useful with greater flexibility to define behaviors according to specific needs.
 
 ## Acknowledgements 
 Thanks to 
