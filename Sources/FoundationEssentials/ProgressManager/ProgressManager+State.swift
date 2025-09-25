@@ -1264,5 +1264,277 @@ extension ProgressManager {
             
             return value
         }
+        
+        struct FinalSummary {
+            var totalFileCountSummary:  Int
+            var completedFileCountSummary: Int
+            var totalByteCountSummary: UInt64
+            var completedByteCountSummary: UInt64
+            var throughputSummary: [UInt64]
+            var estimatedTimeRemainingSummary: Duration
+            var customPropertiesIntSummary: [MetatypeWrapper<Int, Int>: Int]
+            var customPropertiesUInt64Summary: [MetatypeWrapper<UInt64, UInt64>: UInt64]
+            var customPropertiesDoubleSummary: [MetatypeWrapper<Double, Double>: Double]
+            var customPropertiesStringSummary: [MetatypeWrapper<String?, [String?]>: [String?]]
+            var customPropertiesURLSummary: [MetatypeWrapper<URL?, [URL?]>: [URL?]]
+            var customPropertiesUInt64ArraySummary: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]]
+            var customPropertiesDurationSummary: [MetatypeWrapper<Duration, Duration>: Duration]
+        }
+        
+        func customPropertiesCleanup() -> (FinalSummary, [Parent]) {
+            // Set up default summaries
+            var totalFileCount = Properties.TotalFileCount.defaultSummary
+            var completedFileCount = Properties.CompletedFileCount.defaultSummary
+            var totalByteCount = Properties.TotalByteCount.defaultSummary
+            var completedByteCount = Properties.CompletedByteCount.defaultSummary
+            var throughput = Properties.Throughput.defaultSummary
+            var estimatedTimeRemaining = Properties.EstimatedTimeRemaining.defaultSummary
+            var customPropertiesIntSummary: [MetatypeWrapper<Int, Int>: Int] = [:]
+            var customPropertiesUInt64Summary: [MetatypeWrapper<UInt64, UInt64>: UInt64] = [:]
+            var customPropertiesDoubleSummary: [MetatypeWrapper<Double, Double>: Double] = [:]
+            var customPropertiesStringSummary: [MetatypeWrapper<String?, [String?]>: [String?]] = [:]
+            var customPropertiesURLSummary: [MetatypeWrapper<URL?, [URL?]>: [URL?]] = [:]
+            var customPropertiesUInt64ArraySummary: [MetatypeWrapper<UInt64, [UInt64]>: [UInt64]] = [:]
+            var customPropertiesDurationSummary: [MetatypeWrapper<Duration, Duration>: Duration] = [:]
+        
+            // Include self's custom properties values
+            Properties.TotalFileCount.reduce(into: &totalFileCount, value: self.totalFileCount)
+            Properties.CompletedFileCount.reduce(into: &completedFileCount, value: self.completedFileCount)
+            Properties.TotalByteCount.reduce(into: &totalByteCount, value: self.totalByteCount)
+            Properties.CompletedByteCount.reduce(into: &completedByteCount, value: self.completedByteCount)
+            Properties.Throughput.reduce(into: &throughput, value: self.throughput)
+            Properties.EstimatedTimeRemaining.reduce(into: &estimatedTimeRemaining, value: self.estimatedTimeRemaining)
+            
+            // MARK: Custom Properties (Int, Int)
+            // Aggregate information using self's custom property keys
+            for (key, value) in customPropertiesInt {
+                // Set up overall summary
+                var summary = key.defaultSummary
+                
+                // Include self's value into summary
+                key.reduce(&summary, value)
+                
+                // Save summary to dictionary
+                customPropertiesIntSummary[key] = summary
+            }
+            
+            // MARK: Custom Properties (UInt64, UInt64)
+            // Aggregate information using self's custom property keys
+            for (key, value) in customPropertiesUInt64 {
+                // Set up overall summary
+                var summary = key.defaultSummary
+                
+                // Include self's value into summary
+                key.reduce(&summary, value)
+            
+                // Save summary to dictionary
+                customPropertiesUInt64Summary[key] = summary
+            }
+            
+            // MARK: Custom Properties (UInt64, [UInt64])
+            // Aggregate information using self's custom property keys
+            for (key, value) in customPropertiesUInt64Array {
+                // Set up overall summary
+                var summary = key.defaultSummary
+                
+                // Include self's value into summary
+                key.reduce(&summary, value)
+
+                // Save summary to dictionary
+                customPropertiesUInt64ArraySummary[key] = summary
+            }
+            
+            // MARK: Custom Properties (Double, Double)
+            // Aggregate information using self's custom property keys
+            for (key, value) in customPropertiesDouble {
+                // Set up overall summary
+                var summary = key.defaultSummary
+                
+                // Include self's value into summary
+                key.reduce(&summary, value)
+
+                // Save summary to dictionary
+                customPropertiesDoubleSummary[key] = summary
+            }
+            
+            // MARK: Custom Properties (String?, [String?])
+            // Aggregate information using self's custom property keys
+            for (key, value) in customPropertiesString {
+                // Set up overall summary
+                var summary = key.defaultSummary
+                
+                // Include self's value into summary
+                key.reduce(&summary, value)
+
+                // Save summary to dictionary
+                customPropertiesStringSummary[key] = summary
+            }
+            
+            // MARK: Custom Properties (URL?, [URL?])
+            // Aggregate information using self's custom property keys
+            for (key, value) in customPropertiesURL {
+                // Set up overall summary
+                var summary = key.defaultSummary
+                
+                // Include self's value into summary
+                key.reduce(&summary, value)
+
+                // Save summary to dictionary
+                customPropertiesURLSummary[key] = summary
+            }
+            
+            // MARK: Custom Properties (Duration, Duration)
+            // Aggregate information using self's custom property keys
+            for (key, value) in customPropertiesDuration {
+                // Set up overall summary
+                var summary = key.defaultSummary
+                
+                // Include self's value into summary
+                key.reduce(&summary, value)
+                
+                // Save summary to dictionary
+                customPropertiesDurationSummary[key] = summary
+            }
+            
+            // Include child's custom properties summaries, we need to take into account the fact that some of the children's custom properties may not be in self, so we need to check that too. As for the ones that are in self, we need to call finalSummary.
+            for child in children {
+                totalFileCount = Properties.TotalFileCount.finalSummary(totalFileCount, child.totalFileCountSummary.value)
+                completedFileCount = Properties.CompletedFileCount.finalSummary(completedFileCount, child.completedFileCountSummary.value)
+                totalByteCount = Properties.TotalByteCount.finalSummary(totalByteCount, child.totalByteCountSummary.value)
+                completedByteCount = Properties.CompletedByteCount.finalSummary(completedByteCount, child.completedByteCountSummary.value)
+                throughput = Properties.Throughput.finalSummary(throughput, child.throughputSummary.value)
+                estimatedTimeRemaining = Properties.EstimatedTimeRemaining.finalSummary(estimatedTimeRemaining, child.estimatedTimeRemainingSummary.value)
+                
+                for (key, _) in customPropertiesInt {
+                    customPropertiesIntSummary[key] = key.finalSummary(customPropertiesIntSummary[key] ?? key.defaultSummary, child.customPropertiesIntSummary[key]?.value ?? key.defaultSummary)
+                }
+                
+                // Aggregate information using child's custom property keys that may be absent from self's custom property keys
+                for (key, value) in child.customPropertiesIntSummary {
+                    if !customPropertiesInt.keys.contains(key) {
+                        // Set up default summary
+                        var summary = key.defaultSummary
+                        // Include child's value
+                        summary = key.finalSummary(summary, value.value)
+                        // Save summary value to dictionary
+                        customPropertiesIntSummary[key] = summary
+                    }
+                }
+                
+                
+                for (key, _) in customPropertiesUInt64 {
+                    customPropertiesUInt64Summary[key] = key.finalSummary(customPropertiesUInt64Summary[key] ?? key.defaultSummary, child.customPropertiesUInt64Summary[key]?.value ?? key.defaultSummary)
+                }
+                
+                // Aggregate information using child's custom property keys that may be absent from self's custom property keys
+                for (key, value) in child.customPropertiesUInt64Summary {
+                    if !customPropertiesUInt64.keys.contains(key) {
+                        // Set up default summary
+                        var summary = key.defaultSummary
+                        // Include child's value
+                        summary = key.finalSummary(summary, value.value)
+                        // Save summary value to dictionary
+                        customPropertiesUInt64Summary[key] = summary
+                    }
+                }
+                
+            
+                for (key, _) in customPropertiesUInt64Array {
+                    customPropertiesUInt64ArraySummary[key] = key.finalSummary(customPropertiesUInt64ArraySummary[key] ?? key.defaultSummary, child.customPropertiesUInt64ArraySummary[key]?.value ?? key.defaultSummary)
+                }
+                
+                // Aggregate information using child's custom property keys that may be absent from self's custom property keys
+                for (key, value) in child.customPropertiesUInt64ArraySummary {
+                    if !customPropertiesUInt64Array.keys.contains(key) {
+                        // Set up default summary
+                        var summary = key.defaultSummary
+                        // Include child's value
+                        summary = key.finalSummary(summary, value.value)
+                        // Save summary value to dictionary
+                        customPropertiesUInt64ArraySummary[key] = summary
+                    }
+                }
+                
+                for (key, _) in customPropertiesDouble {
+                    customPropertiesDoubleSummary[key] = key.finalSummary(customPropertiesDoubleSummary[key] ?? key.defaultSummary, child.customPropertiesDoubleSummary[key]?.value ?? key.defaultSummary)
+                }
+                
+                // Aggregate information using child's custom property keys that may be absent from self's custom property keys
+                for (key, value) in child.customPropertiesDoubleSummary {
+                    if !customPropertiesDouble.keys.contains(key) {
+                        // Set up default summary
+                        var summary = key.defaultSummary
+                        // Include child's value
+                        summary = key.finalSummary(summary, value.value)
+                        // Save summary value to dictionary
+                        customPropertiesDoubleSummary[key] = summary
+                    }
+                }
+                
+                for (key, _) in customPropertiesString {
+                    customPropertiesStringSummary[key] = key.finalSummary(customPropertiesStringSummary[key] ?? key.defaultSummary, child.customPropertiesStringSummary[key]?.value ?? key.defaultSummary)
+                }
+                
+                // Aggregate information using child's custom property keys that may be absent from self's custom property keys
+                for (key, value) in child.customPropertiesStringSummary {
+                    if !customPropertiesString.keys.contains(key) {
+                        // Set up default summary
+                        var summary = key.defaultSummary
+                        // Include child's value
+                        summary = key.finalSummary(summary, value.value)
+                        // Save summary value to dictionary
+                        customPropertiesStringSummary[key] = summary
+                    }
+                }
+                
+                for (key, _) in customPropertiesURL {
+                    customPropertiesURLSummary[key] = key.finalSummary(customPropertiesURLSummary[key] ?? key.defaultSummary, child.customPropertiesURLSummary[key]?.value ?? key.defaultSummary)
+                }
+                
+                // Aggregate information using child's custom property keys that may be absent from self's custom property keys
+                for (key, value) in child.customPropertiesURLSummary {
+                    if !customPropertiesURL.keys.contains(key) {
+                        // Set up default summary
+                        var summary = key.defaultSummary
+                        // Include child's value
+                        summary = key.finalSummary(summary, value.value)
+                        // Save summary value to dictionary
+                        customPropertiesURLSummary[key] = summary
+                    }
+                }
+                
+                for (key, _) in customPropertiesDuration {
+                    customPropertiesDurationSummary[key] = key.finalSummary(customPropertiesDurationSummary[key] ?? key.defaultSummary, child.customPropertiesDurationSummary[key]?.value ?? key.defaultSummary)
+                }
+                
+                // Aggregate information using child's custom property keys that may be absent from self's custom property keys
+                for (key, value) in child.customPropertiesDurationSummary {
+                    if !customPropertiesDuration.keys.contains(key) {
+                        // Set up default summary
+                        var summary = key.defaultSummary
+                        // Include child's value
+                        summary = key.finalSummary(summary, value.value)
+                        // Save summary value to dictionary
+                        customPropertiesDurationSummary[key] = summary
+                    }
+                }
+            }
+            
+            return (FinalSummary(totalFileCountSummary: totalFileCount,
+                                 completedFileCountSummary: completedFileCount,
+                                 totalByteCountSummary: totalByteCount,
+                                 completedByteCountSummary: completedByteCount,
+                                 throughputSummary: throughput,
+                                 estimatedTimeRemainingSummary: estimatedTimeRemaining,
+                                 customPropertiesIntSummary: customPropertiesIntSummary,
+                                 customPropertiesUInt64Summary: customPropertiesUInt64Summary,
+                                 customPropertiesDoubleSummary: customPropertiesDoubleSummary,
+                                 customPropertiesStringSummary: customPropertiesStringSummary,
+                                 customPropertiesURLSummary: customPropertiesURLSummary,
+                                 customPropertiesUInt64ArraySummary: customPropertiesUInt64ArraySummary,
+                                 customPropertiesDurationSummary: customPropertiesDurationSummary
+                                ),
+                    parents)
+        }
     }
 }
