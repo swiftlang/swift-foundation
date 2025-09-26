@@ -2621,7 +2621,10 @@ extension JSONEncoderTests {
     func _run_json5SpecTest<T:Decodable>(_ category: String, _ name: String, testType: JSON5SpecTestType, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) {
         let subdirectory = "/JSON5/spec/\(category)"
         let ext = testType.fileExtension
-        let jsonData = testData(forResource: name, withExtension: ext, subdirectory: subdirectory)!
+        guard let jsonData = testData(forResource: name, withExtension: ext, subdirectory: subdirectory) else {
+            Issue.record("Failed to load test data forResource: \(name), withExtension: \(ext), subdirectory: \(subdirectory)", sourceLocation: sourceLocation)
+            return
+        }
 
         let json5 = json5Decoder
         let json = JSONDecoder()
