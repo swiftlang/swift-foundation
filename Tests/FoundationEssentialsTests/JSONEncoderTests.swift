@@ -2333,6 +2333,22 @@ extension JSONEncoderTests {
 
         #expect(expected == resultString)
     }
+    
+    @Test func encodingDictionaryCodingKeyRepresentableKeyConversionUntouched() throws {
+        struct Key: RawRepresentable, CodingKeyRepresentable, Hashable, Codable {
+            let rawValue: String
+        }
+        
+        let expected = "{\"leaveMeAlone\":\"test\"}"
+        let toEncode: [Key: String] = [Key(rawValue: "leaveMeAlone"): "test"]
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let resultData = try encoder.encode(toEncode)
+        let resultString = String(bytes: resultData, encoding: .utf8)
+
+        #expect(expected == resultString)
+    }
 
     @Test func keyStrategySnakeGeneratedAndCustom() throws {
         // Test that this works with a struct that has automatically generated keys
