@@ -1087,10 +1087,8 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         func hash(into hasher: inout Hasher) {
             hasher.combine(count)
 
-            // At most, hash the first 80 bytes of this data.
-            let range = startIndex ..< Swift.min(startIndex + 80, endIndex)
-            storage.withUnsafeBytes(in: range) {
-                hasher.combine(bytes: $0)
+            self.withUnsafeBytes { bytes in
+                hasher.combine(bytes: bytes)
             }
         }
     }
@@ -1325,10 +1323,8 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         func hash(into hasher: inout Hasher) {
             hasher.combine(count)
 
-            // Hash at most the first 80 bytes of this data.
-            let range = startIndex ..< Swift.min(startIndex + 80, endIndex)
-            storage.withUnsafeBytes(in: range) {
-                hasher.combine(bytes: $0)
+            self.withUnsafeBytes { bytes in
+                hasher.combine(bytes: bytes)
             }
         }
     }
