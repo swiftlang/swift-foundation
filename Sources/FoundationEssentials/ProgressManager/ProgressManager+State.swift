@@ -527,6 +527,10 @@ extension ProgressManager {
                     if childPropertyState.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -536,6 +540,10 @@ extension ProgressManager {
                     // Property doesn't exist yet in child - need to fetch it
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child manager is deallocated, use default value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, property.defaultValue, isAlive))
                     }
                 }
             }
@@ -590,6 +598,10 @@ extension ProgressManager {
                     if childPropertyState.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -599,6 +611,10 @@ extension ProgressManager {
                     // Property doesn't exist yet in child - need to fetch it
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child manager is deallocated, use default value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, property.defaultValue, isAlive))
                     }
                 }
             }
@@ -653,6 +669,10 @@ extension ProgressManager {
                     if childPropertyState.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -662,6 +682,10 @@ extension ProgressManager {
                     // Property doesn't exist yet in child - need to fetch it
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child manager is deallocated, use default value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, property.defaultValue, isAlive))
                     }
                 }
             }
@@ -716,6 +740,10 @@ extension ProgressManager {
                     if childPropertyState.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -725,6 +753,10 @@ extension ProgressManager {
                     // Property doesn't exist yet in child - need to fetch it
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child manager is deallocated, use default value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, property.defaultSummary, isAlive))
                     }
                 }
             }
@@ -779,6 +811,10 @@ extension ProgressManager {
                     if childPropertyState.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -788,6 +824,10 @@ extension ProgressManager {
                     // Property doesn't exist yet in child - need to fetch it
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child manager is deallocated, use default value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, property.defaultSummary, isAlive))
                     }
                 }
             }
@@ -842,6 +882,10 @@ extension ProgressManager {
                     if childPropertyState.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -851,6 +895,10 @@ extension ProgressManager {
                     // Property doesn't exist yet in child - need to fetch it
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child manager is deallocated, use default value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, property.defaultSummary, isAlive))
                     }
                 }
             }
@@ -905,6 +953,10 @@ extension ProgressManager {
                     if childPropertyState.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, childPropertyState.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -914,6 +966,10 @@ extension ProgressManager {
                     // Property doesn't exist yet in child - need to fetch it
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child manager is deallocated, use default value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, property.defaultValue, isAlive))
                     }
                 }
             }
