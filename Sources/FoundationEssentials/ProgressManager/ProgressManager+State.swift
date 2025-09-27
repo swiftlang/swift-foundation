@@ -971,6 +971,10 @@ extension ProgressManager {
                     if child.totalFileCountSummary.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, child.totalFileCountSummary.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -996,6 +1000,10 @@ extension ProgressManager {
                     if child.completedFileCountSummary.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, child.completedFileCountSummary.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -1076,6 +1084,10 @@ extension ProgressManager {
                     if child.totalByteCountSummary.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, child.totalByteCountSummary.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -1101,6 +1113,10 @@ extension ProgressManager {
                     if child.completedByteCountSummary.isDirty {
                         if let child = child.manager {
                             dirtyChildren.append((idx, child))
+                        } else {
+                            // Child is dirty but manager is deallocated - use last known value
+                            let isAlive = false
+                            nonDirtySummaries.append((idx, child.completedByteCountSummary.value, isAlive))
                         }
                     } else {
                         let isAlive = child.manager != nil
@@ -1176,6 +1192,10 @@ extension ProgressManager {
                 if child.throughputSummary.isDirty {
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child is dirty but manager is deallocated - use last known value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, child.throughputSummary.value, isAlive))
                     }
                 } else {
                     let isAlive = child.manager != nil
@@ -1230,6 +1250,10 @@ extension ProgressManager {
                 if child.estimatedTimeRemainingSummary.isDirty {
                     if let child = child.manager {
                         dirtyChildren.append((idx, child))
+                    } else {
+                        // Child is dirty but manager is deallocated - use last known value
+                        let isAlive = false
+                        nonDirtySummaries.append((idx, child.estimatedTimeRemainingSummary.value, isAlive))
                     }
                 } else {
                     let isAlive = child.manager != nil
