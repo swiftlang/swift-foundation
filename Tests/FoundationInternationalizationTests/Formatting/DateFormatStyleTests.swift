@@ -190,32 +190,25 @@ private struct DateFormatStyleTests {
     @Test func leadingDotSyntax() async {
         let date = Date.now
         let locale = Locale(identifier: "es_ES")
-        let timeZone = TimeZone.gmt
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
         await usingCurrentInternationalizationPreferences {
             #expect(date.formatted(date: .long, time: .complete) == date.formatted(Date.FormatStyle(date: .long, time: .complete)))
-        }
-        #expect(
-            date.formatted(
-                .dateTime
-                    .day()
-                    .month()
-                    .year()
-                    .locale(locale)
-                    .timeZone(timeZone)
-                    .calendar(calendar)
-            ) ==
-            date.formatted(
-                Date.FormatStyle()
-                    .day()
-                    .month()
-                    .year()
-                    .locale(locale)
-                    .timeZone(timeZone)
-                    .calendar(calendar)
+            #expect(
+                date.formatted(
+                    .dateTime
+                        .day()
+                        .month()
+                        .year()
+                        .locale(locale)
+                ) ==
+                date.formatted(
+                    Date.FormatStyle()
+                        .day()
+                        .month()
+                        .year()
+                        .locale(locale)
+                )
             )
-        )
+        }
     }
 
     @Test func dateFormatStyleIndividualFields() {
