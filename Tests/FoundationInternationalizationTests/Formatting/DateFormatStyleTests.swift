@@ -190,6 +190,9 @@ private struct DateFormatStyleTests {
     @Test func leadingDotSyntax() async {
         let date = Date.now
         let locale = Locale(identifier: "es_ES")
+        let timeZone = TimeZone.gmt
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         await usingCurrentInternationalizationPreferences {
             #expect(date.formatted(date: .long, time: .complete) == date.formatted(Date.FormatStyle(date: .long, time: .complete)))
         }
@@ -200,6 +203,8 @@ private struct DateFormatStyleTests {
                     .month()
                     .year()
                     .locale(locale)
+                    .timeZone(timeZone)
+                    .calendar(calendar)
             ) ==
             date.formatted(
                 Date.FormatStyle()
@@ -207,6 +212,8 @@ private struct DateFormatStyleTests {
                     .month()
                     .year()
                     .locale(locale)
+                    .timeZone(timeZone)
+                    .calendar(calendar)
             )
         )
     }

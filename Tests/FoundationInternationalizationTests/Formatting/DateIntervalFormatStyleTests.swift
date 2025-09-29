@@ -106,9 +106,9 @@ private struct DateIntervalFormatStyleTests {
             // This test assumes both the left side and the right side of the comparison has the same `Locale.autoupdatingCurrent`, which assumes the state of the host machine remains unchanged.
             #expect(range.formatted() == Date.IntervalFormatStyle().format(range))
             #expect(range.formatted(date: .numeric, time: .shortened) == Date.IntervalFormatStyle(date: .numeric, time: .shortened).format(range))
+            #expect(range.formatted(.interval.day().month().year().locale(locale)) == Date.IntervalFormatStyle().day().month().year().locale(locale).format(range))
         }
 
-        #expect(range.formatted(.interval.day().month().year().locale(locale)) == Date.IntervalFormatStyle().day().month().year().locale(locale).format(range))
     }
     
 #if FIXED_ICU_74_DAYPERIOD
