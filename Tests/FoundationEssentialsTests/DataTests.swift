@@ -1439,6 +1439,50 @@ private final class DataTests {
             #expect(data.count == 0)
         }
     }
+    
+    @Test func validateMutation_cow_mutableBytes() {
+        var data = Data(Array(repeating: 0, count: 32))
+        holdReference(data) {
+            var bytes = data.mutableBytes
+            bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
+            
+            #expect(data[0] == 1)
+            #expect(heldData?[0] == 0)
+        }
+        
+        var data2 = Data(Array(repeating: 0, count: 32))
+        // Escape the pointer to compare after a mutation without dereferencing the pointer
+        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        
+        var bytes = data2.mutableBytes
+        bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
+        #expect(data2[0] == 1)
+        data2.withUnsafeBytes {
+            #expect($0.baseAddress == originalPointer)
+        }
+    }
+    
+    @Test func validateMutation_cow_mutableSpan() {
+        var data = Data(Array(repeating: 0, count: 32))
+        holdReference(data) {
+            var bytes = data.mutableSpan
+            bytes[0] = 1
+            
+            #expect(data[0] == 1)
+            #expect(heldData?[0] == 0)
+        }
+        
+        var data2 = Data(Array(repeating: 0, count: 32))
+        // Escape the pointer to compare after a mutation without dereferencing the pointer
+        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        
+        var bytes = data2.mutableSpan
+        bytes[0] = 1
+        #expect(data2[0] == 1)
+        data2.withUnsafeBytes {
+            #expect($0.baseAddress == originalPointer)
+        }
+    }
 
     @Test func sliceHash() {
         let base1 = Data([0, 0xFF, 0xFF, 0])
