@@ -2473,6 +2473,8 @@ struct LargeDataTests {
     }
     
     @Test func validateMutation_cow_largeMutableBytes() {
+        // Avoid copying a large data on platforms with constrained memory limits
+        #if !canImport(Darwin) || os(macOS)
         var data = Data(count: largeCount)
         let heldData = data
         var bytes = data.mutableBytes
@@ -2480,6 +2482,7 @@ struct LargeDataTests {
         
         #expect(data[0] == 1)
         #expect(heldData[0] == 0)
+        #endif
         
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
@@ -2494,6 +2497,8 @@ struct LargeDataTests {
     }
     
     @Test func validateMutation_cow_largeMutableSpan() {
+        // Avoid copying a large data on platforms with constrained memory limits
+        #if !canImport(Darwin) || os(macOS)
         var data = Data(count: largeCount)
         let heldData = data
         var bytes = data.mutableSpan
@@ -2501,6 +2506,7 @@ struct LargeDataTests {
         
         #expect(data[0] == 1)
         #expect(heldData[0] == 0)
+        #endif
         
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
