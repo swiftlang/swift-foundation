@@ -2450,7 +2450,6 @@ struct LargeDataTests {
 #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data(repeating: 0, count: largeCount).dropFirst()
         #expect(source.startIndex != 0)
-        count = source.count
         var span = source.mutableSpan
         #expect(span.count == largeCount - 1)
         let i = try #require(span.indices.dropFirst().randomElement())
