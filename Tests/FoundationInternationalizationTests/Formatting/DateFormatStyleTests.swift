@@ -192,23 +192,23 @@ private struct DateFormatStyleTests {
         let locale = Locale(identifier: "es_ES")
         await usingCurrentInternationalizationPreferences {
             #expect(date.formatted(date: .long, time: .complete) == date.formatted(Date.FormatStyle(date: .long, time: .complete)))
-        }
-        #expect(
-            date.formatted(
-                .dateTime
-                    .day()
-                    .month()
-                    .year()
-                    .locale(locale)
-            ) ==
-            date.formatted(
-                Date.FormatStyle()
-                    .day()
-                    .month()
-                    .year()
-                    .locale(locale)
+            #expect(
+                date.formatted(
+                    .dateTime
+                        .day()
+                        .month()
+                        .year()
+                        .locale(locale)
+                ) ==
+                date.formatted(
+                    Date.FormatStyle()
+                        .day()
+                        .month()
+                        .year()
+                        .locale(locale)
+                )
             )
-        )
+        }
     }
 
     @Test func dateFormatStyleIndividualFields() {
