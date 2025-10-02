@@ -36,7 +36,11 @@ public typealias TimeInterval = Double
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Date : Comparable, Hashable, Equatable, Sendable {
 
-    internal var _time : TimeInterval
+    internal var _time: DoubleDouble
+
+    internal init(_ time: DoubleDouble) {
+      self._time = time
+    }
 
     /// The number of seconds from 1 January 1970 to the reference date, 1 January 2001.
     public static let timeIntervalBetween1970AndReferenceDate : TimeInterval = 978307200.0
@@ -51,17 +55,23 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// Returns a `Date` initialized to the current date and time.
     public init() {
-        _time = Self.getCurrentAbsoluteTime()
+        _time = .init(head: Self.getCurrentAbsoluteTime(), tail: 0)
     }
 
     /// Returns a `Date` initialized relative to the current date and time by a given number of seconds.
     public init(timeIntervalSinceNow: TimeInterval) {
-        self.init(timeIntervalSinceReferenceDate: timeIntervalSinceNow + Self.getCurrentAbsoluteTime())
+        self.init(.sum(
+            Self.getCurrentAbsoluteTime(),
+            timeIntervalSinceNow
+        ))
     }
 
     /// Returns a `Date` initialized relative to 00:00:00 UTC on 1 January 1970 by a given number of seconds.
     public init(timeIntervalSince1970: TimeInterval) {
-        self.init(timeIntervalSinceReferenceDate: timeIntervalSince1970 - Date.timeIntervalBetween1970AndReferenceDate)
+        self.init(.sum(
+            timeIntervalSince1970,
+            -Date.timeIntervalBetween1970AndReferenceDate
+        ))
     }
 
     /**
@@ -71,12 +81,12 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     - Parameter date: The reference date.
     */
     public init(timeInterval: TimeInterval, since date: Date) {
-        self.init(timeIntervalSinceReferenceDate: date.timeIntervalSinceReferenceDate + timeInterval)
+        self.init(date._time + timeInterval)
     }
 
     /// Returns a `Date` initialized relative to 00:00:00 UTC on 1 January 2001 by a given number of seconds.
     public init(timeIntervalSinceReferenceDate ti: TimeInterval) {
-        _time = ti
+        _time = .init(head: ti, tail: 0)
     }
 
     /**
@@ -85,7 +95,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     This property's value is negative if the date object is earlier than the system's absolute reference date (00:00:00 UTC on 1 January 2001).
     */
     public var timeIntervalSinceReferenceDate: TimeInterval {
-        return _time
+        return _time.head
     }
 
     /**
@@ -100,7 +110,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     - SeeAlso: `timeIntervalSinceReferenceDate`
     */
     public func timeIntervalSince(_ date: Date) -> TimeInterval {
-        return self.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate
+        return (self._time - date._time).head
     }
 
     /**
@@ -173,9 +183,9 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// Compare two `Date` values.
     public func compare(_ other: Date) -> ComparisonResult {
-        if _time < other.timeIntervalSinceReferenceDate {
+        if _time < other._time {
             return .orderedAscending
-        } else if _time > other.timeIntervalSinceReferenceDate {
+        } else if _time > other._time {
             return .orderedDescending
         } else {
             return .orderedSame
@@ -184,27 +194,27 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// Returns true if the two `Date` values represent the same point in time.
     public static func ==(lhs: Date, rhs: Date) -> Bool {
-        return lhs.timeIntervalSinceReferenceDate == rhs.timeIntervalSinceReferenceDate
+        return lhs._time == rhs._time
     }
 
     /// Returns true if the left hand `Date` is earlier in time than the right hand `Date`.
     public static func <(lhs: Date, rhs: Date) -> Bool {
-        return lhs.timeIntervalSinceReferenceDate < rhs.timeIntervalSinceReferenceDate
+        return lhs._time < rhs._time
     }
 
     /// Returns true if the left hand `Date` is later in time than the right hand `Date`.
     public static func >(lhs: Date, rhs: Date) -> Bool {
-        return lhs.timeIntervalSinceReferenceDate > rhs.timeIntervalSinceReferenceDate
+        return lhs._time > rhs._time
     }
 
     /// Returns a `Date` with a specified amount of time added to it.
     public static func +(lhs: Date, rhs: TimeInterval) -> Date {
-        return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate + rhs)
+        return Date(lhs._time + rhs)
     }
 
     /// Returns a `Date` with a specified amount of time subtracted from it.
     public static func -(lhs: Date, rhs: TimeInterval) -> Date {
-        return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate - rhs)
+        return Date(lhs._time - rhs)
     }
 
     /// Add a `TimeInterval` to a `Date`.
@@ -220,7 +230,6 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     public static func -=(lhs: inout Date, rhs: TimeInterval) {
         lhs = lhs - rhs
     }
-
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
