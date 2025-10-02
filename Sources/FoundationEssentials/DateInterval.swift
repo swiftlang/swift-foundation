@@ -12,30 +12,37 @@
 
 /// DateInterval represents a closed date interval in the form of [startDate, endDate].  It is possible for the start and end dates to be the same with a duration of 0.  DateInterval does not support reverse intervals i.e. intervals where the duration is less than 0 and the end date occurs earlier in time than the start date.
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-public struct DateInterval : Comparable, Hashable, Codable, Sendable {
+public struct DateInterval: Comparable, Hashable, Codable, Sendable {
 
     /// The start date.
-    public var start : Date
+    public var start: Date
+    
+    /// Underlying storage for `duration`
+    internal var _duration: DoubleDouble
 
     /// The end date.
     ///
     /// - precondition: `end >= start`
-    public var end : Date {
+    public var end: Date {
         get {
-            return start + duration
+            return Date(start._time + _duration)
         }
         set {
             precondition(newValue >= start, "Reverse intervals are not allowed")
-            duration = newValue.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate
+            _duration = (newValue._time - start._time)
         }
     }
-
-    /// The duration.
+    
+    /// The duration
     ///
     /// - precondition: `duration >= 0`
-    public var duration : TimeInterval {
-        willSet {
+    public var duration: TimeInterval {
+        get {
+            _duration.head
+        }
+        set {
             precondition(newValue >= 0, "Negative durations are not allowed")
+            _duration = DoubleDouble(head: newValue, tail: 0)
         }
     }
 
@@ -43,7 +50,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
     public init() {
         let d = Date()
         start = d
-        duration = 0
+        _duration = .zero
     }
 
     /// Initialize a `DateInterval` with the specified start and end date.
@@ -52,7 +59,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
     public init(start: Date, end: Date) {
         precondition(end >= start, "Reverse intervals are not allowed")
         self.start = start
-        duration = end.timeIntervalSince(start)
+        _duration = end._time - start._time
     }
 
     /// Initialize a `DateInterval` with the specified start date and duration.
@@ -61,7 +68,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
     public init(start: Date, duration: TimeInterval) {
         precondition(duration >= 0, "Negative durations are not allowed")
         self.start = start
-        self.duration = duration
+        _duration = DoubleDouble(head: duration, tail: 0)
     }
 
     /**
@@ -161,6 +168,24 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
     @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
     public static func <(lhs: DateInterval, rhs: DateInterval) -> Bool {
         return lhs.compare(rhs) == .orderedAscending
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case start = "start"
+        case duration = "duration"
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let start = try container.decode(Date.self, forKey: .start)
+        let duration = try container.decode(TimeInterval.self, forKey: .duration)
+        self.init(start: start, duration: duration)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(start, forKey: .start)
+        try container.encode(duration, forKey: .duration)
     }
 }
 
