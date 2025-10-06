@@ -213,7 +213,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         #expect(match.output.1 == "MergeableSetTests")
         #expect(match.output.2 == "started")
         // dateFormatter.date(from: "2021-07-08 10:19:35.418")!
-        #expect(match.output.3 == Date(timeIntervalSinceReferenceDate: 647432375.418))
+        #expect(match.output.3.timeIntervalSinceReferenceDate == 647432375.418)
     }
 #endif
 
