@@ -476,7 +476,7 @@ extension Tag {
         }
     }
     
-    @Test(.disabled()) func concurrentMultipleChildrenUpdatesAndParentReads() async throws {
+    @Test func concurrentMultipleChildrenUpdatesAndParentReads() async throws {
         let manager = ProgressManager(totalCount: 100)
         let child1 = manager.subprogress(assigningCount: 30).start(totalCount: 10)
         let child2 = manager.subprogress(assigningCount: 40).start(totalCount: 8)
@@ -561,7 +561,7 @@ extension Tag {
         #expect(manager.fractionCompleted == 1.0)
     }
     
-    @Test(.disabled()) func concurrentGrandchildrenUpdates() async throws {
+    @Test func concurrentGrandchildrenUpdates() async throws {
         let parent = ProgressManager(totalCount: 60)
         let child1 = parent.subprogress(assigningCount: 20).start(totalCount: 10)
         let child2 = parent.subprogress(assigningCount: 20).start(totalCount: 8)
@@ -769,7 +769,7 @@ extension Tag {
         }
     }
     
-    @Test(.disabled()) func concurrentSubprogressCreation() async throws {
+    @Test func concurrentSubprogressCreation() async throws {
         let manager = ProgressManager(totalCount: 1000)
 
         await withThrowingTaskGroup(of: Void.self) { group in

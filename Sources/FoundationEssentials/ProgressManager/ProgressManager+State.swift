@@ -310,8 +310,6 @@ extension ProgressManager {
                 if update.updatedFraction.isFinished && !currentWasFinished {
                     selfFraction.completed += update.assignedCount
                 }
-                
-                children[update.index].isFractionDirty = false
             }
         }
         
