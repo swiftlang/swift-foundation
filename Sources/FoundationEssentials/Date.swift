@@ -34,16 +34,64 @@ public typealias TimeInterval = Double
  A `Date` is independent of a particular calendar or time zone. To represent a `Date` to a user, you must interpret it in the context of a `Calendar`.
 */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct Date : Comparable, Hashable, Equatable, Sendable {
-
+public struct Date: Comparable, Hashable, Equatable, Sendable {
+    /* Date is internally represented as a sum of two Doubles.
+    
+     Previously Date was backed by a single Double measuring time since
+     Jan 1 2001 in seconds. Because Double's precision is non-uniform, this
+     means that times within a hundred days of the epoch are represented
+     with approximately nanosecond precision, but as you get farther away
+     from that date the precision decreases. For times close to the time
+     at which this comment was written, accuracy has been reduced to about
+     100ns.
+     
+     The obvious thing would be to adopt an integer-based representation
+     similar to C's timespec (32b nanoseconds, 64b seconds) or Swift's
+     Duration (128b attoseconds). These representations suffer from a few
+     difficulties:
+     
+     - Existing API on Date takes and produces `TimeInterval` (aka Double).
+       Making Date use an integer representation internally would mean that
+       existing users of the public API would suddently start getting
+       different results for computations that were previously exact; even
+       though we could add new API, and the overall system would be more
+       precise, this would be a surprisingly subtle change for users to
+       navigate.
+     
+     - We have been told that some software interprets the raw bytes of Date
+       as a Double for the purposes of fast serialization. These packages
+       formally violate Foundation's API boundaries, but that doesn't help
+       users of those packages who would abruptly be broken by switching to
+       an integer representation.
+     
+     Using DoubleDouble instead navigates these problems fairly elegantly.
+     
+     - Because DoubleDouble is still a floating-point type, it still suffers
+       from non-uniform precision. However, because DoubleDouble is so
+       fantastically precise, it can represent dates out to ±2.5 quadrillion
+       years at ~nanosecond or better precision, so in practice this won't
+       be much of an issue.
+     
+     - Existing API on Date will produce exactly the same result as it did
+       previously in cases where those results were exact, minimizing
+       surprises. In cases where the existing API was not exact, it will
+       produce much more accurate results, even if users do not adopt new
+       API, because its internal calculations are now more precise.
+     
+     - Software that (incorrectly) interprets the raw bytes of Date as a
+       Double will get at least as accurate of a value as it did previously
+       (and often a more accurate value).                                     */
     internal var _time: DoubleDouble
-
+    
     internal init(_ time: DoubleDouble) {
-      self._time = time
+        self._time = time
     }
+}
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Date {
     /// The number of seconds from 1 January 1970 to the reference date, 1 January 2001.
-    public static let timeIntervalBetween1970AndReferenceDate : TimeInterval = 978307200.0
+    public static let timeIntervalBetween1970AndReferenceDate: TimeInterval = 978307200.0
 
     /// The number of seconds from 1 January 1601 to the reference date, 1 January 2001.
     internal static let timeIntervalBetween1601AndReferenceDate: TimeInterval = 12622780800.0
@@ -55,7 +103,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// Returns a `Date` initialized to the current date and time.
     public init() {
-        _time = .init(head: Self.getCurrentAbsoluteTime(), tail: 0)
+        _time = .init(uncheckedHead: Self.getCurrentAbsoluteTime(), tail: 0)
     }
 
     /// Returns a `Date` initialized relative to the current date and time by a given number of seconds.
@@ -86,7 +134,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// Returns a `Date` initialized relative to 00:00:00 UTC on 1 January 2001 by a given number of seconds.
     public init(timeIntervalSinceReferenceDate ti: TimeInterval) {
-        _time = .init(head: ti, tail: 0)
+        _time = .init(uncheckedHead: ti, tail: 0)
     }
 
     /**

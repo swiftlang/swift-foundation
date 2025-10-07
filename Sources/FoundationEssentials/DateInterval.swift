@@ -42,7 +42,7 @@ public struct DateInterval: Comparable, Hashable, Codable, Sendable {
         }
         set {
             precondition(newValue >= 0, "Negative durations are not allowed")
-            _duration = DoubleDouble(head: newValue, tail: 0)
+            _duration = DoubleDouble(uncheckedHead: newValue, tail: 0)
         }
     }
 
@@ -68,7 +68,7 @@ public struct DateInterval: Comparable, Hashable, Codable, Sendable {
     public init(start: Date, duration: TimeInterval) {
         precondition(duration >= 0, "Negative durations are not allowed")
         self.start = start
-        _duration = DoubleDouble(head: duration, tail: 0)
+        _duration = DoubleDouble(uncheckedHead: duration, tail: 0)
     }
 
     /**
