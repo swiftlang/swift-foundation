@@ -42,11 +42,9 @@
     - Expanded Alternatives Considered
 * **v6** Minor Updates:
     - Replaced `withProperties` method with `setCounts`
-    - Removed `ProgressManager.Values` struct
-    - Made `ProgressManager` conform to `@dynamicMemberLookup` and moved `subscript(dynamicMember:)` methods from `ProgressManager.Values` to `ProgressManager`
+    - Moved `@dynamicMemberLookup` attribute to `ProgressManager` and `ProgressReporter`
     - Changed behavior of API so that additional properties are restricted to either `Int`, `Double`, `String?`, `URL?`, `UInt64` or `Duration` types instead of `any Sendable` types
-    - Added overloads for `subscript(dynamicMember:)` to account for currently-allowed types 
-    - Added requirements to `ProgressManager.Property` protocol to define summarization and termination (deinit) behavior
+    - Added requirements to `ProgressManager.Property` protocol to define summarization and cleanup (deinit) behavior
     - Replaced `total(of:)` with overloads for `summary(of:)` to account for all available types and removed `values(of:)` method
     
 ## Table of Contents 
@@ -1433,6 +1431,31 @@ There were discussions about representing indeterminate state in `ProgressManage
 
 ### Allow declared custom additional property to be any type that can be casted as `any Sendable`  
 We initially allowed the full flexibility of allowing developers to declare `ProgressManager.Property` types to be of any type, including structs. However, we realized that this has a severely negative impact on performance of the API. Thus, for now, we allow developers to only declare `ProgressManager.Property` with only certain `Value` and `Summary` types. 
+
+### Use `withProperties` closure as entry point to mutate custom `ProgressManager.Property` types 
+We initially introduced the `withProperties` closure to mutate custom `ProgressManager.Property` types. However, with the use of `withProperties` closure and the need to make custom `ProgressManager.Property` types [`Observable`](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0395-observability.md), we needed to register all the updates of each custom property on one keypath. This is to ensure that `ObservationRegistrar`'s `access` and `withMutation` calls are not called from within a locked context. Registering all updates of custom properties on one keypath can cause unnecessary UI redraws, which negatively impacts performance. Therefore, we decided to move the `@dynamicMemberLookup` attribute to `ProgressManager` to allow each custom `ProgressManager.Property` to be individually `Observable`. Additionally, this allows developers to access custom `ProgressManager.Property` types via dot syntax, improving the discoverability and ergonomics of accessing and mutating custom `ProgressManager.Property` types. The `withProperties` closure is replaced with `setCounts` to preserve the same atomic behavior for mutations of `totalCount` and `completedCount`. 
+
+### Minimal requirements for `ProgressManager.Property` protocol 
+We initially considered a version of the `ProgressManager.Property` protocol that only had two requirements:
+
+- `Value` - The type for individual property values
+- `defaultValue` - A default value when the property isn't explicitly set
+
+In this approach, the `ProgressManager` API handles custom `ProgressManager.Property` types by:
+- Aggregating all values throughout a progress tree into `Array<Value>`
+- Providing access via `values(of:)` method returning arrays of individual values
+- Providing access via `total(of:)` method returning computed summaries (e.g., `Int` for `totalFileCount`)
+- Deciding whether values are dropped or retained when `ProgressManager` instances are deinitialized
+
+However, after extensive performance testing, we realized that this approach for supporting arbitrary types has worse performance and offers much less flexibility for specifying the summarization behavior that developers may need.
+
+We decided to introduce additional requirements that would yield better performance and provide more flexibility: 
+- `Summary` - Explicit type for summaries
+- `reduce(into:value:)` - Custom logic for incorporating individual values into summaries
+- `merge(_:_:)` - Custom logic for combining summaries from different `ProgressManager` instances
+- `finalSummary(_:_:)` - Custom behavior when `ProgressManager` instances are deinitialized
+
+With these additional requirements, the support for custom `ProgressManager.Property` types balances performance and flexibility.
 
 ## Acknowledgements 
 Thanks to 
