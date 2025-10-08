@@ -1165,6 +1165,12 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             self.storage = storage
             self.slice = RangeReference(0..<count)
         }
+        
+        // Not exposed as ABI and only usable by internal, non-inlined code and therefore not @inlinable
+        init(_ storage: __DataStorage, range: Range<Int>) {
+            self.storage = storage
+            self.slice = RangeReference(range)
+        }
 
         @inlinable // This is @inlinable as trivially computable (and inlining may help avoid retain-release traffic).
         mutating func ensureUniqueReference() {
