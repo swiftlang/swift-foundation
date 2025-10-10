@@ -1419,7 +1419,7 @@ private struct CalendarTests {
         func test(_ start: Date, _ end: Date) throws {
             let components = c.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond, .weekOfMonth], from: start, to: end)
             let added = try #require(c.date(byAdding: components, to: start))
-            #expect(added == end, "actual: \(s.format(added)), expected: \(s.format(end))")
+            #expect(added.timeIntervalSinceReferenceDate == end.timeIntervalSinceReferenceDate, "actual: \(s.format(added)), expected: \(s.format(end))")
         }
 
         // 2024-03-09T02:34:36-0800, 2024-03-17T03:34:36-0700, 10:34:36 UTC
