@@ -277,7 +277,13 @@ private struct GregorianCalendarTests {
         func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: wrap)!
-            #expect(result == expectedDate, sourceLocation: sourceLocation)
+            // These tests were written when Date used a 64b representation;
+            // we'll add new tests that validate the low-word of the 128b
+            // Date, but these old tests should continue passing if we only
+            // look at the high word as vended by tISRD.
+            #expect(result.timeIntervalSinceReferenceDate ==
+                    expectedDate.timeIntervalSinceReferenceDate,
+                    sourceLocation: sourceLocation)
         }
 
         date = Date(timeIntervalSince1970: 825723300.0)
@@ -399,7 +405,13 @@ private struct GregorianCalendarTests {
         func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: wrap)!
-            #expect(result == expectedDate, sourceLocation: sourceLocation)
+          // These tests were written when Date used a 64b representation;
+          // we'll add new tests that validate the low-word of the 128b
+          // Date, but these old tests should continue passing if we only
+          // look at the high word as vended by tISRD.
+            #expect(result.timeIntervalSinceReferenceDate ==
+                    expectedDate.timeIntervalSinceReferenceDate,
+                    sourceLocation: sourceLocation)
         }
 
         date = Date(timeIntervalSince1970: 62135596800.0) // 3939-01-01
@@ -826,7 +838,11 @@ private struct GregorianCalendarTests {
             let new_end = new?.end
 
             #expect(new_start == start, "interval start did not match", sourceLocation: sourceLocation)
-            #expect(new_end == end, "interval end did not match", sourceLocation: sourceLocation)
+            // These tests were written when Date used a 64b representation;
+            // we'll add new tests that validate the low-word of the 128b
+            // Date, but these old tests should continue passing if we only
+            // look at the high word as vended by tISRD.
+            #expect(new_end?.timeIntervalSinceReferenceDate == end?.timeIntervalSinceReferenceDate, "interval end did not match", sourceLocation: sourceLocation)
         }
 
         var date: Date
@@ -838,7 +854,10 @@ private struct GregorianCalendarTests {
         test(.hour, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820458000.0))
         test(.minute, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820454460.0))
         test(.second, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820454401.0))
+        // Legacy test from 64b Date; expected end is the same as start due to rounding.
         test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 820454400.0), end: Date(timeIntervalSince1970: 820454400.0))
+        // Updated test for 128b Date to benefit from improved accuracy:
+        #expect(calendar.dateInterval(of: .nanosecond, for: date)?.end == Date(timeInterval: 1e-9, since: date))
         test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 820396800.0), end: Date(timeIntervalSince1970: 820483200.0))
         test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 820396800.0), end: Date(timeIntervalSince1970: 820483200.0))
         test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 812534400.0), end: Date(timeIntervalSince1970: 820483200.0))
@@ -869,7 +888,7 @@ private struct GregorianCalendarTests {
         test(.hour, date, expectedStart: Date(timeIntervalSince1970: -62135769600.0), end: Date(timeIntervalSince1970: -62135766000.0))
         test(.minute, date, expectedStart: Date(timeIntervalSince1970: -62135769600.0), end: Date(timeIntervalSince1970: -62135769540.0))
         test(.second, date, expectedStart: Date(timeIntervalSince1970: -62135769600.0), end: Date(timeIntervalSince1970: -62135769599.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: -62135769600.00001), end: Date(timeIntervalSince1970: -62135769600.00001))
+        test(.nanosecond, date, expectedStart: date, end: Date(timeInterval: 1e-9, since: date))
         test(.weekday, date, expectedStart: Date(timeIntervalSince1970: -62135827200.0), end: Date(timeIntervalSince1970: -62135740800.0))
         test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: -62135827200.0), end: Date(timeIntervalSince1970: -62135740800.0))
         test(.quarter, date, expectedStart: Date(timeIntervalSince1970: -62143689600.0), end: Date(timeIntervalSince1970: -62135740800.0))
