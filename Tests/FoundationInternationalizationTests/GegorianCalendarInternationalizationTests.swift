@@ -1461,8 +1461,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828262987.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829468987.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828262987.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
@@ -1489,8 +1489,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828270187.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828270187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
@@ -1517,8 +1517,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828273787.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828273787.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
@@ -1547,8 +1547,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846403387.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
         // Previously this returns 1996-10-27T01:03:07-0700
@@ -1578,8 +1578,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847011787.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27T02:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
@@ -1606,8 +1606,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847015387.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27T03:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
@@ -1634,8 +1634,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 847018987.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 814953787.0) // 1995-10-29T01:03:07-0700
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
@@ -1664,8 +1664,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814953787.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 814957387.0) // 1995-10-29T01:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
@@ -1692,8 +1692,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815562187.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814348987.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814957387.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 814960987.0) // 1995-10-29T02:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
@@ -1720,8 +1720,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814352587.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815565787.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814352587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814960987.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 814964587.0) // 1995-10-29T03:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
@@ -1748,8 +1748,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814356187.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 815569387.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814356187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
     }
     
     @Test func add_Wrap_DST() {
@@ -1789,8 +1789,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828262987.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829468987.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830851387.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828867787.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
@@ -1817,8 +1817,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828270187.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829476187.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830858587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828871387.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
@@ -1845,8 +1845,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828273787.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 829479787.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 830862187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 828874987.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
@@ -1873,8 +1873,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846752587.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845798587.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846406987.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27T02:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
@@ -1901,8 +1901,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846756187.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845802187.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846410587.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
         
         date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27T03:03:07-0800
         test(addField: .era, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
@@ -1929,8 +1929,8 @@ private struct GregorianCalendarInternationalizationTests {
         test(addField: .weekOfYear, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
         test(addField: .weekOfMonth, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846759787.0))
         test(addField: .weekOfMonth, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 845805787.0))
-        test(addField: .nanosecond, value: 1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
-        test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 846414187.0))
+        test(addField: .nanosecond, value: 1, to: date, expectedDate: date.addingTimeInterval(1e-9))
+        test(addField: .nanosecond, value: -1, to: date, expectedDate: date.addingTimeInterval(-1e-9))
     }
     
     @Test func ordinality_DST() {
@@ -2448,21 +2448,21 @@ private struct GregorianCalendarInternationalizationTests {
         dc_customCalendarAndTimeZone.timeZone = .init(secondsFromGMT: 28800)
         // calendar.timeZone = UTC+0, dc.calendar.timeZone = UTC-7, dc.timeZone = UTC+8
         // expect local time in dc.timeZone (UTC+8)
-        #expect(gregorianCalendar.date(from: dc_customCalendarAndTimeZone)! == Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
+        #expect(gregorianCalendar.date(from: dc_customCalendarAndTimeZone)!.timeIntervalSinceReferenceDate == 679024975.891) // 2022-07-09T02:02:55Z
         
         var dc_customCalendar = dc
         dc_customCalendar.calendar = dcCalendar
         dc_customCalendar.timeZone = nil
         // calendar.timeZone = UTC+0, dc.calendar.timeZone = UTC-7, dc.timeZone = nil
         // expect local time in calendar.timeZone (UTC+0)
-        #expect(gregorianCalendar.date(from: dc_customCalendar)! == Date(timeIntervalSinceReferenceDate: 679053775.891)) // 2022-07-09T10:02:55Z
+        #expect(gregorianCalendar.date(from: dc_customCalendar)!.timeIntervalSinceReferenceDate == 679053775.891) // 2022-07-09T10:02:55Z
         
         var dc_customTimeZone = dc_customCalendarAndTimeZone
         dc_customTimeZone.calendar = nil
         dc_customTimeZone.timeZone = .init(secondsFromGMT: 28800)
         // calendar.timeZone = UTC+0, dc.calendar = nil, dc.timeZone = UTC+8
         // expect local time in dc.timeZone (UTC+8)
-        #expect(gregorianCalendar.date(from: dc_customTimeZone)! == Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
+        #expect(gregorianCalendar.date(from: dc_customTimeZone)!.timeIntervalSinceReferenceDate == 679024975.891) // 2022-07-09T02:02:55Z
         
         let dcCalendar_noTimeZone = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: .gmt, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         var dc_customCalendarNoTimeZone_customTimeZone = dc
@@ -2470,7 +2470,7 @@ private struct GregorianCalendarInternationalizationTests {
         dc_customCalendarNoTimeZone_customTimeZone.timeZone = .init(secondsFromGMT: 28800)
         // calendar.timeZone = UTC+0, dc.calendar.timeZone = nil, dc.timeZone = UTC+8
         // expect local time in dc.timeZone (UTC+8)
-        #expect(gregorianCalendar.date(from: dc_customCalendarNoTimeZone_customTimeZone)! == Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
+        #expect(gregorianCalendar.date(from: dc_customCalendarNoTimeZone_customTimeZone)!.timeIntervalSinceReferenceDate == 679024975.891) // 2022-07-09T02:02:55Z
     }
     
     @Test func dateFromComponents_componentsTimeZoneConversion() {
