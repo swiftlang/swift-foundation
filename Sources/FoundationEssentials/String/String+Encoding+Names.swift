@@ -72,7 +72,7 @@ private struct ASCIICaseInsensitiveUnicodeScalar: Equatable,
 }
 
 /// A type to tokenize string for `String.Encoding` names.
-private protocol StringEncodingNameTokenizer: ~Copyable {
+internal protocol StringEncodingNameTokenizer: ~Copyable {
     associatedtype Token: Equatable
     init(name: String)
     mutating func nextToken() throws -> Token?
@@ -142,7 +142,7 @@ private extension String {
 // MARK: - IANA Charset Names
 
 /// Info about IANA Charset.
-private struct IANACharset {
+internal struct IANACharset {
     /// Preferred MIME Name
     let preferredMIMEName: String?
 
@@ -182,203 +182,6 @@ private struct IANACharset {
     }
 }
 
-// Extracted only necessary charsets from https://www.iana.org/assignments/character-sets/character-sets.xhtml
-extension IANACharset {
-    /// IANA Characater Set `US-ASCII`
-    static let usASCII = IANACharset(
-        preferredMIMEName: "US-ASCII",
-        name: "US-ASCII",
-        aliases: [
-            "iso-ir-6",
-            "ANSI_X3.4-1968",
-            "ANSI_X3.4-1986",
-            "ISO_646.irv:1991",
-            "ISO646-US",
-            "US-ASCII",
-            "us",
-            "IBM367",
-            "cp367",
-            "csASCII",
-        ]
-    )
-
-    /// IANA Characater Set `ISO-8859-1`
-    static let iso8859_1 = IANACharset(
-        preferredMIMEName: "ISO-8859-1",
-        name: "ISO_8859-1:1987",
-        aliases: [
-            "iso-ir-100",
-            "ISO_8859-1",
-            "ISO-8859-1",
-            "latin1",
-            "l1",
-            "IBM819",
-            "CP819",
-            "csISOLatin1",
-        ]
-    )
-
-    /// IANA Characater Set `ISO-8859-2`
-    static let iso8859_2 = IANACharset(
-        preferredMIMEName: "ISO-8859-2",
-        name: "ISO_8859-2:1987",
-        aliases: [
-            "iso-ir-101",
-            "ISO_8859-2",
-            "ISO-8859-2",
-            "latin2",
-            "l2",
-            "csISOLatin2",
-        ]
-    )
-
-    /// IANA Characater Set `Shift_JIS`
-    static let shiftJIS = IANACharset(
-        preferredMIMEName: "Shift_JIS",
-        name: "Shift_JIS",
-        aliases: [
-            "MS_Kanji",
-            "csShiftJIS",
-        ]
-    )
-
-    /// IANA Characater Set `EUC-JP`
-    static let eucJP = IANACharset(
-        preferredMIMEName: "EUC-JP",
-        name: "Extended_UNIX_Code_Packed_Format_for_Japanese",
-        aliases: [
-            "csEUCPkdFmtJapanese",
-            "EUC-JP",
-        ]
-    )
-
-    /// IANA Characater Set `ISO-2022-JP`
-    static let iso2022JP = IANACharset(
-        preferredMIMEName: "ISO-2022-JP",
-        name: "ISO-2022-JP",
-        aliases: [
-            "csISO2022JP",
-        ]
-    )
-
-    /// IANA Characater Set `UTF-8`
-    static let utf8 = IANACharset(
-        preferredMIMEName: nil,
-        name: "UTF-8",
-        aliases: [
-            "csUTF8",
-        ]
-    )
-
-    /// IANA Characater Set `UTF-16BE`
-    static let utf16BE = IANACharset(
-        preferredMIMEName: nil,
-        name: "UTF-16BE",
-        aliases: [
-            "csUTF16BE",
-        ]
-    )
-
-    /// IANA Characater Set `UTF-16LE`
-    static let utf16LE = IANACharset(
-        preferredMIMEName: nil,
-        name: "UTF-16LE",
-        aliases: [
-            "csUTF16LE",
-        ]
-    )
-
-    /// IANA Characater Set `UTF-16`
-    static let utf16 = IANACharset(
-        preferredMIMEName: nil,
-        name: "UTF-16",
-        aliases: [
-            "csUTF16",
-        ]
-    )
-
-    /// IANA Characater Set `UTF-32`
-    static let utf32 = IANACharset(
-        preferredMIMEName: nil,
-        name: "UTF-32",
-        aliases: [
-            "csUTF32",
-        ]
-    )
-
-    /// IANA Characater Set `UTF-32BE`
-    static let utf32BE = IANACharset(
-        preferredMIMEName: nil,
-        name: "UTF-32BE",
-        aliases: [
-            "csUTF32BE",
-        ]
-    )
-
-    /// IANA Characater Set `UTF-32LE`
-    static let utf32LE = IANACharset(
-        preferredMIMEName: nil,
-        name: "UTF-32LE",
-        aliases: [
-            "csUTF32LE",
-        ]
-    )
-
-    /// IANA Characater Set `macintosh`
-    static let macintosh = IANACharset(
-        preferredMIMEName: nil,
-        name: "macintosh",
-        aliases: [
-            "mac",
-            "csMacintosh",
-        ]
-    )
-
-    /// IANA Characater Set `windows-1250`
-    static let windows1250 = IANACharset(
-        preferredMIMEName: nil,
-        name: "windows-1250",
-        aliases: [
-            "cswindows1250",
-        ]
-    )
-
-    /// IANA Characater Set `windows-1251`
-    static let windows1251 = IANACharset(
-        preferredMIMEName: nil,
-        name: "windows-1251",
-        aliases: [
-            "cswindows1251",
-        ]
-    )
-
-    /// IANA Characater Set `windows-1252`
-    static let windows1252 = IANACharset(
-        preferredMIMEName: nil,
-        name: "windows-1252",
-        aliases: [
-            "cswindows1252",
-        ]
-    )
-
-    /// IANA Characater Set `windows-1253`
-    static let windows1253 = IANACharset(
-        preferredMIMEName: nil,
-        name: "windows-1253",
-        aliases: [
-            "cswindows1253",
-        ]
-    )
-
-    /// IANA Characater Set `windows-1254`
-    static let windows1254 = IANACharset(
-        preferredMIMEName: nil,
-        name: "windows-1254",
-        aliases: [
-            "cswindows1254",
-        ]
-    )
-}
 
 // MARK: - `String.Encoding` Names
 
