@@ -41,6 +41,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     internal let _parseInfo: URLParseInfo
     internal let _baseURL: URL?
     internal let _encoding: String.Encoding
+    // URL was created from a file path initializer and is absolute
+    private let _isCanonicalFileURL: Bool
 
     #if FOUNDATION_FRAMEWORK
     // Used frequently for NS/CFURL behaviors
@@ -90,6 +92,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         _parseInfo = parseInfo
         _baseURL = (forceBaseURL || parseInfo.scheme == nil) ? base?.absoluteURL : nil
         _encoding = encoding
+        _isCanonicalFileURL = false
     }
 
     convenience init?(string: String) {
@@ -132,10 +135,13 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     }
 
     convenience init(filePath path: String, directoryHint: URL.DirectoryHint = .inferFromPath, relativeTo base: URL? = nil) {
-        self.init(filePath: path, pathStyle: URL.defaultPathStyle, directoryHint: directoryHint, relativeTo: base)
+        // .init(fileURLWithPath:) inits call through here, convert path to FSR now
+        self.init(filePath: path.fileSystemRepresentation, pathStyle: URL.defaultPathStyle, directoryHint: directoryHint, relativeTo: base)
     }
 
     internal init(filePath path: String, pathStyle: URL.PathStyle, directoryHint: URL.DirectoryHint = .inferFromPath, relativeTo base: URL? = nil) {
+        // Note: don't convert to file system representation in this init since
+        // .init(fileURLWithFileSystemRepresentation:) calls into it, too.
         var baseURL = base
         guard !path.isEmpty else {
             #if !NO_FILESYSTEM
@@ -144,6 +150,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             _parseInfo = Parser.parse(filePath: "./", isAbsolute: false)
             _baseURL = baseURL?.absoluteURL
             _encoding = .utf8
+            _isCanonicalFileURL = false
             return
         }
 
@@ -176,6 +183,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
                 _parseInfo = parseInfo
                 _baseURL = nil // Drop the base URL since we have an HTTP scheme
                 _encoding = .utf8
+                _isCanonicalFileURL = false
                 return
             }
         }
@@ -220,10 +228,12 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             let encodedPath = Parser.percentEncode(filePath, component: .path) ?? "/"
             _parseInfo = Parser.parse(filePath: encodedPath, isAbsolute: true)
             _baseURL = nil // Drop the baseURL if the URL is absolute
+            _isCanonicalFileURL = true
         } else {
             let encodedPath = Parser.percentEncode(filePath, component: .path) ?? ""
             _parseInfo = Parser.parse(filePath: encodedPath, isAbsolute: false)
             _baseURL = baseURL?.absoluteURL
+            _isCanonicalFileURL = false
         }
         _encoding = .utf8
     }
@@ -232,6 +242,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         _parseInfo = url._parseInfo
         _baseURL = url._baseURL?.absoluteURL
         _encoding = url._encoding
+        _isCanonicalFileURL = url._isCanonicalFileURL
     }
 
     convenience init?(dataRepresentation: Data, relativeTo base: URL?, isAbsolute: Bool) {
@@ -256,7 +267,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     convenience init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo base: URL?) {
         let pathString = String(cString: path)
         let directoryHint: URL.DirectoryHint = isDirectory ? .isDirectory : .notDirectory
-        self.init(filePath: pathString, directoryHint: directoryHint, relativeTo: base)
+        // Call the internal init so we don't automatically convert path to its decomposed form
+        self.init(filePath: pathString, pathStyle: URL.defaultPathStyle, directoryHint: directoryHint, relativeTo: base)
     }
 
     internal var encodedComponents: URLParseInfo.EncodedComponentSet {
@@ -389,6 +401,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
 
     private static let fileSchemeUTF8 = Array("file".utf8)
     var isFileURL: Bool {
+        if _isCanonicalFileURL { return true }
         guard let scheme else { return false }
         return scheme.lowercased().utf8.elementsEqual(Self.fileSchemeUTF8)
     }
@@ -624,6 +637,11 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     }
 
     func withUnsafeFileSystemRepresentation<ResultType>(_ block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType {
+        #if !os(Windows)
+        if _isCanonicalFileURL {
+            return try fileSystemPath().withCString { try block($0) }
+        }
+        #endif
         return try fileSystemPath().withFileSystemRepresentation { try block($0) }
     }
     
@@ -691,6 +709,13 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         var pathToAppend = path.replacing(._backslash, with: ._slash)
         #else
         var pathToAppend = String(path)
+        #endif
+
+        #if FOUNDATION_FRAMEWORK
+        if isFileURL {
+            // Use the file system (decomposed) representation
+            pathToAppend = pathToAppend.fileSystemRepresentation
+        }
         #endif
 
         if !encodingSlashes && !compatibility {
@@ -880,6 +905,13 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         guard !pathExtension.isEmpty, !_parseInfo.path.isEmpty else {
             return nil
         }
+        #if FOUNDATION_FRAMEWORK
+        var pathExtension = pathExtension
+        if isFileURL {
+            // Use the file system (decomposed) representation
+            pathExtension = pathExtension.fileSystemRepresentation
+        }
+        #endif
         var components = URLComponents(parseInfo: _parseInfo)
         // pathExtension might need to be percent-encoded
         let encodedExtension = if compatibility {
@@ -1099,6 +1131,21 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         }
     }
 
+}
+
+private extension String {
+    var fileSystemRepresentation: String {
+        #if FOUNDATION_FRAMEWORK
+        return withFileSystemRepresentation { fsRep in
+            guard let fsRep else {
+                return self
+            }
+            return String(cString: fsRep)
+        }
+        #else
+        return self
+        #endif
+    }
 }
 
 #if FOUNDATION_FRAMEWORK
