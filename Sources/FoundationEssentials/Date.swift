@@ -395,7 +395,7 @@ extension Date : ReferenceConvertible, _ObjectiveCBridgeable {
 
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSDate {
-        return NSDate(timeIntervalSinceReferenceDate: _time)
+        return NSDate(timeIntervalSinceReferenceDate: _time.head)
     }
 
     public static func _forceBridgeFromObjectiveC(_ x: NSDate, result: inout Date?) {
