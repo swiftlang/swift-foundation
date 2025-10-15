@@ -207,7 +207,7 @@ internal final class __DataStorage : @unchecked Sendable {
 
     @inlinable // This is @inlinable as trivially computable.
     var mutableBytes: UnsafeMutableRawPointer? {
-        return _bytes?.advanced(by: -_offset)
+        return _bytes?.advanced(by: _offset &* -1) // _offset is guaranteed to be non-negative, so it can never overflow when negating
     }
 
     @inlinable
@@ -955,7 +955,8 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         @inlinable // This is @inlinable as trivially computable.
         var count: Int {
             get {
-                return Int(slice.upperBound - slice.lowerBound)
+                // The upper bound is guaranteed to be greater than or equal to the lower bound, and the lower bound must be non-negative so subtraction can never overflow
+                return Int(slice.upperBound &- slice.lowerBound)
             }
             set(newValue) {
                 assert(newValue < HalfInt.max)
@@ -1112,7 +1113,8 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
         @inlinable @inline(__always) // This is @inlinable as trivially computable.
         var count: Int {
-            return range.upperBound - range.lowerBound
+            // The upper bound is guaranteed to be greater than or equal to the lower bound, and the lower bound must be non-negative so subtraction can never overflow
+            return range.upperBound &- range.lowerBound
         }
 
         @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
@@ -2214,10 +2216,10 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             switch _representation {
             case .empty:
                 buffer = UnsafeRawBufferPointer(start: nil, count: 0)
-            case .inline:
+            case .inline(let inline):
                 buffer = unsafe UnsafeRawBufferPointer(
                   start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
-                  count: _representation.count
+                  count: inline.count
                 )
             case .large(let slice):
                 buffer = unsafe UnsafeRawBufferPointer(
@@ -2252,10 +2254,10 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             switch _representation {
             case .empty:
                 buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            case .inline:
+            case .inline(let inline):
                 buffer = unsafe UnsafeMutableRawBufferPointer(
                   start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                  count: _representation.count
+                  count: inline.count
                 )
             case .large(var slice):
                 // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
@@ -2293,10 +2295,10 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             switch _representation {
             case .empty:
                 buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            case .inline:
+            case .inline(let inline):
                 buffer = unsafe UnsafeMutableRawBufferPointer(
                   start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                  count: _representation.count
+                  count: inline.count
                 )
             case .large(var slice):
                 // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
