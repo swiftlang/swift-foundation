@@ -395,7 +395,7 @@ extension Date : ReferenceConvertible, _ObjectiveCBridgeable {
 
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSDate {
-        return NSDate(timeIntervalSinceReferenceDate: _time)
+        return NSDate(timeIntervalSinceReferenceDate: _time.head)
     }
 
     public static func _forceBridgeFromObjectiveC(_ x: NSDate, result: inout Date?) {
@@ -446,7 +446,7 @@ extension Date : _CustomPlaygroundQuickLookable {
 #endif // FOUNDATION_FRAMEWORK
 
 extension Date {
-    // Julian day 0 (-4713-01-01 12:00:00 +0000) in CFAbsoluteTime to 506713-02-07 00:00:00 +0000, smaller than the max time ICU supported.
+    // Julian day 0 (-4712-01-01 12:00:00 +0000) in CFAbsoluteTime to 506713-02-07 00:00:00 +0000, smaller than the max time ICU supported.
     package static let validCalendarRange = Date(timeIntervalSinceReferenceDate: TimeInterval(-211845067200.0))...Date(timeIntervalSinceReferenceDate: TimeInterval(15927175497600.0))
 
     // aka __CFCalendarValidateAndCapTimeRange
