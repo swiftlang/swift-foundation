@@ -45,7 +45,6 @@ private struct ASCIICaseInsensitiveUnicodeScalar: Equatable,
 
     let scalar: Unicode.Scalar
 
-    @inlinable
     init(_ scalar: Unicode.Scalar) {
         assert(scalar.isASCII)
         self.scalar = scalar
@@ -55,7 +54,6 @@ private struct ASCIICaseInsensitiveUnicodeScalar: Equatable,
         self.init(Unicode.Scalar(unicodeScalarLiteral: value))
     }
 
-    @inlinable
     static func ==(
         lhs: ASCIICaseInsensitiveUnicodeScalar,
         rhs: ASCIICaseInsensitiveUnicodeScalar
