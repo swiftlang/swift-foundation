@@ -222,58 +222,38 @@ extension String.Encoding {
     ///         to determine which encoding is suitable.
     @available(FoundationPreview 6.3, *)
     public init?(ianaName charsetName: String) {
+        let possibilities: [String.Encoding] = [
+            .utf8,
+            .ascii,
+            .japaneseEUC,
+            .isoLatin1,
+            .shiftJIS,
+            .isoLatin2,
+            .unicode, // .utf16
+            .windowsCP1251,
+            .windowsCP1252,
+            .windowsCP1253,
+            .windowsCP1254,
+            .windowsCP1250,
+            .iso2022JP,
+            .macOSRoman,
+            .utf16BigEndian,
+            .utf16LittleEndian,
+            .utf32,
+            .utf32BigEndian,
+            .utf32LittleEndian,
+        ]
+
         func __determineEncoding() -> String.Encoding? {
-            func __matches(_ charsets: IANACharset...) -> Bool {
-                assert(!charsets.isEmpty)
-                return charsets.contains {
-                    $0.matches(
-                        charsetName,
-                        tokenizedBy: ASCIICaseInsensitiveTokenizer.self
-                    )
+            for encoding in possibilities {
+                guard let ianaCharset = encoding._ianaCharset else {
+                    continue
+                }
+                if ianaCharset.matches(charsetName, tokenizedBy: ASCIICaseInsensitiveTokenizer.self) {
+                    return encoding
                 }
             }
-
-            return if __matches(.utf8) {
-                .utf8
-            } else if __matches(.usASCII) {
-                .ascii
-            } else if __matches(.eucJP) {
-                .japaneseEUC
-            } else if __matches(.iso8859_1) {
-                .isoLatin1
-            } else if __matches(.shiftJIS) {
-                .shiftJIS
-            } else if __matches(.iso8859_2) {
-                .isoLatin2
-            } else if __matches(.utf16) {
-                .utf16
-            } else if __matches(.windows1251) {
-                .windowsCP1251
-            } else if __matches(.windows1252) {
-                .windowsCP1252
-            } else if __matches(.windows1253) {
-                .windowsCP1253
-            } else if __matches(.windows1254) {
-                .windowsCP1254
-            } else if __matches(.windows1250) {
-                .windowsCP1250
-            } else if __matches(.iso2022JP) {
-                .iso2022JP
-            } else if __matches(.macintosh) {
-                .macOSRoman
-            } else if __matches(.utf16BE) {
-                .utf16BigEndian
-            } else if __matches(.utf16LE) {
-                .utf16LittleEndian
-            } else if __matches(.utf32) {
-                .utf32
-            } else if __matches(.utf32BE) {
-                .utf32BigEndian
-            } else if __matches(.utf32LE) {
-                .utf32LittleEndian
-            } else {
-                nil
-            }
+            return nil
         }
 
         guard let encoding = __determineEncoding() else {
