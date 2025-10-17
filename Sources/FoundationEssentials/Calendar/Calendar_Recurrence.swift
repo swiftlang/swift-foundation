@@ -71,13 +71,51 @@ extension Calendar {
         let start: Date
         /// The recurrenece rule
         let recurrence: RecurrenceRule
-        /// Range in which the search should occur. If `nil`, return all results
-        let range: Range<Date>?
+        /// The lower end of the search range. If `nil`, the search is unbounded
+        /// in the past.
+        let lowerBound: Date?
+        /// The upper end of the search range. If `nil`, the search is unbounded
+        /// in the future. If `inclusive` is true, `bound` is a valid result
+        let upperBound: (bound: Date, inclusive: Bool)?
         
         init(start: Date, recurrence: RecurrenceRule, range: Range<Date>?) {
             self.start = start
             self.recurrence = recurrence
-            self.range = range
+            if let range {
+                self.lowerBound = range.lowerBound
+                self.upperBound = (range.upperBound, false)
+            } else {
+                self.lowerBound = nil
+                self.upperBound = nil
+            }
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: ClosedRange<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = range.lowerBound
+            self.upperBound = (range.upperBound, true)
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: PartialRangeFrom<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = range.lowerBound
+            self.upperBound = nil
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: PartialRangeThrough<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = nil
+            self.upperBound = (range.upperBound, true)
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: PartialRangeUpTo<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = nil
+            self.upperBound = (range.upperBound, false)
         }
         
         struct Iterator: Sendable, IteratorProtocol {
@@ -85,13 +123,11 @@ extension Calendar {
             let start: Date
             /// The recurrence rule that should be used for enumeration
             let recurrence: RecurrenceRule
-            /// The range in which the sequence should produce results
-            let range: Range<Date>?
-            
-            /// The lower bound of `range`, adjusted so that date expansions may
-            /// still fit in range even if this value is outside the range. This
-            /// value is used as a lower bound for ``nextBaseRecurrenceDate()``.
-            let rangeLowerBound: Date?
+
+            /// The lower bound for iteration results, inclusive
+            let lowerBound: Date?
+            /// The upper bound for iteration results and whether it's inclusive
+            let upperBound: (bound: Date, inclusive: Bool)?
             
             /// The start date's fractional seconds component
             let fractionalSeconds: TimeInterval
@@ -105,6 +141,10 @@ extension Calendar {
             /// date, by the interval specified by the recurrence rule frequency
             /// This does not include the start date itself.
             var baseRecurrence: Calendar.DatesByMatching.Iterator
+            /// The lower bound for `baseRecurrence`. Note that this date can be
+            /// lower than `lowerBound`
+            let baseRecurrenceLowerBound: Date?
+            
             
             /// How many elements we have consumed from `baseRecurrence` 
             var iterations: Int = 0
@@ -123,7 +163,8 @@ extension Calendar {
             
             internal init(start: Date, 
                           matching recurrence: RecurrenceRule,
-                          range: Range<Date>?) {
+                          lowerBound: Date?,
+                          upperBound: (bound: Date, inclusive: Bool)?) {
                 // Copy the calendar if it's autoupdating
                 var recurrence = recurrence
                 if recurrence.calendar == .autoupdatingCurrent {
@@ -135,7 +176,6 @@ extension Calendar {
                 let wholeSeconds = start._time.floor()
                 fractionalSeconds = (start._time - wholeSeconds).head
                 self.start = Date(wholeSeconds)
-                self.range = range
                 
                 let frequency = recurrence.frequency
                 
@@ -218,10 +258,12 @@ extension Calendar {
                     secondAction = .expand
                 }
                 
-                if let range {
-                    rangeLowerBound = recurrence.calendar.dateInterval(of: frequency.component, for: range.lowerBound)?.start
+                self.lowerBound = lowerBound
+                self.upperBound = upperBound
+                if let lowerBound {
+                    baseRecurrenceLowerBound = recurrence.calendar.dateInterval(of: frequency.component, for: lowerBound)?.start
                 } else {
-                    rangeLowerBound = nil
+                    baseRecurrenceLowerBound = nil
                 }
                 
                 // Create date components that enumerate recurrences without any
@@ -331,7 +373,7 @@ extension Calendar {
                     }
                     // If a range has been specified, we should skip a few extra 
                     // occurrences until we reach the start date
-                    if let rangeLowerBound, nextDate < rangeLowerBound {
+                    if let baseRecurrenceLowerBound, nextDate < baseRecurrenceLowerBound {
                         continue
                     }
                     anchor = nextDate
@@ -477,11 +519,18 @@ extension Calendar {
                             finished = true
                             return nil
                         }
-                        if let range = self.range {
-                            if date >= range.upperBound {
+                        if let upperBound = self.upperBound {
+                            let outOfRange = switch upperBound.inclusive {
+                                case true:  date > upperBound.bound
+                                case false: date >= upperBound.bound
+                            }
+                            if outOfRange {
                                 finished = true
                                 return nil
-                            } else if date < range.lowerBound {
+                            }
+                        }
+                        if let lowerBound = self.lowerBound {
+                            if date < lowerBound {
                                 continue
                             }
                         }
@@ -504,7 +553,7 @@ extension Calendar {
         }
         
         public func makeIterator() -> Iterator {
-            return Iterator(start: start, matching: recurrence, range: range)
+            return Iterator(start: start, matching: recurrence, lowerBound: lowerBound, upperBound: upperBound)
         }
     }
 }

@@ -270,9 +270,76 @@ extension Calendar {
         /// - Returns: a sequence of dates conforming to the recurrence rule, in
         ///   the given `range`. An empty sequence if the rule doesn't match any
         ///   dates.
-        /// A recurrence that repeats every `interval` minutes
         public func recurrences(of start: Date,
                                 in range: Range<Date>? = nil
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: PartialRangeThrough<Date>
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: PartialRangeUpTo<Date>
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: PartialRangeFrom<Date>
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: ClosedRange<Date>
         ) -> some (Sequence<Date> & Sendable) {
             DatesByRecurring(start: start, recurrence: self, range: range)
         }
