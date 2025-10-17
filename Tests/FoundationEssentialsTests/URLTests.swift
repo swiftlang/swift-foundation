@@ -423,6 +423,163 @@ private struct URLTests {
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
+    #if FOUNDATION_FRAMEWORK
+    @Test func fileSystemRepresentations() throws {
+        let base = "/base/"
+        let pathNFC = "/caf\u{E9}"
+        let relativeNFC = "caf\u{E9}"
+        let pathNFD = "/cafe\u{301}"
+        let relativeNFD = "cafe\u{301}"
+
+        let resolvedPathNFC = "/base/caf\u{E9}"
+        let resolvedPathNFD = "/base/cafe\u{301}"
+        let baseExtensionNFD = "/base.cafe\u{301}"
+        let doubleCafeNFD = "/cafe\u{301}/cafe\u{301}"
+
+        // URL(filePath:) should always convert the input to decomposed (NFD) representation
+        let baseURL = URL(filePath: base)
+        let urlNFC = URL(filePath: pathNFC)
+        let urlRelativeNFC = URL(filePath: relativeNFC, relativeTo: baseURL)
+        let urlNFD = URL(filePath: pathNFD)
+        let urlRelativeNFD = URL(filePath: relativeNFD, relativeTo: baseURL)
+
+        func equalBytes(_ p1: UnsafePointer<CChar>, _ p2: UnsafePointer<CChar>) -> Bool {
+            return strcmp(p1, p2) == 0
+        }
+
+        // Compare bytes to ensure we have the right representation
+        #expect(equalBytes(urlNFC.path, pathNFD))
+        #expect(equalBytes(urlNFD.path, pathNFD))
+        #expect(urlNFC == urlNFD)
+
+        #expect(equalBytes(urlRelativeNFC.path, resolvedPathNFD))
+        #expect(equalBytes(urlRelativeNFD.path, resolvedPathNFD))
+        #expect(urlRelativeNFC == urlRelativeNFD)
+
+        // withUnsafeFileSystemRepresentation should return a pointer to decomposed bytes
+        try urlNFC.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFD))
+        }
+
+        try urlNFD.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFD))
+        }
+
+        try urlRelativeNFC.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, resolvedPathNFD))
+        }
+
+        try urlRelativeNFD.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, resolvedPathNFD))
+        }
+
+        // ...unless we specifically .init(fileURLWithFileSystemRepresentation:) with absolute NFC
+        let urlNFCFSR = URL(fileURLWithFileSystemRepresentation: pathNFC, isDirectory: false, relativeTo: nil)
+        let urlNFDFSR = URL(fileURLWithFileSystemRepresentation: pathNFD, isDirectory: false, relativeTo: nil)
+
+        #expect(equalBytes(urlNFCFSR.path, pathNFC))
+        #expect(equalBytes(urlNFDFSR.path, pathNFD))
+        #expect(urlNFCFSR != urlNFDFSR)
+
+        try urlNFCFSR.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFC))
+        }
+
+        try urlNFDFSR.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFD))
+        }
+
+        // If we .init(fileURLWithFileSystemRepresentation:) with a relative path,
+        // we store the given representation but must convert when returning it
+        let urlRelativeNFCFSR = URL(fileURLWithFileSystemRepresentation: relativeNFC, isDirectory: false, relativeTo: baseURL)
+        let urlRelativeNFDFSR = URL(fileURLWithFileSystemRepresentation: relativeNFD, isDirectory: false, relativeTo: baseURL)
+
+        #expect(equalBytes(urlRelativeNFCFSR.path, resolvedPathNFC))
+        #expect(equalBytes(urlRelativeNFDFSR.path, resolvedPathNFD))
+        #expect(urlRelativeNFCFSR != urlRelativeNFDFSR)
+
+        try urlRelativeNFCFSR.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, resolvedPathNFD))
+        }
+
+        try urlRelativeNFDFSR.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, resolvedPathNFD))
+        }
+
+        // Appending a path component should convert to decomposed for file URLs
+        let baseWithNFCComponent = baseURL.appending(path: relativeNFC)
+        #expect(equalBytes(baseWithNFCComponent.path, resolvedPathNFD))
+
+        let baseWithNFDComponent = baseURL.appending(path: relativeNFD)
+        #expect(equalBytes(baseWithNFDComponent.path, resolvedPathNFD))
+        #expect(baseWithNFCComponent == baseWithNFDComponent)
+
+        let urlNFCWithNFCComponent = urlNFC.appending(path: relativeNFC)
+        let urlNFCWithNFDComponent = urlNFC.appending(path: relativeNFD)
+        let urlNFDWithNFCComponent = urlNFD.appending(path: relativeNFC)
+        let urlNFDWithNFDComponent = urlNFD.appending(path: relativeNFD)
+        #expect(equalBytes(urlNFCWithNFCComponent.path, doubleCafeNFD))
+        #expect(equalBytes(urlNFCWithNFDComponent.path, doubleCafeNFD))
+        #expect(equalBytes(urlNFDWithNFCComponent.path, doubleCafeNFD))
+        #expect(equalBytes(urlNFDWithNFDComponent.path, doubleCafeNFD))
+        #expect(urlNFCWithNFCComponent == urlNFCWithNFDComponent)
+        #expect(urlNFCWithNFCComponent == urlNFDWithNFCComponent)
+        #expect(urlNFCWithNFCComponent == urlNFDWithNFDComponent)
+
+        // Appending an extension should convert to decomposed for file URLs
+        let baseWithNFCExtension = baseURL.appendingPathExtension(relativeNFC)
+        #expect(equalBytes(baseWithNFCExtension.path, baseExtensionNFD))
+
+        let baseWithNFDExtension = baseURL.appendingPathExtension(relativeNFD)
+        #expect(equalBytes(baseWithNFDExtension.path, baseExtensionNFD))
+        #expect(baseWithNFCExtension == baseWithNFDExtension)
+
+        // None of these conversions apply for initializing or appending to non-file URLs
+        let httpBase = try #require(URL(string: "https://example.com/"))
+        let httpRelativeNFC = try #require(URL(string: relativeNFC, relativeTo: httpBase))
+        let httpRelativeNFD = try #require(URL(string: relativeNFD, relativeTo: httpBase))
+        let httpWithNFCComponent = httpBase.appending(path: relativeNFC)
+        let httpWithNFDComponent = httpBase.appending(path: relativeNFD)
+
+        #expect(equalBytes(httpRelativeNFC.path, pathNFC))
+        #expect(equalBytes(httpRelativeNFD.path, pathNFD))
+        #expect(httpRelativeNFC != httpRelativeNFD)
+
+        #expect(equalBytes(httpWithNFCComponent.path, pathNFC))
+        #expect(equalBytes(httpWithNFDComponent.path, pathNFD))
+        #expect(httpWithNFCComponent != httpWithNFDComponent)
+
+        // Except when we explicitly get the file system representation
+        try httpRelativeNFC.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFD))
+        }
+
+        try httpRelativeNFD.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFD))
+        }
+
+        try httpWithNFCComponent.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFD))
+        }
+
+        try httpWithNFDComponent.withUnsafeFileSystemRepresentation { fsRep in
+            let fsRep = try #require(fsRep)
+            #expect(equalBytes(fsRep, pathNFD))
+        }
+    }
+    #endif
+
     #if os(Windows)
     @Test func windowsDriveLetterPath() throws {
         var url = URL(filePath: #"C:\test\path"#, directoryHint: .notDirectory)
