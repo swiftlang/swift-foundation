@@ -53,7 +53,7 @@ declare generatedCode
 generatedCode=$(
   echo "${swiftLicenseHeader##$'\n'}"
   echo "$warningComment"
-  python3 "${utilsDir}/${commandName}-impl.py"
+  swift -D PRINT_CODE "${utilsDir}/${commandName}-impl.swift"
 )
 
 echo "Writing the code to '${targetSwiftFileRelativePath}'..." 1>&2
