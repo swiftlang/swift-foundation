@@ -551,12 +551,12 @@ extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible
         fractionCompleted: \(fractionCompleted)
         isIndeterminate: \(isIndeterminate)
         isFinished: \(isFinished)
-        totalFileCount: \(summary(of: ProgressManager.Properties.TotalFileCount.self))
-        completedFileCount: \(summary(of: ProgressManager.Properties.CompletedFileCount.self))
-        totalByteCount: \(summary(of: ProgressManager.Properties.TotalByteCount.self))
-        completedByteCount: \(summary(of: ProgressManager.Properties.CompletedByteCount.self))
-        throughput: \(summary(of: ProgressManager.Properties.Throughput.self))
-        estimatedTimeRemaining: \(summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
+        totalFileCount: \(summary(of: \.totalFileCount))
+        completedFileCount: \(summary(of: \.completedFileCount))
+        totalByteCount: \(summary(of: \.totalByteCount))
+        completedByteCount: \(summary(of: \.completedByteCount))
+        throughput: \(summary(of: \.throughput))
+        estimatedTimeRemaining: \(summary(of: \.estimatedTimeRemaining))
         """
     }
     

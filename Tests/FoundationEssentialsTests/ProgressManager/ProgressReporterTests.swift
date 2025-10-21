@@ -38,7 +38,7 @@ import Testing
         manager.totalFileCount = 6
         #expect(reporter.totalFileCount == 6)
         
-        let summaryTotalFile = manager.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        let summaryTotalFile = manager.summary(of: \.totalFileCount)
         #expect(summaryTotalFile == 6)
     }
     
