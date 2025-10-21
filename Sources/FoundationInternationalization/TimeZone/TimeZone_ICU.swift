@@ -45,7 +45,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
      // This is safe because it's only mutated at deinit time
-    nonisolated(unsafe) private let _timeZone : UnsafePointer<UTimeZone?>?
+    nonisolated(unsafe) private let _timeZone : UnsafePointer<UTimeZone?>
 
     // This type is safely sendable because it is guarded by a lock in _TimeZoneICU and we never vend it outside of the lock so it can only ever be accessed from within the lock
     struct State : @unchecked Sendable {
@@ -86,13 +86,8 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             ucal_close(c)
         }
 
-        guard let t = _timeZone else {
-            return
-        }
-
-        let mutableT = UnsafeMutablePointer(mutating: t)
+        let mutableT = UnsafeMutablePointer(mutating: _timeZone)
         uatimezone_close(mutableT)
-
     }
 
     required init?(identifier: String) {
@@ -119,12 +114,11 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             return uatimezone
         }
 
-        if let timeZone {
-            self._timeZone = UnsafePointer(timeZone)
-        } else {
-            self._timeZone = nil
+        guard let timeZone else {
+            return nil
         }
 
+        self._timeZone = UnsafePointer(timeZone)
         self.name = name
         lock = LockedState(initialState: State())
     }
@@ -139,13 +133,10 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func secondsFromGMT(for date: Date) -> Int {
-        guard let t = _timeZone else {
-            return 0
-        }
         var rawOffset: Int32 = 0
         var dstOffset: Int32 = 0
         var status: UErrorCode = U_ZERO_ERROR
-        uatimezone_getOffset(t, date.udate, 0, &rawOffset, &dstOffset, &status)
+        uatimezone_getOffset(_timeZone, date.udate, 0, &rawOffset, &dstOffset, &status)
         guard status.checkSuccessAndLogError("error getting uatimezone offset") else {
             return 0
         }
@@ -166,12 +157,10 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
-        guard let t = _timeZone else { return 0.0 }
-
         var rawOffset_unused: Int32 = 0
         var dstOffset: Int32 = 0
         var status = U_ZERO_ERROR
-        uatimezone_getOffset(t, date.udate, 0, &rawOffset_unused, &dstOffset, &status)
+        uatimezone_getOffset(_timeZone, date.udate, 0, &rawOffset_unused, &dstOffset, &status)
         if status.isSuccess {
             return TimeInterval(Double(dstOffset) / 1000.0)
         } else {
@@ -180,13 +169,9 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
-         guard let t = _timeZone else {
-             return nil
-         }
-
          var status = U_ZERO_ERROR
          var answer = UDate(0.0)
-         let success = uatimezone_getTimeZoneTransitionDate(t, date.udate, UCAL_TZ_TRANSITION_NEXT, &answer, &status)
+         let success = uatimezone_getTimeZoneTransitionDate(_timeZone, date.udate, UCAL_TZ_TRANSITION_NEXT, &answer, &status)
 
          let limit = Date.validCalendarRange.upperBound
          guard (success != 0) && status.isSuccess && answer < limit.udate else {
@@ -196,7 +181,6 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
      }
 
     func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
-        guard let t = _timeZone else { return (0, 0) }
         var rawOffset: Int32 = 0
         var dstOffset: Int32 = 0
         var status = U_ZERO_ERROR
@@ -216,7 +200,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             icuSkippedTime = UCAL_TZ_LOCAL_LATTER
         }
 
-        uatimezone_getOffsetFromLocal(t, icuSkippedTime, icuDuplicatedTime, date.udate, &rawOffset, &dstOffset, &status)
+        uatimezone_getOffsetFromLocal(_timeZone, icuSkippedTime, icuDuplicatedTime, date.udate, &rawOffset, &dstOffset, &status)
         return (Int(rawOffset / 1000), TimeInterval(dstOffset / 1000))
     }
 
