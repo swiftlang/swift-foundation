@@ -724,6 +724,8 @@ The callee will consume `Subprogress` and get the `ProgressManager` by calling `
 ///
 /// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressManager.
 /// A child ProgressManager is then returned by calling `start(totalCount:)` on a Subprogress.
+/// If a `Subprogress` is created but never consumed to create a child `ProgressManager`, the parent `ProgressManager` will 
+/// automatically complete by the `count` that was assigned to the unusued `Subprogress`. 
 @available(FoundationPreview 6.4, *)
 public struct Subprogress: ~Copyable, Sendable {
 
