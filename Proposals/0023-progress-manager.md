@@ -9,6 +9,7 @@
   * [First Review](https://forums.swift.org/t/review-sf-0023-progress-reporting-in-swift-concurrency/79474)
   * [Second Pitch](https://forums.swift.org/t/pitch-2-progressmanager-progress-reporting-in-swift-concurrency/80024)
   * [Second Review](https://forums.swift.org/t/review-2nd-sf-0023-progressreporter-progress-reporting-in-swift-concurrency/80284)
+  * [Post-Review Update](https://forums.swift.org/t/post-review-update-sf-0023-progressmanager/82428)
 
 ## Revision history
 
@@ -42,12 +43,13 @@
     - Expanded Alternatives Considered
 * **v6** Minor Updates:
     - Replaced `withProperties` method with `setCounts`
-    - Removed `ProgressManager.Values` struct
-    - Made `ProgressManager` conform to `@dynamicMemberLookup` and moved `subscript(dynamicMember:)` methods from `ProgressManager.Values` to `ProgressManager`
+    - Moved `@dynamicMemberLookup` attribute to `ProgressManager` and `ProgressReporter`
     - Changed behavior of API so that additional properties are restricted to either `Int`, `Double`, `String?`, `URL?`, `UInt64` or `Duration` types instead of `any Sendable` types
-    - Added overloads for `subscript(dynamicMember:)` to account for currently-allowed types 
-    - Added requirements to `ProgressManager.Property` protocol to define summarization and termination (deinit) behavior
+    - Added requirements to `ProgressManager.Property` protocol to define summarization and cleanup (deinit) behavior
     - Replaced `total(of:)` with overloads for `summary(of:)` to account for all available types and removed `values(of:)` method
+* **v7** Minor Updates: 
+    - Update `summary(of:)` methods to take `KeyPath` as argument instead of `Property.Type` 
+    - Rename interop methods
     
 ## Table of Contents 
 
@@ -201,15 +203,20 @@ public class FoodProcessor {
     func process(ingredients: [Ingredient], subprogress: consuming Subprogress? = nil) async {
           let manager = subprogress?.start(totalCount: ingredients.count + 1)
           
+          var choppedIngredients: [Ingredient] = []
+          
           // Do some work in a function
-          await chop(manager?.subprogress(assigningCount: ingredients.count))
+          for ingredient in ingredients {
+              let choppedIngredient = await chop(ingredient, subprogress: manager?.subprogress(assigningCount: 1))
+              choppedIngredients.append(choppedIngredient)
+          }
           
           // Call some other function that does not yet support progress reporting, and complete the work myself
-          await blender.blend(ingredients)
+          await blender.blend(choppedIngredients)
           manager?.complete(count: 1)
     }
     
-    static func chop(_ ingredient: Ingredient) -> Ingredient { ... }
+    static func chop(_ ingredient: Ingredient, subprogress: consuming Subprogress? = nil) -> Ingredient { ... }
 }
 
 // Juicer.framework
@@ -219,7 +226,7 @@ public class Juicer {
         let manager = subprogress?.start(totalCount: ingredients.count)
         
         for ingredient in ingredients {
-            await ingredient.blend()
+            await blender.add(ingredient)
             manager?.complete(count: 1)
         }
     }
@@ -420,7 +427,7 @@ func doSomething(subprogress: consuming Subprogress? = nil) async {
     manager?.filename = "Snail.jpg" // use self-defined custom property in child `ProgressManager`
 }
 
-let filenames = manager.summary(of: ProgressManager.Properties.Filename.self) // get Array type summary of filename in subtree since we defined `Summary` to be `[String?]`
+let filenames = manager.summary(of: \.filename) // get Array type summary of filename in subtree since we defined `Summary` to be `[String?]`
 print(filenames) // get ["Capybara.jpg", "Snail.jpg"] since we defined `finalSummary` to include filename cumulatively
 ```
 
@@ -458,7 +465,7 @@ class DownloadManager {
 }
 ```
 
-In the case in which we need to receive a `Progress` instance and add it as a child to a `ProgressManager` parent, we can use the interop method `subprogress(assigningCount: to:)`. 
+In the case in which we need to receive a `Progress` instance and add it as a child to a `ProgressManager` parent, we can use the interop method `assign(count: to:)`. 
 
 An example of how this can be used to compose a `ProgressManager` tree with a top-level `ProgressManager` is as follows:
 
@@ -470,10 +477,10 @@ let subprogressOne = overall.subprogress(assigningCount: 1)
 let result = await doSomethingWithManager(subprogress: subprogressOne)
 
 let subprogressTwo = doSomethingWithProgress() 
-overall.subprogress(assigningCount: 1, to: subprogressTwo) 
+overall.assign(count: 1, to: subprogressTwo) 
 ```
 
-The reverse case, in which a `ProgressManager` instance needs to become a child of a top-level `Progress` via `Subprogress` or `ProgressReporter`, can also be done. We can use the methods `makeChild(withPendingUnitCount:)` for getting a `Subprogress` and `addChild(_:withPendingUnitCount:)` for adding a `ProgressReporter` as a child. 
+The reverse case, in which a `ProgressManager` instance needs to become a child of a top-level `Progress` via `Subprogress` or `ProgressReporter`, can also be done. We can use the methods `subprogress(assigningCount:)` for getting a `Subprogress` and `addChild(_:withPendingUnitCount:)` for adding a `ProgressReporter` as a child. 
 
 An example of how this can be used to compose a `Foundation.Progress` tree with a top-level `Foundation.Progress` is as follows: 
 
@@ -484,7 +491,7 @@ let overall = Progress(totalUnitCount: 3)  // Top-level `Progress`
 let subprogressOne = doSomethingWithProgress() 
 overall.addChild(subprogressOne, withPendingUnitCount: 1)
 
-let subprogressTwo = overall.makeChild(withPendingUnitCount: 1)
+let subprogressTwo = overall.subprogress(assigningCount: 1)
 doSomethingWithManager(subprogress: subprogressTwo)
 
 let subprogressThree = DownloadManager().progressReporter
@@ -639,70 +646,70 @@ extension ProgressManager {
     /// This method aggregates the values of a custom integer property from this progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the integer property to summarize. Must be a property
+    /// - Parameter property: A key path to the type of the integer property to summarize. Must be a property
     ///   where both the value and summary types are `Int`.
     /// - Returns: An `Int` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == Int, P.Summary == Int
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
     /// This method aggregates the values of a custom integer property from this progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the integer property to summarize. Must be a property
+    /// - Parameter property: A key path to the type of the integer property to summarize. Must be a property
     ///   where both the value and summary types are `UInt64`.
     /// - Returns: An `UInt64` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == UInt64
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == UInt64, P.Summary == UInt64
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
     /// This method aggregates the values of a custom unsigned integer property from this progress manager
     /// and all its children, returning a consolidated summary value as an array of unsigned integer values.
     ///
-    /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
-    ///   where the value type is `UInt64` and the summary type is `[UInt64]`.
+    /// - Parameter property: A key path to the type of the unsigned integer property to summarize. Must be a 
+    ///   property where the value type is `UInt64` and the summary type is `[UInt64]`.
     /// - Returns: A `[UInt64]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] 
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] 
     
     /// Returns a summary for a custom duration property across the progress subtree.
     ///
     /// This method aggregates the values of a custom duration property from this progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the duration property to summarize. Must be a property
-    ///   where both the value and summary types are `Duration`.
+    /// - Parameter property: A key path to the type of the duration property to summarize. Must be a 
+    ///   property where both the value and summary types are `Duration`.
     /// - Returns: An `Duration` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == Duration, P.Summary == Duration
 
     /// Returns a summary for a custom double property across the progress subtree.
     ///
     /// This method aggregates the values of a custom double property from this progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the double property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the double property to summarize. Must be a property
     ///   where both the value and summary types are `Double`.
     /// - Returns: A `Double` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == Double, P.Summary == Double
 
     /// Returns a summary for a custom string property across the progress subtree.
     ///
     /// This method aggregates the values of a custom string property from this progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the string property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the string property to summarize. Must be a property
     ///   where both the value type is `String?` and the summary type is  `[String?]`.
     /// - Returns: A `[String?]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String?, P.Summary == [String?]
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == String?, P.Summary == [String?]
 
     /// Returns a summary for a custom URL property across the progress subtree.
     ///
     /// This method aggregates the values of a custom URL property from this progress manager
     /// and all its children, returning a consolidated summary value as an array of URLs.
     ///
-    /// - Parameter property: The type of the URL property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the URL property to summarize. Must be a property
     ///   where the value type is `URL?` and the summary type is `[URL?]`.
     /// - Returns: A `[URL?]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == URL?, P.Summary == [URL?]
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == URL?, P.Summary == [URL?]
 }
 ```
 
@@ -1096,70 +1103,70 @@ extension ProgressManager {
     /// This method aggregates the values of a custom integer property from the underlying progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the integer property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the integer property to summarize. Must be a property
     ///   where both the value and summary types are `Int`.
     /// - Returns: An `Int` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> Int where P.Value == Int, P.Summary == Int
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> Int where P.Value == Int, P.Summary == Int
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
     /// This method aggregates the values of a custom unsigned integer property from the underlying progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the unsigned integer property to summarize. Must be a property
     ///   where both the value and summary types are `UInt64`.
     /// - Returns: An `UInt64` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> UInt64 where P.Value == UInt64, P.Summary == UInt64
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> UInt64 where P.Value == UInt64, P.Summary == UInt64
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
     /// This method aggregates the values of a custom unsigned integer property from the underlying progress manager
     /// and all its children, returning a consolidated summary value as an array of unsigned integer values.
     ///
-    /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the unsigned integer property to summarize. Must be a property
     ///   where the value type is `UInt64` and the summary type is `[UInt64]`.
     /// - Returns: A `[UInt64]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64]
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> [UInt64] where P.Value == UInt64, P.Summary == [UInt64]
     
     /// Returns a summary for a custom duration property across the progress subtree.
     ///
     /// This method aggregates the values of a custom duration property from the underlying progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the duration property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the duration property to summarize. Must be a property
     ///   where both the value and summary types are `Duration`.
-    /// - Returns: An `Duraton` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> Duration where P.Value == Duration, P.Summary == Duration
+    /// - Returns: An `Duration` summary value for the specified property.
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> Duration where P.Value == Duration, P.Summary == Duration
     
     /// Returns a summary for a custom double property across the progress subtree.
     ///
     /// This method aggregates the values of a custom double property from the underlying progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the double property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the double property to summarize. Must be a property
     ///   where both the value and summary types are `Double`.
     /// - Returns: A `Double` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> Double where P.Value == Double, P.Summary == Double
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> Double where P.Value == Double, P.Summary == Double
 
     /// Returns a summary for a custom string property across the progress subtree.
     ///
     /// This method aggregates the values of a custom string property from the underlying progress manager
     /// and all its children, returning a consolidated summary value.
     ///
-    /// - Parameter property: The type of the string property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the string property to summarize. Must be a property
     ///   where both the value type is `String?` and the summary type is `[String?]`.
     /// - Returns: A `[String?]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> [String?] where P.Value == String?, P.Summary == [String?]
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> [String?] where P.Value == String?, P.Summary == [String?]
     
     /// Returns a summary for a custom URL property across the progress subtree.
     ///
     /// This method aggregates the values of a custom URL property from the underlying progress manager
     /// and all its children, returning a consolidated summary value as an array of URLs.
     ///
-    /// - Parameter property: The type of the URL property to summarize. Must be a property
+    /// - Parameter property: A keypath to the type of the URL property to summarize. Must be a property
     ///   where the value type is `URL?` and the summary type is `[URL?]`.
     /// - Returns: A `[URL?]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> [URL?] where P.Value == URL?, P.Summary == [URL?]
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> [URL?] where P.Value == URL?, P.Summary == [URL?]
 }
 ```
 
@@ -1196,8 +1203,6 @@ To allow frameworks which may have dependencies on the pre-existing progress-rep
 
 To add an instance of `Foundation.Progress` as a child to an instance of `ProgressManager`, we pass an `Int` for the portion of `ProgressManager`'s `totalCount` `Foundation.Progress` should take up and a `Foundation.Progress` instance to `assign(count:to:)`. The `ProgressManager` instance will track the `Foundation.Progress` instance just like any of its `ProgressManager` children.
 
->The choice of naming the interop method as `subprogress(assigningCount: to:)` is to keep the syntax consistent with the method used to add a `ProgressManager` instance to the progress tree using this new API, `subprogress(assigningCount:)`. 
-
 ```swift 
 @available(FoundationPreview 6.4, *)
 extension ProgressManager {
@@ -1206,15 +1211,13 @@ extension ProgressManager {
     /// - Parameters:
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     ///   - progress: `Foundation.Progress` which receives the delegated `count`.
-    public func subprogress(assigningCount count: Int, to progress: Foundation.Progress)
+    public func assign(count: Int, to progress: Foundation.Progress)
 }
 ```
 
 #### `Foundation.Progress` (Parent) - `ProgressManager` (Child) 
 
-To add an instance of `ProgressManager` as a child to an instance of the existing `Foundation.Progress`, the `Foundation.Progress` instance calls `makeChild(withPendingUnitCount:)` to get a `Subprogress` instance that can be passed as a parameter to a function that reports progress. The `Foundation.Progress` instance will track the `ProgressManager` instance as a child, just like any of its `Progress` children. 
-
->The choice of naming the interop methods as `makeChild(withPendingUnitCount:)` and `addChild(_:withPendingUnitCount` is to keep the syntax consistent with the method used to add a `Foundation.Progress` instance as a child to another `Foundation.Progress`. 
+To add an instance of `ProgressManager` as a child to an instance of the existing `Foundation.Progress`, the `Foundation.Progress` instance calls `subprogress(assigningCount:)` to get a `Subprogress` instance that can be passed as a parameter to a function that reports progress. The `Foundation.Progress` instance will track the `ProgressManager` instance as a child, just like any of its `Progress` children. 
 
 ```swift 
 @available(FoundationPreview 6.4, *)
@@ -1227,7 +1230,7 @@ extension Progress {
     /// - Parameter count: Number of units delegated to a child instance of `ProgressManager`
     /// which may be instantiated by `Subprogress` later when `start(totalCount:)` is called.
     /// - Returns: A `Subprogress` instance.
-    public func makeChild(withPendingUnitCount count: Int) -> Subprogress 
+    public func subprogress(assigningCount count: Int) -> Subprogress 
     
     
     /// Adds a ProgressReporter as a child to a Foundation.Progress.
@@ -1433,6 +1436,31 @@ There were discussions about representing indeterminate state in `ProgressManage
 
 ### Allow declared custom additional property to be any type that can be casted as `any Sendable`  
 We initially allowed the full flexibility of allowing developers to declare `ProgressManager.Property` types to be of any type, including structs. However, we realized that this has a severely negative impact on performance of the API. Thus, for now, we allow developers to only declare `ProgressManager.Property` with only certain `Value` and `Summary` types. 
+
+### Use `withProperties` closure as entry point to mutate custom `ProgressManager.Property` types 
+We initially introduced the `withProperties` closure to mutate custom `ProgressManager.Property` types. However, with the use of `withProperties` closure and the need to make custom `ProgressManager.Property` types [`Observable`](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0395-observability.md), we needed to register all the updates of each custom property on one keypath. This is to ensure that `ObservationRegistrar`'s `access` and `withMutation` calls are not called from within a locked context. Registering all updates of custom properties on one keypath can cause unnecessary UI redraws, which negatively impacts performance. Therefore, we decided to move the `@dynamicMemberLookup` attribute to `ProgressManager` to allow each custom `ProgressManager.Property` to be individually `Observable`. Additionally, this allows developers to access custom `ProgressManager.Property` types via dot syntax, improving the discoverability and ergonomics of accessing and mutating custom `ProgressManager.Property` types. The `withProperties` closure is replaced with `setCounts` to preserve the same atomic behavior for mutations of `totalCount` and `completedCount`. 
+
+### Minimal requirements for `ProgressManager.Property` protocol 
+We initially considered a version of the `ProgressManager.Property` protocol that only had two requirements:
+
+- `Value` - The type for individual property values
+- `defaultValue` - A default value when the property isn't explicitly set
+
+In this approach, the `ProgressManager` API handles custom `ProgressManager.Property` types by:
+- Aggregating all values throughout a progress tree into `Array<Value>`
+- Providing access via `values(of:)` method returning arrays of individual values
+- Providing access via `total(of:)` method returning computed summaries (e.g., `Int` for `totalFileCount`)
+- Deciding whether values are dropped or retained when `ProgressManager` instances are deinitialized
+
+However, after extensive performance testing, we realized that this approach for supporting arbitrary types has worse performance and offers much less flexibility for specifying the summarization behavior that developers may need.
+
+We decided to introduce additional requirements that would yield better performance and provide more flexibility: 
+- `Summary` - Explicit type for summaries
+- `reduce(into:value:)` - Custom logic for incorporating individual values into summaries
+- `merge(_:_:)` - Custom logic for combining summaries from different `ProgressManager` instances
+- `finalSummary(_:_:)` - Custom behavior when `ProgressManager` instances are deinitialized
+
+With these additional requirements, the support for custom `ProgressManager.Property` types balances performance and flexibility.
 
 ## Acknowledgements 
 Thanks to 
