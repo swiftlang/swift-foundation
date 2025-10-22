@@ -13,126 +13,28 @@
 
 // MARK: - Private extensions for parsing encoding names
 
-private extension Unicode.Scalar {
-    /// Returns the Boolean value that indicates whether or not `self` is "ASCII whitespace".
-    ///
-    /// Reference: https://infra.spec.whatwg.org/#ascii-whitespace
-    var _isASCIIWhitespace: Bool {
-        switch self.value {
-        case 0x09, 0x0A, 0x0C, 0x0D, 0x20: true
+private extension UTF8.CodeUnit {
+    func _isASCIICaseinsensitivelyEqual(to other: UTF8.CodeUnit) -> Bool {
+        return switch self {
+        case other, other._uppercased, other._lowercased: true
         default: false
         }
     }
 }
 
 private extension String {
-    var _trimmed: Substring.UnicodeScalarView {
-        let scalars = self.unicodeScalars
-        let isNonWhitespace: (Unicode.Scalar) -> Bool = { !$0._isASCIIWhitespace }
-        guard let firstIndexOfNonWhitespace = scalars.firstIndex(where: isNonWhitespace),
-              let lastIndexOfNonWhitespace = scalars.lastIndex(where: isNonWhitespace) else {
-            return Substring.UnicodeScalarView()
-        }
-        return scalars[firstIndexOfNonWhitespace...lastIndexOfNonWhitespace]
-    }
-}
-
-/// A type that holds a `Unicode.Scalar` where its value is compared case-insensitively with others'
-/// _if the value is within ASCII range_.
-private struct ASCIICaseInsensitiveUnicodeScalar: Equatable,
-                                                  ExpressibleByUnicodeScalarLiteral {
-    typealias UnicodeScalarLiteralType = Unicode.Scalar.UnicodeScalarLiteralType
-
-    let scalar: Unicode.Scalar
-
-    init(_ scalar: Unicode.Scalar) {
-        assert(scalar.isASCII)
-        self.scalar = scalar
-    }
-
-    init(unicodeScalarLiteral value: Unicode.Scalar.UnicodeScalarLiteralType) {
-        self.init(Unicode.Scalar(unicodeScalarLiteral: value))
-    }
-
-    static func ==(
-        lhs: ASCIICaseInsensitiveUnicodeScalar,
-        rhs: ASCIICaseInsensitiveUnicodeScalar
-    ) -> Bool {
-        if lhs.scalar == rhs.scalar {
-            return true
-        } else if ("A"..."Z").contains(lhs.scalar) {
-            return lhs.scalar.value + 0x20 == rhs.scalar.value
-        } else if ("a"..."z").contains(lhs.scalar) {
-            return lhs.scalar.value - 0x20 == rhs.scalar.value
-        }
-        return false
-    }
-}
-
-/// A type to tokenize string for `String.Encoding` names.
-internal protocol StringEncodingNameTokenizer: ~Copyable {
-    associatedtype Token: Equatable
-    init(name: String)
-    mutating func nextToken() throws -> Token?
-}
-
-extension StringEncodingNameTokenizer where Self: ~Copyable {
-    mutating func hasEqualTokens(with other: consuming Self) throws -> Bool {
-        while let myToken = try self.nextToken() {
-            guard let otherToken = try other.nextToken(),
-                  myToken == otherToken else {
+    func _isASCIICaseinsensitivelyEqual(to other: String) -> Bool {
+        let (myUTF8, otherUTF8) = (self.utf8, other.utf8)
+        var (myIndex, otherIndex) = (myUTF8.startIndex, otherUTF8.startIndex)
+        while myIndex < myUTF8.endIndex && otherIndex < otherUTF8.endIndex {
+            guard myUTF8[myIndex]._isASCIICaseinsensitivelyEqual(to: otherUTF8[otherIndex]) else {
                 return false
             }
+
+            myUTF8.formIndex(after: &myIndex)
+            otherUTF8.formIndex(after: &otherIndex)
         }
-        return try other.nextToken() == nil
-    }
-}
-
-
-/// A parser that tokenizes a string into `ASCIICaseInsensitiveUnicodeScalar`s.
-private struct ASCIICaseInsensitiveTokenizer: StringEncodingNameTokenizer, ~Copyable {
-    typealias Token = ASCIICaseInsensitiveUnicodeScalar
-
-    enum Error: Swift.Error {
-        case nonASCII
-    }
-
-    let scalars: Substring.UnicodeScalarView
-
-    var _currentIndex: Substring.UnicodeScalarView.Index
-
-    init(name: String) {
-        self.scalars = name._trimmed
-        self._currentIndex = scalars.startIndex
-    }
-
-    mutating func nextToken() throws -> Token? {
-        guard _currentIndex < scalars.endIndex else {
-            return nil
-        }
-        let scalar = scalars[_currentIndex]
-        guard scalar.isASCII else { throw Error.nonASCII }
-        defer {
-            scalars.formIndex(after: &_currentIndex)
-        }
-        return  ASCIICaseInsensitiveUnicodeScalar(scalar)
-    }
-}
-
-
-private extension String {
-    func isEqual<T>(
-        to other: String,
-        tokenizedBy tokenizer: T.Type
-    ) -> Bool where T: StringEncodingNameTokenizer, T: ~Copyable {
-        do {
-            var myTokenizer = T(name: self)
-            let otherTokenizer = T(name: other)
-            return try myTokenizer.hasEqualTokens(with: otherTokenizer)
-        } catch {
-            // Any errors imply that `self` or `other` contains invalid characters.
-            return false
-        }
+        return myIndex == myUTF8.endIndex && otherIndex == otherUTF8.endIndex
     }
 }
 
@@ -160,19 +62,16 @@ internal struct IANACharset {
         self.aliases = aliases
     }
 
-    func matches<T>(
-        _ string: String,
-        tokenizedBy tokenizer: T.Type
-    ) -> Bool where T: StringEncodingNameTokenizer, T: ~Copyable {
+    func matches(_ string: String) -> Bool {
         if let preferredMIMEName = self.preferredMIMEName,
-           preferredMIMEName.isEqual(to: string, tokenizedBy: tokenizer) {
+           preferredMIMEName._isASCIICaseinsensitivelyEqual(to: string) {
             return true
         }
-        if name.isEqual(to: string, tokenizedBy: tokenizer) {
+        if name._isASCIICaseinsensitivelyEqual(to: string) {
             return true
         }
         for alias in aliases {
-            if alias.isEqual(to: string, tokenizedBy: tokenizer) {
+            if alias._isASCIICaseinsensitivelyEqual(to: string) {
                 return true
             }
         }
@@ -249,7 +148,7 @@ extension String.Encoding {
                 guard let ianaCharset = encoding._ianaCharset else {
                     continue
                 }
-                if ianaCharset.matches(charsetName, tokenizedBy: ASCIICaseInsensitiveTokenizer.self) {
+                if ianaCharset.matches(charsetName) {
                     return encoding
                 }
             }
