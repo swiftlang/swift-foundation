@@ -53,6 +53,13 @@ func timeZoneBenchmarks() {
             blackHole(s)
         }
     }
+
+    Benchmark("creatingTimeZones", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for name in NSTimeZone.knownTimeZoneNames {
+            let t = TimeZone(identifier: name)
+            blackHole(t)
+        }
+    }
 }
 
 
