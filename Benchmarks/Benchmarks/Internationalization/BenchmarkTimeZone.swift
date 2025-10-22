@@ -41,7 +41,7 @@ func timeZoneBenchmarks() {
     Benchmark.defaultConfiguration.maxIterations = 1_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
-    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .mallocCountTotal, .throughput]
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .mallocCountTotal, .throughput, .peakMemoryResident]
 
     guard let t = TimeZone(identifier: "America/Los_Angeles") else {
         fatalError("unexpected failure when creating time zone")
