@@ -392,18 +392,21 @@ extension ProgressManager {
         if P.self == ProgressManager.Properties.TotalFileCount.self {
             self.access(keyPath: \.totalFileCount)
             self.access(keyPath: \.totalFileCountSummary)
+            let updatedFileCount = updatedFileCount(type: .total)
             self.didSet(keyPath: \.totalFileCountSummary)
-            return updatedFileCount(type: .total)
+            return updatedFileCount
         } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
             self.access(keyPath: \.completedFileCount)
             self.access(keyPath: \.completedFileCountSummary)
+            let updatedFileCount = updatedFileCount(type: .completed)
             self.didSet(keyPath: \.completedFileCountSummary)
-            return updatedFileCount(type: .completed)
+            return updatedFileCount
         } else {
             self.access(keyPath: \.customPropertiesInt)
             self.access(keyPath: \.customPropertiesIntSummary)
+            let updatedResult = updatedIntSummary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesIntSummary)
-            return updatedIntSummary(property: MetatypeWrapper(P.self))
+            return updatedResult
         }
     }
     
@@ -419,18 +422,21 @@ extension ProgressManager {
         if P.self == ProgressManager.Properties.TotalByteCount.self {
             self.access(keyPath: \.totalByteCount)
             self.access(keyPath: \.totalByteCountSummary)
+            let updatedByteCount = updatedByteCount(type: .total)
             self.didSet(keyPath: \.totalByteCountSummary)
-            return updatedByteCount(type: .total)
+            return updatedByteCount
         } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
             self.access(keyPath: \.completedByteCount)
             self.access(keyPath: \.completedByteCountSummary)
+            let updatedByteCount = updatedByteCount(type: .completed)
             self.didSet(keyPath: \.completedByteCountSummary)
-            return updatedByteCount(type: .completed)
+            return updatedByteCount
         } else {
             self.access(keyPath: \.customPropertiesUInt64)
             self.access(keyPath: \.customPropertiesUInt64Summary)
+            let updatedResult = updatedUInt64Summary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesUInt64Summary)
-            return updatedUInt64Summary(property: MetatypeWrapper(P.self))
+            return updatedResult
         }
     }
     
@@ -445,8 +451,9 @@ extension ProgressManager {
     public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == Double, P.Summary == Double {
         self.access(keyPath: \.customPropertiesDouble)
         self.access(keyPath: \.customPropertiesDoubleSummary)
+        let updatedResult = updatedDoubleSummary(property: MetatypeWrapper(P.self))
         self.didSet(keyPath: \.customPropertiesDoubleSummary)
-        return updatedDoubleSummary(property: MetatypeWrapper(P.self))
+        return updatedResult
     }
     
     /// Returns a summary for a custom string property across the progress subtree.
@@ -460,8 +467,9 @@ extension ProgressManager {
     public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == String?, P.Summary == [String?] {
         self.access(keyPath: \.customPropertiesString)
         self.access(keyPath: \.customPropertiesStringSummary)
+        let updatedResult = updatedStringSummary(property: MetatypeWrapper(P.self))
         self.didSet(keyPath: \.customPropertiesStringSummary)
-        return updatedStringSummary(property: MetatypeWrapper(P.self))
+        return updatedResult
     }
     
     /// Returns a summary for a custom URL property across the progress subtree.
@@ -475,8 +483,9 @@ extension ProgressManager {
     public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
         self.access(keyPath: \.customPropertiesURL)
         self.access(keyPath: \.customPropertiesURLSummary)
+        let updatedResult = updatedURLSummary(property: MetatypeWrapper(P.self))
         self.didSet(keyPath: \.customPropertiesURLSummary)
-        return updatedURLSummary(property: MetatypeWrapper(P.self))
+        return updatedResult
     }
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
@@ -491,13 +500,15 @@ extension ProgressManager {
         if P.self == ProgressManager.Properties.Throughput.self {
             self.access(keyPath: \.throughput)
             self.access(keyPath: \.throughputSummary)
+            let updatedThroughput = updatedThroughput()
             self.didSet(keyPath: \.throughputSummary)
-            return updatedThroughput()
+            return updatedThroughput
         } else {
             self.access(keyPath: \.customPropertiesUInt64Array)
             self.access(keyPath: \.customPropertiesUInt64ArraySummary)
+            let updatedResult = updatedUInt64ArraySummary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesUInt64ArraySummary)
-            return updatedUInt64ArraySummary(property: MetatypeWrapper(P.self))
+            return updatedResult
         }
     }
     
@@ -513,13 +524,15 @@ extension ProgressManager {
         if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
             self.access(keyPath: \.estimatedTimeRemaining)
             self.access(keyPath: \.estimatedTimeRemainingSummary)
+            let updatedTimeRemaining = updatedEstimatedTimeRemaining()
             self.didSet(keyPath: \.estimatedTimeRemainingSummary)
-            return updatedEstimatedTimeRemaining()
+            return updatedTimeRemaining
         } else {
             self.access(keyPath: \.customPropertiesDuration)
             self.access(keyPath: \.customPropertiesDurationSummary)
+            let updatedResult = updatedDurationSummary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesDurationSummary)
-            return updatedDurationSummary(property: MetatypeWrapper(P.self))
+            return updatedResult
         }
     }
 }
