@@ -143,22 +143,13 @@ extension String.Encoding {
             .utf32LittleEndian,
         ]
 
-        func __determineEncoding() -> String.Encoding? {
-            for encoding in possibilities {
-                guard let ianaCharset = encoding._ianaCharset else {
-                    continue
-                }
-                if ianaCharset.matches(charsetName) {
-                    return encoding
-                }
+        for encoding in possibilities {
+            if encoding._ianaCharset!.matches(charsetName) {
+                self = encoding
+                return
             }
-            return nil
         }
-
-        guard let encoding = __determineEncoding() else {
-            return nil
-        }
-        self = encoding
+        return nil
     }
 }
 
