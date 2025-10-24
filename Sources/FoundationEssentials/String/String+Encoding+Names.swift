@@ -14,7 +14,7 @@
 // MARK: - Private extensions for parsing encoding names
 
 private extension UTF8.CodeUnit {
-    func _isASCIICaseinsensitivelyEqual(to other: UTF8.CodeUnit) -> Bool {
+    func _isASCIICaseInsensitivelyEqual(to other: UTF8.CodeUnit) -> Bool {
         return switch self {
         case other, other._uppercased, other._lowercased: true
         default: false
@@ -23,11 +23,11 @@ private extension UTF8.CodeUnit {
 }
 
 private extension String {
-    func _isASCIICaseinsensitivelyEqual(to other: String) -> Bool {
+    func _isASCIICaseInsensitivelyEqual(to other: String) -> Bool {
         let (myUTF8, otherUTF8) = (self.utf8, other.utf8)
         var (myIndex, otherIndex) = (myUTF8.startIndex, otherUTF8.startIndex)
         while myIndex < myUTF8.endIndex && otherIndex < otherUTF8.endIndex {
-            guard myUTF8[myIndex]._isASCIICaseinsensitivelyEqual(to: otherUTF8[otherIndex]) else {
+            guard myUTF8[myIndex]._isASCIICaseInsensitivelyEqual(to: otherUTF8[otherIndex]) else {
                 return false
             }
 
@@ -64,14 +64,14 @@ internal struct IANACharset {
 
     func matches(_ string: String) -> Bool {
         if let preferredMIMEName = self.preferredMIMEName,
-           preferredMIMEName._isASCIICaseinsensitivelyEqual(to: string) {
+           preferredMIMEName._isASCIICaseInsensitivelyEqual(to: string) {
             return true
         }
-        if name._isASCIICaseinsensitivelyEqual(to: string) {
+        if name._isASCIICaseInsensitivelyEqual(to: string) {
             return true
         }
         for alias in aliases {
-            if alias._isASCIICaseinsensitivelyEqual(to: string) {
+            if alias._isASCIICaseInsensitivelyEqual(to: string) {
                 return true
             }
         }
