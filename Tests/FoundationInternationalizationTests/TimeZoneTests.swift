@@ -67,25 +67,25 @@ private struct TimeZoneTests {
             }
 
             let locale = Locale(identifier: localeIdentifier)
-            #expect(tz?.localizedName(for: .generic, locale: locale) == expected, sourceLocation: sourceLocation)
+            #expect(tz?.localizedName(for: style, locale: locale) == expected, sourceLocation: sourceLocation)
         }
 
         test("America/Los_Angeles", "en_US", .generic, "Pacific Time")
-        test("Europe/Berlin",       "en_US", .generic, "Central European Time")
+        test("Europe/Paris",       "en_US", .generic, "Central European Time")
         test("Antarctica/Vostok",   "en_US", .generic, "Vostok Time")
         test("Asia/Chongqing",      "en_US", .generic, "China Standard Time")
         test("America/Sao_Paulo",   "en_US", .generic, "Brasilia Standard Time")
 
-        test("America/Los_Angeles", "zh_TW", .shortStandard, "太平洋時間")
-        test("Europe/Berlin",       "zh_TW", .shortStandard, "中歐時間")
-        test("Antarctica/Vostok",   "zh_TW", .shortStandard, "沃斯托克時間")
-        test("Asia/Chongqing",      "zh_TW", .shortStandard, "中國標準時間")
-        test("America/Sao_Paulo",   "zh_TW", .shortStandard, "巴西利亞標準時間")
+        test("America/Los_Angeles", "zh_TW", .shortStandard, "PST")
+        test("Europe/Paris",       "zh_TW", .shortStandard, "GMT+1")
+        test("Antarctica/Vostok",   "zh_TW", .shortStandard, "GMT+5")
+        test("Asia/Chongqing",      "zh_TW", .shortStandard, "GMT+8")
+        test("America/Sao_Paulo",   "zh_TW", .shortStandard, "GMT-3")
 
         // abbreviation
         test("GMT",     "en_US", .standard, "Greenwich Mean Time")
         test("GMT+8",   "en_US", .standard, "GMT+08:00")
-        test("PST",     "en_US", .standard, "Pacific Time")
+        test("PST",     "en_US", .standard, "Pacific Standard Time")
 
         // invalid names
         test("XYZ", "en_US", .standard, nil)
