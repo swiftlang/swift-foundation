@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
     @available(swift, introduced: 4.2)
     @available(swift, deprecated: 5, message: "use `init(_:)` instead")

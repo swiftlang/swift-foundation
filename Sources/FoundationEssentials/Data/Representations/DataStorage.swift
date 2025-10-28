@@ -10,6 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(ucrt)
+import ucrt
+#elseif canImport(WASILibc)
+@preconcurrency import WASILibc
+#endif
+
 // Underlying storage representation for medium and large data.
 // Inlinability strategy: methods from here should not inline into InlineSlice or LargeSlice unless trivial.
 // NOTE: older overlays called this class _DataStorage. The two must

@@ -514,6 +514,7 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
     return length - numBytesRemaining
 }
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 #if FOUNDATION_FRAMEWORK
     public typealias ReadingOptions = NSData.ReadingOptions

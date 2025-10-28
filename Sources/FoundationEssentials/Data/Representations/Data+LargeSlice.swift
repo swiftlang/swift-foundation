@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
     // A reference wrapper around a Range<Int> for when the range of a data buffer is too large to whole in a single word.
     // Inlinability strategy: everything should be inlinable as trivial.

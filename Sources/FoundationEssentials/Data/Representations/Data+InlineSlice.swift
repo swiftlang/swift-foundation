@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 #if _pointerBitWidth(_64)
     @usableFromInline internal typealias HalfInt = Int32

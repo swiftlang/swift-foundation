@@ -10,6 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(ucrt)
+import ucrt
+#elseif canImport(WASILibc)
+@preconcurrency import WASILibc
+#endif
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
     // A small inline buffer of bytes suitable for stack-allocation of small data.
     // Inlinability strategy: everything here should be inlined for direct operation on the stack wherever possible.
