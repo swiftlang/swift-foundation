@@ -106,25 +106,10 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
         body(UnsafeMutableBufferPointer(start: nil, count: 0))
         return
     }
-    typealias InlineBuffer = ( // 32 bytes
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
-    )
-    let inlineCount = MemoryLayout<InlineBuffer>.size
-    if capacity <= inlineCount {
-        var buffer: InlineBuffer = (
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-        )
-        withUnsafeMutableBytes(of: &buffer) { buffer in
-            assert(buffer.count == inlineCount)
-            buffer.withMemoryRebound(to: UInt8.self) {
-                body(UnsafeMutableBufferPointer(start: $0.baseAddress, count: capacity))
-            }
+    // Use an inline allocation for 32 bytes or fewer
+    if capacity <= 32 {
+        withUnsafeTemporaryAllocation(of: UInt8.self, capacity: capacity) { buffer in
+            body(buffer)
         }
         return
     }
@@ -494,63 +479,6 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     // MARK: -
-    // MARK: Copy Bytes
-
-    /// Copy the contents of the data to a pointer.
-    ///
-    /// - parameter pointer: A pointer to the buffer you wish to copy the bytes into.
-    /// - parameter count: The number of bytes to copy.
-    /// - warning: This method does not verify that the contents at pointer have enough space to hold `count` bytes.
-    @inlinable // This is @inlinable as trivially forwarding.
-    public func copyBytes(to pointer: UnsafeMutablePointer<UInt8>, count: Int) {
-        precondition(count >= 0, "count of bytes to copy must not be negative")
-        if count == 0 { return }
-        _copyBytesHelper(to: UnsafeMutableRawPointer(pointer), from: startIndex..<(startIndex + count))
-    }
-
-    @inlinable // This is @inlinable as trivially forwarding.
-    internal func _copyBytesHelper(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
-        if range.isEmpty { return }
-        _representation.copyBytes(to: pointer, from: range)
-    }
-
-    /// Copy a subset of the contents of the data to a pointer.
-    ///
-    /// - parameter pointer: A pointer to the buffer you wish to copy the bytes into.
-    /// - parameter range: The range in the `Data` to copy.
-    /// - warning: This method does not verify that the contents at pointer have enough space to hold the required number of bytes.
-    @inlinable // This is @inlinable as trivially forwarding.
-    public func copyBytes(to pointer: UnsafeMutablePointer<UInt8>, from range: Range<Index>) {
-        _copyBytesHelper(to: pointer, from: range)
-    }
-
-    // Copy the contents of the data into a buffer.
-    ///
-    /// This function copies the bytes in `range` from the data into the buffer. If the count of the `range` is greater than `MemoryLayout<DestinationType>.stride * buffer.count` then the first N bytes will be copied into the buffer.
-    /// - precondition: The range must be within the bounds of the data. Otherwise `fatalError` is called.
-    /// - parameter buffer: A buffer to copy the data into.
-    /// - parameter range: A range in the data to copy into the buffer. If the range is empty, this function will return 0 without copying anything. If the range is nil, as much data as will fit into `buffer` is copied.
-    /// - returns: Number of bytes copied into the destination buffer.
-    @inlinable // This is @inlinable as generic and reasonably small.
-    public func copyBytes<DestinationType>(to buffer: UnsafeMutableBufferPointer<DestinationType>, from range: Range<Index>? = nil) -> Int {
-        let cnt = count
-        guard cnt > 0 else { return 0 }
-
-        let copyRange : Range<Index>
-        if let r = range {
-            guard !r.isEmpty else { return 0 }
-            copyRange = r.lowerBound..<(r.lowerBound + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, r.upperBound - r.lowerBound))
-        } else {
-            copyRange = startIndex..<(startIndex + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, cnt))
-        }
-
-        guard !copyRange.isEmpty else { return 0 }
-
-        _copyBytesHelper(to: buffer.baseAddress!, from: copyRange)
-        return copyRange.upperBound - copyRange.lowerBound
-    }
-
-    // MARK: -
 
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     internal mutating func _append<SourceType>(_ buffer : UnsafeBufferPointer<SourceType>) {
@@ -887,7 +815,8 @@ extension Data : Equatable {
                     }
 
                     // Compare the contents
-                    return memcmp(b1Address, b2Address, b2.count) == 0
+                    assert(length1 == b2.count)
+                    return memcmp(b1Address, b2Address, length1) == 0
                 }
             }
         }
@@ -917,8 +846,8 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
         }
 
         // Minimal size data is output as an array
-        if nBytes < 64 {
-            children.append((label: "bytes", value: Array(self[startIndex..<Swift.min(nBytes + startIndex, endIndex)])))
+        if nBytes < 256 {
+            children.append((label: "bytes", value: Array(self)))
         }
 
         let m = Mirror(self, children:children, displayStyle: Mirror.DisplayStyle.struct)

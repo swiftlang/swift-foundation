@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Glibc)
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl

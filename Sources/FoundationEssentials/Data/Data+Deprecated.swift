@@ -33,7 +33,7 @@ extension Data {
     /// - warning: The byte pointer argument should not be stored and used outside of the lifetime of the call to the closure.
     @available(swift, deprecated: 5, message: "use `withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) rethrows -> R` instead")
     public func withUnsafeBytes<ResultType, ContentType>(_ body: (UnsafePointer<ContentType>) throws -> ResultType) rethrows -> ResultType {
-        return try _representation.withUnsafeBytes {
+        return try self.withUnsafeBytes {
             return try body($0.baseAddress?.assumingMemoryBound(to: ContentType.self) ?? UnsafePointer<ContentType>(bitPattern: 0xBAD0)!)
         }
     }
@@ -44,7 +44,7 @@ extension Data {
     /// - warning: The byte pointer argument should not be stored and used outside of the lifetime of the call to the closure.
     @available(swift, deprecated: 5, message: "use `withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R` instead")
     public mutating func withUnsafeMutableBytes<ResultType, ContentType>(_ body: (UnsafeMutablePointer<ContentType>) throws -> ResultType) rethrows -> ResultType {
-        return try _representation.withUnsafeMutableBytes {
+        return try self.withUnsafeMutableBytes {
             return try body($0.baseAddress?.assumingMemoryBound(to: ContentType.self) ?? UnsafeMutablePointer<ContentType>(bitPattern: 0xBAD0)!)
         }
     }
@@ -55,6 +55,9 @@ extension Data {
     /// - parameter block: The closure to invoke for each region of data. You may stop the enumeration by setting the `stop` parameter to `true`.
     @available(swift, deprecated: 5, message: "use `regions` or `for-in` instead")
     public func enumerateBytes(_ block: (_ buffer: UnsafeBufferPointer<UInt8>, _ byteIndex: Index, _ stop: inout Bool) -> Void) {
-        _representation.enumerateBytes(block)
+        self.withUnsafeBytes {
+            var stop = false
+            block($0.assumingMemoryBound(to: UInt8.self), 0, &stop)
+        }
     }
 }
