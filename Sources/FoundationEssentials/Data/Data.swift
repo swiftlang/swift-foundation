@@ -106,25 +106,10 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
         body(UnsafeMutableBufferPointer(start: nil, count: 0))
         return
     }
-    typealias InlineBuffer = ( // 32 bytes
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
-    )
-    let inlineCount = MemoryLayout<InlineBuffer>.size
-    if capacity <= inlineCount {
-        var buffer: InlineBuffer = (
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-        )
-        withUnsafeMutableBytes(of: &buffer) { buffer in
-            assert(buffer.count == inlineCount)
-            buffer.withMemoryRebound(to: UInt8.self) {
-                body(UnsafeMutableBufferPointer(start: $0.baseAddress, count: capacity))
-            }
+    // Use an inline allocation for 32 bytes or fewer
+    if capacity <= 32 {
+        withUnsafeTemporaryAllocation(of: UInt8.self, capacity: capacity) { buffer in
+            body(buffer)
         }
         return
     }
