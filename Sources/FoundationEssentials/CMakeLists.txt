@@ -28,6 +28,7 @@ add_library(FoundationEssentials
     Logging.swift
     OutputBuffer.swift
     Platform.swift
+    Progress+Stub.swift
     SortComparator.swift
     UUID_Wrappers.swift
     UUID.swift

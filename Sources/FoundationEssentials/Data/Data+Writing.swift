@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -720,5 +720,65 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
         }
     }
 }
-
 #endif // !NO_FILESYSTEM
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data {
+#if FOUNDATION_FRAMEWORK
+    public typealias WritingOptions = NSData.WritingOptions
+#else
+    
+    // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
+    public struct WritingOptions : OptionSet, Sendable {
+        public let rawValue: UInt
+        public init(rawValue: UInt) { self.rawValue = rawValue }
+        
+        /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
+#if os(WASI)
+        @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#endif
+        public static let atomic = WritingOptions(rawValue: 1 << 0)
+        
+        /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
+        public static let withoutOverwriting = WritingOptions(rawValue: 1 << 1)
+        
+        /// An option to not encrypt the file when writing it out.
+        public static let noFileProtection = WritingOptions(rawValue: 0x10000000)
+        
+        /// An option to make the file accessible only while the device is unlocked.
+        public static let completeFileProtection = WritingOptions(rawValue: 0x20000000)
+        
+        /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
+        public static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
+        
+        /// An option to allow the file to be accessible after a user first unlocks the device.
+        public static let completeFileProtectionUntilFirstUserAuthentication = WritingOptions(rawValue: 0x40000000)
+        
+        /// An option the system uses when determining the file protection options that the system assigns to the data.
+        public static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
+    }
+#endif
+    
+    /// Write the contents of the `Data` to a location.
+    ///
+    /// - parameter url: The location to write the data into.
+    /// - parameter options: Options for writing the data. Default value is `[]`.
+    /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
+    public func write(to url: URL, options: Data.WritingOptions = []) throws {
+#if !os(WASI) // `.atomic` is unavailable on WASI
+        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
+            fatalError("withoutOverwriting is not supported with atomic")
+        }
+#endif
+        
+        guard url.isFileURL else {
+            throw CocoaError(.fileWriteUnsupportedScheme)
+        }
+        
+#if !NO_FILESYSTEM
+        try writeToFile(path: .url(url), data: self, options: options, reportProgress: true)
+#else
+        throw CocoaError(.featureUnsupported)
+#endif
+    }
+}

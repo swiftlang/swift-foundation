@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -512,4 +512,51 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
     }
     
     return length - numBytesRemaining
+}
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data {
+#if FOUNDATION_FRAMEWORK
+    public typealias ReadingOptions = NSData.ReadingOptions
+#else
+    public struct ReadingOptions : OptionSet, Sendable {
+        public let rawValue: UInt
+        public init(rawValue: UInt) { self.rawValue = rawValue }
+        
+        public static let mappedIfSafe = ReadingOptions(rawValue: 1 << 0)
+        public static let uncached = ReadingOptions(rawValue: 1 << 1)
+        public static let alwaysMapped = ReadingOptions(rawValue: 1 << 3)
+    }
+#endif
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation)
+    public dynamic init(_contentsOfRemote url: URL, options: ReadingOptions = []) throws {
+        assert(!url.isFileURL)
+        throw CocoaError(.fileReadUnsupportedScheme)
+    }
+#endif
+    
+    /// Initialize a `Data` with the contents of a `URL`.
+    ///
+    /// - parameter url: The `URL` to read.
+    /// - parameter options: Options for the read operation. Default value is `[]`.
+    /// - throws: An error in the Cocoa domain, if `url` cannot be read.
+    public init(contentsOf url: __shared URL, options: ReadingOptions = []) throws {
+        if url.isFileURL {
+            self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
+        } else {
+#if FOUNDATION_FRAMEWORK
+            // Fallback to NSData, to read via NSURLSession
+            let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
+            self.init(referencing: d)
+#else
+            try self.init(_contentsOfRemote: url, options: options)
+#endif
+        }
+    }
+    
+    internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
+        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
+    }
 }
