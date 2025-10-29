@@ -82,7 +82,7 @@ private struct TimeZoneTests {
 
         test("America/Los_Angeles", "zh_TW", .shortStandard, "PST", "PST")
         test("Europe/Paris",       "zh_TW", .shortStandard, "GMT+1", "GMT+2")
-        test("Antarctica/Vostok",   "zh_TW", .shortStandard, "GMT+6", "GMT+6")
+        test("Antarctica/Davis",   "zh_TW", .shortStandard, "GMT+7", "GMT+7")
         test("Asia/Chongqing",      "zh_TW", .shortStandard, "GMT+8", "GMT+8")
         test("America/Sao_Paulo",   "zh_TW", .shortStandard, "GMT-3", "GMT-3")
 
