@@ -12,6 +12,20 @@
 
 //===--- ContiguousBytes --------------------------------------------------===//
 
+#if compiler(>=6.2)
+/// Indicates that the conforming type is a contiguous collection of raw bytes
+/// whose underlying storage is directly accessible by withUnsafeBytes.
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+public protocol ContiguousBytes: ~Escapable, ~Copyable {
+    /// Calls the given closure with the contents of underlying storage.
+    ///
+    /// - note: Calling `withUnsafeBytes` multiple times does not guarantee that
+    ///         the same buffer pointer will be passed in every time.
+    /// - warning: The buffer argument to the body should not be stored or used
+    ///            outside of the lifetime of the call to the closure.
+    func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
+}
+#else
 /// Indicates that the conforming type is a contiguous collection of raw bytes
 /// whose underlying storage is directly accessible by withUnsafeBytes.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -24,6 +38,7 @@ public protocol ContiguousBytes {
     ///            outside of the lifetime of the call to the closure.
     func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
 }
+#endif
 
 //===--- Collection Conformances ------------------------------------------===//
 
@@ -112,3 +127,34 @@ extension Slice : ContiguousBytes where Base : ContiguousBytes {
         }
     }
 }
+
+#if compiler(>=6.2)
+
+//===--- Span Conformances -----------------------------------------===//
+
+@available(FoundationPreview 6.3, *)
+extension RawSpan: ContiguousBytes {
+}
+
+@available(FoundationPreview 6.3, *)
+extension MutableRawSpan: ContiguousBytes {
+}
+
+@available(FoundationPreview 6.3, *)
+extension Span: ContiguousBytes where Element == UInt8 {
+}
+
+@available(FoundationPreview 6.3, *)
+extension MutableSpan: ContiguousBytes where Element == UInt8 {
+}
+
+@available(FoundationPreview 6.3, *)
+@available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0, visionOS 26.0, *)
+extension InlineArray: ContiguousBytes where Element == UInt8 {
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
+        return try span.withUnsafeBytes(body)
+    }
+}
+
+#endif
