@@ -815,7 +815,8 @@ extension Data : Equatable {
                     }
 
                     // Compare the contents
-                    return memcmp(b1Address, b2Address, b2.count) == 0
+                    assert(length1 == b2.count)
+                    return memcmp(b1Address, b2Address, length1) == 0
                 }
             }
         }
