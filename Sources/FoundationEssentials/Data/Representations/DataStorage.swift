@@ -33,19 +33,33 @@ internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
     
-#if !FOUNDATION_FRAMEWORK
     static func allocate(_ size: Int, _ clear: Bool) -> UnsafeMutableRawPointer? {
+#if canImport(Darwin) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+        var typeDesc = malloc_type_descriptor_v0_t()
+        typeDesc.summary.layout_semantics.contains_generic_data = true
+        if clear {
+            return malloc_type_calloc(1, size, typeDesc.type_id);
+        } else {
+            return malloc_type_malloc(size, typeDesc.type_id);
+        }
+#else
         if clear {
             return calloc(1, size)
         } else {
             return malloc(size)
         }
+#endif
     }
     
     static func reallocate(_ ptr: UnsafeMutableRawPointer, _ newSize: Int) -> UnsafeMutableRawPointer? {
-        return realloc(ptr, newSize);
+#if canImport(Darwin) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+        var typeDesc = malloc_type_descriptor_v0_t()
+        typeDesc.summary.layout_semantics.contains_generic_data = true
+        return malloc_type_realloc(ptr, newSize, typeDesc.type_id);
+#else
+        return realloc(ptr, newSize)
+#endif
     }
-#endif // !FOUNDATION_FRAMEWORK
     
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     static func move(_ dest_: UnsafeMutableRawPointer, _ source_: UnsafeRawPointer?, _ num_: Int) {
