@@ -19,6 +19,8 @@ jobs:
       macos_versions: '["sequoia"]'
       enable_wasm_sdk_build: true
       wasm_sdk_versions: '["nightly-main"]'
+      enable_android_sdk_build: true
+      android_sdk_versions: '["nightly-main"]'
 
   cmake_build:
     name: Build (CMake)
