@@ -345,9 +345,9 @@ internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline
     @_silgen_name("$s10Foundation13__DataStorageC12replaceBytes2in4with6lengthySo8_NSRangeV_SVSgSitF")
     internal func replaceBytes(in range_: (location: Int, length: Int), with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
-        let range = range_.location - _offset ..< range_.location + range_.length - _offset
+        let range = (location: range_.location - _offset, length: range_.length)
         let currentLength = _length
-        let resultingLength = currentLength - (range.upperBound &- range.lowerBound) + replacementLength
+        let resultingLength = currentLength - range.length + replacementLength
         let shift = resultingLength - currentLength
         let mutableBytes: UnsafeMutableRawPointer
         if resultingLength > currentLength {
@@ -358,8 +358,8 @@ internal final class __DataStorage : @unchecked Sendable {
         }
         mutableBytes = _bytes!
         /* shift the trailing bytes */
-        let start = range.lowerBound
-        let length = range.upperBound - range.lowerBound
+        let start = range.location
+        let length = range.length
         if shift != 0 {
             memmove(mutableBytes + start + replacementLength, mutableBytes + start + length, currentLength - start - length)
         }
