@@ -330,14 +330,24 @@ internal final class __DataStorage : @unchecked Sendable {
         UnsafeMutableRawBufferPointer(start: pointer, count: range.upperBound - range.lowerBound).copyMemory(from: offsetPointer)
     }
     
-#if FOUNDATION_FRAMEWORK
+    // This was an ABI entrypoint added in macOS 14-aligned releases in an attempt to work around the original declaration using NSRange instead of Range<Int>
+    // Using this entrypoint from existing inlinable code required an availability check, and that check has proved to be extremely expensive
+    // This entrypoint is left to preserve ABI compatibility, but inlinable code has since switched back to calling the original entrypoint using a tuple that is layout-compatible with NSRange
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-#endif
-    @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
+    @usableFromInline
     func replaceBytes(in range_: Range<Int>, with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
-        let range = range_.lowerBound - _offset ..< range_.upperBound - _offset
+        // Call through to the main implementation
+        self.replaceBytes(in: (range_.lowerBound, range_.upperBound &- range_.lowerBound), with: replacementBytes, length: replacementLength)
+    }
+    
+    // This ABI entrypoint was original written using NSRange instead of Range<Int>. The ABI contract of this function must continue to accept NSRange values from code inlined into callers
+    // To avoid using the real NSRange type at the source level, we use a tuple that is layout-compatible with NSRange instead and use @_silgen_name to preserve the original symbol name that includes "NSRange"
+    @usableFromInline
+    @_silgen_name("$s10Foundation13__DataStorageC12replaceBytes2in4with6lengthySo8_NSRangeV_SVSgSitF")
+    internal func replaceBytes(in range_: (location: Int, length: Int), with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
+        let range = (location: range_.location - _offset, length: range_.length)
         let currentLength = _length
-        let resultingLength = currentLength - (range.upperBound - range.lowerBound) + replacementLength
+        let resultingLength = currentLength - range.length + replacementLength
         let shift = resultingLength - currentLength
         let mutableBytes: UnsafeMutableRawPointer
         if resultingLength > currentLength {
@@ -348,8 +358,8 @@ internal final class __DataStorage : @unchecked Sendable {
         }
         mutableBytes = _bytes!
         /* shift the trailing bytes */
-        let start = range.lowerBound
-        let length = range.upperBound - range.lowerBound
+        let start = range.location
+        let length = range.length
         if shift != 0 {
             memmove(mutableBytes + start + replacementLength, mutableBytes + start + length, currentLength - start - length)
         }
