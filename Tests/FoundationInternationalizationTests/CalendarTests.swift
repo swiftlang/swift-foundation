@@ -1003,7 +1003,8 @@ private struct CalendarTests {
     }
     
     @Test func datesMatching_simpleExample() {
-        let cal = Calendar(identifier: .gregorian)
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .gmt
         // August 22, 2022 at 3:02:38 PM PDT
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307)
         let next3Minutes = [
