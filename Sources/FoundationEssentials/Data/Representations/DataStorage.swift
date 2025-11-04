@@ -20,6 +20,8 @@ import Darwin
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
 #endif
 
 // Underlying storage representation for medium and large data.

@@ -20,6 +20,8 @@ import Darwin
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
