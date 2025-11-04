@@ -20,6 +20,13 @@ import FoundationInternationalization
 import Foundation
 #endif
 
+#if FOUNDATION_FRAMEWORK
+// FOUNDATION_FRAMEWORK has a scheme per benchmark file, so only include one benchmark here.
+let benchmarks = {
+    localeBenchmarks()
+}
+#endif
+
 func localeBenchmarks() {
     Benchmark.defaultConfiguration.maxIterations = 1_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
@@ -57,4 +64,3 @@ func localeBenchmarks() {
         }
     }
 }
-
