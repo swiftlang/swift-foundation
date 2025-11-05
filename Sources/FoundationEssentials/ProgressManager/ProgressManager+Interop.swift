@@ -28,7 +28,7 @@ extension Progress {
     /// - Parameter count: Number of units delegated to a child instance of `ProgressManager`
     /// which may be instantiated by `Subprogress` later when `reporter(totalCount:)` is called.
     /// - Returns: A `Subprogress` instance.
-    public func makeChild(withPendingUnitCount count: Int) -> Subprogress {
+    public func subprogress(assigningCount count: Int) -> Subprogress {
         
         // Make a ProgressManager
         let manager = ProgressManager(totalCount: 1)
@@ -102,7 +102,7 @@ extension ProgressManager {
     /// - Parameters:
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     ///   - progress: `Progress` which receives the delegated `count`.
-    public func subprogress(assigningCount count: Int, to progress: Foundation.Progress) {
+    public func assign(count: Int, to progress: Foundation.Progress) {
         precondition(progress._parent() == nil, "Cannot assign a progress to more than one parent.")
         
         // Create a ProgressManager - NSProgress bridge

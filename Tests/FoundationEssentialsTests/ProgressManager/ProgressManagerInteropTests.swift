@@ -47,7 +47,7 @@ import Testing
         #expect(overall.completedUnitCount == 5)
         
         // Add ProgressManager as Child
-        let p2 = overall.makeChild(withPendingUnitCount: 5)
+        let p2 = overall.subprogress(assigningCount: 5)
         await doSomething(subprogress: p2)
         
         // Check if ProgressManager values propagate to Progress parent
@@ -73,7 +73,7 @@ import Testing
 
         let p2 = Progress(totalUnitCount: 1, parent: overall, pendingUnitCount: 5)
         
-        await doSomething(subprogress: p2.makeChild(withPendingUnitCount: 1))
+        await doSomething(subprogress: p2.subprogress(assigningCount: 1))
         
         // Check if ProgressManager values propagate to Progress parent
         #expect(overall.fractionCompleted == 1.0)
@@ -108,7 +108,7 @@ import Testing
             p3.completedUnitCount = 2
         }.value
         
-        await doSomething(subprogress: p2.makeChild(withPendingUnitCount: 9))
+        await doSomething(subprogress: p2.subprogress(assigningCount: 9))
         
         // Check if ProgressManager values propagate to Progress parent
         #expect(overall.fractionCompleted == 1.0)
@@ -229,7 +229,7 @@ import Testing
         
         // Interop: Add Progress as Child
         let p2 = await doSomethingWithProgress()
-        overallManager.subprogress(assigningCount: 5, to: p2)
+        overallManager.assign(count: 5, to: p2)
         
         let _ = await Task.detached {
             p2.completedUnitCount = 1
@@ -258,7 +258,7 @@ import Testing
         
         
         let p3 = await doSomethingWithProgress()
-        p2.subprogress(assigningCount: 2, to: p3)
+        p2.assign(count: 2, to: p3)
         
         let _ = await Task.detached {
             p3.completedUnitCount = 1
@@ -288,7 +288,7 @@ import Testing
         
         let overallReporter2 = ProgressManager(totalCount: nil)
         let interopChild = getProgressWithTotalCountInitialized()
-        overallReporter2.subprogress(assigningCount: 5, to: interopChild)
+        overallReporter2.assign(count: 5, to: interopChild)
         #expect(overallReporter2.totalCount == nil)
     }
     
@@ -299,7 +299,7 @@ import Testing
         #expect(overallProgress.totalUnitCount == 0)
         
         let overallProgress2 = Progress()
-        let interopChild = overallProgress2.makeChild(withPendingUnitCount: 5)
+        let interopChild = overallProgress2.subprogress(assigningCount: 5)
         receiveProgress(progress: interopChild)
         #expect(overallProgress2.totalUnitCount == 0)
     }
@@ -316,7 +316,7 @@ import Testing
             parentManager2.assign(count: 1, to: manager.reporter)
             
             let progress = Progress.discreteProgress(totalUnitCount: 4)
-            manager.subprogress(assigningCount: 1, to: progress)
+            manager.assign(count: 1, to: progress)
                     
             progress.completedUnitCount = 2
             #expect(progress.fractionCompleted == 0.5)

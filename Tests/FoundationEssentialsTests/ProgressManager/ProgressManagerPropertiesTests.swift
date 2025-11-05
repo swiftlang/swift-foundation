@@ -43,10 +43,10 @@ import Testing
         #expect(fileProgressManager.totalFileCount == 0)
         #expect(fileProgressManager.completedFileCount == 0)
         
-        let summaryTotalFile = fileProgressManager.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        let summaryTotalFile = fileProgressManager.summary(of: \.totalFileCount)
         #expect(summaryTotalFile == 100)
         
-        let summaryCompletedFile = fileProgressManager.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        let summaryCompletedFile = fileProgressManager.summary(of: \.completedFileCount)
         #expect(summaryCompletedFile == 100)
     }
     
@@ -65,10 +65,10 @@ import Testing
         #expect(manager1.totalFileCount == 10)
         #expect(manager1.completedFileCount == 0)
         
-        let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        let summaryTotalFile = overall.summary(of: \.totalFileCount)
         #expect(summaryTotalFile == 10)
         
-        let summaryCompletedFile = overall.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        let summaryCompletedFile = overall.summary(of: \.completedFileCount)
         #expect(summaryCompletedFile == 0)
     }
     
@@ -91,10 +91,10 @@ import Testing
         #expect(overall.totalFileCount == 0)
         #expect(overall.completedFileCount == 0)
         
-        let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        let summaryTotalFile = overall.summary(of: \.totalFileCount)
         #expect(summaryTotalFile == 20)
         
-        let summaryCompletedFile = overall.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        let summaryCompletedFile = overall.summary(of: \.completedFileCount)
         #expect(summaryCompletedFile == 0)
         
         // Update FileCounts
@@ -103,7 +103,7 @@ import Testing
         manager2.completedFileCount = 1
         
         #expect(overall.completedFileCount == 0)
-        let summaryCompletedFileUpdated = overall.summary(of: ProgressManager.Properties.CompletedFileCount.self)
+        let summaryCompletedFileUpdated = overall.summary(of: \.completedFileCount)
         #expect(summaryCompletedFileUpdated == 2)
     }
     
@@ -119,7 +119,7 @@ import Testing
         childManager1.totalFileCount += 10
         #expect(childManager1.totalFileCount == 10)
         
-        let summaryTotalFileInitial = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        let summaryTotalFileInitial = overall.summary(of: \.totalFileCount)
         #expect(summaryTotalFileInitial == 10)
         
         let childProgress2 = manager1.subprogress(assigningCount: 2)
@@ -129,11 +129,11 @@ import Testing
 
         // Tests that totalFileCount propagates to root level
         #expect(overall.totalFileCount == 0)
-        let summaryTotalFile = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        let summaryTotalFile = overall.summary(of: \.totalFileCount)
         #expect(summaryTotalFile == 20)
         
         manager1.totalFileCount += 999
-        let summaryTotalFileUpdated = overall.summary(of: ProgressManager.Properties.TotalFileCount.self)
+        let summaryTotalFileUpdated = overall.summary(of: \.totalFileCount)
         #expect(summaryTotalFileUpdated == 1019)
     }
 }
@@ -154,8 +154,8 @@ import Testing
         manager.completedByteCount += 100000
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 300000)
-        #expect(manager.summary(of: ProgressManager.Properties.CompletedByteCount.self) == 300000)
+        #expect(manager.summary(of: \.totalByteCount) == 300000)
+        #expect(manager.summary(of: \.completedByteCount) == 300000)
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async throws {
@@ -168,8 +168,8 @@ import Testing
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 500000)
-        #expect(manager.summary(of: ProgressManager.Properties.CompletedByteCount.self) == 500000)
+        #expect(manager.summary(of: \.totalByteCount) == 500000)
+        #expect(manager.summary(of: \.completedByteCount) == 500000)
     }
     
     @Test func discreteManager() async throws {
@@ -180,8 +180,8 @@ import Testing
         manager.completedByteCount = 1000
         
         #expect(manager.fractionCompleted == 0.5)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 2000)
-        #expect(manager.summary(of: ProgressManager.Properties.CompletedByteCount.self) == 1000)
+        #expect(manager.summary(of: \.totalByteCount) == 2000)
+        #expect(manager.summary(of: \.completedByteCount) == 1000)
     }
     
     @Test func twoLevelManager() async throws {
@@ -194,8 +194,8 @@ import Testing
         manager.completedByteCount = 499999
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 800000)
-        #expect(manager.summary(of: ProgressManager.Properties.CompletedByteCount.self) == 799999)
+        #expect(manager.summary(of: \.totalByteCount) == 800000)
+        #expect(manager.summary(of: \.completedByteCount) == 799999)
     }
     
     @Test func threeLevelManager() async throws {
@@ -208,8 +208,8 @@ import Testing
         try await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalByteCount.self) == 600000)
-        #expect(manager.summary(of: ProgressManager.Properties.CompletedByteCount.self) == 599999)
+        #expect(manager.summary(of: \.totalByteCount) == 600000)
+        #expect(manager.summary(of: \.completedByteCount) == 599999)
     }
 }
 
@@ -224,7 +224,7 @@ import Testing
         manager.throughput += 1000
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [2000])
+        #expect(manager.summary(of: \.throughput) == [2000])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -236,7 +236,7 @@ import Testing
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 2000])
+        #expect(manager.summary(of: \.throughput) == [1000, 2000])
     }
     
     @Test func discreteManager() async throws {
@@ -247,7 +247,7 @@ import Testing
         manager.throughput += 2000
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [3000])
+        #expect(manager.summary(of: \.throughput) == [3000])
     }
     
     @Test func twoLevelManager() async throws {
@@ -258,7 +258,7 @@ import Testing
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 2000])
+        #expect(manager.summary(of: \.throughput) == [1000, 2000])
     }
     
     @Test func threeLevelManager() async throws {
@@ -270,7 +270,7 @@ import Testing
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Throughput.self) == [1000, 1000, 2000])
+        #expect(manager.summary(of: \.throughput) == [1000, 1000, 2000])
     }
 }
 
@@ -286,7 +286,7 @@ import Testing
         manager.estimatedTimeRemaining += Duration.seconds(3000)
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(6000))
+        #expect(manager.summary(of: \.estimatedTimeRemaining) == Duration.seconds(6000))
     }
     
     @Test func discreteManager() async throws {
@@ -296,7 +296,7 @@ import Testing
         manager.estimatedTimeRemaining = Duration.seconds(1000)
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(1000))
+        #expect(manager.summary(of: \.estimatedTimeRemaining) == Duration.seconds(1000))
     }
     
     @Test func twoLevelManagerWithFinishedChild() async throws {
@@ -308,7 +308,7 @@ import Testing
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(1))
+        #expect(manager.summary(of: \.estimatedTimeRemaining) == Duration.seconds(1))
     }
     
     @Test func twoLevelManagerWithUnfinishedChild() async throws {
@@ -322,11 +322,11 @@ import Testing
         child?.estimatedTimeRemaining = Duration.seconds(80000)
         
         #expect(manager.fractionCompleted == 0.75)
-        #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(80000))
+        #expect(manager.summary(of: \.estimatedTimeRemaining) == Duration.seconds(80000))
         
         child = nil
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self) == Duration.seconds(200))
+        #expect(manager.summary(of: \.estimatedTimeRemaining) == Duration.seconds(200))
     }
     
 }
@@ -375,7 +375,7 @@ extension ProgressManager.Properties {
         manager.counter += 10
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 30)
+        #expect(manager.summary(of: \.counter) == 30)
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -388,7 +388,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 45)
+        #expect(manager.summary(of: \.counter) == 45)
     }
     
     @Test func discreteManager() async throws {
@@ -398,7 +398,7 @@ extension ProgressManager.Properties {
         manager.counter += 10
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 10)
+        #expect(manager.summary(of: \.counter) == 10)
     }
     
     @Test func twoLevelManager() async throws {
@@ -410,7 +410,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 40)
+        #expect(manager.summary(of: \.counter) == 40)
     }
     
     @Test func threeLevelManager() async throws {
@@ -422,7 +422,7 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.Counter.self) == 55)
+        #expect(manager.summary(of: \.counter) == 55)
     }
 }
 
@@ -470,7 +470,7 @@ func doSomething(subprogress: consuming Subprogress) async {
     manager.byteSize += 4096
     
     #expect(manager.fractionCompleted == 1.0)
-    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 7168)
+    #expect(manager.summary(of: \.byteSize) == 7168)
 }
 
 func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -483,7 +483,7 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
     await doSomething(subprogress: manager.subprogress(assigningCount: 1))
 
     #expect(manager.fractionCompleted == 1.0)
-    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 15360)
+    #expect(manager.summary(of: \.byteSize) == 15360)
 }
 
 @Test func discreteManager() async throws {
@@ -493,7 +493,7 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
     manager.byteSize += 16384
     
     #expect(manager.fractionCompleted == 1.0)
-    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 16384)
+    #expect(manager.summary(of: \.byteSize) == 16384)
 }
 
 @Test func twoLevelManager() async throws {
@@ -505,7 +505,7 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
     await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
     #expect(manager.fractionCompleted == 1.0)
-    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 39936)
+    #expect(manager.summary(of: \.byteSize) == 39936)
 }
 
 @Test func threeLevelManager() async throws {
@@ -517,7 +517,7 @@ func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
     await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
     
     #expect(manager.fractionCompleted == 1.0)
-    #expect(manager.summary(of: ProgressManager.Properties.ByteSize.self) == 80896)
+    #expect(manager.summary(of: \.byteSize) == 80896)
 }
 }
 
@@ -564,7 +564,7 @@ extension ProgressManager.Properties {
         manager.complete(count: 1)
         manager.justADouble += 10.0
         
-        #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 30.0)
+        #expect(manager.summary(of: \.justADouble) == 30.0)
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async throws {
@@ -575,7 +575,7 @@ extension ProgressManager.Properties {
         
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
-        #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 37.0)
+        #expect(manager.summary(of: \.justADouble) == 37.0)
     }
     
     @Test func discreteManager() async throws {
@@ -585,7 +585,7 @@ extension ProgressManager.Properties {
         manager.justADouble = 80.0
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 80.0)
+        #expect(manager.summary(of: \.justADouble) == 80.0)
     }
     
     @Test func twoLevelManager() async throws {
@@ -597,7 +597,7 @@ extension ProgressManager.Properties {
         try await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 110.0)
+        #expect(manager.summary(of: \.justADouble) == 110.0)
     }
     
     @Test func threeLevelManager() async throws {
@@ -610,7 +610,7 @@ extension ProgressManager.Properties {
         try await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.JustADouble.self) == 117.0)
+        #expect(manager.summary(of: \.justADouble) == 117.0)
     }
 }
 
@@ -653,7 +653,7 @@ extension ProgressManager.Properties {
         manager.downloadedFile = "Melon.jpg"
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Melon.jpg"])
+        #expect(manager.summary(of: \.downloadedFile) == ["Melon.jpg"])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -665,7 +665,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Cherry.jpg", "Melon.jpg"])
+        #expect(manager.summary(of: \.downloadedFile) == ["Cherry.jpg", "Melon.jpg"])
     }
     
     @Test func discreteManager() async throws {
@@ -676,7 +676,7 @@ extension ProgressManager.Properties {
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.downloadedFile == "Grape.jpg")
-        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Grape.jpg"])
+        #expect(manager.summary(of: \.downloadedFile) == ["Grape.jpg"])
     }
     
     @Test func twoLevelsManager() async throws {
@@ -688,7 +688,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Watermelon.jpg", "Melon.jpg"])
+        #expect(manager.summary(of: \.downloadedFile) == ["Watermelon.jpg", "Melon.jpg"])
     }
     
     @Test func threeLevelsManager() async throws {
@@ -700,7 +700,7 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.DownloadedFile.self) == ["Watermelon.jpg", "Cherry.jpg", "Melon.jpg"])
+        #expect(manager.summary(of: \.downloadedFile) == ["Watermelon.jpg", "Cherry.jpg", "Melon.jpg"])
     }
 }
 
@@ -742,7 +742,7 @@ extension ProgressManager.Properties {
         manager.processingFile = "Hello.jpg"
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Hello.jpg"])
+        #expect(manager.summary(of: \.processingFile) == ["Hello.jpg"])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -754,7 +754,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Hi.jpg"])
+        #expect(manager.summary(of: \.processingFile) == ["Hi.jpg"])
     }
     
     @Test func discreteManager() async throws {
@@ -765,7 +765,7 @@ extension ProgressManager.Properties {
         
         #expect(manager.fractionCompleted == 1.0)
         #expect(manager.processingFile == "Howdy.jpg")
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Howdy.jpg"])
+        #expect(manager.summary(of: \.processingFile) == ["Howdy.jpg"])
     }
     
     @Test func twoLevelsManager() async throws {
@@ -777,7 +777,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Howdy.jpg"])
+        #expect(manager.summary(of: \.processingFile) == ["Howdy.jpg"])
     }
     
     @Test func threeLevelsManager() async throws {
@@ -789,7 +789,7 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessingFile.self) == ["Howdy.jpg"])
+        #expect(manager.summary(of: \.processingFile) == ["Howdy.jpg"])
     }
 }
 
@@ -829,7 +829,7 @@ extension ProgressManager.Properties {
         manager.complete(count: 1)
         manager.imageURL = URL(string: "112.jpg")
         
-        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "112.jpg")])
+        #expect(manager.summary(of: \.imageURL) == [URL(string: "112.jpg")])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -840,7 +840,7 @@ extension ProgressManager.Properties {
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
-        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "114.jpg")])
+        #expect(manager.summary(of: \.imageURL) == [URL(string: "114.jpg")])
     }
     
     @Test func discreteManager() async throws {
@@ -849,7 +849,7 @@ extension ProgressManager.Properties {
         manager.imageURL = URL(string: "116.jpg")
         
         #expect(manager.fractionCompleted == 0.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "116.jpg")])
+        #expect(manager.summary(of: \.imageURL) == [URL(string: "116.jpg")])
     }
     
     @Test func twoLevelsManager() async throws {
@@ -861,7 +861,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "116.jpg")])
+        #expect(manager.summary(of: \.imageURL) == [URL(string: "116.jpg")])
     }
     
     @Test func threeLevelsManager() async throws {
@@ -873,7 +873,7 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ImageURL.self) == [URL(string: "116.jpg")])
+        #expect(manager.summary(of: \.imageURL) == [URL(string: "116.jpg")])
     }
 }
 
@@ -912,7 +912,7 @@ extension ProgressManager.Properties {
         manager.complete(count: 1)
         manager.totalPixelCount = 24
         
-        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [24])
+        #expect(manager.summary(of: \.totalPixelCount) == [24])
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -923,7 +923,7 @@ extension ProgressManager.Properties {
         
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
-        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [26, 24])
+        #expect(manager.summary(of: \.totalPixelCount) == [26, 24])
     }
     
     @Test func discreteManager() async throws {
@@ -932,7 +932,7 @@ extension ProgressManager.Properties {
         manager.totalPixelCount = 42
         
         #expect(manager.fractionCompleted == 0.0)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42])
+        #expect(manager.summary(of: \.totalPixelCount) == [42])
     }
     
     @Test func twoLevelsManager() async throws {
@@ -944,7 +944,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42, 24])
+        #expect(manager.summary(of: \.totalPixelCount) == [42, 24])
     }
     
     @Test func threeLevelsManager() async throws {
@@ -956,7 +956,7 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.TotalPixelCount.self) == [42, 26, 24])
+        #expect(manager.summary(of: \.totalPixelCount) == [42, 26, 24])
     }
 }
 
@@ -1001,7 +1001,7 @@ extension ProgressManager.Properties {
         manager.complete(count: 1)
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+        #expect(manager.summary(of: \.viralIndeterminate) == 0)
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -1013,7 +1013,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+        #expect(manager.summary(of: \.viralIndeterminate) == 0)
     }
     
     @Test func discreteManager() async throws {
@@ -1023,7 +1023,7 @@ extension ProgressManager.Properties {
         manager.viralIndeterminate = 1
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 1)
+        #expect(manager.summary(of: \.viralIndeterminate) == 1)
     }
     
     @Test func twoLevelManager() async throws {
@@ -1035,7 +1035,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+        #expect(manager.summary(of: \.viralIndeterminate) == 0)
     }
     
     @Test func threeLevelManager() async throws {
@@ -1047,7 +1047,7 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ViralIndeterminate.self) == 0)
+        #expect(manager.summary(of: \.viralIndeterminate) == 0)
     }
 }
 
@@ -1094,7 +1094,7 @@ extension ProgressManager.Properties {
         manager.processTime += Duration.seconds(25)
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(50))
+        #expect(manager.summary(of: \.processTime) == Duration.seconds(50))
     }
     
     func doSomethingTwoLevels(subprogress: consuming Subprogress) async {
@@ -1107,7 +1107,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
     
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(80))
+        #expect(manager.summary(of: \.processTime) == Duration.seconds(80))
     }
     
     @Test func discreteManager() async throws {
@@ -1117,7 +1117,7 @@ extension ProgressManager.Properties {
         manager.processTime += Duration.milliseconds(500)
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.milliseconds(500))
+        #expect(manager.summary(of: \.processTime) == Duration.milliseconds(500))
     }
     
     @Test func twoLevelManager() async throws {
@@ -1129,7 +1129,7 @@ extension ProgressManager.Properties {
         await doSomething(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(170))
+        #expect(manager.summary(of: \.processTime) == Duration.seconds(170))
     }
     
     @Test func threeLevelManager() async throws {
@@ -1141,7 +1141,7 @@ extension ProgressManager.Properties {
         await doSomethingTwoLevels(subprogress: manager.subprogress(assigningCount: 1))
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(81))
+        #expect(manager.summary(of: \.processTime) == Duration.seconds(81))
     }
     
     @Test func zeroDurationHandling() async throws {
@@ -1157,7 +1157,7 @@ extension ProgressManager.Properties {
         childManager.processTime = Duration.seconds(42)
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(42))
+        #expect(manager.summary(of: \.processTime) == Duration.seconds(42))
     }
     
     @Test func negativeDurationHandling() async throws {
@@ -1168,7 +1168,7 @@ extension ProgressManager.Properties {
         manager.processTime = Duration.seconds(-5)
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(-5))
+        #expect(manager.summary(of: \.processTime) == Duration.seconds(-5))
     }
     
     @Test func mixedDurationUnits() async throws {
@@ -1184,7 +1184,7 @@ extension ProgressManager.Properties {
         manager.processTime += Duration.microseconds(500000) // + 0.5 seconds
         
         #expect(manager.fractionCompleted == 1.0)
-        #expect(manager.summary(of: ProgressManager.Properties.ProcessTime.self) == Duration.seconds(2))
+        #expect(manager.summary(of: \.processTime) == Duration.seconds(2))
     }
 }
 

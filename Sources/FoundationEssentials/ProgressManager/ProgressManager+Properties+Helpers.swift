@@ -23,7 +23,7 @@ extension ProgressManager {
     }
     
     //MARK: Helper Methods for Updating Dirty Path
-    internal func updatedIntSummary(property: MetatypeWrapper<Int, Int>) -> Int {
+    internal func updateIntSummary(property: MetatypeWrapper<Int, Int>) -> Int {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getIntSummaryUpdateInfo(property: property)
@@ -31,7 +31,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.IntSummaryUpdate(index: index, updatedSummary: child.updatedIntSummary(property: property))
+            State.IntSummaryUpdate(index: index, updatedSummary: child.updateIntSummary(property: property))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -40,7 +40,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedUInt64Summary(property: MetatypeWrapper<UInt64, UInt64>) -> UInt64 {
+    internal func updateUInt64Summary(property: MetatypeWrapper<UInt64, UInt64>) -> UInt64 {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getUInt64SummaryUpdateInfo(property: property)
@@ -48,7 +48,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.UInt64SummaryUpdate(index: index, updatedSummary: child.updatedUInt64Summary(property: property))
+            State.UInt64SummaryUpdate(index: index, updatedSummary: child.updateUInt64Summary(property: property))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -57,7 +57,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedDoubleSummary(property: MetatypeWrapper<Double, Double>) -> Double {
+    internal func updateDoubleSummary(property: MetatypeWrapper<Double, Double>) -> Double {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getDoubleSummaryUpdateInfo(property: property)
@@ -65,7 +65,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.DoubleSummaryUpdate(index: index, updatedSummary: child.updatedDoubleSummary(property: property))
+            State.DoubleSummaryUpdate(index: index, updatedSummary: child.updateDoubleSummary(property: property))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -74,7 +74,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedStringSummary(property: MetatypeWrapper<String?, [String?]>) -> [String?] {
+    internal func updateStringSummary(property: MetatypeWrapper<String?, [String?]>) -> [String?] {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getStringSummaryUpdateInfo(property: property)
@@ -82,7 +82,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.StringSummaryUpdate(index: index, updatedSummary: child.updatedStringSummary(property: property))
+            State.StringSummaryUpdate(index: index, updatedSummary: child.updateStringSummary(property: property))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -91,7 +91,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedURLSummary(property: MetatypeWrapper<URL?, [URL?]>) -> [URL?] {
+    internal func updateURLSummary(property: MetatypeWrapper<URL?, [URL?]>) -> [URL?] {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getURLSummaryUpdateInfo(property: property)
@@ -99,7 +99,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.URLSummaryUpdate(index: index, updatedSummary: child.updatedURLSummary(property: property))
+            State.URLSummaryUpdate(index: index, updatedSummary: child.updateURLSummary(property: property))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -108,7 +108,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedUInt64ArraySummary(property: MetatypeWrapper<UInt64, [UInt64]>) -> [UInt64] {
+    internal func updateUInt64ArraySummary(property: MetatypeWrapper<UInt64, [UInt64]>) -> [UInt64] {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getUInt64ArraySummaryUpdateInfo(property: property)
@@ -116,7 +116,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.UInt64ArraySummaryUpdate(index: index, updatedSummary: child.updatedUInt64ArraySummary(property: property))
+            State.UInt64ArraySummaryUpdate(index: index, updatedSummary: child.updateUInt64ArraySummary(property: property))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -125,7 +125,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedDurationSummary(property: MetatypeWrapper<Duration, Duration>) -> Duration {
+    internal func updateDurationSummary(property: MetatypeWrapper<Duration, Duration>) -> Duration {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getDurationSummaryUpdateInfo(property: property)
@@ -133,7 +133,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.DurationSummaryUpdate(index: index, updatedSummary: child.updatedDurationSummary(property: property))
+            State.DurationSummaryUpdate(index: index, updatedSummary: child.updateDurationSummary(property: property))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -142,7 +142,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedFileCount(type: CountType) -> Int {
+    internal func updateFileCount(type: CountType) -> Int {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getFileCountUpdateInfo(type: type)
@@ -150,7 +150,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.FileCountUpdate(index: index, updatedSummary: child.updatedFileCount(type: type))
+            State.FileCountUpdate(index: index, updatedSummary: child.updateFileCount(type: type))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -159,7 +159,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedByteCount(type: CountType) -> UInt64 {
+    internal func updateByteCount(type: CountType) -> UInt64 {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getByteCountUpdateInfo(type: type)
@@ -167,7 +167,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.ByteCountUpdate(index: index, updatedSummary: child.updatedByteCount(type: type))
+            State.ByteCountUpdate(index: index, updatedSummary: child.updateByteCount(type: type))
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
@@ -176,7 +176,7 @@ extension ProgressManager {
         }
     }
     
-    internal func updatedThroughput() -> [UInt64] {
+    internal func updateThroughput() -> [UInt64] {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getThroughputUpdateInfo()
@@ -184,16 +184,16 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.ThroughputUpdate(index: index, updatedSummary: child.updatedThroughput())
+            State.ThroughputUpdate(index: index, updatedSummary: child.updateThroughput())
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children
         return state.withLock { state in
-            state.updatedThroughput(updateInfo, updatedSummaries)
+            state.updateThroughput(updateInfo, updatedSummaries)
         }
     }
     
-    internal func updatedEstimatedTimeRemaining() -> Duration {
+    internal func updateEstimatedTimeRemaining() -> Duration {
         // Get information about dirty children and summaries of non-dirty children
         let updateInfo = state.withLock { state in
             state.getEstimatedTimeRemainingUpdateInfo()
@@ -201,7 +201,7 @@ extension ProgressManager {
         
         // Get updated summary for each dirty child
         let updatedSummaries = updateInfo.dirtyChildren.map { (index, child) in
-            State.EstimatedTimeRemainingUpdate(index: index, updatedSummary: child.updatedEstimatedTimeRemaining())
+            State.EstimatedTimeRemainingUpdate(index: index, updatedSummary: child.updateEstimatedTimeRemaining())
         }
         
         // Consolidate updated summaries of dirty children and summaries of non-dirty children

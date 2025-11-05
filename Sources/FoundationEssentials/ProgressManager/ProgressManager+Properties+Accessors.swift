@@ -388,22 +388,25 @@ extension ProgressManager {
     /// - Parameter property: The type of the integer property to summarize. Must be a property
     ///   where both the value and summary types are `Int`.
     /// - Returns: An `Int` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Int, P.Summary == Int {
-        if property.self == ProgressManager.Properties.TotalFileCount.self {
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == Int, P.Summary == Int {
+        if P.self == ProgressManager.Properties.TotalFileCount.self {
             self.access(keyPath: \.totalFileCount)
             self.access(keyPath: \.totalFileCountSummary)
+            let updatedFileCount = updateFileCount(type: .total)
             self.didSet(keyPath: \.totalFileCountSummary)
-            return updatedFileCount(type: .total)
-        } else if property.self == ProgressManager.Properties.CompletedFileCount.self {
+            return updatedFileCount
+        } else if P.self == ProgressManager.Properties.CompletedFileCount.self {
             self.access(keyPath: \.completedFileCount)
             self.access(keyPath: \.completedFileCountSummary)
+            let updatedFileCount = updateFileCount(type: .completed)
             self.didSet(keyPath: \.completedFileCountSummary)
-            return updatedFileCount(type: .completed)
+            return updatedFileCount
         } else {
             self.access(keyPath: \.customPropertiesInt)
             self.access(keyPath: \.customPropertiesIntSummary)
+            let updatedResult = updateIntSummary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesIntSummary)
-            return updatedIntSummary(property: MetatypeWrapper(property))
+            return updatedResult
         }
     }
     
@@ -415,22 +418,25 @@ extension ProgressManager {
     /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
     ///   where both the value and summary types are `UInt64`.
     /// - Returns: An `UInt64` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == UInt64 {
-        if property.self == ProgressManager.Properties.TotalByteCount.self {
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == UInt64, P.Summary == UInt64 {
+        if P.self == ProgressManager.Properties.TotalByteCount.self {
             self.access(keyPath: \.totalByteCount)
             self.access(keyPath: \.totalByteCountSummary)
+            let updatedByteCount = updateByteCount(type: .total)
             self.didSet(keyPath: \.totalByteCountSummary)
-            return updatedByteCount(type: .total)
-        } else if property.self == ProgressManager.Properties.CompletedByteCount.self {
+            return updatedByteCount
+        } else if P.self == ProgressManager.Properties.CompletedByteCount.self {
             self.access(keyPath: \.completedByteCount)
             self.access(keyPath: \.completedByteCountSummary)
+            let updatedByteCount = updateByteCount(type: .completed)
             self.didSet(keyPath: \.completedByteCountSummary)
-            return updatedByteCount(type: .completed)
+            return updatedByteCount
         } else {
             self.access(keyPath: \.customPropertiesUInt64)
             self.access(keyPath: \.customPropertiesUInt64Summary)
+            let updatedResult = updateUInt64Summary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesUInt64Summary)
-            return updatedUInt64Summary(property: MetatypeWrapper(property))
+            return updatedResult
         }
     }
     
@@ -442,11 +448,12 @@ extension ProgressManager {
     /// - Parameter property: The type of the double property to summarize. Must be a property
     ///   where both the value and summary types are `Double`.
     /// - Returns: A `Double` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Double, P.Summary == Double {
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == Double, P.Summary == Double {
         self.access(keyPath: \.customPropertiesDouble)
         self.access(keyPath: \.customPropertiesDoubleSummary)
+        let updatedResult = updateDoubleSummary(property: MetatypeWrapper(P.self))
         self.didSet(keyPath: \.customPropertiesDoubleSummary)
-        return updatedDoubleSummary(property: MetatypeWrapper(property))
+        return updatedResult
     }
     
     /// Returns a summary for a custom string property across the progress subtree.
@@ -457,11 +464,12 @@ extension ProgressManager {
     /// - Parameter property: The type of the string property to summarize. Must be a property
     ///   where both the value type is `String?` and the summary type is  `[String?]`.
     /// - Returns: A `[String?]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == String?, P.Summary == [String?] {
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == String?, P.Summary == [String?] {
         self.access(keyPath: \.customPropertiesString)
         self.access(keyPath: \.customPropertiesStringSummary)
+        let updatedResult = updateStringSummary(property: MetatypeWrapper(P.self))
         self.didSet(keyPath: \.customPropertiesStringSummary)
-        return updatedStringSummary(property: MetatypeWrapper(property))
+        return updatedResult
     }
     
     /// Returns a summary for a custom URL property across the progress subtree.
@@ -472,11 +480,12 @@ extension ProgressManager {
     /// - Parameter property: The type of the URL property to summarize. Must be a property
     ///   where the value type is `URL?` and the summary type is `[URL?]`.
     /// - Returns: A `[URL?]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == URL?, P.Summary == [URL?] {
         self.access(keyPath: \.customPropertiesURL)
         self.access(keyPath: \.customPropertiesURLSummary)
+        let updatedResult = updateURLSummary(property: MetatypeWrapper(P.self))
         self.didSet(keyPath: \.customPropertiesURLSummary)
-        return updatedURLSummary(property: MetatypeWrapper(property))
+        return updatedResult
     }
     
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
@@ -487,17 +496,19 @@ extension ProgressManager {
     /// - Parameter property: The type of the unsigned integer property to summarize. Must be a property
     ///   where the value type is `UInt64` and the summary type is `[UInt64]`.
     /// - Returns: A `[UInt64]` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
-        if property.self == ProgressManager.Properties.Throughput.self {
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == UInt64, P.Summary == [UInt64] {
+        if P.self == ProgressManager.Properties.Throughput.self {
             self.access(keyPath: \.throughput)
             self.access(keyPath: \.throughputSummary)
+            let updatedThroughput = updateThroughput()
             self.didSet(keyPath: \.throughputSummary)
-            return updatedThroughput()
+            return updatedThroughput
         } else {
             self.access(keyPath: \.customPropertiesUInt64Array)
             self.access(keyPath: \.customPropertiesUInt64ArraySummary)
+            let updatedResult = updateUInt64ArraySummary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesUInt64ArraySummary)
-            return updatedUInt64ArraySummary(property: MetatypeWrapper(property))
+            return updatedResult
         }
     }
     
@@ -509,17 +520,19 @@ extension ProgressManager {
     /// - Parameter property: The type of the duration property to summarize. Must be a property
     ///   where the value type is `Duration` and the summary type is `Duration`.
     /// - Returns: A `Duration` summary value for the specified property.
-    public func summary<P: Property>(of property: P.Type) -> P.Summary where P.Value == Duration, P.Summary == Duration {
-        if property.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
+    public func summary<P: Property>(of property: KeyPath<ProgressManager.Properties, P.Type>) -> P.Summary where P.Value == Duration, P.Summary == Duration {
+        if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
             self.access(keyPath: \.estimatedTimeRemaining)
             self.access(keyPath: \.estimatedTimeRemainingSummary)
+            let updatedTimeRemaining = updateEstimatedTimeRemaining()
             self.didSet(keyPath: \.estimatedTimeRemainingSummary)
-            return updatedEstimatedTimeRemaining()
+            return updatedTimeRemaining
         } else {
             self.access(keyPath: \.customPropertiesDuration)
             self.access(keyPath: \.customPropertiesDurationSummary)
+            let updatedResult = updateDurationSummary(property: MetatypeWrapper(P.self))
             self.didSet(keyPath: \.customPropertiesDurationSummary)
-            return updatedDurationSummary(property: MetatypeWrapper(property))
+            return updatedResult
         }
     }
 }

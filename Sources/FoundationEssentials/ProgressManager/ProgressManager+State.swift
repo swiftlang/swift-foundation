@@ -1320,7 +1320,7 @@ extension ProgressManager {
             )
         }
         
-        internal mutating func updatedThroughput(_ updateInfo: ThroughputUpdateInfo, _ childUpdates: [ThroughputUpdate]) -> [UInt64] {
+        internal mutating func updateThroughput(_ updateInfo: ThroughputUpdateInfo, _ childUpdates: [ThroughputUpdate]) -> [UInt64] {
             var value = updateInfo.currentSummary
             
             // Apply updates from children that were dirty
