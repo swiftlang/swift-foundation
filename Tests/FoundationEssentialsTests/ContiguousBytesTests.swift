@@ -18,24 +18,22 @@ import Testing
 @testable import Foundation
 #endif
 
-#if compiler(>=6.2)
-
-func acceptContiguousBytes(_ bytes: borrowing some ContiguousBytes & ~Escapable & ~Copyable) { }
+func acceptContiguousBytes<T: ContiguousBytes & ~Escapable & ~Copyable>(_ bytes: borrowing T) { }
 
 @Suite("ContiguousBytesTests")
 private struct ContiguousBytesTests {
-    @available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0, visionOS 26.0, *)
     @Test func span() throws {
         if #available(FoundationPreview 6.3, *) {
             var bytes: [UInt8] = [1, 2, 3]
-            acceptContiguousBytes(bytes.span)
-            acceptContiguousBytes(bytes.mutableSpan)
-            acceptContiguousBytes(bytes.span.bytes)
+            bytes.withUnsafeMutableBufferPointer { unsafeBytes in
+                acceptContiguousBytes(unsafeBytes.span)
+                acceptContiguousBytes(unsafeBytes.mutableSpan)
+                acceptContiguousBytes(unsafeBytes.span.bytes)
 
-            let ms = bytes.mutableSpan
-            acceptContiguousBytes(ms.bytes)
+                var ms = unsafeBytes.mutableSpan
+                acceptContiguousBytes(ms.bytes)
+                acceptContiguousBytes(ms.mutableBytes)
+            }
         }
     }
 }
-
-#endif
