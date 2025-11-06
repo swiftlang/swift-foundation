@@ -124,7 +124,7 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
 #if compiler(>=6.2)
 @_addressableForDependencies
 #endif
-public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceableCollection, Sendable {
+public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceableCollection, Sendable, Hashable {
     public typealias Index = Int
     public typealias Indices = Range<Int>
 
@@ -773,7 +773,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 extension Data.Deallocator : Sendable {}
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : Hashable {
+extension Data {
     /// The hash value for the data.
     @inline(never) // This is not inlinable as emission into clients could cause cross-module inconsistencies if they are not all recompiled together.
     public func hash(into hasher: inout Hasher) {
@@ -782,7 +782,7 @@ extension Data : Hashable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : Equatable {
+extension Data {
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
     public static func ==(d1 : Data, d2 : Data) -> Bool {
