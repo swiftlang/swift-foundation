@@ -206,14 +206,14 @@ private func read(from hFile: HANDLE, at path: PathOrURL,
         }
 
         let dwBytesToRead: DWORD =
-            DWORD(clamping: DWORD(min(DWORD(dwChunk), pBuffer.freeCapacity)))
+            DWORD(clamping: min(dwChunk, pBuffer.freeCapacity))
         
         var dwBytesRead: DWORD = 0
-        pBuffer.withUnsafeMutableBytes { bytes, initializedCount in
+        try pBuffer.withUnsafeMutableBytes { bytes, initializedCount in
             if !ReadFile(hFile, bytes.baseAddress!.advanced(by: initializedCount), dwBytesToRead, &dwBytesRead, nil) {
                 throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
             }
-            initializedCount += dwBytesRead
+            initializedCount += Int(dwBytesRead)
         }
         progress?.completedUnitCount += Int64(dwBytesRead)
         if dwBytesRead < dwBytesToRead {
@@ -296,7 +296,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
             return ReadBytesResult(bytes: ptr, length: outputSpan.finalize(for: buffer), deallocator: .free)
         } catch {
             localProgress?.resignCurrent()
-            free(pBuffer)
+            free(ptr)
             throw error
         }
     }

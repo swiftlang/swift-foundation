@@ -384,7 +384,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Da
 
     defer { if fd >= 0 { _close(fd) } }
 
-    let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+    let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
 
     do {
         try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
