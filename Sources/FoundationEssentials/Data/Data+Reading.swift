@@ -374,7 +374,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         while true {
             let buffer = UnsafeMutableRawBufferPointer(start: ptr, count: totalRead + chunkSize)
             var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: totalRead)
-            try readBytesFromFileDescriptor(fd, path: inPath, buffer: &buffer, readUntilLength: false, reportProgress: false)
+            try readBytesFromFileDescriptor(fd, path: inPath, buffer: &outputSpan, readUntilLength: false, reportProgress: false)
             
             let length = outputSpan.finalize(for: buffer)
             totalRead += length
