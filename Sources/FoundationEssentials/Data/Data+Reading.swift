@@ -464,7 +464,7 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
         preferredChunkSize = inBuffer.freeCapacity
     }
     
-    while !inBuffer.isEmpty {
+    while !inBuffer.isFull {
         if let localProgress, localProgress.isCancelled {
             throw CocoaError(.userCancelled)
         }
