@@ -273,7 +273,7 @@ extension MutableRawSpan: ContiguousBytes {
 @available(FoundationInlineArray 6.3, *)
 extension UTF8Span: ContiguousBytes {
     @_alwaysEmitIntoClient
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         try span.withUnsafeBytes(body)
     }
 
