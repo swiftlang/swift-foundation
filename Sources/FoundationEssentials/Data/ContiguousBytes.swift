@@ -98,7 +98,6 @@ extension UnsafeRawBufferPointer : ContiguousBytes {
         return try body(self)
     }
 
-
     @_alwaysEmitIntoClient
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(bytes)
@@ -257,11 +256,6 @@ extension Slice : ContiguousBytes where Base : ContiguousBytes {
 
 @available(FoundationPreview 6.3, *)
 extension RawSpan: ContiguousBytes {
-    @_alwaysEmitIntoClient
-    public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
-        try body(self)
-    }
-
     @_alwaysEmitIntoClient
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(self)
