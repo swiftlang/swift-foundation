@@ -6,7 +6,7 @@
 * Status: **Awaiting review**
 * Bug: *if applicable* [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/issues/NNNNN)
 * Implementation: https://github.com/swiftlang/swift-foundation/pull/1565
-* Review: ([pitch](https://forums.swift.org/...))
+* Review: ([pitch](https://forums.swift.org/t/pitch-generalize-contiguousbytes-to-support-span-et-al/83082))
 
 ## Introduction
 
