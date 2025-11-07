@@ -49,18 +49,20 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
     ///         the same span will be passed in every time.
     @_alwaysEmitIntoClient
     public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+#if !hasFeature(Embedded)
         do {
-            return try withUnsafeBytes {
-                try body($0.bytes)
+            return try withUnsafeBytes { (buffer) in
+                try body(buffer.bytes)
             }
         } catch let error {
-#if !hasFeature(Embedded)
             // Note: withUnsafeBytes is rethrowing, so we have an "any Error" here that needs casting.
             throw error as! E
-#else
-            throw error
-#endif
         }
+#else
+        return try withUnsafeBytes { (buffer) throws(E) in
+            try body(buffer.bytes)
+        }
+#endif
     }
 }
 
@@ -208,20 +210,25 @@ extension Slice : ContiguousBytes where Base : ContiguousBytes {
     @_alwaysEmitIntoClient
     public func withUnsafeBytes<ResultType, ErrorType>(_ body: (UnsafeRawBufferPointer) throws(ErrorType) -> ResultType) throws(ErrorType) -> ResultType {
         let offset = base.distance(from: base.startIndex, to: self.startIndex)
+
+#if !hasFeature(Embedded)
         do {
-            return try base.withUnsafeBytes { (ptr) throws(ErrorType) in
+            return try base.withUnsafeBytes { (ptr) in
                 let slicePtr = ptr.baseAddress?.advanced(by: offset)
                 let sliceBuffer = UnsafeRawBufferPointer(start: slicePtr, count: self.count)
                 return try body(sliceBuffer)
             }
         } catch let error {
-#if !hasFeature(Embedded)
             // Note: withUnsafeBytes is rethrowing, so we have an "any Error" here that needs casting.
             throw error as! ErrorType
-#else
-            throw error
-#endif
         }
+#else
+        return try base.withUnsafeBytes { (ptr) throws(ErrorType) in
+            let slicePtr = ptr.baseAddress?.advanced(by: offset)
+            let sliceBuffer = UnsafeRawBufferPointer(start: slicePtr, count: self.count)
+            return try body(sliceBuffer)
+        }
+#endif
     }
 }
 
