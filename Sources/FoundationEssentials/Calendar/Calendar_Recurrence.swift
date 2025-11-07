@@ -93,8 +93,8 @@ extension Calendar {
             /// value is used as a lower bound for ``nextBaseRecurrenceDate()``.
             let rangeLowerBound: Date?
             
-            /// The start date's fractional seconds component
-            let fractionalSeconds: TimeInterval
+            /// The start date's nanoseconds component
+            let startDateNanoseconds: TimeInterval
             
             /// How many occurrences have been found so far
             var resultsFound = 0
@@ -131,10 +131,7 @@ extension Calendar {
                 }
                 self.recurrence = recurrence
                 
-                // round start down to whole seconds, set aside fraction.
-                let wholeSeconds = start._time.floor()
-                fractionalSeconds = (start._time - wholeSeconds).head
-                self.start = Date(wholeSeconds)
+                self.start = start
                 self.range = range
                 
                 let frequency = recurrence.frequency
@@ -236,7 +233,9 @@ extension Calendar {
                     case .monthly:  [.second, .minute, .hour, .day]
                     case .yearly:   [.second, .minute, .hour, .day, .month, .isLeapMonth]
                 }
-                var componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start)
+                var componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
+                
+                startDateNanoseconds = start.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1)
                 
                 let expansionChangesDay = dayOfYearAction == .expand || dayOfMonthAction == .expand || weekAction == .expand || weekdayAction == .expand
                 let expansionChangesMonth = dayOfYearAction == .expand || monthAction == .expand || weekAction == .expand
@@ -428,11 +427,11 @@ extension Calendar {
                     recurrence._limitTimeComponent(.second, dates: &dates, anchor: anchor)
                 }
                 
-                if fractionalSeconds != 0 {
+                if startDateNanoseconds > 0 {
                     // `_dates(startingAfter:)` above returns whole-second dates,
                     // so we need to restore the nanoseconds value present in the original start date.
                     for idx in dates.indices {
-                        dates[idx] += fractionalSeconds
+                        dates[idx] += startDateNanoseconds
                     }
                 }
                 dates = dates.filter { $0 >= self.start }

@@ -21,7 +21,6 @@ add_library(FoundationEssentials
     ComparisonResult.swift
     Date.swift
     DateInterval.swift
-    DoubleDouble.swift
     FoundationEssentials.swift
     IndexPath.swift
     LockedState.swift
