@@ -239,7 +239,9 @@ extension Data : MutableDataProtocol {
     public var regions: CollectionOfOne<Data> {
         return CollectionOfOne(self)
     }
-    
+}
+
+extension Data {
     /// Copy the contents of the data to a pointer.
     ///
     /// - parameter pointer: A pointer to the buffer you wish to copy the bytes into.
