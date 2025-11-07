@@ -23,6 +23,7 @@ target_sources(FoundationEssentials PRIVATE
     ContiguousBytes.swift
     Data.swift
     Data+Base64.swift
+    Data+Bridging.swift
     Data+Deprecated.swift
     Data+Error.swift
     Data+Iterator.swift

@@ -29,10 +29,9 @@ extension Data {
         } else {
             nsRange = NSRange(location: 0, length: count)
         }
-        let result = _representation.withInteriorPointerReference {
-            let opts = NSData.SearchOptions(rawValue: options.rawValue)
-            return $0.range(of: dataToFind, options: opts, in: nsRange)
-        }
+        let nsData = self as NSData
+        let opts = NSData.SearchOptions(rawValue: options.rawValue)
+        let result = nsData.range(of: dataToFind, options: opts, in: nsRange)
         if result.location == NSNotFound {
             return nil
         }
