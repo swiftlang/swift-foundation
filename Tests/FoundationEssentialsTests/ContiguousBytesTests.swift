@@ -40,6 +40,8 @@ func acceptContiguousBytes<T: ContiguousBytes & ~Escapable & ~Copyable>(_ bytes:
     }
 }
 
+struct NC: ~Copyable { }
+
 @Suite("ContiguousBytesTests")
 private struct ContiguousBytesTests {
     @Test func span() throws {
@@ -53,6 +55,11 @@ private struct ContiguousBytesTests {
                 var ms = unsafeBytes.mutableSpan
                 acceptContiguousBytes(ms.bytes)
                 acceptContiguousBytes(ms.mutableBytes)
+
+                // Noncopyable result type
+                _ = unsafeBytes.span.withBytes { (buffer) in
+                    return NC()
+                }
             }
         }
     }
