@@ -490,7 +490,9 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
 #else
                 numBytesRead = CInt(read(fd, buffer.baseAddress!.advanced(by: initializedCount), Int(numBytesRequested)))
 #endif
-                initializedCount += Int(clamping: numBytesRead)
+                if numBytesRead >= 0 {
+                    initializedCount += Int(clamping: numBytesRead)
+                }
             }
         } while numBytesRead < 0 && errno == EINTR
         
