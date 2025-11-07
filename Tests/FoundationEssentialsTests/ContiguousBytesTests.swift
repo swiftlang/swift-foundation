@@ -18,7 +18,27 @@ import Testing
 @testable import Foundation
 #endif
 
-func acceptContiguousBytes<T: ContiguousBytes & ~Escapable & ~Copyable>(_ bytes: borrowing T) { }
+enum HomeworkError: Error {
+    case dogAteIt
+}
+
+@available(FoundationPreview 6.3, *)
+@discardableResult
+func acceptContiguousBytes<T: ContiguousBytes & ~Escapable & ~Copyable>(_ bytes: borrowing T) -> Int {
+    do {
+        // Ensure that we can use withBytes with typed throws.
+        return try bytes.withBytes { (buffer) throws(HomeworkError) in
+            if buffer.isEmpty {
+                throw .dogAteIt
+            }
+
+            return buffer.byteCount
+        }
+    } catch let error {
+        precondition(error == .dogAteIt)
+        return -1
+    }
+}
 
 @Suite("ContiguousBytesTests")
 private struct ContiguousBytesTests {

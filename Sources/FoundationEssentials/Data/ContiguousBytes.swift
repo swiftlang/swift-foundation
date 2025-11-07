@@ -33,6 +33,35 @@ public protocol ContiguousBytes: ~Escapable, ~Copyable {
     ///            outside of the lifetime of the call to the closure.
     func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R
 #endif
+
+    /// Calls the given closure with the contents of underlying storage.
+    ///
+    /// - note: Calling `withUnsafeBytes` multiple times does not guarantee that
+    ///         the same span will be passed in every time.
+    @available(FoundationPreview 6.3, *)
+    func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R
+}
+
+extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
+    /// Calls the given closure with the contents of underlying storage.
+    ///
+    /// - note: Calling `withUnsafeBytes` multiple times does not guarantee that
+    ///         the same span will be passed in every time.
+    @_alwaysEmitIntoClient
+    public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        do {
+            return try withUnsafeBytes {
+                try body($0.bytes)
+            }
+        } catch let error {
+#if !hasFeature(Embedded)
+            // Note: withUnsafeBytes is rethrowing, so we have an "any Error" here that needs casting.
+            throw error as! E
+#else
+            throw error
+#endif
+        }
+    }
 }
 
 //===--- Collection Conformances ------------------------------------------===//
