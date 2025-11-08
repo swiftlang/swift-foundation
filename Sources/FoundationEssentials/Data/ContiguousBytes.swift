@@ -270,6 +270,19 @@ extension MutableRawSpan: ContiguousBytes {
     }
 }
 
+@available(FoundationPreview 6.3, *)
+extension OutputRawSpan: ContiguousBytes {
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
+        try bytes.withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        try body(bytes)
+    }
+}
+
 @available(FoundationInlineArray 6.3, *)
 extension UTF8Span: ContiguousBytes {
     @_alwaysEmitIntoClient
@@ -296,6 +309,19 @@ extension MutableSpan: ContiguousBytes where Element == UInt8 {
     @_alwaysEmitIntoClient
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         try body(bytes)
+    }
+}
+
+@available(FoundationPreview 6.3, *)
+extension OutputSpan: ContiguousBytes where Element == UInt8 {
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
+        try span.withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        try body(span.bytes)
     }
 }
 
