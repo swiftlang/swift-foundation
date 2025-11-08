@@ -22,7 +22,7 @@ Updating `ContiguousBytes` involves three related changes:
 
 * The `ContiguousBytes` protocol becomes `~Copyable` and `~Escapable`, so non-copyable and non-escapable types can conform to it.
 * The `ContiguousBytes` protocol gains a new `withBytes` function that provides a safe counterpart to the existing `withUnsafeBytes`.
-* The `Span`, `MutableSpan`, `RawSpan`, `MutableRawSpan`, `UTF8Span`, and `InlineArray` types are made to conform to `ContiguousBytes`.
+* The `Span`, `MutableSpan`, `RawSpan`, `MutableRawSpan`, `UTF8Span`, `OutputSpan`, `OutputRawSpan`, and `InlineArray` types are made to conform to `ContiguousBytes`.
 
 ## Detailed design
 
@@ -64,24 +64,28 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
 
 ### New conformances to `ContiguousBytes`
 
-The `RawSpan` , `MutableRawSpan`, and `UTF8Span` types will all conform to `ContiguousBytes`:
+The `RawSpan` , `MutableRawSpan`, `OutputRawSpan`, and `UTF8Span` types will all conform to `ContiguousBytes`:
 
 ```swift
 extension RawSpan: ContiguousBytes { }
 
 extension MutableRawSpan: ContiguousBytes { }
 
+extension OutputRawSpan: ContiguousBytes { }
+
 extension UTF8Span: ContiguousBytes {
   public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R { ... }
 }
 ```
 
-The `Span`, `MutableSpan`, and `InlineArray` types will conditionally conform to `ContiguousBytes` when the element type is `UInt8`, just like `Array` and `Unsafe(Mutable)BufferPointer` already do:
+The `Span`, `MutableSpan`, `OutputSpan`, and `InlineArray` types will conditionally conform to `ContiguousBytes` when the element type is `UInt8`, just like `Array` and `Unsafe(Mutable)BufferPointer` already do:
 
 ```swift
 extension Span: ContiguousBytes where Element == UInt8 { }
 
 extension MutableSpan: ContiguousBytes where Element == UInt8 { }
+
+extension OutputSpan: ContiguousBytes where Element == UInt8 { }
 
 extension InlineArray: ContiguousBytes where Element == UInt8 {
     public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R { ... }
@@ -164,3 +168,9 @@ The `withBytes` requirement of `ContiguousBytes` could be generalized slightly t
 ```
 
 However, doing so on the protocol itself would break source compatibility, because one cannot correctly implement `withBytes` for a non-copyable result type `R` in terms of the existing `withUnsafeBytes`. Therefore, we settle for only supporting non-copyable result types in the concrete `withBytes` implementations.
+
+### Use an `Element: BitwiseCopyable` requirement instead of `Element == UInt8`
+
+The various generic types conditionally conform to `ContiguousBytes` when they store `UInt8` (byte) elements. Conceptually, it would be more general to allow the element to be any `BitwiseCopyable` type (as defined be [SE-0426](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0426-bitwise-copyable.md)). However, SE-0426 defines limitations on the use of `BitwiseCopyable` that prohibit it from being used for the conditional conformance.
+
+It would be possible to generalize the `withBytes` operations on `Span` et al to work on `BitwiseCopyable`element types, but doing so does not seem worth it: the `withBytes` functions aren't particularly useful when you already have a concrete type in the `Span` family, because they already provide `bytes` properties.
