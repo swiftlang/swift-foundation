@@ -56,9 +56,9 @@ private func openFileDescriptorProtected(path: UnsafePointer<CChar>, flags: Int3
 }
 #endif
 
-private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBufferPointer, reportProgress: Bool) throws -> Int {
+private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, reportProgress: Bool) throws -> Int {
     // Fetch this once
-    let length = buffer.count
+    let length = buffer.byteCount
     
     let preferredChunkSize: Int
     let localProgress: Progress?
@@ -72,24 +72,22 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
         localProgress = nil
     }
 
-    var nextRange = buffer.startIndex..<buffer.startIndex.advanced(by: length)
-    var numBytesRemaining = length
-    while numBytesRemaining > 0 {
+    var remaining = buffer
+    while !remaining.isEmpty {
         if let localProgress, localProgress.isCancelled {
             throw CocoaError(.userCancelled)
         }
         
         // Don't ever attempt to write more than (2GB - 1 byte). Some platforms will return an error over that amount.
         let numBytesRequested = CInt(clamping: min(preferredChunkSize, Int(CInt.max)))
-        let smallestAmountToRead = min(Int(numBytesRequested), numBytesRemaining)
-        let upperBound = nextRange.startIndex + smallestAmountToRead
-        nextRange = nextRange.startIndex..<upperBound
+        let smallestAmountToRead = min(Int(numBytesRequested), remaining.byteCount)
+        let chunk = remaining.extracting(first: smallestAmountToRead)
         var numBytesWritten: CInt
         repeat {
             if let localProgress, localProgress.isCancelled {
                 throw CocoaError(.userCancelled)
             }
-            numBytesWritten = buffer[nextRange].withUnsafeBytes { buf in
+            numBytesWritten = chunk.withUnsafeBytes { buf in
 #if os(Windows)
                 _write(fd, buf.baseAddress, CUnsignedInt(buf.count))
 #else
@@ -107,25 +105,19 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
                 // Return the number of bytes written so far (which is compatible with the way write() would work with just one call)
                 break
             } else {
-                numBytesRemaining -= Int(numBytesWritten)
-                if numBytesRemaining < 0 {
-                    // Just in case, do not allow a negative number of bytes remaining
-                    numBytesRemaining = 0
-                }
+                remaining = remaining.extracting(droppingFirst: Int(numBytesWritten))
                 if let localProgress {
-                    localProgress.completedUnitCount = Int64(length - numBytesRemaining)
+                    localProgress.completedUnitCount = Int64(length - remaining.byteCount)
                 }
                 // Anytime we write less than actually requested, stop, since the length is considered the "max" for socket calls
-                if numBytesWritten < numBytesRequested {
+                if numBytesWritten < chunk.byteCount {
                     break
                 }
-                
-                nextRange = nextRange.startIndex.advanced(by: Int(numBytesWritten))..<buffer.endIndex
             }
         } while numBytesWritten < 0 && errno == EINTR
     }
     
-    let bytesWritten = length - numBytesRemaining
+    let bytesWritten = length - remaining.byteCount
     return bytesWritten
 }
 
@@ -290,8 +282,8 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
 #endif // os(WASI)
 }
 
-private func write(buffer: UnsafeRawBufferPointer, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
-    let count = buffer.count
+private func write(buffer: RawSpan, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
+    let count = buffer.byteCount
     parentProgress?.becomeCurrent(withPendingUnitCount: Int64(count))
     defer {
         parentProgress?.resignCurrent()
@@ -340,28 +332,22 @@ extension NSData {
     @objc(_writeDataToPath:data:options:reportProgress:error:)
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, reportProgress: Bool) throws {
         try autoreleasepool {
-            let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
-            try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [:], reportProgress: reportProgress)
+            let span = RawSpan(_unsafeStart: data.bytes, byteCount: data.count)
+            try writeToFile(path: .path(path), buffer: span, options: options, attributes: [:], reportProgress: reportProgress)
         }
     }
     
     @objc(_writeDataToPath:data:options:stringEncodingAttributeData:reportProgress:error:)
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, stringEncodingAttributeData: Data, reportProgress: Bool) throws {
         try autoreleasepool {
-            let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
-            try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
+            let span = RawSpan(_unsafeStart: data.bytes, byteCount: data.count)
+            try writeToFile(path: .path(path), buffer: span, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
         }
     }
 }
 #endif
 
-internal func writeToFile(path inPath: PathOrURL, data: Data, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
-    try data.withUnsafeBytes { buffer in
-        try writeToFile(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
-    }
-}
-
-internal func writeToFile(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
+internal func writeToFile(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
 #if os(WASI) // `.atomic` is unavailable on WASI
     try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
 #else
@@ -377,7 +363,7 @@ internal func writeToFile(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer
 #if os(WASI)
 @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
 #endif
-private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
 #if os(WASI)
     // `.atomic` is unavailable on WASI
     throw CocoaError(.featureUnsupported)
@@ -398,7 +384,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
 
     defer { if fd >= 0 { _close(fd) } }
 
-    let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+    let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
 
     do {
         try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
@@ -517,7 +503,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         
         defer { close(fd) }
         
-        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
         
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
@@ -629,7 +615,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
 }
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
-private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileNoAux(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
 #if !os(WASI) // `.atomic` is unavailable on WASI
     assert(!options.contains(.atomic))
 #endif
@@ -646,7 +632,7 @@ private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoi
         }
         defer { _close(fd) }
 
-        let callback: Progress? = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+        let callback: Progress? = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
 
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
@@ -681,7 +667,7 @@ private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoi
         
         defer { close(fd) }
         
-        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
         
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
@@ -776,7 +762,7 @@ extension Data {
         }
         
 #if !NO_FILESYSTEM
-        try writeToFile(path: .url(url), data: self, options: options, reportProgress: true)
+        try writeToFile(path: .url(url), buffer: self.bytes, options: options, reportProgress: true)
 #else
         throw CocoaError(.featureUnsupported)
 #endif
