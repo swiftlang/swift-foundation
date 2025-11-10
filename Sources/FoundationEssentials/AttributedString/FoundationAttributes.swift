@@ -470,7 +470,7 @@ extension AttributeScopes.FoundationAttributes {
             guard text.count == 1 else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
                     codingPath: container.codingPath,
-                    debugDescription: "List item delimeter encoded value must contain only one character / grapheme cluster"
+                    debugDescription: "List item delimiter encoded value must contain only one character / grapheme cluster"
                 ))
             }
             return text[text.startIndex]
