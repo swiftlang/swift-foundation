@@ -28,6 +28,10 @@ import WinSDK
 internal import os
 #endif
 
+#if FOUNDATION_FRAMEWORK
+internal import _ForSwiftFoundation
+#endif
+
 /// `_SwiftURL` provides the new Swift implementation for `URL`, using the same parser
 /// and `URLParseInfo` as `URLComponents`, but with a few compatibility behaviors.
 ///
@@ -56,14 +60,17 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     }
     internal let _resourceInfo = ResourceInfo()
 
-    // Only used if foundation_swift_nsurl_enabled() is false.
     // Note: We use a lock instead of a lazy var to ensure that we always
     // bridge to the same NSURL even if the URL was copied across threads.
     private let _nsurlLock = LockedState<NSURL?>(initialState: nil)
     private var _nsurl: NSURL {
         return _nsurlLock.withLock {
             if let nsurl = $0 { return nsurl }
-            let nsurl = Self._makeNSURL(from: _parseInfo, baseURL: _baseURL)
+            let nsurl = if _foundation_swift_nsurl_feature_enabled() {
+                _swiftCFURL() as NSURL
+            } else {
+                Self._makeNSURL(from: _parseInfo, baseURL: _baseURL)
+            }
             $0 = nsurl
             return nsurl
         }
@@ -1004,9 +1011,6 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
 #if FOUNDATION_FRAMEWORK
 
     func bridgeToNSURL() -> NSURL {
-        if foundation_swift_nsurl_enabled() {
-            return _NSSwiftURL(url: self)
-        }
         return _nsurl
     }
 
@@ -1272,6 +1276,135 @@ extension _SwiftURL {
 
         return ranges.withUnsafeBufferPointer {
             _CFURLCreateWithRangesAndFlags(string as CFString, $0.baseAddress!, UInt8($0.count), flags.rawValue, baseURL)
+        }
+    }
+
+    // Used when _foundation_swift_nsurl_enabled() is true
+    private func _swiftCFURL() -> CFURL {
+        let string = _parseInfo.urlString
+        if _isCanonicalFileURL {
+            var flags = __CFURLFlags(type: .file)
+            flags.insert([
+                .hasScheme, .hasHost, .hasOldPath, .isDecomposable, .isFileURL
+            ])
+            if hasDirectoryPath {
+                flags.insert(.hasDirectoryPath)
+            }
+            if string.utf8.contains(UInt8(ascii: "%")) {
+                flags.insert(.hasEncodedPath)
+            }
+            return _CFURLCreateWithCanonicalFileURLString(string as CFString, flags.rawValue)
+        }
+
+        if string.utf8.count <= __CFSmallURLImpl.maxStringLength {
+            var flags = __CFURLFlags(type: .small)
+            var impl = __CFSmallURLImpl()
+            fillCFURLImpl(&impl, flags: &flags)
+            impl._header._flags = flags
+            impl._header._string = Unmanaged.passRetained(string as CFString)
+            if let base = _baseURL as CFURL? {
+                impl._header._base = Unmanaged.passRetained(base)
+            }
+            return withUnsafePointer(to: impl) { smallImpl in
+                return _CFURLCreateWithSmallImpl(smallImpl)
+            }
+        } else {
+            var flags = __CFURLFlags(type: .big)
+            var impl = __CFBigURLImpl()
+            fillCFURLImpl(&impl, flags: &flags)
+            impl._header._flags = flags
+            impl._header._string = Unmanaged.passRetained(string as CFString)
+            if let base = _baseURL as CFURL? {
+                impl._header._base = Unmanaged.passRetained(base)
+            }
+            return withUnsafePointer(to: impl) { bigImpl in
+                return _CFURLCreateWithBigImpl(bigImpl)
+            }
+        }
+    }
+
+    @_specialize(where Impl == __CFSmallURLImpl)
+    private func fillCFURLImpl<Impl: _URLParseable>(_ impl: inout Impl, flags: inout __CFURLFlags) {
+        let parseInfo = _parseInfo
+        let string = _parseInfo.urlString
+
+        // CFURL considers a URL decomposable if it does not have a scheme
+        // or if there is a slash directly following the scheme.
+        if parseInfo.scheme == nil || parseInfo.hasAuthority || parseInfo.path.utf8.first == ._slash {
+            flags.insert(.isDecomposable)
+        }
+
+        // The URL string is guaranteed ASCII, so UTF8 ranges are valid.
+        @inline(__always)
+        func range(for rg: Range<String.Index>) -> Range<Int> {
+            let startIndex = string.utf8.distance(from: string.startIndex, to: rg.lowerBound)
+            let endIndex = string.utf8.distance(from: string.startIndex, to: rg.upperBound)
+            return startIndex..<endIndex
+        }
+
+        if let schemeRange = parseInfo.schemeRange {
+            flags.insert(.hasScheme)
+            impl.schemeRange = range(for: schemeRange)
+        }
+
+        if let userRange = parseInfo.userRange {
+            flags.insert(.hasUser)
+            impl.userRange = range(for: userRange)
+        }
+
+        if let passwordRange = parseInfo.passwordRange {
+            flags.insert(.hasPassword)
+            impl.passwordRange = range(for: passwordRange)
+        }
+
+        if parseInfo.portRange != nil {
+            flags.insert(.hasPort)
+        }
+
+        // CFURL considers an empty host nil unless there's another authority component
+        if let hostRange = parseInfo.hostRange {
+            if !hostRange.isEmpty || !flags.isDisjoint(with: [.hasUser, .hasPassword, .hasPort]) {
+                flags.insert(.hasOldNetLocation)
+            }
+            flags.insert(.hasHost)
+            impl.hostRange = range(for: hostRange)
+        }
+
+        if let portRange = parseInfo.portRange {
+            impl.portRange = range(for: portRange)
+        }
+
+        if flags.contains(.isDecomposable) && (!parseInfo.path.isEmpty || parseInfo.netLocationRange?.isEmpty == false) {
+            flags.insert(.hasOldPath)
+        }
+        if let pathRange = parseInfo.pathRange {
+            impl.pathRange = range(for: pathRange)
+        }
+        if parseInfo.path.utf8.contains(UInt8(ascii: "%")) {
+            flags.insert(.hasEncodedPath)
+        }
+
+        if let queryRange = parseInfo.queryRange {
+            flags.insert(.hasQuery)
+            impl.queryRange = range(for: queryRange)
+        }
+
+        if let fragmentRange = parseInfo.fragmentRange {
+            flags.insert(.hasFragment)
+            impl.fragmentRange = range(for: fragmentRange)
+        }
+
+        if parseInfo.isIPLiteral {
+            flags.insert(.isIPLiteral)
+        }
+        if hasDirectoryPath {
+            flags.insert(.hasDirectoryPath)
+        }
+        if isFileURL {
+            flags.insert(.isFileURL)
+            if parseInfo.pathHasFileID && _baseURL == nil {
+                flags.insert(.isFileReferenceURL)
+            }
         }
     }
 }

@@ -14,8 +14,7 @@
 /// In `FOUNDATION_FRAMEWORK`, the inner class types of `struct URL` conform to this protocol.
 /// Outside `FOUNDATION_FRAMEWORK`, only `_SwiftURL` is used, so the protocol is not needed.
 /// - `class _SwiftURL` is the new Swift implementation for a true Swift `URL`.
-/// - `class _BridgedURL` wraps the old `NSURL` implementation, which is used for custom `NSURL` subclasses that are bridged to Swift.
-/// - `class _BridgedNSSwiftURL` wraps a `_NSSwiftURL` (Swift subclass/implementation for `NSURL`) to maintain pointers when bridging.
+/// - `class _BridgedURL` wraps an `NSURL` implementation bridged to Swift, including custom subclasses.
 /// - Note: Except for `baseURL`, a nil `URL?` return value means that `struct URL` will return `self`.
 internal protocol _URLProtocol: AnyObject, Sendable {
     init?(string: String)

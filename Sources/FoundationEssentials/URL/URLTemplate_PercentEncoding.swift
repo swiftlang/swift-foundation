@@ -198,25 +198,3 @@ extension URL.Template.Expression.Operator.AllowedCharacters {
         }
     }
 }
-
-private func hexToAscii(_ hex: UInt8) -> UInt8 {
-    switch hex {
-    case 0x0: UInt8(ascii: "0")
-    case 0x1: UInt8(ascii: "1")
-    case 0x2: UInt8(ascii: "2")
-    case 0x3: UInt8(ascii: "3")
-    case 0x4: UInt8(ascii: "4")
-    case 0x5: UInt8(ascii: "5")
-    case 0x6: UInt8(ascii: "6")
-    case 0x7: UInt8(ascii: "7")
-    case 0x8: UInt8(ascii: "8")
-    case 0x9: UInt8(ascii: "9")
-    case 0xA: UInt8(ascii: "A")
-    case 0xB: UInt8(ascii: "B")
-    case 0xC: UInt8(ascii: "C")
-    case 0xD: UInt8(ascii: "D")
-    case 0xE: UInt8(ascii: "E")
-    case 0xF: UInt8(ascii: "F")
-    default: fatalError("Invalid hex digit: \(hex)")
-    }
-}
