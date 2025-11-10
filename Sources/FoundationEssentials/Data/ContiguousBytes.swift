@@ -13,7 +13,22 @@
 //===--- ContiguousBytes --------------------------------------------------===//
 
 /// Indicates that the conforming type is a contiguous collection of raw bytes
-/// whose underlying storage is directly accessible by withBytes.
+/// whose underlying storage is directly accessible by calling withBytes.
+///
+/// This protocol predates the introduction of the `RawSpan` type in the
+/// standard library. Types that conform to this protocol will generally provide
+/// a property (often called `bytes`) that produces a `RawSpan`, which is easier
+/// to use than the closure-based APIs in this protocol. Therefore, new code
+/// should generally be written to use `RawSpan` rather than `ContiguousBytes`.
+///
+/// Existing functions that use `ContiguousBytes` to accept raw bytes can be
+/// generalized to also support directly passing a `RawSpan` or `Span<UInt8>` by
+/// suppressing the implicit `Copyable` and `Escapable` requirements:
+///
+///     func encrypt<Bytes: ContiguousBytes>(_ bytes: Bytes) -> [UInt8]
+///             where Bytes: ~Copyable, Bytes: ~Escapable {
+///         return bytes.withBytes { rawSpan in ... }
+///     }
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public protocol ContiguousBytes: ~Escapable, ~Copyable {
 #if !hasFeature(Embedded)
@@ -23,6 +38,10 @@ public protocol ContiguousBytes: ~Escapable, ~Copyable {
     ///         the same buffer pointer will be passed in every time.
     /// - warning: The buffer argument to the body should not be stored or used
     ///            outside of the lifetime of the call to the closure.
+    ///
+    /// Clients should prefer the `withBytes` function to this one, because
+    /// `withBytes` uses the non-escapable type `RawSpan` to ensure that the
+    /// buffer argument is not stored outside of the closure.
     func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
 #else
     /// Calls the given closure with the contents of underlying storage.
@@ -31,6 +50,10 @@ public protocol ContiguousBytes: ~Escapable, ~Copyable {
     ///         the same buffer pointer will be passed in every time.
     /// - warning: The buffer argument to the body should not be stored or used
     ///            outside of the lifetime of the call to the closure.
+    ///
+    /// Clients should prefer the `withBytes` function to this one, because
+    /// `withBytes` uses the non-escapable type `RawSpan` to ensure that the
+    /// buffer argument is not stored outside of the closure.
     func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R
 #endif
 
