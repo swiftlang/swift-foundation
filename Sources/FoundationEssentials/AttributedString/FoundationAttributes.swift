@@ -902,7 +902,7 @@ extension AttributedString {
     /// The writing direction of a piece of text.
     ///
     /// Writing direction defines the base direction in which bidirectional text
-    /// lays out its directional runs. A directional run is a contigous sequence
+    /// lays out its directional runs. A directional run is a contiguous sequence
     /// of characters that all have the same effective directionality, which can
     /// be determined using the Unicode BiDi algorithm. The ``leftToRight``
     /// writing direction puts the directional run that is placed first in the
