@@ -1,6 +1,8 @@
 name: Create PR to merge release branch into the main branch
 # At the end of a release cycle and the start of a new one, we may want to automatically forward all changes to the current branch (main) to the branch for the next release (future).
 # This workflow can be disabled earlier in the release cycle in the GitHub UI as described in https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow
+permissions:
+  contents: read
 on:
   schedule:
     - cron: '0 9 * * *'

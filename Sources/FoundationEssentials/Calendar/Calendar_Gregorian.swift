@@ -1448,30 +1448,39 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
-        let time = date.timeIntervalSinceReferenceDate
+        let approximateTime = date._time.head
         var effectiveUnit = component
         switch effectiveUnit {
         case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
-            if time < -63113904000.0 {
+            if approximateTime < -63113904000.0 {
                 return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti), duration: inf_ti)
             } else {
                 return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0), duration: inf_ti)
             }
 
         case .hour:
-            let ti = Double(timeZone.secondsFromGMT(for: date))
-            var fixedTime = time + ti // compute local time
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
-            fixedTime = fixedTime - ti // compute GMT
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: fixedTime), duration: 3600.0)
+            // Local hours may not be aligned to GMT hours, so we have to apply
+            // the time zone adjustment before rounding down, then unapply it.
+            let offset = Double(timeZone.secondsFromGMT(for: date))
+            let start = ((date._time + offset)/3600).floor() * 3600 - offset
+            return DateInterval(
+                start: Date(start),
+                duration: 3600
+            )
         case .minute:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0), duration: 60.0)
+            return DateInterval(
+                start: Date((date._time/60).floor() * 60),
+                duration: 60
+            )
         case .second:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time)), duration: 1.0)
+            return DateInterval(start: Date(date._time.floor()), duration: 1)
         case .nanosecond:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9), duration: 1.0e-9)
+            return DateInterval(
+                start: Date((date._time*1e9).floor() / 1e9),
+                duration: 1e-9
+            )
         case .year, .yearForWeekOfYear, .quarter, .month, .day, .dayOfYear, .weekOfMonth, .weekOfYear:
             // Continue to below
             break

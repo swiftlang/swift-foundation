@@ -1439,6 +1439,50 @@ private final class DataTests {
             #expect(data.count == 0)
         }
     }
+    
+    @Test func validateMutation_cow_mutableBytes() {
+        var data = Data(count: 32)
+        holdReference(data) {
+            var bytes = data.mutableBytes
+            bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
+            
+            #expect(data[0] == 1)
+            #expect(heldData?[0] == 0)
+        }
+        
+        var data2 = Data(count: 32)
+        // Escape the pointer to compare after a mutation without dereferencing the pointer
+        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        
+        var bytes = data2.mutableBytes
+        bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
+        #expect(data2[0] == 1)
+        data2.withUnsafeBytes {
+            #expect($0.baseAddress == originalPointer)
+        }
+    }
+    
+    @Test func validateMutation_cow_mutableSpan() {
+        var data = Data(count: 32)
+        holdReference(data) {
+            var bytes = data.mutableSpan
+            bytes[0] = 1
+            
+            #expect(data[0] == 1)
+            #expect(heldData?[0] == 0)
+        }
+        
+        var data2 = Data(count: 32)
+        // Escape the pointer to compare after a mutation without dereferencing the pointer
+        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        
+        var bytes = data2.mutableSpan
+        bytes[0] = 1
+        #expect(data2[0] == 1)
+        data2.withUnsafeBytes {
+            #expect($0.baseAddress == originalPointer)
+        }
+    }
 
     @Test func sliceHash() {
         let base1 = Data([0, 0xFF, 0xFF, 0])
@@ -2505,17 +2549,16 @@ extension DataTests {
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
 @Suite("Large Data Tests", .serialized)
 struct LargeDataTests {
-    @Test
-    func largeSliceDataSpan() throws {
 #if _pointerBitWidth(_64)
-        let count = Int(Int32.max)
+    let largeCount = Int(Int32.max)
 #elseif _pointerBitWidth(_32)
-        let count = Int(Int16.max)
+    let largeCount = Int(Int16.max)
 #else
 #error("This test needs updating")
 #endif
-        
-        let source = Data(repeating: 0, count: count).dropFirst()
+    @Test
+    func largeSliceDataSpan() throws {
+        let source = Data(repeating: 0, count: largeCount).dropFirst()
         #expect(source.startIndex != 0)
         let span = source.span
         let isEmpty = span.isEmpty
@@ -2524,20 +2567,11 @@ struct LargeDataTests {
     
     @Test
     func largeSliceDataMutableSpan() throws {
-#if _pointerBitWidth(_64)
-        var count = Int(Int32.max)
-#elseif _pointerBitWidth(_32)
-        var count = Int(Int16.max)
-#else
-#error("This test needs updating")
-#endif
-        
 #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
-        var source = Data(repeating: 0, count: count).dropFirst()
+        var source = Data(repeating: 0, count: largeCount).dropFirst()
         #expect(source.startIndex != 0)
-        count = source.count
         var span = source.mutableSpan
-        #expect(span.count == count)
+        #expect(span.count == largeCount - 1)
         let i = try #require(span.indices.dropFirst().randomElement())
         span[i] = .max
         #expect(source[i] == 0)
@@ -2547,23 +2581,62 @@ struct LargeDataTests {
     
     @Test
     func largeSliceDataMutableRawSpan() throws {
-#if _pointerBitWidth(_64)
-        var count = Int(Int32.max)
-#elseif _pointerBitWidth(_32)
-        var count = Int(Int16.max)
-#else
-#error("This test needs updating")
-#endif
-        
-        var source = Data(repeating: 0, count: count).dropFirst()
+        var source = Data(repeating: 0, count: largeCount).dropFirst()
         #expect(source.startIndex != 0)
-        count = source.count
         var span = source.mutableBytes
         let byteCount = span.byteCount
-        #expect(byteCount == count)
+        #expect(byteCount == largeCount - 1)
         let i = try #require(span.byteOffsets.dropFirst().randomElement())
         span.storeBytes(of: -1, toByteOffset: i, as: Int8.self)
         #expect(source[i] == 0)
         #expect(source[i+1] == .max)
+    }
+    
+    @Test func validateMutation_cow_largeMutableBytes() {
+        // Avoid copying a large data on platforms with constrained memory limits
+        #if !canImport(Darwin) || os(macOS)
+        var data = Data(count: largeCount)
+        let heldData = data
+        var bytes = data.mutableBytes
+        bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
+        
+        #expect(data[0] == 1)
+        #expect(heldData[0] == 0)
+        #endif
+        
+        var data2 = Data(count: largeCount)
+        // Escape the pointer to compare after a mutation without dereferencing the pointer
+        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        
+        var bytes2 = data2.mutableBytes
+        bytes2.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
+        #expect(data2[0] == 1)
+        data2.withUnsafeBytes {
+            #expect($0.baseAddress == originalPointer)
+        }
+    }
+    
+    @Test func validateMutation_cow_largeMutableSpan() {
+        // Avoid copying a large data on platforms with constrained memory limits
+        #if !canImport(Darwin) || os(macOS)
+        var data = Data(count: largeCount)
+        let heldData = data
+        var bytes = data.mutableSpan
+        bytes[0] = 1
+        
+        #expect(data[0] == 1)
+        #expect(heldData[0] == 0)
+        #endif
+        
+        var data2 = Data(count: largeCount)
+        // Escape the pointer to compare after a mutation without dereferencing the pointer
+        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        
+        var bytes2 = data2.mutableSpan
+        bytes2[0] = 1
+        #expect(data2[0] == 1)
+        data2.withUnsafeBytes {
+            #expect($0.baseAddress == originalPointer)
+        }
     }
 }
