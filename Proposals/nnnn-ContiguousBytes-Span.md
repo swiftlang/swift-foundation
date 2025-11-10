@@ -149,10 +149,6 @@ This means that the `encrypt` function will not be usable with non-copyable type
 
 Ideally, Swift code bases using `ContiguousBytes` would move from using `withUnsafeBytes` to using the safer `withBytes` introduced by this proposal. This can be helped somewhat by the opt-in strict memory safety mode introduced in [SE-0458](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0458-strict-memory-safety.md), which will identify uses of unsafe buffer pointers and require them to be marked `unsafe`.
 
-## Future directions
-
-In the future, we could consider deprecating `withUnsafeBytes` in favor of `withBytes`: aside from source compatibility, there is no reason to use `withUnsafeBytes` instead of `withBytes`, and the latter is safer.
-
 ## Alternatives considered
 
 ### Replace `withBytes` with a property
@@ -163,7 +159,14 @@ An alternative to the new `withBytes` requirement of `ContiguousBytes` is to pro
 var bytes: RawSpan { get }
 ```
 
-in the protocol. However, not all types that currently conform to the `ContiguousBytes` protocol can provide a `bytes` property that satisfies this. For example, a type that needs to materialize data into a buffer to pass to the closure provided to `with(Unsafe)Bytes` would not be able to implement this property, which depends on having the lifetime of the resulting `RawSpan` tied to that of its enclosing type. [SE-0456](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0456-stdlib-span-properties.md) describes some of the changes required in the implementations of `String.UTF8View` and `Array` that were needed to provide `span` properties and which might not be possible for other types. Therefore, while adding this property would provide more ergonomic access to the contiguous bytes of a type, doing so necessarily breaks source compatibility.
+in the protocol. This has various benefits over the `withBytes` API proposed here, including:
+
+* One does not need to nest all code that accesses these bytes within a closure, eliminating a level of indentation and extra ceremony around the calls.
+* The property will work within `async` functions, whereas `withBytes` does not have an `async` counterpart.
+* Captures of non-copyable types within closures aren't currently available, so they cannot be used well when calling `withBytes`.
+* The `withBytes` function is a generic protocol requirement, which limits the use of the protocol in Embedded Swift, which cannot call into generic protocol requirements from existentials.
+
+However, not all types that currently conform to the `ContiguousBytes` protocol can provide a `bytes` property that satisfies this requirement. For example, a type that needs to materialize data into a buffer to pass to the closure provided to `with(Unsafe)Bytes` would not be able to implement this property, which depends on having the lifetime of the resulting `RawSpan` tied to that of its enclosing type. [SE-0456](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0456-stdlib-span-properties.md) describes some of the changes required in the implementations of `String.UTF8View` and `Array` that were needed to provide `span` properties and which might not be possible for other types. Therefore, while adding this property would provide more ergonomic access to the contiguous bytes of a type, doing so necessarily breaks source compatibility. This property can only be introduced as part of a new protocol.
 
 ### Allow the result of `withBytes` to be non-copyable
 
@@ -184,3 +187,44 @@ However, doing so on the protocol itself would break source compatibility, becau
 The various generic types conditionally conform to `ContiguousBytes` when they store `UInt8` (byte) elements. Conceptually, it would be more general to allow the element to be any `BitwiseCopyable` type (as defined be [SE-0426](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0426-bitwise-copyable.md)). However, SE-0426 defines limitations on the use of `BitwiseCopyable` that prohibit it from being used for the conditional conformance.
 
 It would be possible to generalize the `withBytes` operations on `Span` et al to work on `BitwiseCopyable`element types, but doing so does not seem worth it: the `withBytes` functions aren't particularly useful when you already have a concrete type in the `Span` family, because they already provide `bytes` properties.
+
+## Future directions
+
+### Deprecating `withUnsafeBytes`
+
+In the future, we could consider deprecating `withUnsafeBytes` in favor of `withBytes`: aside from source and backward compatibility, there is no reason to use `withUnsafeBytes` instead of `withBytes`, and the latter is safer.
+
+### Sinking `ContiguousBytes` into the standard library
+
+The notion of a type that stores contiguous bytes is fairly general, and most of the types that conform to this protocol are in the standard library itself. With the introduction of `Span` et al into the standard library, there is more of an emphasis on safe access to contiguous regions of memory. It is possible to move the `ContiguousBytes` protocol into the standard library while maintaining source and binary compatibility.
+
+However, even with the changes in this proposal, `ContiguousBytes` does not provide an ideal abstraction for types that can provide access to their contiguous storage. As noted in the "Alternatives considered" section, a better interface would involve a `bytes` property, but that cannot be added to `ContiguousBytes` in a source-compatible manner:
+
+```swift
+var bytes: RawSpan { get }
+```
+
+Given that `ContiguousBytes` is not and cannot become the ideal abstraction for contiguous storage in the standard library, the standard library would likely gain another protocol. One design for such a protocol would be as a refinement of `ContiguousBytes` (if both were in the standard library), e.g.,
+
+```swift
+protocol RawBytes: ContiguousBytes {
+  @_lifetime(self)
+  var bytes: RawSpan { get }
+}
+```
+
+with default implementations that satisfy the `ContiguousBytes` requirements based on `bytes`:
+
+```swift
+extension ContiguousBytes where Self: RawBytes {
+    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+      try bytes.withUnsafeBytes { try body($0) } }
+    }
+
+    public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+      try body(bytes)
+    }
+}
+```
+
+New APIs would be expressed in terms of `RawBytes`, while existing APIs could still use `ContiguousBytes` for compatibility reasons. This may provide a smoother evolution path than adding `RawBytes` or similar to the standard library independently of `ContiguousBytes`, but at the cost of adding an effectively deprecated protocol (`ContiguousBytes`) to the standard library itself.
