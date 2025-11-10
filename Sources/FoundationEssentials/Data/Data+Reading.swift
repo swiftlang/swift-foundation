@@ -193,7 +193,7 @@ struct ReadBytesResult {
 }
 
 #if os(Windows)
-@lifetime(pBuffer: copy pBuffer)
+@_lifetime(pBuffer: copy pBuffer)
 private func read(from hFile: HANDLE, at path: PathOrURL,
                   into pBuffer: inout OutputRawSpan,
                   chunkSize dwChunk: Int = 4096, progress bProgress: Bool)
