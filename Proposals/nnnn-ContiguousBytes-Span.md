@@ -125,7 +125,7 @@ func encrypt<Bytes: ContiguousBytes>(_ bytes: Bytes) -> [UInt8]
 }
 ```
 
-Now this API supports callers using `Span` et al directly, while still working for all existing calls. To make this change while retaining the same ABI, one can use the `@abi` attribute introduced in [SE-0476](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0476-abi-attr.md), e.g.,:
+Now this API supports callers using `Span` et al directly, while still working for all existing calls. To make this change while retaining the same ABI, one can use the `@abi` attribute introduced in [SE-0476](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0476-abi-attr.md). For example:
 
 ```swift
 @abi(func encrypt<Bytes: ContiguousBytes>(_ bytes: Bytes) -> [UInt8])
@@ -135,7 +135,17 @@ func encrypt<Bytes: ContiguousBytes>(_ bytes: Bytes) -> [UInt8]
 }
 ```
 
-Note that the `@abi` attribute should only be used in this manner when the implementation of the function avoids making copies or escaping the values of type `Bytes`.
+Note that the `@abi` attribute should only be used in this manner when the implementation of the function avoids making copies or escaping the values of type `Bytes`. The escaping requirement was always a semantic requirement for the buffer passed into the closure, but copies could have been implicitly generated in existing versions of the `encrypt` function. Correctly verifying that there are no copies in an existing function would require inspecting the compiler's output for any already-shipped implementation of the `encrypt` function, and any that do produce copies would cause crashes at runtime when provided with a non-copyable type. Therefore, it is safer for ABI-stable APIs like this to generalize only to permit non-escapable types but retain the implicit `Copyable` requirement:
+
+```swift
+@abi(func encrypt<Bytes: ContiguousBytes>(_ bytes: Bytes) -> [UInt8])
+func encrypt<Bytes: ContiguousBytes>(_ bytes: Bytes) -> [UInt8]
+    where Bytes: ~Escapable {
+ ...
+}
+```
+
+This means that the `encrypt` function will not be usable with non-copyable types like `MutableSpan`, rather than potentially crashing with such types.
 
 Ideally, Swift code bases using `ContiguousBytes` would move from using `withUnsafeBytes` to using the safer `withBytes` introduced by this proposal. This can be helped somewhat by the opt-in strict memory safety mode introduced in [SE-0458](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0458-strict-memory-safety.md), which will identify uses of unsafe buffer pointers and require them to be marked `unsafe`.
 
@@ -153,7 +163,7 @@ An alternative to the new `withBytes` requirement of `ContiguousBytes` is to pro
 var bytes: RawSpan { get }
 ```
 
-in the protocol. However, not all types that currently conform to the `ContiguousBytes` protocol can provide a `bytes` property that satisfies this. For example, a type that needs to materialize data into a buffer to pass to the closure provided to `with(Unsafe)Bytes` would not be able to implement this property, which depends on having the lifetime of the resulting `RawSpan` tied to that of its enclosing type. [SE-0456](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0456-stdlib-span-properties.md) describes some of the changes required in the implementations of `String.UTF8View` and `Array` that were needed to provide `span` properties and which might not be possible for other types. Therefore, while adding this property would provide more ergonomic access to the contiguous bytes of a type, doing so necessary breaks source compatibility.
+in the protocol. However, not all types that currently conform to the `ContiguousBytes` protocol can provide a `bytes` property that satisfies this. For example, a type that needs to materialize data into a buffer to pass to the closure provided to `with(Unsafe)Bytes` would not be able to implement this property, which depends on having the lifetime of the resulting `RawSpan` tied to that of its enclosing type. [SE-0456](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0456-stdlib-span-properties.md) describes some of the changes required in the implementations of `String.UTF8View` and `Array` that were needed to provide `span` properties and which might not be possible for other types. Therefore, while adding this property would provide more ergonomic access to the contiguous bytes of a type, doing so necessarily breaks source compatibility.
 
 ### Allow the result of `withBytes` to be non-copyable
 
