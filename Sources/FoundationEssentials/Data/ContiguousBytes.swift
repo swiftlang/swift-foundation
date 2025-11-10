@@ -70,15 +70,36 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Array : ContiguousBytes where Element == UInt8 { }
+extension Array : ContiguousBytes where Element == UInt8 {
+    // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
+    @_alwaysEmitIntoClient
+    public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        try withUnsafeBufferPointer { (buffer) throws(E) in
+            try body(buffer.span.bytes)
+        }
+    }
+}
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension ArraySlice : ContiguousBytes where Element == UInt8 { }
+extension ArraySlice : ContiguousBytes where Element == UInt8 {
+    // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
+    @_alwaysEmitIntoClient
+    public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        try withUnsafeBufferPointer { (buffer) throws(E) in
+            try body(buffer.span.bytes)
+        }
+    }
+}
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension ContiguousArray : ContiguousBytes where Element == UInt8 { }
+extension ContiguousArray : ContiguousBytes where Element == UInt8 {
+    @_alwaysEmitIntoClient
+    public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        return try body(span.bytes)
+    }
+}
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data : ContiguousBytes { }
