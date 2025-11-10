@@ -159,7 +159,6 @@ extension Data {
         @inlinable // This is @inlinable as reasonably small.
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
             ensureUniqueReference()
-            let upperbound = storage.length + storage._offset
             storage.replaceBytes(
                 in: (
                     location: range.upperBound,
