@@ -456,7 +456,8 @@ extension StringProtocol {
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
 #endif
 
-        try writeToFile(path: .path(String(path)), buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
+        let bytes = data.bytes
+        try writeToFile(path: .path(String(path)), buffer: bytes, options: options, attributes: attributes, reportProgress: false)
     }
 
     /// Writes the contents of the `String` to the URL specified by url using the specified encoding.
