@@ -28,6 +28,7 @@ add_library(FoundationEssentials
     Logging.swift
     OutputBuffer.swift
     Platform.swift
+    Progress+Stub.swift
     SortComparator.swift
     UUID_Wrappers.swift
     UUID.swift
@@ -46,6 +47,7 @@ add_subdirectory(Locale)
 add_subdirectory(NotificationCenter)
 add_subdirectory(Predicate)
 add_subdirectory(ProcessInfo)
+add_subdirectory(ProgressManager)
 add_subdirectory(PropertyList)
 add_subdirectory(String)
 add_subdirectory(TimeZone)
