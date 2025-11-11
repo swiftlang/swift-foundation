@@ -138,7 +138,7 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
     }
 
     @Test func apiStatements2() {
-        // Test dates and numbers appearing in unexpeted places
+        // Test dates and numbers appearing in unexpected places
         let statement = """
 CREDIT   Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11
 DSLIP    Apr 06/20    GMT gain                     USD 3,020.85
