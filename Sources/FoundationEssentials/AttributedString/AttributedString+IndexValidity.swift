@@ -56,7 +56,7 @@ extension AttributedString.Index {
     
     /// Indicates whether the index is valid for use with the provided discontiguous attributed string.
     /// - Parameter text: A discontiguous attributed string used to validate the index.
-    /// - Returns: `true` when the index is valid for use with the provided discontiguous attributed string; otherwise, false. An index is valid if it is both within the bounds of the discontigous attributed string and was produced from the provided string without any intermediate mutations.
+    /// - Returns: `true` when the index is valid for use with the provided discontiguous attributed string; otherwise, false. An index is valid if it is both within the bounds of the discontiguous attributed string and was produced from the provided string without any intermediate mutations.
     public func isValid(within text: DiscontiguousAttributedSubstring) -> Bool {
         self._version == text._guts.version &&
         text._indices.contains(self._value)
@@ -100,7 +100,7 @@ extension RangeSet<AttributedString.Index> {
     }
     
     /// Indicates whether the range set is valid for use with the provided discontiguous attributed string.
-    /// - Parameter text: A discontigious attributed string used to validate the range set.
+    /// - Parameter text: A discontiguous attributed string used to validate the range set.
     /// - Returns: `true` when the range set is valid for use with the provided discontiguous attributed string; otherwise, false. A range set is valid if each of its ranges are valid in the discontiguous attributed string.
     public func isValid(within text: DiscontiguousAttributedSubstring) -> Bool {
         self.ranges.allSatisfy {
