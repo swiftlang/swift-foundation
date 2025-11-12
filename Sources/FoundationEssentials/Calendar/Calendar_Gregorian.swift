@@ -989,13 +989,13 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
             case .weekOfYear, .weekOfMonth: /* kCFCalendarUnitWeek_Deprecated */
                 guard var start = start(of: .era, at: date) else { return nil }
-                var (startMatchinWeekday, daysAdded) = try dateAfterDateWithTargetDoW(start, firstWeekday)
+                var (startMatchingWeekday, daysAdded) = try dateAfterDateWithTargetDoW(start, firstWeekday)
 
                 start += Double(daysAdded) * 86400.0
 
                 if minimumDaysInFirstWeek <= daysAdded {
                     // previous week chunk was big enough, count it
-                    startMatchinWeekday -= 7 * 86400.0
+                    startMatchingWeekday -= 7 * 86400.0
                     start -=  7 * 86400.0
                 }
                 var week = Int(floor(
