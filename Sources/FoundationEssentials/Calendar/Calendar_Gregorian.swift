@@ -2395,7 +2395,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 let newOffset = timeZone.secondsFromGMT(for: newDateInWholeSecond)
                 let prevOffset = timeZone.secondsFromGMT(for: date)
 
-                // No need for normal gmt-offset adjustment because the revelant bits are handled above individually
+                // No need for normal gmt-offset adjustment because the relevant bits are handled above individually
                 // We do have to adjust DST offset when the new date crosses DST boundary, such as adding an hour to dst transitioning day
                 if newOffset != prevOffset {
                     newDateInWholeSecond = newDateInWholeSecond + Double(prevOffset - newOffset)
