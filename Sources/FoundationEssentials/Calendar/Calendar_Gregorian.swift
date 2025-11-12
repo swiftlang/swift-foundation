@@ -2272,7 +2272,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         switch field {
         case .era:
-            // We've been ignorning era historically. Do the same for compatibility reason.
+            // We've been ignoring era historically. Do the same for compatibility reason.
             return date
 
         case .yearForWeekOfYear:
