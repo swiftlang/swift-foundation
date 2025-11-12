@@ -846,15 +846,15 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal {
             let targetDay = dateComponent(.day, from: updatedDate)
             var currentDay = targetDay
-            var udate = updatedDate
+            var update = updatedDate
             var prev: Date
             repeat {
-                prev = udate
-                udate = try self.add(.second, to: prev, amount: -1, inTimeZone: timeZone)
-                guard udate < prev else {
-                    throw GregorianCalendarError.notAdvancing(udate, prev)
+                prev = update
+                update = try self.add(.second, to: prev, amount: -1, inTimeZone: timeZone)
+                guard update < prev else {
+                    throw GregorianCalendarError.notAdvancing(update, prev)
                 }
-                currentDay = dateComponent(.day, from: udate)
+                currentDay = dateComponent(.day, from: update)
             } while targetDay == currentDay
 
             start = prev
