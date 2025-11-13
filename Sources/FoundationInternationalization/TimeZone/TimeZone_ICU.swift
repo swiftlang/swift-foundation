@@ -108,7 +108,8 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
 
         var status = U_ZERO_ERROR
-        let timeZone : UnsafeMutablePointer<UTimeZone?>? = Array(identifier.utf16).withUnsafeBufferPointer {
+        // Use the already canonicalized `name` instead of `identifier` to initiate ICU time zone
+        let timeZone : UnsafeMutablePointer<UTimeZone?>? = Array(name.utf16).withUnsafeBufferPointer {
             let uatimezone = uatimezone_open($0.baseAddress, Int32($0.count), &status)
             guard status.isSuccess else {
                 return nil

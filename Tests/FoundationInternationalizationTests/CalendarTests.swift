@@ -1436,6 +1436,18 @@ private struct CalendarTests {
         try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
     }
 
+    @Test func testDateComponentsTimeZone() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+
+        var components = DateComponents(year:2021, month: 6, day: 10, hour: 23, minute: 59, second: 59)
+        let tz = try #require(TimeZone(identifier: "UTC+9"))
+        components.timeZone = tz
+
+        let date = try #require(calendar.date(from: components))
+        #expect(date.timeIntervalSinceReferenceDate == 645029999)
+    }
+
 #if _pointerBitWidth(_64) // These tests assumes Int is Int64
     @Test func dateFromComponentsOverflow() {
         let calendar = Calendar(identifier: .gregorian)
