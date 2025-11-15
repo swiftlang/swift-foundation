@@ -2,7 +2,7 @@
 ##
 ## This source file is part of the Swift open source project
 ##
-## Copyright (c) 2024-2025 Apple Inc. and the Swift project authors
+## Copyright (c) 2024 Apple Inc. and the Swift project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -13,23 +13,13 @@
 ##===----------------------------------------------------------------------===##
 
 target_sources(FoundationEssentials PRIVATE
-    Representations/Data+Inline.swift
-    Representations/Data+InlineSlice.swift
-    Representations/Data+LargeSlice.swift
-    Representations/Data+Representation.swift
-    Representations/DataStorage.swift
-    
     Collections+DataProtocol.swift
     ContiguousBytes.swift
-    Data.swift
     Data+Base64.swift
-    Data+Bridging.swift
-    Data+Deprecated.swift
     Data+Error.swift
-    Data+Iterator.swift
     Data+Reading.swift
-    Data+Searching.swift
+    Data+Stub.swift
     Data+Writing.swift
+    Data.swift
     DataProtocol.swift
-    PathOrURL.swift
     Pointers+DataProtocol.swift)

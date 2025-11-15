@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2023-2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2023-2024 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -24,56 +24,6 @@ import WinSDK
 #elseif os(WASI)
 import WASILibc
 #endif
-
-#if !FOUNDATION_FRAMEWORK
-extension Data {
-    
-    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Base64EncodingOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-        
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-        /// Set the maximum line length to 64 characters, after which a line ending is inserted.
-        public static let lineLength64Characters = Base64EncodingOptions(rawValue: 1 << 0)
-        /// Set the maximum line length to 76 characters, after which a line ending is inserted.
-        public static let lineLength76Characters = Base64EncodingOptions(rawValue: 1 << 1)
-        /// When a maximum line length is set, specify that the line ending to insert should include a carriage return.
-        public static let endLineWithCarriageReturn = Base64EncodingOptions(rawValue: 1 << 4)
-        /// When a maximum line length is set, specify that the line ending to insert should include a line feed.
-        public static let endLineWithLineFeed       = Base64EncodingOptions(rawValue: 1 << 5)
-    }
-    
-    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Base64DecodingOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-        
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-        /// Modify the decoding algorithm so that it ignores unknown non-Base-64 bytes, including line ending characters.
-        public static let ignoreUnknownCharacters = Base64DecodingOptions(rawValue: 1 << 0)
-    }
-}
-#else
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data {
-    // These types are typealiased to the `NSData` options for framework builds only.
-    public typealias Base64EncodingOptions = NSData.Base64EncodingOptions
-    public typealias Base64DecodingOptions = NSData.Base64DecodingOptions
-}
-#endif //!FOUNDATION_FRAMEWORK
-
-extension Data.Base64EncodingOptions {
-    /// Use the base64url alphabet to encode the data
-    @available(FoundationPreview 6.3, *)
-    public static let base64URLAlphabet = Self(rawValue: 1 << 6)
-    
-    /// Omit the `=` padding characters in the end of the base64 encoded result
-    @available(FoundationPreview 6.3, *)
-    public static let omitPaddingCharacter = Self(rawValue: 1 << 7)
-}
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
