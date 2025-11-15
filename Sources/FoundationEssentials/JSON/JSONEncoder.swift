@@ -1216,7 +1216,7 @@ private extension __JSONEncoder {
             return .number(decimal.description)
         } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
             return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
-        } else if let array = _asDirectArrayEncodable(value, for: additionalKey) {
+        } else if let array = _asDirectArrayEncodable(value) {
             if options.outputFormatting.contains(.prettyPrinted) {
                 let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
                 return .directArray(bytes, lengths: lengths)
@@ -1246,36 +1246,36 @@ private extension __JSONEncoder {
         return encoder.takeValue()
     }
 
-    func _asDirectArrayEncodable<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) -> _JSONDirectArrayEncodable? {
-        return if let array = _specializingCast(array, to: [Int8].self) {
+    func _asDirectArrayEncodable<T: Encodable>(_ value: T) -> _JSONDirectArrayEncodable? {
+        return if let array = _specializingCast(value, to: [Int8].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int16].self) {
+        } else if let array = _specializingCast(value, to: [Int16].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int32].self) {
+        } else if let array = _specializingCast(value, to: [Int32].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int64].self) {
+        } else if let array = _specializingCast(value, to: [Int64].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int128].self) {
+        } else if let array = _specializingCast(value, to: [Int128].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int].self) {
+        } else if let array = _specializingCast(value, to: [Int].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt8].self) {
+        } else if let array = _specializingCast(value, to: [UInt8].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt16].self) {
+        } else if let array = _specializingCast(value, to: [UInt16].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt32].self) {
+        } else if let array = _specializingCast(value, to: [UInt32].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt64].self) {
+        } else if let array = _specializingCast(value, to: [UInt64].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt128].self) {
+        } else if let array = _specializingCast(value, to: [UInt128].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt].self) {
+        } else if let array = _specializingCast(value, to: [UInt].self) {
             array
-        } else if let array = _specializingCast(array, to: [String].self) {
+        } else if let array = _specializingCast(value, to: [String].self) {
             array
-        } else if let array = _specializingCast(array, to: [Float].self) {
+        } else if let array = _specializingCast(value, to: [Float].self) {
             array
-        } else if let array = _specializingCast(array, to: [Double].self) {
+        } else if let array = _specializingCast(value, to: [Double].self) {
             array
         } else {
             nil
