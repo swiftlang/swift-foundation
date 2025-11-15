@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -56,9 +56,9 @@ private func openFileDescriptorProtected(path: UnsafePointer<CChar>, flags: Int3
 }
 #endif
 
-private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, reportProgress: Bool) throws -> Int {
+private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBufferPointer, reportProgress: Bool) throws -> Int {
     // Fetch this once
-    let length = buffer.byteCount
+    let length = buffer.count
     
     let preferredChunkSize: Int
     let localProgress: Progress?
@@ -72,22 +72,24 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, rep
         localProgress = nil
     }
 
-    var remaining = buffer
-    while !remaining.isEmpty {
+    var nextRange = buffer.startIndex..<buffer.startIndex.advanced(by: length)
+    var numBytesRemaining = length
+    while numBytesRemaining > 0 {
         if let localProgress, localProgress.isCancelled {
             throw CocoaError(.userCancelled)
         }
         
         // Don't ever attempt to write more than (2GB - 1 byte). Some platforms will return an error over that amount.
         let numBytesRequested = CInt(clamping: min(preferredChunkSize, Int(CInt.max)))
-        let smallestAmountToRead = min(Int(numBytesRequested), remaining.byteCount)
-        let chunk = remaining.extracting(first: smallestAmountToRead)
+        let smallestAmountToRead = min(Int(numBytesRequested), numBytesRemaining)
+        let upperBound = nextRange.startIndex + smallestAmountToRead
+        nextRange = nextRange.startIndex..<upperBound
         var numBytesWritten: CInt
         repeat {
             if let localProgress, localProgress.isCancelled {
                 throw CocoaError(.userCancelled)
             }
-            numBytesWritten = chunk.withUnsafeBytes { buf in
+            numBytesWritten = buffer[nextRange].withUnsafeBytes { buf in
 #if os(Windows)
                 _write(fd, buf.baseAddress, CUnsignedInt(buf.count))
 #else
@@ -105,19 +107,25 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, rep
                 // Return the number of bytes written so far (which is compatible with the way write() would work with just one call)
                 break
             } else {
-                remaining = remaining.extracting(droppingFirst: Int(numBytesWritten))
+                numBytesRemaining -= Int(numBytesWritten)
+                if numBytesRemaining < 0 {
+                    // Just in case, do not allow a negative number of bytes remaining
+                    numBytesRemaining = 0
+                }
                 if let localProgress {
-                    localProgress.completedUnitCount = Int64(length - remaining.byteCount)
+                    localProgress.completedUnitCount = Int64(length - numBytesRemaining)
                 }
                 // Anytime we write less than actually requested, stop, since the length is considered the "max" for socket calls
-                if numBytesWritten < chunk.byteCount {
+                if numBytesWritten < numBytesRequested {
                     break
                 }
+                
+                nextRange = nextRange.startIndex.advanced(by: Int(numBytesWritten))..<buffer.endIndex
             }
         } while numBytesWritten < 0 && errno == EINTR
     }
     
-    let bytesWritten = length - remaining.byteCount
+    let bytesWritten = length - numBytesRemaining
     return bytesWritten
 }
 
@@ -282,8 +290,8 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
 #endif // os(WASI)
 }
 
-private func write(buffer: RawSpan, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
-    let count = buffer.byteCount
+private func write(buffer: UnsafeRawBufferPointer, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
+    let count = buffer.count
     parentProgress?.becomeCurrent(withPendingUnitCount: Int64(count))
     defer {
         parentProgress?.resignCurrent()
@@ -332,22 +340,28 @@ extension NSData {
     @objc(_writeDataToPath:data:options:reportProgress:error:)
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, reportProgress: Bool) throws {
         try autoreleasepool {
-            let span = RawSpan(_unsafeStart: data.bytes, byteCount: data.count)
-            try writeToFile(path: .path(path), buffer: span, options: options, attributes: [:], reportProgress: reportProgress)
+            let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
+            try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [:], reportProgress: reportProgress)
         }
     }
     
     @objc(_writeDataToPath:data:options:stringEncodingAttributeData:reportProgress:error:)
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, stringEncodingAttributeData: Data, reportProgress: Bool) throws {
         try autoreleasepool {
-            let span = RawSpan(_unsafeStart: data.bytes, byteCount: data.count)
-            try writeToFile(path: .path(path), buffer: span, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
+            let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
+            try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
         }
     }
 }
 #endif
 
-internal func writeToFile(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
+internal func writeToFile(path inPath: PathOrURL, data: Data, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
+    try data.withUnsafeBytes { buffer in
+        try writeToFile(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
+    }
+}
+
+internal func writeToFile(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
 #if os(WASI) // `.atomic` is unavailable on WASI
     try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
 #else
@@ -363,7 +377,7 @@ internal func writeToFile(path inPath: PathOrURL, buffer: RawSpan, options: Data
 #if os(WASI)
 @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
 #endif
-private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
 #if os(WASI)
     // `.atomic` is unavailable on WASI
     throw CocoaError(.featureUnsupported)
@@ -384,7 +398,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Da
 
     defer { if fd >= 0 { _close(fd) } }
 
-    let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
+    let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
 
     do {
         try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
@@ -503,7 +517,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Da
         
         defer { close(fd) }
         
-        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
+        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
         
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
@@ -615,7 +629,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Da
 }
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
-private func writeToFileNoAux(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
 #if !os(WASI) // `.atomic` is unavailable on WASI
     assert(!options.contains(.atomic))
 #endif
@@ -632,7 +646,7 @@ private func writeToFileNoAux(path inPath: PathOrURL, buffer: RawSpan, options: 
         }
         defer { _close(fd) }
 
-        let callback: Progress? = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
+        let callback: Progress? = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
 
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
@@ -667,7 +681,7 @@ private func writeToFileNoAux(path inPath: PathOrURL, buffer: RawSpan, options: 
         
         defer { close(fd) }
         
-        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
+        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
         
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
@@ -706,65 +720,5 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
         }
     }
 }
-#endif // !NO_FILESYSTEM
 
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data {
-#if FOUNDATION_FRAMEWORK
-    public typealias WritingOptions = NSData.WritingOptions
-#else
-    
-    // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
-    public struct WritingOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-        public init(rawValue: UInt) { self.rawValue = rawValue }
-        
-        /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
-#if os(WASI)
-        @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
-#endif
-        public static let atomic = WritingOptions(rawValue: 1 << 0)
-        
-        /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
-        public static let withoutOverwriting = WritingOptions(rawValue: 1 << 1)
-        
-        /// An option to not encrypt the file when writing it out.
-        public static let noFileProtection = WritingOptions(rawValue: 0x10000000)
-        
-        /// An option to make the file accessible only while the device is unlocked.
-        public static let completeFileProtection = WritingOptions(rawValue: 0x20000000)
-        
-        /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
-        public static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
-        
-        /// An option to allow the file to be accessible after a user first unlocks the device.
-        public static let completeFileProtectionUntilFirstUserAuthentication = WritingOptions(rawValue: 0x40000000)
-        
-        /// An option the system uses when determining the file protection options that the system assigns to the data.
-        public static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
-    }
-#endif
-    
-    /// Write the contents of the `Data` to a location.
-    ///
-    /// - parameter url: The location to write the data into.
-    /// - parameter options: Options for writing the data. Default value is `[]`.
-    /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
-    public func write(to url: URL, options: Data.WritingOptions = []) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
-        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
-            fatalError("withoutOverwriting is not supported with atomic")
-        }
-#endif
-        
-        guard url.isFileURL else {
-            throw CocoaError(.fileWriteUnsupportedScheme)
-        }
-        
-#if !NO_FILESYSTEM
-        try writeToFile(path: .url(url), buffer: self.bytes, options: options, reportProgress: true)
-#else
-        throw CocoaError(.featureUnsupported)
-#endif
-    }
-}
+#endif // !NO_FILESYSTEM

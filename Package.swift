@@ -9,7 +9,7 @@ import CompilerPluginSupport
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
 ]
-let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4"]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3"]
 
 // Availability Macro Utilities
 
@@ -140,8 +140,7 @@ let package = Package(
             "ProcessInfo/CMakeLists.txt",
             "FileManager/CMakeLists.txt",
             "URL/CMakeLists.txt",
-            "NotificationCenter/CMakeLists.txt",
-            "ProgressManager/CMakeLists.txt",
+            "NotificationCenter/CMakeLists.txt"
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux]))
@@ -186,7 +185,7 @@ let package = Package(
                 "Locale/CMakeLists.txt",
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
-                "Predicate/CMakeLists.txt",
+                "Predicate/CMakeLists.txt"
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
