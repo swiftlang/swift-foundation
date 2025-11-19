@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2018 Apple Inc. and the Swift project authors
+// Copyright (c) 2018-2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -38,6 +38,9 @@ extension ArraySlice : ContiguousBytes where Element == UInt8 { }
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension ContiguousArray : ContiguousBytes where Element == UInt8 { }
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data : ContiguousBytes { }
 
 //===--- Pointer Conformances ---------------------------------------------===//
 

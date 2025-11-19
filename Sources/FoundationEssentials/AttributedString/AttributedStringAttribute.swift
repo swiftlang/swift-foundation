@@ -95,7 +95,7 @@ extension AttributedString {
 
 // Developers define new attributes by implementing AttributeKey.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AttributedStringKey {
+public protocol AttributedStringKey : SendableMetatype {
     associatedtype Value : Hashable
     static var name : String { get }
     
