@@ -163,7 +163,7 @@ extension Platform {
         }
     }
     
-    static func gid(forName name: String) -> uid_t? {
+    static func gid(forName name: String) -> gid_t? {
         withUserGroupBuffer(name, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: getgrnam_r) {
             $0.gr_gid
         }
