@@ -2212,7 +2212,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var bytes: RawSpan {
-        @_lifetime(borrow self)
+        @lifetime(borrow self)
         borrowing get {
             let buffer: UnsafeRawBufferPointer
             switch _representation {
@@ -2240,7 +2240,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var span: Span<UInt8> {
-        @_lifetime(borrow self)
+        @lifetime(borrow self)
         borrowing get {
             let span = unsafe bytes._unsafeView(as: UInt8.self)
             return _overrideLifetime(span, borrowing: self)
@@ -2250,7 +2250,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var mutableBytes: MutableRawSpan {
-        @_lifetime(&self)
+        @lifetime(&self)
         mutating get {
             let buffer: UnsafeMutableRawBufferPointer
             switch _representation {
@@ -2286,7 +2286,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var mutableSpan: MutableSpan<UInt8> {
-        @_lifetime(&self)
+        @lifetime(&self)
         mutating get {
 #if false // see https://github.com/swiftlang/swift/issues/81218
             var bytes = mutableBytes
