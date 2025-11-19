@@ -45,7 +45,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
      // This is safe because it's only mutated at deinit time
-    nonisolated(unsafe) private let _timeZone : UnsafePointer<UTimeZone?>
+    nonisolated(unsafe) private let _timeZone : LockedState<UnsafePointer<UTimeZone?>>
 
     // This type is safely sendable because it is guarded by a lock in _TimeZoneICU and we never vend it outside of the lock so it can only ever be accessed from within the lock
     struct State : @unchecked Sendable {
@@ -86,8 +86,10 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             ucal_close(c)
         }
 
-        let mutableT = UnsafeMutablePointer(mutating: _timeZone)
-        uatimezone_close(mutableT)
+        _timeZone.withLock {
+            let mutableT = UnsafeMutablePointer(mutating: $0)
+            uatimezone_close(mutableT)
+        }
     }
 
     required init?(identifier: String) {
@@ -117,8 +119,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         guard let timeZone else {
             return nil
         }
-
-        self._timeZone = UnsafePointer(timeZone)
+        self._timeZone = .init(initialState:timeZone)
         self.name = name
         lock = LockedState(initialState: State())
     }
@@ -133,15 +134,16 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func secondsFromGMT(for date: Date) -> Int {
-        var rawOffset: Int32 = 0
-        var dstOffset: Int32 = 0
-        var status: UErrorCode = U_ZERO_ERROR
-        uatimezone_getOffset(_timeZone, date.udate, 0, &rawOffset, &dstOffset, &status)
-        guard status.checkSuccessAndLogError("error getting uatimezone offset") else {
-            return 0
+       return _timeZone.withLock {
+            var rawOffset: Int32 = 0
+            var dstOffset: Int32 = 0
+            var status: UErrorCode = U_ZERO_ERROR
+            uatimezone_getOffset($0, date.udate, 0, &rawOffset, &dstOffset, &status)
+            guard status.checkSuccessAndLogError("error getting uatimezone offset") else {
+                return 0
+            }
+            return Int((rawOffset + dstOffset) / 1000)
         }
-
-        return Int((rawOffset + dstOffset) / 1000)
     }
 
     func abbreviation(for date: Date) -> String? {
@@ -157,33 +159,38 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
-        var rawOffset_unused: Int32 = 0
-        var dstOffset: Int32 = 0
-        var status = U_ZERO_ERROR
-        uatimezone_getOffset(_timeZone, date.udate, 0, &rawOffset_unused, &dstOffset, &status)
-        if status.isSuccess {
+        _timeZone.withLock {
+            var rawOffset_unused: Int32 = 0
+            var dstOffset: Int32 = 0
+            var status = U_ZERO_ERROR
+            uatimezone_getOffset($0, date.udate, 0, &rawOffset_unused, &dstOffset, &status)
+            guard status.isSuccess else {
+                return 0.0
+            }
             return TimeInterval(Double(dstOffset) / 1000.0)
-        } else {
-            return 0.0
         }
     }
 
     func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
-         var status = U_ZERO_ERROR
-         var answer = UDate(0.0)
-         let success = uatimezone_getTimeZoneTransitionDate(_timeZone, date.udate, UCAL_TZ_TRANSITION_NEXT, &answer, &status)
+        let limit = Date.validCalendarRange.upperBound
+        let answer: UDate? = _timeZone.withLock {
+            var status = U_ZERO_ERROR
+            var answer = UDate(0.0)
+            let success = uatimezone_getTimeZoneTransitionDate($0, date.udate, UCAL_TZ_TRANSITION_NEXT, &answer, &status)
+            guard (success != 0) && status.isSuccess && answer < limit.udate else {
+                return nil
+            }
+            return answer
+        }
 
-         let limit = Date.validCalendarRange.upperBound
-         guard (success != 0) && status.isSuccess && answer < limit.udate else {
-             return nil
-         }
-         return Date(udate: answer)
-     }
+        guard let answer else {
+            return nil
+        }
+
+        return Date(udate: answer)
+    }
 
     func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
-        var rawOffset: Int32 = 0
-        var dstOffset: Int32 = 0
-        var status = U_ZERO_ERROR
         let icuDuplicatedTime: UTimeZoneLocalOption
         switch repeatedTimePolicy {
         case .former:
@@ -200,7 +207,18 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             icuSkippedTime = UCAL_TZ_LOCAL_LATTER
         }
 
-        uatimezone_getOffsetFromLocal(_timeZone, icuSkippedTime, icuDuplicatedTime, date.udate, &rawOffset, &dstOffset, &status)
+        let (rawOffset, dstOffset): (Int32, Int32) = _timeZone.withLock {
+            var rawOffset: Int32 = 0
+            var dstOffset: Int32 = 0
+            var status = U_ZERO_ERROR
+            uatimezone_getOffsetFromLocal($0, icuSkippedTime, icuDuplicatedTime, date.udate, &rawOffset, &dstOffset, &status)
+
+            guard status.isSuccess else {
+                return (0, 0)
+            }
+            return (rawOffset, dstOffset)
+        }
+
         return (Int(rawOffset / 1000), TimeInterval(dstOffset / 1000))
     }
 
