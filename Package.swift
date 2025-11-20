@@ -148,7 +148,7 @@ let package = Package(
           ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
-            .enableExperimentalFeature("Lifetimes"),
+            .enableExperimentalFeature("LifetimeDependence"),
             .enableExperimentalFeature("AddressableTypes"),
             .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
