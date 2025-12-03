@@ -136,6 +136,23 @@ func calendarBenchmarks() {
         }
     }
 
+    let testDates = {
+        let date = Date(timeIntervalSince1970: 0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 3600), since: date))
+        }
+        return dates
+    }()
+
+    Benchmark("NextDatesMatchingOnHour") { _ in
+        for d in testDates {
+            let t = currentCalendar.nextDate(after: d, matching: DateComponents(minute: 0, second: 0), matchingPolicy: .nextTime)
+            blackHole(t)
+        }
+    }
+
     // MARK: - Allocations
     let reference = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
     
