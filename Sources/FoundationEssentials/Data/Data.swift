@@ -345,9 +345,16 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    public func withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
-        return try _representation.withUnsafeBytes(body)
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<E, ResultType: ~Copyable>(_ body: (UnsafeRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
+        try _representation.withUnsafeBytes(body)
+    }
+
+    @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) rethrows -> R)
+    @_spi(FoundationLegacyABI)
+    @usableFromInline
+    internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
+        try withUnsafeBytes(body)
     }
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)

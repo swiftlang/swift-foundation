@@ -213,8 +213,8 @@ extension Data {
             }
         }
         
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        func withUnsafeBytes<Result>(_ apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
+        @_alwaysEmitIntoClient
+        func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             switch self {
             case .empty:
                 let empty = InlineData()
@@ -227,7 +227,14 @@ extension Data {
                 return try slice.withUnsafeBytes(apply)
             }
         }
-        
+
+        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) rethrows -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
+            try withUnsafeBytes(body)
+        }
+
         @inlinable // This is @inlinable as a generic, trivially forwarding function.
         mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
             switch self {
