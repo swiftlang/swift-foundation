@@ -342,10 +342,12 @@ internal final class __DataStorage : @unchecked Sendable {
         self.replaceBytes(in: (range_.lowerBound, range_.upperBound &- range_.lowerBound), with: replacementBytes, length: replacementLength)
     }
     
-    // This ABI entrypoint was original written using NSRange instead of Range<Int>. The ABI contract of this function must continue to accept NSRange values from code inlined into callers
-    // To avoid using the real NSRange type at the source level, we use a tuple that is layout-compatible with NSRange instead and use @_silgen_name to preserve the original symbol name that includes "NSRange"
+    // This utility function was originally written in terms of NSRange instead of Range<Int>. On Darwin platforms, it is also an ABI entry point so we need to continue accepting NSRange values from code that has been inlined into callers.
+    // To avoid requiring the use of NSRange in source, we instead use a tuple that is layout-compatible with NSRange. On Darwin platforms, we can use `@_silgen_name to preserve the original symbol name that refers to NSRange.
     @usableFromInline
+    #if FOUNDATION_FRAMEWORK
     @_silgen_name("$s10Foundation13__DataStorageC12replaceBytes2in4with6lengthySo8_NSRangeV_SVSgSitF")
+    #endif
     internal func replaceBytes(in range_: (location: Int, length: Int), with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
         let range = (location: range_.location - _offset, length: range_.length)
         let currentLength = _length
