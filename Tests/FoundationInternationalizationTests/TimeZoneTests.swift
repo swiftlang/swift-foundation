@@ -133,6 +133,9 @@ private struct TimeZoneTests {
         try testAbbreviation("GMT+8:00", 28800, "GMT+0800")
         try testAbbreviation("GMT+0800", 28800, "GMT+0800")
         try testAbbreviation("UTC", 0, "GMT")
+        try testAbbreviation("UTC+9", 32400, "GMT+0900")
+        try testAbbreviation("UTC+9:00", 32400, "GMT+0900")
+        try testAbbreviation("UTC+0900", 32400, "GMT+0900")
     }
 
     @Test func secondsFromGMT_RemoteDates() {
@@ -296,6 +299,40 @@ private struct TimeZoneICUTests {
         try test(.init(year: 2023, month: 11, day: 5, hour: 3, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 0)
     }
 
+    @Test func names_rawAndDaylightSavingTimeOffset() throws {
+        var gmt_calendar = Calendar(identifier: .gregorian)
+        gmt_calendar.timeZone = .gmt
+
+        func test(_ identifier: String, _ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            let tz = try #require(_TimeZoneICU(identifier: identifier))
+            let d = try #require(gmt_calendar.date(from: dateComponent)) // date in GMT
+            let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: d)
+            #expect(rawOffset == expectedRawOffset, sourceLocation: sourceLocation)
+            #expect(dstOffset == expectedDSTOffset, sourceLocation: sourceLocation)
+        }
+
+        // PST
+        // Not in DST
+        try test("PST", .init(year: 2023, month: 3, day: 12, hour: 1, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        // These times do not exist; we treat it as if in the previous time zone, i.e. not in DST
+        try test("PST", .init(year: 2023, month: 3, day: 12, hour: 2, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        // After DST starts
+        try test("PST", .init(year: 2023, month: 3, day: 12, hour: 3, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 3600)
+        // These times happen twice; we treat it as if in the previous time zone, i.e. still in DST
+        try test("PST", .init(year: 2023, month: 11, day: 5, hour: 1, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 3600)
+        // Clock should turn right back as this moment, so if we insist on being at this point, then we've moved past the transition point -- hence not DST
+        try test("PST", .init(year: 2023, month: 11, day: 5, hour: 2, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        // Not in DST
+        try test("PST", .init(year: 2023, month: 11, day: 5, hour: 2, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 0)
+
+        // JST: not in DST
+        let dc = DateComponents(year: 2023, month: 3, day: 12, hour: 1, minute: 00, second: 00)
+        try test("JST", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
+        try test("UTC+9", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
+        try test("UTC+0900", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
+        try test("UTC+9:00", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
+        try test("GMT+9", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
+    }
 }
 // MARK: - FoundationPreview disabled tests
 
