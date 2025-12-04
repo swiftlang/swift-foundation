@@ -1767,7 +1767,7 @@ private final class DataTests {
         let byteCount = span.byteCount
         #expect(byteCount == count)
         let v = UInt8.random(in: 10..<100)
-        var sub = span.extracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i+1)
         sub.storeBytes(of: v, as: UInt8.self)
         #expect(source[i] == v)
     }
