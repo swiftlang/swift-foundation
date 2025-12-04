@@ -109,12 +109,18 @@ internal final class __DataStorage : @unchecked Sendable {
         try withUnsafeBytes(in: range, apply: apply)
     }
 
-    @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
-    @discardableResult
-    func withUnsafeMutableBytes<Result>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
-        return try apply(UnsafeMutableRawBufferPointer(start: _bytes!.advanced(by:range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+    @_alwaysEmitIntoClient
+    func withUnsafeMutableBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+        try apply(UnsafeMutableRawBufferPointer(start: _bytes!.advanced(by:range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
     }
     
+  @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R)
+    @_spi(FoundationLegacyABI)
+    @usableFromInline
+    internal func _legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
+        try withUnsafeMutableBytes(in: range, apply: apply)
+    }
+
     @inlinable // This is @inlinable as trivially computable.
     var mutableBytes: UnsafeMutableRawPointer? {
         return _bytes?.advanced(by: _offset &* -1) // _offset is guaranteed to be non-negative, so it can never overflow when negating

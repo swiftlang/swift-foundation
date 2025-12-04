@@ -140,14 +140,20 @@ extension Data {
             try withUnsafeBytes(body)
         }
 
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
-            let count = Int(length)
-            return try Swift.withUnsafeMutableBytes(of: &bytes) { (rawBuffer) throws -> Result in
-                return try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
+        @_alwaysEmitIntoClient
+        mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+            try Swift.withUnsafeMutableBytes(of: &bytes) { [count = Int(length)] (rawBuffer) throws(E) -> Result in
+                try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
             }
         }
-        
+
+        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
+            try withUnsafeMutableBytes(body)
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         mutating func append(byte: UInt8) {
             let count = self.count
