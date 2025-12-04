@@ -350,12 +350,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try _representation.withUnsafeBytes(body)
     }
 
+#if FOUNDATION_FRAMEWORK
     @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) rethrows -> R)
     @_spi(FoundationLegacyABI)
     @usableFromInline
     internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
         try withUnsafeBytes(body)
     }
+#endif // FOUNDATION_FRAMEWORK
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
@@ -485,12 +487,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try _representation.withUnsafeMutableBytes(body)
     }
 
+#if FOUNDATION_FRAMEWORK
     @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R)
     @_spi(FoundationLegacyABI)
     @usableFromInline
     internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
         try withUnsafeMutableBytes(body)
     }
+#endif // FOUNDATION_FRAMEWORK
 
     // MARK: -
 

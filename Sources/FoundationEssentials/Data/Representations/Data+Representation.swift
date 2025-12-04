@@ -228,12 +228,14 @@ extension Data {
             }
         }
 
+#if FOUNDATION_FRAMEWORK
         @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) rethrows -> R)
         @_spi(FoundationLegacyABI)
         @usableFromInline
         internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
             try withUnsafeBytes(body)
         }
+#endif // FOUNDATION_FRAMEWORK
 
         @_alwaysEmitIntoClient
         mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
@@ -255,12 +257,14 @@ extension Data {
             }
         }
 
+#if FOUNDATION_FRAMEWORK
         @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R)
         @_spi(FoundationLegacyABI)
         @usableFromInline
         internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
             try withUnsafeMutableBytes(body)
         }
+#endif // FOUNDATION_FRAMEWORK
 
         @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
         func enumerateBytes(_ block: (_ buffer: UnsafeBufferPointer<UInt8>, _ byteIndex: Index, _ stop: inout Bool) -> Void) {

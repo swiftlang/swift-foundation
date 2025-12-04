@@ -161,13 +161,15 @@ extension Data {
         func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             try storage.withUnsafeBytes(in: range, apply: apply)
         }
-        
+
+#if FOUNDATION_FRAMEWORK
         @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) rethrows -> R)
         @_spi(FoundationLegacyABI)
         @usableFromInline
         internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
             try withUnsafeBytes(body)
         }
+#endif // FOUNDATION_FRAMEWORK
 
         @_alwaysEmitIntoClient
         mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
@@ -175,12 +177,14 @@ extension Data {
             return try storage.withUnsafeMutableBytes(in: range, apply: apply)
         }
 
+#if FOUNDATION_FRAMEWORK
         @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R)
         @_spi(FoundationLegacyABI)
         @usableFromInline
         internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
             try withUnsafeMutableBytes(body)
         }
+#endif // FOUNDATION_FRAMEWORK
 
         @inlinable // This is @inlinable as reasonably small.
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
