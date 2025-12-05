@@ -1484,6 +1484,79 @@ private final class DataTests {
         }
     }
 
+    private struct Value: ~Copyable {
+        var stored: Int
+        init(_ value: Int) { stored = value }
+    }
+
+    private enum LocalError: Error, Equatable { case error }
+
+    @Test func validateGeneralizedParameters_withUnsafeBytes() {
+        var data: Data
+
+        do throws(LocalError) {
+            data = Data(repeating: 2, count: 12)
+            let value = data.withUnsafeBytes {
+                let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+                return Value(sum)
+            }
+            #expect(value.stored == 24)
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            Issue.record("Should be unreachable")
+        } catch {
+            #expect(error == .error)
+        }
+
+        do throws(LocalError) {
+            data = Data(repeating: 1, count: 128)
+            let value = data.withUnsafeBytes {
+                let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+                return Value(sum)
+            }
+            #expect(value.stored == 128)
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            Issue.record("Should be unreachable")
+        } catch {
+            #expect(error == .error)
+        }
+    }
+
+    @Test func validateGeneralizedParameters_withUnsafeMutableBytes() {
+        var data: Data
+
+        do throws(LocalError) {
+            data = Data(count: 12)
+            let value = data.withUnsafeMutableBytes {
+                $0.withMemoryRebound(to: UInt8.self) {
+                    for i in $0.indices { $0[i] = 2 }
+                }
+                let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+                return Value(sum)
+            }
+            #expect(value.stored == 24)
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            Issue.record("Should be unreachable")
+        } catch {
+            #expect(error == .error)
+        }
+
+        do throws(LocalError) {
+            data = Data(count: 128)
+            let value = data.withUnsafeMutableBytes {
+                $0.withMemoryRebound(to: UInt8.self) {
+                    for i in $0.indices { $0[i] = 1 }
+                }
+                let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+                return Value(sum)
+            }
+            #expect(value.stored == 128)
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            Issue.record("Should be unreachable")
+        } catch {
+            #expect(error == .error)
+        }
+    }
+
     @Test func sliceHash() {
         let base1 = Data([0, 0xFF, 0xFF, 0])
         let base2 = Data([0, 0xFF, 0xFF, 0])
