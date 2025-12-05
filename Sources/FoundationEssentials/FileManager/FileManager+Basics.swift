@@ -277,7 +277,7 @@ internal struct _FileManagerImpl {
                                     return false
                                 }
                             }
-                            if readBytes < -1 { return false }
+                            if readBytes == -1 { return false }
                             return true
                         }
                     }
