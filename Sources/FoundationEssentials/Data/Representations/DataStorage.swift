@@ -103,10 +103,10 @@ internal final class __DataStorage : @unchecked Sendable {
     }
 
 #if FOUNDATION_FRAMEWORK
-    @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) rethrows -> R)
+    @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
     @_spi(FoundationLegacyABI)
     @usableFromInline
-    func _legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
+    func _legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
         try withUnsafeBytes(in: range, apply: apply)
     }
 #endif // FOUNDATION_FRAMEWORK
@@ -117,10 +117,10 @@ internal final class __DataStorage : @unchecked Sendable {
     }
 
 #if FOUNDATION_FRAMEWORK
-    @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R)
+    @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
     @_spi(FoundationLegacyABI)
     @usableFromInline
-    internal func _legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
+    internal func _legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeMutableBytes(in: range, apply: apply)
     }
 #endif // FOUNDATION_FRAMEWORK

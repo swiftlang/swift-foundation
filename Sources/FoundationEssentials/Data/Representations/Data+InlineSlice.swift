@@ -163,10 +163,10 @@ extension Data {
         }
 
 #if FOUNDATION_FRAMEWORK
-        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) rethrows -> R)
+        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
         @_spi(FoundationLegacyABI)
         @usableFromInline
-        internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
+        internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
             try withUnsafeBytes(body)
         }
 #endif // FOUNDATION_FRAMEWORK
@@ -178,10 +178,10 @@ extension Data {
         }
 
 #if FOUNDATION_FRAMEWORK
-        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) rethrows -> R)
+        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
         @_spi(FoundationLegacyABI)
         @usableFromInline
-        internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
+        internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
             try withUnsafeMutableBytes(body)
         }
 #endif // FOUNDATION_FRAMEWORK
