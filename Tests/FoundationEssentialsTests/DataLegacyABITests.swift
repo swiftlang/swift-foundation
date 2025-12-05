@@ -14,11 +14,15 @@
 @_spi(FoundationLegacyABI) @testable import Foundation
 import Testing
 
-@Test func validateLegacyABI() {
-    var data = Data()
+@Suite("Foundation Legacy ABI")
+private final class FoundationLegacyABITests {
 
-    data._legacy_withUnsafeBytes { _ in }
-    data._legacy_withUnsafeMutableBytes { _ in }
+    @Test func validateDataLegacyABI() {
+        var data = Data()
+
+        data._legacy_withUnsafeBytes { _ in }
+        data._legacy_withUnsafeMutableBytes { _ in }
+    }
 }
 
 #endif // FOUNDATION_FRAMEWORK
