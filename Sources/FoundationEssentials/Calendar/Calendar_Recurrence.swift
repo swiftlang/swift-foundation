@@ -373,6 +373,11 @@ extension Calendar {
                     // If a range has been specified, we should skip a few extra 
                     // occurrences until we reach the start date
                     if let baseRecurrenceLowerBound, nextDate < baseRecurrenceLowerBound {
+                        resultsFound += 1
+                        if let limit = recurrence.end.occurrences, resultsFound >= limit {
+                            finished = true
+                            return
+                        }
                         continue
                     }
                     anchor = nextDate

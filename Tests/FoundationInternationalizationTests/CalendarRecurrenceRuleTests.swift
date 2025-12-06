@@ -134,4 +134,42 @@ private struct CalendarRecurrenceRuleTests {
         ]
         #expect(results == expectedResults)
     }
+
+    @Test func afterOccurrenceMatchingDays() {
+        let recurrenceRule = Calendar.RecurrenceRule.init(
+            calendar: gregorian,
+            frequency: .daily,
+            end: .afterOccurrences(3)
+        )
+
+        let startDate = Date(timeIntervalSince1970: 1764576000.0) // 2025-12-01T00:00:00-0800
+
+        let rangeStartDate = Date(timeIntervalSince1970: 1765353600.0) // 2025-12-10T00:00:00-0800
+        let rangeEndDate = Date(timeIntervalSince1970: 1766217600.0) // 2025-12-20T00:00:00-0800
+
+        let result = Array(recurrenceRule.recurrences(of: startDate, in: rangeStartDate..<rangeEndDate))
+
+        #expect(result.isEmpty)
+    }
+
+    @Test func afterOccurrencesReturnsInRangeOccurrences() {
+        let recurrenceRule = Calendar.RecurrenceRule.init(
+            calendar: gregorian,
+            frequency: .daily,
+            end: .afterOccurrences(4)
+        )
+
+        let startDate = Date(timeIntervalSince1970: 1765094400.0) // 2025-12-07T00:00:00-0800
+
+        let rangeStartDate = Date(timeIntervalSince1970: 1765267200.0) // 2025-12-09T00:00:00-0800
+        let rangeEndDate = Date(timeIntervalSince1970: 1765440000.0) // 2025-12-11T00:00:00-0800
+
+        let result = Array(recurrenceRule.recurrences(of: startDate, in: rangeStartDate..<rangeEndDate))
+        let expectedResults = [
+            Date(timeIntervalSince1970: 1765267200.0), // 2025-12-09T00:00:00-0800
+            Date(timeIntervalSince1970: 1765353600.0), // 2025-12-10T00:00:00-0800
+        ]
+
+        #expect(result == expectedResults)
+    }
 }
