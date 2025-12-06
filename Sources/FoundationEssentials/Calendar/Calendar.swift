@@ -330,6 +330,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
             // The calendar and timeZone properties do not count as a 'highest unit set', since they are not ordered in time like the others are.
             return nil
         }
+
+        var containsOnlyTimeComponents: Bool {
+            !self.contains(.era) && !self.contains(.year) && !self.contains(.dayOfYear) && !self.contains(.quarter) && !self.contains(.month) && !self.contains(.day) && !self.contains(.weekday) && !self.contains(.weekdayOrdinal) && !self.contains(.weekOfMonth) && !self.contains(.weekOfYear) && !self.contains(.yearForWeekOfYear) && !self.contains(.isLeapMonth) && !self.contains(.isRepeatedDay)
+        }
     }
 
     /// An enumeration for the various components of a calendar date.
