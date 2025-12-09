@@ -1083,7 +1083,7 @@ enum _FileOperations {
         defer { close(dstFD) }
         
         #if canImport(Darwin)
-        if fcopyfile(srcFD, dstFD, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
+        if fcopyfile(srcFD, dstFD, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) < 0 {
             try delegate.throwIfNecessary(errno, String(cString: src), String(cString: dst))
         }
         #else
