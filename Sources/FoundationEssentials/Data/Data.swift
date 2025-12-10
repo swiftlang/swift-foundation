@@ -88,8 +88,6 @@ import func WinSDK.UnmapViewOfFile
 internal func __DataInvokeDeallocatorUnmap(_ mem: UnsafeMutableRawPointer, _ length: Int) {
 #if os(Windows)
     _ = UnmapViewOfFile(mem)
-#elseif canImport(C)
-    free(mem)
 #else
     munmap(mem, length)
 #endif
