@@ -97,8 +97,9 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
         public static var `default`: Self { .all }
 
         fileprivate var smallestUnit: Unit {
-            for idx in (Unit.byte.rawValue...Unit.petabyte.rawValue) {
-                if self.contains(.init(rawValue: UInt(idx))) { return Unit(rawValue: idx)! }
+            for idx in Unit.byte.rawValue...Unit.petabyte.rawValue {
+                let mask = UInt(1 << idx)
+                if self.contains(.init(rawValue: mask)) { return Unit(rawValue: idx)! }
             }
             // 84270854: Fall back to petabyte if the unit is larger than petabyte, which is the largest we currently support
             return .petabyte

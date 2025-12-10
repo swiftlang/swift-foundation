@@ -187,6 +187,16 @@ private struct ByteCountFormatStyleTests {
     }
 
 #if !_pointerBitWidth(_32)
+    @Test func higherUnitsFallbackToPetabyte() {
+        // Units above petabyte are not yet supported by ICU; they should fallback to PB
+        let value: Int64 = 10_000_000_000_000_000 // 10 PB
+        let locale = Locale(identifier: "en_US")
+
+        #expect(value.formatted(.byteCount(style: .file, allowedUnits: .eb).locale(locale)) == "10 PB")
+        #expect(value.formatted(.byteCount(style: .file, allowedUnits: .zb).locale(locale)) == "10 PB")
+        #expect(value.formatted(.byteCount(style: .file, allowedUnits: .ybOrHigher).locale(locale)) == "10 PB")
+    }
+
     @Test func testEveryAllowedUnit() {
         // 84270854: The largest unit supported currently is pb
         let expectations: [ByteCountFormatStyle.Units: String] = [
