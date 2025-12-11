@@ -476,9 +476,11 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @_alwaysEmitIntoClient
-    public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
-        return try _representation.withUnsafeBytes {
-            return try $0.withMemoryRebound(to: UInt8.self, body)
+    public func withContiguousStorageIfAvailable<E, ResultType: ~Copyable>(
+      _ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws(E) -> ResultType
+    ) throws(E) -> ResultType? {
+        try _representation.withUnsafeBytes { bytes throws(E) in
+          try bytes.withMemoryRebound(to: UInt8.self, body)
         }
     }
 
