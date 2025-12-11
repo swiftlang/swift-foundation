@@ -1513,6 +1513,7 @@ extension URL {
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func appending(queryItems: [URLQueryItem]) -> URL {
         guard var c = URLComponents(url: self, resolvingAgainstBaseURL: true) else { return self }
+        guard queryItems.isEmpty == false else { return self }
         var newItems = c.queryItems ?? []
         newItems.append(contentsOf: queryItems)
         c.queryItems = newItems
