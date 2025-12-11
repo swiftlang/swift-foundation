@@ -618,7 +618,7 @@ enum _FileOperations {
                     try destination.withNTPathRepresentation { pwszDestination in
                         var faDestinationAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
                         if GetFileAttributesExW(pwszDestination, GetFileExInfoStandard, &faDestinationAttributes) {
-                            let error = CocoaError.moveFileError(GetLastError(), src, dst)
+                            let error = CocoaError.moveFileError(ERROR_ALREADY_EXISTS, src, dst)
                             guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
                                 throw error
                             }
