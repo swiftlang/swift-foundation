@@ -145,6 +145,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
     endif()
 endif()
 
+option(SwiftFoundation_INSTALL_ARCH_SUBDIR "Install libraries under an architecture subdirectory" NO)
+
 include(GNUInstallDirs)
 include(SwiftFoundationSwiftSupport)
 
