@@ -1046,6 +1046,74 @@ private struct FileManagerTests {
         }
     }
 
+    #if !os(Windows) && !os(WASI) && !os(OpenBSD) && !canImport(Android)
+    @Test func extendedAttributesDoNotFollowSymlinksWhenSetting() async throws {
+        let xattrKey = FileAttributeKey("NSFileExtendedAttributes")
+        #if canImport(Darwin)
+        let attrName = "com.swiftfoundation.symlinktest"
+        let probeName = "com.swiftfoundation.symlinkprobe"
+        #elseif os(Linux)
+        // Linux requires the user.* namespace prefix for regular files
+        let attrName = "user.swiftfoundation.symlinktest"
+        let probeName = "user.swiftfoundation.symlinkprobe"
+        #else
+        let attrName = "swiftfoundation.symlinktest"
+        let probeName = "swiftfoundation.symlinkprobe"
+        #endif
+        let attrValue = Data([0xAA, 0xBB, 0xCC])
+        let probeValue = Data([0x11, 0x22, 0x33])
+
+        try await FilePlayground {
+            File("target", contents: Data("payload".utf8))
+            SymbolicLink("link", destination: "target")
+        }.test { fileManager in
+            // First, prove that this environment supports xattrs on regular files and that we
+            // have permission to set them. If this fails, the symlink behavior isn't meaningful.
+            do {
+                try fileManager.setAttributes([xattrKey: [probeName: probeValue]], ofItemAtPath: "target")
+            } catch let error as CocoaError {
+                if error.code == .featureUnsupported { return }
+                guard let posix = error.underlying as? POSIXError else { throw error }
+                guard posix.code.rawValue == EOPNOTSUPP || posix.code.rawValue == ENOTSUP else { throw error }
+                return
+            }
+
+            // Attempt to set xattrs on the symlink.
+            var setSucceeded = false
+            do {
+                try fileManager.setAttributes(
+                    [xattrKey: [attrName: attrValue]], ofItemAtPath: "link")
+                setSucceeded = true
+            } catch let error as CocoaError {
+                if error.code == .featureUnsupported { return }
+                guard let posix = error.underlying as? POSIXError else { throw error }
+                guard posix.code.rawValue == EOPNOTSUPP || posix.code.rawValue == ENOTSUP || posix.code == .EPERM else { throw error }
+                // Fall through to verify target wasn't modified
+            }
+
+            let targetAttrs = try fileManager.attributesOfItem(atPath: "target")
+            let targetXattrs = targetAttrs[xattrKey] as? [String: Data]
+
+            // The target file must NOT have the xattr - this is the key assertion.
+            // If setAttributes incorrectly followed the symlink, the xattr would be on the target.
+            #expect(
+                targetXattrs?[attrName] == nil,
+                "setAttributes must not follow symlinks when setting extended attributes")
+
+            if setSucceeded {
+                // If setting on symlink succeeded, verify it's actually on the symlink
+                let linkAttrs = try fileManager.attributesOfItem(atPath: "link")
+                let linkXattrs = try #require(
+                    linkAttrs[xattrKey] as? [String: Data],
+                    "Expected extended attributes on symlink after setAttributes call")
+                #expect(
+                    linkXattrs[attrName] == attrValue,
+                    "xattr should be applied to the symlink itself")
+            }
+        }
+    }
+    #endif
+
     #if !canImport(Darwin) || os(macOS)
     @Test func currentUserHomeDirectory() async throws {
         let userName = ProcessInfo.processInfo.userName
