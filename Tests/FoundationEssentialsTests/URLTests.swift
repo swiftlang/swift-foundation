@@ -666,6 +666,12 @@ private struct URLTests {
         )
 
         // Append queryItems
+        let emptyQueryItems = [URLQueryItem]()
+        #expect(
+            base.appending(queryItems: emptyQueryItems).absoluteString ==
+            "https://www.example.com"
+        )
+
         let queryItems = [
             URLQueryItem(name: "id", value: "42"),
             URLQueryItem(name: "color", value: "blue")

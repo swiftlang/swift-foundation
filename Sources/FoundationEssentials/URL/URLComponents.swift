@@ -480,7 +480,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             } else {
                 result += percentEncodedPath
             }
-            if let percentEncodedQuery {
+            if let percentEncodedQuery, !percentEncodedQuery.isEmpty {
                 result += "?\(percentEncodedQuery)"
             }
             if let percentEncodedFragment {
@@ -526,9 +526,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             } else {
                 result += percentEncodedPath
             }
-            if componentsToDecode.contains(.query), let query {
+            if componentsToDecode.contains(.query), let query, !query.isEmpty {
                 result += "?\(query)"
-            } else if let percentEncodedQuery {
+            } else if let percentEncodedQuery, !percentEncodedQuery.isEmpty {
                 result += "?\(percentEncodedQuery)"
             }
             if componentsToDecode.contains(.fragment), let fragment {

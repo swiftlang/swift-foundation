@@ -486,7 +486,7 @@ extension _NSSwiftURL {
             return String(relativeString[start...])
         }
         var result: String?
-        if let query = url._parseInfo.query {
+        if let query = url._parseInfo.query, !query.isEmpty {
             result = "?\(query)"
         }
         if let fragment = url._parseInfo.fragment {

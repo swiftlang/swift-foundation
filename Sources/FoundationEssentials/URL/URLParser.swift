@@ -711,7 +711,7 @@ internal struct RFC3986Parser {
             finalURLString += path
         }
 
-        if let query = parseInfo.query {
+        if let query = parseInfo.query, !query.isEmpty {
             if invalidComponents.contains(.query) {
                 finalURLString += "?\(percentEncode(query, component: .query)!)"
             } else {
@@ -1322,7 +1322,7 @@ extension RFC3986Parser {
             finalURLString += path
         }
 
-        if let query = parseInfo.query {
+        if let query = parseInfo.query, !query.isEmpty {
             if invalidComponents.contains(.query) {
                 finalURLString += "?\(percentEncode(query, component: .query, skipAlreadyEncoded: true)!)"
             } else {

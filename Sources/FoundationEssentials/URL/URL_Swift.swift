@@ -1115,7 +1115,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
                 result += ":\(portString)"
             }
             result += path
-            if let query {
+            if let query, !query.isEmpty {
                 result += "?\(query)"
             }
             if let fragment {
