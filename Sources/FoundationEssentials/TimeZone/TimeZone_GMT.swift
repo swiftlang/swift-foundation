@@ -15,7 +15,12 @@ package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
     let name: String
     
     required package init?(identifier: String) {
-        fatalError("Unexpected init")
+        guard let offset = TimeZone.tryParseGMTName(identifier), let offsetName = TimeZone.nameForSecondsFromGMT(offset) else {
+            return nil
+        }
+
+        self.name = offsetName
+        self.offset = offset
     }
 
     required package init?(secondsFromGMT: Int) {

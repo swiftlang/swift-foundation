@@ -26,9 +26,15 @@ private func _timeZoneGMTClass_localized() -> _TimeZoneProtocol.Type {
 internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
     let offset: Int
     let name: String
-    
+
+    // Allow using this class to represent time zone whose names take form of "GMT+<offset>" such as "GMT+8".
     init?(identifier: String) {
-        fatalError("Unexpected init")
+        guard let offset = TimeZone.tryParseGMTName(identifier), let offsetName = TimeZone.nameForSecondsFromGMT(offset) else {
+            return nil
+        }
+
+        self.name = offsetName
+        self.offset = offset
     }
     
     init?(secondsFromGMT: Int) {
@@ -79,29 +85,22 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
         default: false
         }
         
-        // TODO: Consider using ICU C++ API instead of a date formatter here
+        // TODO: Consider implementing this ourselves
         let timeZoneIdentifier = Array(name.utf16)
         let result: String? = timeZoneIdentifier.withUnsafeBufferPointer {
             var status = U_ZERO_ERROR
-            guard let df = udat_open(UDAT_NONE, UDAT_NONE, locale?.identifier ?? "", $0.baseAddress, Int32($0.count), nil, 0, &status) else {
-                return nil
+            let tz = uatimezone_open($0.baseAddress, Int32($0.count), &status)
+            defer {
+                uatimezone_close(tz)
             }
-
             guard status.isSuccess else {
                 return nil
             }
 
-            defer { udat_close(df) }
-
-            let pattern = "vvvv"
-            let patternUTF16 = Array(pattern.utf16)
-            return patternUTF16.withUnsafeBufferPointer {
-                udat_applyPattern(df, UBool.false, $0.baseAddress, Int32(isShort ? 1 : $0.count))
-
-                return _withResizingUCharBuffer { buffer, size, status in
-                    udat_format(df, ucal_getNow(), buffer, size, nil, &status)
-                }
+            let result: String? = _withResizingUCharBuffer { buffer, size, status in
+                uatimezone_getDisplayName(tz, isShort ? UTIMEZONE_SHORT: UTIMEZONE_LONG, locale?.identifier ?? "", buffer, size, &status)
             }
+            return result
         }
 
         return result
