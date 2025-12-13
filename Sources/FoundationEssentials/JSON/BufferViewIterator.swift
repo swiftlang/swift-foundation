@@ -49,4 +49,9 @@ extension BufferViewIterator: IteratorProtocol {
         guard curPointer < endPointer else { return }
         curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)
     }
+
+    mutating func _uncheckedAdvance() {
+        assert(curPointer < endPointer)
+        curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)
+    }
 }
