@@ -431,6 +431,10 @@ let benchmarks = {
         blackHole(manyAttributesString == manyAttributesString2)
     }
 
+    Benchmark("isIdentical") { benchmark in
+        blackHole(manyAttributesString.isIdentical(to: manyAttributesString))
+    }
+
     Benchmark("equalityDifferingCharacters") { benchmark in
         blackHole(manyAttributesString == manyAttributesString3)
     }
@@ -442,7 +446,11 @@ let benchmarks = {
     Benchmark("substringEquality") { benchmark in
         blackHole(manyAttributesSubstring == manyAttributes2Substring)
     }
-    
+
+    Benchmark("substringIsIdentical") { benchmark in
+        blackHole(manyAttributesSubstring.isIdentical(to: manyAttributesSubstring))
+    }
+
     Benchmark("hashAttributedString") { benchmark in
         var hasher = Hasher()
         manyAttributesString.hash(into: &hasher)
