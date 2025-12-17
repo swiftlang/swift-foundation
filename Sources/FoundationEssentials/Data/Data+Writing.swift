@@ -173,6 +173,12 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
         if let sandboxResult {
             return sandboxResult
         }
+        
+        // If we have no result and also no errno, just fail immediately because we failed to produce a file system representation for the path
+        guard let amkrErrno else {
+            throw CocoaError.errorWithFilePath(.fileReadInvalidFileName, inPath.path)
+        }
+        
         // If _amkrtemp failed with EEXIST, just retry
         if amkrErrno == EEXIST {
             continue
