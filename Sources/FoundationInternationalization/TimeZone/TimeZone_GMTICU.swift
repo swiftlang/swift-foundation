@@ -91,6 +91,7 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
             var status = U_ZERO_ERROR
             let tz = uatimezone_open($0.baseAddress, Int32($0.count), &status)
             defer {
+                // `uatimezone_close` checks for nil input, so it's safe to do it even there's an error.
                 uatimezone_close(tz)
             }
             guard status.isSuccess else {
