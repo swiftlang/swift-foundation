@@ -66,8 +66,7 @@ extension String {
                 // 2. Canonicalize the path.
                 // This will add the \\?\ prefix if needed based on the path's length.
                 var pwszCanonicalPath: LPWSTR?
-                // Alway add the long path prefix since we don't know if this is a directory.
-                let flags: ULONG =  PATHCCH_ENSURE_IS_EXTENDED_LENGTH_PATH
+                let flags: ULONG = PATHCCH_ALLOW_LONG_PATHS
                 let result = PathAllocCanonicalize(pwszFullPath.baseAddress, flags, &pwszCanonicalPath)
                 if let pwszCanonicalPath {
                     defer { LocalFree(pwszCanonicalPath) }
@@ -77,32 +76,6 @@ extension String {
                     }
                 }
                 throw CocoaError.errorWithFilePath(self, win32: WIN32_FROM_HRESULT(result), reading: true)
-            }
-        }
-    }
-    /// Removes the Windows NT prefix for long file paths if present.
-    /// The \\?\ prefix is used by Windows NT for device paths and may appear
-    /// in paths returned by system APIs. This method provides a clean way to
-    /// normalize such paths to standard format.
-    ///
-    /// - Returns: A string with the NT object namespace prefix removed, or the original string if no prefix is found.
-    package func removingNTPathPrefix() -> String {
-        // Use Windows API PathCchStripPrefix for robust prefix handling
-        return withCString(encodedAs: UTF16.self) { pwszPath in
-            // Calculate required buffer size (original path length should be sufficient)
-            let length = wcslen(pwszPath) + 1 // include null terminator
-            
-            return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(length)) { buffer  in
-                // Copy the original path to the buffer
-                _ = buffer.initialize(from: UnsafeBufferPointer(start: pwszPath, count: Int(length)))
-
-                // Call PathCchStripPrefix (modifies buffer in place)
-                _ = PathCchStripPrefix(buffer.baseAddress, buffer.count)                
-
-                // Return the result regardless of success/failure
-                // PathCchStripPrefix modifies the buffer in-place and returns S_OK on success
-                // If it fails, the original path remains unchanged, which is the desired fallback
-                return String(decodingCString: buffer.baseAddress!, as: UTF16.self)
             }
         }
     }
