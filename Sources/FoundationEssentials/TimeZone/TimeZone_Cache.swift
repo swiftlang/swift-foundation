@@ -227,6 +227,10 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 return offsetFixed(0)
             } else if let cached = fixedTimeZones[identifier] {
                 return cached
+            } else if let innerTZ = _timeZoneGMTClass().init(identifier: identifier) {
+                // Identifier takes a form of GMT offset such as "GMT+8"
+                fixedTimeZones[identifier] = innerTZ
+                return innerTZ
             } else {
                 if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
