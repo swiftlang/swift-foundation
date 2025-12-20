@@ -874,18 +874,18 @@ enum _FileOperations {
 #else
     #if !canImport(Darwin)
     private static func _copyRegularFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate) throws {
-        var fileInfo = stat()
-        guard stat(srcPtr, &fileInfo) >= 0 else {
-            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
-            return
-        }
-
         let srcfd = open(srcPtr, O_RDONLY)
         guard srcfd >= 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
         defer { close(srcfd) }
+        
+        var fileInfo = stat()
+        guard fstat(srcfd, &fileInfo) >= 0 else {
+            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
+            return
+        }
 
         let dstfd = open(dstPtr, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC, 0o666)
         guard dstfd >= 0 else {
