@@ -39,11 +39,22 @@ extension PredicateExpressions {
             self.transform = builder(variable)
         }
         
-        public func evaluate(_ bindings: PredicateBindings) throws -> Output {
+        // When the transform produces a non-optional Result, wrap it.
+        public func evaluate(_ bindings: PredicateBindings) throws -> Output where RHS.Output == Result {
             var mutableBindings = bindings
             return try wrapped.evaluate(bindings).flatMap { inner in
                 mutableBindings[variable] = inner
-                return try transform.evaluate(mutableBindings) as! Result?
+                let value = try transform.evaluate(mutableBindings)
+                return Optional(value)
+            }
+        }
+
+        // When the transform already produces an optional Result, propagate it.
+        public func evaluate(_ bindings: PredicateBindings) throws -> Output where RHS.Output == Optional<Result> {
+            var mutableBindings = bindings
+            return try wrapped.evaluate(bindings).flatMap { inner in
+                mutableBindings[variable] = inner
+                return try transform.evaluate(mutableBindings)
             }
         }
     }
