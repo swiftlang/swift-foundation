@@ -13,6 +13,7 @@
 ##===----------------------------------------------------------------------===##
 
 if(NOT TARGET SwiftFoundation)
+    include(@SWIFT_FOUNDATION_BUILD_MACROS_FILE@)
     include(@SWIFT_FOUNDATION_ICU_EXPORTS_FILE@)
     include(@SWIFT_COLLECTIONS_EXPORTS_FILE@)
     include(@SWIFT_FOUNDATION_EXPORTS_FILE@)
