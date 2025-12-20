@@ -96,7 +96,7 @@ extension PredicateExpressions {
         }
         
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
-            try root.evaluate(bindings).localizedCompare(other.evaluate(bindings))
+            try root.evaluate(bindings).localizedCompare(try other.evaluate(bindings))
         }
     }
     
