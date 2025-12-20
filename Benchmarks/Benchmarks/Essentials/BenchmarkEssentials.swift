@@ -67,8 +67,26 @@ let benchmarks = {
         return box
     })
 
+    Benchmark("DataIdenticalEmpty", closure: { benchmark, box in
+        blackHole(box.d1.isIdentical(to: box.d2))
+    }, setup: { () -> TwoDatasBox in
+        let d1 = Data()
+        let d2 = d1
+        let box = TwoDatasBox(d1: d1, d2: d2)
+        return box
+    })
+    
     Benchmark("DataEqualInline", closure: { benchmark, box in
         blackHole(box.d1 == box.d2)
+    }, setup: { () -> TwoDatasBox in
+        let d1 = createSomeData(12) // Less than size of InlineData.Buffer
+        let d2 = d1
+        let box = TwoDatasBox(d1: d1, d2: d2)
+        return box
+    })
+
+    Benchmark("DataIdenticalInline", closure: { benchmark, box in
+        blackHole(box.d1.isIdentical(to: box.d2))
     }, setup: { () -> TwoDatasBox in
         let d1 = createSomeData(12) // Less than size of InlineData.Buffer
         let d2 = d1
@@ -93,7 +111,16 @@ let benchmarks = {
         let box = TwoDatasBox(d1: d1, d2: d2)
         return box
     })
-    
+
+    Benchmark("DataIdenticalLarge", closure: { benchmark, box in
+        blackHole(box.d1.isIdentical(to: box.d2))
+    }, setup: { () -> TwoDatasBox in
+        let d1 = createSomeData(1024 * 8)
+        let d2 = d1
+        let box = TwoDatasBox(d1: d1, d2: d2)
+        return box
+    })
+
     Benchmark("DataNotEqualLarge", closure: { benchmark, box in
         blackHole(box.d1 != box.d2)
     }, setup: { () -> TwoDatasBox in
@@ -112,6 +139,15 @@ let benchmarks = {
         return box
     })
 
+    Benchmark("DataIdenticalReallyLarge", closure: { benchmark, box in
+        blackHole(box.d1.isIdentical(to: box.d2))
+    }, setup: { () -> TwoDatasBox in
+        let d1 = createSomeData(1024 * 1024 * 8)
+        let d2 = d1
+        let box = TwoDatasBox(d1: d1, d2: d2)
+        return box
+    })
+    
     Benchmark("DataNotEqualReallyLarge", closure: { benchmark, box in
         blackHole(box.d1 != box.d2)
     }, setup: { () -> TwoDatasBox in
