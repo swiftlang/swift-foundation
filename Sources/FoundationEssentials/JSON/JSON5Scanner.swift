@@ -123,7 +123,14 @@ internal struct JSON5Scanner {
             throw JSONError.unexpectedCharacter(context: "after top-level value", ascii: char, location: reader.sourceLocation)
         }
 
-        return JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
+        let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
+
+        // If the input contains only a number, ensure a trailing NUL byte is available for strtod/strtof parsing.
+        if case .number = map.loadValue(at: 0)! {
+            map.copyInBuffer()
+        }
+
+        return map
     }
 
     // MARK: Generic Value Scanning
