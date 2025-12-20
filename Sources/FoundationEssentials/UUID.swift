@@ -11,6 +11,10 @@
 
 internal import _FoundationCShims // uuid.h
 
+#if canImport(RegexBuilder)
+import RegexBuilder
+#endif
+
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
@@ -194,3 +198,155 @@ extension UUID : Comparable {
         return result < 0
     }
 }
+
+// MARK: - Regex Support
+
+#if canImport(RegexBuilder)
+import RegexBuilder
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension UUID: RegexComponent {
+    /// The regex pattern that matches UUID strings.
+    ///
+    /// Matches UUIDs in the standard format: `XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`
+    /// where X represents a hexadecimal digit (0-9, A-F, a-f).
+    ///
+    /// Example usage:
+    /// ```swift
+    /// let text = "User ID: E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
+    /// let regex = Regex {
+    ///     "User ID: "
+    ///     Capture { UUID.regex }
+    /// }
+    /// if let match = text.firstMatch(of: regex) {
+    ///     let uuidString = String(match.1)
+    ///     let uuid = UUID(uuidString: uuidString)
+    /// }
+    /// ```
+    public var regex: Regex<Substring> {
+        Regex {
+            // 8 hex digits
+            Repeat(count: 8) {
+                CharacterClass(.hexDigit)
+            }
+            "-"
+            // 4 hex digits
+            Repeat(count: 4) {
+                CharacterClass(.hexDigit)
+            }
+            "-"
+            // 4 hex digits
+            Repeat(count: 4) {
+                CharacterClass(.hexDigit)
+            }
+            "-"
+            // 4 hex digits
+            Repeat(count: 4) {
+                CharacterClass(.hexDigit)
+            }
+            "-"
+            // 12 hex digits
+            Repeat(count: 12) {
+                CharacterClass(.hexDigit)
+            }
+        }
+    }
+}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension RegexComponent where Self == UUID {
+    /// A regex component that matches UUID strings.
+    ///
+    /// This component matches UUID strings in the standard format:
+    /// `XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX` where X represents a hexadecimal digit.
+    ///
+    /// Example usage:
+    /// ```swift
+    /// let text = "Session: E621E1F8-C36C-495A-93FC-0C247A3E6E5F active"
+    /// let regex = Regex {
+    ///     "Session: "
+    ///     Capture { UUID.regex }
+    ///     " active"
+    /// }
+    /// if let match = text.firstMatch(of: regex) {
+    ///     let uuidString = String(match.1)
+    ///     let uuid = UUID(uuidString: uuidString)
+    /// }
+    /// ```
+    public static var regex: UUID { UUID() }
+}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension UUID {
+    /// A regex component that captures and parses UUID strings into UUID instances.
+    ///
+    /// This parser matches UUID strings in the standard format: `XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`
+    /// where X is a hexadecimal digit (0-9, A-F, a-f). If the input does not match this format,
+    /// or is not a valid UUID string, the parser returns `nil`.
+    ///
+    /// Example usage:
+    /// ```swift
+    /// let text = "User ID: E621E1F8-C36C-495A-93FC-0C247A3E6E5F end"
+    /// let regex = Regex {
+    ///     "User ID: "
+    ///     Capture { UUID.parser }
+    ///     " end"
+    /// }
+    /// if let match = text.firstMatch(of: regex) {
+    ///     let uuid: UUID = match.1 // Direct UUID instance
+    ///     print("Found UUID: \(uuid)")
+    /// }
+    public static var parser: some RegexComponent<UUID> {
+        TryCapture {
+            Repeat(count: 8) { .hexDigit }
+            "-"
+            Repeat(count: 4) { .hexDigit }
+            "-"
+            Repeat(count: 4) { .hexDigit }
+            "-"
+            Repeat(count: 4) { .hexDigit }
+            "-"
+            Repeat(count: 12) { .hexDigit }
+        } transform: { (match: Substring) -> UUID? in
+            // match is the captured substring; convert to UUID
+            UUID(uuidString: String(match))
+        }
+    }
+
+    /// A case-insensitive regex component that captures and parses UUID strings into UUID instances.
+    ///
+    /// This parser matches UUID strings in both uppercase and lowercase format:
+    /// `XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX` or `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+    /// where X is a hexadecimal digit (0-9, A-F, a-f). If the input does not match this format,
+    /// or is not a valid UUID string, the parser returns `nil`.
+    ///
+    /// Example usage:
+    /// ```swift
+    /// let text = "User ID: e621e1f8-c36c-495a-93fc-0c247a3e6e5f end"
+    /// let regex = Regex {
+    ///     "User ID: "
+    ///     Capture { UUID.caseInsensitiveParser }
+    ///     " end"
+    /// }
+    /// if let match = text.firstMatch(of: regex) {
+    ///     let uuid: UUID = match.1 // Direct UUID instance
+    ///     print("Found UUID: \(uuid)")
+    /// }
+    public static var caseInsensitiveParser: some RegexComponent<UUID> {
+        TryCapture {
+            Repeat(count: 8) { .hexDigit }
+            "-"
+            Repeat(count: 4) { .hexDigit }
+            "-"
+            Repeat(count: 4) { .hexDigit }
+            "-"
+            Repeat(count: 4) { .hexDigit }
+            "-"
+            Repeat(count: 12) { .hexDigit }
+        } transform: { (match: Substring) -> UUID? in
+            // match is the captured substring; convert to UUID
+            UUID(uuidString: String(match))
+        }
+    }
+}
+#endif
