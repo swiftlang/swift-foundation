@@ -14,6 +14,7 @@
 #define CSHIMS_FILEMANAGER_H
 
 #include "_CShimsMacros.h"
+#include "_CShimsTargetConditionals.h"
 
 #if __has_include(<sys/param.h>)
 #include <sys/param.h>
@@ -44,6 +45,83 @@
 // Darwin-specific API that is implemented but not declared in any header
 // This function behaves exactly like the public mkpath_np(3) API, but it also returns the first directory it actually created, which helps us make sure we set the given attributes on the right directories.
 extern int _mkpath_np(const char *path, mode_t omode, const char **firstdir);
+#endif
+
+#include <grp.h>
+
+#if TARGET_OS_ANDROID && __ANDROID_API__ <= 23
+#include <sys/types.h>
+#include <string.h>
+#include <errno.h>
+
+static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    // Call the non-reentrant version.
+    // On Android, this uses Thread Local Storage (TLS),
+    // so it is safe from race conditions with other threads.
+    struct group *p = getgrgid(gid);
+
+    if (p == NULL) {
+        *result = NULL;
+        return errno != 0 ? errno : 0;
+    }
+
+    size_t name_len = strlen(p->gr_name) + 1;
+    if (name_len > buflen) {
+        *result = NULL;
+        return ERANGE;
+    }
+
+    strcpy(buf, p->gr_name);
+    grp->gr_name = buf;
+    grp->gr_gid = p->gr_gid;
+
+    grp->gr_passwd = (char *)"";
+    grp->gr_mem = NULL;
+
+    *result = grp;
+    return 0;
+}
+
+static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    // Call the non-reentrant version.
+    // On Android, this uses Thread Local Storage (TLS),
+    // so it is safe from race conditions with other threads.
+    struct group *p = getgrnam(name);
+
+    if (p == NULL) {
+        *result = NULL;
+        return errno != 0 ? errno : 0;
+    }
+
+    size_t name_len = strlen(p->gr_name) + 1;
+    if (name_len > buflen) {
+        *result = NULL;
+        return ERANGE;
+    }
+
+    strcpy(buf, p->gr_name);
+    grp->gr_name = buf;
+    grp->gr_gid = p->gr_gid;
+
+    grp->gr_passwd = (char *)"";
+    grp->gr_mem = NULL;
+
+    *result = grp;
+    return 0;
+}
+
+#else
+static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    return getgrgid_r(gid, grp, buf, buflen, result);
+}
+
+static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    return getgrnam_r(name, grp, buf, buflen, result);
+}
 #endif
 
 #endif // CSHIMS_FILEMANAGER_H
