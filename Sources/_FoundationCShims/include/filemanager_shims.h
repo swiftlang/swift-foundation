@@ -47,15 +47,16 @@
 extern int _mkpath_np(const char *path, mode_t omode, const char **firstdir);
 #endif
 
-#include <grp.h>
-
 #if TARGET_OS_ANDROID && __ANDROID_API__ <= 23
+#include <grp.h>
 #include <sys/types.h>
 #include <string.h>
 #include <errno.h>
 
 static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
                                                 char *buf, size_t buflen, struct group **result) {
+    errno = 0;
+
     // Call the non-reentrant version.
     // On Android, this uses Thread Local Storage (TLS),
     // so it is safe from race conditions with other threads.
@@ -63,7 +64,7 @@ static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
 
     if (p == NULL) {
         *result = NULL;
-        return errno != 0 ? errno : 0;
+        return errno;
     }
 
     size_t name_len = strlen(p->gr_name) + 1;
@@ -85,6 +86,8 @@ static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
 
 static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *grp,
                                                 char *buf, size_t buflen, struct group **result) {
+    errno = 0;
+
     // Call the non-reentrant version.
     // On Android, this uses Thread Local Storage (TLS),
     // so it is safe from race conditions with other threads.
@@ -92,7 +95,7 @@ static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *
 
     if (p == NULL) {
         *result = NULL;
-        return errno != 0 ? errno : 0;
+        return errno;
     }
 
     size_t name_len = strlen(p->gr_name) + 1;
@@ -112,7 +115,9 @@ static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *
     return 0;
 }
 
-#else
+#elif !TARGET_OS_WINDOWS && !TARGET_OS_WASI
+#include <grp.h>
+
 static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
                                                 char *buf, size_t buflen, struct group **result) {
     return getgrgid_r(gid, grp, buf, buflen, result);
