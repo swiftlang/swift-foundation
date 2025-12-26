@@ -273,7 +273,7 @@ internal struct _FileManagerImpl {
                                 if read(fd2, buf2.baseAddress!, quantum) != readBytes {
                                     return false
                                 }
-                                if !buf1.elementsEqual(buf2) {
+                                if !buf1.prefix(readBytes).elementsEqual(buf2.prefix(readBytes)) {
                                     return false
                                 }
                             }
