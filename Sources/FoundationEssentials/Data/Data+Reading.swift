@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -193,33 +193,33 @@ struct ReadBytesResult {
 }
 
 #if os(Windows)
+@lifetime(pBuffer: copy pBuffer)
 private func read(from hFile: HANDLE, at path: PathOrURL,
-                  into pBuffer: UnsafeMutableRawPointer, length dwLength: Int,
+                  into pBuffer: inout OutputRawSpan,
                   chunkSize dwChunk: Int = 4096, progress bProgress: Bool)
-        throws -> Int {
-    var pBuffer = pBuffer
-    let progress = bProgress && Progress.current() != nil ? Progress(totalUnitCount: Int64(dwLength)) : nil
+        throws {
+    let progress = bProgress && Progress.current() != nil ? Progress(totalUnitCount: Int64(pBuffer.freeCapacity)) : nil
 
-    var dwBytesRemaining: DWORD = DWORD(dwLength)
-    while dwBytesRemaining > 0 {
+    while !pBuffer.isFull {
         if let progress, progress.isCancelled {
             throw CocoaError(.userCancelled)
         }
 
         let dwBytesToRead: DWORD =
-            DWORD(clamping: DWORD(min(DWORD(dwChunk), dwBytesRemaining)))
+            DWORD(clamping: min(dwChunk, pBuffer.freeCapacity))
+        
         var dwBytesRead: DWORD = 0
-        if !ReadFile(hFile, pBuffer, dwBytesToRead, &dwBytesRead, nil) {
-            throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+        try pBuffer.withUnsafeMutableBytes { bytes, initializedCount in
+            if !ReadFile(hFile, bytes.baseAddress!.advanced(by: initializedCount), dwBytesToRead, &dwBytesRead, nil) {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+            initializedCount += Int(dwBytesRead)
         }
-        dwBytesRemaining -= DWORD(clamping: dwBytesRead)
-        progress?.completedUnitCount = Int64(dwLength - Int(dwBytesRemaining))
+        progress?.completedUnitCount += Int64(dwBytesRead)
         if dwBytesRead < dwBytesToRead {
             break
         }
-        pBuffer = pBuffer.advanced(by: Int(dwBytesRead))
     }
-    return dwLength - Int(dwBytesRemaining)
 }
 #endif
 
@@ -283,18 +283,20 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
             }
         }))
     } else {
-        guard let pBuffer: UnsafeMutableRawPointer = malloc(Int(szFileSize)) else {
+        guard let ptr: UnsafeMutableRawPointer = malloc(Int(szFileSize)) else {
             throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
         }
+        let buffer = UnsafeMutableRawBufferPointer(start: ptr, count: Int(szFileSize))
+        var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
 
-        localProgress?.becomeCurrent(withPendingUnitCount: Int64(szFileSize))
+        localProgress?.becomeCurrent(withPendingUnitCount: Int64(outputSpan.freeCapacity))
         do {
-            let dwLength = try read(from: hFile, at: inPath, into: pBuffer, length: Int(szFileSize), progress: reportProgress)
+            try read(from: hFile, at: inPath, into: &outputSpan, progress: reportProgress)
             localProgress?.resignCurrent()
-            return ReadBytesResult(bytes: pBuffer, length: dwLength, deallocator: .free)
+            return ReadBytesResult(bytes: ptr, length: outputSpan.finalize(for: buffer), deallocator: .free)
         } catch {
             localProgress?.resignCurrent()
-            free(pBuffer)
+            free(ptr)
             throw error
         }
     }
@@ -367,18 +369,21 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         #if os(Linux) || os(Android)
         // Linux has some files that may report a size of 0 but actually have contents
         let chunkSize = 1024 * 4
-        var buffer = malloc(chunkSize)!
+        var ptr = malloc(chunkSize)!
         var totalRead = 0
         while true {
-            let length = try readBytesFromFileDescriptor(fd, path: inPath, buffer: buffer.advanced(by: totalRead), length: chunkSize, readUntilLength: false, reportProgress: false)
+            let buffer = UnsafeMutableRawBufferPointer(start: ptr, count: totalRead + chunkSize)
+            var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: totalRead)
+            try readBytesFromFileDescriptor(fd, path: inPath, buffer: &outputSpan, readUntilLength: false, reportProgress: false)
             
+            let length = outputSpan.finalize(for: buffer)
             totalRead += length
             if length != chunkSize {
                 break
             }
-            buffer = realloc(buffer, totalRead + chunkSize)
+            ptr = realloc(ptr, totalRead + chunkSize)
         }
-        result = ReadBytesResult(bytes: buffer, length: totalRead, deallocator: .free)
+        result = ReadBytesResult(bytes: ptr, length: totalRead, deallocator: .free)
         #else
         result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
         #endif
@@ -415,13 +420,15 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         guard let bytes = malloc(Int(fileSize)) else {
             throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
         }
+        let buffer = UnsafeMutableRawBufferPointer(start: bytes, count: Int(fileSize))
+        var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
         
         localProgress?.becomeCurrent(withPendingUnitCount: Int64(fileSize))
         do {
-            let length = try readBytesFromFileDescriptor(fd, path: inPath, buffer: bytes, length: fileSize, reportProgress: reportProgress)
+            try readBytesFromFileDescriptor(fd, path: inPath, buffer: &outputSpan, reportProgress: reportProgress)
             localProgress?.resignCurrent()
             
-            result = ReadBytesResult(bytes: bytes, length: length, deallocator: .free)
+            result = ReadBytesResult(bytes: bytes, length: outputSpan.finalize(for: buffer), deallocator: .free)
         } catch {
             localProgress?.resignCurrent()
             free(bytes)
@@ -440,25 +447,24 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
 /// Read data from a file descriptor.
 /// Takes an `Int` size and returns an `Int` to match `Data`'s count. If we are going to read more than Int.max, throws - because we won't be able to store it in `Data`.
 /// If `readUntilLength` is `false`, then we will end the read if we receive less than `length` bytes. This can be used to read from something like a socket, where the `length` simply represents the maximum size you can read at once.
-private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: UnsafeMutableRawPointer, length: Int, readUntilLength: Bool = true, reportProgress: Bool) throws -> Int {
-    var buffer = inBuffer
+private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: inout OutputRawSpan, readUntilLength: Bool = true, reportProgress: Bool) throws {
     // If chunkSize (8-byte value) is more than blksize_t.max (4 byte value), then use the 4 byte max and chunk
     
     let preferredChunkSize: size_t
     let localProgress: Progress?
+    let length = inBuffer.freeCapacity
     
     if Progress.current() != nil && reportProgress {
-        localProgress = Progress(totalUnitCount: Int64(length))
+        localProgress = Progress(totalUnitCount: Int64(inBuffer.freeCapacity))
         // To report progress, we have to try reading in smaller chunks than the whole file. Aim for about 1% increments.
-        preferredChunkSize = max(length / 100, 1024 * 4)
+        preferredChunkSize = max(inBuffer.freeCapacity / 100, 1024 * 4)
     } else {
         localProgress = nil
         // Get it all in one go, if possible
-        preferredChunkSize = length
+        preferredChunkSize = inBuffer.freeCapacity
     }
     
-    var numBytesRemaining = length
-    while numBytesRemaining > 0 {
+    while !inBuffer.isFull {
         if let localProgress, localProgress.isCancelled {
             throw CocoaError(.userCancelled)
         }
@@ -467,22 +473,27 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
         var numBytesRequested = CUnsignedInt(clamping: min(preferredChunkSize, Int(CInt.max)))
         
         // Furthermore, don't request more than the number of bytes remaining
-        if numBytesRequested > numBytesRemaining {
-            numBytesRequested = CUnsignedInt(clamping: min(numBytesRemaining, Int(CInt.max)))
+        if numBytesRequested > inBuffer.freeCapacity {
+            numBytesRequested = CUnsignedInt(clamping: min(inBuffer.freeCapacity, Int(CInt.max)))
         }
 
-        var numBytesRead: CInt
+        var numBytesRead: CInt = 0
         repeat {
             if let localProgress, localProgress.isCancelled {
                 throw CocoaError(.userCancelled)
             }
             
             // read takes an Int-sized argument, which will always be at least the size of Int32.
+            inBuffer.withUnsafeMutableBytes { buffer, initializedCount in
 #if os(Windows)
-            numBytesRead = _read(fd, buffer, numBytesRequested)
+                numBytesRead = _read(fd, buffer.baseAddress!.advanced(by: initializedCount), numBytesRequested)
 #else
-            numBytesRead = CInt(read(fd, buffer, Int(numBytesRequested)))
+                numBytesRead = CInt(read(fd, buffer.baseAddress!.advanced(by: initializedCount), Int(numBytesRequested)))
 #endif
+                if numBytesRead >= 0 {
+                    initializedCount += Int(clamping: numBytesRead)
+                }
+            }
         } while numBytesRead < 0 && errno == EINTR
         
         if numBytesRead < 0 {
@@ -495,21 +506,59 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
             break
         } else {
             // Partial read
-            numBytesRemaining -= Int(clamping: numBytesRead)
-            if numBytesRemaining < 0 {
-                // Just in case; we do not want to have a negative amount of bytes remaining. We will just assume that is the end.
-                numBytesRemaining = 0
-            }
-            localProgress?.completedUnitCount = Int64(length - numBytesRemaining)
+            localProgress?.completedUnitCount = Int64(length - inBuffer.freeCapacity)
 
             // The `readUntilLength` argument controls if we should end early when `read` returns less than the amount requested, or if we should continue to loop until we have reached `length` bytes.
             if !readUntilLength && numBytesRead < numBytesRequested {
                 break
             }
+        }
+    }
+}
 
-            buffer = buffer.advanced(by: numericCast(numBytesRead))
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data {
+#if FOUNDATION_FRAMEWORK
+    public typealias ReadingOptions = NSData.ReadingOptions
+#else
+    public struct ReadingOptions : OptionSet, Sendable {
+        public let rawValue: UInt
+        public init(rawValue: UInt) { self.rawValue = rawValue }
+        
+        public static let mappedIfSafe = ReadingOptions(rawValue: 1 << 0)
+        public static let uncached = ReadingOptions(rawValue: 1 << 1)
+        public static let alwaysMapped = ReadingOptions(rawValue: 1 << 3)
+    }
+#endif
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation)
+    public dynamic init(_contentsOfRemote url: URL, options: ReadingOptions = []) throws {
+        assert(!url.isFileURL)
+        throw CocoaError(.fileReadUnsupportedScheme)
+    }
+#endif
+    
+    /// Initialize a `Data` with the contents of a `URL`.
+    ///
+    /// - parameter url: The `URL` to read.
+    /// - parameter options: Options for the read operation. Default value is `[]`.
+    /// - throws: An error in the Cocoa domain, if `url` cannot be read.
+    public init(contentsOf url: __shared URL, options: ReadingOptions = []) throws {
+        if url.isFileURL {
+            self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
+        } else {
+#if FOUNDATION_FRAMEWORK
+            // Fallback to NSData, to read via NSURLSession
+            let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
+            self.init(referencing: d)
+#else
+            try self.init(_contentsOfRemote: url, options: options)
+#endif
         }
     }
     
-    return length - numBytesRemaining
+    internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
+        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
+    }
 }

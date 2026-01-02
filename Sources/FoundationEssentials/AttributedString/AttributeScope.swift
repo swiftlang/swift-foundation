@@ -17,7 +17,7 @@
 // }
 // An AttributeScope can contain other scopes as well.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding {
+public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding, SendableMetatype {
     static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
     static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
 }
