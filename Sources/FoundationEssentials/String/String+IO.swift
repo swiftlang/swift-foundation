@@ -283,7 +283,7 @@ extension String {
         let encoding: Encoding
         if len >= 4 && (
             (data[0] == 0xFF && data[1] == 0xFE && data[2] == 0x00 && data[3] == 0x00) ||
-            (data[0] == 0x00 && data[1] == 0x00 && data[3] == 0xFE && data[4] == 0xFF)) {
+            (data[0] == 0x00 && data[1] == 0x00 && data[2] == 0xFE && data[3] == 0xFF)) {
             // Looks like UTF32
             encoding = .utf32
         } else if len >= 2 {
