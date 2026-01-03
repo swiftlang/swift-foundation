@@ -103,7 +103,7 @@ extension String {
                 // String is not valid UTF8
 #if FOUNDATION_FRAMEWORK && os(macOS)
                 // Allow for invalid UTF8 to be repaired in compatibility cases
-                if Self.compatibiltity2 {
+                if Self.compatibility2 {
                     self = String(decoding: Array(bytes), as: UTF8.self)
                 } else {
                     return nil
