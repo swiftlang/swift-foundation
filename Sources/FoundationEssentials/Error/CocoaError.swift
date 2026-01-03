@@ -27,8 +27,8 @@ public struct CocoaError : _BridgedStoredNSError {
     
     public static var errorDomain: String { return NSCocoaErrorDomain }
     
-    public var hashValue: Int {
-        return _nsError.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(_nsError)
     }
 }
 
