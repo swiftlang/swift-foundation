@@ -275,6 +275,27 @@ private struct FileManagerTests {
         }
     }
 
+    /// Regression test: contentsEqual must compare only the bytes actually read,
+    /// not the entire buffer. Files not aligned to the 8KB buffer would fail.
+    @Test func contentsEqualPartialBufferRead() async throws {
+        // Create files with sizes that are NOT multiples of 8KB (the internal buffer size)
+        // This exercises the case where the last read returns fewer bytes than the buffer size.
+        let sizes = [1, 100, 1000, 8191, 8193, 10000, 16385]
+        
+        for size in sizes {
+            let data = Data((0..<size).map { _ in UInt8.random(in: .min ... .max) })
+            try await FilePlayground {
+                File("file1", contents: data)
+                File("file2", contents: data)
+            }.test { fileManager in
+                #expect(
+                    fileManager.contentsEqual(atPath: "file1", andPath: "file2"),
+                    "Files of size \(size) should be equal"
+                )
+            }
+        }
+    }
+
     @Test func directoryContentsAtPath() async throws {
         try await FilePlayground {
             Directory("dir1") {
