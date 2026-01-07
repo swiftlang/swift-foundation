@@ -112,6 +112,10 @@ extension AttributeScopes.TestAttributes {
             return NonCodableType(inner: inner)
         }
     }
+
+    struct NonCodableType : Hashable {
+        var inner : Int
+    }
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -120,10 +124,6 @@ extension AttributeScopes.TestAttributes.TestStringAttribute : MarkdownDecodable
 extension AttributeScopes.TestAttributes.TestBoolAttribute : MarkdownDecodableAttributedStringKey {}
 extension AttributeScopes.TestAttributes.TestDoubleAttribute : MarkdownDecodableAttributedStringKey {}
 #endif // FOUNDATION_FRAMEWORK
-
-struct NonCodableType : Hashable {
-    var inner : Int
-}
 
 extension AttributeScopes {
     var test: TestAttributes.Type { TestAttributes.self }
