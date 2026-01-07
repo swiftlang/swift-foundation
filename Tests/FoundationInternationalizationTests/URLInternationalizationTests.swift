@@ -21,18 +21,42 @@ import Testing
 
 @Suite("URL (Internationalization)")
 private struct URLInternationalizationTests {
-    @Test func urlHostUIDNAEncoding() {
-        let emojiURL = URL(string: "https://i❤️tacos.ws/🏳️‍🌈/冰淇淋")
+    @Test func IDNAEncodingHost() throws {
+        let emojiURL = try #require(URL(string: "https://i❤️tacos.ws/🏳️‍🌈/冰淇淋"))
         let emojiURLEncoded = "https://xn--itacos-i50d.ws/%F0%9F%8F%B3%EF%B8%8F%E2%80%8D%F0%9F%8C%88/%E5%86%B0%E6%B7%87%E6%B7%8B"
-        #expect(emojiURL?.absoluteString == emojiURLEncoded)
-        #expect(emojiURL?.host(percentEncoded: false) == "xn--itacos-i50d.ws")
+        #expect(emojiURL.absoluteString == emojiURLEncoded)
+        #expect(emojiURL.host(percentEncoded: false) == "xn--itacos-i50d.ws")
 
-        let chineseURL = URL(string: "http://見.香港/热狗/🌭")
+        let chineseURL = try #require(URL(string: "http://見.香港/热狗/🌭"))
         let chineseURLEncoded = "http://xn--nw2a.xn--j6w193g/%E7%83%AD%E7%8B%97/%F0%9F%8C%AD"
-        #expect(chineseURL?.absoluteString == chineseURLEncoded)
-        #expect(chineseURL?.host(percentEncoded: false) == "xn--nw2a.xn--j6w193g")
+        #expect(chineseURL.absoluteString == chineseURLEncoded)
+        #expect(chineseURL.host(percentEncoded: false) == "xn--nw2a.xn--j6w193g")
     }
-    
+
+    @Test func IDNAEncodingAllowedErrors() throws {
+        // Test an empty domain label to ensure we allow UIDNA_ERROR_EMPTY_LABEL
+        let emptyLabelURL = try #require(URL(string: "https://🧐..example.com/"))
+        #expect(emptyLabelURL.absoluteString == "https://xn--9u9h..example.com/")
+
+        // Test over 63 bytes in a domain label to ensure we allow UIDNA_ERROR_LABEL_TOO_LONG
+        let bigLabelURL = try #require(URL(string: "https://🧐aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example.com/"))
+        #expect(bigLabelURL.absoluteString == "https://xn--aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-98779d.example.com/")
+
+        // Test over 255 bytes in a domain name to ensure we allow UIDNA_ERROR_DOMAIN_NAME_TOO_LONG
+        let bigDomainURL = try #require(URL(string: "https://🧐aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.example.com/"))
+        #expect(bigDomainURL.absoluteString == "https://xn--aaaaaaaaaaaaaaaa-9g90p.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa.example.com/")
+
+        // Test leading and trailing hyphens in a domain label to ensure we allow
+        // UIDNA_ERROR_LEADING_HYPHEN and UIDNA_ERROR_TRAILING_HYPHEN
+        let hyphenURL = try #require(URL(string: "https://-🧐-.example.com/"))
+        #expect(hyphenURL.absoluteString == "https://xn-----b203a.example.com/")
+
+        // Test a domain label with hyphens in positions 3 and 4 to ensure we allow
+        // UIDNA_ERROR_HYPHEN_3_4
+        let hyphen34URL = try #require(URL(string: "https://aa--a🧐.example.com/"))
+        #expect(hyphen34URL.absoluteString == "https://xn--aa--a-fv74d.example.com/")
+    }
+
     @Test func componentsUnixDomainSocketOverWebSocketScheme() {
         var comp = URLComponents()
         comp.scheme = "ws+unix"
