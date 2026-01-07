@@ -38,8 +38,8 @@ public struct POSIXError : _BridgedStoredNSError {
 
     public static var errorDomain: String { return NSPOSIXErrorDomain }
 
-    public var hashValue: Int {
-        return _nsError.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(_nsError)
     }
 
     public typealias Code = POSIXErrorCode
