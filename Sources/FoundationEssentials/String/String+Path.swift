@@ -741,15 +741,7 @@ extension String {
                 guard GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwLength, VOLUME_NAME_DOS) == dwLength - 1 else {
                     return nil
                 }
-
-                let pathBaseAddress: UnsafePointer<WCHAR>
-                if Array($0.prefix(4)) == Array(#"\\?\"#.utf16) {
-                    // When using `VOLUME_NAME_DOS`, the returned path uses `\\?\`.
-                    pathBaseAddress = UnsafePointer($0.baseAddress!.advanced(by: 4))
-                } else {
-                    pathBaseAddress = UnsafePointer($0.baseAddress!)
-                }
-                return String(decodingCString: pathBaseAddress, as: UTF16.self)
+                return String(decodingCString: UnsafePointer($0.baseAddress!), as: UTF16.self).removingNTPathPrefix()
             }
         }
         #else // os(Windows)
