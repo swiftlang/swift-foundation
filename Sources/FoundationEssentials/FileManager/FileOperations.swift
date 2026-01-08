@@ -1017,7 +1017,10 @@ enum _FileOperations {
                                 valueSize = fgetxattr(srcFD, current, valueBuffer.baseAddress!, valueSize)
                                 if valueSize >= 0 {
                                     if fsetxattr(dstFD, current, valueBuffer.baseAddress!, valueSize, 0) != 0 {
-                                        try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                                        // Ignore the error if setting this xattr is not supported (ex. SELinux security xattrs)
+                                        if errno != EOPNOTSUPP {
+                                            try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                                        }
                                     }
                                 }
                             }
