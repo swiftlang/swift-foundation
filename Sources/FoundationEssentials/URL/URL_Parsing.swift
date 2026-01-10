@@ -31,6 +31,13 @@ internal protocol _URLEncoding {
         input: borrowing Span<Self.CodeUnit>,
         block: (consuming Span<UTF8.CodeUnit>) -> R
     ) -> R
+
+    // ICU's uidna_nameToASCII conversion is fastest with UTF16, so supply
+    // UTF16 if we have it (especially for UTF16-backed CF/NSStrings).
+    static func _withUTF16<R>(
+        input: borrowing Span<Self.CodeUnit>,
+        block: (consuming Span<UTF16.CodeUnit>) -> R
+    ) -> R
 }
 
 // CFURL parsing uses either an 8-bit ASCII or 16-bit UTF16 span from the
@@ -50,6 +57,31 @@ extension UTF8: _URLEncoding {
     ) -> R {
         // No change needed to convert UTF8 to itself
         return block(input)
+    }
+
+    internal static func _withUTF16<R>(
+        input: borrowing Span<UTF8.CodeUnit>,
+        block: (borrowing Span<UTF16.CodeUnit>) -> R
+    ) -> R {
+        // Max 1 UTF16 character per UTF8 byte
+        return withUnsafeTemporaryAllocation(
+            of: UTF16.CodeUnit.self,
+            capacity: input.count
+        ) { utf16Buffer in
+            var outputSpan = OutputSpan(buffer: utf16Buffer, initializedCount: 0)
+            // Need UnsafeBufferPointer to make the iterator for transcoding
+            return input.withUnsafeBufferPointer {
+                _ = Swift.transcode(
+                    $0.makeIterator(),
+                    from: UTF8.self,
+                    to: UTF16.self,
+                    stoppingOnError: false
+                ) { utf16CodeUnit in
+                    outputSpan.append(utf16CodeUnit)
+                }
+                return block(outputSpan.span)
+            }
+        }
     }
 }
 
@@ -77,6 +109,14 @@ extension UTF16: _URLEncoding {
                 return block(outputSpan.span)
             }
         }
+    }
+
+    internal static func _withUTF16<R>(
+        input: borrowing Span<UTF16.CodeUnit>,
+        block: (borrowing Span<UTF16.CodeUnit>) -> R
+    ) -> R {
+        // No change needed to convert UTF16 to itself
+        return block(input)
     }
 }
 
@@ -586,14 +626,42 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     }
 
     if flags.contains(.hasHost) {
-        var range = impl.pointee.hostRange
-        var componentMask: URLComponentAllowedSet = .host
+        let hostRange = impl.pointee.hostRange
         if flags.contains(.isIPLiteral) {
-            range = Range(uncheckedBounds: ((range.startIndex + 1), (range.endIndex - 1)))
-            componentMask = .hostIPvFuture
-        }
-        if !validate(span: span.extracting(range), component: componentMask) {
+            // Ignore the leading and trailing brackets
+            var i = hostRange.startIndex + 1
+            let endBracketIndex = hostRange.endIndex - 1
+            while i < endBracketIndex && URLComponentAllowedSet.hostIPvFuture.contains(span[i]) {
+                i += 1
+            }
+            if i < endBracketIndex {
+                // We found a character that's not allowed in .hostIPvFuture
+                // Only a zone ID (starting at "%") can be percent-encoded
+                guard span[i] == UInt8(ascii: "%") else {
+                    // The IP portion contained an invalid character that was
+                    // not the start of a zone ID, so return false.
+                    return false
+                }
+                // "%25" is the correctly-encoded zone ID delimiter for a URL
+                let isValidZoneID = (
+                    i + 2 < endBracketIndex
+                    && span[i + 1] == UInt8(ascii: "2")
+                    && span[i + 2] == UInt8(ascii: "5")
+                    && validate(
+                        span: span.extracting((i + 3)..<endBracketIndex),
+                        component: .hostZoneID
+                    )
+                )
+                if !isValidZoneID {
+                    // We have an invalid zone ID, but we can encode it
+                    guard allowEncoding else { return false }
+                    flags.insert(.shouldEncodeHost)
+                    shouldEncode = true
+                }
+            }
+        } else if !validate(span: span.extracting(hostRange), component: .host) {
             guard allowEncoding else { return false }
+            guard span[hostRange.startIndex] != UInt8(ascii: "[") else { return false }
             flags.insert(.shouldEncodeHost)
             shouldEncode = true
         }
@@ -761,6 +829,48 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
             return true
         }
 
+        // Returns false if there's not enough room in the output buffer.
+        @inline(__always)
+        func idnaEncodeHost(range: Range<Int>) -> Bool {
+            guard !range.isEmpty else { return true }
+            guard flush() else { return false }
+            guard let uidnaHook = _uidnaHook() else { return false }
+            let success = T._withUTF16(input: span.extracting(range)) { utf16Span in
+                return uidnaHook.nameToASCII(
+                    input: utf16Span,
+                    output: &outputSpan,
+                )
+            }
+            guard success else { return false }
+            // Update the length we've added due to encoding
+            extraBytesAdded = outputSpan.count - range.endIndex
+            // Update the indices for copying
+            copyStart = range.endIndex
+            copyEnd = range.endIndex
+            return true
+        }
+
+        // Returns false if there's not enough room in the output buffer.
+        @inline(__always)
+        func encodeZoneID(range: Range<Int>) -> Bool {
+            assert(!range.isEmpty)
+            guard flush() else { return false }
+            let success = T._withUTF8(input: span.extracting(range)) { utf8Span in
+                return URLEncoder.percentEncode(
+                    input: utf8Span,
+                    output: &outputSpan,
+                    component: .hostZoneID
+                )
+            }
+            guard success else { return false }
+            // Update the length we've added due to percent-encoding
+            extraBytesAdded = outputSpan.count - range.endIndex
+            // Update the indices for copying
+            copyStart = range.endIndex
+            copyEnd = range.endIndex
+            return true
+        }
+
         @inline(__always)
         func updateUserRange(_ start: Int, _ end: Int) {
             guard updateRanges && extraBytesAdded > 0 else { return }
@@ -842,9 +952,15 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
             let newHostStart = hostRange.startIndex + extraBytesAdded
             if flags.contains(.shouldEncodeHost) {
                 if flags.contains(.isIPLiteral) {
-                    copyEnd += 1 // Include leading "["
-                    guard encode(range: (hostRange.startIndex + 1)..<(hostRange.endIndex - 1), component: .host) else { return false }
+                    // We can only be encoding a zone ID, find the start
+                    while copyEnd < hostRange.endIndex - 1 && span[copyEnd] != UInt8(ascii: "%") {
+                        copyEnd += 1
+                    }
+                    guard encodeZoneID(range: copyEnd..<(hostRange.endIndex - 1)) else { return false }
                     copyEnd += 1 // Include trailing "]"
+                } else if updateRanges && flags.contains(.hasSpecialScheme) && _uidnaHook() != nil {
+                    // Support IDNA-encoding for NSURL (updateRanges: true)
+                    guard idnaEncodeHost(range: hostRange) else { return false }
                 } else {
                     // Always percent-encode for CFURL compatibility
                     guard encode(range: hostRange, component: .host) else { return false }

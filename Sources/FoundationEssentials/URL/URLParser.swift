@@ -185,6 +185,10 @@ fileprivate struct URLBufferParseInfo {
 package protocol UIDNAHook {
     static func encode(_ host: some StringProtocol) -> String?
     static func decode(_ host: some StringProtocol) -> String?
+    static func nameToASCII(
+        input: borrowing Span<UTF16.CodeUnit>,
+        output: inout OutputSpan<Unicode.ASCII.CodeUnit>
+    ) -> Bool
 }
 
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)

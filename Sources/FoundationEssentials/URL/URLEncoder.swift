@@ -148,6 +148,29 @@ internal enum URLEncoder {
         )
     }
 
+    @lifetime(output: copy output)
+    static func percentEncode(
+        input: borrowing Span<UInt8>,
+        output: inout OutputSpan<UInt8>,
+        component allowedSet: URLComponentAllowedSet
+    ) -> Bool {
+        for i in input.indices {
+            let byte = input[i]
+            if allowedSet.contains(byte) {
+                guard !output.isFull else { return false }
+                // Write the allowed byte
+                output.append(byte)
+            } else {
+                guard output.freeCapacity >= 3 else { return false }
+                // Percent-encode this unallowed byte
+                output.append(UInt8(ascii: "%"))
+                output.append(hexToAscii(byte >> 4))
+                output.append(hexToAscii(byte & 0xF))
+            }
+        }
+        return true
+    }
+
     /// Percent-encodes bytes from `input` that are not allowed in `component`,
     /// writing the result to `output`. This function preserves valid percent-
     /// escape sequences in `input` and does not re-encode the `%` character.
@@ -161,8 +184,8 @@ internal enum URLEncoder {
         output: inout OutputSpan<UInt8>,
         component allowedMask: URLComponentAllowedMask
     ) -> Bool {
-        var readIndex = 0
-        while readIndex < input.count {
+        var readIndex = input.indices.startIndex
+        while readIndex < input.indices.endIndex {
             let byte = input[readIndex]
             if allowedMask.contains(byte) {
                 guard !output.isFull else { return false }

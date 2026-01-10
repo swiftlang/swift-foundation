@@ -218,4 +218,67 @@ struct UIDNAHookICU: UIDNAHook {
         return IDNACodedHost(host, encodeToASCII: false)
     }
 
+    /// IDNA-encodes UTF16 characters from `input`, writing the ASCII result to `output`.
+    ///
+    /// - Note: This function checks the remaining capacity of `output` to ensure there's enough space to write.
+    /// - Returns: `true` on success, `false` on failure or if `output` was too small.
+    @lifetime(output: copy output)
+    static func nameToASCII(
+        input: borrowing Span<UTF16.CodeUnit>,
+        output: inout OutputSpan<Unicode.ASCII.CodeUnit>
+    ) -> Bool {
+        let maxHostBufferLength = 2048
+        guard !input.isEmpty && input.count <= maxHostBufferLength else {
+            return false
+        }
+        guard !output.isFull else {
+            // No room to encode the non-empty input
+            return false
+        }
+        guard let transcoder = idnaTranscoder else {
+            return false
+        }
+
+        return input.withUnsafeBufferPointer { inBuffer in
+            return withUnsafeTemporaryAllocation(of: UInt16.self, capacity: maxHostBufferLength) { outBuffer in
+                var processingDetails = UIDNAInfo(
+                    size: Int16(MemoryLayout<UIDNAInfo>.size),
+                    isTransitionalDifferent: 0,
+                    reservedB3: 0,
+                    errors: 0,
+                    reservedI2: 0,
+                    reservedI3: 0
+                )
+                var error = U_ZERO_ERROR
+
+                guard let inBufferPtr = inBuffer.baseAddress,
+                      let outBufferPtr = outBuffer.baseAddress else {
+                    return false
+                }
+
+                let convertedLength = uidna_nameToASCII(
+                    transcoder.idnaTranscoder,
+                    inBufferPtr,
+                    Int32(inBuffer.count),
+                    outBufferPtr,
+                    Int32(outBuffer.count),
+                    &processingDetails,
+                    &error
+                )
+
+                guard U_SUCCESS(error.rawValue) && shouldAllow(processingDetails.errors, encodeToASCII: true) && convertedLength > 0 else {
+                    return false
+                }
+
+                // Conversion succeeded and the result is ASCII
+                guard convertedLength <= output.freeCapacity else {
+                    return false
+                }
+                for v in outBuffer[..<Int(convertedLength)] {
+                    output.append(UInt8(truncatingIfNeeded: v))
+                }
+                return true
+            }
+        }
+    }
 }
