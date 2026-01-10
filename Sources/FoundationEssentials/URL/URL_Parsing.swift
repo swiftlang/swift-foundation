@@ -325,45 +325,7 @@ private func parse<T: _URLEncoding, Impl: _URLParseable>(
     if hasScheme {
         // Note: currentIndex is after the ":"
         let schemeLength = currentIndex - 1
-        switch schemeLength {
-        case 2:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "w") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "s")) {
-                flags.insert(.hasSpecialScheme)
-            }
-        case 3:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "w") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "s") &&
-                (buffer[2] | 0x20) == UInt8(ascii: "s")) {
-                flags.insert(.hasSpecialScheme)
-            } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") &&
-                       (buffer[1] | 0x20) == UInt8(ascii: "t") &&
-                       (buffer[2] | 0x20) == UInt8(ascii: "p")) {
-                flags.insert(.hasSpecialScheme)
-            }
-        case 4:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "h") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[2] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[3] | 0x20) == UInt8(ascii: "p")) {
-                flags.insert(.hasSpecialScheme)
-            } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") &&
-                       (buffer[1] | 0x20) == UInt8(ascii: "i") &&
-                       (buffer[2] | 0x20) == UInt8(ascii: "l") &&
-                       (buffer[3] | 0x20) == UInt8(ascii: "e")) {
-                flags.insert([.isFileURL, .hasSpecialScheme])
-            }
-        case 5:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "h") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[2] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[3] | 0x20) == UInt8(ascii: "p") &&
-                (buffer[4] | 0x20) == UInt8(ascii: "s")) {
-                flags.insert(.hasSpecialScheme)
-            }
-        default:
-            break
-        }
+        flags.insert(schemeFlags(buffer, schemeLength: schemeLength))
     }
 
     if currentIndex == endIndex {
@@ -524,40 +486,10 @@ private func parse<T: _URLEncoding, Impl: _URLParseable>(
         if flags.contains(.isDecomposable) {
             flags.insert(.hasOldPath)
         }
-        let isFileReferenceURL = (
-            flags.contains(.isFileURL) &&
-            pathLength >= 10 &&
-            buffer[pathStart] == UInt8(ascii: "/") &&
-            buffer[pathStart + 1] == UInt8(ascii: ".") &&
-            buffer[pathStart + 2] == UInt8(ascii: "f") &&
-            buffer[pathStart + 3] == UInt8(ascii: "i") &&
-            buffer[pathStart + 4] == UInt8(ascii: "l") &&
-            buffer[pathStart + 5] == UInt8(ascii: "e") &&
-            buffer[pathStart + 6] == UInt8(ascii: "/") &&
-            buffer[pathStart + 7] == UInt8(ascii: "i") &&
-            buffer[pathStart + 8] == UInt8(ascii: "d") &&
-            buffer[pathStart + 9] == UInt8(ascii: "=")
-        )
-        if isFileReferenceURL {
+        if flags.contains(.isFileURL) && hasFileReferencePath(buffer, pathStart: pathStart, pathLength: pathLength) {
             flags.insert(.isFileReferenceURL)
         }
-        // Could make this a tiny bit faster by branching better
-        let hasDirectoryPath = (
-            buffer[pathEnd - 1] == UInt8(ascii: "/")
-            || (pathLength == 1 &&
-                buffer[pathEnd - 1] == UInt8(ascii: "."))
-            || (pathLength == 2 &&
-                buffer[pathEnd - 2] == UInt8(ascii: ".") &&
-                buffer[pathEnd - 1] == UInt8(ascii: "."))
-            || (pathLength >= 2 &&
-                buffer[pathEnd - 2] == UInt8(ascii: "/") &&
-                buffer[pathEnd - 1] == UInt8(ascii: "."))
-            || (pathLength >= 3 &&
-                buffer[pathEnd - 3] == UInt8(ascii: "/") &&
-                buffer[pathEnd - 2] == UInt8(ascii: ".") &&
-                buffer[pathEnd - 1] == UInt8(ascii: "."))
-        )
-        if hasDirectoryPath {
+        if hasDirectoryPath(buffer, pathEnd: pathEnd, pathLength: pathLength) {
             flags.insert(.hasDirectoryPath)
         }
     }
@@ -599,7 +531,7 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     flags: inout __CFURLFlags,
     into impl: UnsafeMutablePointer<Impl>,
     allowEncoding: Bool,
-    replacingOriginalString: Bool = false
+    useModernParsing: Bool = false
 ) -> Bool {
 
     // MARK: Parsing
@@ -667,10 +599,31 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
         }
     }
 
-    // Allow any valid URL character in the port for compatibility
-    if flags.contains(.hasPort) && !validate(span: span.extracting(impl.pointee.portRange), component: .anyValid) {
-        guard allowEncoding else { return false }
-        shouldEncode = true
+    if flags.contains(.hasPort) {
+        if useModernParsing {
+            // Validate the port only contains digits
+            var isValid = true
+            for i in impl.pointee.portRange {
+                // Checks for ASCII digits "0" through "9" for a generic UnsignedInteger
+                if (span[unchecked: i] &- 0x30) > 9 {
+                    isValid = false
+                    break
+                }
+            }
+            if !isValid {
+                // Check for special-cased schemes where we allow a non-numeric port
+                guard flags.contains(.hasScheme),
+                      span.withUnsafeBufferPointer({
+                          shouldIgnorePort($0, schemeLength: impl.pointee.schemeRange.count)
+                      }) else {
+                    return false
+                }
+            }
+        } else if !validate(span: span.extracting(impl.pointee.portRange), component: .anyValid) {
+            // Allow any valid URL character in the port for compatibility
+            guard allowEncoding else { return false }
+            shouldEncode = true
+        }
     }
 
     // Path always exists
@@ -695,7 +648,8 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     // MARK: Encoding (if needed)
 
     if shouldEncode {
-        if replacingOriginalString {
+        if useModernParsing {
+            // Store only the valid, fully-encoded URL string with updated ranges
             guard let encodedString = encode(T.self, span: span, flags: &flags, updating: impl) else {
                 return false
             }
@@ -713,6 +667,136 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     return true
 }
 
+// MARK: - Helper functions
+
+private func schemeFlags<T: UnsignedInteger & FixedWidthInteger>(
+    _ buffer: UnsafeBufferPointer<T>,
+    schemeLength: Int
+) -> _URLFlags {
+    switch schemeLength {
+    case 2:
+        if ((buffer[0] | 0x20) == UInt8(ascii: "w") &&
+            (buffer[1] | 0x20) == UInt8(ascii: "s")) {
+            return .hasSpecialScheme
+        }
+    case 3:
+        if ((buffer[0] | 0x20) == UInt8(ascii: "w") &&
+            (buffer[1] | 0x20) == UInt8(ascii: "s") &&
+            (buffer[2] | 0x20) == UInt8(ascii: "s")) {
+            return .hasSpecialScheme
+        } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") &&
+                   (buffer[1] | 0x20) == UInt8(ascii: "t") &&
+                   (buffer[2] | 0x20) == UInt8(ascii: "p")) {
+            return .hasSpecialScheme
+        }
+    case 4:
+        if ((buffer[0] | 0x20) == UInt8(ascii: "h") &&
+            (buffer[1] | 0x20) == UInt8(ascii: "t") &&
+            (buffer[2] | 0x20) == UInt8(ascii: "t") &&
+            (buffer[3] | 0x20) == UInt8(ascii: "p")) {
+            return .hasSpecialScheme
+        } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") &&
+                   (buffer[1] | 0x20) == UInt8(ascii: "i") &&
+                   (buffer[2] | 0x20) == UInt8(ascii: "l") &&
+                   (buffer[3] | 0x20) == UInt8(ascii: "e")) {
+            return [.isFileURL, .hasSpecialScheme]
+        }
+    case 5:
+        if ((buffer[0] | 0x20) == UInt8(ascii: "h") &&
+            (buffer[1] | 0x20) == UInt8(ascii: "t") &&
+            (buffer[2] | 0x20) == UInt8(ascii: "t") &&
+            (buffer[3] | 0x20) == UInt8(ascii: "p") &&
+            (buffer[4] | 0x20) == UInt8(ascii: "s")) {
+            return .hasSpecialScheme
+        }
+    default:
+        break
+    }
+    return []
+}
+
+private func hasFileReferencePath<T: UnsignedInteger & FixedWidthInteger>(
+    _ buffer: UnsafeBufferPointer<T>,
+    pathStart: Int,
+    pathLength: Int
+) -> Bool {
+    guard pathLength >= 10 else {
+        return false
+    }
+    if T.self == UInt8.self {
+        return memcmp(buffer.baseAddress!.advanced(by: pathStart), "/.file/id=", 10) == 0
+    }
+    return (
+        buffer[pathStart] == UInt8(ascii: "/") &&
+        buffer[pathStart + 1] == UInt8(ascii: ".") &&
+        buffer[pathStart + 2] == UInt8(ascii: "f") &&
+        buffer[pathStart + 3] == UInt8(ascii: "i") &&
+        buffer[pathStart + 4] == UInt8(ascii: "l") &&
+        buffer[pathStart + 5] == UInt8(ascii: "e") &&
+        buffer[pathStart + 6] == UInt8(ascii: "/") &&
+        buffer[pathStart + 7] == UInt8(ascii: "i") &&
+        buffer[pathStart + 8] == UInt8(ascii: "d") &&
+        buffer[pathStart + 9] == UInt8(ascii: "=")
+    )
+}
+
+private func hasDirectoryPath<T: UnsignedInteger & FixedWidthInteger>(
+    _ buffer: UnsafeBufferPointer<T>,
+    pathEnd: Int,
+    pathLength: Int
+) -> Bool {
+    assert(pathLength > 0)
+    let last = buffer[pathEnd - 1]
+    if last == UInt8(ascii: "/") {
+        return true // Ends with "/"
+    }
+
+    guard last == UInt8(ascii: ".") else {
+        return false
+    }
+    if pathLength == 1 {
+        return true // Is "."
+    }
+
+    let secondLast = buffer[pathEnd - 2]
+    if secondLast == UInt8(ascii: "/") {
+        return true // Ends with "/."
+    }
+    guard secondLast == UInt8(ascii: ".") else {
+        return false
+    }
+    if pathLength == 2 {
+        return true // Is ".."
+    }
+
+    return buffer[pathEnd - 3] == UInt8(ascii: "/") // Ends with "/.."
+}
+
+private func shouldIgnorePort<T: UnsignedInteger & FixedWidthInteger>(
+    _ buffer: UnsafeBufferPointer<T>,
+    schemeLength: Int
+) -> Bool {
+    guard schemeLength == 11 else {
+        return false
+    }
+    if T.self == UInt8.self {
+        return memcmp(buffer.baseAddress!, "addressbook", 11) == 0
+    }
+    return (
+        buffer[0] == UInt8(ascii: "a") &&
+        buffer[1] == UInt8(ascii: "d") &&
+        buffer[2] == UInt8(ascii: "d") &&
+        buffer[3] == UInt8(ascii: "r") &&
+        buffer[4] == UInt8(ascii: "e") &&
+        buffer[5] == UInt8(ascii: "s") &&
+        buffer[6] == UInt8(ascii: "s") &&
+        buffer[7] == UInt8(ascii: "b") &&
+        buffer[8] == UInt8(ascii: "o") &&
+        buffer[9] == UInt8(ascii: "o") &&
+        buffer[10] == UInt8(ascii: "k")
+    )
+}
+
 // MARK: - Encoding
 
 private func encode<T: _URLEncoding, Impl: _URLParseable>(
@@ -722,6 +806,9 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
     updating impl: UnsafeMutablePointer<Impl>
 ) -> String? {
     let result = encode(T.self, span: span, flags: flags, for: impl, updateRanges: true)
+    if flags.contains(.shouldEncodePath) {
+        flags.insert(.hasEncodedPath)
+    }
     flags.remove([
         .shouldEncodeUser, .shouldEncodePassword, .shouldEncodeHost,
         .shouldEncodePath, .shouldEncodeQuery, .shouldEncodeFragment
@@ -795,6 +882,15 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
         // only store the fully-encoded string, since it means we don't need
         // to re-parse the encoded string.
 
+        @inline(__always)
+        func updateIndices(currentIndex: Int) {
+            // Update the length we've added due to encoding
+            extraBytesAdded = outputSpan.count - currentIndex
+            // Update the indices for copying
+            copyStart = currentIndex
+            copyEnd = currentIndex
+        }
+
         // Returns false if there's not enough room in the output buffer.
         @inline(__always)
         func flush() -> Bool {
@@ -821,11 +917,7 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
                 )
             }
             guard success else { return false }
-            // Update the length we've added due to percent-encoding
-            extraBytesAdded = outputSpan.count - range.endIndex
-            // Update the indices for copying
-            copyStart = range.endIndex
-            copyEnd = range.endIndex
+            updateIndices(currentIndex: range.endIndex)
             return true
         }
 
@@ -842,11 +934,7 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
                 )
             }
             guard success else { return false }
-            // Update the length we've added due to encoding
-            extraBytesAdded = outputSpan.count - range.endIndex
-            // Update the indices for copying
-            copyStart = range.endIndex
-            copyEnd = range.endIndex
+            updateIndices(currentIndex: range.endIndex)
             return true
         }
 
@@ -863,11 +951,7 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
                 )
             }
             guard success else { return false }
-            // Update the length we've added due to percent-encoding
-            extraBytesAdded = outputSpan.count - range.endIndex
-            // Update the indices for copying
-            copyStart = range.endIndex
-            copyEnd = range.endIndex
+            updateIndices(currentIndex: range.endIndex)
             return true
         }
 
@@ -910,7 +994,7 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
         @inline(__always)
         func updateFragmentRange(_ start: Int, _ end: Int) {
             guard updateRanges && extraBytesAdded > 0 else { return }
-            impl.pointee.queryRange = start..<end
+            impl.pointee.fragmentRange = start..<end
         }
 
         if flags.contains(.hasScheme) {
