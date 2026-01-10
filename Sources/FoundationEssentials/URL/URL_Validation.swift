@@ -74,7 +74,13 @@ struct URLComponentAllowedSet: RawRepresentable {
         codeUnit < 128 && (Self.allowedTable[Int(codeUnit)] & rawValue) != 0
     }
 
-    private static let allowedTable: [128 of UInt16] = [
+    #if FOUNDATION_FRAMEWORK
+    private typealias AllowedTable = [128 of UInt16]
+    #else
+    private typealias AllowedTable = ContiguousArray<UInt16>
+    #endif
+
+    private static let allowedTable: AllowedTable = [
         0b0000000,
         0b0000000,
         0b0000000,
