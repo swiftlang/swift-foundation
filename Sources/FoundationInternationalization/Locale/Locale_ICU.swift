@@ -1758,3 +1758,38 @@ extension Locale {
     }
 
 }
+
+// MARK: - Locale Canonicalization
+internal func canonicalizeLocaleIdentifier(_ identifier: String) -> String {
+    guard !identifier.isEmpty else { return identifier }
+
+    return _withFixedCharBuffer { buffer, size, status in
+        identifier.utf8CString.withUnsafeBufferPointer { inputBuffer in
+            uloc_canonicalize(inputBuffer.baseAddress, buffer, size, &status)
+        }
+    } ?? identifier
+}
+
+internal func canonicalizeLanguageIdentifier(_ identifier: String) -> String {
+    guard !identifier.isEmpty else { return identifier }
+
+    return _withFixedCharBuffer { buffer, size, status in
+        identifier.utf8CString.withUnsafeBufferPointer { inputBuffer in
+            uloc_canonicalize(inputBuffer.baseAddress, buffer, size, &status)
+        }
+    } ?? identifier
+}
+
+// MARK: - Dynamic Replacement for FoundationEssentials
+
+#if !FOUNDATION_FRAMEWORK
+@_dynamicReplacement(for: _canonicalLocaleIdentifier_platform(from:))
+package func _canonicalLocaleIdentifier_ICU(from string: String) -> String {
+    canonicalizeLocaleIdentifier(string)
+}
+
+@_dynamicReplacement(for: _canonicalLanguageIdentifier_platform(from:))
+package func _canonicalLanguageIdentifier_ICU(from string: String) -> String {
+    canonicalizeLanguageIdentifier(string)
+}
+#endif

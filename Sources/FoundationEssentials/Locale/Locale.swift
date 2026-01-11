@@ -716,8 +716,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 #if FOUNDATION_FRAMEWORK
         return _canonicalLocaleIdentifier(from: string)
 #else
-        // TODO: (Locale.canonicalIdentifier) implement in Swift: https://github.com/apple/swift-foundation/issues/45
-        return string
+        return _canonicalLocaleIdentifier_platform(from: string)
 #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -730,8 +729,7 @@ public struct Locale : Hashable, Equatable, Sendable {
             return ""
         }
 #else
-        // TODO: (Locale.canonicalIdentifier) implement in Swift: https://github.com/apple/swift-foundation/issues/45
-        return string
+        return _canonicalLocaleIdentifier_platform(from: string)
 #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -744,8 +742,7 @@ public struct Locale : Hashable, Equatable, Sendable {
             return ""
         }
 #else
-        // TODO: (Locale.canonicalLanguageIdentifier) Implement in Swift: https://github.com/apple/swift-foundation/issues/45
-        return string
+        return _canonicalLanguageIdentifier_platform(from: string)
 #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -888,4 +885,13 @@ extension Locale : Codable {
     public func encode(to encoder: Encoder) throws {
         try _encode(to: encoder, currentIsSentinel: true)
     }
+}
+
+// MARK: - Dynamic replacement hooks for locale canonicalization
+dynamic package func _canonicalLocaleIdentifier_platform(from string: String) -> String {
+    return string
+}
+
+dynamic package func _canonicalLanguageIdentifier_platform(from string: String) -> String {
+    return string
 }

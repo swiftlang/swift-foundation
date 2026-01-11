@@ -856,7 +856,6 @@ extension LocaleTests {
         verify("en-GB-u-ca-islamic-rg-uszzzz", .sunday, shouldRespectUserPrefForGregorian: false, shouldRespectUserPrefForIslamic: true)
     }
 
-    // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
     @Test func identifierTypesFromICUIdentifier() throws {
         verify("und_ZZ", cldr: "und_ZZ", bcp47: "und-ZZ", icu: "und_ZZ")
 
@@ -878,7 +877,6 @@ extension LocaleTests {
         verify("en_Hant_IL_FOO_BAR@ currency = EUR; calendar = Japanese ;", cldr: "en_Hant_IL_u_ca_japanese_cu_eur_x_lvariant_foo_bar", bcp47: "en-Hant-IL-u-ca-japanese-cu-eur-x-lvariant-foo-bar", icu: "en_Hant_IL_BAR_FOO@calendar=Japanese;currency=EUR")
     }
 
-    // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
     @Test func identifierTypesFromBCP47Identifier() throws {
 
         verify("fr-FR-1606nict-u-ca-gregory-x-test", cldr: "fr_FR_1606nict_u_ca_gregory_x_test", bcp47: "fr-FR-1606nict-u-ca-gregory-x-test", icu: "fr_FR_1606NICT@calendar=gregorian;x=test")
@@ -892,7 +890,6 @@ extension LocaleTests {
         verify("zh-cmn-CH-u-co-pinyin", cldr: "zh_CH_u_co_pinyin", bcp47: "zh-CH-u-co-pinyin", icu: "zh_CH@collation=pinyin")
     }
 
-    // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
     @Test func identifierTypesFromSpecialIdentifier() throws {
         verify("", cldr: "root", bcp47: "und", icu: "")
         verify("root", cldr: "root", bcp47: "root", icu: "root")
@@ -922,6 +919,30 @@ extension LocaleTests {
 
         // Starting an ID with script code is an acceptable special case
         verify("Hant", cldr: "hant", bcp47: "hant", icu: "hant")
+    }
+
+    @Test func canonicalIdentifierDirect() throws {
+        #expect(Locale.canonicalIdentifier(from: "en_us") == "en_US")
+        #expect(Locale.canonicalIdentifier(from: "EN_US") == "en_US")
+        #expect(Locale.canonicalIdentifier(from: "zh_hans_cn") == "zh_CN")
+        #expect(Locale.canonicalIdentifier(from: "no") == "nb")
+        #expect(Locale.canonicalIdentifier(from: "iw") == "he")
+        #expect(Locale.canonicalIdentifier(from: "in") == "id")
+        #expect(Locale.canonicalIdentifier(from: "ji") == "yi")
+        #expect(Locale.canonicalIdentifier(from: "en_latn_us") == "en_US")
+        #expect(Locale.canonicalIdentifier(from: "sr_latn_rs") == "sr-Latn_RS")
+        #expect(Locale.canonicalIdentifier(from: "") == "")
+    }
+
+    @Test func canonicalLanguageIdentifierDirect() throws {
+        #expect(Locale.canonicalLanguageIdentifier(from: "en") == "en")
+        #expect(Locale.canonicalLanguageIdentifier(from: "EN") == "en")
+        #expect(Locale.canonicalLanguageIdentifier(from: "no") == "nb")
+        #expect(Locale.canonicalLanguageIdentifier(from: "iw") == "he")
+        #expect(Locale.canonicalLanguageIdentifier(from: "in") == "id")
+        #expect(Locale.canonicalLanguageIdentifier(from: "ji") == "yi")
+        #expect(Locale.canonicalLanguageIdentifier(from: "zh-cmn") == "zh")
+        #expect(Locale.canonicalLanguageIdentifier(from: "") == "")
     }
 
     @Test func asIfCurrentWithBundleLocalizations() async {
