@@ -152,7 +152,7 @@ private extension CFRange {
     }
 }
 
-internal extension __CFURLRange {
+extension __CFURLRange {
     @inline(__always)
     init(_ range: Range<Int>) {
         self = __CFURLRange(
@@ -528,7 +528,7 @@ private func parse<T: _URLEncoding, Impl: _URLParseable>(
 internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     _ type: T.Type,
     span: borrowing Span<T.CodeUnit>,
-    flags: inout __CFURLFlags,
+    flags: inout _URLFlags,
     into impl: UnsafeMutablePointer<Impl>,
     allowEncoding: Bool,
     useModernParsing: Bool = false
@@ -536,6 +536,7 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
 
     // MARK: Parsing
 
+    assert(span.indices.startIndex == 0)
     span.withUnsafeBufferPointer { buffer in
         parse(T.self, buffer: buffer, into: impl, flags: &flags)
     }
@@ -802,7 +803,7 @@ private func shouldIgnorePort<T: UnsignedInteger & FixedWidthInteger>(
 private func encode<T: _URLEncoding, Impl: _URLParseable>(
     _ type: T.Type,
     span: borrowing Span<T.CodeUnit>,
-    flags: inout __CFURLFlags,
+    flags: inout _URLFlags,
     updating impl: UnsafeMutablePointer<Impl>
 ) -> String? {
     let result = encode(T.self, span: span, flags: flags, for: impl, updateRanges: true)
@@ -930,7 +931,7 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
             let success = T._withUTF16(input: span.extracting(range)) { utf16Span in
                 return uidnaHook.nameToASCII(
                     input: utf16Span,
-                    output: &outputSpan,
+                    output: &outputSpan
                 )
             }
             guard success else { return false }

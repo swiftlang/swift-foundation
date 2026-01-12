@@ -24,12 +24,10 @@ internal func resolve<T: UnsignedInteger & FixedWidthInteger>(
     into absolutePath: UnsafeMutableBufferPointer<T>
 ) -> Int {
     // Append the relative path after the last slash in the base path
-    var lastSlashIndex = basePath.indices.endIndex
-    repeat {
+    var lastSlashIndex = basePath.indices.endIndex - 1
+    while lastSlashIndex >= basePath.indices.startIndex && basePath[lastSlashIndex] != T(UInt8(ascii: "/")) {
         lastSlashIndex -= 1
-    } while (
-        lastSlashIndex >= basePath.indices.startIndex && basePath[lastSlashIndex] != T(UInt8(ascii: "/"))
-    )
+    }
     guard lastSlashIndex >= basePath.indices.startIndex else {
         // No base slash, just use the relative path
         let pathEnd = absolutePath.initialize(fromSpan: relativePath)
@@ -277,7 +275,7 @@ extension UnsafePointer<__CFURLHeader>: _URLHeader {
 
 // MARK: - Absolute URL resolution
 
-internal extension UnsafeMutableBufferPointer where Element: UnsignedInteger & FixedWidthInteger {
+extension UnsafeMutableBufferPointer where Element: UnsignedInteger & FixedWidthInteger {
     func initialize(fromSpan span: borrowing Span<Element>) -> Self.Index {
         return span.withUnsafeBufferPointer { buffer in
             return self.initialize(fromContentsOf: buffer)
@@ -285,7 +283,7 @@ internal extension UnsafeMutableBufferPointer where Element: UnsignedInteger & F
     }
 }
 
-internal extension Slice {
+extension Slice {
     func initialize<T>(fromSpan span: borrowing Span<T>) -> Base.Index where Base == UnsafeMutableBufferPointer<T> {
         return span.withUnsafeBufferPointer { buffer in
             return self.initialize(fromContentsOf: buffer)

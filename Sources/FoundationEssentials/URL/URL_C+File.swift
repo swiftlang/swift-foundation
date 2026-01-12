@@ -97,7 +97,7 @@ extension NSURL {
 ///
 /// - Note: `pathBuffer` must be larger than `pathLength`, which
 ///   should point to the end of the FSR (first null byte).
-private func parseMutableFileSystemRepresentation(_ pathBuffer: UnsafeMutableBufferPointer<UInt8>, pathLength: Int, flags: inout __CFURLFlags, isDirectory: Bool) -> String {
+private func parseMutableFileSystemRepresentation(_ pathBuffer: UnsafeMutableBufferPointer<UInt8>, pathLength: Int, flags: inout _URLFlags, isDirectory: Bool) -> String {
     // Note: pathLength can technically be 0 for FSRs like "\0".
     assert(pathBuffer.count > 0)
     assert(pathLength < pathBuffer.count) // Need room for a trailing slash
@@ -121,10 +121,11 @@ private func parseMutableFileSystemRepresentation(_ pathBuffer: UnsafeMutableBuf
         }
     }
 
+    // pathBuffer.count > 0, so we're OK to unwrap .baseAddress!
     let fileIDPrefixSize = 10 // "/.file/id="
     let isFileReferenceURL = (
         pathLength >= fileIDPrefixSize &&
-        strncmp(pathBuffer.baseAddress!, "/.file/id=", fileIDPrefixSize) == 0
+        memcmp(pathBuffer.baseAddress!, "/.file/id=", fileIDPrefixSize) == 0
     )
 
     // Note: don't insert .hasOldNetLocation, which only considers a non-empty authority
@@ -147,6 +148,7 @@ private func parseMutableFileSystemRepresentation(_ pathBuffer: UnsafeMutableBuf
     return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxEncodedSize) { encodedBuffer in
         var pathStart = 0
         if isAbsolute {
+            // maxEncodedSize > 0, so we're OK to unwrap .baseAddress!
             memcpy(encodedBuffer.baseAddress!, "file://", filePrefixSize)
             pathStart = filePrefixSize
         }
@@ -165,7 +167,7 @@ private func parseMutableFileSystemRepresentation(_ pathBuffer: UnsafeMutableBuf
     }
 }
 
-private func parseFileSystemRepresentation(buffer: UnsafeBufferPointer<UInt8>, flags: inout __CFURLFlags, isDirectory: Bool) -> String? {
+private func parseFileSystemRepresentation(buffer: UnsafeBufferPointer<UInt8>, flags: inout _URLFlags, isDirectory: Bool) -> String? {
     // Check for null bytes.
     var pathLength = buffer.count
     if let nullIndex = buffer.firstIndex(of: 0) {
@@ -183,7 +185,7 @@ private func parseFileSystemRepresentation(buffer: UnsafeBufferPointer<UInt8>, f
     }
 }
 
-private func parsePOSIX(_ path: CFString, flags: inout __CFURLFlags, isDirectory: Bool) -> String? {
+private func parsePOSIX(_ path: CFString, flags: inout _URLFlags, isDirectory: Bool) -> String? {
     // Convert path to its decomposed file system representation
     let length = CFStringGetLength(path)
     // Checking for ASCII and avoiding bridging gets us from 2.2x slower to
@@ -208,7 +210,7 @@ private func parsePOSIX(_ path: CFString, flags: inout __CFURLFlags, isDirectory
     }
 }
 
-private func parseWindows(_ path: String, flags: inout __CFURLFlags, isDirectory: Bool) -> String? {
+private func parseWindows(_ path: String, flags: inout _URLFlags, isDirectory: Bool) -> String? {
     var path = path.replacing(._backslash, with: ._slash)
     // Standardizes an absolute path like "C:/" to "/C:/"
     _ = URL.isAbsolute(standardizing: &path, pathStyle: .windows)
@@ -220,7 +222,7 @@ private func parseWindows(_ path: String, flags: inout __CFURLFlags, isDirectory
     }
 }
 
-private func parseHFS(_ path: String, flags: inout __CFURLFlags, isDirectory: Bool) -> String? {
+private func parseHFS(_ path: String, flags: inout _URLFlags, isDirectory: Bool) -> String? {
     var path = posixLikePath(fromHFSPath: path)
     return path.withUTF8 { pathBuffer in
         guard !pathBuffer.isEmpty else {

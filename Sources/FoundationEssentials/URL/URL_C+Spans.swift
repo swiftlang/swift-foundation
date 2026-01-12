@@ -92,6 +92,7 @@ internal func _withURLSpans<R>(
                 blockIfUTF16: { s2span16 in
                     return withUnsafeTemporaryAllocation(of: UInt16.self, capacity: s1span8.count) { s1buffer16 in
                         // s1span8 is ASCII, which is the same in UTF16
+                        // _withURLSpan gives us a 0-indexed Span.
                         assert(s1span8.indices.startIndex == 0)
                         for i in 0..<s1span8.count {
                             s1buffer16[i] = UInt16(s1span8[unchecked: i])

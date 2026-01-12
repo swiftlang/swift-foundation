@@ -252,7 +252,6 @@ internal enum URLEncoder {
                 writeIndex += 1
             }
             readIndex += 3
-
         }
         return writeIndex
     }

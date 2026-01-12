@@ -13,7 +13,7 @@
 
 // MARK: - Component validation
 
-func validate<T: UnsignedInteger & FixedWidthInteger>(
+internal func validate<T: UnsignedInteger & FixedWidthInteger>(
     span: borrowing Span<T>,
     component allowedSet: URLComponentAllowedSet
 ) -> Bool {
@@ -44,7 +44,7 @@ private func isHexDigit<T: UnsignedInteger & FixedWidthInteger>(
     codeUnit < 128 && UInt8(truncatingIfNeeded: codeUnit).isValidHexDigit
 }
 
-struct URLComponentAllowedSet: RawRepresentable {
+internal struct URLComponentAllowedSet: RawRepresentable {
     let rawValue: UInt16
 
     static var scheme: Self { Self(rawValue: UInt16(1) << 0) }
