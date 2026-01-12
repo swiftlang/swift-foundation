@@ -62,6 +62,8 @@ private struct ParseStrategyMatchTests {
         #expect(res.output.1 == expectedDate)
     }
 
+// https://github.com/apple/swift-foundation/issues/60
+#if FOUNDATION_FRAMEWORK
     @Test func apiStatement() {
 
         let statement = """
@@ -138,7 +140,7 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
     }
 
     @Test func apiStatements2() {
-        // Test dates and numbers appearing in unexpeted places
+        // Test dates and numbers appearing in unexpected places
         let statement = """
 CREDIT   Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11
 DSLIP    Apr 06/20    GMT gain                     USD 3,020.85
@@ -211,8 +213,9 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         #expect(match.output.1 == "MergeableSetTests")
         #expect(match.output.2 == "started")
         // dateFormatter.date(from: "2021-07-08 10:19:35.418")!
-        #expect(match.output.3.timeIntervalSinceReferenceDate == 647432375.418)
+        #expect(match.output.3 == Date(timeIntervalSinceReferenceDate: 647432375.418))
     }
+#endif
 
     @Test func variousDatesAndTimes() {
         func verify(_ str: String, _ strategy: Date.ParseStrategy, _ expected: String?, sourceLocation: SourceLocation = #_sourceLocation) {

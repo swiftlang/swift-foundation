@@ -1003,7 +1003,8 @@ private struct CalendarTests {
     }
     
     @Test func datesMatching_simpleExample() {
-        let cal = Calendar(identifier: .gregorian)
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .gmt
         // August 22, 2022 at 3:02:38 PM PDT
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307)
         let next3Minutes = [
@@ -1419,7 +1420,7 @@ private struct CalendarTests {
         func test(_ start: Date, _ end: Date) throws {
             let components = c.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond, .weekOfMonth], from: start, to: end)
             let added = try #require(c.date(byAdding: components, to: start))
-            #expect(added.timeIntervalSinceReferenceDate == end.timeIntervalSinceReferenceDate, "actual: \(s.format(added)), expected: \(s.format(end))")
+            #expect(added == end, "actual: \(s.format(added)), expected: \(s.format(end))")
         }
 
         // 2024-03-09T02:34:36-0800, 2024-03-17T03:34:36-0700, 10:34:36 UTC
@@ -1433,6 +1434,18 @@ private struct CalendarTests {
 
         // 2024-03-03T02:34:36-0800, 2024-03-11T02:34:36-0700
         try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
+    }
+
+    @Test func testDateComponentsTimeZone() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+
+        var components = DateComponents(year:2021, month: 6, day: 10, hour: 23, minute: 59, second: 59)
+        let tz = try #require(TimeZone(identifier: "UTC+9"))
+        components.timeZone = tz
+
+        let date = try #require(calendar.date(from: components))
+        #expect(date.timeIntervalSinceReferenceDate == 645029999)
     }
 
 #if _pointerBitWidth(_64) // These tests assumes Int is Int64

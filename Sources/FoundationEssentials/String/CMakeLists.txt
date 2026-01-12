@@ -15,10 +15,12 @@
 target_sources(FoundationEssentials PRIVATE
     BidirectionalCollection.swift
     BuiltInUnicodeScalarSet.swift
+    IANACharsetNames.swift
     RegexPatternCache.swift
     String+Bridging.swift
     String+Comparison.swift
     String+Encoding.swift
+    String+Encoding+Names.swift
     String+EndianAdaptorSequence.swift
     String+Essentials.swift
     String+IO.swift

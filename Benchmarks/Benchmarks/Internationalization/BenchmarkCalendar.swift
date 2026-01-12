@@ -20,6 +20,13 @@ import FoundationInternationalization
 import Foundation
 #endif
 
+#if FOUNDATION_FRAMEWORK
+// FOUNDATION_FRAMEWORK has a scheme per benchmark file, so only include one benchmark here.
+let benchmarks = {
+    calendarBenchmarks()
+}
+#endif
+
 func calendarBenchmarks() {
 
     Benchmark.defaultConfiguration.maxIterations = 1_000
@@ -129,8 +136,24 @@ func calendarBenchmarks() {
         }
     }
 
-    // MARK: - Allocations
+    let testDates = {
+        let date = Date(timeIntervalSince1970: 0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 3600), since: date))
+        }
+        return dates
+    }()
 
+    Benchmark("NextDatesMatchingOnHour") { _ in
+        for d in testDates {
+            let t = currentCalendar.nextDate(after: d, matching: DateComponents(minute: 0, second: 0), matchingPolicy: .nextTime)
+            blackHole(t)
+        }
+    }
+
+    // MARK: - Allocations
     let reference = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
     
     let allocationsConfiguration = Benchmark.Configuration(
@@ -208,7 +231,6 @@ func calendarBenchmarks() {
             assert(identifier == "en_US")
         }
     }
-
     // MARK: - Identifiers
 
     Benchmark("identifierFromComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
