@@ -29,14 +29,14 @@ internal protocol _URLEncoding {
     static var _maxUTF8BytesPerCharacter: Int { get }
     static func _withUTF8<R>(
         input: borrowing Span<Self.CodeUnit>,
-        block: (consuming Span<UTF8.CodeUnit>) -> R
+        block: (borrowing Span<UTF8.CodeUnit>) -> R
     ) -> R
 
     // ICU's uidna_nameToASCII conversion is fastest with UTF16, so supply
     // UTF16 if we have it (especially for UTF16-backed CF/NSStrings).
     static func _withUTF16<R>(
         input: borrowing Span<Self.CodeUnit>,
-        block: (consuming Span<UTF16.CodeUnit>) -> R
+        block: (borrowing Span<UTF16.CodeUnit>) -> R
     ) -> R
 }
 
