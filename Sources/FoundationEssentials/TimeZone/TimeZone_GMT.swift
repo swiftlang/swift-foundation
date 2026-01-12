@@ -102,29 +102,30 @@ extension _TimeZoneGMT {
             } else {
                 span.append(UInt8(ascii: "+"))
             }
-            if hours >= 10 {
-                // Tens
-                span.append(UInt8((hours / 10) + 48))
-            }
 
-            // Ones
-            span.append(UInt8((hours % 10) + 48))
+            let (hours_tens, hours_ones) = hours.quotientAndRemainder(dividingBy: 10)
+            if hours_tens >= 1 {
+                span.append(UInt8(hours_tens + 48))
+            }
+            span.append(UInt8(hours_ones + 48))
+
             guard minutes > 0 else {
                 return span.finalize(for: buffer)
             }
 
             span.append(UInt8(ascii: ":"))
 
-            if minutes >= 10 {
+            let (minutes_tens, minutes_ones) = minutes.quotientAndRemainder(dividingBy: 10)
+            if minutes_tens >= 1 {
                 // Tens
-                span.append(UInt8((minutes / 10) + 48))
-            } else if minutes > 0 {
-                // 0 for Tens
+                span.append(UInt8(minutes_tens + 48))
+            } else {
+                // Pad 0 for Tens
                 span.append(UInt8(ascii: "0"))
             }
 
             // Ones
-            span.append(UInt8((minutes % 10) + 48))
+            span.append(UInt8(minutes_ones + 48))
 
             return span.finalize(for: buffer)
         }
