@@ -1154,6 +1154,12 @@ private struct FileManagerTests {
             let fileName = UUID().uuidString
             let cwd = fileManager.currentDirectoryPath
 
+            #expect(fileManager.changeCurrentDirectoryPath(cwd))
+            #expect(cwd == fileManager.currentDirectoryPath)
+
+            let nearLimitDir = cwd + "/" + String(repeating: "A", count: 255 - cwd.count)
+            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: nearLimitDir), withIntermediateDirectories: false) }
+
             #expect(fileManager.createFile(atPath: dirName + "/" + fileName, contents: nil))
 
             let dirURL = URL(filePath: dirName, directoryHint: .checkFileSystem)
@@ -1192,12 +1198,6 @@ private struct FileManagerTests {
 
             #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir1"), withIntermediateDirectories: false) }
 
-            // SHCreateDirectoryExW's path argument is limited to 248 characters, and the \\?\ prefix doesn't help.
-            // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shcreatedirectoryexw
-            #expect(throws: (any Error).self) {
-                try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: true)
-            }
-
             // SetCurrentDirectory seems to be limited to MAX_PATH unconditionally, counter to the documentation.
             // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setcurrentdirectory
             // https://github.com/MicrosoftDocs/feedback/issues/1441
@@ -1216,8 +1216,12 @@ private struct FileManagerTests {
 
             #expect((cwd + "/" + dirName + "/" + "lnk").resolvingSymlinksInPath == (cwd + "/" + dirName + "/" + fileName).resolvingSymlinksInPath)
 
-            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2"), withIntermediateDirectories: false) }
-            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: false) }
+            #expect(throws: Never.self) {
+                try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: true)
+            }
+            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir4"), withIntermediateDirectories: false) }
+            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir4" + "/" + "subdir5"), withIntermediateDirectories: false) }
+
             #expect(throws: Never.self) { try Data().write(to: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile")) }
             #expect(throws: Never.self) { try Data().write(to: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile2")) }
             #expect(throws: Never.self) { try fileManager.moveItem(atPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile2", toPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile3") }
