@@ -1747,7 +1747,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         // `julianDayAtBeginningOfYear` points to the noon of the day *before* the beginning of year/month
-        let julianDayAtBeginningOfYear = try Self.julianDay(ofDay: 0, month: rawMonth, year: rawYear, useJulianReference: usingJulianReference)
+        let julianDayAtBeginningOfYear = try julianDay(ofDay: 0, month: rawMonth, year: rawYear, useJulianReference: usingJulianReference)
 
         let first = relativeWeekday(fromJulianDay: julianDayAtBeginningOfYear + 1) // weekday of the first day in the month, 0...6
 
@@ -1903,7 +1903,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     // day and month are 1-based
     // throws if out of supported julian day range
-    static func julianDay(ofDay day: Int, month: Int, year: Int, useJulianReference: Bool = false) throws (GregorianCalendarError) -> Int {
+    func julianDay(ofDay day: Int, month: Int, year: Int, useJulianReference: Bool = false) throws (GregorianCalendarError) -> Int {
 
         let y = 4716 // number of years from epoch of computation to epoch of calendar
         let j = 1401 // number of days from the epoch of computation to the first day of the Julian period
@@ -1950,7 +1950,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let daysBeforeMonthNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         let daysBeforeMonthLeap =    [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
 
-        let julianDay = try Self.julianDay(ofDay: day, month: month, year: year)
+        let julianDay = try julianDay(ofDay: day, month: month, year: year)
         let useJulianCalendar = julianDay < julianCutoverDay
         let isLeapYear = gregorianYearIsLeap(year)
         

@@ -149,6 +149,41 @@ func timeZoneBenchmarks() {
             blackHole(gmtTimeZone.abbreviation())
         }
     }
-}
 
+    guard let pacificTime = TimeZone(identifier: "America/Los_Angeles") else {
+        fatalError("unexpected failure when creating time zone")
+    }
+
+    let locale = Locale(identifier: "jp_JP")
+    let PacificTimeConfiguration = Benchmark.Configuration(scalingFactor: .mega)
+
+
+    Benchmark("PacificTime-secondsFromGMT", configuration: PacificTimeConfiguration) { benchmark in
+        for d in testDates {
+            let secondsFromGMT = pacificTime.secondsFromGMT(for: d)
+            blackHole(secondsFromGMT)
+        }
+    }
+
+    Benchmark("PacificTime-nextDaylightSavingTimeTransition", configuration: PacificTimeConfiguration) { benchmark in
+        for d in testDates {
+            let nextDST = pacificTime.nextDaylightSavingTimeTransition(after: d)
+            blackHole(nextDST)
+        }
+    }
+
+    Benchmark("PacificTime-daylightSavingTimeOffsets", configuration: PacificTimeConfiguration) { benchmark in
+        for d in testDates {
+            let dstOffset = pacificTime.daylightSavingTimeOffset(for: d)
+            blackHole(dstOffset)
+        }
+    }
+
+    Benchmark("PacificTime-isDaylightSavingTime", configuration: PacificTimeConfiguration) { benchmark in
+        for d in testDates {
+            let isDST = pacificTime.isDaylightSavingTime(for: d)
+            blackHole(isDST)
+        }
+    }
+}
 
