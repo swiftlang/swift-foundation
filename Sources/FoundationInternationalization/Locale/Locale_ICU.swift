@@ -1760,14 +1760,119 @@ extension Locale {
 }
 
 // MARK: - Locale Canonicalization
+
+private let legacyLanguageMappings: [String: String] = [
+    "no": "nb",   // Norwegian
+    "iw": "he",   // Hebrew
+    "in": "id",   // Indonesian
+    "ji": "yi",   // Yiddish
+    "jw": "jv",   // Javanese
+    "jaw": "jv",  // Javanese alternate
+]
+
 internal func canonicalizeLocaleIdentifier(_ identifier: String) -> String {
     guard !identifier.isEmpty else { return identifier }
+    let isBCP47 = identifier.contains("-")
 
-    return _withFixedCharBuffer { buffer, size, status in
-        identifier.utf8CString.withUnsafeBufferPointer { inputBuffer in
+    var workingIdentifier = applyLegacyLanguageMapping(identifier)
+
+    guard let canonicalized = _withFixedCharBuffer({ buffer, size, status in
+        workingIdentifier.utf8CString.withUnsafeBufferPointer { inputBuffer in
             uloc_canonicalize(inputBuffer.baseAddress, buffer, size, &status)
         }
-    } ?? identifier
+    }) else {
+        return identifier
+    }
+
+    let minimized = isBCP47 ? canonicalized : removeRedundantScript(canonicalized)
+
+    if isBCP47 {
+        return _withFixedCharBuffer { buffer, size, status in
+            minimized.utf8CString.withUnsafeBufferPointer { inputBuffer in
+                uloc_toLanguageTag(inputBuffer.baseAddress, buffer, size, UBool.true, &status)
+            }
+        } ?? minimized
+    } else {
+        return convertScriptSeparatorToHyphen(minimized)
+    }
+}
+
+private func applyLegacyLanguageMapping(_ identifier: String) -> String {
+    let separator = identifier.contains("_") ? "_" : "-"
+    let components = identifier.split(separator: Character(separator), maxSplits: 1)
+    guard let langCode = components.first else { return identifier }
+
+    let langStr = String(langCode)
+    if let mapped = legacyLanguageMappings[langStr] {
+        if components.count > 1 {
+            return mapped + separator + String(components[1])
+        } else {
+            return mapped
+        }
+    }
+    return identifier
+}
+
+private func removeRedundantScript(_ identifier: String) -> String {
+    let parts = identifier.split(separator: "_")
+    guard parts.count >= 3 else { return identifier }
+
+    let lang = String(parts[0])
+    let script = String(parts[1])
+    let region = String(parts[2])
+
+    guard script.count == 4,
+          script.first?.isUppercase == true,
+          script.dropFirst().allSatisfy({ $0.isLowercase }) else {
+        return identifier
+    }
+
+    let langRegion = "\(lang)_\(region)"
+    guard let likelyFull = _withFixedCharBuffer({ buffer, size, status in
+        langRegion.utf8CString.withUnsafeBufferPointer { inputBuffer in
+            uloc_addLikelySubtags(inputBuffer.baseAddress, buffer, size, &status)
+        }
+    }) else {
+        return identifier
+    }
+
+    guard let defaultScript = _withFixedCharBuffer({ buffer, size, status in
+        likelyFull.utf8CString.withUnsafeBufferPointer { inputBuffer in
+            uloc_getScript(inputBuffer.baseAddress, buffer, size, &status)
+        }
+    }) else {
+        return identifier
+    }
+
+    if script == defaultScript {
+        var result = lang + "_" + region
+        for i in 3..<parts.count {
+            result += "_" + String(parts[i])
+        }
+        return result
+    }
+
+    return identifier
+}
+
+private func convertScriptSeparatorToHyphen(_ identifier: String) -> String {
+    let parts = identifier.split(separator: "_")
+    guard parts.count >= 2 else { return identifier }
+
+    let secondPart = String(parts[1])
+    let isScriptCode = secondPart.count == 4 &&
+                       secondPart.first?.isUppercase == true &&
+                       secondPart.dropFirst().allSatisfy { $0.isLowercase }
+
+    if isScriptCode {
+        var result = String(parts[0]) + "-" + secondPart
+        for i in 2..<parts.count {
+            result += "_" + String(parts[i])
+        }
+        return result
+    }
+
+    return identifier
 }
 
 internal func canonicalizeLanguageIdentifier(_ identifier: String) -> String {
