@@ -79,53 +79,56 @@ extension _TimeZoneGMT {
         guard !(offset < -18 * 3600 || 18 * 3600 < offset) else {
             return nil
         }
-        
+
         // Move up by half a minute so that rounding down via division gets us the right answer
         var remainder = abs(offset) + 30
-        
+
         let hours = remainder / 3600
         remainder = remainder % 3600
         let minutes = remainder / 60
-        
+        // This format discards "seconds" values
+
         if hours == 0 && minutes == 0 {
             return "GMT"
         }
 
-        // This format discards "seconds" values
-        
-        var result = "GMT"
-        if offset < 0 {
-            result += "-"
-        } else {
-            result += "+"
-        }
-        
-        if hours >= 10 {
-            // Tens
-            result.unicodeScalars.append(Unicode.Scalar((hours / 10) + 48)!)
-        }
-        
-        // Ones
-        result.unicodeScalars.append(Unicode.Scalar((hours % 10) + 48)!)
-        guard minutes > 0 else {
-            return result
-        }
+        return String(unsafeUninitializedCapacity: 14) { buffer in
+            var span = OutputSpan(buffer: buffer, initializedCount: 0)
+            span.append(UInt8(ascii: "G"))
+            span.append(UInt8(ascii: "M"))
+            span.append(UInt8(ascii: "T"))
+            if offset < 0 {
+                span.append(UInt8(ascii: "-"))
+            } else {
+                span.append(UInt8(ascii: "+"))
+            }
 
-        // ':'
-        result.unicodeScalars.append(Unicode.Scalar(58)!)
+            let (hours_tens, hours_ones) = hours.quotientAndRemainder(dividingBy: 10)
+            if hours_tens >= 1 {
+                span.append(UInt8(hours_tens + 48))
+            }
+            span.append(UInt8(hours_ones + 48))
 
-        if minutes >= 10 {
-            // Tens
-            result.unicodeScalars.append(Unicode.Scalar((minutes / 10) + 48)!)
-        } else if minutes > 0 {
-            // 0 for Tens
-            result.unicodeScalars.append(Unicode.Scalar(48)!)
+            guard minutes > 0 else {
+                return span.finalize(for: buffer)
+            }
+
+            span.append(UInt8(ascii: ":"))
+
+            let (minutes_tens, minutes_ones) = minutes.quotientAndRemainder(dividingBy: 10)
+            if minutes_tens >= 1 {
+                // Tens
+                span.append(UInt8(minutes_tens + 48))
+            } else {
+                // Pad 0 for Tens
+                span.append(UInt8(ascii: "0"))
+            }
+
+            // Ones
+            span.append(UInt8(minutes_ones + 48))
+
+            return span.finalize(for: buffer)
         }
-        
-        // Ones
-        result.unicodeScalars.append(Unicode.Scalar((minutes % 10) + 48)!)
-
-        return result
     }
 }
 
