@@ -123,6 +123,16 @@ fileprivate struct LoadedScopeCache : Sendable {
 
 fileprivate let _loadedScopeCache = LockedState(initialState: LoadedScopeCache())
 
+extension AttributeScopes {
+    @_spi(AttributedStringDefaultScopes)
+    @objc
+    open class _DefaultScopeRegistration: NSObject, @unchecked Sendable {
+        open class func _attributeScopeType() -> any AttributeScope.Type {
+            fatalError("Class \(Self.self) does not implement _attributeScopeType()")
+        }
+    }
+}
+
 internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type] {
     // On native macOS, the UI framework that gets loaded is AppKit. On
     // macCatalyst however, we load a version of UIKit.
