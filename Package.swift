@@ -190,7 +190,8 @@ let package = Package(
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
-                .enableExperimentalFeature("AccessLevelOnImport")
+                .enableExperimentalFeature("AccessLevelOnImport"),
+                .enableExperimentalFeature("LifetimeDependence"),
             ] + availabilityMacros + featureSettings
         ),
         

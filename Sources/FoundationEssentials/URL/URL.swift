@@ -1329,20 +1329,7 @@ public struct URL: Equatable, Sendable, Hashable {
     // MARK: - Bridging Support
 
     private init(reference: __shared NSURL) {
-        guard foundation_swift_nsurl_enabled() else {
-            _url = _BridgedURL(reference).convertingFileReference()
-            return
-        }
-        if let swift = reference as? _NSSwiftURL {
-            _url = _BridgedNSSwiftURL(swift).convertingFileReference()
-        } else {
-            // This is a custom NSURL subclass
-            _url = _BridgedURL(reference).convertingFileReference()
-        }
-    }
-
-    internal init(_ url: _NSSwiftURL) {
-        _url = _BridgedNSSwiftURL(url)
+        _url = _BridgedURL(reference).convertingFileReference()
     }
 
     private var ns: NSURL {
@@ -1358,10 +1345,6 @@ public struct URL: Equatable, Sendable, Hashable {
     internal var _swiftURL: _SwiftURL? {
         #if FOUNDATION_FRAMEWORK
         if let swift = _url as? _SwiftURL { return swift }
-        if let bridged = _url as? _BridgedNSSwiftURL { return bridged._wrapped.url }
-        if foundation_swift_nsurl_enabled(), let swift = ns._trueSelf()._url as? _SwiftURL {
-            return swift
-        }
         return _SwiftURL(stringOrEmpty: _url.relativeString, relativeTo: _url.baseURL)
         #else
         return _url

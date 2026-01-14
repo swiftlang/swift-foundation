@@ -15,7 +15,6 @@
 target_sources(FoundationEssentials PRIVATE
     URL.swift
     URL_Bridge.swift
-    URL_ObjC.swift
     URL_Protocol.swift
     URL_Swift.swift
     URLComponents.swift

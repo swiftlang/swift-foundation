@@ -167,8 +167,9 @@ extension String {
             }
         }
     }
-    
-    private func _decomposed(_ type: String._NormalizationType, into buffer: UnsafeMutableBufferPointer<UInt8>, nullTerminated: Bool = false) -> Int? {
+
+    // Note: internal for use in URL
+    internal func _decomposed(_ type: String._NormalizationType, into buffer: UnsafeMutableBufferPointer<UInt8>, nullTerminated: Bool = false) -> Int? {
         var copy = self
         return copy.withUTF8 {
             try? $0._decomposed(type, as: Unicode.UTF8.self, into: buffer, nullTerminated: nullTerminated)

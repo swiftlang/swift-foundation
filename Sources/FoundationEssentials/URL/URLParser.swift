@@ -185,6 +185,10 @@ fileprivate struct URLBufferParseInfo {
 package protocol UIDNAHook {
     static func encode(_ host: some StringProtocol) -> String?
     static func decode(_ host: some StringProtocol) -> String?
+    static func nameToASCII(
+        input: borrowing Span<UTF16.CodeUnit>,
+        output: inout OutputSpan<Unicode.ASCII.CodeUnit>
+    ) -> Bool
 }
 
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
@@ -960,82 +964,32 @@ internal struct RFC3986Parser {
 
 // MARK: - Encoding Extensions
 
-fileprivate func hexToAscii(_ hex: UInt8) -> UInt8 {
+@inline(__always)
+internal func hexToAscii(_ hex: UInt8) -> UInt8 {
     switch hex {
-    case 0x0:
-        return UInt8(ascii: "0")
-    case 0x1:
-        return UInt8(ascii: "1")
-    case 0x2:
-        return UInt8(ascii: "2")
-    case 0x3:
-        return UInt8(ascii: "3")
-    case 0x4:
-        return UInt8(ascii: "4")
-    case 0x5:
-        return UInt8(ascii: "5")
-    case 0x6:
-        return UInt8(ascii: "6")
-    case 0x7:
-        return UInt8(ascii: "7")
-    case 0x8:
-        return UInt8(ascii: "8")
-    case 0x9:
-        return UInt8(ascii: "9")
-    case 0xA:
-        return UInt8(ascii: "A")
-    case 0xB:
-        return UInt8(ascii: "B")
-    case 0xC:
-        return UInt8(ascii: "C")
-    case 0xD:
-        return UInt8(ascii: "D")
-    case 0xE:
-        return UInt8(ascii: "E")
-    case 0xF:
-        return UInt8(ascii: "F")
-    default:
-        fatalError("Invalid hex digit: \(hex)")
+    case 0x0: return UInt8(ascii: "0")
+    case 0x1: return UInt8(ascii: "1")
+    case 0x2: return UInt8(ascii: "2")
+    case 0x3: return UInt8(ascii: "3")
+    case 0x4: return UInt8(ascii: "4")
+    case 0x5: return UInt8(ascii: "5")
+    case 0x6: return UInt8(ascii: "6")
+    case 0x7: return UInt8(ascii: "7")
+    case 0x8: return UInt8(ascii: "8")
+    case 0x9: return UInt8(ascii: "9")
+    case 0xA: return UInt8(ascii: "A")
+    case 0xB: return UInt8(ascii: "B")
+    case 0xC: return UInt8(ascii: "C")
+    case 0xD: return UInt8(ascii: "D")
+    case 0xE: return UInt8(ascii: "E")
+    case 0xF: return UInt8(ascii: "F")
+    default: fatalError("Invalid hex digit: \(hex)")
     }
 }
 
-fileprivate func asciiToHex(_ ascii: UInt8) -> UInt8? {
-    switch ascii {
-    case UInt8(ascii: "0"):
-        return 0x0
-    case UInt8(ascii: "1"):
-        return 0x1
-    case UInt8(ascii: "2"):
-        return 0x2
-    case UInt8(ascii: "3"):
-        return 0x3
-    case UInt8(ascii: "4"):
-        return 0x4
-    case UInt8(ascii: "5"):
-        return 0x5
-    case UInt8(ascii: "6"):
-        return 0x6
-    case UInt8(ascii: "7"):
-        return 0x7
-    case UInt8(ascii: "8"):
-        return 0x8
-    case UInt8(ascii: "9"):
-        return 0x9
-    case UInt8(ascii: "A"), UInt8(ascii: "a"):
-        return 0xA
-    case UInt8(ascii: "B"), UInt8(ascii: "b"):
-        return 0xB
-    case UInt8(ascii: "C"), UInt8(ascii: "c"):
-        return 0xC
-    case UInt8(ascii: "D"), UInt8(ascii: "d"):
-        return 0xD
-    case UInt8(ascii: "E"), UInt8(ascii: "e"):
-        return 0xE
-    case UInt8(ascii: "F"), UInt8(ascii: "f"):
-        return 0xF
-    default:
-        return nil
-    }
+@inline(__always)
+internal func asciiToHex(_ ascii: UInt8) -> UInt8? {
+    return ascii.hexDigitValue
 }
 
 fileprivate extension StringProtocol {
@@ -1196,7 +1150,6 @@ extension RFC3986Parser {
 internal struct URLComponentAllowedMask: RawRepresentable {
     let rawValue: UInt128
 
-    static let alpha            = Self(rawValue: 0x07fffffe07fffffe0000000000000000)
     static let scheme           = Self(rawValue: 0x07fffffe07fffffe03ff680000000000)
 
     // user, password, and hostIPvFuture use the same allowed character set.
@@ -1222,13 +1175,18 @@ internal struct URLComponentAllowedMask: RawRepresentable {
     static let anyValid         = Self(rawValue: 0x47fffffeafffffffafffffda00000000)
 
     func contains(_ codeUnit: UInt8) -> Bool {
-        return codeUnit < 128 && ((rawValue & (UInt128(1) << codeUnit)) != 0)
+        return codeUnit < 128 && ((rawValue & (UInt128(1) &<< codeUnit)) != 0)
     }
 }
 
 internal extension UInt8 {
     var isAlpha: Bool {
-        URLComponentAllowedMask.alpha.contains(self)
+        switch self {
+        case _allLettersUpper, _allLettersLower:
+            return true
+        default:
+            return false
+        }
     }
 }
 
