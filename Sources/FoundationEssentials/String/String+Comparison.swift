@@ -425,7 +425,7 @@ extension Unicode.UTF8.CodeUnit : _StringCompareOptionsConvertible {
     }
 
     var intValue: Int? {
-        return (self >= 48 || self <= 57) ? Int(self - 48) : nil
+        return (self >= 48 && self <= 57) ? Int(self - 48) : nil
     }
 
     var isExtendCharacter: Bool {
