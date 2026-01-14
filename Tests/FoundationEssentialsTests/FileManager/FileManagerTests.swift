@@ -778,6 +778,24 @@ private struct FileManagerTests {
             }
         }
     }
+    
+    @Test func fileExtendedAttributes() async throws {
+        try await FilePlayground {
+            "Foo"
+        }.test {
+            #if os(Linux)
+            let key = "user.org.swift.foundation.testattribute"
+            #else
+            let key = "org.swift.foundation.testattribute"
+            #endif
+            let value = Data("Hello, world".utf8)
+            try $0.setAttributes([._extendedAttributes : [key : value]], ofItemAtPath: "Foo")
+            let attrs = try $0.attributesOfItem(atPath: "Foo")
+            let xattrs = try #require(attrs[._extendedAttributes] as? [String : Data])
+            #expect(xattrs.count == 1)
+            #expect(xattrs[key] == value)
+        }
+    }
 
     @Test func currentWorkingDirectory() async throws {
         try await FilePlayground {

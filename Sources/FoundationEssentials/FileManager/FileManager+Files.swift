@@ -233,7 +233,7 @@ extension FileProtectionType {
 #endif
 
 extension FileAttributeKey {
-    fileprivate static var _extendedAttributes: Self { Self("NSFileExtendedAttributes") }
+    static var _extendedAttributes: Self { Self("NSFileExtendedAttributes") }
 }
 
 extension _FileManagerImpl {
@@ -542,7 +542,7 @@ extension _FileManagerImpl {
         
         var extendedAttrs: [String : Data] = [:]
         var current = keyList.baseAddress!
-        let end = keyList.baseAddress!.advanced(by: keyList.count)
+        let end = keyList.baseAddress!.advanced(by: size)
         while current < end {
             let currentKey = String(cString: current)
             defer { current = current.advanced(by: currentKey.utf8.count) + 1 /* pass null byte */ }
