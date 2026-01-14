@@ -1,9 +1,9 @@
 # Adopting Span in ContiguousBytes
 
-* Proposal: [SF-NNNN](NNNN-ContiguousBytes-Span.md)
+* Proposal: [SF-0034](0034-ContiguousBytes-Span.md)
 * Authors: [Doug Gregor](https://github.com/DougGregor)
-* Review Manager: TBD
-* Status: **Awaiting review**
+* Review Manager: Tina L
+* Status: **Review: 2025-01-13...2025-01-21**
 * Bug: *if applicable* [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/issues/NNNNN)
 * Implementation: https://github.com/swiftlang/swift-foundation/pull/1565
 * Review: ([pitch](https://forums.swift.org/t/pitch-generalize-contiguousbytes-to-support-span-et-al/83082))
