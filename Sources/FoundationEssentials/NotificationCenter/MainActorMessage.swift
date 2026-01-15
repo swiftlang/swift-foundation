@@ -225,7 +225,13 @@ extension NotificationCenter {
             }
         })
 #else
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: observer))
+        nonisolated(unsafe) let observer = observer
+        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { (message: Message) in
+            nonisolated(unsafe) let message = message
+            MainActor.assumeIsolated {
+                observer(message)
+            }
+        })
 #endif
     }
 
