@@ -216,6 +216,14 @@ private struct FileManagerTests {
         #endif
     }
     
+    private static var isLinux: Bool {
+        #if os(Linux)
+        true
+        #else
+        false
+        #endif
+    }
+    
     private func randomData(count: Int = 10000) -> Data {
         Data((0 ..< count).map { _ in UInt8.random(in: .min ..< .max) })
     }
@@ -779,7 +787,8 @@ private struct FileManagerTests {
         }
     }
     
-    @Test func fileExtendedAttributes() async throws {
+    @Test(.enabled(if: isDarwin || isLinux))
+    func fileExtendedAttributes() async throws {
         try await FilePlayground {
             "Foo"
         }.test {
