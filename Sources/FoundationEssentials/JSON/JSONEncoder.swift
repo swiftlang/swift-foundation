@@ -1184,14 +1184,16 @@ private extension __JSONEncoder {
         }
     }
 
-    func wrap(_ dict: [String : Encodable], for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue? {
+    func wrap(_ dict: _JSONCodingKeyRepresentableDictionaryEncodableMarker, for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue? {
+        let dict = dict as! [AnyHashable: Encodable]
         var result = [String: JSONEncoderValue]()
         result.reserveCapacity(dict.count)
 
         let encoder = __JSONEncoder(options: self.options, ownerEncoder: self)
         for (key, value) in dict {
-            encoder.codingKey = _CodingKey(stringValue: key)
-            result[key] = try encoder.wrap(value)
+            let stringKey = (key.base as! CodingKeyRepresentable).codingKey.stringValue
+            encoder.codingKey = _CodingKey(stringValue: stringKey)
+            result[stringKey] = try encoder.wrap(value)
         }
 
         return .object(result)
@@ -1214,8 +1216,8 @@ private extension __JSONEncoder {
             return self.wrap(url.absoluteString)
         } else if let decimal = value as? Decimal {
             return .number(decimal.description)
-        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
-            return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
+        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONCodingKeyRepresentableDictionaryEncodableMarker {
+            return try self.wrap(encodable, for: additionalKey)
         } else if let array = _asDirectArrayEncodable(value) {
             if options.outputFormatting.contains(.prettyPrinted) {
                 let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
@@ -1398,11 +1400,11 @@ extension JSONEncoder : @unchecked Sendable {}
 // Special-casing Support
 //===----------------------------------------------------------------------===//
 
-/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
+/// A marker protocol used to determine whether a value is a `CodingKeyRepresentable`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
-private protocol _JSONStringDictionaryEncodableMarker { }
+private protocol _JSONCodingKeyRepresentableDictionaryEncodableMarker { }
 
-extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
+extension Dictionary : _JSONCodingKeyRepresentableDictionaryEncodableMarker where Key: CodingKeyRepresentable, Value: Encodable { }
 
 /// A protocol used to determine whether a value is an `Array` containing values that allow
 /// us to bypass UnkeyedEncodingContainer overhead by directly encoding the contents as
