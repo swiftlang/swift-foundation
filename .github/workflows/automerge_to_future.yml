@@ -10,7 +10,7 @@ on:
 jobs:
   create_merge_pr:
     name: Create PR to merge main branch into future branch
-    uses: swiftlang/github-workflows/.github/workflows/create_automerge_pr.yml@0.0.4
+    uses: swiftlang/github-workflows/.github/workflows/create_automerge_pr.yml@0.0.5
     with:
       base_branch: future
       head_branch: main
