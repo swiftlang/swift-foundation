@@ -23,6 +23,8 @@ import TestSupport
 
 import Testing
 
+#if FOUNDATION_FRAMEWORK || FOUNDATION_ICU_STRING_COMPARE
+
 @Test func caseInsensitiveComparison() {
     let locale = Locale(identifier: "en_US")
 
@@ -183,3 +185,5 @@ import Testing
     let result = "Café2".compare("cafe10", options: [.caseInsensitive, .diacriticInsensitive, .numeric], locale: locale)
     #expect(result == .orderedAscending)
 }
+
+#endif // FOUNDATION_FRAMEWORK || FOUNDATION_ICU_STRING_COMPARE

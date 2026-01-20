@@ -86,9 +86,11 @@ private func configureCollator(_ collator: OpaquePointer, options: String.Compar
     }
 }
 
+#if FOUNDATION_ICU_STRING_COMPARE
 @_dynamicReplacement(for: _localizedCompare_platform(_:other:options:locale:))
 package func _localizedCompare_ICU(_ string: Substring, other: Substring, options: String.CompareOptions, locale: Locale) -> ComparisonResult {
     return compareStringsWithLocale(string, other, options: options, locale: locale)
 }
+#endif
 
 #endif // !FOUNDATION_FRAMEWORK
