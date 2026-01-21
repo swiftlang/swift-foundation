@@ -53,14 +53,9 @@ public extension KeyedEncodingContainer {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension KeyedDecodingContainer {
     func decode<T, C>(_: CodableConfiguration<T?, C>.Type, forKey key: Self.Key) throws -> CodableConfiguration<T?, C> {
-        if self.contains(key) {
-            let wrapper = try self.decode(CodableConfiguration<T, C>.self, forKey: key)
-            return CodableConfiguration<T?, C>(wrappedValue: wrapper.wrappedValue)
-        } else {
-            return CodableConfiguration<T?, C>(wrappedValue: nil)
-        }
+        let wrapper = try self.decodeIfPresent(CodableConfiguration<T?,C>.self, forKey: key)
+        return CodableConfiguration<T?, C>(wrappedValue: wrapper?.wrappedValue)
     }
-
 }
 
 
