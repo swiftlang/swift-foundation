@@ -216,6 +216,14 @@ private struct FileManagerTests {
         #endif
     }
     
+    private static var isLinux: Bool {
+        #if os(Linux)
+        true
+        #else
+        false
+        #endif
+    }
+    
     private func randomData(count: Int = 10000) -> Data {
         Data((0 ..< count).map { _ in UInt8.random(in: .min ..< .max) })
     }
@@ -797,6 +805,25 @@ private struct FileManagerTests {
             } throws: {
                 ($0 as? CocoaError)?.code == .fileReadNoSuchFile
             }
+        }
+    }
+    
+    @Test(.enabled(if: isDarwin || isLinux))
+    func fileExtendedAttributes() async throws {
+        try await FilePlayground {
+            "Foo"
+        }.test {
+            #if os(Linux)
+            let key = "user.org.swift.foundation.testattribute"
+            #else
+            let key = "org.swift.foundation.testattribute"
+            #endif
+            let value = Data("Hello, world".utf8)
+            try $0.setAttributes([._extendedAttributes : [key : value]], ofItemAtPath: "Foo")
+            let attrs = try $0.attributesOfItem(atPath: "Foo")
+            let xattrs = try #require(attrs[._extendedAttributes] as? [String : Data])
+            #expect(xattrs.count == 1)
+            #expect(xattrs[key] == value)
         }
     }
 
