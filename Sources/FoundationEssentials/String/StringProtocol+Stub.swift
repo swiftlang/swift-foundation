@@ -15,6 +15,15 @@
 extension StringProtocol {
     /// Compares the string using the specified options and
     /// returns the lexical ordering for the range.
+    package func compare<T : StringProtocol>(_ aString: T, options mask: String.CompareOptions = [], range: Range<Index>? = nil) -> ComparisonResult {
+        var substr = Substring(self)
+        if let range {
+            substr = substr[range]
+        }
+        return substr._unlocalizedCompare(other: Substring(aString), options: mask)
+    }
+
+#if FOUNDATION_ICU_STRING_COMPARE
     public func compare<T : StringProtocol>(_ aString: T, options mask: String.CompareOptions = [], range: Range<Index>? = nil, locale: Locale? = nil) -> ComparisonResult {
         var substr = Substring(self)
         if let range {
@@ -27,10 +36,13 @@ extension StringProtocol {
 
         return substr._unlocalizedCompare(other: Substring(aString), options: mask)
     }
+#endif
 }
 
+#if FOUNDATION_ICU_STRING_COMPARE
 dynamic package func _localizedCompare_platform(_ string: Substring, other: Substring, options: String.CompareOptions, locale: Locale) -> ComparisonResult {
     return string._unlocalizedCompare(other: other, options: options)
 }
+#endif
 
 #endif // !FOUNDATION_FRAMEWORK

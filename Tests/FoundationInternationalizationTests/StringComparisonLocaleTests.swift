@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else

@@ -10,27 +10,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationEssentials
+#if FOUNDATION_ICU_STRING_COMPARE
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
 internal import _FoundationICU
 
 internal func compareStringsWithLocale(_ string1: Substring, _ string2: Substring, options: String.CompareOptions, locale: Locale) -> ComparisonResult {
-    if options.contains(.literal) {
-        if string1 < string2 {
-            return .orderedAscending
-        } else if string1 > string2 {
-            return .orderedDescending
-        } else {
-            return .orderedSame
-        }
-    }
-
     let localeIdentifier = locale.identifier
     var status = U_ZERO_ERROR
 
-    guard let collator = localeIdentifier.utf8CString.withUnsafeBufferPointer({ buffer in
+    let collator = localeIdentifier.utf8CString.withUnsafeBufferPointer({ buffer in
         ucol_open(buffer.baseAddress, &status)
-    }), status.rawValue <= U_ZERO_ERROR.rawValue else {
+    })
+
+    defer {
+        if let collator = collator {
+            ucol_close(collator)
+        }
+    }
+
+    guard let collator = collator, status.rawValue <= U_ZERO_ERROR.rawValue else {
         if string1 < string2 {
             return .orderedAscending
         } else if string1 > string2 {
@@ -39,8 +39,6 @@ internal func compareStringsWithLocale(_ string1: Substring, _ string2: Substrin
             return .orderedSame
         }
     }
-
-    defer { ucol_close(collator) }
 
     configureCollator(collator, options: options, status: &status)
     guard status.rawValue <= U_ZERO_ERROR.rawValue else {
@@ -72,6 +70,10 @@ internal func compareStringsWithLocale(_ string1: Substring, _ string2: Substrin
 }
 
 private func configureCollator(_ collator: OpaquePointer, options: String.CompareOptions, status: inout UErrorCode) {
+    if options.contains(.literal) {
+        ucol_setAttribute(collator, UCOL_NORMALIZATION_MODE, UCOL_OFF, &status)
+    }
+
     if options.contains(.diacriticInsensitive) && options.contains(.caseInsensitive) {
         ucol_setAttribute(collator, UCOL_STRENGTH, UCOL_PRIMARY, &status)
     } else if options.contains(.diacriticInsensitive) {
@@ -86,11 +88,9 @@ private func configureCollator(_ collator: OpaquePointer, options: String.Compar
     }
 }
 
-#if FOUNDATION_ICU_STRING_COMPARE
 @_dynamicReplacement(for: _localizedCompare_platform(_:other:options:locale:))
 package func _localizedCompare_ICU(_ string: Substring, other: Substring, options: String.CompareOptions, locale: Locale) -> ComparisonResult {
     return compareStringsWithLocale(string, other, options: options, locale: locale)
 }
-#endif
 
-#endif // !FOUNDATION_FRAMEWORK
+#endif // FOUNDATION_ICU_STRING_COMPARE
