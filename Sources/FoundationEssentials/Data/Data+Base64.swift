@@ -608,7 +608,7 @@ extension Base64 {
 
         let outputLength = ((inBuffer.count + 3) / 4) * 3
 
-        let pointer = malloc(outputLength)
+        let pointer = __DataStorage.allocate(outputLength, false)
         let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
         let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
         var length = outputLength

@@ -45,7 +45,6 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 internal import CoreFoundation_Private
 #endif
 
-
 package struct Platform {
     static var pageSize: Int {
         _pageSize
