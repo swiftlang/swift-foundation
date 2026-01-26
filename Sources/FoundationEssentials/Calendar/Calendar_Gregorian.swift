@@ -1994,9 +1994,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let timezoneOffset = timeZone.secondsFromGMT(for: d)
         let localDate = d + Double(timezoneOffset)
 
-        let dateOffsetInSeconds = localDate.timeIntervalSinceReferenceDate.rounded(.down)
-        let date = Date(timeIntervalSinceReferenceDate: dateOffsetInSeconds) // Round down the given date to seconds
-
         let hour: Int?
         let second: Int?
         let minute: Int?
@@ -2012,13 +2009,31 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         var day: Int?
 
         let timeComponents: Calendar.ComponentSet = [.hour, .minute, .second, .nanosecond]
+        let dateOffsetInSeconds = localDate.timeIntervalSinceReferenceDate.rounded(.down)
         if !components.isDisjoint(with: timeComponents) {
-            let totalSeconds = Int(dateOffsetInSeconds)
-            let secondsInDay = (totalSeconds % 86400 + 86400) % 86400
-
-            hour = secondsInDay / 3600
-            minute = (secondsInDay % 3600) / 60
-            second = secondsInDay % 60
+            let canUseIntegerMath = dateOffsetInSeconds < Double(Int.max) && dateOffsetInSeconds >= Double(Int.min)
+            if canUseIntegerMath {
+                let totalSeconds = Int(dateOffsetInSeconds)
+                let secondsInDay = (totalSeconds % 86400 + 86400) % 86400
+                
+                let tmp: Int
+                (hour, tmp) = secondsInDay.quotientAndRemainder(dividingBy: 3600)
+                (minute, second) = tmp.quotientAndRemainder(dividingBy: 60)
+            } else {
+                var timeInDay = dateOffsetInSeconds.remainder(dividingBy: 86400) // this has precision of one second
+                if (timeInDay < 0) {
+                    timeInDay += 86400
+                }
+                
+                hour = Int(timeInDay / 3600) // zero-based
+                timeInDay = timeInDay.truncatingRemainder(dividingBy: 3600.0)
+                
+                minute = Int(timeInDay / 60)
+                timeInDay = timeInDay.truncatingRemainder(dividingBy: 60.0)
+                
+                second = Int(timeInDay)
+            }
+            
             nanosecond = Int((localDate.timeIntervalSinceReferenceDate - dateOffsetInSeconds) * 1_000_000_000)
         } else {
             hour = nil
@@ -2041,6 +2056,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         do {
+            let date = Date(timeIntervalSinceReferenceDate: dateOffsetInSeconds) // Round down the given date to seconds
             let useJulianRef = useJulianReference(date)
             let julianDay = try date.julianDay()
             let julianDayYMD = Self.yearMonthDayFromJulianDay(julianDay, useJulianRef: useJulianRef)
