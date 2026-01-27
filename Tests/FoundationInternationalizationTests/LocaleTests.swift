@@ -936,9 +936,7 @@ extension LocaleTests {
     }
 }
 
-#endif // FOUNDATION_FRAMEWORK
-
-// MARK: - Disabled Tests
+// These tests require bundle language matching to be implemented
 extension LocaleTests {
     @Test func localeBundleMatching_modernLproj() {
         let result = Locale.localeIdentifierForCanonicalizedLocalizations(["fr", "en", "de"], preferredLanguages: ["pa-IN", "en-IN"], preferredLocaleID: "pa_IN")
@@ -960,8 +958,6 @@ extension LocaleTests {
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(["de", "en", "es", "fr", "zh-Hans", "zh-Hant"], preferredLanguages: ["zh-Hant-MO"], preferredLocaleID: "zh_MO")
         #expect(actual == "zh_MO", "`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.")
     }
-    // MARK: Additional Bundle Matching Tests
-    // These tests use Locale.localeIdentifierForCanonicalizedLocalizations instead of the unavailable _CFLocaleCreateLocaleIdentifierForAvailableLocalizations
 
     @Test func localeBundleMatching_zh_MO_2() {
         let localizations = ["de", "en", "es", "fr", "zh_CN", "zh_TW"]
@@ -1030,3 +1026,4 @@ extension LocaleTests {
         #expect(actual == nil, "Empty preferred locale ID should return nil")
     }
 }
+#endif // FOUNDATION_FRAMEWORK
