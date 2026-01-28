@@ -262,7 +262,8 @@ extension UnsafeBufferPointer {
         case illegalScalar
         case decodingError
     }
-    
+
+    @inline(__always) // Trivially forwarding and generic, inlining ensures calls are fully specialized
     fileprivate func _decomposedRebinding<T: UnicodeCodec, InputElement>(_ type: String._NormalizationType, as codec: T.Type, into buffer: UnsafeMutableBufferPointer<InputElement>, nullTerminated: Bool = false) throws -> Int {
         try self.withMemoryRebound(to: T.CodeUnit.self) { reboundSelf in
             try buffer.withMemoryRebound(to: Unicode.UTF8.CodeUnit.self) { reboundBuffer in
@@ -270,7 +271,11 @@ extension UnsafeBufferPointer {
             }
         }
     }
-    
+
+    @specialized(where T == Unicode.UTF8)
+    #if FOUNDATION_FRAMEWORK
+    @specialized(where T == Unicode.UTF16)
+    #endif
     fileprivate func _decomposed<T: UnicodeCodec>(_ type: String._NormalizationType, as codec: T.Type, into buffer: UnsafeMutableBufferPointer<UInt8>, nullTerminated: Bool = false) throws -> Int where Element == T.CodeUnit {
         let scalarSet = BuiltInUnicodeScalarSet(type: type.setType)
         var bufferIdx = 0
