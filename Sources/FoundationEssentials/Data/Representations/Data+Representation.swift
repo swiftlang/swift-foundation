@@ -213,8 +213,8 @@ extension Data {
             }
         }
         
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        func withUnsafeBytes<Result>(_ apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
+        @_alwaysEmitIntoClient
+        func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             switch self {
             case .empty:
                 let empty = InlineData()
@@ -227,9 +227,18 @@ extension Data {
                 return try slice.withUnsafeBytes(apply)
             }
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
+
+#if FOUNDATION_FRAMEWORK
+        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeBytes(body)
+        }
+#endif // FOUNDATION_FRAMEWORK
+
+        @_alwaysEmitIntoClient
+        mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             switch self {
             case .empty:
                 var empty = InlineData()
@@ -247,7 +256,16 @@ extension Data {
                 return try slice.withUnsafeMutableBytes(apply)
             }
         }
-        
+
+#if FOUNDATION_FRAMEWORK
+        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeMutableBytes(body)
+        }
+#endif // FOUNDATION_FRAMEWORK
+
         @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
         func enumerateBytes(_ block: (_ buffer: UnsafeBufferPointer<UInt8>, _ byteIndex: Index, _ stop: inout Bool) -> Void) {
             switch self {
