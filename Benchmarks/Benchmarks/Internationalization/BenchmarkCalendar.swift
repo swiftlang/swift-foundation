@@ -38,7 +38,7 @@ func calendarBenchmarks() {
     let cal = Calendar(identifier: .gregorian)
     let currentCalendar = Calendar.current
     let thanksgivingStart = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
-    
+
     Benchmark("nextThousandThursdaysInTheFourthWeekOfNovember") { benchmark in
         // This benchmark used to be nextThousandThanksgivings, but the name was deceiving since it does not compute the next thousand thanksgivings
         let components = DateComponents(month: 11, weekday: 5, weekOfMonth: 4)
@@ -135,7 +135,6 @@ func calendarBenchmarks() {
             }
         }
     }
-
     let testDates = {
         let date = Date(timeIntervalSince1970: 0)
         var dates = [Date]()
@@ -249,6 +248,63 @@ func calendarBenchmarks() {
             assert(id1.isEmpty == false)
             assert(id2.isEmpty == false)
             assert(id3.isEmpty == false)
+        }
+    }
+
+    // MARK: - GregorianCalendar
+
+    var gmtCalendr = Calendar(identifier: .gregorian)
+    guard let gmtTimeZone = TimeZone(secondsFromGMT: 0) else {
+        preconditionFailure("Unexpected nil TimeZone")
+    }
+    gmtCalendr.timeZone = gmtTimeZone // use gmt-based time zone so the result doesn't get overshadowed by TimeZone API
+
+    Benchmark("GregorianCalendar-dateComponents-yearMonthBasedComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-calendarDayComparison", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.year, .month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-timestamps", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-timeValidation", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.hour, .minute, .second], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-anniversary", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-year", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.year], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-week-based", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+            blackHole(dc)
         }
     }
 }
