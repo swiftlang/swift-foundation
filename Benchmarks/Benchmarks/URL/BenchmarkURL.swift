@@ -279,4 +279,42 @@ let benchmarks = {
             }
         }
     }
+
+    // MARK: - IDNA Encoding
+
+    var idnaComp = URLComponents()
+    idnaComp.scheme = "https"
+
+    Benchmark("URL.IDNAEncodeHost.Simple") { benchmark in
+        for _ in benchmark.scaledIterations {
+            idnaComp.host = "bücher.example"
+            blackHole(idnaComp)
+            idnaComp.host = nil
+        }
+    }
+
+    Benchmark("URL.IDNAEncodeHost.Complex") { benchmark in
+        for _ in benchmark.scaledIterations {
+            idnaComp.host = "😂😂😂.example"
+            blackHole(idnaComp)
+            idnaComp.host = nil
+        }
+    }
+
+    let idnaCompWithSimpleHost = URLComponents(string: "https://bücher.example")!
+
+    Benchmark("URL.IDNADecodeHost.Simple") { benchmark in
+        for _ in benchmark.scaledIterations {
+            // .host decodes the internal IDNA-encoded (ASCII) host
+            blackHole(idnaCompWithSimpleHost.host)
+        }
+    }
+
+    let idnaCompWithComplexHost = URLComponents(string: "https://😂😂😂.example")!
+
+    Benchmark("URL.IDNADecodeHost.Complex") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(idnaCompWithComplexHost.host)
+        }
+    }
 }
