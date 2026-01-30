@@ -13,6 +13,10 @@
 internal import Synchronization
 #endif
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 // This type works with Gregorian calendar only
 // It represents just one rule; does not handle historical changes
 internal final class _TimeZoneSingleDSTRule: Sendable {
@@ -37,14 +41,14 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     // MARK: - Properties
 
-    let rawOffset: Int32           // Raw offset in seconds
-    let dstSavings: Int32          // DST savings in seconds
+    let rawOffset: Int           // Raw offset in seconds
+    let dstSavings: Int          // DST savings in seconds
 
     struct RuleComponents {
-        let month: Int8           // 0-based (0 = January)
-        let day: Int8             // Day-of-month if mode is `.dayOfMonth`, or day-of-week-in-month (2 in "2nd Sunday in March", -1 for "last Sunday in October") if mode is `.dayOfWeekInMonth`
-        let dayOfWeek: Int8       // 1-based (1 == Sunday, 7 == Saturday)
-        let time: Int32           // Time in seconds since start of day
+        let month: Int           // 0-based (0 = January)
+        let day: Int             // Day-of-month if mode is `.dayOfMonth`, or day-of-week-in-month (2 in "2nd Sunday in March", -1 for "last Sunday in October") if mode is `.dayOfWeekInMonth`
+        let dayOfWeek: Int       // 1-based (1 == Sunday, 7 == Saturday)
+        let time: Int            // Time in seconds since start of day
         let timeMode: TimeMode
         let mode: RuleMode
         init(month: Int8, day: Int8, dayOfWeek: Int8, time: Int32, timeMode: TimeMode) throws(SingleDSTRuleTimeZoneError) {
@@ -104,10 +108,10 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
                 }
             }
 
-            self.month = month
-            self.day = adjustedDay
-            self.dayOfWeek = adjustedDayOfWeek
-            self.time = time
+            self.month = Int(month)
+            self.day = Int(adjustedDay)
+            self.dayOfWeek = Int(adjustedDayOfWeek)
+            self.time = Int(time)
             self.timeMode = timeMode
             self.mode = mode
         }
@@ -117,15 +121,15 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     let endRule: RuleComponents   // DST ends. For example, PST has endRule.month == November
     let isSouthernHemisphere: Bool
 
-    let startYear: Int32
+    let startYear: Int
     let useDaylight: Bool
 
-    private static let MONTH_LENGTH_LEAP_YEAR: [Int8] = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    private static let MONTH_LENGTH_LEAP_YEAR = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
     // Precomputed cumulative days in prior months
-    private static let DAYS_IN_PRIOR_MONTHS_LEAP_YEAR: [Int32] = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
-    private static let DAYS_IN_PRIOR_MONTHS_NOT_LEAP_YEAR: [Int32] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
-    
+    private static let DAYS_IN_PRIOR_MONTHS_LEAP_YEAR = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
+    private static let DAYS_IN_PRIOR_MONTHS_NOT_LEAP_YEAR = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
     // year for maxJulianDay
     static let MAX_YEAR = 5828963
 
@@ -144,19 +148,20 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         }
         self.useDaylight = useDaylight
 
-        self.rawOffset = offsetSeconds
-        self.dstSavings = dstSavingsSeconds
-        self.startYear = startYear
+        self.rawOffset = Int(offsetSeconds)
+        self.dstSavings = Int(dstSavingsSeconds)
+        self.startYear = Int(startYear)
         self.startRule = try RuleComponents(month: startMonth, day: startDay, dayOfWeek: startDayOfWeek, time: startTime, timeMode: startTimeMode)
         self.endRule = try RuleComponents(month: endMonth, day: endDay, dayOfWeek: endDayOfWeek, time: endTime, timeMode: endTimeMode)
         self.isSouthernHemisphere = startRule.month > endRule.month
 
+        // This type of time zone rule is represented in terms of Gregorian calendar
         self.calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: .unlocalized, firstWeekday: Locale.Weekday.monday.icuIndex, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         self._cachedFirstTransition = .init(nil)
     }
 
 
-    func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) -> (rawOffset: Int32, dstOffset: Int32) {
+    func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) -> (rawOffset: Int, dstOffset: Int) {
         if local {
             let secondsOffsets = _rawAndDSTOffsetForLocalDate(date, nonExistingTimeOpt: nonExistingTimePolicy, duplicatedTimeOpt: duplicatedTimePolicy)
             return secondsOffsets
@@ -173,27 +178,27 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
     // Returns offset in seconds
-    func _gmtOffset(forLocalDate date: Date) -> Int32 {
+    func _gmtOffset(forLocalDate date: Date) -> Int {
         // We already adjusted for offset at call site. So date is always local already, so we use a calendar in GMT timezone to avoid adjusting it again
         let components = calendar.dateComponents([.era, .year, .month, .day, .weekday, .hour, .minute, .second, .nanosecond], from: date)
 
         guard let era = components.era, let year = components.year, let month = components.month, let day = components.day, let dayOfWeek = components.weekday, let hour = components.hour, let minute = components.minute, let second = components.second, let nanosecond = components.nanosecond else {
-            return rawOffset
+            return Int(rawOffset)
         }
 
         // Convert to ICU-style parameters (0-based month, seconds since start of day)
-        let icuMonth = Int8(month - 1)  // Convert from 1-based to 0-based
-        let icuDayOfWeek = Int8(dayOfWeek)  // Sunday = 1
-        let seconds = Int32(hour * 3600 +
+        let icuMonth = month - 1  // Convert from 1-based to 0-based
+        let icuDayOfWeek = dayOfWeek  // Sunday = 1
+        let seconds = hour * 3600 +
                            minute * 60 +
                            second +
-                           nanosecond / 1_000_000_000) 
+                           nanosecond / 1_000_000_000
 
-        return _gmtOffset(era: UInt8(era), year: Int32(year), month: icuMonth, day: Int8(day), dayOfWeek: icuDayOfWeek, seconds: seconds)
+        return _gmtOffset(era: era, year: year, month: icuMonth, day: day, dayOfWeek: icuDayOfWeek, seconds: seconds)
     }
 
     // Returns offset in seconds
-    private func _gmtOffset(era: UInt8, year: Int32, month: Int8, day: Int8, dayOfWeek: Int8, seconds: Int32) -> Int32 {
+    private func _gmtOffset(era: Int, year: Int, month: Int, day: Int, dayOfWeek: Int, seconds: Int) -> Int {
         var result = rawOffset
 
         guard useDaylight && year >= startYear && era == 1 else {
@@ -205,9 +210,9 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         let secondsDelta = switch startRule.timeMode {
         case .wallTime:
-            Int32(0)
+            0
         case .standardTime:
-            Int32(0)
+            0
         case .utcTime:
             -rawOffset
         }
@@ -228,7 +233,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             case .wallTime:
                 dstSavings
             case .standardTime:
-                Int32(0)
+                0
             case .utcTime:
                 -rawOffset
             }
@@ -258,9 +263,9 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     // - .descending if the date is before the rule date
     // - .same if the date is equal to the rule date
     private func compareToRule(
-        month: Int8, monthLength: Int8, prevMonthLength: Int8,
-        dayOfMonth: Int8, dayOfWeek: Int8, seconds: Int32,
-        secondsDelta: Int32,
+        month: Int, monthLength: Int, prevMonthLength: Int,
+        dayOfMonth: Int, dayOfWeek: Int, seconds: Int,
+        secondsDelta: Int,
         rule: RuleComponents
     ) -> ComparisonResult {
         // Adjust seconds for time mode
@@ -273,7 +278,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         while adjustedSeconds >= 86400 {
             adjustedSeconds -= 86400
             adjustedDayOfMonth += 1
-            adjustedDayOfWeek = Int8(1 + (adjustedDayOfWeek % 7))
+            adjustedDayOfWeek = 1 + (adjustedDayOfWeek % 7)
             if adjustedDayOfMonth > monthLength {
                 adjustedDayOfMonth = 1
                 adjustedMonth += 1
@@ -283,7 +288,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         while adjustedSeconds < 0 {
             adjustedSeconds += 86400
             adjustedDayOfMonth -= 1
-            adjustedDayOfWeek = Int8(1 + ((adjustedDayOfWeek + 5) % 7))
+            adjustedDayOfWeek = 1 + ((adjustedDayOfWeek + 5) % 7)
             if adjustedDayOfMonth < 1 {
                 adjustedDayOfMonth = prevMonthLength
                 adjustedMonth -= 1
@@ -314,7 +319,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
     // Calculate the actual day of month for a rule
-    private func dayOfMonthForRule(ruleMode: RuleMode, ruleDay: Int8, ruleDayOfWeek: Int8, monthLength: Int8, dayOfWeek: Int8, dayOfMonth: Int8) -> Int8 {
+    private func dayOfMonthForRule(ruleMode: RuleMode, ruleDay: Int, ruleDayOfWeek: Int, monthLength: Int, dayOfWeek: Int, dayOfMonth: Int) -> Int {
 
         // Adjust for leap year February 29 rules
         let adjustedRuleDay = min(monthLength, ruleDay)
@@ -325,26 +330,22 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         case .dayOfWeekInMonth:
             if adjustedRuleDay > 0 {
-                return Int8(1 + (adjustedRuleDay - 1) * 7 +
-                           (7 + ruleDayOfWeek - (dayOfWeek - dayOfMonth + 1)) % 7)
+                return 1 + (adjustedRuleDay - 1) * 7 + (7 + ruleDayOfWeek - (dayOfWeek - dayOfMonth + 1)) % 7
             } else {
-                return Int8(monthLength + (ruleDay + 1) * 7 -
-                            (7 + (dayOfWeek + monthLength - dayOfMonth) - ruleDayOfWeek) % 7)
+                return monthLength + (ruleDay + 1) * 7 - (7 + (dayOfWeek + monthLength - dayOfMonth) - ruleDayOfWeek) % 7
             }
 
         case .dayOfWeekOnOrAfterDayOfMonth:
-            return Int8(adjustedRuleDay +
-                       (49 + ruleDayOfWeek - adjustedRuleDay - dayOfWeek + dayOfMonth) % 7)
+            return adjustedRuleDay + (49 + ruleDayOfWeek - adjustedRuleDay - dayOfWeek + dayOfMonth) % 7
 
         case .dayOfWeekOnOrBeforeDayOfMonth:
-            return Int8(adjustedRuleDay -
-                       (49 - ruleDayOfWeek + adjustedRuleDay + dayOfWeek - dayOfMonth) % 7)
+            return adjustedRuleDay - (49 - ruleDayOfWeek + adjustedRuleDay + dayOfWeek - dayOfMonth) % 7
         }
     }
 
     // MARK: - Utility Methods
 
-    func _rawAndDSTOffsetForLocalDate(_ date: Date, nonExistingTimeOpt: DaylightSavingTimePolicy, duplicatedTimeOpt: DaylightSavingTimePolicy) -> (rawOffset: Int32, dstOffset: Int32) {
+    func _rawAndDSTOffsetForLocalDate(_ date: Date, nonExistingTimeOpt: DaylightSavingTimePolicy, duplicatedTimeOpt: DaylightSavingTimePolicy) -> (rawOffset: Int, dstOffset: Int) {
         var dstOffset = _gmtOffset(forLocalDate: date) - rawOffset
         // Need to recalculate if either
         // 1. We're in DST AND options say we should try standard time
@@ -361,7 +362,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         return (rawOffset, dstOffset)
     }
 
-    private func monthLength(year: Int32, month: Int8) -> Int8 {
+    private func monthLength(year: Int, month: Int) -> Int {
         precondition(month >= 0 && month < 12)
         if month == 1 && !isLeapYear(year) {
             // Adjust February for non-leap years
@@ -371,16 +372,16 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         }
     }
 
-    private func previousMonthLength(year: Int32, month: Int8) -> Int8 {
+    private func previousMonthLength(year: Int, month: Int) -> Int {
         month == 0 ? 31 : monthLength(year: year, month: month - 1)
     }
 
-    private func isLeapYear(_ year: Int32) -> Bool {
+    private func isLeapYear(_ year: Int) -> Bool {
         (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0))
     }
     
     // Returns the day number from 1970, with day 0 == Jan 1 1970
-    private func daysSince1970(year: Int32, month: Int8, dayOfMonth: Int32) -> Int {
+    private func daysSince1970(year: Int, month: Int, dayOfMonth: Int) -> Int {
         precondition(month >= 0 && month < 12)
 
         // Days in prior years (Gregorian calculation)
@@ -391,7 +392,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         daysSinceBCE1 += priorYear / 400
 
         // Days in prior months this year
-        let isLeap = isLeapYear(Int32(year))
+        let isLeap = isLeapYear(year)
         let daysInPriorMonths = isLeap ? 
             Self.DAYS_IN_PRIOR_MONTHS_LEAP_YEAR[Int(month)] :
             Self.DAYS_IN_PRIOR_MONTHS_NOT_LEAP_YEAR[Int(month)]
@@ -405,12 +406,12 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
     
     // Returns: 1 == Sunday, 2 == Monday, ..., 7 == Saturday
-    private func dayOfWeek(daysSince1970: Int64) -> Int32 {
+    private func dayOfWeek(daysSince1970: Int) -> Int {
         // Jan 1, 1970 was a Thursday
         let dayOfWeekForJan1 = 5
-        let dayOfWeek = ((daysSince1970 % 7) + Int64(dayOfWeekForJan1) - 1) % 7 + 1
-        
-        return Int32(dayOfWeek > 0 ? dayOfWeek : dayOfWeek + 7)
+        let dayOfWeek = ((daysSince1970 % 7) + dayOfWeekForJan1 - 1) % 7 + 1
+
+        return dayOfWeek > 0 ? dayOfWeek : dayOfWeek + 7
     }
     
     // MARK: - Transition Rules Support
@@ -472,7 +473,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
     // Returns the first Date when the rule takes effect after or before `base`, depending on the direction
-    private func startDateForRule(_ rule: RuleComponents, base: Date, direction: TransitionDirection, inclusive: Bool, previousRawOffset: Int32, previousDSTOffset: Int32) -> Date? {
+    private func startDateForRule(_ rule: RuleComponents, base: Date, direction: TransitionDirection, inclusive: Bool, previousRawOffset: Int, previousDSTOffset: Int) -> Date? {
 
         let baseYear = calendar.dateComponent(.year, from: base)
         guard baseYear >= startYear && baseYear <= _TimeZoneSingleDSTRule.MAX_YEAR else { return nil }
@@ -484,14 +485,14 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             }
             
             // Try current year first
-            let currentYearDate = startDateForRuleInYear(Int32(baseYear), rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
+            let currentYearDate = startDateForRuleInYear(baseYear, rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
 
             // If current year transition is after base (or equal with inclusive), returns the current year
             if currentYearDate > base || (inclusive && currentYearDate >= base) {
                 return currentYearDate
             } else if baseYear + 1 <= _TimeZoneSingleDSTRule.MAX_YEAR { // currentYearDate <= base
                 // Current year's transition has passed, try year + 1
-                let nextYearDate = startDateForRuleInYear(Int32(baseYear + 1), rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
+                let nextYearDate = startDateForRuleInYear(baseYear + 1, rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
                 return nextYearDate
             } else {
                 return nil
@@ -499,13 +500,13 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         case .previous:
             // Try current year first
-            let currentYearDate = startDateForRuleInYear(Int32(baseYear), rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
+            let currentYearDate = startDateForRuleInYear(baseYear, rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
             // If current year transition is before base (or equal with inclusive), returns the current year
             if currentYearDate < base || (inclusive && currentYearDate == base) {
                 return currentYearDate
             } else if baseYear - 1 >= startYear {
                 // Try previous year
-                let previousYearDate = startDateForRuleInYear(Int32(baseYear - 1), rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
+                let previousYearDate = startDateForRuleInYear(baseYear - 1, rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
                 return previousYearDate
             } else {
                 return nil
@@ -515,7 +516,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     
     // Returns the start date of the rule in the given year
-    private func startDateForRuleInYear(_ year: Int32, rule: RuleComponents, previousRawOffset: Int32, previousDSTOffset: Int32) -> Date {
+    private func startDateForRuleInYear(_ year: Int, rule: RuleComponents, previousRawOffset: Int, previousDSTOffset: Int) -> Date {
         // For _TimeZoneSingleDSTRule, we don't have explicit end year, so we allow any reasonable year
         precondition(year >= startYear && year <= _TimeZoneSingleDSTRule.MAX_YEAR)
 
@@ -523,7 +524,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         switch rule.mode {
         case .dayOfMonth:
-            ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: Int32(rule.day))
+            ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: rule.day)
 
         case .dayOfWeekInMonth:
             // Day of week in month mode (e.g., "2nd Sunday")
@@ -531,18 +532,18 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             if rule.day > 0 {
                 // Positive: count from beginning of month (e.g., 2nd Sunday)
                 ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: 1)
-                ruleDay += 7 * (Int(rule.day) - 1)
+                ruleDay += 7 * (rule.day - 1)
             } else {
                 // Negative: count from end of month (e.g., last Sunday = -1)
                 after = false
                 let monthLength = monthLength(year: year, month: rule.month)
-                ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: Int32(monthLength))
-                ruleDay += 7 * (Int(rule.day) + 1) // day is negative
+                ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: monthLength)
+                ruleDay += 7 * (rule.day + 1) // day is negative
             }
             
             // Apply day-of-week adjustment
-            let currentDayOfWeek = self.dayOfWeek(daysSince1970: Int64(ruleDay))
-            let targetDayOfWeek = Int32(rule.dayOfWeek)
+            let currentDayOfWeek = self.dayOfWeek(daysSince1970: ruleDay)
+            let targetDayOfWeek = rule.dayOfWeek
             var delta = targetDayOfWeek - currentDayOfWeek
             
             if after {
@@ -555,7 +556,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         case .dayOfWeekOnOrAfterDayOfMonth, .dayOfWeekOnOrBeforeDayOfMonth:
             // Day of week >= or <= specific date
             let after = (rule.mode == .dayOfWeekOnOrAfterDayOfMonth)
-            var targetDay = Int32(rule.day)
+            var targetDay = rule.day
             
             // Handle Feb <= 29 for non-leap years
             if !after && rule.month == 1 && rule.day == 29 && !isLeapYear(year) { // February
@@ -565,8 +566,8 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: targetDay)
 
             // Apply day-of-week adjustment
-            let currentDayOfWeek = self.dayOfWeek(daysSince1970: Int64(ruleDay))
-            let targetDayOfWeek = Int32(rule.dayOfWeek)
+            let currentDayOfWeek = self.dayOfWeek(daysSince1970: ruleDay)
+            let targetDayOfWeek = rule.dayOfWeek
             var delta = targetDayOfWeek - currentDayOfWeek
             
             if after {

@@ -26,18 +26,18 @@ internal import Synchronization
 struct TimezoneTypeInfo: Sendable {
     // Fixed offset timezone rule (equivalent to ICU's simple rules)
     struct FixedOffsetTimeZoneRule: Sendable {
-        let rawOffset: Int32  // in seconds
-        let dstSavings: Int32 // in seconds
+        let rawOffset: Int  // in seconds
+        let dstSavings: Int // in seconds
 
         // Total offset from UTC (raw + DST)
-        var totalOffset: Int32 { rawOffset + dstSavings }
+        var totalOffset: Int { rawOffset + dstSavings }
 
         // Whether this type represents daylight saving time
         var isDaylightSaving: Bool { dstSavings != 0 }
 
         init(rawOffset: Int32, dstSavings: Int32) {
-            self.rawOffset = rawOffset
-            self.dstSavings = dstSavings
+            self.rawOffset = Int(rawOffset)
+            self.dstSavings = Int(dstSavings)
         }
     }
     // All available timezone types (e.g., EST, EDT, historical variants)
@@ -94,7 +94,7 @@ struct TimezoneTypeInfo: Sendable {
         return Int64(type.totalOffset)
     }
 
-    func offsetsAt(_ transitionIndex: Int) -> (rawOffset: Int32, dstOffset: Int32) {
+    func offsetsAt(_ transitionIndex: Int) -> (rawOffset: Int, dstOffset: Int) {
         let type = _typeForTransition(transitionIndex)
         return (type.rawOffset, type.dstSavings)
     }
@@ -443,6 +443,10 @@ internal final class _TimeZoneICUResource: Sendable {
     }
 
     func secondsFromGMT(for date: Date) -> Int {
+        guard Date.validCalendarRange.contains(date) else {
+            // TODO: We should throw an error properly, but for now return 0 just like how we handle this when calling into ICU timezone
+            return 0
+        }
         let (rawOffset, dstOffset) = getOffset(date: date, local: false)
         return Int((rawOffset + dstOffset))
     }
@@ -466,7 +470,7 @@ internal final class _TimeZoneICUResource: Sendable {
 
     // Entry point for offset calculation that delegates to either historical or final zone
     // Returns: offsets in seconds
-    func getOffset(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int32, dstOffset: Int32) {
+    func getOffset(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, dstOffset: Int) {
         // Check if we should use final zone first
         if let finalZone, let finalStartDate, date >= finalStartDate {
             return finalZone.rawAndDaylightSavingTimeOffset(for: date, local: local, duplicatedTimePolicy: duplicatedTimePolicy, nonExistingTimePolicy: nonExistingTimePolicy)
@@ -478,7 +482,7 @@ internal final class _TimeZoneICUResource: Sendable {
     
     // MARK: - Historical Offset Calculation
 
-    func historicalOffsets(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> (rawOffset: Int32, dstOffset: Int32) {
+    func historicalOffsets(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> (rawOffset: Int, dstOffset: Int) {
         let transCount = allTransitionTimes.count
         guard transCount > 0 else {
             // No transitions, single pair of offsets only
@@ -511,7 +515,7 @@ internal final class _TimeZoneICUResource: Sendable {
     
     // Get timezone offset information for a transition
     // This provides both raw and DST offsets in one efficient call
-    func offsetsAt(_ transitionIndex: Int) -> (rawOffset: Int32, dstOffset: Int32) {
+    func offsetsAt(_ transitionIndex: Int) -> (rawOffset: Int, dstOffset: Int) {
         timezoneTypes.offsetsAt(transitionIndex)
     }
     
@@ -714,12 +718,12 @@ internal final class _TimeZoneICUResource: Sendable {
 
     
     // Get the initial raw offset (before any transitions)
-    var initialRawOffset: Int32 {
+    var initialRawOffset: Int {
         return timezoneTypes.initialType.rawOffset
     }
     
     // Get the initial DST offset (before any transitions)
-    var initialDSTOffset: Int32 {
+    var initialDSTOffset: Int {
         return timezoneTypes.initialType.dstSavings
     }
 }
