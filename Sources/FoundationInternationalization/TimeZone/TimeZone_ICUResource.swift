@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
 
 #if canImport(_FoundationICU)
 internal import _FoundationICU

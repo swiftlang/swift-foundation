@@ -13,6 +13,10 @@
 
 internal import _FoundationICU
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 extension ICU {
 
     // Wrapper for ICU's resource bundle
@@ -92,10 +96,16 @@ extension ICU {
             var length: Int32 = 0
             var status: UErrorCode = U_ZERO_ERROR
 
-            let stringPtr = ures_getString(bundle, &length, &status)
+            guard let stringPtr = ures_getString(bundle, &length, &status) else {
+                throw ICUError(code: U_INVALID_FORMAT_ERROR)
+            }
+
             try status.checkSuccess()
 
-            return String(utf16CodeUnits: stringPtr!, count: Int(length))
+            guard let result = String(_utf16: stringPtr, count: Int(length)) else {
+                throw ICUError(code: U_INVALID_FORMAT_ERROR)
+            }
+            return result
         }
 
         func asInteger() throws(ICUError) -> Int32 {
