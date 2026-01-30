@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if DATA_LEGACY_ABI
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -253,3 +255,5 @@ extension Data {
         }
     }
 }
+
+#endif
