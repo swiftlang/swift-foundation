@@ -333,12 +333,14 @@ internal func resolveURLBuffers<
             writeIndex = absoluteBuffer[writeIndex...].initialize(
                 fromSpan: relativeSpan.extracting(relativePathRange.endIndex...)
             )
-        } else if baseHeader.hasQuery {
-            // No relative query, copy the base query including the leading "?"
-            let baseQueryRange = baseHeader.queryRange
-            writeIndex = absoluteBuffer[writeIndex...].initialize(
-                fromSpan: baseSpan.extracting((baseQueryRange.startIndex - 1)..<baseQueryRange.endIndex)
-            )
+        } else {
+            if baseHeader.hasQuery {
+                // No relative query, copy the base query including the leading "?"
+                let baseQueryRange = baseHeader.queryRange
+                writeIndex = absoluteBuffer[writeIndex...].initialize(
+                    fromSpan: baseSpan.extracting((baseQueryRange.startIndex - 1)..<baseQueryRange.endIndex)
+                )
+            }
             // Copy the relative fragment, if present
             writeIndex = absoluteBuffer[writeIndex...].initialize(
                 fromSpan: relativeSpan.extracting(relativePathRange.endIndex...)
