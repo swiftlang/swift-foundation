@@ -1946,12 +1946,14 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     func dayOfYear(fromYear year: Int, month: Int, day: Int) throws (GregorianCalendarError) -> Int {
+        precondition(month > 0 && month < 13)
         let daysBeforeMonthNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         let daysBeforeMonthLeap =    [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
 
         let julianDay = try Self.julianDay(ofDay: day, month: month, year: year)
         let useJulianCalendar = julianDay < julianCutoverDay
         let isLeapYear = gregorianYearIsLeap(year)
+        
         var dayOfYear = (isLeapYear ? daysBeforeMonthLeap : daysBeforeMonthNonLeap)[month - 1] + day
         if !useJulianCalendar && year == gregorianStartYear {
             // Use julian's week number for 1582, so recalculate day of year
@@ -1985,96 +1987,145 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from d: Date, in timeZone: TimeZone) -> DateComponents {
+        guard !components.isEmpty else {
+            return DateComponents()
+        }
+
         let timezoneOffset = timeZone.secondsFromGMT(for: d)
         let localDate = d + Double(timezoneOffset)
 
         let dateOffsetInSeconds = localDate.timeIntervalSinceReferenceDate.rounded(.down)
         let date = Date(timeIntervalSinceReferenceDate: dateOffsetInSeconds) // Round down the given date to seconds
 
-        let totalSeconds = Int(dateOffsetInSeconds)
-        let secondsInDay = (totalSeconds % 86400 + 86400) % 86400
+        let hour: Int?
+        let second: Int?
+        let minute: Int?
+        let nanosecond: Int?
+        var dayOfYear: Int?
+        var weekday: Int?
+        var weekOfMonth: Int?
+        var yearForWeekOfYear: Int?
+        var weekdayOrdinal: Int?
+        var weekOfYear: Int?
+        var year: Int?
+        var month: Int?
+        var day: Int?
 
-        let hour = secondsInDay / 3600
-        let minute = (secondsInDay % 3600) / 60
-        let second = secondsInDay % 60
-        let nanosecond = Int((localDate.timeIntervalSinceReferenceDate - dateOffsetInSeconds) * 1_000_000_000)
+        let timeComponents: Calendar.ComponentSet = [.hour, .minute, .second, .nanosecond]
+        if !components.isDisjoint(with: timeComponents) {
+            let totalSeconds = Int(dateOffsetInSeconds)
+            let secondsInDay = (totalSeconds % 86400 + 86400) % 86400
 
-        if components.containsOnlyTimeComponents {
+            hour = secondsInDay / 3600
+            minute = (secondsInDay % 3600) / 60
+            second = secondsInDay % 60
+            nanosecond = Int((localDate.timeIntervalSinceReferenceDate - dateOffsetInSeconds) * 1_000_000_000)
+        } else {
+            hour = nil
+            minute = nil
+            second = nil
+            nanosecond = nil
+        }
+
+        if components.isSubset(of: timeComponents) {
             var dcHour: Int?
             var dcMinute: Int?
             var dcSecond: Int?
             var dcNano: Int?
+
             if components.contains(.hour) { dcHour = hour }
             if components.contains(.minute) { dcMinute = minute }
             if components.contains(.second) { dcSecond = second }
             if components.contains(.nanosecond) { dcNano = nanosecond }
-            return DateComponents(hour: dcHour, minute: dcMinute, second: dcSecond, nanosecond: dcNano)
+            return DateComponents(rawHour: dcHour, rawMinute: dcMinute, rawSecond: dcSecond, rawNanosecond: dcNano)
         }
 
-        let dayOfYear: Int
-        let weekday: Int
-        let weekOfMonth: Int
-        var yearForWeekOfYear: Int
-        var weekdayOrdinal: Int
-        var weekOfYear: Int
-        var isLeapYear: Bool
-        var year: Int
-        var month: Int
-        var day: Int
         do {
             let useJulianRef = useJulianReference(date)
             let julianDay = try date.julianDay()
-             (year, month, day) = Self.yearMonthDayFromJulianDay(julianDay, useJulianRef: useJulianRef)
-            isLeapYear = gregorianYearIsLeap(year)
+            let julianDayYMD = Self.yearMonthDayFromJulianDay(julianDay, useJulianRef: useJulianRef)
 
-            // To calculate day of year, work backwards with month/day
-            dayOfYear = try self.dayOfYear(fromYear: year, month: month, day: day)
-            func remainder(numerator: Int, denominator: Int ) -> Int {
-                let r = numerator % denominator
-                return r >= 0 ? r : r + denominator
-            }
-            // Week of year calculation, from ICU calendar.cpp :: computeWeekFields
-            // 1-based: 1...7
-            weekday = remainder(numerator: julianDay + 1, denominator: 7) + 1
+            year = julianDayYMD.year
+            month = julianDayYMD.month
+            day = julianDayYMD.day
 
-            // 0-based 0...6
-            let relativeWeekday = (weekday + 7 - firstWeekday) % 7
-            let relativeWeekdayForJan1 = (weekday - dayOfYear + 7001 - firstWeekday) % 7
-            weekOfYear = (dayOfYear - 1 + relativeWeekdayForJan1) / 7 // 0...53
-            if (7 - relativeWeekdayForJan1) >= minimumDaysInFirstWeek {
-                weekOfYear += 1
+            guard let year, let month, let day else {
+                preconditionFailure()
             }
 
-            yearForWeekOfYear = year
-            // Adjust for weeks at end of the year that overlap into previous or next calendar year
-            if weekOfYear == 0 {
-                let previousDayOfYear = dayOfYear + (gregorianYearIsLeap(year - 1) ? 366 : 365)
-                weekOfYear = weekNumber(desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday)
-                yearForWeekOfYear -= 1
+            if !components.isDisjoint(with: [.dayOfYear, .quarter]) || !components.isDisjoint(with: [.weekOfYear, .yearForWeekOfYear]) {
+                dayOfYear = try self.dayOfYear(fromYear: year, month: month, day: day)
             } else {
-                let lastDayOfYear = (gregorianYearIsLeap(year) ? 366 : 365)
-                // Fast check: For it to be week 1 of the next year, the DOY
-                // must be on or after L-5, where L is yearLength(), then it
-                // cannot possibly be week 1 of the next year:
-                //          L-5                  L
-                // doy: 359 360 361 362 363 364 365 001
-                // dow:      1   2   3   4   5   6   7
-                if dayOfYear >= lastDayOfYear - 5 {
-                    var lastRelativeDayOfWeek = (relativeWeekday + lastDayOfYear - dayOfYear) % 7
-                    if lastRelativeDayOfWeek < 0 {
-                        lastRelativeDayOfWeek += 7
+                dayOfYear = nil
+            }
+
+            // Calculate weekday-related fields
+            if !components.isDisjoint(with: [.weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]) {
+                func remainder(numerator: Int, denominator: Int ) -> Int {
+                    let r = numerator % denominator
+                    return r >= 0 ? r : r + denominator
+                }
+                // Week of year calculation, from ICU calendar.cpp :: computeWeekFields
+                // 1-based: 1...7
+                weekday = remainder(numerator: julianDay + 1, denominator: 7) + 1
+
+                if !components.isDisjoint(with: [.weekOfYear, .yearForWeekOfYear]) {
+                    guard let dayOfYear, let weekday else {
+                        preconditionFailure()
                     }
 
-                    if ((6 - lastRelativeDayOfWeek) >= minimumDaysInFirstWeek) && ((dayOfYear + 7 - relativeWeekday) > lastDayOfYear) {
-                        weekOfYear = 1
-                        yearForWeekOfYear += 1
+                    // 0-based 0...6
+                    let relativeWeekday = (weekday + 7 - firstWeekday) % 7
+                    let relativeWeekdayForJan1 = (weekday - dayOfYear + 7001 - firstWeekday) % 7
+                    var calculatedWeekOfYear = (dayOfYear - 1 + relativeWeekdayForJan1) / 7 // 0...53
+                    if (7 - relativeWeekdayForJan1) >= minimumDaysInFirstWeek {
+                        calculatedWeekOfYear += 1
                     }
+
+                    var calculatedYearForWeekOfYear = year
+                    // Adjust for weeks at end of the year that overlap into previous or next calendar year
+                    if calculatedWeekOfYear == 0 {
+                        let previousDayOfYear = dayOfYear + (gregorianYearIsLeap(year - 1) ? 366 : 365)
+                        calculatedWeekOfYear = weekNumber(desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday)
+                        calculatedYearForWeekOfYear -= 1
+                    } else {
+                        let lastDayOfYear = (gregorianYearIsLeap(year) ? 366 : 365)
+                        // Fast check: For it to be week 1 of the next year, the DOY
+                        // must be on or after L-5, where L is yearLength(), then it
+                        // cannot possibly be week 1 of the next year:
+                        //          L-5                  L
+                        // doy: 359 360 361 362 363 364 365 001
+                        // dow:      1   2   3   4   5   6   7
+                        if dayOfYear >= lastDayOfYear - 5 {
+                            var lastRelativeDayOfWeek = (relativeWeekday + lastDayOfYear - dayOfYear) % 7
+                            if lastRelativeDayOfWeek < 0 {
+                                lastRelativeDayOfWeek += 7
+                            }
+
+                            if ((6 - lastRelativeDayOfWeek) >= minimumDaysInFirstWeek) && ((dayOfYear + 7 - relativeWeekday) > lastDayOfYear) {
+                                calculatedWeekOfYear = 1
+                                calculatedYearForWeekOfYear += 1
+                            }
+                        }
+                    }
+                    yearForWeekOfYear = calculatedYearForWeekOfYear
+                    weekOfYear = calculatedWeekOfYear
+                }
+
+                if components.contains(.weekOfMonth) {
+                    guard let weekday else {
+                        preconditionFailure()
+                    }
+                    weekOfMonth = weekNumber(desiredDay: day, dayOfPeriod: day, weekday: weekday)
+                }
+
+                if components.contains(.weekdayOrdinal) {
+                    weekdayOrdinal = (day - 1) / 7 + 1
                 }
             }
 
-            weekOfMonth = weekNumber(desiredDay: day, dayOfPeriod: day, weekday: weekday)
-            weekdayOrdinal = (day - 1) / 7 + 1
         } catch {
+            // Set error values when calculations fail
             year = .max
             month = .max
             day = .max
@@ -2084,8 +2135,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             yearForWeekOfYear = .max
             weekdayOrdinal = .max
             weekOfYear = .max
-            isLeapYear = false
         }
+
 
         var dcCalendar: Calendar?
         var dcTimeZone: TimeZone?
@@ -2110,17 +2161,21 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if components.contains(.calendar) { dcCalendar = Calendar(identifier: identifier) }
         if components.contains(.timeZone) { dcTimeZone = timeZone }
         if components.contains(.era) {
-            if year < 1 {
+            if let year = year, year < 1 {
                 dcEra = 0
             } else {
                 dcEra = 1
             }
         }
         if components.contains(.year) {
-            if year < 1 {
-                year = 1 - year
+            if var year = year {
+                if year < 1 {
+                    year = 1 - year
+                }
+                dcYear = year
+            } else {
+                dcYear = .max
             }
-            dcYear = year
         }
         if components.contains(.month) { dcMonth = month }
         if components.contains(.day) { dcDay = day }
@@ -2131,18 +2186,24 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if components.contains(.weekday) { dcWeekday = weekday }
         if components.contains(.weekdayOrdinal) { dcWeekdayOrdinal = weekdayOrdinal }
         if components.contains(.quarter) {
-            let quarter = if !isLeapYear {
-                if dayOfYear < 90 { 1 }
-                else if dayOfYear < 181 { 2 }
-                else if dayOfYear < 273 { 3 }
-                else if dayOfYear < 366 { 4 }
-                else { fatalError() }
+            let quarter: Int
+            if let dayOfYear = dayOfYear, let year {
+                let isLeapYear = gregorianYearIsLeap(year)
+                quarter = if !isLeapYear {
+                    if dayOfYear < 90 { 1 }
+                    else if dayOfYear < 181 { 2 }
+                    else if dayOfYear < 273 { 3 }
+                    else if dayOfYear < 366 { 4 }
+                    else { preconditionFailure("Invalid day of year") }
+                } else {
+                    if dayOfYear < 91 { 1 }
+                    else if dayOfYear < 182 { 2 }
+                    else if dayOfYear < 274 { 3 }
+                    else if dayOfYear < 367 { 4 }
+                    else { preconditionFailure("Invalid day of year") }
+                }
             } else {
-                if dayOfYear < 91 { 1 }
-                else if dayOfYear < 182 { 2 }
-                else if dayOfYear < 274 { 3 }
-                else if dayOfYear < 367 { 4 }
-                else { fatalError() }
+                quarter = 1 // fallback if calculations weren't performed
             }
 
             dcQuarter = quarter
