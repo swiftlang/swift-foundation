@@ -42,6 +42,12 @@ private func _timeZoneIdentifier_ICU(forWindowsIdentifier windowsIdentifier: Str
 #if FOUNDATION_FRAMEWORK
 // For feature flag
 internal import _ForSwiftFoundation
+
+internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool {
+    return _foundation_swift_ICUResourceTimeZone_feature_enabled()
+}
+#else
+internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool { return false }
 #endif
 
 final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
@@ -52,7 +58,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
      // This is safe because it's only mutated at deinit time
     nonisolated(unsafe) private let _timeZone : LockedState<UnsafePointer<UTimeZone?>>?
 
-    // This is only currently in use for _foundation_swift_ICUResourceTimeZone_feature_enabled
+    // This is only currently in use for foundation_swift_ICUResourceTimeZone_feature_enabled
     let _timeZoneICUResource: _TimeZoneICUResource?
 
     // This type is safely sendable because it is guarded by a lock in _TimeZoneICU and we never vend it outside of the lock so it can only ever be accessed from within the lock
@@ -134,7 +140,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
         self.name = name
         lock = LockedState(initialState: State())
-        if _foundation_swift_ICUResourceTimeZone_feature_enabled(), let timeZoneICUResource = try? _TimeZoneICUResource(identifier: name) {
+        if foundation_swift_ICUResourceTimeZone_feature_enabled(), let timeZoneICUResource = try? _TimeZoneICUResource(identifier: name) {
             // TODO: add logging for when initializaiton fails
             self._timeZoneICUResource = timeZoneICUResource
             self._timeZone = nil
