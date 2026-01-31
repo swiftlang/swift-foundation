@@ -18,7 +18,7 @@ internal import _ForSwiftFoundation
 
 @objc
 extension NSURL {
-    static func __copySwiftAbsoluteString(_ relativeHeader: UnsafePointer<__CFURLHeader>, baseHeader: UnsafePointer<__CFURLHeader>) -> Unmanaged<CFString>? {
+    static func __copySwiftAbsoluteString(_ relativeHeader: UnsafePointer<__CFURLHeader>, baseHeader: UnsafePointer<__CFURLHeader>, useRFC1808: Bool) -> Unmanaged<CFString>? {
         let relativeString = relativeHeader.pointee._string.takeUnretainedValue()
         let baseString = baseHeader.pointee._string.takeUnretainedValue()
         // +1 because we might need to prepend a slash to a relative path
@@ -33,7 +33,8 @@ extension NSURL {
                         relativeHeader: relativeHeader,
                         baseSpan: baseSpan,
                         baseHeader: baseHeader,
-                        into: absoluteBuffer
+                        into: absoluteBuffer,
+                        useRFC1808: useRFC1808
                     )
                 }
             },
@@ -44,13 +45,17 @@ extension NSURL {
                         relativeHeader: relativeHeader,
                         baseSpan: baseSpan,
                         baseHeader: baseHeader,
-                        into: absoluteBuffer
+                        into: absoluteBuffer,
+                        useRFC1808: useRFC1808
                     )
                 }
             }
         )
     }
 
+    /// Used by `CFURLCreateAbsoluteURLWithBytes` when `useCompatibilityMode: true`.
+    /// - Note: For `CFURL`, "compatibility mode" actually means compatibility with
+    ///   more _modern_ parsers, so we don't want to use the old RFC 1808 here.
     static func __copySwiftURLStringByResolvingPath(_ header: UnsafePointer<__CFURLHeader>) -> Unmanaged<CFString> {
         let string = header.pointee._string.takeUnretainedValue()
         let pathRange = header.pathRange
@@ -62,7 +67,10 @@ extension NSURL {
             blockIfASCII: { span in
                 return _createCFStringFromASCIIBuffer(capacity: span.count) { outputBuffer in
                     _ = outputBuffer.initialize(fromSpan: span.extracting(..<pathRange.endIndex))
-                    let writeIndex = pathRange.startIndex + resolveDotSegmentsInPlace(buffer: outputBuffer[pathRange])
+                    let writeIndex = pathRange.startIndex + resolveDotSegmentsInPlace(
+                        buffer: outputBuffer[pathRange],
+                        useRFC1808: false
+                    )
                     return outputBuffer[writeIndex...].initialize(
                         fromSpan: span.extracting(pathRange.endIndex...)
                     )
@@ -71,7 +79,10 @@ extension NSURL {
             blockIfUTF16: { span in
                 return _createCFStringFromCharacterBuffer(capacity: span.count) { outputBuffer in
                     _ = outputBuffer.initialize(fromSpan: span.extracting(..<pathRange.endIndex))
-                    let writeIndex = pathRange.startIndex + resolveDotSegmentsInPlace(buffer: outputBuffer[pathRange])
+                    let writeIndex = pathRange.startIndex + resolveDotSegmentsInPlace(
+                        buffer: outputBuffer[pathRange],
+                        useRFC1808: false
+                    )
                     return outputBuffer[writeIndex...].initialize(
                         fromSpan: span.extracting(pathRange.endIndex...)
                     )
@@ -89,12 +100,12 @@ extension NSURL {
             string2: base,
             blockIfASCII: { relativeSpan, baseSpan in
                 return _createCFStringFromASCIIBuffer(capacity: maxLength) { outputBuffer in
-                    return resolve(relativePath: relativeSpan, basePath: baseSpan, into: outputBuffer)
+                    return resolve(relativePath: relativeSpan, basePath: baseSpan, into: outputBuffer, useRFC1808: true)
                 }
             },
             blockIfUTF16: { relativeSpan, baseSpan in
                 return _createCFStringFromCharacterBuffer(capacity: maxLength) { outputBuffer in
-                    return resolve(relativePath: relativeSpan, basePath: baseSpan, into: outputBuffer)
+                    return resolve(relativePath: relativeSpan, basePath: baseSpan, into: outputBuffer, useRFC1808: true)
                 }
             }
         ) ?? Unmanaged<CFString>.passRetained(base)
