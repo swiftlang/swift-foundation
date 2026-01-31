@@ -48,7 +48,9 @@
 @usableFromInline let memcmp = WASILibc.memcmp
 #endif
 
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 import Builtin
 
 #if canImport(Darwin)
