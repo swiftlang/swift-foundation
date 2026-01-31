@@ -44,7 +44,47 @@ let benchmarks = {
         d[length - 1] = UInt8.random(in: UInt8.min..<UInt8.max)
         return d
     }
-    
+
+    #if _pointerBitWidth(_64)
+    typealias HalfInt = Int32
+    #elseif _pointerBitWidth(_32)
+    typealias HalfInt = Int16
+    #endif
+
+    func createInlineData() -> Data {
+        createSomeData(10) // 10B, Smaller than InlineData.Buffer
+    }
+
+    func createSmallSliceData() -> Data {
+        createSomeData(1024 * 8) // 8KB, Smaller than HalfInt.max but larger than InlineData.Buffer
+    }
+
+    func createLargeSliceData() -> Data {
+        createSomeData(Int(HalfInt.max) + 1024) // HalfInt + 1KB, Larger than HalfInt.max
+    }
+
+    let dataKinds: [(Data, String)] = [
+        (Data(), "empty"),
+        (createInlineData(), "inline"),
+        (createSmallSliceData(), "smallSlice"),
+        (createLargeSliceData(), "largeSlice")
+    ]
+
+    let dataKinds2: [(Data, String)] = [
+        (Data(), "empty"),
+        (createInlineData(), "inline"),
+        (createSmallSliceData(), "smallSlice"),
+        (createLargeSliceData(), "largeSlice")
+    ]
+
+    class DataBox {
+        var d: Data
+
+        init(d: Data) {
+            self.d = d
+        }
+    }
+
     /// A box `Data`. Intentionally turns the value type into a reference, so we can make a promise that the inner value is not copied due to mutation during a test of insertion or replacing.
     class TwoDatasBox {
         var d1: Data
@@ -57,68 +97,78 @@ let benchmarks = {
     }
     
     // MARK: -
-    
-    Benchmark("DataEqualEmpty", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = Data()
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
 
-    Benchmark("DataEqualInline", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(12) // Less than size of InlineData.Buffer
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
-    
-    Benchmark("DataNotEqualInline", closure: { benchmark, box in
-        blackHole(box.d1 != box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(12) // Less than size of InlineData.Buffer
-        let d2 = createSomeData(12)
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
-    
-    Benchmark("DataEqualLarge", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 8)
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
-    
-    Benchmark("DataNotEqualLarge", closure: { benchmark, box in
-        blackHole(box.d1 != box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 8)
-        let d2 = createSomeData(1024 * 8)
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
+    for (data, name) in dataKinds {
+        Benchmark("DataEqual", configuration: .init(tags: ["kind": name]), closure: { _, box in
+            blackHole(box.d1 == box.d2)
+        }, setup: { () -> TwoDatasBox in
+            TwoDatasBox(d1: data, d2: data)
+        })
+    }
 
-    Benchmark("DataEqualReallyLarge", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 1024 * 8)
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
+    for ((data1, name), (data2, _)) in zip(dataKinds, dataKinds2) {
+        Benchmark("DataNotEqual", configuration: .init(tags: ["kind": name]), closure: { _, box in
+            blackHole(box.d1 != box.d2)
+        }, setup: { () -> TwoDatasBox in
+            TwoDatasBox(d1: data1, d2: data2)
+        })
+    }
 
-    Benchmark("DataNotEqualReallyLarge", closure: { benchmark, box in
-        blackHole(box.d1 != box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 1024 * 8)
-        let d2 = createSomeData(1024 * 1024 * 8)
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
+    for (data, name) in dataKinds {
+        Benchmark("DataIterate", configuration: .init(tags: ["kind": name, "iteration": "iterator"])) { _ in
+            for byte in data {
+                blackHole(byte)
+            }
+        }
+    }
 
+    for (data, name) in dataKinds {
+        Benchmark("DataIterate", configuration: .init(tags: ["kind": name, "iteration": "indices"])) { _ in
+            for index in data.startIndex ..< data.endIndex {
+                blackHole(data[index])
+            }
+        }
+    }
+
+    for (data, name) in dataKinds {
+        Benchmark("DataCount", configuration: .init(tags: ["kind": name])) { benchmark in
+            for _ in benchmark.scaledIterations {
+                blackHole(data.count)
+            }
+        }
+    }
+
+    for (data, name) in dataKinds {
+        Benchmark("DataMakeRawSpan", configuration: .init(tags: ["kind": name])) { benchmark in
+            for _ in benchmark.scaledIterations {
+                blackHole(data.bytes.isEmpty)
+            }
+        }
+    }
+
+    for (data, name) in dataKinds.dropFirst() {
+        Benchmark("DataAppend", configuration: .init(tags: ["kind": name]), closure: { benchmark, box in
+            for _ in benchmark.scaledIterations {
+                box.d.append(5)
+                box.d.removeLast()
+            }
+        }, setup: { () -> DataBox in
+            DataBox(d: data)
+        })
+    }
+
+    for (data, name) in dataKinds.dropFirst() {
+        Benchmark("DataInsert", configuration: .init(tags: ["kind": name]), closure: { benchmark, box in
+            box.d.insert(5, at: 3)
+            box.d.remove(at: 3)
+        }, setup: { () -> DataBox in
+            DataBox(d: data)
+        })
+    }
+
+    Benchmark("DataFromString", closure: { benchmark, string in
+        blackHole(string.data(using: .ascii))
+    }, setup: { () -> String in
+        Array(repeating: "A", count: 1024 * 1024).joined()
+    })
 }
