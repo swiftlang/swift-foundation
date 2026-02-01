@@ -31,29 +31,17 @@ internal func compareStringsWithLocale(_ string1: Substring, _ string2: Substrin
     }
 
     guard let collator = collator, status.rawValue <= U_ZERO_ERROR.rawValue else {
-        if string1 < string2 {
-            return .orderedAscending
-        } else if string1 > string2 {
-            return .orderedDescending
-        } else {
-            return .orderedSame
-        }
+        return ComparisonResult(string1, string2)
     }
 
     configureCollator(collator, options: options, status: &status)
     guard status.rawValue <= U_ZERO_ERROR.rawValue else {
-        if string1 < string2 {
-            return .orderedAscending
-        } else if string1 > string2 {
-            return .orderedDescending
-        } else {
-            return .orderedSame
-        }
+        return ComparisonResult(string1, string2)
     }
 
-    let result = string1.withCString(encodedAs: UTF16.self) { str1Ptr in
-        string2.withCString(encodedAs: UTF16.self) { str2Ptr in
-            ucol_strcoll(collator, str1Ptr, -1, str2Ptr, -1)
+    let result = string1.withCString { str1Ptr in
+        string2.withCString { str2Ptr in
+            ucol_strcollUTF8(collator, str1Ptr, -1, str2Ptr, -1, &status)
         }
     }
 
