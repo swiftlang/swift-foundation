@@ -1000,13 +1000,29 @@ extension JSONDecoderImpl: Decoder {
     }
 
     static private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, json5: Bool, numberBuffer: BufferView<UInt8>, fullSource: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+        // Helper function to create number conversion error
+        func createNumberConversionError() -> DecodingError {
+            #if FOUNDATION_FRAMEWORK
+            let underlyingError: Error? = JSONError.numberIsNotRepresentableInSwift(
+                parsed: String(decoding: numberBuffer, as: UTF8.self)
+            ).nsError
+            #else
+            let underlyingError: Error? = nil
+            #endif
+            return DecodingError.dataCorrupted(DecodingError.Context(
+                codingPath: codingPathNode.path(byAppending: additionalKey),
+                debugDescription: "Parsed JSON number <\(String(decoding: numberBuffer, as: UTF8.self))> does not fit in \(T.self).",
+                underlyingError: underlyingError
+            ))
+        }
+
         // This is the slow path... If the fast path has failed. For example for "34.0" as an integer, we try to parse as either a Decimal or a Double and then convert back, losslessly.
         if let double = Double(prevalidatedBuffer: numberBuffer) {
             // T.init(exactly:) guards against non-integer Double(s), but the parser may
             // have already transformed the non-integer "1.0000000000000001" into 1, etc.
             // Proper lossless behavior should be implemented by the parser.
             guard let value = T(exactly: double) else {
-                throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                throw createNumberConversionError()
             }
 
             // The distance between Double(s) is >=2 from ±2^53.
@@ -1021,7 +1037,7 @@ extension JSONDecoderImpl: Decoder {
         let decimalParseResult = Decimal._decimal(from: numberBuffer, matchEntireString: true).asOptional
         if let decimal = decimalParseResult.result {
             guard let value = T(decimal) else {
-                throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                throw createNumberConversionError()
             }
             return value
         }
