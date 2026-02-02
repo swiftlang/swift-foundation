@@ -180,7 +180,7 @@ open class FileManager : @unchecked Sendable {
     // Sendable note: _impl may only be mutated in `init`
     private var _impl: _FileManagerImpl
     private let _lock = LockedState<State>(initialState: .init(delegate: nil))
-    private let isDefault: Bool = false
+    private let isDefault: Bool
     
     private static let _default = FileManager(default: true)
     open class var `default`: FileManager {
@@ -202,14 +202,15 @@ open class FileManager : @unchecked Sendable {
     }
     
     public init() {
+        isDefault = false
         _impl = _FileManagerImpl()
         _impl._manager = self
     }
     
     private init(default: Bool) {
+        isDefault = `default`
         _impl = _FileManagerImpl()
         _impl._manager = self
-        self.isDefault = `default`
     }
 
     open func setAttributes(_ attributes: [FileAttributeKey : Any], ofItemAtPath path: String) throws {
