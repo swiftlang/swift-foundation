@@ -21,7 +21,8 @@ internal import _ForSwiftFoundation
 internal func resolve<T: UnsignedInteger & FixedWidthInteger>(
     relativePath: borrowing Span<T>,
     basePath: borrowing Span<T>,
-    into absolutePath: UnsafeMutableBufferPointer<T>
+    into absolutePath: UnsafeMutableBufferPointer<T>,
+    useRFC1808: Bool = false
 ) -> Int {
     // Append the relative path after the last slash in the base path
     var lastSlashIndex = basePath.indices.endIndex - 1
@@ -31,20 +32,26 @@ internal func resolve<T: UnsignedInteger & FixedWidthInteger>(
     guard lastSlashIndex >= basePath.indices.startIndex else {
         // No base slash, just use the relative path
         let pathEnd = absolutePath.initialize(fromSpan: relativePath)
-        return resolveDotSegmentsInPlace(buffer: absolutePath[..<pathEnd])
+        return resolveDotSegmentsInPlace(buffer: absolutePath[..<pathEnd], useRFC1808: useRFC1808)
     }
     let baseEnd = absolutePath.initialize(fromSpan: basePath.extracting(...lastSlashIndex))
     let pathEnd = absolutePath[baseEnd...].initialize(fromSpan: relativePath)
-    return resolveDotSegmentsInPlace(buffer: absolutePath[..<pathEnd])
+    return resolveDotSegmentsInPlace(buffer: absolutePath[..<pathEnd], useRFC1808: useRFC1808)
 }
 
 internal func resolve<T: UnsignedInteger & FixedWidthInteger>(
     relativePath: borrowing Span<T>,
     basePath: borrowing Span<T>,
-    into absolutePath: Slice<UnsafeMutableBufferPointer<T>>
+    into absolutePath: Slice<UnsafeMutableBufferPointer<T>>,
+    useRFC1808: Bool = false
 ) -> Int {
     let absolute = UnsafeMutableBufferPointer(rebasing: absolutePath)
-    return resolve(relativePath: relativePath, basePath: basePath, into: absolute)
+    return resolve(
+        relativePath: relativePath,
+        basePath: basePath,
+        into: absolute,
+        useRFC1808: useRFC1808
+    )
 }
 
 // MARK: - Dot segment resolution
@@ -60,21 +67,17 @@ private enum RemovingDotState {
     case skipSlashes
 }
 
-@_specialize(where T == UInt8)
-@_specialize(where T == UInt16)
+// Inline to specialize for UInt8/UInt16 and remove compatibility branching
+@inline(__always)
 internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
-    buffer: UnsafeMutableBufferPointer<T>
+    buffer: UnsafeMutableBufferPointer<T>,
+    useRFC1808: Bool = false
 ) -> Int {
-
-    // Behavior differences from the old CFURL dot segment resolution:
-    // - CFURL would leave all leading "/../" segments alone
-    // - CFURL would leave a single leading "/./" segment alone
-    // - New behavior prevents relative paths "a/../b" from becoming absolute
 
     // State machine for remove_dot_segments() from RFC 3986:
     //
     // First, remove all "./" and "../" prefixes by moving through the
-    // .initial, .dot, and .dotDot states (without appending).
+    // .initial, .dot, and .dotDot states (without writing).
     //
     // Then, move through the remaining states/components, first checking if
     // the component is special ("/./" or "/../") so that we only append when
@@ -82,7 +85,14 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
     //
     // Note: There's a slight modification to the RFC algorithm to prevent
     // relative path segments from becoming absolute, which matters for URLs
-    // that have both a relative path and relative base path. See note below.
+    // that have both a relative path and relative base path.
+    //
+    // useRFC1808: true enables RFC 1808 behavior for CFURL, which does not
+    // strip leading "../" segments and therefore needs to ensure that the
+    // previous segment of "<segment>/../" is not ".." before removing it.
+    //
+    // Behavior differences from the old CFURL dot segment resolution:
+    // - New behavior prevents relative paths "a/../b" from becoming absolute
 
     let dot = T(UInt8(ascii: "."))
     let slash = T(UInt8(ascii: "/"))
@@ -113,9 +123,24 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                 state = .appendUntilSlash
             }
         case .dotDot:
+            guard !useRFC1808 else {
+                // RFC 1808 says leading "../" segments should not be
+                // stripped, so write to the buffer in either case.
+                if v == slash {
+                    state = .initial
+                } else {
+                    state = .appendUntilSlash
+                }
+                writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
+                    fromContentsOf: [dot, dot, v]
+                )
+                continue
+            }
             if v == slash {
+                // Strip the leading "../" by not writing it to the output
                 state = .initial
             } else {
+                // Found a non-".." component like "..a"
                 writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
                     fromContentsOf: [dot, dot, v]
                 )
@@ -145,6 +170,37 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                 state = .appendUntilSlash
             }
         case .slashDotDot:
+            guard !useRFC1808 else {
+                if v == slash {
+                    // RFC 1808 says don't remove a leading "/../", and
+                    // don't remove "<segment>/../" if <segment> == ".."
+                    let previousIsDotDot = (
+                        writeIndex >= 2 &&
+                        buffer[writeIndex - 1] == dot &&
+                        buffer[writeIndex - 2] == dot && (
+                            writeIndex == 2 || buffer[writeIndex - 3] == slash
+                        )
+                    )
+                    if writeIndex == 0 || previousIsDotDot {
+                        writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
+                            fromContentsOf: [slash, dot, dot]
+                        )
+                        state = .slash
+                    } else if let lastSlash = buffer[..<writeIndex].lastIndex(of: slash) {
+                        writeIndex = lastSlash
+                        state = .slash
+                    } else {
+                        writeIndex = 0
+                        state = .skipSlashes
+                    }
+                } else {
+                    writeIndex = buffer[writeIndex...(writeIndex + 3)].initialize(
+                        fromContentsOf: [slash, dot, dot, v]
+                    )
+                    state = .appendUntilSlash
+                }
+                continue
+            }
             if v == slash {
                 // Note: this diverges slightly from the RFC 3986 algorithm to prevent
                 // relative paths from becoming absolute (e.g. "a/../b" -> "/b")
@@ -164,7 +220,9 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                     state = .skipSlashes
                 }
             } else {
-                writeIndex = buffer[writeIndex...(writeIndex + 3)].initialize(fromContentsOf: [slash, dot, dot, v])
+                writeIndex = buffer[writeIndex...(writeIndex + 3)].initialize(
+                    fromContentsOf: [slash, dot, dot, v]
+                )
                 state = .appendUntilSlash
             }
         case .appendUntilSlash:
@@ -193,6 +251,25 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
         buffer[writeIndex] = slash
         writeIndex += 1
     case .slashDotDot:
+        guard !useRFC1808 else {
+            let previousIsDotDot = (
+                writeIndex >= 2 &&
+                buffer[writeIndex - 1] == dot &&
+                buffer[writeIndex - 2] == dot && (
+                    writeIndex == 2 || buffer[writeIndex - 3] == slash
+                )
+            )
+            if writeIndex == 0 || previousIsDotDot {
+                writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
+                    fromContentsOf: [slash, dot, dot]
+                )
+            } else if let previousSlash = buffer[..<writeIndex].lastIndex(of: slash) {
+                writeIndex = previousSlash + 1
+            } else {
+                writeIndex = 0
+            }
+            break
+        }
         // Note: "/.." is not yet appended to the buffer
         if writeIndex == 0 {
             // "/.." only, resolve to "/"
@@ -218,10 +295,11 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
 }
 
 internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
-    buffer: Slice<UnsafeMutableBufferPointer<T>>
+    buffer: Slice<UnsafeMutableBufferPointer<T>>,
+    useRFC1808: Bool = false
 ) -> Int {
     let rebased = UnsafeMutableBufferPointer(rebasing: buffer)
-    return resolveDotSegmentsInPlace(buffer: rebased)
+    return resolveDotSegmentsInPlace(buffer: rebased, useRFC1808: useRFC1808)
 }
 
 // MARK: - URL header types for resolution
@@ -300,7 +378,8 @@ internal func resolveURLBuffers<
     relativeHeader: Header,
     baseSpan: borrowing Span<T>,
     baseHeader: Header,
-    into absoluteBuffer: UnsafeMutableBufferPointer<T>
+    into absoluteBuffer: UnsafeMutableBufferPointer<T>,
+    useRFC1808: Bool = false
 ) -> Int {
     // We should not have a scheme if we have a base URL
     assert(!relativeHeader.hasScheme)
@@ -350,12 +429,18 @@ internal func resolveURLBuffers<
     }
 
     // Resolve the relative and base paths
+    var resolveDotSegments = true
     let absolutePathStart = writeIndex
     if relativeSpan[relativePathRange.startIndex] == UInt8(ascii: "/") {
         // Relative path is absolute, don't use the base path
         writeIndex = absoluteBuffer[writeIndex...].initialize(
             fromSpan: relativeSpan.extracting(relativePathRange)
         )
+        // Note: CFURL historically will not resolve any dot segments
+        // in this case and will keep the path exactly as-is.
+        if useRFC1808 {
+            resolveDotSegments = false
+        }
     } else if basePathRange.isEmpty {
         // Relative path does not start with "/", and we have no base path.
         // If the base has a host, we need to make sure to prepend a "/".
@@ -371,16 +456,23 @@ internal func resolveURLBuffers<
         writeIndex += resolve(
             relativePath: relativeSpan.extracting(relativePathRange),
             basePath: baseSpan.extracting(basePathRange),
-            into: absoluteBuffer[writeIndex...]
+            into: absoluteBuffer[writeIndex...],
+            useRFC1808: useRFC1808
         )
+        resolveDotSegments = false // Already resolved
     }
 
-    // Resolve dot segments in the absolute path
-    let absolutePathBuffer = UnsafeMutableBufferPointer(
-        rebasing: absoluteBuffer[absolutePathStart..<writeIndex]
-    )
-    let absolutePathLength = resolveDotSegmentsInPlace(buffer: absolutePathBuffer)
-    writeIndex = absolutePathStart + absolutePathLength
+    if resolveDotSegments {
+        // Resolve dot segments in the absolute path
+        let absolutePathBuffer = UnsafeMutableBufferPointer(
+            rebasing: absoluteBuffer[absolutePathStart..<writeIndex]
+        )
+        let absolutePathLength = resolveDotSegmentsInPlace(
+            buffer: absolutePathBuffer,
+            useRFC1808: useRFC1808
+        )
+        writeIndex = absolutePathStart + absolutePathLength
+    }
 
     // Copy the relative query and fragment if present and return the end index
     return absoluteBuffer[writeIndex...].initialize(
