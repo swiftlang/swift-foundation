@@ -137,7 +137,7 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
 #if os(WASI)
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
-private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, prefix: String, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String) {
+private func createTemporaryFile(at destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, prefix: String, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String) {
 #if os(WASI)
     // WASI does not have temp directories
     throw CocoaError(.featureUnsupported)
@@ -239,7 +239,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
 #if os(WASI)
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
-private func createProtectedTemporaryFile(at destinationPath: String, inPath: PathOrURL, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String, String?) {
+private func createProtectedTemporaryFile(at destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String, String?) {
 #if os(WASI)
     // WASI does not have temp directories
     throw CocoaError(.featureUnsupported)
@@ -288,7 +288,7 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
 #endif // os(WASI)
 }
 
-private func write(buffer: RawSpan, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
+private func write(buffer: RawSpan, toFileDescriptor fd: Int32, path: borrowing some FileSystemRepresentable & ~Copyable, parentProgress: Progress?) throws {
     let count = buffer.byteCount
     parentProgress?.becomeCurrent(withPendingUnitCount: Int64(count))
     defer {
@@ -339,7 +339,7 @@ extension NSData {
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, reportProgress: Bool) throws {
         try autoreleasepool {
             let span = RawSpan(_unsafeStart: data.bytes, byteCount: data.count)
-            try writeToFile(path: .path(path), buffer: span, options: options, attributes: [:], reportProgress: reportProgress)
+            try writeToFile(path: path, buffer: span, options: options, attributes: [:], reportProgress: reportProgress)
         }
     }
     
@@ -347,13 +347,13 @@ extension NSData {
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, stringEncodingAttributeData: Data, reportProgress: Bool) throws {
         try autoreleasepool {
             let span = RawSpan(_unsafeStart: data.bytes, byteCount: data.count)
-            try writeToFile(path: .path(path), buffer: span, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
+            try writeToFile(path: path, buffer: span, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
         }
     }
 }
 #endif
 
-internal func writeToFile(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
+internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
 #if os(WASI) // `.atomic` is unavailable on WASI
     try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
 #else
@@ -369,7 +369,7 @@ internal func writeToFile(path inPath: PathOrURL, buffer: RawSpan, options: Data
 #if os(WASI)
 @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
 #endif
-private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
 #if os(WASI)
     // `.atomic` is unavailable on WASI
     throw CocoaError(.featureUnsupported)
@@ -621,7 +621,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: RawSpan, options: Da
 }
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
-private func writeToFileNoAux(path inPath: PathOrURL, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileNoAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
 #if !os(WASI) // `.atomic` is unavailable on WASI
     assert(!options.contains(.atomic))
 #endif
@@ -768,7 +768,7 @@ extension Data {
         }
         
 #if !NO_FILESYSTEM
-        try writeToFile(path: .url(url), buffer: self.bytes, options: options, reportProgress: true)
+        try writeToFile(path: url, buffer: self.bytes, options: options, reportProgress: true)
 #else
         throw CocoaError(.featureUnsupported)
 #endif

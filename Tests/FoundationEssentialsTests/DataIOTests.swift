@@ -133,11 +133,11 @@ private final class DataIOTests {
         // Data doesn't have a direct API to write with attributes, but our I/O code has it. Use it via @testable interface here.
         
         let writeAttrs: [String : Data] = [FileAttributeKey.hfsCreatorCode.rawValue : "abcd".data(using: .ascii)!]
-        try writeToFile(path: .url(url), buffer: writeData.bytes, options: [], attributes: writeAttrs)
+        try writeToFile(path: url, buffer: writeData.bytes, options: [], attributes: writeAttrs)
         
         // Verify attributes
         var readAttrs: [String : Data] = [:]
-        let readData = try readDataFromFile(path: .url(url), reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
+        let readData = try readDataFromFile(path: url, reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
         
         #expect(writeData == readData)
         #expect(writeAttrs == readAttrs)

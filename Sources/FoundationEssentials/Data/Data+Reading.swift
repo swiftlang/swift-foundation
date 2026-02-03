@@ -84,7 +84,7 @@ private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: 
     
 }
 
-private func shouldMapFileDescriptor(_ fd: Int32, path: PathOrURL, options: Data.ReadingOptions) -> Bool {
+private func shouldMapFileDescriptor(_ fd: Int32, path: borrowing some FileSystemRepresentable & ~Copyable, options: Data.ReadingOptions) -> Bool {
     if options.contains(.alwaysMapped) {
         return true
     }
@@ -127,7 +127,7 @@ extension NSData {
     @objc(_readBytesFromPath:maxLength:bytes:length:didMap:options:reportProgress:error:)
     internal static func _readBytes(fromPath path: String, maxLength: Int, bytes: UnsafeMutablePointer<UnsafeMutableRawPointer?>, length: UnsafeMutablePointer<Int>, didMap: UnsafeMutablePointer<ObjCBool>, options: Data.ReadingOptions, reportProgress: Bool) throws {
         var attrs: [String : Data] = [:]
-        let result = try readBytesFromFile(path: .path(path), reportProgress: reportProgress, maxLength: maxLength == Int.max ? nil : maxLength, options: options, attributesToRead: [], attributes: &attrs)
+        let result = try readBytesFromFile(path: path, reportProgress: reportProgress, maxLength: maxLength == Int.max ? nil : maxLength, options: options, attributesToRead: [], attributes: &attrs)
         
         bytes.pointee = result.bytes
         length.pointee = result.length
@@ -145,7 +145,7 @@ extension NSData {
     internal static func _readBytesAndEncoding(fromPath path: String, maxLength: Int, encoding outEncoding: UnsafeMutablePointer<UInt>, bytes: UnsafeMutablePointer<UnsafeMutableRawPointer?>, length: UnsafeMutablePointer<Int>, didMap: UnsafeMutablePointer<ObjCBool>, options: Data.ReadingOptions, reportProgress: Bool) throws {
         
         var attrs: [String : Data] = [:]
-        let result = try readBytesFromFile(path: .path(path), reportProgress: reportProgress, maxLength: maxLength == Int.max ? nil : maxLength, options: options, attributesToRead: [NSFileAttributeStringEncoding], attributes: &attrs)
+        let result = try readBytesFromFile(path: path, reportProgress: reportProgress, maxLength: maxLength == Int.max ? nil : maxLength, options: options, attributesToRead: [NSFileAttributeStringEncoding], attributes: &attrs)
         if let encodingAttributeData = attrs[NSFileAttributeStringEncoding], let encoding = encodingFromDataForExtendedAttribute(encodingAttributeData) {
             outEncoding.pointee = encoding.rawValue
         } else {
@@ -165,12 +165,12 @@ extension NSData {
 }
 #endif
 
-internal func readDataFromFile(path inPath: PathOrURL, reportProgress: Bool, maxLength: Int? = nil, options: Data.ReadingOptions = []) throws -> Data {
+internal func readDataFromFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, reportProgress: Bool, maxLength: Int? = nil, options: Data.ReadingOptions = []) throws -> Data {
     var attributes: [String : Data] = [:]
     return try readDataFromFile(path: inPath, reportProgress: reportProgress, maxLength: maxLength, options: options, attributesToRead: [], attributes: &attributes)
 }
 
-internal func readDataFromFile(path inPath: PathOrURL, reportProgress: Bool, maxLength: Int? = nil, options: Data.ReadingOptions = [], attributesToRead: [String], attributes: inout [String: Data]) throws -> Data {
+internal func readDataFromFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, reportProgress: Bool, maxLength: Int? = nil, options: Data.ReadingOptions = [], attributesToRead: [String], attributes: inout [String: Data]) throws -> Data {
     let result = try readBytesFromFile(path: inPath, reportProgress: reportProgress, maxLength: maxLength, options: options, attributesToRead: attributesToRead, attributes: &attributes)
     
     if result.length == 0 {
@@ -194,7 +194,7 @@ struct ReadBytesResult {
 
 #if os(Windows)
 @lifetime(pBuffer: copy pBuffer)
-private func read(from hFile: HANDLE, at path: PathOrURL,
+private func read(from hFile: HANDLE, at path: FileSystemRepresentable,
                   into pBuffer: inout OutputRawSpan,
                   chunkSize dwChunk: Int = 4096, progress bProgress: Bool)
         throws {
@@ -223,7 +223,7 @@ private func read(from hFile: HANDLE, at path: PathOrURL,
 }
 #endif
 
-internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, maxLength: Int?, options: Data.ReadingOptions, attributesToRead: [String], attributes: inout [String: Data]) throws -> ReadBytesResult {
+internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, reportProgress: Bool, maxLength: Int?, options: Data.ReadingOptions, attributesToRead: [String], attributes: inout [String: Data]) throws -> ReadBytesResult {
     if inPath.isEmpty {
         // For compatibility, throw a different error than the perhaps-expected 'file not found' here (41646641)
         throw CocoaError(.fileReadInvalidFileName)
@@ -447,7 +447,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
 /// Read data from a file descriptor.
 /// Takes an `Int` size and returns an `Int` to match `Data`'s count. If we are going to read more than Int.max, throws - because we won't be able to store it in `Data`.
 /// If `readUntilLength` is `false`, then we will end the read if we receive less than `length` bytes. This can be used to read from something like a socket, where the `length` simply represents the maximum size you can read at once.
-private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: inout OutputRawSpan, readUntilLength: Bool = true, reportProgress: Bool) throws {
+private func readBytesFromFileDescriptor(_ fd: Int32, path: borrowing some FileSystemRepresentable & ~Copyable, buffer inBuffer: inout OutputRawSpan, readUntilLength: Bool = true, reportProgress: Bool) throws {
     // If chunkSize (8-byte value) is more than blksize_t.max (4 byte value), then use the 4 byte max and chunk
     
     let preferredChunkSize: size_t
@@ -546,7 +546,7 @@ extension Data {
     /// - throws: An error in the Cocoa domain, if `url` cannot be read.
     public init(contentsOf url: __shared URL, options: ReadingOptions = []) throws {
         if url.isFileURL {
-            self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
+            self = try readDataFromFile(path: url, reportProgress: true, options: options)
         } else {
 #if FOUNDATION_FRAMEWORK
             // Fallback to NSData, to read via NSURLSession
@@ -559,6 +559,11 @@ extension Data {
     }
     
     internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
-        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
+        self = try readDataFromFile(path: path, reportProgress: true, options: options)
+    }
+    
+    // Allows for disabling of progress reporting
+    internal init(contentsOf path: borrowing some FileSystemRepresentable & ~Copyable, options: ReadingOptions = [], reportProgress: Bool = true) throws {
+        self = try readDataFromFile(path: path, reportProgress: reportProgress, maxLength: nil, options: options)
     }
 }
