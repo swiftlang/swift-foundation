@@ -215,7 +215,6 @@ private final class DataIOTests {
 
 extension LargeDataTests {
     // This test is placed in the LargeDataTests suite since it allocates an extremely large amount of memory for some devices
-#if !os(watchOS)
     @Test func readLargeFile() throws {
         let url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: url) }
@@ -236,6 +235,5 @@ extension LargeDataTests {
         #expect(data.count == readNS.count)
 #endif
     }
-#endif
 }
 

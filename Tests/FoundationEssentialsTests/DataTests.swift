@@ -2547,7 +2547,16 @@ extension DataTests {
 #endif
 
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
-@Suite("Large Data Tests", .serialized)
+@Suite("Large Data Tests",
+       .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
+       .disabled(if: {
+           #if os(watchOS) // Disable these tests on watchOS since the test runner will likely be terminated for consuming too much memory
+           true
+           #else
+           false
+           #endif
+       }(), "Allocating large amounts of data is not supported on this platform")
+)
 struct LargeDataTests {
 #if _pointerBitWidth(_64)
     let largeCount = Int(Int32.max)
