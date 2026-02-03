@@ -630,6 +630,18 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     // Path always exists
     if !validate(span: span.extracting(impl.pointee.pathRange), component: .path) {
         guard allowEncoding else { return false }
+        if flags.isDisjoint(with: [.hasScheme, .hasHost]) {
+            // A relative-ref must not contain a ":" before the first "/"
+            let path = span.extracting(impl.pointee.pathRange)
+            for i in path.indices {
+                let v = path[i]
+                if v == UInt8(ascii: "/") {
+                    break
+                } else if v == UInt8(ascii: ":") {
+                    return false
+                }
+            }
+        }
         flags.insert(.shouldEncodePath)
         shouldEncode = true
     }
