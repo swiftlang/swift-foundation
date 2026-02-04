@@ -110,6 +110,10 @@ struct LocaleCache : Sendable, ~Copyable {
                 return new
             }
         }
+        
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        var identifiersWithLikelySubtags: [String : String] = [:]
+#endif
     }
 
     let lock: LockedState<State>
@@ -356,4 +360,27 @@ struct LocaleCache : Sendable, ~Copyable {
         return nil
 #endif
     }
+    
+#if FOUNDATION_FRAMEWORK
+    func localeIdentifierWithLikelySubtags(_ localeID: String, cacheResult: Bool) -> String {
+#if canImport(_FoundationICU)
+        let existing = lock.withLock {
+            $0.identifiersWithLikelySubtags[localeID]
+        }
+        if let existing {
+            return existing
+        }
+        
+        let result = Locale.localeIdentifierWithLikelySubtags(localeID)
+        if cacheResult {
+            lock.withLock {
+                $0.identifiersWithLikelySubtags[localeID] = result
+            }
+        }
+        return result
+#else
+        return ""
+#endif
+    }
+#endif
 }
