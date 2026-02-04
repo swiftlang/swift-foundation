@@ -194,7 +194,7 @@ struct ReadBytesResult {
 
 #if os(Windows)
 @lifetime(pBuffer: copy pBuffer)
-private func read(from hFile: HANDLE, at path: FileSystemRepresentable,
+private func read(from hFile: HANDLE, at path: borrowing some FileSystemRepresentable & ~Copyable,
                   into pBuffer: inout OutputRawSpan,
                   chunkSize dwChunk: Int = 4096, progress bProgress: Bool)
         throws {

@@ -81,16 +81,12 @@ extension POSIXError {
 }
 
 extension CocoaError {
-    static func errorWithFilePath(_ pathOrURL: borrowing some FileSystemRepresentable & ~Copyable, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
-        pathOrURL
-            .errorWithFilePath(
-                errno: errno,
-                reading: reading,
-                variant: variant,
-                source: source,
-                destination: destination,
-                debugDescription: debugDescription,
-            )
+    static func errorWithFilePath(_ path: borrowing some FileSystemRepresentable & ~Copyable, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        if let url = path.urlForError {
+            return CocoaError(Code(fileErrno: errno, reading: reading), url: url, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
+        } else {
+            return CocoaError(Code(fileErrno: errno, reading: reading), path: path.path, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
+        }
     }
 }
 
@@ -139,14 +135,8 @@ extension CocoaError.Code {
 }
 
 extension CocoaError {
-    static func errorWithFilePath(_ path: FileSystemRepresentable, win32 dwError: DWORD, reading: Bool, debugDescription: String? = nil) -> CocoaError {
-        switch path {
-        case let .path(path):
-            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path.isEmpty), path: path, underlying: Win32Error(dwError), debugDescription: debugDescription)
-        case let .url(url):
-            let pathStr = url.withUnsafeFileSystemRepresentation { String(cString: $0!) }
-            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: pathStr.isEmpty), path: pathStr, url: url, underlying: Win32Error(dwError), debugDescription: debugDescription)
-        }
+    static func errorWithFilePath(_ path: borrowing some FileSystemRepresentable & ~Copyable, win32 dwError: DWORD, reading: Bool, debugDescription: String? = nil) -> CocoaError {
+        return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path.isEmpty), path: path.path, underlying: Win32Error(dwError), debugDescription: debugDescription)
     }
     
     static func errorWithFilePath(_ path: String? = nil, win32 dwError: DWORD, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {

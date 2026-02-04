@@ -258,7 +258,7 @@ extension String {
         self = try String(contentsOfFileOrPath: url, usedEncoding: &usedEncoding)
     }
     
-    internal init(contentsOfFileOrPath path: borrowing FileSystemRepresentable, usedEncoding: inout Encoding) throws {
+    internal init(contentsOfFileOrPath path: borrowing some FileSystemRepresentable & ~Copyable, usedEncoding: inout Encoding) throws {
         var attrs: [String : Data] = [:]
         let data = try readDataFromFile(path: path, reportProgress: false, maxLength: nil, options: [], attributesToRead: [stringEncodingAttributeName], attributes: &attrs)
         if let encodingAttributeData = attrs[stringEncodingAttributeName], let extendedAttributeEncoding = encodingFromDataForExtendedAttribute(encodingAttributeData) {
