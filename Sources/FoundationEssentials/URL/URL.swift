@@ -1434,8 +1434,9 @@ extension URL {
             return isAbsolute
         }
         #if !NO_FILESYSTEM
-        // Expand the tilde if present
-        if filePath.utf8.first == UInt8(ascii: "~") {
+        // Expand the tilde, but only for "~/" (no user)
+        // Treat a lone "~" as a potential file name and don't expand it
+        if filePath.utf8.starts(with: [UInt8(ascii: "~"), UInt8(ascii: "/")]) {
             filePath = filePath.expandingTildeInPath
         }
         #endif
