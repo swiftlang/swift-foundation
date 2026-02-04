@@ -19,4 +19,5 @@ target_sources(FoundationInternationalization PRIVATE
     ICU+Enums.swift
     ICU+FieldPositer.swift
     ICU+Foundation.swift
+    ICU+ResourceBundle.swift
     ICUPatternGenerator.swift)
