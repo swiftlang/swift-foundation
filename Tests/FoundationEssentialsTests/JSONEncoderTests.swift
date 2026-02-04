@@ -548,6 +548,19 @@ private struct JSONEncoderTests {
 
         #expect(["leave_me_alone": "test"] == result)
     }
+    
+    @Test func decodingDictionaryCodingKeyRepresentableKeyConversionUntouched() throws {
+        struct Key: RawRepresentable, CodingKeyRepresentable, Hashable, Codable {
+            let rawValue: String
+        }
+
+        let input = "{\"leave_me_alone\":\"test\"}".data(using: .utf8)!
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let result = try decoder.decode([Key: String].self, from: input)
+
+        #expect(result[Key(rawValue: "leave_me_alone")] == "test")
+    }
 
     @Test func decodingDictionaryFailureKeyPath() {
         let input = "{\"leave_me_alone\":\"test\"}".data(using: .utf8)!
