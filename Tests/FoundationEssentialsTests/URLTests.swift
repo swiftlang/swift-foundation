@@ -1092,27 +1092,41 @@ private struct URLTests {
 
     #if !os(Windows)
     @Test func tildeFilePath() throws {
-        func urlIsAbsolute(_ url: URL) -> Bool {
-            if url.relativePath.utf8.first == ._slash {
-                return true
-            }
-            guard url.baseURL != nil else {
-                return false
-            }
-            return url.path.utf8.first == ._slash
+        func isAbsolute(_ url: URL) -> Bool {
+            url.relativePath.utf8.first == ._slash && url.baseURL == nil
         }
 
-        // "~" must either be expanded to an absolute path or resolved against a base URL
+        func isRelative(_ url: URL) -> Bool {
+            url.relativePath.utf8.first != ._slash && url.baseURL != nil
+        }
+
+        // Treat a lone "~" as a potential file name
         var url = URL(filePath: "~")
-        #expect(urlIsAbsolute(url))
+        #expect(isRelative(url))
+        #expect(url.lastPathComponent == "~")
 
-        url = URL(filePath: "~", directoryHint: .isDirectory)
-        #expect(urlIsAbsolute(url))
-        #expect(url.path().utf8.last == ._slash)
-
+        // Expand the tilde for a "~/" prefix
         url = URL(filePath: "~/")
-        #expect(urlIsAbsolute(url))
-        #expect(url.path().utf8.last == ._slash)
+        #expect(isAbsolute(url))
+        #expect(url.hasDirectoryPath)
+
+        url = URL(filePath: "~/Desktop/")
+        #expect(isAbsolute(url))
+        #expect(url.hasDirectoryPath)
+        #expect(url.lastPathComponent == "Desktop")
+
+        // Don't expand the tilde for any "~user"-like prefix
+        url = URL(filePath: "~user")
+        #expect(isRelative(url))
+        #expect(url.lastPathComponent == "~user")
+
+        url = URL(filePath: "~mobile")
+        #expect(isRelative(url))
+        #expect(url.lastPathComponent == "~mobile")
+
+        url = URL(filePath: "~mobile/path")
+        #expect(isRelative(url))
+        #expect(url.lastPathComponent == "path")
     }
     #endif // !os(Windows)
 
