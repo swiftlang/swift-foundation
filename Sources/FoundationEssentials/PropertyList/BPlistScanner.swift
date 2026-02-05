@@ -72,7 +72,7 @@ private enum BPlistTypeMarker: UInt8 {
 }
 
 class BPlistMap : PlistDecodingMap {
-    internal indirect enum Value {
+    internal enum Value {
         case string(Region, isAscii: Bool)
         case array([BPlistObjectIndex])
         case set([BPlistObjectIndex])
@@ -134,6 +134,16 @@ class BPlistMap : PlistDecodingMap {
             return try closure($0.buffer[region], $0.buffer)
         }
     }
+    
+    @_lifetime(self)
+    @inline(__always)
+    func span(for region: Region) -> Span<UInt8> {
+        let escaped = dataLock.withLock {
+            $0.buffer[region]
+        }
+        // We're just going to assume that the data itself is going to stay alive as long as this map does.
+        return _overrideLifetime(escaped.span, borrowing: self)
+    }
 
     deinit {
         dataLock.withLock {
@@ -165,6 +175,31 @@ class BPlistMap : PlistDecodingMap {
             let offset = objectOffsets[Int(idx)]
             let scanInfo = BPlistScanner(buffer: state.buffer, trailer: trailer)
             return try scanInfo.scanObject(at: offset)
+        }
+    }
+    
+    /// Fetch an index as an ASCII span. This avoids overhead of intermediate creation of "value" types for a common case of looking for an ASCII key string.
+    /// Returns an empty span if the value was not an ASCII string (either not a string at all, or UTF16BE string).
+    @_lifetime(self)
+    func asciiString(at idx: BPlistObjectIndex) throws -> Span<UInt8> {
+        let view: BufferView? = try dataLock.withLockUnchecked { state in
+            guard Int(idx) < objectOffsets.count else {
+                throw BPlistError.corruptedValue("object index")
+            }
+            let offset = objectOffsets[Int(idx)]
+            let scanInfo = BPlistScanner(buffer: state.buffer, trailer: trailer)
+            if let region = try scanInfo.scanASCIIStringRegion(at: offset) {
+                return state.buffer[region]
+            } else {
+                return nil
+            }
+        }
+        
+        if let view {
+            // We're just going to assume that the data itself is going to stay alive as long as this map does.
+            return _overrideLifetime(view.span, borrowing: self)
+        } else {
+            return Span()
         }
     }
     
@@ -592,6 +627,21 @@ internal struct BPlistScanner {
         }
     }
     
+    func scanASCIIStringRegion(at offset: UInt64) throws -> BPlistMap.Region? {
+        let idx = reader.index(offset: try Int(bplistSafe: offset))
+        let rawMarker = reader.char(at: idx)
+
+        let objectRangeEndIdx = baseIdx.advanced(by: Int(trailer._offsetTableOffset))
+
+        let typeMarker = BPlistTypeMarker(rawMarker)
+        switch typeMarker {
+        case .asciiString:
+            return try scanASCIIStringRegion(rawTypeMarker: rawMarker, index: idx, objectRangeEndIndex: objectRangeEndIdx)
+        default:
+            return nil
+        }
+    }
+    
     private func scanInteger(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
         let integerSize = 1 << (rawTypeMarker & 0x0f)
         guard integerSize <= 16 else {
@@ -660,6 +710,23 @@ internal struct BPlistScanner {
         }
         return .string(.init(startOffset: baseIdx.distance(to: dataStartIdx), count: Int(count)), isAscii: true)
     }
+    
+    private func scanASCIIStringRegion(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Region? {
+        var count = UInt64(rawTypeMarker & 0x0f)
+        var dataStartIdx = idx.advanced(by: 1)
+        if count == 0xf {
+            count = try reader.readInt(updatingIndex: &dataStartIdx, objectRangeEnd: objectRangeEndIndex, for: "ASCII string")
+        }
+        guard dataStartIdx.distance(to: objectRangeEndIndex) >= count else {
+            throw BPlistError.corruptedValue("ASCII string")
+        }
+
+        if count == _plistNull.utf8CodeUnitCount, reader.char(at: dataStartIdx) == UInt8(ascii: "$"), reader.string(at: dataStartIdx, matches: _plistNull) {
+            return nil
+        }
+        return .init(startOffset: baseIdx.distance(to: dataStartIdx), count: Int(count))
+    }
+
     
     private func scanUTF16BEString(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
         var count = UInt64(rawTypeMarker & 0x0f)

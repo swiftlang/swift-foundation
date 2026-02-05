@@ -42,6 +42,25 @@ internal struct BufferView<Element> {
         guard let baseAddress = UnsafeRawPointer(buffer.baseAddress) else { return nil }
         self.init(unsafeBaseAddress: baseAddress, count: buffer.count)
     }
+    
+    var bytes: RawSpan {
+        @lifetime(borrow self)
+        borrowing get {
+            let buffer = UnsafeRawBufferPointer(start: baseAddress, count: count)
+            let span = unsafe RawSpan(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, borrowing: self)
+        }
+    }
+}
+
+extension BufferView where Element: BitwiseCopyable {
+    var span: Span<Element> {
+        @lifetime(borrow self)
+        borrowing get {
+            let span = unsafe bytes._unsafeView(as: Element.self)
+            return _overrideLifetime(span, borrowing: self)
+        }
+    }
 }
 
 extension BufferView /*where Element: BitwiseCopyable*/ {
