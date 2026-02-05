@@ -353,7 +353,9 @@ extension OutputRawSpan {
 @available(FoundationInlineArray 6.4, *)
 extension UTF8Span: ContiguousBytes { }
 
+#if os(macOS) && !FOUNDATION_FRAMEWORK
 @available(FoundationInlineArray 6.2, *)
+#endif
 extension UTF8Span {
     @_alwaysEmitIntoClient
     public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
@@ -404,7 +406,9 @@ extension OutputSpan where Element == UInt8 {
 @available(FoundationInlineArray 6.4, *)
 extension InlineArray: ContiguousBytes where Element == UInt8 { }
 
+#if os(macOS) && !FOUNDATION_FRAMEWORK
 @available(FoundationInlineArray 6.2, *)
+#endif
 extension InlineArray where Element == UInt8 {
     @_alwaysEmitIntoClient
     public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
