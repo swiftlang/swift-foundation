@@ -47,12 +47,7 @@ extension _NSSwiftProcessInfo {
     }
 
     override var isMacCatalystApp: Bool {
-#if (os(macOS) || targetEnvironment(macCatalyst)) && !(FOUNDATION_FRAMEWORK && !canImport(_FoundationICU))
-        return dyld_get_active_platform() == PLATFORM_MACCATALYST ||
-            dyld_get_active_platform() == PLATFORM_IOS
-#else
-        return false
-#endif
+        _CFCatalystEnabled()
     }
 
     override var isiOSAppOnMac: Bool {
@@ -103,7 +98,7 @@ extension _NSSwiftProcessInfo {
         var resolvedProductVersionKey = "ProductVersion"
         #if os(macOS)
         // If we're on a Mac but running an iOS app, use the `iOSSupportVersion` instead
-        if dyld_get_active_platform() == PLATFORM_IOS {
+        if _CFMacOSCompatible() {
             resolvedProductVersionKey = "iOSSupportVersion"
         }
         #endif
