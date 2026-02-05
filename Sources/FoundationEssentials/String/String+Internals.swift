@@ -413,7 +413,7 @@ extension UTF8Span {
         var seenNullIdx: Int? = nil
         var iterator = self.makeUnicodeScalarIterator()
         
-        guard span.capacity > 0 else {
+        guard !span.isFull else {
             if !nullTerminated && iterator.next() == nil {
                 // No bytes to write, so an empty buffer is OK
                 return
