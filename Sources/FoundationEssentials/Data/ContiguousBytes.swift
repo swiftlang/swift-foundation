@@ -61,7 +61,7 @@ public protocol ContiguousBytes: ~Escapable, ~Copyable {
     ///
     /// - note: Calling `withBytes` multiple times does not guarantee that
     ///         the same span will be passed in every time.
-    @available(FoundationPreview 6.3, *)
+    @available(FoundationPreview 6.4, *)
     func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R
 }
 
@@ -232,6 +232,11 @@ extension EmptyCollection : ContiguousBytes where Element == UInt8 {
     public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         return try body(UnsafeRawBufferPointer(start: nil, count: 0))
     }
+
+    @_alwaysEmitIntoClient
+    public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        return try body(RawSpan())
+    }
 }
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
@@ -253,6 +258,15 @@ extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
         let element = self.first!
         return try Swift.withUnsafeBytes(of: element) { (buffer) throws(E) in
             return try body(buffer)
+        }
+    }
+
+    // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
+    @_alwaysEmitIntoClient
+    public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
+        let element = self.first!
+        return try Swift.withUnsafeBytes(of: element) { (buffer) throws(E) in
+            return try body(buffer.bytes)
         }
     }
 }
@@ -301,7 +315,7 @@ extension Slice : ContiguousBytes where Base : ContiguousBytes {
 
 //===--- Span Conformances -----------------------------------------===//
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.4, *)
 extension RawSpan: ContiguousBytes { }
 
 extension RawSpan {
@@ -311,7 +325,7 @@ extension RawSpan {
     }
 }
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.4, *)
 extension MutableRawSpan: ContiguousBytes { }
 
 extension MutableRawSpan {
@@ -321,7 +335,7 @@ extension MutableRawSpan {
     }
 }
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.4, *)
 extension OutputRawSpan: ContiguousBytes { }
 
 extension OutputRawSpan {
@@ -336,7 +350,7 @@ extension OutputRawSpan {
     }
 }
 
-@available(FoundationInlineArray 6.3, *)
+@available(FoundationInlineArray 6.4, *)
 extension UTF8Span: ContiguousBytes { }
 
 @available(FoundationInlineArray 6.2, *)
@@ -352,7 +366,7 @@ extension UTF8Span {
     }
 }
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.4, *)
 extension Span: ContiguousBytes where Element == UInt8 { }
 
 extension Span where Element == UInt8 {
@@ -362,7 +376,7 @@ extension Span where Element == UInt8 {
     }
 }
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.4, *)
 extension MutableSpan: ContiguousBytes where Element == UInt8 { }
 
 extension MutableSpan where Element == UInt8 {
@@ -372,7 +386,7 @@ extension MutableSpan where Element == UInt8 {
     }
 }
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.4, *)
 extension OutputSpan: ContiguousBytes where Element == UInt8 { }
 
 extension OutputSpan where Element == UInt8 {
@@ -387,7 +401,7 @@ extension OutputSpan where Element == UInt8 {
     }
 }
 
-@available(FoundationInlineArray 6.3, *)
+@available(FoundationInlineArray 6.4, *)
 extension InlineArray: ContiguousBytes where Element == UInt8 { }
 
 @available(FoundationInlineArray 6.2, *)

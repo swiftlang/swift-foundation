@@ -22,7 +22,7 @@ enum HomeworkError: Error {
     case dogAteIt
 }
 
-@available(FoundationPreview 6.3, *)
+@available(FoundationPreview 6.4, *)
 @discardableResult
 func acceptContiguousBytes<T: ContiguousBytes & ~Escapable & ~Copyable>(_ bytes: borrowing T) -> Int {
     do {
@@ -44,22 +44,21 @@ struct NC: ~Copyable { }
 
 @Suite("ContiguousBytesTests")
 private struct ContiguousBytesTests {
+    @available(FoundationInlineArray 6.4, *)
     @Test func span() throws {
-        if #available(FoundationPreview 6.3, *) {
-            var bytes: [UInt8] = [1, 2, 3]
-            bytes.withUnsafeMutableBufferPointer { unsafeBytes in
-                acceptContiguousBytes(unsafeBytes.span)
-                acceptContiguousBytes(unsafeBytes.mutableSpan)
-                acceptContiguousBytes(unsafeBytes.span.bytes)
+        var bytes: [UInt8] = [1, 2, 3]
+        bytes.withUnsafeMutableBufferPointer { unsafeBytes in
+            acceptContiguousBytes(unsafeBytes.span)
+            acceptContiguousBytes(unsafeBytes.mutableSpan)
+            acceptContiguousBytes(unsafeBytes.span.bytes)
 
-                var ms = unsafeBytes.mutableSpan
-                acceptContiguousBytes(ms.bytes)
-                acceptContiguousBytes(ms.mutableBytes)
+            var ms = unsafeBytes.mutableSpan
+            acceptContiguousBytes(ms.bytes)
+            acceptContiguousBytes(ms.mutableBytes)
 
-                // Noncopyable result type
-                _ = unsafeBytes.span.withBytes { (buffer) in
-                    return NC()
-                }
+            // Noncopyable result type
+            _ = unsafeBytes.span.withBytes { (buffer) in
+                return NC()
             }
         }
     }
