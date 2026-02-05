@@ -19,6 +19,7 @@ import SwiftParser
 import SwiftDiagnostics
 import SwiftOperators
 import SwiftSyntaxMacroExpansion
+import SwiftIfConfig
 
 #if FOUNDATION_FRAMEWORK
 let foundationModuleName = "Foundation"
@@ -121,13 +122,13 @@ extension DiagnosticTest {
     }
 }
 
-func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], sourceLocation: Testing.SourceLocation = #_sourceLocation) {
+func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], buildConfiguration: (any BuildConfiguration)? = nil, sourceLocation: Testing.SourceLocation = #_sourceLocation) {
     let origSourceFile = Parser.parse(source: source)
     let expandedSourceFile: Syntax
     let context: BasicMacroExpansionContext
     do {
         let foldedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).cast(SourceFileSyntax.self)
-        context = BasicMacroExpansionContext(sourceFiles: [foldedSourceFile : .init(moduleName: testModuleName, fullFilePath: testFileName)])
+        context = BasicMacroExpansionContext(sourceFiles: [foldedSourceFile : .init(moduleName: testModuleName, fullFilePath: testFileName)], buildConfiguration: buildConfiguration)
         expandedSourceFile = foldedSourceFile.expand(macros: macros) {
             BasicMacroExpansionContext(sharingWith: context, lexicalContext: [$0])
         }
