@@ -741,10 +741,10 @@ extension _FileManagerImpl {
             let blockSize = UInt64(result.f_bsize)
             #else
             let fsNumber = result.f_fsid
-            let blockSize = UInt(result.f_frsize)
+            let blockSize = UInt64(result.f_frsize)
             #endif
-            var totalSizeBytes = result.f_blocks * blockSize
-            var availSizeBytes = result.f_bavail * blockSize
+            var totalSizeBytes = UInt64(result.f_blocks) * blockSize
+            var availSizeBytes = UInt64(result.f_bavail) * blockSize
             var totalFiles = result.f_files
             var availFiles = result.f_ffree
             
