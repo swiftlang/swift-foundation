@@ -116,8 +116,13 @@ extension NSURL {
         // Convert path to its decomposed file system representation then encode
         let maxFSRSize = 3 * path.utf8.count
         return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxFSRSize) { pathBuffer -> String? in
-            guard let pathLength = path._decomposed(.hfsPlus, into: pathBuffer) else {
+            guard var pathLength = path._decomposed(.hfsPlus, into: pathBuffer) else {
                 return nil
+            }
+            // Strip trailing slashes up to the root prefix
+            let rootLength = rootLength(pathBuffer: UnsafeBufferPointer(pathBuffer), length: pathLength)
+            while pathLength > rootLength && pathBuffer[pathLength - 1] == UInt8(ascii: "/") {
+                pathLength -= 1
             }
             return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 3 * pathLength) { encodedBuffer in
                 let encodedLength = URLEncoder.percentEncodeUnchecked(
