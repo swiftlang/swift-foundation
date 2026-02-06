@@ -225,7 +225,9 @@ extension NotificationCenter {
             }
         })
 #else
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: observer))
+        // Silence compiler warnings with unsafeObserver. It will only be called from @MainActor.
+        let unsafeObserver = unsafeBitCast(observer, to: (@Sendable (Message) -> Void).self)
+        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: unsafeObserver))
 #endif
     }
 
