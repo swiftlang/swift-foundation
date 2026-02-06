@@ -470,6 +470,10 @@ private struct JSONEncoderTests {
         let outerValue: EncodeNested
     }
 
+    private struct CodingKeyRepresentableKey: RawRepresentable, CodingKeyRepresentable, Hashable, Codable {
+        let rawValue: String
+    }
+
     @Test func encodingKeyStrategyPath() throws {
         // Make sure a more complex path shows up the way we want
         // Make sure the path reflects keys in the Swift, not the resulting ones in the JSON
@@ -550,16 +554,15 @@ private struct JSONEncoderTests {
     }
     
     @Test func decodingDictionaryCodingKeyRepresentableKeyConversionUntouched() throws {
-        struct Key: RawRepresentable, CodingKeyRepresentable, Hashable, Codable {
-            let rawValue: String
-        }
-
-        let input = "{\"leave_me_alone\":\"test\"}".data(using: .utf8)!
+        // CodingKeyRepresentable dictionary keys should NOT be converted by key decoding strategy,
+        // but nested struct properties should still be converted.
+        let input = "{\"leave_me_alone\":{\"this_is_camel_case\":\"test\"}}".data(using: .utf8)!
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let result = try decoder.decode([Key: String].self, from: input)
+        let result = try decoder.decode([CodingKeyRepresentableKey: DecodeMe3].self, from: input)
 
-        #expect(result[Key(rawValue: "leave_me_alone")] == "test")
+        let value = try #require(result[CodingKeyRepresentableKey(rawValue: "leave_me_alone")])
+        #expect(value.thisIsCamelCase == "test")
     }
 
     @Test func decodingDictionaryFailureKeyPath() {
@@ -2348,12 +2351,12 @@ extension JSONEncoderTests {
     }
     
     @Test func encodingDictionaryCodingKeyRepresentableKeyConversionUntouched() throws {
-        struct Key: RawRepresentable, CodingKeyRepresentable, Hashable, Codable {
-            let rawValue: String
-        }
-        
-        let expected = "{\"leaveMeAlone\":\"test\"}"
-        let toEncode: [Key: String] = [Key(rawValue: "leaveMeAlone"): "test"]
+        // CodingKeyRepresentable dictionary keys should NOT be converted by key encoding strategy,
+        // but nested struct properties should still be converted.
+        let expected = "{\"leaveMeAlone\":{\"this_is_camel_case\":\"test\"}}"
+        let toEncode: [CodingKeyRepresentableKey: DecodeMe3] = [
+            CodingKeyRepresentableKey(rawValue: "leaveMeAlone"): DecodeMe3(thisIsCamelCase: "test")
+        ]
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
