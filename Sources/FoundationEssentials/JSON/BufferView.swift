@@ -44,7 +44,7 @@ internal struct BufferView<Element> {
     }
     
     var bytes: RawSpan {
-        @lifetime(borrow self)
+        @_lifetime(borrow self)
         borrowing get {
             let buffer = UnsafeRawBufferPointer(start: baseAddress, count: count)
             let span = unsafe RawSpan(_unsafeBytes: buffer)
@@ -53,9 +53,10 @@ internal struct BufferView<Element> {
     }
 }
 
-extension BufferView where Element: BitwiseCopyable {
+// TODO: This can be improved once stdlib API for safe conversions for fully-inhabited types is ready
+extension BufferView where Element == UInt8 {
     var span: Span<Element> {
-        @lifetime(borrow self)
+        @_lifetime(borrow self)
         borrowing get {
             let span = unsafe bytes._unsafeView(as: Element.self)
             return _overrideLifetime(span, borrowing: self)

@@ -180,26 +180,18 @@ class BPlistMap : PlistDecodingMap {
     
     /// Fetch an index as an ASCII span. This avoids overhead of intermediate creation of "value" types for a common case of looking for an ASCII key string.
     /// Returns an empty span if the value was not an ASCII string (either not a string at all, or UTF16BE string).
-    @_lifetime(self)
-    func asciiString(at idx: BPlistObjectIndex) throws -> Span<UInt8> {
-        let view: BufferView? = try dataLock.withLockUnchecked { state in
+    func withASCIIString<T>(at idx: BPlistObjectIndex, body: (Span<UInt8>) throws -> T) rethrows -> T {
+        try dataLock.withLockUnchecked { state in
             guard Int(idx) < objectOffsets.count else {
                 throw BPlistError.corruptedValue("object index")
             }
             let offset = objectOffsets[Int(idx)]
             let scanInfo = BPlistScanner(buffer: state.buffer, trailer: trailer)
             if let region = try scanInfo.scanASCIIStringRegion(at: offset) {
-                return state.buffer[region]
+                return try body(state.buffer[region].span)
             } else {
-                return nil
+                return try body(Span())
             }
-        }
-        
-        if let view {
-            // We're just going to assume that the data itself is going to stay alive as long as this map does.
-            return _overrideLifetime(view.span, borrowing: self)
-        } else {
-            return Span()
         }
     }
     
