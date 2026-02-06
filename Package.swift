@@ -37,7 +37,8 @@ let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
     .enableExperimentalFeature("ImportMacroAliases"),
     .enableUpcomingFeature("InferSendableFromCaptures"),
-    .enableUpcomingFeature("MemberImportVisibility")
+    .enableUpcomingFeature("MemberImportVisibility"),
+    .swiftLanguageMode(.v5)
 ]
 
 var dependencies: [Package.Dependency] = []
