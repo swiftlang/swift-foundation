@@ -18,7 +18,9 @@ internal extension RangeExpression {
         case let self as Range<Int>:
             let clamped = self.clamped(to: boundary)
             lower = clamped.lowerBound
-            upper = clamped.upperBound
+            // Convert exclusive upper bound to inclusive maximum
+            let (inclusiveUpper, overflow) = clamped.upperBound.subtractingReportingOverflow(1)
+            upper = overflow ? clamped.upperBound : inclusiveUpper
         case let self as ClosedRange<Int>:
             let clamped = self.clamped(to: ClosedRange(boundary))
             lower = clamped.lowerBound
@@ -28,22 +30,33 @@ internal extension RangeExpression {
             upper = nil
         case let self as PartialRangeThrough<Int>:
             lower = nil
-            upper = min(self.upperBound, boundary.upperBound)
+            // upperBound is already inclusive, but boundary.upperBound is exclusive
+            // Convert boundary to inclusive for comparison
+            let (inclusiveBoundaryUpper, overflow) = boundary.upperBound.subtractingReportingOverflow(1)
+            let boundaryMax = overflow ? boundary.upperBound : inclusiveBoundaryUpper
+            upper = min(self.upperBound, boundaryMax)
         case let self as PartialRangeUpTo<Int>:
             lower = nil
             let (val, overflow) = self.upperBound.subtractingReportingOverflow(1)
+            // Convert boundary.upperBound from exclusive to inclusive for comparison
+            let (inclusiveBoundaryUpper, boundaryOverflow) = boundary.upperBound.subtractingReportingOverflow(1)
+            let boundaryMax = boundaryOverflow ? boundary.upperBound : inclusiveBoundaryUpper
             if overflow { // So small that we have no choice but treating self as PartialRangeThrough
-                upper = min(self.upperBound, boundary.upperBound)
+                upper = min(self.upperBound, boundaryMax)
             } else {
-                upper = min(val, boundary.upperBound)
+                upper = min(val, boundaryMax)
             }
         default:
             lower = nil
             upper = nil
         }
 
+        // Convert boundary.upperBound from exclusive to inclusive for comparison
+        let (inclusiveBoundaryUpper, boundaryOverflow) = boundary.upperBound.subtractingReportingOverflow(1)
+        let boundaryMax = boundaryOverflow ? boundary.upperBound : inclusiveBoundaryUpper
+
         if lower != nil {
-            lower = min(lower!, boundary.upperBound)
+            lower = min(lower!, boundaryMax)
         }
 
         if upper != nil {
