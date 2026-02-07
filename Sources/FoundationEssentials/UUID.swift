@@ -57,7 +57,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     public init(uuid: uuid_t) {
         self.uuid = uuid
     }
-
+    
     /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
     public var uuidString: String {
         var bytes: uuid_string_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -192,5 +192,13 @@ extension UUID : Comparable {
         }
 
         return result < 0
+    }
+}
+
+@available(FoundationPreview 6.2, *)
+extension UUID: LosslessStringConvertible {
+    /// Create a UUID from a string representation conforming to `LosslessStringConvertible`.
+    public init?(_ description: String) {
+            self.init(uuidString: description)
     }
 }
