@@ -67,17 +67,20 @@ static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
         return errno;
     }
 
-    size_t name_len = strlen(p->gr_name) + 1;
-    if (name_len > buflen) {
+    if (strlcpy(buf, p->gr_name, buflen) >= buflen) {
         *result = NULL;
         return ERANGE;
     }
 
-    strcpy(buf, p->gr_name);
     grp->gr_name = buf;
     grp->gr_gid = p->gr_gid;
 
+    // Android Bionic actually leaves this as NULL, but just use "" for safety.
     grp->gr_passwd = (char *)"";
+
+    // Android Bionic generates a synthetic list ["groupname", NULL].
+    // Replicating that here would require deep copying the strings array.
+    // Foundation does not use this either, so NULL is sufficient and avoids complexity.
     grp->gr_mem = NULL;
 
     *result = grp;
@@ -98,17 +101,20 @@ static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *
         return errno;
     }
 
-    size_t name_len = strlen(p->gr_name) + 1;
-    if (name_len > buflen) {
+    if (strlcpy(buf, p->gr_name, buflen) >= buflen) {
         *result = NULL;
         return ERANGE;
     }
 
-    strcpy(buf, p->gr_name);
     grp->gr_name = buf;
     grp->gr_gid = p->gr_gid;
 
+    // Android Bionic actually leaves this as NULL, but just use "" for safety.
     grp->gr_passwd = (char *)"";
+
+    // Android Bionic generates a synthetic list ["groupname", NULL].
+    // Replicating that here would require deep copying the strings array.
+    // Foundation does not use this either, so NULL is sufficient and avoids complexity.
     grp->gr_mem = NULL;
 
     *result = grp;
