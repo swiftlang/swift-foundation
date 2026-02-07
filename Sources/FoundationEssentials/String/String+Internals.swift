@@ -177,14 +177,14 @@ extension String {
     }
     
     #if canImport(Darwin) || FOUNDATION_FRAMEWORK
-    fileprivate func _fileSystemRepresentation(into buffer: UnsafeMutableBufferPointer<CChar>) -> Bool {
+    fileprivate func _fileSystemRepresentation(into buffer: UnsafeMutableBufferPointer<CChar>, nullTerminated: Bool = true) -> Bool {
         let result = buffer.withMemoryRebound(to: UInt8.self) { rebound in
-            _decomposed(.hfsPlus, into: rebound, nullTerminated: true)
+            _decomposed(.hfsPlus, into: rebound, nullTerminated: nullTerminated)
         }
         return result != nil
     }
     
-    private var maxFileSystemRepresentationSize: Int {
+    package var maxFileSystemRepresentationSize: Int {
         // The Darwin file system representation expands the UTF-8 contents to decomposed UTF-8 contents (only decomposing specific scalars)
         // For any given scalar that we decompose, we will increase its UTF-8 length by at most a factor of 3 during decomposition
         // (ex. U+0390 expands from 2 to 6 UTF-8 code-units, U+1D160 expands from 4 to 12 UTF-8 code-units)
@@ -256,13 +256,13 @@ extension String {
 
 }
 
-extension UnsafeBufferPointer {
-    private enum DecompositionError : Error {
-        case insufficientSpace
-        case illegalScalar
-        case decodingError
-    }
+private enum DecompositionError : Error {
+    case insufficientSpace
+    case illegalScalar
+    case decodingError
+}
 
+extension UnsafeBufferPointer {
     @inline(__always) // Trivially forwarding and generic, inlining ensures calls are fully specialized
     fileprivate func _decomposedRebinding<T: UnicodeCodec, InputElement>(_ type: String._NormalizationType, as codec: T.Type, into buffer: UnsafeMutableBufferPointer<InputElement>, nullTerminated: Bool = false) throws -> Int {
         try self.withMemoryRebound(to: T.CodeUnit.self) { reboundSelf in
@@ -396,6 +396,120 @@ extension UnsafeBufferPointer {
                 try appendOutput(0)
             }
             return bufferIdx
+        }
+    }
+}
+
+extension UTF8Span {
+    internal func fileSystemRepresentation(into span: inout OutputSpan<UInt8>, nullTerminated: Bool) throws {
+        try _decomposed(.hfsPlus, into: &span, nullTerminated: nullTerminated)
+    }
+    
+    fileprivate func _decomposed(_ type: String._NormalizationType, into span: inout OutputSpan<UInt8>, nullTerminated: Bool = false) throws {
+        let scalarSet = BuiltInUnicodeScalarSet(type: type.setType)
+        // Start at the end of the already-filled part of the span
+        let start = span.count
+        var sortBuffer: [UnicodeScalar] = []
+        var seenNullIdx: Int? = nil
+        var iterator = self.makeUnicodeScalarIterator()
+        
+        guard !span.isFull else {
+            if !nullTerminated && iterator.next() == nil {
+                // No bytes to write, so an empty buffer is OK
+                return
+            } else {
+                throw DecompositionError.insufficientSpace
+            }
+        }
+        
+        defer {
+            if nullTerminated {
+                // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
+                // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
+                if span.freeCapacity > 1 {
+                    // We still have space left in the buffer - if we haven't already null-terminated then add a null byte to the buffer
+                    // Since we have space, we only want to write the null byte when/where we have to since some clients provide buffer sizes that don't match the true buffer length
+                    if span.count == start || span[span.count - 1] != 0 {
+                        span.append(0)
+                    }
+                } else {
+                    // The buffer is non-empty but we've completely filled it, overwrite the last written byte with a null byte to ensure null termination
+                    span[span.count - 1] = 0
+                }
+            }
+        }
+        
+        func appendOutput(_ value: UInt8) throws {
+            guard !span.isFull else {
+                throw DecompositionError.insufficientSpace
+            }
+            span.append(value)
+        }
+        
+        func fillFromSortBuffer() throws {
+            guard !sortBuffer.isEmpty else { return }
+            sortBuffer.sort {
+                $0.properties.canonicalCombiningClass.rawValue < $1.properties.canonicalCombiningClass.rawValue
+            }
+            for scalar in sortBuffer {
+                let value = UTF8.encode(scalar)
+                if let value {
+                    guard span.freeCapacity >= value.count else {
+                        throw DecompositionError.insufficientSpace
+                    }
+                    
+                    for byte in value {
+                        span.append(byte)
+                    }
+                }
+            }
+            sortBuffer.removeAll(keepingCapacity: true)
+        }
+        
+        decodingLoop: while !span.isFull {
+            if let scalar = iterator.next() {
+                if scalar.value == 0 {
+                    // Null bytes within the string are fine as long as they are at the end
+                    seenNullIdx = span.count - 1
+                } else if seenNullIdx != nil {
+                    // File system representations are c-strings that do not support embedded null bytes
+                    throw DecompositionError.illegalScalar
+                }
+                
+                let isASCII = scalar.isASCII
+                if isASCII || scalar.properties.canonicalCombiningClass == .notReordered {
+                    try fillFromSortBuffer()
+                }
+
+                if isASCII {
+                    try appendOutput(UInt8(scalar.value))
+                } else {
+#if FOUNDATION_FRAMEWORK
+                    // Only decompose scalars present in the declared set
+                    if scalarSet.contains(scalar) {
+                        sortBuffer.append(contentsOf: String(scalar)._nfd)
+                    } else {
+                        // Even if a scalar isn't decomposed, it may still need to be re-ordered
+                        sortBuffer.append(scalar)
+                    }
+#else
+                    // TODO: Implement Unicode decomposition in swift-foundation
+                    sortBuffer.append(scalar)
+#endif
+                }
+            } else {
+                // We've finished the input, return the index
+                break decodingLoop
+            }
+        }
+        try fillFromSortBuffer()
+        
+        if iterator.next() != nil {
+            throw DecompositionError.insufficientSpace
+        } else {
+            if nullTerminated {
+                try appendOutput(0)
+            }
         }
     }
 }
