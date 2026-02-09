@@ -17,8 +17,8 @@ jobs:
     with:
       linux_swift_versions: '["nightly-main"]'
       windows_swift_versions: '["nightly-main"]'
-      enable_macos_checks: false
-      macos_xcode_versions: '["16.3"]'
+      enable_macos_checks: true
+      macos_xcode_versions: '["26.2"]'
       macos_versions: '["tahoe"]'
       enable_wasm_sdk_build: true
       wasm_sdk_versions: '["nightly-main"]'
