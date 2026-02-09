@@ -75,8 +75,8 @@ static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
     grp->gr_name = buf;
     grp->gr_gid = p->gr_gid;
 
-    // Android Bionic actually leaves this as NULL, but just use "" for safety.
-    grp->gr_passwd = (char *)"";
+    // Android Bionic leaves this as NULL.
+    grp->gr_passwd = NULL;
 
     // Android Bionic generates a synthetic list ["groupname", NULL].
     // Replicating that here would require deep copying the strings array.
@@ -109,8 +109,8 @@ static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *
     grp->gr_name = buf;
     grp->gr_gid = p->gr_gid;
 
-    // Android Bionic actually leaves this as NULL, but just use "" for safety.
-    grp->gr_passwd = (char *)"";
+    // Android Bionic leaves this as NULL.
+    grp->gr_passwd = NULL;
 
     // Android Bionic generates a synthetic list ["groupname", NULL].
     // Replicating that here would require deep copying the strings array.
