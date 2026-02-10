@@ -17,12 +17,16 @@ internal import _FoundationICU
 import FoundationEssentials
 #endif
 
+#if canImport(Synchronization)
+internal import Synchronization
+#endif
+
 extension ICU {
 
     // Wrapper for ICU's resource bundle
     internal final class ResourceBundle: Sendable {
         // Safe because it's only mutated at init and deinit
-        nonisolated(unsafe) private let lockedBundle: LockedState<OpaquePointer>
+        private let lockedBundle: Mutex<OpaquePointer>
 
         init(packageName: String?, bundleName: String, direct: Bool) throws(ICUError) {
             let resourceBundle: OpaquePointer?
@@ -38,11 +42,11 @@ extension ICU {
             guard let resourceBundle else {
                 throw ICUError(code: status)
             }
-            self.lockedBundle = LockedState(initialState: resourceBundle)
+            self.lockedBundle = Mutex(resourceBundle)
         }
 
-        private init(existing: OpaquePointer) {
-            self.lockedBundle = LockedState(initialState: existing)
+        private init(existing: sending OpaquePointer) {
+            self.lockedBundle = Mutex(existing)
         }
 
         deinit {
