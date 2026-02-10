@@ -116,12 +116,12 @@ package struct LockedState<State> {
         })
     }
 
-    package func withLock<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
+    package func withLock<T, E: Error>(_ body: @Sendable (inout State) throws(E) -> T) throws(E) -> T {
         try withLockUnchecked(body)
     }
     
-    package func withLockUnchecked<T>(_ body: (inout State) throws -> T) rethrows -> T {
-        try _buffer.withUnsafeMutablePointers { state, lock in
+    package func withLockUnchecked<T, E: Error>(_ body: (inout State) throws(E) -> T) throws(E) -> T {
+        try _buffer.withUnsafeMutablePointers { state, lock throws(E) in
             _Lock.lock(lock)
             defer { _Lock.unlock(lock) }
             return try body(&state.pointee)
@@ -129,13 +129,13 @@ package struct LockedState<State> {
     }
 
     // Ensures the managed state outlives the locked scope.
-    package func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
-        try _buffer.withUnsafeMutablePointers { state, lock in
+    package func withLockExtendingLifetimeOfState<T, E: Error>(_ body: @Sendable (inout State) throws(E) -> T) throws(E) -> T {
+        try _buffer.withUnsafeMutablePointers { state, lock throws(E) in
             _Lock.lock(lock)
-            return try withExtendedLifetime(state.pointee) {
-                defer { _Lock.unlock(lock) }
-                return try body(&state.pointee)
+            defer { extendLifetime(state.pointee)
+                _Lock.unlock(lock)
             }
+            return try body(&state.pointee)
         }
     }
 }
@@ -145,8 +145,8 @@ extension LockedState where State == Void {
         self.init(initialState: ())
     }
 
-    package func withLock<R: Sendable>(_ body: @Sendable () throws -> R) rethrows -> R {
-        return try withLock { _ in
+    package func withLock<R: Sendable, E: Error>(_ body: @Sendable () throws(E) -> R) throws(E) -> R {
+        return try withLock { _ throws(E) in
             try body()
         }
     }
