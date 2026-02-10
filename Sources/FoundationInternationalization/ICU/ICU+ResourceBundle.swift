@@ -22,7 +22,7 @@ extension ICU {
     // Wrapper for ICU's resource bundle
     internal final class ResourceBundle: Sendable {
         // Safe because it's only mutated at init and deinit
-        nonisolated(unsafe) private let bundle: OpaquePointer
+        nonisolated(unsafe) private let lockedBundle: LockedState<OpaquePointer>
 
         init(packageName: String?, bundleName: String, direct: Bool) throws(ICUError) {
             let resourceBundle: OpaquePointer?
@@ -38,28 +38,32 @@ extension ICU {
             guard let resourceBundle else {
                 throw ICUError(code: status)
             }
-            self.bundle = resourceBundle
+            self.lockedBundle = LockedState(initialState: resourceBundle)
         }
 
 
         private init(existing: OpaquePointer) {
-            self.bundle = existing
+            self.lockedBundle = LockedState(initialState: existing)
         }
 
         deinit {
-            ures_close(bundle)
+            lockedBundle.withLock{
+                ures_close($0)
+            }
         }
 
         func resourceBundle(forKey key: String) throws(ICUError) -> ResourceBundle? {
-            var status: UErrorCode = U_ZERO_ERROR
-            let subBundle = ures_getByKey(bundle, key, nil, &status)
-            try status.checkSuccess()
-            guard let subBundle else {
-                // We're not throwing error here because it's valid for `subBundle` to be nil
-                return nil
-            }
+            try lockedBundle.withLock {
+                var status: UErrorCode = U_ZERO_ERROR
+                let subBundle = ures_getByKey($0, key, nil, &status)
+                try status.checkSuccess()
+                guard let subBundle else {
+                    // We're not throwing error here because it's valid for `subBundle` to be nil
+                    return nil
+                }
 
-            return ResourceBundle(existing: subBundle)
+                return ResourceBundle(existing: subBundle)
+            }
         }
 
         func resourceBundle(forIndex index: Int32) throws(ICUError) -> ResourceBundle? {
