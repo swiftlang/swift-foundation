@@ -119,6 +119,15 @@ let package = Package(
             ]
         ),
         .executableTarget(
+            name: "DataBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/Data",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        )
+        .executableTarget(
             name: "DataIOBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/DataIO",
