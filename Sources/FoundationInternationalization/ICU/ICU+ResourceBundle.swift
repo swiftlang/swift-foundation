@@ -41,7 +41,6 @@ extension ICU {
             self.lockedBundle = LockedState(initialState: resourceBundle)
         }
 
-
         private init(existing: OpaquePointer) {
             self.lockedBundle = LockedState(initialState: existing)
         }
@@ -53,58 +52,79 @@ extension ICU {
         }
 
         func resourceBundle(forKey key: String) throws(ICUError) -> ResourceBundle? {
-            try lockedBundle.withLock {
+            let subBundle = try lockedBundle.withLock { bundle throws(ICUError) in
                 var status: UErrorCode = U_ZERO_ERROR
-                let subBundle = ures_getByKey($0, key, nil, &status)
+                let subBundle = ures_getByKey(bundle, key, nil, &status)
                 try status.checkSuccess()
-                guard let subBundle else {
-                    // We're not throwing error here because it's valid for `subBundle` to be nil
-                    return nil
-                }
-
-                return ResourceBundle(existing: subBundle)
+                return subBundle
             }
+
+            guard let subBundle else {
+                // We're not throwing error here because it's valid for `subBundle` to be nil
+                return nil
+            }
+
+            return ResourceBundle(existing: subBundle)
         }
 
         func resourceBundle(forIndex index: Int32) throws(ICUError) -> ResourceBundle? {
-            var status: UErrorCode = U_ZERO_ERROR
-            let subBundle = ures_getByIndex(bundle, index, nil, &status)
-           
-            try status.checkSuccess()
-            guard let subBundle else {return nil}
+            let subBundle = try lockedBundle.withLock { bundle throws(ICUError) in
+                var status: UErrorCode = U_ZERO_ERROR
+                let subBundle = ures_getByIndex(bundle, index, nil, &status)
+
+                try status.checkSuccess()
+                return subBundle
+            }
+
+            guard let subBundle else {
+                // We're not throwing error here because it's valid for `subBundle` to be nil
+                return nil
+            }
             return ResourceBundle(existing: subBundle)
         }
 
         func asIntegers() throws(ICUError) -> [Int32] {
-            var length: Int32 = 0
-            var status: UErrorCode = U_ZERO_ERROR
+            let (vector, length) = try lockedBundle.withLock { bundle throws(ICUError) in
+                var length: Int32 = 0
+                var status: UErrorCode = U_ZERO_ERROR
 
-            let vector = ures_getIntVector(bundle, &length, &status)
-            try status.checkSuccess()
+                let vector = ures_getIntVector(bundle, &length, &status)
+                try status.checkSuccess()
 
-            return Array(UnsafeBufferPointer(start: vector!, count: Int(length)))
+                guard let vector else {
+                    throw ICUError(code: U_INVALID_FORMAT_ERROR)
+                }
+                return (vector, length)
+            }
+
+            // FIXME: return Span if possible
+            return Array(UnsafeBufferPointer(start: vector, count: Int(length)))
         }
 
         func getBinary() throws(ICUError) -> [UInt8] {
+            let (binary, length) = try lockedBundle.withLock { bundle throws(ICUError) in
+                var length: Int32 = 0
+                var status: UErrorCode = U_ZERO_ERROR
 
-            var length: Int32 = 0
-            var status: UErrorCode = U_ZERO_ERROR
-
-            let binary = ures_getBinary(bundle, &length, &status)
-            try status.checkSuccess()
+                let binary = ures_getBinary(bundle, &length, &status)
+                try status.checkSuccess()
+                return (binary, length)
+            }
             return Array(UnsafeBufferPointer(start: binary, count: Int(length)))
         }
 
         func asString() throws(ICUError) -> String {
+            let (stringPtr, length) = try lockedBundle.withLock { bundle throws(ICUError) in
+                var length: Int32 = 0
+                var status: UErrorCode = U_ZERO_ERROR
 
-            var length: Int32 = 0
-            var status: UErrorCode = U_ZERO_ERROR
+                guard let stringPtr = ures_getString(bundle, &length, &status) else {
+                    throw ICUError(code: U_INVALID_FORMAT_ERROR)
+                }
 
-            guard let stringPtr = ures_getString(bundle, &length, &status) else {
-                throw ICUError(code: U_INVALID_FORMAT_ERROR)
+                try status.checkSuccess()
+                return (stringPtr, length)
             }
-
-            try status.checkSuccess()
 
             guard let result = String(_utf16: stringPtr, count: Int(length)) else {
                 throw ICUError(code: U_INVALID_FORMAT_ERROR)
@@ -113,18 +133,24 @@ extension ICU {
         }
 
         func asInteger() throws(ICUError) -> Int32 {
-            var status: UErrorCode = U_ZERO_ERROR
-            let int = ures_getInt(bundle, &status)
-            try status.checkSuccess()
-            return int
+            try lockedBundle.withLock { bundle throws(ICUError) in
+                var status: UErrorCode = U_ZERO_ERROR
+                let int = ures_getInt(bundle, &status)
+                try status.checkSuccess()
+                return int
+            }
         }
 
         var resourceType: UResType {
-            ures_getType(bundle)
+            lockedBundle.withLock { bundle in
+                ures_getType(bundle)
+            }
         }
 
         var size: Int32 {
-            return ures_getSize(bundle)
+            lockedBundle.withLock { bundle in
+                ures_getSize(bundle)
+            }
         }
 
     }
