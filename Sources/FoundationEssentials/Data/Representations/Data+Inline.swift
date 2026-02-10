@@ -44,7 +44,7 @@ extension Data {
 #endif
         @usableFromInline var length: UInt8
         
-        @inlinable // This is @inlinable as trivially computable.
+        @inlinable @inline(__always) // This is @inlinable as trivially computable.
         static func canStore(count: Int) -> Bool {
             return count <= MemoryLayout<Buffer>.size
         }
@@ -53,7 +53,7 @@ extension Data {
             return MemoryLayout<Buffer>.size
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ srcBuffer: UnsafeRawBufferPointer) {
             self.init(count: srcBuffer.count)
             if !srcBuffer.isEmpty {
@@ -63,7 +63,7 @@ extension Data {
             }
         }
         
-        @inlinable // This is @inlinable as a trivial initializer.
+        @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
         init(count: Int = 0) {
             assert(count <= MemoryLayout<Buffer>.size)
 #if _pointerBitWidth(_64)
@@ -76,7 +76,7 @@ extension Data {
             length = UInt8(count)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ slice: InlineSlice, count: Int) {
             self.init(count: count)
             Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
@@ -86,7 +86,7 @@ extension Data {
             }
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ slice: LargeSlice, count: Int) {
             self.init(count: count)
             Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in

@@ -267,17 +267,39 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    // slightly faster paths for common sequences
-    @inlinable // This is @inlinable as an important generic funnel point, despite being a non-trivial initializer.
-    public init<S: Sequence>(_ elements: S) where S.Element == UInt8 {
-        // If the sequence is already contiguous, access the underlying raw memory directly.
-        if let contiguous = elements as? ContiguousBytes {
-            _representation = contiguous.withUnsafeBytes { return _Representation($0) }
-            return
+    // Always inlined as it is trivially forwarding
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public init(_ elements: some Sequence<UInt8> & ContiguousBytes) {
+        // Since the sequence is already contiguous, access the underlying raw memory directly.
+        _representation = elements.withUnsafeBytes {
+            _Representation($0)
         }
+    }
 
-        // The sequence might still be able to provide direct access to typed memory.
+    // Always inlined as it is a trivially forwarding fast path
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    @abi(init(fastCheckElements elements: some Sequence<UInt8>))
+    public init(_ elements: some Sequence<UInt8>) {
+        // The sequence might be able to provide direct access to typed memory.
         // NOTE: It's safe to do this because we're already guarding on S's element as `UInt8`. This would not be safe on arbitrary sequences.
+        if let representation = elements.withContiguousStorageIfAvailable({
+            _Representation(UnsafeRawBufferPointer($0))
+        }) {
+            self.init(representation: representation)
+        } else {
+            self.init(slowElements: elements)
+        }
+    }
+
+
+    @inlinable
+    @abi(init<S: Sequence>(_ elements: S) where S.Element == UInt8)
+    internal init<S: Sequence>(slowElements elements: S) where S.Element == UInt8 {
+        #if FOUNDATION_FRAMEWORK
+        // We still check for fast paths here on ABI stable platforms (withContiguousStorageIfAvailable and ContiguousBytes) because older SDKs did not contain always-inline fast paths, so some callers may still be using this ABI entrypoint with values that have fast paths
+        // We check withContiguousStorageIfAvailable first because it is cheaper than a protocol conformance check and all Foundation-defined ContiguousBytes-conforming types respond to withContiguousStorageIfAvailable
         let representation = elements.withContiguousStorageIfAvailable {
             _Representation(UnsafeRawBufferPointer($0))
         }
@@ -285,6 +307,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             _representation = representation
             return
         }
+
+        // If the sequence is already contiguous, access the underlying raw memory directly.
+        if let contiguous = elements as? ContiguousBytes {
+            _representation = contiguous.withUnsafeBytes { return _Representation($0) }
+            return
+        }
+        #endif
 
         // Copy as much as we can in one shot from the sequence.
         let underestimatedCount = elements.underestimatedCount
@@ -318,11 +347,12 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    @inline(__always)
     @inlinable // This is @inlinable as a trivial initializer.
     internal init(representation: _Representation) {
         _representation = representation
     }
-    
+
     // -----------------------------------
     // MARK: - Properties and Functions
 
@@ -509,30 +539,60 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _append(buffer)
     }
 
-    @inlinable // This is @inlinable as trivially forwarding.
-    public mutating func append(contentsOf bytes: [UInt8]) {
-        bytes.withUnsafeBufferPointer { (buffer: UnsafeBufferPointer<UInt8>) -> Void in
-            _append(buffer)
+    #if FOUNDATION_FRAMEWORK
+    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
+    @abi(mutating func append(contentsOf bytes: [UInt8]))
+    internal mutating func __legacy_append(contentsOf bytes: [UInt8]) {
+        self.append(contentsOf: bytes)
+    }
+    #endif
+
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public mutating func append(contentsOf elements: some Sequence<UInt8> & ContiguousBytes) {
+        // Since the sequence is already contiguous, access the underlying raw memory directly.
+        elements.withUnsafeBytes {
+            guard !$0.isEmpty else { return }
+            _representation.append(contentsOf: $0)
+        }
+    }
+
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    @abi(mutating func append(fastContentsof elements: some Sequence<UInt8>))
+    public mutating func append(contentsOf elements: some Sequence<UInt8>) {
+        // The sequence might be able to provide direct access to typed memory.
+        // NOTE: It's safe to do this because we're already guarding on S's element as `UInt8`. This would not be safe on arbitrary sequences.
+        let appended: Void? = elements.withContiguousStorageIfAvailable {
+            guard !$0.isEmpty else { return }
+            _representation.append(contentsOf: UnsafeRawBufferPointer($0))
+        }
+        if appended == nil {
+            self.append(slowContentsOf: elements)
         }
     }
 
     @inlinable // This is @inlinable as an important generic funnel point, despite being non-trivial.
-    public mutating func append<S: Sequence>(contentsOf elements: S) where S.Element == Element {
-        // If the sequence is already contiguous, access the underlying raw memory directly.
-        if let contiguous = elements as? ContiguousBytes {
-            contiguous.withUnsafeBytes {
-                _representation.append(contentsOf: $0)
-            }
-
-            return
-        }
-
-        // The sequence might still be able to provide direct access to typed memory.
-        // NOTE: It's safe to do this because we're already guarding on S's element as `UInt8`. This would not be safe on arbitrary sequences.
+    @abi(mutating func append<S: Sequence>(contentsOf elements: S) where S.Element == Element)
+    internal mutating func append<S: Sequence>(slowContentsOf elements: S) where S.Element == Element {
+        #if FOUNDATION_FRAMEWORK
+        // We still check for fast paths here on ABI stable platforms (withContiguousStorageIfAvailable and ContiguousBytes) because older SDKs did not contain always-inline fast paths, so some callers may still be using this ABI entrypoint with values that have fast paths
+        // We check withContiguousStorageIfAvailable first because it is cheaper than a protocol conformance check and all Foundation-defined ContiguousBytes-conforming types respond to withContiguousStorageIfAvailable
         let appended: Void? = elements.withContiguousStorageIfAvailable {
+            guard !$0.isEmpty else { return }
             _representation.append(contentsOf: UnsafeRawBufferPointer($0))
         }
         guard appended == nil else { return }
+
+        // If the sequence is already contiguous, access the underlying raw memory directly.
+        if let contiguous = elements as? ContiguousBytes {
+            contiguous.withUnsafeBytes {
+                guard !$0.isEmpty else { return }
+                _representation.append(contentsOf: $0)
+            }
+            return
+        }
+        #endif
 
         // The sequence is really not contiguous.
         // Copy as much as we can in one shot.
@@ -583,6 +643,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.resetBytes(in: range)
     }
 
+    #if FOUNDATION_FRAMEWORK
     /// Replace a region of bytes in the data with new data.
     ///
     /// This will resize the data if required, to fit the entire contents of `data`.
@@ -590,12 +651,12 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - precondition: The bounds of `subrange` must be valid indices of the collection.
     /// - parameter subrange: The range in the data to replace. If `subrange.lowerBound == data.count && subrange.count == 0` then this operation is an append.
     /// - parameter data: The replacement data.
-    @inlinable // This is @inlinable as trivially forwarding.
-    public mutating func replaceSubrange(_ subrange: Range<Index>, with data: Data) {
-        data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
-            _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
-        }
+    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
+    @abi(mutating func replaceSubrange(_ subrange: Range<Index>, with data: Data))
+    internal mutating func __legacy_replaceSubrange(_ subrange: Range<Index>, with data: Data) {
+        self.replaceSubrange(subrange, with: data)
     }
+    #endif
 
     /// Replace a region of bytes in the data with new bytes from a buffer.
     ///
@@ -610,6 +671,26 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         replaceSubrange(subrange, with: buffer.baseAddress!, count: buffer.count * MemoryLayout<SourceType>.stride)
     }
 
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8> & ContiguousBytes) {
+        newElements.withUnsafeBytes { buffer in
+            _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
+        }
+    }
+
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    @abi(mutating func repalceSubrangeFast(_ subrange: Range<Index>, with newElements: some Collection<UInt8>))
+    public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8>) {
+        let replaced: Void? = newElements.withContiguousStorageIfAvailable { buffer in
+            _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
+        }
+        if replaced == nil {
+            self.replaceSubrangeSlow(subrange, with: newElements)
+        }
+    }
+
     /// Replace a region of bytes in the data with new bytes from a collection.
     ///
     /// This will resize the data if required, to fit the entire contents of `newElements`.
@@ -618,7 +699,16 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - parameter subrange: The range in the data to replace.
     /// - parameter newElements: The replacement bytes.
     @inlinable // This is @inlinable as generic and reasonably small.
-    public mutating func replaceSubrange<ByteCollection : Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element {
+    @abi(mutating func replaceSubrange<ByteCollection : Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element)
+    internal mutating func replaceSubrangeSlow<ByteCollection : Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element {
+        #if FOUNDATION_FRAMEWORK
+        // We still check for fast paths here on ABI stable platforms (withContiguousStorageIfAvailable and ContiguousBytes) because older SDKs did not contain always-inline fast paths, so some callers may still be using this ABI entrypoint with values that have fast paths
+        // We check withContiguousStorageIfAvailable first because it is cheaper than a protocol conformance check and all Foundation-defined ContiguousBytes-conforming types respond to withContiguousStorageIfAvailable
+        let replaced: Void? = newElements.withContiguousStorageIfAvailable { buffer in
+            _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
+        }
+        guard replaced == nil else { return }
+
         // If the collection is already contiguous, access the underlying raw memory directly.
         if let contiguous = newElements as? ContiguousBytes {
             contiguous.withUnsafeBytes { buffer in
@@ -626,12 +716,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             }
             return
         }
-        // The collection might still be able to provide direct access to typed memory.
-        // NOTE: It's safe to do this because we're already guarding on ByteCollection's element as `UInt8`. This would not be safe on arbitrary collections.
-        let replaced: Void? = newElements.withContiguousStorageIfAvailable { buffer in
-            _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
-        }
-        guard replaced == nil else { return }
+        #endif
 
         let totalCount = Int(newElements.count)
         _withStackOrHeapBuffer(capacity: totalCount) { buffer in
@@ -670,7 +755,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         precondition(start <= self.endIndex)
         return Data(self[start...])
     }
-    
+
     // MARK: -
     // MARK: Index and Subscript
 
@@ -796,22 +881,22 @@ extension Data {
             // Continue on to checks below
             break
         }
-        
+
         let length1 = d1.count
         let length2 = d2.count
-        
+
         // Unequal length data can never be equal
         guard length1 == length2 else {
             return false
         }
-        
+
         if length1 > 0 {
             return d1.withUnsafeBytes { (b1: UnsafeRawBufferPointer) in
                 return d2.withUnsafeBytes { (b2: UnsafeRawBufferPointer) in
                     // If they have the same base address and same count, it is equal
                     let b1Address = b1.baseAddress!
                     let b2Address = b2.baseAddress!
-                    
+
                     guard b1Address != b2Address else {
                         return true
                     }
