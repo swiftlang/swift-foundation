@@ -110,6 +110,7 @@ extension ICU {
                 try status.checkSuccess()
                 return (binary, length)
             }
+            // FIXME: return Span if possible
             return Array(UnsafeBufferPointer(start: binary, count: Int(length)))
         }
 

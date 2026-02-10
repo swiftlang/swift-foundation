@@ -249,7 +249,8 @@ internal final class _TimeZoneICUResource: Sendable {
         }
 
         // Find the zone ID in the string array
-        guard let zoneIndex = findInStringArray(names, identifier: identifier) else {
+        // `names` is the "Names" array in zoneinfo64.txt, and is alphabetically sorted in ascending order.
+        guard let zoneIndex = findStringInAscendingSortedArray(names, string: identifier) else {
             throw missingResourceError
         }
 
@@ -266,7 +267,8 @@ internal final class _TimeZoneICUResource: Sendable {
         return (top, zoneBundle)
     }
 
-    static func findInStringArray(_ bundle: ICU.ResourceBundle, identifier: String) -> Int32? {
+    // Assumes `bundle` to be an array of strings, sorted in ascending order
+    static func findStringInAscendingSortedArray(_ bundle: ICU.ResourceBundle, string identifier: String) -> Int32? {
         let size = bundle.size
         guard size > 0 else { return nil }
         
