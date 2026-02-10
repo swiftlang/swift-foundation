@@ -134,16 +134,6 @@ class BPlistMap : PlistDecodingMap {
             return try closure($0.buffer[region], $0.buffer)
         }
     }
-    
-    @_lifetime(self)
-    @inline(__always)
-    func span(for region: Region) -> Span<UInt8> {
-        let escaped = dataLock.withLock {
-            $0.buffer[region]
-        }
-        // We're just going to assume that the data itself is going to stay alive as long as this map does.
-        return _overrideLifetime(escaped.span, borrowing: self)
-    }
 
     deinit {
         dataLock.withLock {

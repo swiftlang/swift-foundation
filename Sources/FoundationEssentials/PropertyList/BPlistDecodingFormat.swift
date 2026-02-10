@@ -73,15 +73,6 @@ struct _BPlistDecodingFormat : PlistDecodingFormat {
         return result
     }
     
-    @_lifetime(borrow map)
-    static func stringSpan(from mapValue: BPlistMap.Value, isAscii outIsAscii: inout Bool, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Span<UInt8> {
-        guard case let .string(region, isAscii) = mapValue else {
-            throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: String.self, reality: mapValue)
-        }
-        outIsAscii = isAscii
-        return map.span(for: region)
-    }
-    
     static func unwrapFloatingPoint<T : BinaryFloatingPoint>(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         try mapValue.realValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
