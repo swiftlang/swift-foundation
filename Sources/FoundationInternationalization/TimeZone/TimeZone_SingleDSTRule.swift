@@ -157,7 +157,11 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         // This type of time zone rule is represented in terms of Gregorian calendar
         self.calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: .unlocalized, firstWeekday: Locale.Weekday.monday.icuIndex, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+#if FOUNDATION_FRAMEWORK && !os(bridgeOS)
         self._cachedFirstTransition = .init(nil)
+#else
+        self._cachedFirstTransition = .init(initialState: nil)
+#endif
     }
 
 
@@ -593,9 +597,11 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         return Date(timeIntervalSince1970: result)
     }
 
-    
+#if FOUNDATION_FRAMEWORK && !os(bridgeOS)
     let _cachedFirstTransition: Mutex<Date??>
-
+#else
+    let _cachedFirstTransition: LockedState<Date??>
+#endif
     // the first transition for this timezone
     var firstTransition: Date? {
         // Check if we already have a cached value (including cached nil)

@@ -18,10 +18,6 @@ import FoundationEssentials
 internal import _FoundationICU
 #endif
 
-#if canImport(Synchronization)
-internal import Synchronization
-#endif
-
 
 struct TimezoneTypeInfo: Sendable {
     // Fixed offset timezone rule (equivalent to ICU's simple rules)
