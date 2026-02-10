@@ -889,3 +889,53 @@ extension Data : Codable {
         }
     }
 }
+
+extension Data {
+  /// Returns a boolean value indicating whether this data is identical to
+  /// `other`.
+  ///
+  /// Two data values are identical if there is no way to distinguish between
+  /// them.
+  ///
+  /// Comparing data this way includes comparing (normally) hidden
+  /// implementation details such as the memory location of any underlying
+  /// data storage object. Therefore, identical data are guaranteed to
+  /// compare equal with `==`, but not all equal data are considered
+  /// identical.
+  ///
+  /// - Performance: O(1)
+  @_alwaysEmitIntoClient
+  public func isIdentical(to other: Self) -> Bool {
+    // See if both are empty
+    switch (self._representation, other._representation) {
+    case (.empty, .empty):
+        return true
+    case (.inline, .inline), (.slice, .slice), (.large, .large):
+        // Continue on to checks below
+        break
+    default:
+        return false
+    }
+
+    let length1 = self.count
+    let length2 = other.count
+
+    // Unequal length data can never be equal
+    guard length1 == length2 else {
+        return false
+    }
+    
+    if length1 > 0 {
+        return self.withUnsafeBytes { (b1: UnsafeRawBufferPointer) in
+            return other.withUnsafeBytes { (b2: UnsafeRawBufferPointer) in
+                // If they have the same base address and same count, it is equal
+                let b1Address = b1.baseAddress!
+                let b2Address = b2.baseAddress!
+                
+                return b1Address == b2Address
+            }
+        }
+    }
+    return true
+  }
+}

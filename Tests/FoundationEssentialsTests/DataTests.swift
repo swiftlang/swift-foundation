@@ -46,6 +46,14 @@ extension Data {
     }
 }
 
+func createSomeData(_ length: Int) -> Data {
+    var d = Data(repeating: 42, count: length)
+    // Set a byte to be another value just so we know we have a unique pointer to the backing
+    // For maximum inefficiency in the not equal case, set the last byte
+    d[length - 1] = UInt8.random(in: UInt8.min..<UInt8.max)
+    return d
+}
+
 @Suite("Data")
 private final class DataTests {
 
@@ -195,6 +203,16 @@ private final class DataTests {
 
         // Use == explicitly here to make sure we're calling the right methods
         #expect(d1 == d2, "Data should be equal")
+    }
+
+    @Test func identical() {
+        let d1 = createSomeData(1024 * 8)
+        let d2 = createSomeData(1024 * 8)
+
+        #expect(d1.isIdentical(to: d1), "Data should be identical")
+        #expect(d2.isIdentical(to: d2), "Data should be identical")
+        #expect(!(d1.isIdentical(to: d2)), "Data should be identical")
+        #expect(!(d2.isIdentical(to: d1)), "Data should be identical")
     }
 
     @Test func dataInSet() {
