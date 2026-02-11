@@ -30,64 +30,64 @@ extension Data {
         @usableFromInline var slice: Range<HalfInt>
         @usableFromInline var storage: __DataStorage
         
-        @inlinable // This is @inlinable as trivially computable.
+        @inlinable @inline(__always) // This is @inlinable as trivially computable.
         static func canStore(count: Int) -> Bool {
             return count < HalfInt.max
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ buffer: UnsafeRawBufferPointer) {
             assert(buffer.count < HalfInt.max)
             self.init(__DataStorage(bytes: buffer.baseAddress, length: buffer.count), count: buffer.count)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(capacity: Int) {
             assert(capacity < HalfInt.max)
             self.init(__DataStorage(capacity: capacity), count: 0)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(count: Int) {
             assert(count < HalfInt.max)
             self.init(__DataStorage(length: count), count: count)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ inline: InlineData) {
             assert(inline.count < HalfInt.max)
             self.init(inline.withUnsafeBytes { return __DataStorage(bytes: $0.baseAddress, length: $0.count) }, count: inline.count)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ inline: InlineData, range: Range<Int>) {
             assert(range.lowerBound < HalfInt.max)
             assert(range.upperBound < HalfInt.max)
             self.init(inline.withUnsafeBytes { return __DataStorage(bytes: $0.baseAddress, length: $0.count) }, range: range)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ large: LargeSlice) {
             assert(large.range.lowerBound < HalfInt.max)
             assert(large.range.upperBound < HalfInt.max)
             self.init(large.storage, range: large.range)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ large: LargeSlice, range: Range<Int>) {
             assert(range.lowerBound < HalfInt.max)
             assert(range.upperBound < HalfInt.max)
             self.init(large.storage, range: range)
         }
         
-        @inlinable // This is @inlinable as a trivial initializer.
+        @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
         init(_ storage: __DataStorage, count: Int) {
             assert(count < HalfInt.max)
             self.storage = storage
             slice = 0..<HalfInt(count)
         }
         
-        @inlinable // This is @inlinable as a trivial initializer.
+        @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
         init(_ storage: __DataStorage, range: Range<Int>) {
             assert(range.lowerBound < HalfInt.max)
             assert(range.upperBound < HalfInt.max)
