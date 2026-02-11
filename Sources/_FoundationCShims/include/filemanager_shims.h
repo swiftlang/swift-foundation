@@ -121,7 +121,7 @@ static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *
     return 0;
 }
 
-#elif !TARGET_OS_WINDOWS && !TARGET_OS_WASI
+#elif __has_include(<grp.h>)
 #include <grp.h>
 
 static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
