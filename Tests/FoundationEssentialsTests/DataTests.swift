@@ -281,6 +281,12 @@ private final class DataTests {
         #expect(Data([1, 9, 8, 4, 5]) == d)
     }
 
+    @Test func replaceSubrangeEmptyBuffer() {
+        var d = Data([1, 2, 3, 4])
+        d.replaceSubrange(1 ..< 3, with: UnsafeBufferPointer<Int>(start: nil, count: 0))
+        #expect(d == Data([1, 4]))
+    }
+
     @Test func insertData() {
         let hello = dataFrom("Hello")
         let world = dataFrom(" World")
