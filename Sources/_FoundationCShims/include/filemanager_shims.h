@@ -14,6 +14,7 @@
 #define CSHIMS_FILEMANAGER_H
 
 #include "_CShimsMacros.h"
+#include "_CShimsTargetConditionals.h"
 
 #if __has_include(<sys/param.h>)
 #include <sys/param.h>
@@ -44,6 +45,94 @@
 // Darwin-specific API that is implemented but not declared in any header
 // This function behaves exactly like the public mkpath_np(3) API, but it also returns the first directory it actually created, which helps us make sure we set the given attributes on the right directories.
 extern int _mkpath_np(const char *path, mode_t omode, const char **firstdir);
+#endif
+
+#if TARGET_OS_ANDROID && __ANDROID_API__ <= 23
+#include <grp.h>
+#include <sys/types.h>
+#include <string.h>
+#include <errno.h>
+
+static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    errno = 0;
+
+    // Call the non-reentrant version.
+    // On Android, this uses Thread Local Storage (TLS),
+    // so it is safe from race conditions with other threads.
+    struct group *p = getgrgid(gid);
+
+    if (p == NULL) {
+        *result = NULL;
+        return errno;
+    }
+
+    if (strlcpy(buf, p->gr_name, buflen) >= buflen) {
+        *result = NULL;
+        return ERANGE;
+    }
+
+    grp->gr_name = buf;
+    grp->gr_gid = p->gr_gid;
+
+    // Android Bionic leaves this as NULL.
+    grp->gr_passwd = NULL;
+
+    // Android Bionic generates a synthetic list ["groupname", NULL].
+    // Replicating that here would require deep copying the strings array.
+    // Foundation does not use this either, so NULL is sufficient and avoids complexity.
+    grp->gr_mem = NULL;
+
+    *result = grp;
+    return 0;
+}
+
+static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    errno = 0;
+
+    // Call the non-reentrant version.
+    // On Android, this uses Thread Local Storage (TLS),
+    // so it is safe from race conditions with other threads.
+    struct group *p = getgrnam(name);
+
+    if (p == NULL) {
+        *result = NULL;
+        return errno;
+    }
+
+    if (strlcpy(buf, p->gr_name, buflen) >= buflen) {
+        *result = NULL;
+        return ERANGE;
+    }
+
+    grp->gr_name = buf;
+    grp->gr_gid = p->gr_gid;
+
+    // Android Bionic leaves this as NULL.
+    grp->gr_passwd = NULL;
+
+    // Android Bionic generates a synthetic list ["groupname", NULL].
+    // Replicating that here would require deep copying the strings array.
+    // Foundation does not use this either, so NULL is sufficient and avoids complexity.
+    grp->gr_mem = NULL;
+
+    *result = grp;
+    return 0;
+}
+
+#elif __has_include(<grp.h>)
+#include <grp.h>
+
+static inline int _filemanager_shims_getgrgid_r(gid_t gid, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    return getgrgid_r(gid, grp, buf, buflen, result);
+}
+
+static inline int _filemanager_shims_getgrnam_r(const char *name, struct group *grp,
+                                                char *buf, size_t buflen, struct group **result) {
+    return getgrnam_r(name, grp, buf, buflen, result);
+}
 #endif
 
 #endif // CSHIMS_FILEMANAGER_H
