@@ -163,7 +163,7 @@ extension Platform {
     }
     
     static func gid(forName name: String) -> gid_t? {
-        withUserGroupBuffer(name, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: getgrnam_r) {
+        withUserGroupBuffer(name, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: _filemanager_shims_getgrnam_r) {
             $0.gr_gid
         }
     }
@@ -192,7 +192,7 @@ extension Platform {
     }
     
     static func name(forGID gid: gid_t) -> String? {
-        withUserGroupBuffer(gid, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: getgrgid_r) {
+        withUserGroupBuffer(gid, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: _filemanager_shims_getgrgid_r) {
             // Android's gr_name `char *`` is nullable when it should be non-null.
             // FIXME: avoid the coerce cast workaround once https://github.com/android/ndk/issues/2098 is fixed.
             let gr_name: UnsafeMutablePointer<CChar>? = $0.gr_name
