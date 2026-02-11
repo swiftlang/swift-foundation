@@ -606,8 +606,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - parameter buffer: The replacement bytes.
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public mutating func replaceSubrange<SourceType>(_ subrange: Range<Index>, with buffer: UnsafeBufferPointer<SourceType>) {
-        guard !buffer.isEmpty  else { return }
-        replaceSubrange(subrange, with: buffer.baseAddress!, count: buffer.count * MemoryLayout<SourceType>.stride)
+        replaceSubrange(subrange, with: UnsafeRawBufferPointer(buffer))
     }
 
     /// Replace a region of bytes in the data with new bytes from a collection.
