@@ -58,13 +58,15 @@ struct SafePointerComparison: Equatable {
 
 extension Data {
     var allocationForComparison: SafePointerComparison {
+        #if DATA_LEGACY_ABI
         switch _representation {
         case .empty, .inline:
             preconditionFailure("Data does not have an allocation")
-        default:
-            // It is safe to escape the pointer from this closure because SafePointerComparison guarantees it will never be dereferenced
-            self.withUnsafeBytes { SafePointerComparison($0.baseAddress) }
+        default: break
         }
+        #endif
+        // It is safe to escape the pointer from this closure because SafePointerComparison guarantees it will never be dereferenced
+        return self.withUnsafeBytes { SafePointerComparison($0.baseAddress) }
     }
 }
 
@@ -202,22 +204,14 @@ private final class DataTests {
             #expect($0.freeCapacity == 1)
             $0.append(42)
         }
-        switch data._representation {
-        case .inline:
-            #expect(data.count == 1)
-        default:
-            Issue.record("Data representation should be .inline")
-        }
+        expectInlineIfLegacyABI(data)
+        #expect(data.count == 1)
 
         data = Data(rawCapacity: 0) {
             #expect($0.freeCapacity == 0)
         }
-        switch data._representation {
-        case .empty:
-            #expect(data.count == 0)
-        default:
-            Issue.record("Data representation should be .empty")
-        }
+        expectEmptyRepresentation(data)
+        #expect(data.count == 0)
 
         #expect(throws: LocalError()) {
             data = try Data(rawCapacity: 2) {
@@ -233,12 +227,8 @@ private final class DataTests {
             #expect($0.freeCapacity == anInlineSliceSize)
             $0.append(42)
         }
-        switch data._representation {
-        case .slice:
-            #expect(data.count == 1)
-        default:
-            Issue.record("Data representation should be .slice")
-        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 1)
     }
 
     @Test func initializationWithOutputSpanOfUInt8() throws {
@@ -987,15 +977,12 @@ private final class DataTests {
 
         // Append to the inline representation
         var data = Data()
+        print("NOW!!!")
         data.append(addingRawCapacity: 8) {
             #expect($0.freeCapacity == 8)
         }
-        switch data._representation {
-        case .empty:
-            #expect(data.isEmpty)
-        default:
-            Issue.record("Data representation should be .empty")
-        }
+        expectEmptyRepresentation(data)
+        #expect(data.count == 0)
 
         data = Data()
         try? data.append(addingRawCapacity: 1) {
@@ -1003,25 +990,17 @@ private final class DataTests {
             $0.append(appendedValue)
             throw LocalError()
         }
-        switch data._representation {
-        case .inline:
-            #expect(data.count == 1)
-            #expect(data[0] == appendedValue)
-        default:
-            Issue.record("Data representation should be .inline")
-        }
+        expectInlineIfLegacyABI(data)
+        #expect(data.count == 1)
+        #expect(data[0] == appendedValue)
 
         data = Data(0..<4)
         let count0 = data.count
         data.append(addingRawCapacity: 20) {
             #expect($0.freeCapacity == 20)
         }
-        switch data._representation {
-        case .slice:
-            #expect(data.count == count0)
-        default:
-            Issue.record("Data representation should be .slice")
-        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == count0)
 
         try? data.append(addingRawCapacity: 20) {
             #expect($0.freeCapacity == 20)
@@ -1030,13 +1009,9 @@ private final class DataTests {
             #expect(full)
             throw LocalError()
         }
-        switch data._representation {
-        case .slice:
-            #expect(data.count == 24)
-            #expect(data.last == appendedValue)
-        default:
-            Issue.record("Data representation should be .slice")
-        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 24)
+        #expect(data.last == appendedValue)
 
         // Append to the `InlineSlice` representation
         data = Data(0..<23)
@@ -1049,13 +1024,9 @@ private final class DataTests {
             $0.append(appendedValue)
             throw LocalError()
         }
-        switch data._representation {
-        case .slice:
-            #expect(data.count == 25)
-            #expect(data.last == appendedValue)
-        default:
-            Issue.record("Data representation should be .slice")
-        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 25)
+        #expect(data.last == appendedValue)
     }
 
     @Test func appendToSlicedInlineSlicesWithOutputRawSpan() {
@@ -2989,12 +2960,8 @@ struct LargeDataTests {
             #expect($0.freeCapacity == largeCount)
             $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
-        switch data._representation {
-        case .large:
-            #expect(data.count == largeCount)
-        default:
-            Issue.record("Data representation should be .large")
-        }
+        expectLargeIfLegacyABI(data)
+        #expect(data.count == largeCount)
 
         // exercise `LargeSlice.append()`
         data.append(addingRawCapacity: 20) {
@@ -3017,12 +2984,8 @@ struct LargeDataTests {
             #expect($0.freeCapacity == largeCount)
             $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
-        switch data._representation {
-        case .large:
-            #expect(data.count == largeCount+3)
-        default:
-            Issue.record("Data representation should be .large")
-        }
+        expectLargeIfLegacyABI(data)
+        #expect(data.count == largeCount + 3)
 
         // transform from the `InlineSlice` form to the `LargeSlice` form
         data = Data(0..<24)
@@ -3030,12 +2993,8 @@ struct LargeDataTests {
             #expect($0.freeCapacity == largeCount)
             $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
-        switch data._representation {
-        case .large:
-            #expect(data.count == largeCount+24)
-        default:
-            Issue.record("Data representation should be .large")
-        }
+        expectLargeIfLegacyABI(data)
+        #expect(data.count == largeCount + 24)
     }
 
     @Test(.requiresMultipleLargeData)
@@ -3163,11 +3122,77 @@ struct LargeDataTests {
     }
 }
 
+private func expectLargeIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty:
+        Issue.record("Expected data to be large but was empty", sourceLocation: sourceLocation)
+    case .inline:
+        Issue.record("Expected data to be large but was inline of count \(data.count)", sourceLocation: sourceLocation)
+    case .slice:
+        Issue.record("Expected data to be large but was slice of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        return
+    }
+    #endif
+}
+
+private func expectSliceIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty:
+        Issue.record("Expected data to be slice but was empty", sourceLocation: sourceLocation)
+    case .inline:
+        Issue.record("Expected data to be slice but was inline of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        Issue.record("Expected data to be slice but was large of count \(data.count)", sourceLocation: sourceLocation)
+    case .slice:
+        return
+    }
+    #endif
+}
+
+private func expectInlineIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty:
+        Issue.record("Expected data to be inline but was empty", sourceLocation: sourceLocation)
+    case .slice:
+        Issue.record("Expected data to be inline but was slice of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        Issue.record("Expected data to be inline but was large of count \(data.count)", sourceLocation: sourceLocation)
+    case .inline:
+        return
+    }
+    #endif
+}
+
+private func expectEmptyRepresentation(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .inline:
+        Issue.record("Expected data to be empty but was inline of count \(data.count)", sourceLocation: sourceLocation)
+    case .slice:
+        Issue.record("Expected data to be empty but was slice of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        Issue.record("Expected data to be empty but was large of count \(data.count)", sourceLocation: sourceLocation)
+    case .empty:
+        return
+    }
+    #else
+    #expect(data._representation._storage === __DataStorage.empty, "Expected data to be empty singleton but was not (count \(data.count))", sourceLocation: sourceLocation)
+    #endif
+}
+
 private func capacity(_ data: consuming Data) -> Int {
+    #if DATA_LEGACY_ABI
     switch data._representation {
     case .empty: 0
     case .inline: Data.InlineData.maximumCapacity
     case .slice(let slice): slice.capacity
     case .large(let slice): slice.capacity
     }
+    #else
+    data._representation._storage.capacity
+    #endif
 }
