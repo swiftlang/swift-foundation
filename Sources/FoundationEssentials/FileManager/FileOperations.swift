@@ -916,7 +916,7 @@ enum _FileOperations {
         // Attempt to clone the file using platform-specific API. If this operation fails, don't throw
         // an error and just fall back to chunked writes.
         #if os(Linux)
-        if ioctl(dst, FICLONE, src) != -1 {
+        if ioctl(dstfd, FICLONE, srcfd) != -1 {
             return
         }
         #elseif os(FreeBSD)
