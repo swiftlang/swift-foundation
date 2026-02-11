@@ -109,6 +109,10 @@ static inline int32_t _platform_shims_O_NOFOLLOW(void) { return O_NOFOLLOW; }
 
 #endif
 
+#if TARGET_OS_LINUX
+static inline unsigned long _platform_shims_FICLONE(void) { return FICLONE; }
+#endif
+
 #if TARGET_OS_BSD
 static inline unsigned int _platform_shims_COPY_FILE_RANGE_CLONE(void) {
 #if defined(COPY_FILE_RANGE_CLONE)
