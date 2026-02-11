@@ -109,4 +109,16 @@ static inline int32_t _platform_shims_O_NOFOLLOW(void) { return O_NOFOLLOW; }
 
 #endif
 
+#if TARGET_OS_BSD
+static inline unsigned int _platform_shims_COPY_FILE_RANGE_CLONE(void) {
+#if defined(COPY_FILE_RANGE_CLONE)
+  return COPY_FILE_RANGE_CLONE;
+#else
+  // Compiled against an older unistd.h, but presumably running on FreeBSD 15.0
+  // or newer. SEE: https://github.com/freebsd/freebsd-src/blob/main/sys/sys/unistd.h
+  return 0x00800000;
+#endif
+}
+#endif
+
 #endif /* CSHIMS_PLATFORM_SHIMS */

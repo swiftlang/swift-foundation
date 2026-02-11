@@ -144,6 +144,10 @@
 #include <tzfile.h>
 #else
 
+#if TARGET_OS_LINUX && __has_include(<linux/fs.h>)
+#include <linux/fs.h>
+#endif
+
 #if TARGET_OS_MAC || TARGET_OS_LINUX || TARGET_OS_BSD
 #ifndef TZDIR
 #define TZDIR    "/usr/share/zoneinfo/" /* Time zone object file directory */
