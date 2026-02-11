@@ -134,6 +134,28 @@ private struct UUIDTests {
         }
     }
     
+
+
+    @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @Test func regexComponentParsesUUID() throws {
+        let input = "prefix E621E1F8-C36C-495A-93FC-0C247A3E6E5F suffix"
+        let match = try #require(input.firstMatch(of: /prefix \(.uuid) suffix/))
+        #expect(match.1 == UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"))
+    }
+
+    @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @Test func regexComponentRejectsInvalidUUID() throws {
+        let input = "prefix E621E1F8-C36C-495A-93FC-0C247A3E6E5Z suffix"
+        let match = try input.firstMatch(of: /prefix \(.uuid) suffix/)
+        #expect(match == nil)
+    }
+
+    @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @Test func regexComponentCanBeUsedDirectly() throws {
+        let input = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
+        let match = try #require(input.wholeMatch(of: UUID.RegexComponent()))
+        #expect(match.output == UUID(uuidString: input))
+    }
     @Test func deterministicRandomGeneration() {
         var generator = PCGRandomNumberGenerator(seed: 123456789)
         

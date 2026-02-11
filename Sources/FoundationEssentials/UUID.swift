@@ -169,6 +169,41 @@ extension UUID : Codable {
     }
 }
 
+// MARK: Regex
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension UUID {
+    /// A regex component that parses a UUID string and captures it as a `UUID`.
+    public struct RegexComponent : CustomConsumingRegexComponent {
+        public init() {}
+
+        public typealias RegexOutput = UUID
+
+        public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: UUID)? {
+            guard index < bounds.upperBound else {
+                return nil
+            }
+
+            let uuidStringLength = 36
+            guard let endIndex = input.index(index, offsetBy: uuidStringLength, limitedBy: bounds.upperBound),
+                  let parsed = UUID(uuidString: String(input[index..<endIndex])) else {
+                return nil
+            }
+
+            return (endIndex, parsed)
+        }
+    }
+}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension RegexComponent where Self == UUID.RegexComponent {
+    /// Creates a regex component to match a UUID string, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
+    /// and capture the string as a `UUID`.
+    public static var uuid: UUID.RegexComponent {
+        UUID.RegexComponent()
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension UUID : Comparable {
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
