@@ -110,6 +110,8 @@ static inline int32_t _platform_shims_O_NOFOLLOW(void) { return O_NOFOLLOW; }
 #endif
 
 #if TARGET_OS_LINUX
+#include <linux/fs.h>
+
 static inline unsigned long _platform_shims_FICLONE(void) { return FICLONE; }
 #endif
 
