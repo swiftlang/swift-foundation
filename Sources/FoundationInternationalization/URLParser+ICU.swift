@@ -222,7 +222,7 @@ struct UIDNAHookICU: UIDNAHook {
     ///
     /// - Note: This function checks the remaining capacity of `output` to ensure there's enough space to write.
     /// - Returns: `true` on success, `false` on failure or if `output` was too small.
-    @lifetime(output: copy output)
+    @_lifetime(output: copy output)
     static func nameToASCII(
         input: borrowing Span<UTF16.CodeUnit>,
         output: inout OutputSpan<Unicode.ASCII.CodeUnit>

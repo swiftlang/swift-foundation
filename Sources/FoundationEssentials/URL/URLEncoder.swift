@@ -148,7 +148,7 @@ internal enum URLEncoder {
         )
     }
 
-    @lifetime(output: copy output)
+    @_lifetime(output: copy output)
     static func percentEncode(
         input: borrowing Span<UInt8>,
         output: inout OutputSpan<UInt8>,
@@ -178,7 +178,7 @@ internal enum URLEncoder {
     /// - Note: This function checks the remaining capacity of `output` on every
     ///   iteration to ensure there's enough space to write.
     /// - Returns: `true` on success, `false` if `output` was too small.
-    @lifetime(output: copy output)
+    @_lifetime(output: copy output)
     static func addPercentEscapes(
         input: borrowing Span<UInt8>,
         output: inout OutputSpan<UInt8>,
