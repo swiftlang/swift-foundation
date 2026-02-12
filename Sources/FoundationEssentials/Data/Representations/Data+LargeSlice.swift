@@ -51,40 +51,41 @@ extension Data {
         @usableFromInline var slice: RangeReference
         @usableFromInline var storage: __DataStorage
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ buffer: UnsafeRawBufferPointer) {
             self.init(__DataStorage(bytes: buffer.baseAddress, length: buffer.count), count: buffer.count)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(capacity: Int) {
             self.init(__DataStorage(capacity: capacity), count: 0)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(count: Int) {
             self.init(__DataStorage(length: count), count: count)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
+        @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ inline: InlineData) {
             let storage = inline.withUnsafeBytes { return __DataStorage(bytes: $0.baseAddress, length: $0.count) }
             self.init(storage, count: inline.count)
         }
         
-        @inlinable // This is @inlinable as a trivial initializer.
+        @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
         init(_ slice: InlineSlice) {
             self.storage = slice.storage
             self.slice = RangeReference(slice.range)
         }
         
-        @inlinable // This is @inlinable as a trivial initializer.
+        @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
         init(_ storage: __DataStorage, count: Int) {
             self.storage = storage
             self.slice = RangeReference(0..<count)
         }
         
         // Not exposed as ABI and only usable by internal, non-inlined code and therefore not @inlinable
+        @inline(__always)
         init(_ storage: __DataStorage, range: Range<Int>) {
             self.storage = storage
             self.slice = RangeReference(range)

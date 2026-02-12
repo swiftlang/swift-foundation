@@ -31,6 +31,14 @@ let benchmarks = {
     typealias HalfInt = Int16
     #endif
 
+    func createSomeData(_ length: Int) -> Data {
+        var d = Data(repeating: 42, count: length)
+        // Set a byte to be another value just so we know we have a unique pointer to the backing
+        // For maximum inefficiency in the not equal case, set the last byte
+        d[length - 1] = UInt8.random(in: UInt8.min..<UInt8.max)
+        return d
+    }
+
     func createInlineData() -> Data {
         createSomeData(10) // 10B, Smaller than InlineData.Buffer
     }
@@ -77,6 +85,18 @@ let benchmarks = {
     }
     
     // MARK: -
+
+    Benchmark("DataInitSequence", configuration: .init(tags: ["kind": "inline"]), closure: { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(Data([1, 3, 5, 7]))
+        }
+    })
+
+    Benchmark("DataInitSequence", configuration: .init(tags: ["kind": "smallSlice"]), closure: { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(Data([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33]))
+        }
+    })
 
     for (data, name) in dataKinds {
         Benchmark("DataEqual", configuration: .init(tags: ["kind": name]), closure: { _, box in
