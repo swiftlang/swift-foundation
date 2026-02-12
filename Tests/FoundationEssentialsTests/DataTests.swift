@@ -1737,7 +1737,7 @@ private final class DataTests {
         #expect(span.count == count)
         let v = UInt8.random(in: 10..<100)
         span[i] = v
-        var sub = span.extracting(i ..< i+1)
+        var sub = span._mutatingExtracting(i ..< i+1)
         sub.update(repeating: v)
         #expect(source[i] == v)
 #endif
@@ -1751,7 +1751,7 @@ private final class DataTests {
         var span = source.mutableSpan
         #expect(span.count == count)
         let i = try #require(span.indices.randomElement())
-        var sub = span.extracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i+1)
         sub.update(repeating: .max)
         #expect(source[i] == .max)
 #endif
@@ -1773,7 +1773,7 @@ private final class DataTests {
         let byteCount = span.byteCount
         #expect(byteCount == count)
         let v = UInt8.random(in: 10..<100)
-        var sub = span.extracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i+1)
         sub.storeBytes(of: v, as: UInt8.self)
         #expect(source[i] == v)
     }

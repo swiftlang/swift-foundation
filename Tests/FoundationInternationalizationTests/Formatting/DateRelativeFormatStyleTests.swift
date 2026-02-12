@@ -485,7 +485,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
                 sourceLocation: sourceLocation)
         }
 
-        var now = try date("2021-06-10 12:00:00Z")
+        var now = date("2021-06-10 12:00:00Z")
 
         assertEvaluation(
             of: .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated),
@@ -565,7 +565,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
                 "8 mo. ago",
             ])
 
-        now = try date("2023-05-15 08:47:20Z")
+        now = date("2023-05-15 08:47:20Z")
 
         assertEvaluation(
             of: .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated),
@@ -685,7 +685,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
                 "8 mo. ago",
             ])
 
-        now = try date("2019-06-03 09:41:00Z")
+        now = date("2019-06-03 09:41:00Z")
 
         assertEvaluation(
             of: .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide),

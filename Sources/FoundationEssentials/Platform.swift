@@ -368,7 +368,9 @@ extension Platform {
         if let processPath = CommandLine.arguments.first {
             return processPath
         }
+        return nil
+#else
+        return nil
 #endif
-    return nil
     }
 }
