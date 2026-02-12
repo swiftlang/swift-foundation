@@ -35,6 +35,7 @@ private struct GregorianCalendarTests {
         #expect(gregorianCalendar.numberOfDaysInMonth(14, year: 2024) == 28) //  equivalent to month: 2, year: 2025, not leap
 
         #expect(gregorianCalendar.numberOfDaysInMonth(50, year: 2024) == 29) //  equivalent to month: 2, year: 2028, leap
+        #expect(gregorianCalendar.numberOfDaysInMonth(-22, year: 2026) == 29) //  equivalent to month: 2, year: 2024, leap
     }
 
     @Test func testRemoteJulianDayCrash() {

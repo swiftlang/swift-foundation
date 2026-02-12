@@ -1698,7 +1698,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         } else if month < 1 {
             let (q, r) = month.quotientAndRemainder(dividingBy: 12)
             month = r + 12
-            year = year - q - 1
+            year = year + q - 1
         }
         switch month {
         case 1, 3, 5, 7, 8, 10, 12:
