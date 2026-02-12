@@ -360,18 +360,18 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             let buffer: UnsafeRawBufferPointer
             switch _representation {
             case .empty:
-                buffer = UnsafeRawBufferPointer(start: nil, count: 0)
+                unsafe buffer = UnsafeRawBufferPointer(start: nil, count: 0)
             case .inline(let inline):
-                buffer = unsafe UnsafeRawBufferPointer(
+                unsafe buffer = unsafe UnsafeRawBufferPointer(
                   start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
                   count: inline.count
                 )
             case .large(let slice):
-                buffer = unsafe UnsafeRawBufferPointer(
+                unsafe buffer = unsafe UnsafeRawBufferPointer(
                   start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
                 )
             case .slice(let slice):
-                buffer = unsafe UnsafeRawBufferPointer(
+                unsafe buffer = unsafe UnsafeRawBufferPointer(
                   start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
                 )
             }
@@ -386,7 +386,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         @lifetime(borrow self)
         borrowing get {
             let span = unsafe bytes._unsafeView(as: UInt8.self)
-            return _overrideLifetime(span, borrowing: self)
+            return unsafe _overrideLifetime(span, borrowing: self)
         }
     }
 
@@ -398,9 +398,9 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             let buffer: UnsafeMutableRawBufferPointer
             switch _representation {
             case .empty:
-                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+                unsafe buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
             case .inline(let inline):
-                buffer = unsafe UnsafeMutableRawBufferPointer(
+                unsafe buffer = UnsafeMutableRawBufferPointer(
                   start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
                   count: inline.count
                 )
@@ -409,7 +409,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
                 _representation = .empty
                 slice.ensureUniqueReference()
                 _representation = .large(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
+                unsafe buffer = UnsafeMutableRawBufferPointer(
                   start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
                 )
             case .slice(var slice):
@@ -417,7 +417,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
                 _representation = .empty
                 slice.ensureUniqueReference()
                 _representation = .slice(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
+                unsafe buffer = UnsafeMutableRawBufferPointer(
                   start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
                 )
             }
@@ -433,9 +433,9 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         mutating get {
             // We need a better way to compose this accessor in terms of the other one.
             // See https://github.com/swiftlang/swift/issues/81218
-            var bytes = _overrideLifetime(mutableBytes, copying: ())
+            var bytes = unsafe _overrideLifetime(mutableBytes, copying: ())
             let span = unsafe bytes._unsafeMutableView(as: UInt8.self)
-            return _overrideLifetime(span, mutating: &self)
+            return unsafe _overrideLifetime(span, mutating: &self)
         }
     }
 
