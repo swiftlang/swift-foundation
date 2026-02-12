@@ -13,7 +13,6 @@
 #ifndef CSHIMS_FILEMANAGER_H
 #define CSHIMS_FILEMANAGER_H
 
-#include "_CShimsTargetConditionals.h"
 #include "_CShimsMacros.h"
 #include "_CShimsTargetConditionals.h"
 
