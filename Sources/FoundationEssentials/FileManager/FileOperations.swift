@@ -916,13 +916,13 @@ enum _FileOperations {
         // Attempt to clone the file using platform-specific API. If this operation fails, don't throw
         // an error and just fall back to chunked writes.
         #if os(Linux)
-        if ioctl(dstfd, _platform_shims_FICLONE(), srcfd) != -1 {
+        if ioctl(dstfd, _filemanager_shims_FICLONE(), srcfd) != -1 {
             return
         }
         #elseif os(FreeBSD)
         if _freeBSDRelease >= 1500000 {
             // `COPY_FILE_RANGE_CLONE` was introduced in FreeBSD 15.0.
-            let flags = _platform_shims_COPY_FILE_RANGE_CLONE()
+            let flags = _filemanager_shims_COPY_FILE_RANGE_CLONE()
             if copy_file_range(srcfd, nil, dstfd, nil, total, flags) != -1 {
                 return
             }
