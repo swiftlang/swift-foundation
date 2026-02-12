@@ -431,40 +431,11 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     public var mutableSpan: MutableSpan<UInt8> {
         @lifetime(&self)
         mutating get {
-#if false // see https://github.com/swiftlang/swift/issues/81218
-            var bytes = mutableBytes
+            // We need a better way to compose this accessor in terms of the other one.
+            // See https://github.com/swiftlang/swift/issues/81218
+            var bytes = _overrideLifetime(mutableBytes, copying: ())
             let span = unsafe bytes._unsafeMutableView(as: UInt8.self)
             return _overrideLifetime(span, mutating: &self)
-#else
-            let buffer: UnsafeMutableRawBufferPointer
-            switch _representation {
-            case .empty:
-                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .large(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .slice(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
-            let span = unsafe MutableSpan<UInt8>(_unsafeBytes: buffer)
-            return unsafe _overrideLifetime(span, mutating: &self)
-#endif
         }
     }
 
