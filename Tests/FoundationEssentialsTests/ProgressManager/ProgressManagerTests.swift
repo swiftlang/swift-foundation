@@ -399,10 +399,10 @@ extension Tag {
         
         manager.complete(count: 1)
         
-        var subprogress: Subprogress? = manager.subprogress(assigningCount: 1)
-        #expect(manager.fractionCompleted == 0.5)
-        
-        subprogress = nil
+        withExtendedLifetime(manager.subprogress(assigningCount: 1)) {
+            #expect(manager.fractionCompleted == 0.5)
+        }
+
         #expect(manager.fractionCompleted == 1.0)
     }
     
