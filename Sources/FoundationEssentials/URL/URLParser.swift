@@ -186,7 +186,7 @@ package protocol UIDNAHook {
     static func encode(_ host: some StringProtocol) -> String?
     static func decode(_ host: some StringProtocol) -> String?
 
-    @lifetime(output: copy output)
+    @_lifetime(output: copy output)
     static func nameToASCII(
         input: borrowing Span<UTF16.CodeUnit>,
         output: inout OutputSpan<Unicode.ASCII.CodeUnit>

@@ -148,7 +148,6 @@ let package = Package(
           ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
-            .enableExperimentalFeature("LifetimeDependence"),
             .enableExperimentalFeature("Lifetimes"),
             .enableExperimentalFeature("AddressableTypes"),
             .enableExperimentalFeature("AllowUnsafeAttribute"),
@@ -192,7 +191,6 @@ let package = Package(
             cSettings: wasiLibcCSettings,
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
-                .enableExperimentalFeature("LifetimeDependence"),
                 .enableExperimentalFeature("Lifetimes"),
             ] + availabilityMacros + featureSettings
         ),
