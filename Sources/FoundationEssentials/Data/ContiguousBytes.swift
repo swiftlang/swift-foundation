@@ -71,6 +71,7 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
     /// - note: Calling `withBytes` multiple times does not guarantee that
     ///         the same span will be passed in every time.
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
 #if !hasFeature(Embedded)
         do {
@@ -96,6 +97,7 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
 extension Array : ContiguousBytes where Element == UInt8 {
     // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         try withUnsafeBufferPointer { (buffer) throws(E) in
             try body(buffer.span.bytes)
@@ -108,6 +110,7 @@ extension Array : ContiguousBytes where Element == UInt8 {
 extension ArraySlice : ContiguousBytes where Element == UInt8 {
     // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         try withUnsafeBufferPointer { (buffer) throws(E) in
             try body(buffer.span.bytes)
@@ -119,6 +122,7 @@ extension ArraySlice : ContiguousBytes where Element == UInt8 {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension ContiguousArray : ContiguousBytes where Element == UInt8 {
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(span.bytes)
     }
@@ -146,6 +150,7 @@ extension UnsafeRawBufferPointer : ContiguousBytes {
     }
 
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(bytes)
     }
@@ -168,6 +173,7 @@ extension UnsafeMutableRawBufferPointer : ContiguousBytes {
     }
 
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(bytes)
     }
@@ -190,6 +196,7 @@ extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
     }
 
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(span.bytes)
     }
@@ -212,6 +219,7 @@ extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
     }
 
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(span.bytes)
     }
@@ -234,6 +242,7 @@ extension EmptyCollection : ContiguousBytes where Element == UInt8 {
     }
 
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         return try body(RawSpan())
     }
@@ -263,6 +272,7 @@ extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
 
     // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
     @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
         let element = self.first!
         return try Swift.withUnsafeBytes(of: element) { (buffer) throws(E) in
