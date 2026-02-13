@@ -1336,10 +1336,6 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.bridgeToNSURL()
     }
 
-    internal func isFileReferenceURL() -> Bool {
-        return _url.isFileReferenceURL()
-    }
-
 #endif // FOUNDATION_FRAMEWORK
 
     internal var _swiftURL: _SwiftURL? {
@@ -1388,8 +1384,8 @@ extension URL {
         case windows
     }
 
-    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true, compatibility: Bool = false) -> String {
-        _url.fileSystemPath(style: style, resolveAgainstBase: resolveAgainstBase, compatibility: compatibility)
+    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true) -> String {
+        _url.fileSystemPath(style: style, resolveAgainstBase: resolveAgainstBase)
     }
 
     #if os(Windows)
