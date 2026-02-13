@@ -872,6 +872,10 @@ enum _FileOperations {
     }
 #else
     #if !canImport(Darwin)
+    #if os(FreeBSD)
+    private static let _freeBSDRelease = getosreldate()
+    #endif
+
     private static func _copyRegularFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate) throws {
         let srcfd = open(srcPtr, O_RDONLY)
         guard srcfd >= 0 else {
@@ -906,8 +910,25 @@ enum _FileOperations {
             // no copying required
             return
         }
-        
+
         let total: Int = Int(fileInfo.st_size)
+
+        // Attempt to clone the file using platform-specific API. If this operation fails, don't throw
+        // an error and just fall back to chunked writes.
+        #if os(Linux)
+        if ioctl(dstfd, _filemanager_shims_FICLONE(), srcfd) != -1 {
+            return
+        }
+        #elseif os(FreeBSD)
+        if _freeBSDRelease >= 1500000 {
+            // `COPY_FILE_RANGE_CLONE` was introduced in FreeBSD 15.0.
+            let flags = _filemanager_shims_COPY_FILE_RANGE_CLONE()
+            if copy_file_range(srcfd, nil, dstfd, nil, total, flags) != -1 {
+                return
+            }
+        }
+        #endif
+
         // Respect the optimal block size for the file system if available
         // Some platforms including WASI don't provide this information, so we
         // fall back to the default chunk size 4KB, which is a common page size.
