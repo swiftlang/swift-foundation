@@ -239,9 +239,9 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         return nil
     }
 
-    func fileSystemPath(style: URL.PathStyle, resolveAgainstBase: Bool, compatibility: Bool) -> String {
+    func fileSystemPath(style: URL.PathStyle, resolveAgainstBase: Bool) -> String {
         let path = resolveAgainstBase ? absolutePath(percentEncoded: true) : relativePath(percentEncoded: true)
-        return _SwiftURL.fileSystemPath(for: path, style: style, compatibility: compatibility)
+        return _SwiftURL.fileSystemPath(for: path, style: style)
     }
 
     func withUnsafeFileSystemRepresentation<ResultType>(_ block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType {
@@ -411,7 +411,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         return _url
     }
 
-    func isFileReferenceURL() -> Bool {
+    private func isFileReferenceURL() -> Bool {
         #if NO_FILESYSTEM
         return false
         #else
