@@ -164,7 +164,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     public static let distantPast = Date(timeIntervalSinceReferenceDate: -63114076800.0)
 
     /// Returns a `Date` initialized to the current date and time.
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    @backDeployed(before: macOS 12, iOS 15, tvOS 15, watchOS 8)
     public static var now : Date { Date() }
 
     public func hash(into hasher: inout Hasher) {
