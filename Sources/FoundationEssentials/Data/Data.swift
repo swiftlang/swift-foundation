@@ -330,20 +330,24 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             return
         }
 
-        // Append the rest byte-wise, buffering through an InlineData.
-        var buffer = InlineData()
-        while let element = iter.next() {
-            buffer.append(byte: element)
-            if buffer.count == buffer.capacity {
-                buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-                buffer.count = 0
-            }
-        }
+        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { unsafeBuffer in
+            var buffer = OutputRawSpan(buffer: unsafeBuffer, initializedCount: 0)
 
-        // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
-        if buffer.count > 0 {
-            buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-            buffer.count = 0
+            // Append the rest byte-wise, buffering through a temporary allocation.
+            while let element = iter.next() {
+                buffer.append(element)
+                if buffer.isFull {
+                    buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
+                    buffer.removeAll()
+                }
+            }
+
+            // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
+            if !buffer.isEmpty {
+                buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
+            }
+
+            _ = buffer.finalize(for: unsafeBuffer)
         }
     }
 
@@ -362,7 +366,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     mutating func stabilizeAddresses() {
-        reserveCapacity(InlineData.maximumCapacity + 1)
+        reserveCapacity(1)
     }
 
     /// The number of bytes in the data.
@@ -387,26 +391,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     public var bytes: RawSpan {
         @_lifetime(borrow self)
         borrowing get {
-            let buffer: UnsafeRawBufferPointer
-            switch _representation {
-            case .empty:
-                unsafe buffer = UnsafeRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                unsafe buffer = unsafe UnsafeRawBufferPointer(
-                  start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(let slice):
-                unsafe buffer = unsafe UnsafeRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(let slice):
-                unsafe buffer = unsafe UnsafeRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
-            let span = unsafe RawSpan(_unsafeBytes: buffer)
-            return unsafe _overrideLifetime(span, borrowing: self)
+            _representation.bytes
         }
     }
 
@@ -425,34 +410,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     public var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
         mutating get {
-            let buffer: UnsafeMutableRawBufferPointer
-            switch _representation {
-            case .empty:
-                unsafe buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                unsafe buffer = UnsafeMutableRawBufferPointer(
-                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .large(slice)
-                unsafe buffer = UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .slice(slice)
-                unsafe buffer = UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
-            let span = unsafe MutableRawSpan(_unsafeBytes: buffer)
-            return unsafe _overrideLifetime(span, mutating: &self)
+            _representation.mutableBytes
         }
     }
 
@@ -583,20 +541,24 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             return
         }
 
-        // Append the rest byte-wise, buffering through an InlineData.
-        var buffer = InlineData()
-        while let element = iter.next() {
-            buffer.append(byte: element)
-            if buffer.count == buffer.capacity {
-                buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-                buffer.count = 0
-            }
-        }
+        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { unsafeBuffer in
+            var buffer = OutputRawSpan(buffer: unsafeBuffer, initializedCount: 0)
 
-        // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
-        if buffer.count > 0 {
-            buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-            buffer.count = 0
+            // Append the rest byte-wise, buffering through a temporary allocation.
+            while let element = iter.next() {
+                buffer.append(element)
+                if buffer.isFull {
+                    buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
+                    buffer.removeAll()
+                }
+            }
+
+            // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
+            if !buffer.isEmpty {
+                buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
+            }
+
+            _ = buffer.finalize(for: unsafeBuffer)
         }
     }
 
@@ -843,6 +805,7 @@ extension Data {
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
     public static func ==(d1 : Data, d2 : Data) -> Bool {
+        #if DATA_LEGACY_ABI
         // See if both are empty
         switch (d1._representation, d2._representation) {
         case (.empty, .empty):
@@ -851,6 +814,11 @@ extension Data {
             // Continue on to checks below
             break
         }
+        #else
+        if d1._representation._storage === d2._representation._storage, d1._representation._slice == d2._representation._slice {
+            return true
+        }
+        #endif
 
         let length1 = d1.count
         let length2 = d2.count

@@ -152,7 +152,8 @@ let package = Package(
             .enableExperimentalFeature("AddressableTypes"),
             .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
-            .enableExperimentalFeature("AccessLevelOnImport")
+            .enableExperimentalFeature("AccessLevelOnImport"),
+            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
           ] + availabilityMacros + featureSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
