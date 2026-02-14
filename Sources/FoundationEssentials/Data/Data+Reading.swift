@@ -381,7 +381,7 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
             if length != chunkSize {
                 break
             }
-            ptr = realloc(ptr, totalRead + chunkSize)
+            ptr = realloc(ptr, totalRead + chunkSize)!
         }
         result = ReadBytesResult(bytes: ptr, length: totalRead, deallocator: .free)
         #else
