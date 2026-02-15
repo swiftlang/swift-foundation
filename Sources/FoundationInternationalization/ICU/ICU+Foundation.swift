@@ -43,7 +43,7 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
 }
 
 extension UErrorCode {
-    func checkSuccess() throws {
+    func checkSuccess() throws(ICUError) {
         if !isSuccess {
             throw ICUError(code: self)
         }

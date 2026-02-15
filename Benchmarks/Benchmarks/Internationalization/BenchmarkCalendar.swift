@@ -164,6 +164,29 @@ func calendarBenchmarks() {
         }
     }
 
+    // MARK: - TimeZone dependent, no dst
+    var calender_africa = Calendar(identifier: .gregorian)
+    let lagos = TimeZone(identifier: "Africa/Accra")
+    precondition(lagos != nil, "unexpected nil time zone")
+    calender_africa.timeZone = lagos!
+    Benchmark("next date matching - Non DST TimeZone") { _ in
+        for d in testDates {
+            let t = calender_africa.nextDate(after: d, matching: DateComponents(minute: 0, second: 0), matchingPolicy: .nextTime)
+            blackHole(t)
+        }
+    }
+
+    Benchmark("RecurrenceRuleDailyWithTimes - Non DST TimeZone") { benchmark in
+        var rule = Calendar.RecurrenceRule(calendar: calender_africa, frequency: .daily, end: .afterOccurrences(1000))
+        rule.hours = [9, 10]
+        rule.minutes = [0, 30]
+        rule.weekdays = [.every(.monday), .every(.tuesday), .every(.wednesday)]
+        rule.matchingPolicy = .nextTime
+        for date in rule.recurrences(of: thanksgivingStart) {
+            Benchmark.blackHole(date)
+        }
+    }
+
     // MARK: - Allocations
     let reference = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
     

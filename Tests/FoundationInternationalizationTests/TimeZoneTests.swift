@@ -391,6 +391,183 @@ private struct TimeZoneICUTests {
         try test("GMT+9", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
     }
 }
+
+@Suite("TimeZone_ICUResource")
+private struct TimeZone_ICUResourceTests {
+
+    let finalTimeZoneDates = {
+        let fallTime = Date(timeIntervalSince1970: 1762041600) // 2025-11-02, end of DST
+        var dates: [Date] = []
+        let springTime = Date(timeIntervalSince1970: 1741392000) // 2025-03-08, DST start is 2025-03-09
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 3600), since: fallTime))
+            dates.append(Date(timeInterval: Double(i * -3600), since: fallTime))
+        }
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 3600), since: springTime))
+            dates.append(Date(timeInterval: Double(i * -3600), since: springTime))
+        }
+        return dates
+    }()
+
+    @Test func singleDSTRuleTimeZone() throws {
+        let t = try _TimeZoneSingleDSTRule(offsetSeconds: -28800, dstSavingsSeconds: 3600, startMonth: 2, startDay: 8, startDayOfWeek: -1, startTime: 7200, startTimeMode: .wallTime, endMonth: 10, endDay: 1, endDayOfWeek: -1, endTime: 7200, endTimeMode: .wallTime, startYear: 2008)
+        let truth = try #require(_TimeZoneICU(identifier: "America/Los_Angeles"))
+        let options: [(TimeZone.DaylightSavingTimePolicy, TimeZone.DaylightSavingTimePolicy)] = [
+            (.former, .former),
+            (.former, .latter),
+            (.latter, .former),
+            (.latter, .latter)
+        ]
+
+        for d in finalTimeZoneDates {
+            for option in options {
+                let offsets = t.rawAndDaylightSavingTimeOffset(for: d, local: true, duplicatedTimePolicy: option.0, nonExistingTimePolicy: option.1)
+                let offsets_expected = truth.rawAndDaylightSavingTimeOffset(for: d, repeatedTimePolicy: option.0, skippedTimePolicy: option.1)
+
+                #expect(offsets.0 == offsets_expected.0, "Date = Date(timeIntervalSince1970: \(d.timeIntervalSince1970)), option = \(option)")
+                #expect(TimeInterval(offsets.1) == offsets_expected.1, "Date = Date(timeIntervalSince1970: \(d.timeIntervalSince1970)), option = \(option)")
+            }
+        }
+
+        for d in finalTimeZoneDates {
+            let nextTransition = t.dstTransition(after: d)
+            let expected = truth.nextDaylightSavingTimeTransition(after: d)
+            #expect(nextTransition == expected, "Date = Date(timeIntervalSince1970: \(d.timeIntervalSince1970)")
+        }
+    }
+
+
+    @Test(.disabled("This test takes a long time to run because it tests all known timezones. Also this test is only useful when ICUResourceTimeZone feature flag is disabled"))
+    func allKnownTimeZones() throws {
+        func buildTestDates(_ seeds: [Date]) -> [Date] {
+
+            var dates: [Date] = []
+            for seed in seeds {
+                for i in 0...10000 {
+                    dates.append(Date(timeInterval: Double(i * 3600), since: seed))
+                    dates.append(Date(timeInterval: Double(i * -3600), since: seed))
+                }
+            }
+            return dates
+
+        }
+
+        let testDates = buildTestDates( [
+            Date(timeIntervalSince1970: 1647165728.7119999) /*year 2022*/,
+            Date(timeIntervalSince1970: 0),
+            Date.now,
+            Date(timeIntervalSince1970: -3389673178),
+            Date(timeIntervalSince1970: 1196467622)
+        ] )
+
+        for name in TimeZone.knownTimeZoneIdentifiers {
+            let t = try _TimeZoneICUResource(identifier: name)
+            guard let truth = _TimeZoneICU(identifier: name) else {
+                preconditionFailure("Unexpected nil TimeZoneICU")
+            }
+
+            for d in testDates {
+                let offset = t.secondsFromGMT(for: d)
+                let expect = truth.secondsFromGMT(for: d)
+                #expect(offset == expect)
+
+                let (rawOffset, dstOffset) = t.rawAndDSTOffset(for: d)
+                let offsets_expected = truth.rawAndDaylightSavingTimeOffset(for: d)
+                #expect(rawOffset == offsets_expected.0)
+                #expect(TimeInterval(dstOffset) == offsets_expected.1)
+
+                let nextDST = t.nextTransition(after: d, inclusive: false)
+                let nextDST_expected = truth.nextDaylightSavingTimeTransition(after: d)
+                #expect(nextDST == nextDST_expected)
+
+                let expectedIsDST = truth.isDaylightSavingTime(for: d)
+                let isDST = t.isDaylightSavingTime(for: d)
+                #expect(isDST == expectedIsDST)
+            }
+        }
+    }
+
+    @Test func offsets() throws {
+        func test(_ identifier: String, date: Date, expectedOffsetFromGMT: Int, expectedRawOffset: Int, expectedDSTOffset: Double, expectedIsDST: Bool, sourceLocation: SourceLocation = #_sourceLocation) throws {
+
+            let tz = try _TimeZoneICUResource(identifier: identifier)
+
+            let offset = tz.secondsFromGMT(for: date)
+            let isDST = tz.isDaylightSavingTime(for: date)
+            let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: date)
+
+            #expect(offset == expectedOffsetFromGMT)
+            #expect(rawOffset == expectedRawOffset)
+            #expect(dstOffset == expectedDSTOffset)
+            #expect(isDST == expectedIsDST)
+        }
+
+        // 1916-04-30T23:00:00Z, Germany first DST
+        try test("Europe/Berlin", date: Date(timeIntervalSince1970: -1693702800), expectedOffsetFromGMT: 7200, expectedRawOffset: 3600, expectedDSTOffset: 0, expectedIsDST: true)
+
+        // 1918-03-31T12:00:00Z, America's first nationwide DST
+        try test("America/New_York", date: Date(timeIntervalSince1970: -1633262400.0), expectedOffsetFromGMT: -14400, expectedRawOffset: -18000, expectedDSTOffset: 3600, expectedIsDST: true)
+
+        // 1942-12-30T12:00:00Z, Year-round DST
+        try test("America/New_York", date: Date(timeIntervalSince1970: -852206400), expectedOffsetFromGMT: -14400, expectedRawOffset: -18000, expectedDSTOffset: 3600, expectedIsDST: true)
+
+        // 2021-10-31T12:00:00Z, 30-minute DST offset
+        try test("Australia/Lord_Howe", date: Date(timeIntervalSince1970: 1635681600.0), expectedOffsetFromGMT: 39600, expectedRawOffset: 37800, expectedDSTOffset: 1800, expectedIsDST: true)
+
+        // 2007-03-12T12:00:00Z, Extended DST period
+        try test("America/Chicago", date: Date(timeIntervalSince1970: 1173700800), expectedOffsetFromGMT: -18000, expectedRawOffset: -21600, expectedDSTOffset: 3600, expectedIsDST: true)
+        // 2006-10-30T12:00:00Z, Old DST rules
+        try test("America/Chicago", date: Date(timeIntervalSince1970: 1162209600), expectedOffsetFromGMT: -21600, expectedRawOffset: -21600, expectedDSTOffset: 0, expectedIsDST: false)
+
+        // 2010-10-30T12:00:00Z, Russia's DST
+        try test("Europe/Moscow", date: Date(timeIntervalSince1970: 1288440000), expectedOffsetFromGMT: 14400, expectedRawOffset: 10800, expectedDSTOffset: 3600, expectedIsDST: true)
+        // 2011-10-30T12:00:00Z, Russia abandoning DST
+        try test("Europe/Moscow", date: Date(timeIntervalSince1970: 1319976000.0), expectedOffsetFromGMT: 14400, expectedRawOffset: 14400, expectedDSTOffset: 0, expectedIsDST: false)
+
+        // 2016-09-06T23:59:59Z, Turkey's abolition of DST
+        try test("Europe/Istanbul", date: Date(timeIntervalSince1970: 1473206399), expectedOffsetFromGMT: 10800, expectedRawOffset: 7200, expectedDSTOffset: 3600, expectedIsDST: false)
+        // 2016-09-07T00:00:00Z, Turkey's abolition of DST
+        try test("Europe/Istanbul", date: Date(timeIntervalSince1970: 1473206400), expectedOffsetFromGMT: 10800, expectedRawOffset: 10800, expectedDSTOffset: 0, expectedIsDST: false)
+        // 2016-09-07T01:00:00Z
+        try test("Europe/Istanbul", date: Date(timeIntervalSince1970: 1473210000), expectedOffsetFromGMT: 10800, expectedRawOffset: 10800, expectedDSTOffset: 0, expectedIsDST: false)
+
+        // 2005-04-05T12:00:00Z, Indiana before statewide adoption
+        try test("America/Indiana/Indianapolis", date: Date(timeIntervalSince1970: 1112702400.0), expectedOffsetFromGMT: -18000, expectedRawOffset: -18000, expectedDSTOffset: 0, expectedIsDST: false)
+        // 2006-05-05T12:00:00Z, Indiana after adopting DST statewide
+        try test("America/Indiana/Indianapolis", date: Date(timeIntervalSince1970: 1146830400.0), expectedOffsetFromGMT: -14400, expectedRawOffset: -18000, expectedDSTOffset: 3600, expectedIsDST: true)
+
+        // 1995-01-02T12:00:00Z, Tests Kiritimati after moving to UTC+14
+        try test("Pacific/Kiritimati", date: Date(timeIntervalSince1970: 789048000.0), expectedOffsetFromGMT: 50400, expectedRawOffset: 50400, expectedDSTOffset: 0, expectedIsDST: false)
+
+        // 2011-12-29T12:00:00Z, Tests Samoa before skipping December 30th
+        try test("Pacific/Apia", date: Date(timeIntervalSince1970: 1325160000.0), expectedOffsetFromGMT: -36000, expectedRawOffset: -39600, expectedDSTOffset: 3600, expectedIsDST: true)
+        // 2011-12-30T12:00:00Z, Tests Samoa on skipping day
+        try test("Pacific/Apia", date: Date(timeIntervalSince1970: 1325246400), expectedOffsetFromGMT: 50400, expectedRawOffset: -39600, expectedDSTOffset: 3600, expectedIsDST: true)
+        // 2011-12-31T12:00:00Z, Tests Samoa after skipping a day - December 30, 2011 never existed in Samoa
+        try test("Pacific/Apia", date: Date(timeIntervalSince1970: 1325332800.0), expectedOffsetFromGMT: 50400, expectedRawOffset: 46800, expectedDSTOffset: 3600, expectedIsDST: true)
+
+        // 2010-02-28T12:00:00Z, Tests leap year February
+        try test("America/New_York", date: Date(timeIntervalSince1970: 1267358400.0), expectedOffsetFromGMT: -18000, expectedRawOffset: -18000, expectedDSTOffset: 0, expectedIsDST: false)
+        // 2000-02-29T12:00:00Z, Tests leap day in century year (divisible by 400)
+        try test("Europe/Paris", date: Date(timeIntervalSince1970: 951825600.0), expectedOffsetFromGMT: 3600, expectedRawOffset: 3600, expectedDSTOffset: 0, expectedIsDST: false)
+
+        // 2018-07-01, Morocco Ramadan
+        try test("Africa/Casablanca", date: Date(timeIntervalSince1970: 1530485234), expectedOffsetFromGMT: 3600, expectedRawOffset: 0, expectedDSTOffset: 3600, expectedIsDST: true)
+        // 2018-11-01, After Ramadan ended
+        try test("Africa/Casablanca", date: Date(timeIntervalSince1970: 1541112434), expectedOffsetFromGMT: 3600, expectedRawOffset: 0, expectedDSTOffset: 3600, expectedIsDST: true)
+
+        // 2014-05-30T12:00:00Z, Chile's regular year
+        try test("America/Santiago", date: Date(timeIntervalSince1970: 1401451200), expectedOffsetFromGMT: -14400, expectedRawOffset: -14400, expectedDSTOffset: 0, expectedIsDST: false)
+        // 2015-05-30T12:00:00Z, Tests Chile's all year DST ??
+        try test("America/Santiago", date: Date(timeIntervalSince1970: 1432987200), expectedOffsetFromGMT: -10800, expectedRawOffset: -14400, expectedDSTOffset: 3600, expectedIsDST: true)
+
+        // 1880-01-01T12:00:00Z, Tests historical Local Mean Time before standardized timezones (9min 21sec ahead of GMT)
+        try test("Europe/Paris", date: Date(timeIntervalSince1970: -2840097600.0), expectedOffsetFromGMT: 561, expectedRawOffset: 561, expectedDSTOffset: 0, expectedIsDST: false)
+        // 1883-11-18T12:00:00Z, Tests NYC Local Mean Time before railroad standard time adoption
+        try test("America/New_York", date: Date(timeIntervalSince1970: -2717668800.0), expectedOffsetFromGMT: -17762, expectedRawOffset: -17762, expectedDSTOffset: 0, expectedIsDST: false)
+    }
+}
 // MARK: - FoundationPreview disabled tests
 
 // MARK: - Bridging Tests
