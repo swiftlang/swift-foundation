@@ -79,7 +79,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
     
     /// Unlocalized locale (`en_001`).
-    internal static var unlocalized : Locale {
+    package static var unlocalized : Locale {
         Locale(inner: LocaleCache.unlocalized)
     }
 
