@@ -412,17 +412,9 @@ internal struct BuiltInUnicodeScalarSet {
                 // Add or remove newline characters
                 for newlineChar in newlines {
                     if isInverted {
-                        #if FOUNDATION_FRAMEWORK
                         _CharacterSet.modifyBitmap(.remove, char: newlineChar, mutableSpan: &bitmapMutableSpan)
-                        #else
-                        modifyBitmap(.remove, char: newlineChar, mutableSpan: &bitmapMutableSpan)
-                        #endif
                     } else {
-                        #if FOUNDATION_FRAMEWORK
                         _CharacterSet.modifyBitmap(.add, char: newlineChar, mutableSpan: &bitmapMutableSpan)
-                        #else
-                        modifyBitmap(.add, char: newlineChar, mutableSpan: &bitmapMutableSpan)
-                        #endif
                     }
                 }
                 
@@ -435,17 +427,9 @@ internal struct BuiltInUnicodeScalarSet {
 
             for whitespaceChar in whitespaces {
                 if isInverted {
-                    #if FOUNDATION_FRAMEWORK
                     _CharacterSet.modifyBitmap(.remove, char: whitespaceChar, mutableSpan: &bitmapMutableSpan)
-                    #else
-                    modifyBitmap(.remove, char: whitespaceChar, mutableSpan: &bitmapMutableSpan)
-                    #endif
                 } else {
-                    #if FOUNDATION_FRAMEWORK
                     _CharacterSet.modifyBitmap(.add, char: whitespaceChar, mutableSpan: &bitmapMutableSpan)
-                    #else
-                    modifyBitmap(.add, char: whitespaceChar, mutableSpan: &bitmapMutableSpan)
-                    #endif
                 }
             }
             
@@ -453,46 +437,15 @@ internal struct BuiltInUnicodeScalarSet {
             
             for char in characterRange {
                 if isInverted {
-                    #if FOUNDATION_FRAMEWORK
                     _CharacterSet.modifyBitmap(.remove, char: char, mutableSpan: &bitmapMutableSpan)
-                    #else
-                    modifyBitmap(.remove, char: char, mutableSpan: &bitmapMutableSpan)
-                    #endif
                 } else {
-                    #if FOUNDATION_FRAMEWORK
                     _CharacterSet.modifyBitmap(.add, char: char, mutableSpan: &bitmapMutableSpan)
-                    #else
-                    modifyBitmap(.add, char: char, mutableSpan: &bitmapMutableSpan)
-                    #endif
                 }
             }
             
             return (.bitmapFilled, bitmap)
         }
         return isInverted ? (.bitmapAll, bitmap) : (.bitmapEmpty, bitmap)
-    }
-    
-    enum Operation {
-        case add
-        case remove
-    }
-    
-    private func modifyBitmap(_ operation: Operation, char: UInt16, mutableSpan: inout MutableSpan<UInt8>) {
-        let LOG_BPB = 3
-        let BITSPERBYTE = 8
-        let byteIndex = Int(char >> LOG_BPB)
-        let bitPosition = char & UInt16(BITSPERBYTE - 1)
-        
-        guard byteIndex < mutableSpan.count else { return }
-        
-        let bitMask: UInt8 = 1 << bitPosition
-        
-        switch operation {
-        case .add:
-            mutableSpan[byteIndex] |= bitMask
-        case .remove:
-            mutableSpan[byteIndex] &= ~bitMask
-        }
     }
 
     // CFUniCharGetNumberOfPlanes
@@ -532,3 +485,30 @@ internal struct BuiltInUnicodeScalarSet {
     static let graphemeExtends = Self.init(type: .graphemeExtend)
     static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
 }
+
+#if !FOUNDATION_FRAMEWORK
+struct _CharacterSet {
+    enum Operation {
+        case add
+        case remove
+    }
+    
+    internal static func modifyBitmap(_ operation: Operation, char: UInt16, mutableSpan: inout MutableSpan<UInt8>) {
+        let LOG_BPB = 3
+        let BITSPERBYTE = 8
+        let byteIndex = Int(char >> LOG_BPB)
+        let bitPosition = char & UInt16(BITSPERBYTE - 1)
+        
+        guard byteIndex < mutableSpan.count else { return }
+        
+        let bitMask: UInt8 = 1 << bitPosition
+        
+        switch operation {
+        case .add:
+            mutableSpan[byteIndex] |= bitMask
+        case .remove:
+            mutableSpan[byteIndex] &= ~bitMask
+        }
+    }
+}
+#endif
