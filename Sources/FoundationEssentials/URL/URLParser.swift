@@ -92,22 +92,6 @@ final class URLParseInfo: Sendable {
         return (startIndex..<endIndex)
     }
 
-    var netLocation: Substring? {
-        guard let netLocationRange else {
-            return nil
-        }
-        return urlString[netLocationRange]
-    }
-
-    // Does not include the "?" or "#" separator at the beginning
-    var cfResourceSpecifierRange: Range<String.Index>? {
-        guard let startIndex = queryRange?.lowerBound
-                ?? fragmentRange?.lowerBound else {
-            return nil
-        }
-        return startIndex..<urlString.endIndex
-    }
-
     var user: Substring? {
         guard let userRange else {
             return nil
@@ -1195,14 +1179,6 @@ internal extension UInt8 {
 // MARK: - Compatibility Parsing
 
 extension RFC3986Parser {
-    /// Parses the URL string into its component parts with no encoding or validation.
-    /// Only used for `CFURLGetByteRangeForComponent`.
-    /// - Note: The `URLParseInfo` returned may refer to an invalid URL.
-    static func rawParse(urlString: String) -> URLParseInfo? {
-        // Can only be nil if the port string is wildly invalid.
-        return compatibilityParse(urlString: urlString)
-    }
-
     static func compatibilityParse(urlString: String, encodingInvalidCharacters: Bool) -> URLParseInfo? {
         guard let parseInfo = compatibilityParse(urlString: urlString) else {
             return nil

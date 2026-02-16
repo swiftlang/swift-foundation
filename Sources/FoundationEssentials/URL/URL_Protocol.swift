@@ -64,7 +64,7 @@ internal protocol _URLProtocol: AnyObject, Sendable {
     var fragment: String? { get }
     func fragment(percentEncoded: Bool) -> String?
 
-    func fileSystemPath(style: URL.PathStyle, resolveAgainstBase: Bool, compatibility: Bool) -> String
+    func fileSystemPath(style: URL.PathStyle, resolveAgainstBase: Bool) -> String
     func withUnsafeFileSystemRepresentation<ResultType>(_ block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType
 
     var hasDirectoryPath: Bool { get }
@@ -90,7 +90,6 @@ internal protocol _URLProtocol: AnyObject, Sendable {
     var debugDescription: String { get }
 
     func bridgeToNSURL() -> NSURL
-    func isFileReferenceURL() -> Bool
 
     /// We must not store a `_URLProtocol` in `URL` without running it through this function.
     /// This makes sure that we do not hold a file reference URL, which changes the nullability of many functions.
