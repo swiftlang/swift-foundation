@@ -23,7 +23,7 @@ private struct PredicateMacroBasicTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                return PredicateExpressions.build_Arg(
+                return PredicateExpressions.\(foundationModuleName)::build_Arg(
                     true
                 )
             })
@@ -40,7 +40,7 @@ private struct PredicateMacroBasicTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_Arg(
+                PredicateExpressions.\(foundationModuleName)::build_Arg(
                     true
                 )
             })
@@ -57,7 +57,7 @@ private struct PredicateMacroBasicTests {
             """,
             """
             \(foundationModuleName).Predicate({ input in
-                PredicateExpressions.build_Arg(
+                PredicateExpressions.\(foundationModuleName)::build_Arg(
                     true
                 )
             })
@@ -74,7 +74,7 @@ private struct PredicateMacroBasicTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({
-                PredicateExpressions.build_Arg(
+                PredicateExpressions.\(foundationModuleName)::build_Arg(
                     $0
                 )
             })
@@ -90,8 +90,8 @@ private struct PredicateMacroBasicTests {
             }
             """,
             """
-            \(foundationModuleName).Predicate<Int, String>({ (a: PredicateExpressions.Variable<Int>, b: PredicateExpressions.Variable<String>) in
-                PredicateExpressions.build_Arg(
+            \(foundationModuleName).Predicate<Int, String>({ (a: PredicateExpressions.\(foundationModuleName)::Variable<Int>, b: PredicateExpressions.\(foundationModuleName)::Variable<String>) in
+                PredicateExpressions.\(foundationModuleName)::build_Arg(
                     true
                 )
             })
@@ -151,8 +151,8 @@ private struct PredicateMacroBasicTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_Arg($0),
+                PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                    root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                     keyPath: \\.foo
                 )
             })
@@ -166,8 +166,8 @@ private struct PredicateMacroBasicTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_Arg(input),
+                PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                    root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                     keyPath: \\.foo
                 )
             })
@@ -181,9 +181,9 @@ private struct PredicateMacroBasicTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
+                PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                    root: PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                         keyPath: \\.foo
                     ),
                     keyPath: \\.bar
@@ -204,7 +204,7 @@ private struct PredicateMacroBasicTests {
             """
             // comment
             \(foundationModuleName).Predicate<Object>({ input in
-                return PredicateExpressions.build_Arg(
+                return PredicateExpressions.\(foundationModuleName)::build_Arg(
                     true // comment
                 )
             }) // comment
