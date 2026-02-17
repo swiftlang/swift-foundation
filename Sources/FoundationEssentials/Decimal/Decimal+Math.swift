@@ -750,159 +750,63 @@ extension Decimal {
     /// Fixed-capacity inline buffer for intermediate integer arithmetic,
     /// replacing `[UInt16]` to eliminate heap allocations on the critical path.
     struct VariableLengthInteger: ExpressibleByArrayLiteral, Sendable {
-//        static let maxCapacity = 28
+        // 2 x Mantissa is 16 + 1 for carry
+        @usableFromInline
+        static let maxCapacity = 17
+        @usableFromInline
+        typealias InlineStorage = InlineArray<17, UInt16>
 
         @usableFromInline
-        enum _Storage: Sendable {
-            @usableFromInline
-            static let maxCapacity = 28
-            @usableFromInline
-            typealias InlineStorage = InlineArray<28, UInt16>
-
-            case inline(count: Int, storage: InlineStorage)
-            case heap(storage: [UInt16])
-
-            var count: Int {
-                switch self {
-                case .inline(let count, _):
-                    return count
-                case .heap(let storage):
-                    return storage.count
-                }
-            }
-
-            @inlinable
-            init(repeating: UInt16, count: Int = 0) {
-                if count > Self.maxCapacity {
-                    self = .heap(storage: Array(repeating: repeating, count: count))
-                } else {
-                    self = .inline(count: count, storage: InlineArray(repeating: repeating))
-                }
-            }
-
-            @inlinable
-            init(mantissa: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)) {
-                var storage: InlineArray<28, UInt16> = .init(repeating: 0)
-                storage[0] = mantissa.0
-                storage[1] = mantissa.1
-                storage[2] = mantissa.2
-                storage[3] = mantissa.3
-                storage[4] = mantissa.4
-                storage[5] = mantissa.5
-                storage[6] = mantissa.6
-                storage[7] = mantissa.7
-
-                var count = 8
-                while count > 0 && storage[count - 1] == 0 {
-                    count -= 1
-                }
-                self = .inline(count: count, storage: storage)
-            }
-
-            @inlinable
-            init<C: RandomAccessCollection<UInt16>>(elements: C) where C.Index == Int {
-                let count = elements.count
-                if count > Self.maxCapacity {
-                    self = .heap(storage: .init(elements))
-                } else {
-                    var storage: InlineStorage = .init(repeating: 0)
-                    for i in 0..<count {
-                        storage[i] = elements[i]
-                    }
-                    self = .inline(count: count, storage: storage)
-                }
-            }
-
-            @inlinable
-            subscript(index: Int) -> UInt16 {
-                get {
-                    switch self {
-                    case .inline(let count, let storage):
-                        assert(index >= 0 && index < count, "Index out of bounds")
-                        return storage[index]
-                    case .heap(let storage):
-                        return storage[index]
-                    }
-                }
-                set {
-                    switch self {
-                    case .inline(let count, var storage):
-                        assert(index >= 0 && index < count, "Index out of bounds")
-                        storage[index] = newValue
-                        self = .inline(count: count, storage: storage)
-                    case .heap(var storage):
-                        storage[index] = newValue
-                        self = .heap(storage: storage)
-                    }
-                }
-            }
-
-            @inlinable
-            mutating func append(_ value: UInt16) {
-                switch self {
-                case .inline(let count, var storage):
-                    if count + 1 < Self.maxCapacity {
-                        storage[count] = value
-                        self = .inline(count: count + 1, storage: storage)
-                    } else {
-                        var array = [UInt16]()
-                        array.reserveCapacity(count + 1)
-                        for i in 0..<count {
-                            array[i] = storage[i]
-                        }
-                        array[count] = value
-                        self = .heap(storage: array)
-                    }
-                case .heap(var storage):
-                    storage.append(value)
-                    self = .heap(storage: storage)
-                }
-            }
-
-            @inlinable
-            mutating func removeLast(_ n: Int) {
-                switch self {
-                case .inline(let count, let storage):
-                    precondition(count >= n, "Cannot removeLast \(n) from \(count) VariableLengthInteger")
-                    self = .inline(count: count - 1, storage: storage)
-                case .heap(var storage):
-                    storage.removeLast(n)
-                    self = .heap(storage: storage)
-                }
-            }
-        }
-
-        @inlinable
-        var count: Int {
-            self._storage.count
-        }
-
+        var count: Int
         @usableFromInline
-        var _storage: _Storage
+        var storage: InlineStorage
 
         @inlinable
         init() {
-            self._storage = .init(repeating: 0)
+            self.count = 0
+            self.storage = .init(repeating: 0)
         }
 
         @inlinable
         init(repeating value: UInt16, count: Int) {
-            self._storage = .init(repeating: value, count: count)
+            self.count = count
+            self.storage = .init(repeating: value)
         }
 
         @inlinable
         init(mantissa: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)) {
-            self._storage = .init(mantissa: mantissa)
+            self.storage = .init(repeating: 0)
+            self.storage[0] = mantissa.0
+            self.storage[1] = mantissa.1
+            self.storage[2] = mantissa.2
+            self.storage[3] = mantissa.3
+            self.storage[4] = mantissa.4
+            self.storage[5] = mantissa.5
+            self.storage[6] = mantissa.6
+            self.storage[7] = mantissa.7
+
+            self.count = 8
+            while count > 0 && self.storage[count - 1] == 0 {
+                count -= 1
+            }
         }
 
         @inlinable
         init(arrayLiteral elements: UInt16...) {
-            self._storage = .init(elements: elements)
+            self.storage = .init(initializingWith: { span in
+                for idx in 0..<elements.count {
+                    span.append(elements[idx])
+                }
+                for _ in elements.count..<Self.maxCapacity {
+                    span.append(0)
+                }
+            })
+            self.count = elements.count
         }
 
         @inlinable
         var isEmpty: Bool {
-            count == 0
+            self.count == 0
         }
 
         @inlinable
@@ -914,18 +818,19 @@ extension Decimal {
         @inlinable
         subscript(index: Int) -> UInt16 {
             get {
-                assert(index >= 0 && index < count, "Index out of bounds")
-                return self._storage[index]
+                precondition(index >= 0 && index < self.count, "Index out of bounds")
+                return self.storage[index]
             }
             set {
-                assert(index >= 0 && index < count, "Index out of bounds")
-                self._storage[index] = newValue
+                precondition(index >= 0 && index < self.count, "Index out of bounds")
+                self.storage[index] = newValue
             }
         }
 
         @inlinable
         mutating func append(_ value: UInt16) {
-            self._storage.append(value)
+            self.storage[count] = value
+            self.count += 1
         }
 
         @inlinable
@@ -935,7 +840,8 @@ extension Decimal {
 
         @inlinable
         mutating func removeLast(_ n: Int) {
-            self._storage.removeLast(n)
+            precondition(self.count >= n, "Cannot removeLast \(n) from \(self.count) VariableLengthInteger")
+            self.count -= n
         }
     }
 
