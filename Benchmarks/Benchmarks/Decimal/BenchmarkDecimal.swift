@@ -20,6 +20,10 @@ import Foundation
 #endif
 
 let benchmarks: @Sendable () -> Void = {
+    Benchmark.defaultConfiguration.scalingFactor = .mega
+    Benchmark.defaultConfiguration.maxDuration = .seconds(2)
+    Benchmark.defaultConfiguration.maxIterations = .count(100_000_000)
+
     Benchmark("Decimal init from Double") { benchmark in
         for i in benchmark.scaledIterations {
             let double = Double(i)
