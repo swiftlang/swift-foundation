@@ -749,7 +749,7 @@ extension Decimal {
 extension Decimal {
     /// Fixed-capacity inline buffer for intermediate integer arithmetic,
     /// replacing `[UInt16]` to eliminate heap allocations on the critical path.
-    struct VariableLengthInteger: Sendable {
+    struct VariableLengthInteger: Sendable, ExpressibleByArrayLiteral {
         // Maximum capacity: 17 elements needed for normalizedDividend
         // in _integerDivide (dividend up to 16 + 1 from normalization).
         // 20 provides a small safety margin and aligns to 40 bytes.
@@ -792,13 +792,13 @@ extension Decimal {
             }
         }
 
-        // init(arrayLiteral elements: UInt16...) {
-        //     assert(elements.count <= Self.maxCapacity, "VariableLengthInteger capacity exceeded")
-        //     self.count = elements.count
-        //     for i in 0..<elements.count {
-        //         _setUnchecked(i, to: elements[i])
-        //     }
-        // }
+        init(arrayLiteral elements: UInt16...) {
+            assert(elements.count <= Self.maxCapacity, "VariableLengthInteger capacity exceeded")
+            self.count = elements.count
+            for i in 0..<elements.count {
+                _setUnchecked(i, to: elements[i])
+            }
+        }
 
         var isEmpty: Bool {
             @inline(__always) get { count == 0 }
