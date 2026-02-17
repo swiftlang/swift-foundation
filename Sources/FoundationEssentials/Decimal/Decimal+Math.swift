@@ -749,108 +749,193 @@ extension Decimal {
 extension Decimal {
     /// Fixed-capacity inline buffer for intermediate integer arithmetic,
     /// replacing `[UInt16]` to eliminate heap allocations on the critical path.
-    struct VariableLengthInteger: Sendable, ExpressibleByArrayLiteral {
-        // Maximum capacity: 17 elements needed for normalizedDividend
-        // in _integerDivide (dividend up to 16 + 1 from normalization).
-        // 20 provides a small safety margin and aligns to 40 bytes.
-        static let maxCapacity = 20
+    struct VariableLengthInteger: ExpressibleByArrayLiteral, Sendable {
+//        static let maxCapacity = 28
 
-        private var _storage: (
-            UInt16, UInt16, UInt16, UInt16, UInt16,
-            UInt16, UInt16, UInt16, UInt16, UInt16,
-            UInt16, UInt16, UInt16, UInt16, UInt16,
-            UInt16, UInt16, UInt16, UInt16, UInt16
-        ) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        @usableFromInline
+        enum _Storage: Sendable {
+            @usableFromInline
+            static let maxCapacity = 28
+            @usableFromInline
+            typealias InlineStorage = InlineArray<28, UInt16>
 
-        var count: Int = 0
+            case inline(count: Int, storage: InlineStorage)
+            case heap(storage: [UInt16])
 
-        @inline(__always)
-        init() {}
+            var count: Int {
+                switch self {
+                case .inline(let count, _):
+                    return count
+                case .heap(let storage):
+                    return storage.count
+                }
+            }
 
-        init(repeating value: UInt16, count: Int) {
-            assert(count <= Self.maxCapacity, "VariableLengthInteger capacity exceeded")
-            self.count = count
-            if value != 0 {
-                for i in 0..<count {
-                    _setUnchecked(i, to: value)
+            @inlinable
+            init(repeating: UInt16, count: Int = 0) {
+                if count > Self.maxCapacity {
+                    self = .heap(storage: Array(repeating: repeating, count: count))
+                } else {
+                    self = .inline(count: count, storage: InlineArray(repeating: repeating))
+                }
+            }
+
+            @inlinable
+            init(mantissa: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)) {
+                var storage: InlineArray<28, UInt16> = .init(repeating: 0)
+                storage[0] = mantissa.0
+                storage[1] = mantissa.1
+                storage[2] = mantissa.2
+                storage[3] = mantissa.3
+                storage[4] = mantissa.4
+                storage[5] = mantissa.5
+                storage[6] = mantissa.6
+                storage[7] = mantissa.7
+
+                var count = 8
+                while count > 0 && storage[count - 1] == 0 {
+                    count -= 1
+                }
+                self = .inline(count: count, storage: storage)
+            }
+
+            @inlinable
+            init<C: RandomAccessCollection<UInt16>>(elements: C) where C.Index == Int {
+                let count = elements.count
+                if count > Self.maxCapacity {
+                    self = .heap(storage: .init(elements))
+                } else {
+                    var storage: InlineStorage = .init(repeating: 0)
+                    for i in 0..<count {
+                        storage[i] = elements[i]
+                    }
+                    self = .inline(count: count, storage: storage)
+                }
+            }
+
+            @inlinable
+            subscript(index: Int) -> UInt16 {
+                get {
+                    switch self {
+                    case .inline(let count, let storage):
+                        assert(index >= 0 && index < count, "Index out of bounds")
+                        return storage[index]
+                    case .heap(let storage):
+                        return storage[index]
+                    }
+                }
+                set {
+                    switch self {
+                    case .inline(let count, var storage):
+                        assert(index >= 0 && index < count, "Index out of bounds")
+                        storage[index] = newValue
+                        self = .inline(count: count, storage: storage)
+                    case .heap(var storage):
+                        storage[index] = newValue
+                        self = .heap(storage: storage)
+                    }
+                }
+            }
+
+            @inlinable
+            mutating func append(_ value: UInt16) {
+                switch self {
+                case .inline(let count, var storage):
+                    if count + 1 < Self.maxCapacity {
+                        storage[count] = value
+                        self = .inline(count: count + 1, storage: storage)
+                    } else {
+                        var array = [UInt16]()
+                        array.reserveCapacity(count + 1)
+                        for i in 0..<count {
+                            array[i] = storage[i]
+                        }
+                        array[count] = value
+                        self = .heap(storage: array)
+                    }
+                case .heap(var storage):
+                    storage.append(value)
+                    self = .heap(storage: storage)
+                }
+            }
+
+            @inlinable
+            mutating func removeLast(_ n: Int) {
+                switch self {
+                case .inline(let count, let storage):
+                    precondition(count >= n, "Cannot removeLast \(n) from \(count) VariableLengthInteger")
+                    self = .inline(count: count - 1, storage: storage)
+                case .heap(var storage):
+                    storage.removeLast(n)
+                    self = .heap(storage: storage)
                 }
             }
         }
 
+        @inlinable
+        var count: Int {
+            self._storage.count
+        }
+
+        @usableFromInline
+        var _storage: _Storage
+
+        @inlinable
+        init() {
+            self._storage = .init(repeating: 0)
+        }
+
+        @inlinable
+        init(repeating value: UInt16, count: Int) {
+            self._storage = .init(repeating: value, count: count)
+        }
+
+        @inlinable
         init(mantissa: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)) {
-            _storage.0 = mantissa.0
-            _storage.1 = mantissa.1
-            _storage.2 = mantissa.2
-            _storage.3 = mantissa.3
-            _storage.4 = mantissa.4
-            _storage.5 = mantissa.5
-            _storage.6 = mantissa.6
-            _storage.7 = mantissa.7
-            count = 8
-            while count > 0 && _getUnchecked(count - 1) == 0 {
-                count -= 1
-            }
+            self._storage = .init(mantissa: mantissa)
         }
 
+        @inlinable
         init(arrayLiteral elements: UInt16...) {
-            assert(elements.count <= Self.maxCapacity, "VariableLengthInteger capacity exceeded")
-            self.count = elements.count
-            for i in 0..<elements.count {
-                _setUnchecked(i, to: elements[i])
-            }
+            self._storage = .init(elements: elements)
         }
 
+        @inlinable
         var isEmpty: Bool {
-            @inline(__always) get { count == 0 }
+            count == 0
         }
 
+        @inlinable
         var last: UInt16? {
-            @inline(__always) get {
-                guard count > 0 else { return nil }
-                return _getUnchecked(count - 1)
-            }
+            guard count > 0 else { return nil }
+            return self[count - 1]
         }
 
-        @inline(__always)
+        @inlinable
         subscript(index: Int) -> UInt16 {
             get {
                 assert(index >= 0 && index < count, "Index out of bounds")
-                return _getUnchecked(index)
+                return self._storage[index]
             }
             set {
                 assert(index >= 0 && index < count, "Index out of bounds")
-                _setUnchecked(index, to: newValue)
+                self._storage[index] = newValue
             }
         }
 
-        @inline(__always)
-        private func _getUnchecked(_ index: Int) -> UInt16 {
-            withUnsafePointer(to: _storage) { ptr in
-                UnsafeRawPointer(ptr).assumingMemoryBound(to: UInt16.self)[index]
-            }
-        }
-
-        @inline(__always)
-        private mutating func _setUnchecked(_ index: Int, to value: UInt16) {
-            withUnsafeMutablePointer(to: &_storage) { ptr in
-                UnsafeMutableRawPointer(ptr).assumingMemoryBound(to: UInt16.self)[index] = value
-            }
-        }
-
+        @inlinable
         mutating func append(_ value: UInt16) {
-            assert(count < Self.maxCapacity, "VariableLengthInteger capacity exceeded")
-            _setUnchecked(count, to: value)
-            count += 1
+            self._storage.append(value)
         }
 
+        @inlinable
         mutating func removeLast() {
-            assert(count > 0, "Cannot removeLast from empty VariableLengthInteger")
-            count -= 1
+            self.removeLast(1)
         }
 
+        @inlinable
         mutating func removeLast(_ n: Int) {
-            assert(n >= 0 && n <= count)
-            count -= n
+            self._storage.removeLast(n)
         }
     }
 
@@ -1015,7 +1100,8 @@ extension Decimal {
         var carry: UInt32 = 0
         var acc: UInt32 = 0
         var result = VariableLengthInteger(repeating: 0, count: dividend.count)
-        for index in (0 ..< dividend.count).reversed() {
+        for directIndex in 0 ..< dividend.count {
+            let index = dividend.count - directIndex - 1
             acc = (UInt32(dividend[index]) + carry * (1 << 16))
             result[index] = UInt16(acc / divisor)
             carry = acc % divisor
