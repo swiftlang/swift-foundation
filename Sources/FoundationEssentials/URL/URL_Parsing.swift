@@ -862,17 +862,32 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
     // cases, since usually very few characters need encoding, or we're ASCII,
     // so start with 2 * buffer.count and re-allocate if needed.
 
+    // However, if updating ranges in place, only do so with the second
+    // maximum allocation, or else we could push past the 2 * span.count
+    // limit in the first allocation and be left using an invalid range.
+
     assert(!span.isEmpty)
-    let encoded: String? = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 2 * span.count) {
-        var os = OutputSpan(buffer: $0, initializedCount: 0)
-        guard encode(into: &os) else { return nil }
-        let outputLength = os.finalize(for: $0)
-        return String(decoding: $0[..<outputLength], as: UTF8.self)
+    if !updateRanges {
+        let encoded: String? = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 2 * span.count) {
+            var os = OutputSpan(buffer: $0, initializedCount: 0)
+            guard encode(into: &os) else { return nil }
+            let outputLength = os.finalize(for: $0)
+            return String(decoding: $0[..<outputLength], as: UTF8.self)
+        }
+        if let encoded {
+            return encoded
+        }
     }
-    if let encoded {
-        return encoded
+
+    var maxLength = 3 * T._maxUTF8BytesPerCharacter * span.count
+    if updateRanges && Impl.maxStringLength < maxLength {
+        // If updating ranges in place, the ranges must not go beyond the
+        // max string length for the given backing implementation. NSURL
+        // will retry with a larger implementation if needed.
+        maxLength = Impl.maxStringLength
     }
-    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 3 * T._maxUTF8BytesPerCharacter * span.count) {
+
+    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxLength) {
         var os = OutputSpan(buffer: $0, initializedCount: 0)
         guard encode(into: &os) else { return nil }
         let outputLength = os.finalize(for: $0)
