@@ -595,6 +595,14 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
         } else if !validate(span: span.extracting(hostRange), component: .host) {
             guard allowEncoding else { return false }
             guard span[hostRange.startIndex] != UInt8(ascii: "[") else { return false }
+            if useModernParsing && flags.contains(.hasSpecialScheme) {
+                // We will IDNA-encode the host, which doesn't encode ASCII
+                // characters. If there's an invalid ASCII character in the
+                // host, it would remain in the final string, so fail now.
+                if containsInvalidASCII(host: span.extracting(hostRange)) {
+                    return false
+                }
+            }
             flags.insert(.shouldEncodeHost)
             shouldEncode = true
         }

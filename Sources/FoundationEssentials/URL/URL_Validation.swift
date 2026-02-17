@@ -38,6 +38,19 @@ internal func validate<T: UnsignedInteger & FixedWidthInteger>(
     return true
 }
 
+internal func containsInvalidASCII<T: UnsignedInteger & FixedWidthInteger>(
+    host: borrowing Span<T>
+) -> Bool {
+    let allowedSet = URLComponentAllowedSet.host
+    for i in host.indices {
+        let codeUnit = host[i]
+        if codeUnit < 128 && !allowedSet.contains(codeUnit) {
+            return true
+        }
+    }
+    return false
+}
+
 private func isHexDigit<T: UnsignedInteger & FixedWidthInteger>(
     _ codeUnit: T
 ) -> Bool {
