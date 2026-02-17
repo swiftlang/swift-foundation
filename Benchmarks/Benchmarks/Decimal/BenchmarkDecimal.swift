@@ -32,11 +32,11 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-//    Benchmark("Decimal divide") { benchmark in
-//        let divisor = Decimal(10_000)
-//        for i in benchmark.scaledIterations {
-//            let result = Decimal(i) / divisor
-//            blackHole(result)
-//        }
-//    }
+    Benchmark("Decimal divide") { benchmark in
+        let divisor = Decimal(10_000)
+        for i in benchmark.scaledIterations {
+            let result = Decimal(i) / divisor
+            blackHole(result)
+        }
+    }
 }
