@@ -747,29 +747,115 @@ extension Decimal {
 
 // MARK: - Integer Mathmatics
 extension Decimal {
-    typealias VariableLengthInteger = [UInt16]
+    /// Fixed-capacity inline buffer for intermediate integer arithmetic,
+    /// replacing `[UInt16]` to eliminate heap allocations on the critical path.
+    struct VariableLengthInteger: Sendable {
+        // Maximum capacity: 17 elements needed for normalizedDividend
+        // in _integerDivide (dividend up to 16 + 1 from normalization).
+        // 20 provides a small safety margin and aligns to 40 bytes.
+        static let maxCapacity = 20
+
+        private var _storage: (
+            UInt16, UInt16, UInt16, UInt16, UInt16,
+            UInt16, UInt16, UInt16, UInt16, UInt16,
+            UInt16, UInt16, UInt16, UInt16, UInt16,
+            UInt16, UInt16, UInt16, UInt16, UInt16
+        ) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        var count: Int = 0
+
+        @inline(__always)
+        init() {}
+
+        init(repeating value: UInt16, count: Int) {
+            assert(count <= Self.maxCapacity, "VariableLengthInteger capacity exceeded")
+            self.count = count
+            if value != 0 {
+                for i in 0..<count {
+                    _setUnchecked(i, to: value)
+                }
+            }
+        }
+
+        init(mantissa: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)) {
+            _storage.0 = mantissa.0
+            _storage.1 = mantissa.1
+            _storage.2 = mantissa.2
+            _storage.3 = mantissa.3
+            _storage.4 = mantissa.4
+            _storage.5 = mantissa.5
+            _storage.6 = mantissa.6
+            _storage.7 = mantissa.7
+            count = 8
+            while count > 0 && _getUnchecked(count - 1) == 0 {
+                count -= 1
+            }
+        }
+
+        // init(arrayLiteral elements: UInt16...) {
+        //     assert(elements.count <= Self.maxCapacity, "VariableLengthInteger capacity exceeded")
+        //     self.count = elements.count
+        //     for i in 0..<elements.count {
+        //         _setUnchecked(i, to: elements[i])
+        //     }
+        // }
+
+        var isEmpty: Bool {
+            @inline(__always) get { count == 0 }
+        }
+
+        var last: UInt16? {
+            @inline(__always) get {
+                guard count > 0 else { return nil }
+                return _getUnchecked(count - 1)
+            }
+        }
+
+        @inline(__always)
+        subscript(index: Int) -> UInt16 {
+            get {
+                assert(index >= 0 && index < count, "Index out of bounds")
+                return _getUnchecked(index)
+            }
+            set {
+                assert(index >= 0 && index < count, "Index out of bounds")
+                _setUnchecked(index, to: newValue)
+            }
+        }
+
+        @inline(__always)
+        private func _getUnchecked(_ index: Int) -> UInt16 {
+            withUnsafePointer(to: _storage) { ptr in
+                UnsafeRawPointer(ptr).assumingMemoryBound(to: UInt16.self)[index]
+            }
+        }
+
+        @inline(__always)
+        private mutating func _setUnchecked(_ index: Int, to value: UInt16) {
+            withUnsafeMutablePointer(to: &_storage) { ptr in
+                UnsafeMutableRawPointer(ptr).assumingMemoryBound(to: UInt16.self)[index] = value
+            }
+        }
+
+        mutating func append(_ value: UInt16) {
+            assert(count < Self.maxCapacity, "VariableLengthInteger capacity exceeded")
+            _setUnchecked(count, to: value)
+            count += 1
+        }
+
+        mutating func removeLast() {
+            assert(count > 0, "Cannot removeLast from empty VariableLengthInteger")
+            count -= 1
+        }
+
+        mutating func removeLast(_ n: Int) {
+            assert(n >= 0 && n <= count)
+            count -= n
+        }
+    }
 
     private func asVariableLengthInteger() -> VariableLengthInteger {
-        switch self._mantissa {
-        case (0, 0, 0, 0, 0, 0, 0, 0):
-            return []
-        case let (a0, 0, 0, 0, 0, 0, 0, 0):
-            return [a0]
-        case let (a0, a1, 0, 0, 0, 0, 0, 0):
-            return [a0, a1]
-        case let (a0, a1, a2, 0, 0, 0, 0, 0):
-            return [a0, a1, a2]
-        case let (a0, a1, a2, a3, 0, 0, 0, 0):
-            return [a0, a1, a2, a3]
-        case let (a0, a1, a2, a3, a4, 0, 0, 0):
-            return [a0, a1, a2, a3, a4]
-        case let (a0, a1, a2, a3, a4, a5, 0, 0):
-            return [a0, a1, a2, a3, a4, a5]
-        case let (a0, a1, a2, a3, a4, a5, a6, 0):
-            return [a0, a1, a2, a3, a4, a5, a6]
-        case let (a0, a1, a2, a3, a4, a5, a6, a7):
-            return [a0, a1, a2, a3, a4, a5, a6, a7]
-        }
+        VariableLengthInteger(mantissa: _mantissa)
     }
 
     internal mutating func copyVariableLengthInteger(_ source: VariableLengthInteger) throws {
@@ -809,7 +895,7 @@ extension Decimal {
         let minLength = min(lhs.count, rhs.count)
         var i = 0
         var carry: UInt32 = 0
-        var result: VariableLengthInteger = Array(repeating: 0, count: maxResultLength)
+        var result = VariableLengthInteger(repeating: 0, count: maxResultLength)
         while i < minLength {
             let acc = UInt32(lhs[i]) + UInt32(rhs[i]) + carry
             carry = acc >> 16
@@ -860,7 +946,7 @@ extension Decimal {
 
     private static func _integerAddShort(_ lhs: VariableLengthInteger, rhs: UInt32, maxResultLength: Int? = nil) throws -> VariableLengthInteger {
         var carry: UInt32 = rhs
-        var result: VariableLengthInteger = Array(repeating: 0, count: lhs.count)
+        var result = VariableLengthInteger(repeating: 0, count: lhs.count)
         for index in 0 ..< lhs.count {
             let acc = UInt32(lhs[index]) + carry
             carry = acc >> 16
@@ -882,7 +968,7 @@ extension Decimal {
     ) throws -> VariableLengthInteger {
         var carry: UInt32 = 1
         var i = 0
-        var result: VariableLengthInteger = Array(repeating: 0, count: maxResultLength)
+        var result = VariableLengthInteger(repeating: 0, count: maxResultLength)
         let diffLength = min(term.count, subtrahend.count)
         while i < diffLength {
             let acc = 0xFFFF + UInt32(term[i]) - UInt32(subtrahend[i]) + carry
@@ -928,7 +1014,7 @@ extension Decimal {
         }
         var carry: UInt32 = 0
         var acc: UInt32 = 0
-        var result: VariableLengthInteger = Array(repeating: 0, count: dividend.count)
+        var result = VariableLengthInteger(repeating: 0, count: dividend.count)
         for index in (0 ..< dividend.count).reversed() {
             acc = (UInt32(dividend[index]) + carry * (1 << 16))
             result[index] = UInt16(acc / divisor)
@@ -950,7 +1036,7 @@ extension Decimal {
         }
         // If dividend < divisor, the result is appromixtly 0
         if self._integerCompare(lhs: dividend, rhs: divisor) == .orderedAscending {
-            return [] // zero
+            return VariableLengthInteger() // zero
         }
         // Fast algorithm
         if divisor.count == 1 {
@@ -992,7 +1078,7 @@ extension Decimal {
         let v1: UInt32 = UInt32(normalizedDivisor[divivisorLength - 1])
         let v2: UInt32 = divivisorLength > 1 ? UInt32(normalizedDivisor[divivisorLength - 2]) : 0
 
-        var result: VariableLengthInteger = Array(repeating: 0, count: maxResultLength)
+        var result = VariableLengthInteger(repeating: 0, count: maxResultLength)
         // D2: Initialize j
         // On each pass, build a single value for the quotient
         for j in 0 ..< quotientLength {
@@ -1058,13 +1144,13 @@ extension Decimal {
         maxResultLength: Int
     ) throws -> VariableLengthInteger {
         if lhs.isEmpty || rhs.isEmpty {
-            return []
+            return VariableLengthInteger()
         }
         var resultLength = maxResultLength
         if resultLength > lhs.count + rhs.count {
             resultLength = lhs.count + rhs.count
         }
-        var result: VariableLengthInteger = Array(repeating: 0, count: resultLength)
+        var result = VariableLengthInteger(repeating: 0, count: resultLength)
         var carry: UInt32 = 0
         for j in 0 ..< rhs.count {
             carry = 0
@@ -1098,13 +1184,12 @@ extension Decimal {
         mulplicand: UInt32, maxResultLength: Int
     ) throws -> VariableLengthInteger {
         if mulplicand == 0 {
-            return []
+            return VariableLengthInteger()
         }
         if maxResultLength < lhs.count {
             throw _CalculationError.overflow
         }
-        var result: VariableLengthInteger = Array(
-            repeating: 0, count: lhs.count)
+        var result = VariableLengthInteger(repeating: 0, count: lhs.count)
         var carry: UInt32 = 0
         for index in 0 ..< lhs.count {
             let acc = UInt32(lhs[index]) * mulplicand + carry
