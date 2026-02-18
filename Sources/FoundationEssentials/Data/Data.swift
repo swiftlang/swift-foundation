@@ -239,19 +239,55 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = .empty
     }
 
+    /// Creates a data instance with the specified capacity, and then calls the given
+    /// closure with an output span covering the instance's uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to the `OutputRawSpan`.
+    /// The `OutputRawSpan` keeps track of the initialized memory, ensuring
+    /// safety. Its `count` at the end of the closure will become the `count` of
+    /// the newly-initialized instance of `Data`.
+    ///
+    /// - Note: While the resulting `Data` may have a capacity larger than the
+    ///   requested amount, the `OutputRawSpan` passed to the closure will cover
+    ///   exactly the number of bytes requested.
+    ///
+    /// - Parameters:
+    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
+    ///   - initializer: A closure to initialize the allocated memory.
+    ///     - Parameters:
+    ///       - span: An `OutputRawSpan` covering uninitialized memory with
+    ///         space for the specified number of bytes.
     @_alwaysEmitIntoClient
     public init<E: Error>(
         rawCapacity capacity: Int,
-        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
         precondition(capacity >= 0, "capacity must not be negative")
         _representation = try _Representation(capacity: capacity, initializer)
     }
 
+    /// Creates a data instance with the specified capacity, and then calls the given
+    /// closure with an output span covering the instance's uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to the `OutputSpan`.
+    /// The `OutputSpan` keeps track of the initialized memory, ensuring
+    /// safety. Its `count` at the end of the closure will become the `count` of
+    /// the newly-initialized instance of `Data`.
+    ///
+    /// - Note: While the resulting `Data` may have a capacity larger than the
+    ///   requested amount, the `OutputSpan` passed to the closure will cover
+    ///   exactly the number of bytes requested.
+    ///
+    /// - Parameters:
+    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
+    ///   - initializer: A closure to initialize the allocated memory.
+    ///     - Parameters:
+    ///       - span: An `OutputSpan` covering uninitialized memory with
+    ///         space for the specified number of elements.
     @_alwaysEmitIntoClient
     public init<E: Error>(
         capacity: Int,
-        initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> Void
+        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {
         self = try Data(rawCapacity: capacity) { output throws(E) in
             try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
@@ -526,19 +562,57 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Grows this data to have enough capacity for the specified number of
+    /// bytes, then calls the closure with an output span covering the requested
+    /// amount of uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to `span`. It
+    /// ensures safety by keeping track of the initialized memory.
+    /// At the end of the closure, `span`'s `count` elements will have
+    /// been appended to this `Data` instance.
+    ///
+    /// If the closure throws an error, the items appended until that point
+    /// will remain in the `Data` instance.
+    ///
+    /// - Parameters:
+    ///   - uninitializedCount: The number of new elements the array should have
+    ///     space for.
+    ///   - initializer: A closure to initialize memory.
+    ///     - Parameters:
+    ///       - span: An `OutputRawSpan` covering uninitialized memory with
+    ///         space for the specified number of additional bytes.
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingRawCapacity uninitializedCount: Int,
-        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
         precondition(uninitializedCount >= 0, "uninitializedCount must not be negative")
         try _representation.append(addingCapacity: uninitializedCount, initializer)
     }
 
+    /// Grows this data to have enough capacity for the specified number of
+    /// bytes, then calls the closure with an output span covering the requested
+    /// amount of uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to `span`. It
+    /// ensures safety by keeping track of the initialized memory.
+    /// At the end of the closure, `span`'s `count` elements will have
+    /// been appended to this `Data` instance.
+    ///
+    /// If the closure throws an error, the items appended until that point
+    /// will remain in the `Data` instance.
+    ///
+    /// - Parameters:
+    ///   - uninitializedCount: The number of new elements the array should have
+    ///     space for.
+    ///   - initializer: A closure to initialize memory.
+    ///     - Parameters:
+    ///       - span: An `OutputSpan` covering uninitialized memory with
+    ///         space for the specified number of additional elements.
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingCapacity uninitializedCount: Int,
-        initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> Void
+        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {
         try self.append(addingRawCapacity: uninitializedCount) { output throws(E) in
             try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
