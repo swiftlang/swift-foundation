@@ -332,13 +332,14 @@ internal struct BuiltInUnicodeScalarSet {
         var bitmapMutableSpan = bitmap.mutableSpan
         
         if let src = bitmapPtrForPlane(plane) {
+            assert(bitmapMutableSpan.indices.contains(0..<Self.byteCount))
             if isInverted {
                 for i in 0..<Self.byteCount {
-                    bitmapMutableSpan[unchecked: i] = ~src[i]
+                    bitmapMutableSpan[i] = ~src[i]
                 }
             } else {
                 for i in 0..<Self.byteCount {
-                    bitmapMutableSpan[unchecked: i] = src[i]
+                    bitmapMutableSpan[i] = src[i]
                 }
             }
             return (.bitmapFilled, bitmap)
@@ -351,14 +352,16 @@ internal struct BuiltInUnicodeScalarSet {
                 }
             }
             
+
             if plane < data._numPlanes, let src = data._planes[plane] {
+                assert(bitmapMutableSpan.indices.contains(0..<Self.byteCount))
                 if isInverted {
                     for i in 0..<Self.byteCount {
-                        bitmapMutableSpan[unchecked: i] = src[i]
+                        bitmapMutableSpan[i] = src[i]
                     }
                 } else {
                     for i in 0..<Self.byteCount {
-                        bitmapMutableSpan[unchecked: i] = ~src[i]
+                        bitmapMutableSpan[i] = ~src[i]
                     }
                 }
                 return (.bitmapFilled, bitmap)
@@ -405,8 +408,9 @@ internal struct BuiltInUnicodeScalarSet {
             }
             
             let nonFillValue: UInt8 = isInverted ? 0xFF : 0x00
+            assert(bitmapMutableSpan.indices.contains(0..<Self.byteCount))
             for i in 0..<Self.byteCount {
-                bitmapMutableSpan[unchecked: i] = nonFillValue
+                bitmapMutableSpan[i] = nonFillValue
             }
             
             if charset == .whitespaceAndNewline || charset == .newline {
