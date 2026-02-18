@@ -84,14 +84,54 @@ internal final class __DataStorage : @unchecked Sendable {
     static func shouldAllocateCleared(_ size: Int) -> Bool {
         return (size > (128 * 1024))
     }
-    
+
+    // Layout of __DataStorage's byte allocation:
+    //
+    //            _bytes
+    //              ↓
+    //   ┌ ─ ─ ─ ─ ─┬───────────────────────────────┬───────────────────┐
+    //   ┊ prior    │ initialized bytes             ┊ uninitialized     │
+    //   ┊ prefix   │                               ┊ bytes             │
+    //   └ ─ ─ ─ ─ ─┴───────────────────────────────┴───────────────────┘
+    //   <─_offset─> <──────────── _length ────────>
+    //               <─────────────────── capacity ────────────────────>
+    //
+    // Layout of Slices:
+    //
+    //   ┌ ─ ─ ─ ─ ─┬──────────┬──────────────┬─────────┬───────────────┐
+    //   ┊ prior    │ prefix   ┊  slice       ┊ suffix  ┊ uninitialized │
+    //   ┊ prefix   │          ┊              ┊         ┊ bytes         │
+    //   └ ─ ─ ─ ─ ─┴──────────┴──────────────┴─────────┴───────────────┘
+    //   <─_offset─>
+    //   <─ slice.lowerBound ─>
+    //   <────── slice.upperBound ───────────>
+    //
+    //   The bounds of the slice are relative to the beginning of the prior prefix, not the start of the current allocation (_bytes)
+    //   This guarantees that indices remain stable for slices that are mutated
+
+    /// A pointer to the start of the referenced byte allocation
     @usableFromInline var _bytes: UnsafeMutableRawPointer?
+
+    /// The size of the initialized portion of the referenced byte allocation
     @usableFromInline var _length: Int
+
+    /// The total capacity of the initialized portion of the referenced byte allocation
     @usableFromInline var _capacity: Int
+
+    /// The size of the prior slice's prefix if the allocation was copied from a slice (to maintain stable indexing)
     @usableFromInline var _offset: Int
+
+    /// The deallocator to use when discarding the byte allocation
     @usableFromInline var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?
+
+    /// Whether the uninitialized portion of the byte allocation needs to be cleared before use
+    ///
+    /// When creating an allocation, the uninitialized portion may or may not be zeroed. When `true`, `_needToZero` indicates the uninitialized portion has nondeterministic contents and needs to be cleared. When `false`, the uninitialized portion is guaranteed to already be zeroed and does not need to be cleared before use.
     @usableFromInline var _needToZero: Bool
-    
+
+    /// A pointer to the referenced byte allocation, relative to the slice offsets
+    ///
+    /// This is a pointer to the start of the symbolic allocation range that begins at index 0. This pointer _must_ be offset by the slice's lowerBound. For slices that have been copied out of their original allocation, this may point to memory before the actual allocation.
     @inlinable // This is @inlinable as trivially computable.
     var bytes: UnsafeRawPointer? {
         return UnsafeRawPointer(_bytes)?.advanced(by: -_offset)
@@ -108,7 +148,10 @@ internal final class __DataStorage : @unchecked Sendable {
     func withUnsafeMutableBytes<Result>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
         return try apply(UnsafeMutableRawBufferPointer(start: _bytes!.advanced(by:range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
     }
-    
+
+    /// A pointer to the mutable referenced byte allocation, relative to the slice offsets
+    ///
+    /// This is a pointer to the start of the symbolic allocation range that begins at index 0. This pointer _must_ be offset by the slice's lowerBound. For slices that have been copied out of their original allocation, this may point to memory before the actual allocation.
     @inlinable // This is @inlinable as trivially computable.
     var mutableBytes: UnsafeMutableRawPointer? {
         return _bytes?.advanced(by: _offset &* -1) // _offset is guaranteed to be non-negative, so it can never overflow when negating
