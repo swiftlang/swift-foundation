@@ -175,11 +175,7 @@ internal struct BuiltInUnicodeScalarSet {
             return plane == 0 || isInverted
         } else if charset == .illegal {
             if isInverted {
-                if plane < 3 || plane > 13 {
-                    return true
-                } else {
-                    return false
-                }
+                return plane < 3 || plane > 13
             } else {
                 return true
             }
