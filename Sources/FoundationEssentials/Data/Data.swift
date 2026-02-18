@@ -248,7 +248,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
             _representation = (inline.count == 0) ? .empty : .inline(inline)
         } else {
-            let storage = __DataStorage(length: capacity)
+            let storage = __DataStorage(capacity: capacity)
             try storage.withUninitializedBytes(capacity, apply: initializer)
             let newCount = storage.length
             if InlineSlice.canStore(count: newCount) {

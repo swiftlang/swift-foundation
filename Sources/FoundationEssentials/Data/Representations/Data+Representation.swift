@@ -317,7 +317,7 @@ extension Data {
                     }
                     try inline.append(newCapacity: newCapacity, initializingWith: initializer)
                 } else {
-                    let storage = __DataStorage(length: newCapacity)
+                    let storage = __DataStorage(capacity: newCapacity)
                     inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
                     defer {
                         let count = storage.length
