@@ -165,7 +165,7 @@ extension AttributedSubstring {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol { // CustomStringConvertible
     public var description: String {
-        __guts.description(in: _stringBounds)
+        AttributedString.Guts._description(in: runs)
     }
 }
 
@@ -176,13 +176,11 @@ extension AttributedStringProtocol { // Equatable, Hashable
     @_specialize(where Self == AttributedSubstring, RHS == AttributedString)
     @_specialize(where Self == AttributedSubstring, RHS == AttributedSubstring)
     public static func == <RHS: AttributedStringProtocol>(lhs: Self, rhs: RHS) -> Bool {
-        AttributedString.Guts.characterwiseIsEqual(
-            lhs.__guts, in: lhs._stringBounds,
-            to: rhs.__guts, in: rhs._stringBounds)
+        AttributedString.Guts._characterwiseIsEqual(lhs.runs, to: rhs.runs)
     }
 
     public func hash(into hasher: inout Hasher) {
-        __guts.characterwiseHash(in: _stringBounds, into: &hasher)
+        AttributedString.Guts.characterwiseHash(runs: runs, into: &hasher)
     }
 }
 
