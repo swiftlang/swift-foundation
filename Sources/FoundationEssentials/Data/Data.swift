@@ -264,15 +264,15 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         capacity: Int,
         initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {
-      self = try Data(rawCapacity: capacity) { output throws(E) in
-          try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
-              try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
-                  var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
-                  try initializer(&span)
-                  count = span.finalize(for: buffer)
-              }
-          }
-      }
+        self = try Data(rawCapacity: capacity) { output throws(E) in
+            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
+                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
+                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
+                    try initializer(&span)
+                    count = span.finalize(for: buffer)
+                }
+            }
+        }
     }
 
     /// Initialize a `Data` without copying the bytes.
@@ -551,18 +551,18 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         addingCapacity uninitializedCount: Int,
         initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {
-      try self.append(addingRawCapacity: uninitializedCount) { output throws(E) in
-          try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
-              try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
-                  var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
-                  defer {
-                      count = span.finalize(for: buffer)
-                      span = OutputSpan()
-                  }
-                  try initializer(&span)
-              }
-          }
-      }
+        try self.append(addingRawCapacity: uninitializedCount) { output throws(E) in
+            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
+                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
+                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
+                    defer {
+                        count = span.finalize(for: buffer)
+                        span = OutputSpan()
+                    }
+                    try initializer(&span)
+                }
+            }
+        }
     }
 
     /// Append a buffer of bytes to the data.
