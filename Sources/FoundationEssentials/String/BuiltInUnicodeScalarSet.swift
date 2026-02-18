@@ -242,17 +242,14 @@ internal struct BuiltInUnicodeScalarSet {
                     return charInPlane > 0xFFFD
                 } else {
                     // fix for fetching ptr to legal
-                    let legalDataPtr = withUnsafePointer(to: __CFUniCharBitmapDataArray) { ptr in
-                        ptr.withMemoryRebound(to: __CFUniCharBitmapData.self, capacity: Int(__CFUniCharNumberOfBitmaps)) { bitmapDataPtr in
-                            bitmapDataPtr.advanced(by: _bitmapTableIndex!).pointee
-                        }
+                    let dataSpan = bitmapPtrForPlane(Int(planeNo))
+                    guard let dataSpan else {
+                        return false
                     }
-               
-                    if planeNo < _numberOfPlanes, let planePtr = legalDataPtr._planes[Int(planeNo)] {
-                        let span = Span(_unsafeStart: planePtr, count: Self.byteCount)
-                        return !_isMemberOfBitmap(scalar, span)
+                 
+                    if planeNo < _numberOfPlanes {
+                        return !_isMemberOfBitmap(scalar, dataSpan)
                     }
-               
                 }
             } else if charset == .controlAndFormatter {
                 if planeNo == 14 {
@@ -260,23 +257,23 @@ internal struct BuiltInUnicodeScalarSet {
                     return ((charInPlane == 0x01) || ((charInPlane > 0x1F) && (charInPlane < 0x80))) ? true : false
                 } else {
                     // dataPtr will be nil for illegal case, causing the check to fail; the C implementation returns legal pointer for dataPtr
-                    let dataPtr = bitmapPtrForPlane(Int(planeNo))
-                    guard let dataPtr else {
+                    let dataSpan = bitmapPtrForPlane(Int(planeNo))
+                    guard let dataSpan else {
                         return false
                     }
                  
                     if planeNo < _numberOfPlanes {
-                        return _isMemberOfBitmap(scalar, dataPtr)
+                        return _isMemberOfBitmap(scalar, dataSpan)
                     }
                 }
             } else {
                 // dataPtr will be nil for illegal case, causing the check to fail; the C implementation returns legal pointer for dataPtr
-                let dataPtr = bitmapPtrForPlane(Int(planeNo))
-                guard let dataPtr else {
+                let dataSpan = bitmapPtrForPlane(Int(planeNo))
+                guard let dataSpan else {
                     return false
                 }
                 if planeNo < _numberOfPlanes {
-                    return _isMemberOfBitmap(scalar, dataPtr)
+                    return _isMemberOfBitmap(scalar, dataSpan)
                 }
             }
             return false
