@@ -248,8 +248,9 @@ internal struct BuiltInUnicodeScalarSet {
                         }
                     }
                
-                    if planeNo < _numberOfPlanes {
-                        return !_isMemberOfBitmap(scalar, legalDataPtr._planes[Int(planeNo)])
+                    if planeNo < _numberOfPlanes, let planePtr = legalDataPtr._planes[Int(planeNo)] {
+                        let span = Span(_unsafeStart: planePtr, count: Self.byteCount)
+                        return !_isMemberOfBitmap(scalar, span)
                     }
                
                 }
@@ -283,11 +284,10 @@ internal struct BuiltInUnicodeScalarSet {
     }
     
     // CFUniCharIsMemberOfBitmap
-    func _isMemberOfBitmap(_ scalar: Unicode.Scalar, _ bitmap: UnsafePointer<UInt8>?) -> Bool {
-        guard let bitmap else { return false }
+    func _isMemberOfBitmap(_ scalar: Unicode.Scalar, _ span: Span<UInt8>) -> Bool {
         let theChar = UInt16(truncatingIfNeeded: scalar.value) // intentionally truncated
 
-        let position = bitmap[Int(theChar >> Self.bitShiftForByte)]
+        let position = span[Int(theChar >> Self.bitShiftForByte)]
         let mask = theChar & Self.bitShiftForMask
         let bitMask = UInt32(1) << mask
         let result = (UInt32(position) & bitMask) != 0
@@ -296,7 +296,8 @@ internal struct BuiltInUnicodeScalarSet {
     
     // CFUniCharGetBitmapPtrForPlane
     // Returns nil for whitespace, whitespace and newline, illegal, newline
-    public func bitmapPtrForPlane(_ plane: Int) -> UnsafePointer<UInt8>? {
+    @_lifetime(borrow self)
+    public func bitmapPtrForPlane(_ plane: Int) -> Span<UInt8>? {
         switch charset {
         case .whitespace, .whitespaceAndNewline, .illegal, .newline:
             return nil
@@ -314,7 +315,13 @@ internal struct BuiltInUnicodeScalarSet {
                     bitmapDataPtr.advanced(by: tableIndex).pointee
                 }
             }
-            return plane < data._numPlanes ? data._planes[plane] : nil
+            
+            guard plane < data._numPlanes, let planePtr = data._planes[plane] else {
+                return nil
+            }
+            
+            let temp = Span(_unsafeStart: planePtr, count: Self.byteCount)
+            return unsafe _overrideLifetime(temp, borrowing: self)
         }
     }
     
