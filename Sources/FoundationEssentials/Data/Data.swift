@@ -540,31 +540,17 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @available(FoundationPreview 6.4, *)
+    @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingRawCapacity uninitializedCount: Int,
         initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
         precondition(uninitializedCount >= 0, "uninitializedCount must not be negative")
-        let oldCount = count
-        let newCapacity = oldCount + uninitializedCount
-        switch _representation {
-        case .empty:
-            self = try Data(rawCapacity: newCapacity, initializingWith: initializer)
-        case .inline(var inline):
-            if newCapacity <= InlineData.maximumCapacity {
-                defer { _representation = .inline(inline) }
-                try inline.append(newCapacity: newCapacity, initializingWith: initializer)
-            } else {
-                fatalError() // large slice case
-            }
-        case .large(let storage):
-            fatalError()
-        case .slice(let storage):
-            fatalError()
-        }
+        try _representation.append(addingRawCapacity: uninitializedCount, initializingWith: initializer)
     }
 
     @available(FoundationPreview 6.4, *)
+    @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingCapacity uninitializedCount: Int,
         initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> Void

@@ -169,6 +169,19 @@ extension Data {
             slice.range = slice.range.lowerBound..<slice.range.upperBound + buffer.count
         }
         
+        @_alwaysEmitIntoClient
+        mutating func append<E: Error>(
+            newCapacity: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            ensureUniqueReference()
+            reserveCapacity(newCapacity)
+            defer {
+                slice.range = slice.range.lowerBound..<storage.length
+            }
+            try storage.withUninitializedBytes(newCapacity, apply: initializer)
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         subscript(index: Index) -> UInt8 {
             get {

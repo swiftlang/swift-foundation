@@ -183,6 +183,7 @@ extension Data {
             length += UInt8(buffer.count)
         }
         
+        @_alwaysEmitIntoClient
         mutating func append<E: Error>(
             newCapacity: Int,
             initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void

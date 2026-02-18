@@ -181,6 +181,20 @@ extension Data {
             slice = slice.lowerBound..<HalfInt(Int(slice.upperBound) + buffer.count)
         }
         
+        @_alwaysEmitIntoClient
+        mutating func append<E: Error>(
+            newCapacity: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            assert(endIndex + newCapacity < HalfInt.max)
+            ensureUniqueReference()
+            reserveCapacity(newCapacity)
+            defer {
+                slice = slice.lowerBound..<(HalfInt(storage.length))
+            }
+            try storage.withUninitializedBytes(newCapacity, apply: initializer)
+        }
+
         @inlinable // This is @inlinable as reasonably small.
         subscript(index: Index) -> UInt8 {
             get {

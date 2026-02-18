@@ -302,6 +302,59 @@ extension Data {
             }
         }
         
+        @available(FoundationPreview 6.4, *)
+        @_alwaysEmitIntoClient
+        mutating func append<E: Error>(
+            addingRawCapacity uninitializedCount: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            let oldCount = count
+            let newCapacity = oldCount + uninitializedCount
+
+            func appendInline(_ inline: consuming InlineData) throws(E) {
+                if InlineData.canStore(count: newCapacity) {
+                    defer {
+                        self = (inline.count == 0) ? .empty : .inline(inline)
+                    }
+                    try inline.append(newCapacity: newCapacity, initializingWith: initializer)
+                } else {
+                    let storage = __DataStorage(length: newCapacity)
+                    inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
+                    defer {
+                        let count = storage.length
+                        if InlineSlice.canStore(count: count) {
+                            self = .slice(InlineSlice(storage, count: count))
+                        } else {
+                            self = .large(LargeSlice(storage, count: count))
+                        }
+                    }
+                    try storage.withUninitializedBytes(newCapacity, apply: initializer)
+                }
+            }
+
+            switch self {
+            case .empty:
+                try appendInline(InlineData())
+            case .inline(let inline):
+                try appendInline(inline)
+            case .slice(var slice):
+                if InlineSlice.canStore(count: newCapacity) {
+                    self = .empty
+                    defer { self = .slice(slice) }
+                    try slice.append(newCapacity: newCapacity, initializingWith: initializer)
+                } else {
+                    self = .empty
+                    var newSlice = LargeSlice(slice)
+                    defer { self = .large(newSlice) }
+                    try newSlice.append(newCapacity: newCapacity, initializingWith: initializer)
+                }
+            case .large(var slice):
+                self = .empty
+                defer { self = .large(slice) }
+                try slice.append(newCapacity: newCapacity, initializingWith: initializer)
+            }
+        }
+
         @inlinable // This is @inlinable as reasonably small.
         mutating func resetBytes(in range: Range<Index>) {
             switch self {
