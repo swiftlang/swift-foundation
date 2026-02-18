@@ -314,7 +314,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
     
     @_alwaysEmitIntoClient
-    func withUninitializedBytes<Result: ~Copyable, E>(
+    func withUninitializedBytes<Result: ~Copyable, E: Error>(
         _ newCapacity: Int, apply: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
         let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: _length), count: newCapacity &- _length)

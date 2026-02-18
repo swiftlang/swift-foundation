@@ -77,7 +77,7 @@ extension Data {
         }
         
         @_alwaysEmitIntoClient @inline(__always)
-        init<E>(
+        init<E: Error>(
             rawCapacity: Int,
             initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {

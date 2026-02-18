@@ -240,7 +240,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @_alwaysEmitIntoClient
-    public init<E>(
+    public init<E: Error>(
         rawCapacity capacity: Int,
         initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
@@ -260,7 +260,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @_alwaysEmitIntoClient
-    public init<E>(
+    public init<E: Error>(
         capacity: Int,
         initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {
