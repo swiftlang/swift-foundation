@@ -152,7 +152,7 @@ internal struct BuiltInUnicodeScalarSet {
                 data.append(indexData)
                 
                 if status == .bitmapAll {
-                    let filledData = Data(repeating: 0xFF, count: 8192)
+                    let filledData = _CharacterSet.allOnes
                     data.append(filledData)
                 } else {
                     data.append(bitmap)
@@ -201,17 +201,17 @@ internal struct BuiltInUnicodeScalarSet {
         case .bitmapEmpty:
             // For empty result, return the appropriate fill pattern
             if isInverted {
-                return Data(repeating: 0x00, count: 65536 / 8)
+                return _CharacterSet.allOnes
             } else {
-                return Data(repeating: 0x00, count: 65536 / 8)
+                return _CharacterSet.allZeros
             }
             
         case .bitmapAll:
             // For all result, return the appropriate fill pattern
             if isInverted {
-                return Data(repeating: 0x00, count: 65536 / 8)
+                return _CharacterSet.allZeros
             } else {
-                return Data(repeating: 0xFF, count: 65536 / 8)
+                return _CharacterSet.allOnes
             }
             
         case .bitmapFilled:
@@ -321,7 +321,7 @@ internal struct BuiltInUnicodeScalarSet {
     // CFUniCharGetBitmapForPlane
     internal func bitmap(forPlane plane: Int, isInverted: Bool) -> (BitmapResult, Data) {
         
-        var bitmap = Data(repeating: 0x00, count: Self.byteCount)
+        var bitmap = _CharacterSet.allZeros
         var bitmapMutableSpan = bitmap.mutableSpan
         
         if let src = bitmapPtrForPlane(plane) {
@@ -484,6 +484,11 @@ internal struct BuiltInUnicodeScalarSet {
 
 #if !FOUNDATION_FRAMEWORK
 struct _CharacterSet {
+    
+    static let bitmapSize = 8192
+    static let allZeros = Data(repeating: 0x00, count: bitmapSize)
+    static let allOnes = Data(repeating: 0xFF, count: bitmapSize)
+    
     enum Operation {
         case add
         case remove
