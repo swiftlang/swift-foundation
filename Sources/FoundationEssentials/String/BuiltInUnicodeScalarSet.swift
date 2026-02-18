@@ -296,10 +296,11 @@ internal struct BuiltInUnicodeScalarSet {
     
     // CFUniCharGetBitmapPtrForPlane
     // Returns nil for whitespace, whitespace and newline, illegal, newline
+    // Returns legal bitmap data for illegal charset, caller must invert it later
     @_lifetime(borrow self)
     public func bitmapPtrForPlane(_ plane: Int) -> Span<UInt8>? {
         switch charset {
-        case .whitespace, .whitespaceAndNewline, .illegal, .newline:
+        case .whitespace, .whitespaceAndNewline, .newline:
             return nil
         default:
             guard let tableIndex = _bitmapTableIndex else {
@@ -333,7 +334,12 @@ internal struct BuiltInUnicodeScalarSet {
         
         if let src = bitmapPtrForPlane(plane) {
             assert(bitmapMutableSpan.indices.contains(0..<Self.byteCount))
-            if isInverted {
+            
+            // For illegal charset, the bitmap data is stored as LEGAL characters
+            // So we need to invert the sense of the inversion
+            let shouldInvert = (charset == .illegal) ? !isInverted : isInverted
+            
+            if shouldInvert {
                 for i in 0..<Self.byteCount {
                     bitmapMutableSpan[i] = ~src[i]
                 }
@@ -344,28 +350,8 @@ internal struct BuiltInUnicodeScalarSet {
             }
             return (.bitmapFilled, bitmap)
         } else if charset == .illegal {
-            let index = _bitmapTableIndex!
-            
-            let data = withUnsafePointer(to: __CFUniCharBitmapDataArray) { ptr in
-                ptr.withMemoryRebound(to: __CFUniCharBitmapData.self, capacity: Int(__CFUniCharNumberOfBitmaps)) { bitmapDataPtr in
-                    bitmapDataPtr.advanced(by: index).pointee
-                }
-            }
-            
-
-            if plane < data._numPlanes, let src = data._planes[plane] {
-                assert(bitmapMutableSpan.indices.contains(0..<Self.byteCount))
-                if isInverted {
-                    for i in 0..<Self.byteCount {
-                        bitmapMutableSpan[i] = src[i]
-                    }
-                } else {
-                    for i in 0..<Self.byteCount {
-                        bitmapMutableSpan[i] = ~src[i]
-                    }
-                }
-                return (.bitmapFilled, bitmap)
-            } else if plane == 14 {
+            // Special handling for planes 14, 15, and 16 which don't have bitmap data
+            if plane == 14 {
                 let asciiRange: UInt8 = isInverted ? 0xFF : 0x00
                 let otherRange: UInt8 = isInverted ? 0x00 : 0xFF
                 
