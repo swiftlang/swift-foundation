@@ -76,6 +76,27 @@ extension Data {
             length = UInt8(count)
         }
         
+        @_alwaysEmitIntoClient @inline(__always)
+        init<E>(
+            rawCapacity: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            self.init()
+            do throws(E) {
+                let count = try Swift.withUnsafeMutableBytes(of: &bytes) {
+                    buffer throws(E) in
+                    var output = OutputRawSpan(buffer: buffer, initializedCount: 0)
+                    try initializer(&output)
+                    return output.finalize(for: buffer)
+                }
+                assert(count <= rawCapacity)
+                length = UInt8(count)
+            } catch {
+                self = .init()
+                throw error
+            }
+        }
+
         @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ slice: InlineSlice, count: Int) {
             self.init(count: count)

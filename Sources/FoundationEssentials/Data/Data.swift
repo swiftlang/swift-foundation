@@ -239,29 +239,21 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = .empty
     }
 
-    @available(FoundationPreview 6.2, *)
-    @_alwaysEmitIntoClient
+    @available(FoundationPreview 6.4, *)
     public init<E>(
         rawCapacity capacity: Int,
         initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
-        self = Data(count: capacity) // initialized with zeroed buffer
-        let count = try self.withUnsafeMutableBytes { buffer throws(E) in
-            var output = OutputRawSpan(buffer: buffer, initializedCount: capacity)
-            output.removeAll()
-            do throws(E) {
-                try initializer(&output)
-                return output.finalize(for: buffer)
-            } catch {
-                output.removeAll()
-                throw error
-            }
-        }
-        assert(count <= self.count)
-        self.replaceSubrange(count..<self.count, with: EmptyCollection())
+      if capacity <= InlineData.maximumCapacity {
+        let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
+        _representation = .inline(inline)
+      } else {
+        // __DataStorage implementation
+        fatalError()
+      }
     }
 
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationPreview 6.4, *)
     @_alwaysEmitIntoClient
     public init<E>(
         capacity: Int,
