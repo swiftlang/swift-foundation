@@ -44,8 +44,8 @@ private func _timeZoneIdentifier_ICU(forWindowsIdentifier windowsIdentifier: Str
 internal import _ForSwiftFoundation
 
 internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool {
-     _foundation_swift_ICUResourceTimeZone_feature_enabled()
- }
+    _foundation_swift_ICUResourceTimeZone_feature_enabled()
+}
 #else
 internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool { return false }
 #endif

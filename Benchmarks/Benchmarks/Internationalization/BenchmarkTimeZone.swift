@@ -154,7 +154,6 @@ func timeZoneBenchmarks() {
         fatalError("unexpected failure when creating time zone")
     }
 
-    let locale = Locale(identifier: "jp_JP")
     let PacificTimeConfiguration = Benchmark.Configuration(scalingFactor: .mega)
 
 

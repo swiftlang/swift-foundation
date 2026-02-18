@@ -192,6 +192,15 @@ let package = Package(
             ]
         ),
         .executableTarget(
+            name: "CharacterSetBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/CharacterSet",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
             name: "DecimalBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/Decimal",
