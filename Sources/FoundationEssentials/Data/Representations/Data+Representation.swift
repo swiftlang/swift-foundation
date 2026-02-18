@@ -302,7 +302,6 @@ extension Data {
             }
         }
         
-        @available(FoundationPreview 6.4, *)
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
             addingRawCapacity uninitializedCount: Int,

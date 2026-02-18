@@ -239,7 +239,6 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = .empty
     }
 
-    @available(FoundationPreview 6.4, *)
     @_alwaysEmitIntoClient
     public init<E>(
         rawCapacity capacity: Int,
@@ -260,7 +259,6 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    @available(FoundationPreview 6.4, *)
     @_alwaysEmitIntoClient
     public init<E>(
         capacity: Int,
@@ -539,7 +537,6 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    @available(FoundationPreview 6.4, *)
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingRawCapacity uninitializedCount: Int,
@@ -549,7 +546,6 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try _representation.append(addingRawCapacity: uninitializedCount, initializingWith: initializer)
     }
 
-    @available(FoundationPreview 6.4, *)
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingCapacity uninitializedCount: Int,
