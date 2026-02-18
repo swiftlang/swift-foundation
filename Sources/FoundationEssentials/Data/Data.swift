@@ -244,19 +244,8 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         rawCapacity capacity: Int,
         initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
-        if InlineData.canStore(count: capacity) {
-            let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
-            _representation = (inline.count == 0) ? .empty : .inline(inline)
-        } else {
-            let storage = __DataStorage(capacity: capacity)
-            try storage.withUninitializedBytes(capacity, apply: initializer)
-            let newCount = storage.length
-            if InlineSlice.canStore(count: newCount) {
-                _representation = .slice(InlineSlice(storage, count: newCount))
-            } else {
-                _representation = .large(LargeSlice(storage, count: newCount))
-            }
-        }
+        precondition(capacity >= 0, "capacity must not be negative")
+        _representation = try _Representation(capacity: capacity, initializer)
     }
 
     @_alwaysEmitIntoClient

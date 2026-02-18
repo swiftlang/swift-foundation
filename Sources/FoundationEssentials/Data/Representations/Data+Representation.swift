@@ -93,6 +93,25 @@ extension Data {
             }
         }
         
+        @_alwaysEmitIntoClient
+        init<E: Error>(
+            capacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            if InlineData.canStore(count: capacity) {
+                let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
+                self = (inline.count == 0) ? .empty : .inline(inline)
+            } else {
+                let storage = __DataStorage(length: capacity)
+                try storage.withUninitializedBytes(capacity, apply: initializer)
+                let newCount = storage.length
+                if InlineSlice.canStore(count: newCount) {
+                    self = .slice(InlineSlice(storage, count: newCount))
+                } else {
+                    self = .large(LargeSlice(storage, count: newCount))
+                }
+            }
+        }
+
         @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
         mutating func reserveCapacity(_ minimumCapacity: Int) {
             guard minimumCapacity > 0 else { return }
