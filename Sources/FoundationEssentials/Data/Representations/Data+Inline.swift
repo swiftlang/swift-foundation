@@ -183,6 +183,27 @@ extension Data {
             length += UInt8(buffer.count)
         }
         
+        mutating func append<E: Error>(
+            newCapacity: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            assert(newCapacity <= capacity)
+            let oldCount = self.count
+            var addedCount = 0
+            try Swift.withUnsafeMutableBytes(of: &bytes) {
+                buffer throws(E) in
+                let suffix = buffer.suffix(from: oldCount)
+                var span = OutputRawSpan(buffer: suffix, initializedCount: 0)
+                defer {
+                    addedCount = unsafe span.finalize(for: suffix)
+                    assert(oldCount+addedCount <= newCapacity)
+                    span = OutputRawSpan()
+                }
+                try initializer(&span)
+            }
+            length = UInt8(oldCount+addedCount)
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         subscript(index: Index) -> UInt8 {
             get {
