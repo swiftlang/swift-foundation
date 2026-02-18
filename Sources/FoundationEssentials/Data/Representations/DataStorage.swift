@@ -315,15 +315,16 @@ internal final class __DataStorage : @unchecked Sendable {
     
     @_alwaysEmitIntoClient
     func withUninitializedBytes<Result: ~Copyable, E: Error>(
-        _ newCapacity: Int, apply: (inout OutputRawSpan) throws(E) -> Result
+        _ newCapacity: Int, _ newCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
         let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: _length), count: newCapacity &- _length)
         var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
         defer {
-            _length &+= outputSpan.finalize(for: buffer)
+            newCount = outputSpan.finalize(for: buffer)
+            _length &+= newCount
             outputSpan = OutputRawSpan()
         }
-        return try apply(&outputSpan)
+        return try initializer(&outputSpan)
     }
 
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.

@@ -101,9 +101,9 @@ extension Data {
                 let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
                 self = (inline.count == 0) ? .empty : .inline(inline)
             } else {
-                let storage = __DataStorage(length: capacity)
-                try storage.withUninitializedBytes(capacity, apply: initializer)
-                let newCount = storage.length
+                let storage = __DataStorage(capacity: capacity)
+                var newCount = 0
+                try storage.withUninitializedBytes(capacity, &newCount, initializer)
                 if InlineSlice.canStore(count: newCount) {
                     self = .slice(InlineSlice(storage, count: newCount))
                 } else {
@@ -323,8 +323,8 @@ extension Data {
         
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
-            addingRawCapacity uninitializedCount: Int,
-            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+            addingCapacity uninitializedCount: Int,
+            _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
             let oldCount = count
             let newCapacity = oldCount + uninitializedCount
@@ -334,19 +334,20 @@ extension Data {
                     defer {
                         self = (inline.count == 0) ? .empty : .inline(inline)
                     }
-                    try inline.append(newCapacity: newCapacity, initializingWith: initializer)
+                    try inline.append(newCapacity, initializer)
                 } else {
                     let storage = __DataStorage(capacity: newCapacity)
                     inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
+                    var newCount = 0
                     defer {
-                        let count = storage.length
-                        if InlineSlice.canStore(count: count) {
-                            self = .slice(InlineSlice(storage, count: count))
+                        assert(newCount == storage.length)
+                        if InlineSlice.canStore(count: newCount) {
+                            self = .slice(InlineSlice(storage, count: newCount))
                         } else {
-                            self = .large(LargeSlice(storage, count: count))
+                            self = .large(LargeSlice(storage, count: newCount))
                         }
                     }
-                    try storage.withUninitializedBytes(newCapacity, apply: initializer)
+                    try storage.withUninitializedBytes(newCapacity, &newCount, initializer)
                 }
             }
 
@@ -359,17 +360,17 @@ extension Data {
                 if InlineSlice.canStore(count: newCapacity) {
                     self = .empty
                     defer { self = .slice(slice) }
-                    try slice.append(newCapacity: newCapacity, initializingWith: initializer)
+                    try slice.append(newCapacity, initializer)
                 } else {
                     self = .empty
                     var newSlice = LargeSlice(slice)
                     defer { self = .large(newSlice) }
-                    try newSlice.append(newCapacity: newCapacity, initializingWith: initializer)
+                    try newSlice.append(newCapacity, initializer)
                 }
             case .large(var slice):
                 self = .empty
                 defer { self = .large(slice) }
-                try slice.append(newCapacity: newCapacity, initializingWith: initializer)
+                try slice.append(newCapacity, initializer)
             }
         }
 

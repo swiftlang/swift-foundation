@@ -532,7 +532,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
         precondition(uninitializedCount >= 0, "uninitializedCount must not be negative")
-        try _representation.append(addingRawCapacity: uninitializedCount, initializingWith: initializer)
+        try _representation.append(addingCapacity: uninitializedCount, initializer)
     }
 
     @_alwaysEmitIntoClient

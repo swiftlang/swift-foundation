@@ -185,8 +185,7 @@ extension Data {
         
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
-            newCapacity: Int,
-            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+            _ newCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
             assert(newCapacity <= capacity)
             let oldCount = self.count

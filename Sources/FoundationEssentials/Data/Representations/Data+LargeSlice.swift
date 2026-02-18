@@ -171,15 +171,15 @@ extension Data {
         
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
-            newCapacity: Int,
-            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+            _ newCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
             ensureUniqueReference()
             reserveCapacity(newCapacity)
+            var newCount = 0
             defer {
-                slice.range = slice.range.lowerBound..<storage.length
+                slice.range = slice.range.lowerBound..<(slice.range.upperBound + newCount)
             }
-            try storage.withUninitializedBytes(newCapacity, apply: initializer)
+            try storage.withUninitializedBytes(newCapacity, &newCount, initializer)
         }
 
         @inlinable // This is @inlinable as trivially computable.
