@@ -58,7 +58,9 @@ extension ICU {
         func resourceBundle(forKey key: String) throws(ICUError) -> ResourceBundle? {
             let subBundle = try lockedBundle.withLock { bundle throws(ICUError) in
                 var status: UErrorCode = U_ZERO_ERROR
-                let subBundle = ures_getByKey(bundle, key, nil, &status)
+                let subBundle = key.withCString { ptr in
+                    ures_getByKey(bundle, ptr, nil, &status)
+                }
                 try status.checkSuccess()
                 return subBundle
             }
@@ -87,35 +89,38 @@ extension ICU {
             return ResourceBundle(existing: subBundle)
         }
 
-        func asIntegers() throws(ICUError) -> [Int32] {
-            let (vector, length) = try lockedBundle.withLock { bundle throws(ICUError) in
+        func withIntegers<R: ~Copyable, E>(_ body: (Span<Int32>) throws(E)-> (R)) throws(E) -> R {
+            let (vector, length) =  lockedBundle.withLock { bundle  in
                 var length: Int32 = 0
                 var status: UErrorCode = U_ZERO_ERROR
 
                 let vector = ures_getIntVector(bundle, &length, &status)
-                try status.checkSuccess()
 
-                guard let vector else {
-                    throw ICUError(code: U_INVALID_FORMAT_ERROR)
+                guard let vector, status.isSuccess else {
+                    return (nil as UnsafePointer<Int32>?, 0)
+
                 }
-                return (vector, length)
+                return (vector, Int(length))
             }
 
-            // FIXME: return Span if possible
-            return Array(UnsafeBufferPointer(start: vector, count: Int(length)))
+            // Calling `body` from outside of the lock in case it takes a long time to finish
+            return try body(UnsafeBufferPointer<Int32>(start: vector, count: length).span)
         }
 
-        func getBinary() throws(ICUError) -> [UInt8] {
-            let (binary, length) = try lockedBundle.withLock { bundle throws(ICUError) in
+        func withBinary<R: ~Copyable, E>(_ body: (Span<UInt8>) throws(E) -> (R)) throws(E) -> R {
+            let (binary, length) = lockedBundle.withLock { bundle in
                 var length: Int32 = 0
                 var status: UErrorCode = U_ZERO_ERROR
 
                 let binary = ures_getBinary(bundle, &length, &status)
-                try status.checkSuccess()
-                return (binary, length)
+                guard status.isSuccess else {
+                    return (nil as UnsafePointer<UInt8>?, 0)
+                }
+                return (binary, Int(length))
             }
-            // FIXME: return Span if possible
-            return Array(UnsafeBufferPointer(start: binary, count: Int(length)))
+
+            // Calling `body` from outside of the lock in case it takes a long time to finish
+            return try body(UnsafeBufferPointer<UInt8>(start: binary, count: length).span)
         }
 
         func asString() throws(ICUError) -> String {
