@@ -313,6 +313,19 @@ internal final class __DataStorage : @unchecked Sendable {
         __DataStorage.move(_bytes!.advanced(by: origLength), bytes, length)
     }
     
+    @_alwaysEmitIntoClient
+    func withUninitializedBytes<Result: ~Copyable, E>(
+        _ newCapacity: Int, apply: (inout OutputRawSpan) throws(E) -> Result
+    ) throws(E) -> Result {
+        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: _length), count: newCapacity &- _length)
+        var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
+        defer {
+            _length &+= outputSpan.finalize(for: buffer)
+            outputSpan = OutputRawSpan()
+        }
+        return try apply(&outputSpan)
+    }
+
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func get(_ index: Int) -> UInt8 {
         // index must have already been validated by the caller

@@ -240,17 +240,24 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @available(FoundationPreview 6.4, *)
+    @_alwaysEmitIntoClient
     public init<E>(
         rawCapacity capacity: Int,
         initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
-      if capacity <= InlineData.maximumCapacity {
-        let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
-        _representation = .inline(inline)
-      } else {
-        // __DataStorage implementation
-        fatalError()
-      }
+        if InlineData.canStore(count: capacity) {
+            let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
+            _representation = (inline.count == 0) ? .empty : .inline(inline)
+        } else {
+            let storage = __DataStorage(length: capacity)
+            try storage.withUninitializedBytes(capacity, apply: initializer)
+            let newCount = storage.length
+            if InlineSlice.canStore(count: newCount) {
+                _representation = .slice(InlineSlice(storage, count: newCount))
+            } else {
+                _representation = .large(LargeSlice(storage, count: newCount))
+            }
+        }
     }
 
     @available(FoundationPreview 6.4, *)
