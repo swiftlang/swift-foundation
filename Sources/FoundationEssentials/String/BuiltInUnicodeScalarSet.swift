@@ -338,11 +338,11 @@ internal struct BuiltInUnicodeScalarSet {
             
             if shouldInvert {
                 for i in 0..<Self.byteCount {
-                    bitmapMutableSpan[i] = ~src[i]
+                    bitmapMutableSpan[unchecked: i] = ~src[i]
                 }
             } else {
                 for i in 0..<Self.byteCount {
-                    bitmapMutableSpan[i] = src[i]
+                    bitmapMutableSpan[unchecked: i] = src[i]
                 }
             }
             return (.bitmapFilled, bitmap)
@@ -393,7 +393,7 @@ internal struct BuiltInUnicodeScalarSet {
             let nonFillValue: UInt8 = isInverted ? 0xFF : 0x00
             assert(bitmapMutableSpan.count >= Self.byteCount)
             for i in 0..<Self.byteCount {
-                bitmapMutableSpan[i] = nonFillValue
+                bitmapMutableSpan[unchecked: i] = nonFillValue
             }
             
             if charset == .whitespaceAndNewline || charset == .newline {
