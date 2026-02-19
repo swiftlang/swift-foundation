@@ -338,13 +338,14 @@ extension Data {
                 } else {
                     let storage = __DataStorage(capacity: newCapacity)
                     inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
+                    let oldCount = storage.length
                     var newCount = 0
                     defer {
-                        assert(newCount == storage.length)
+                        assert(newCount+oldCount == storage.length)
                         if InlineSlice.canStore(count: newCount) {
-                            self = .slice(InlineSlice(storage, count: newCount))
+                            self = .slice(InlineSlice(storage, count: storage.length))
                         } else {
-                            self = .large(LargeSlice(storage, count: newCount))
+                            self = .large(LargeSlice(storage, count: storage.length))
                         }
                     }
                     try storage.withUninitializedBytes(newCapacity, &newCount, initializer)

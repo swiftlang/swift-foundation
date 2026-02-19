@@ -191,19 +191,21 @@ extension Data {
             assert(newCapacity <= capacity)
             let oldCount = self.count
             var newCount = 0
+            defer {
+                length = UInt8(truncatingIfNeeded: newCount)
+            }
             try Swift.withUnsafeMutableBytes(of: &bytes) {
                 buffer throws(E) in
-                let suffix = buffer.suffix(from: oldCount)
-                var span = OutputRawSpan(buffer: suffix, initializedCount: 0)
+                let slice = buffer[oldCount..<newCapacity]
+                var span = OutputRawSpan(buffer: slice, initializedCount: 0)
                 defer {
-                    let addedCount = unsafe span.finalize(for: suffix)
+                    let addedCount = unsafe span.finalize(for: slice)
                     newCount = oldCount + addedCount
                     precondition(newCount <= newCapacity)
                     span = OutputRawSpan()
                 }
                 try initializer(&span)
             }
-            length = UInt8(truncatingIfNeeded: newCount)
         }
 
         @inlinable // This is @inlinable as trivially computable.

@@ -889,6 +889,80 @@ private final class DataTests {
         #expect(Data([1]) == slice)
     }
 
+    @Test func appendWithOutputRawSpan() {
+        struct LocalError: Error, Equatable {}
+
+        // Append to the inline representation
+        var data = Data()
+        data.append(addingRawCapacity: 8) {
+            #expect($0.freeCapacity == 8)
+        }
+        switch data._representation {
+        case .empty:
+            #expect(data.isEmpty)
+        default:
+            Issue.record("Data representation should be .empty")
+        }
+
+        data = Data()
+        try? data.append(addingRawCapacity: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(.max)
+            throw LocalError()
+        }
+        switch data._representation {
+        case .inline:
+            #expect(data.count == 1)
+            #expect(data[0] == .max)
+        default:
+            Issue.record("Data representation should be .inline")
+        }
+
+        data = Data(0..<4)
+        let count0 = data.count
+        data.append(addingRawCapacity: 20) {
+            #expect($0.freeCapacity == 20)
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == count0)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+
+        try? data.append(addingRawCapacity: 20) {
+            $0.append(repeating: .max, count: 20, as: UInt8.self)
+            let full = $0.isFull
+            #expect(full)
+            throw LocalError()
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == 24)
+            #expect(data.last == .max)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+
+        // Append to the `InlineSlice` representation
+        data = Data(0..<23)
+        data.append(addingRawCapacity: 20) {
+          $0.append(0)
+        }
+        #expect(data.count == 24)
+        try? data.append(addingRawCapacity: 1) {
+            $0.append(.max)
+            throw LocalError()
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == 25)
+            #expect(data.last == .max)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+    }
+
     // This test uses `repeatElement` to produce a sequence -- the produced sequence reports its actual count as its `.underestimatedCount`.
     @Test func appendingNonContiguousSequence_exactCount() {
         var d = Data()
@@ -2714,19 +2788,65 @@ struct LargeDataTests {
     }
 
     @Test func largeRepresentationOutputRawSpanInitAndAppend() throws {
-        let data = Data(rawCapacity: largeCount) {
+        struct LocalError: Error, Equatable {}
+
+        var data = Data(rawCapacity: largeCount) {
             #expect($0.freeCapacity == largeCount)
             $0.withUnsafeMutableBytes { (buffer, count) in
                 buffer.initializeMemory(as: UInt8.self, repeating: .max)
                 count = buffer.count
             }
         }
-        #expect(data.count == largeCount)
         switch data._representation {
         case .large:
-          #expect(data.count == largeCount)
+            #expect(data.count == largeCount)
         default:
-          Issue.record("Data representation should be .large")
+            Issue.record("Data representation should be .large")
+        }
+
+        // exercise `LargeSlice.append()`
+        data.append(addingRawCapacity: 20) {
+            #expect($0.freeCapacity == 20)
+            $0.append(51)
+        }
+        #expect(data.count == largeCount+1)
+        #expect(data.last == 51)
+        try? data.append(addingRawCapacity: 10) {
+            #expect($0.freeCapacity == 10)
+            $0.append(52)
+            throw LocalError()
+        }
+        #expect(data.count == largeCount+2)
+        #expect(data.last == 52)
+
+        // transform from the `InlineData` form to the `LargeSlice` form
+        data = Data([1, 2, 3])
+        data.append(addingRawCapacity: largeCount) {
+            $0.withUnsafeMutableBytes { (buffer, count) in
+                buffer.initializeMemory(as: UInt8.self, repeating: .max)
+                count = buffer.count
+            }
+        }
+        switch data._representation {
+        case .large:
+            #expect(data.count == largeCount+3)
+        default:
+            Issue.record("Data representation should be .large")
+        }
+
+        // transform from the `InlineSlice` form to the `LargeSlice` form
+        data = Data(0..<24)
+        data.append(addingRawCapacity: largeCount) {
+            $0.withUnsafeMutableBytes { (buffer, count) in
+                buffer.initializeMemory(as: UInt8.self, repeating: .max)
+                count = buffer.count
+            }
+        }
+        switch data._representation {
+        case .large:
+            #expect(data.count == largeCount+24)
+        default:
+            Issue.record("Data representation should be .large")
         }
     }
 }
