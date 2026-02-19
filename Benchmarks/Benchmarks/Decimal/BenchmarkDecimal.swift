@@ -24,12 +24,22 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(2)
     Benchmark.defaultConfiguration.maxIterations = .count(100_000_000)
 
-    Benchmark("Decimal init from Double") { benchmark in
-        let double = Double.pi
+    Benchmark("Decimal init from Double(1)") { benchmark in
+        let value = Double(1)
 
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
-            blackHole(Decimal(double))
+            blackHole(Decimal.init(value))
+        }
+        benchmark.stopMeasurement()
+    }
+
+    Benchmark("Decimal init from Double.pi") { benchmark in
+        let value = Double.pi
+
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            blackHole(Decimal.init(value))
         }
         benchmark.stopMeasurement()
     }
