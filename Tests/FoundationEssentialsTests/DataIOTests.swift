@@ -133,11 +133,11 @@ private final class DataIOTests {
         // Data doesn't have a direct API to write with attributes, but our I/O code has it. Use it via @testable interface here.
         
         let writeAttrs: [String : Data] = [FileAttributeKey.hfsCreatorCode.rawValue : "abcd".data(using: .ascii)!]
-        try writeToFile(path: .url(url), data: writeData, options: [], attributes: writeAttrs)
+        try writeToFile(path: url, buffer: writeData.bytes, options: [], attributes: writeAttrs)
         
         // Verify attributes
         var readAttrs: [String : Data] = [:]
-        let readData = try readDataFromFile(path: .url(url), reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
+        let readData = try readDataFromFile(path: url, reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
         
         #expect(writeData == readData)
         #expect(writeAttrs == readAttrs)
@@ -215,7 +215,6 @@ private final class DataIOTests {
 
 extension LargeDataTests {
     // This test is placed in the LargeDataTests suite since it allocates an extremely large amount of memory for some devices
-#if !os(watchOS)
     @Test func readLargeFile() throws {
         let url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: url) }
@@ -236,6 +235,5 @@ extension LargeDataTests {
         #expect(data.count == readNS.count)
 #endif
     }
-#endif
 }
 

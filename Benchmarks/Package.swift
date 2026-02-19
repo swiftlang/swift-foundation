@@ -88,7 +88,7 @@ switch usePackage {
 
 let package = Package(
     name: "benchmarks",
-    platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")], // Should match parent project
+    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")], // Should match parent project
     dependencies: packageDependency,
     targets: [
         .executableTarget(
@@ -113,6 +113,15 @@ let package = Package(
             name: "EssentialsBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/Essentials",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
+            name: "DataBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/Data",
             swiftSettings: swiftSettings,
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
@@ -177,6 +186,15 @@ let package = Package(
             name: "Base64Benchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/Base64",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
+            name: "CharacterSetBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/CharacterSet",
             swiftSettings: swiftSettings,
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")

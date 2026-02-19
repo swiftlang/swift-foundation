@@ -35,6 +35,7 @@ private struct GregorianCalendarTests {
         #expect(gregorianCalendar.numberOfDaysInMonth(14, year: 2024) == 28) //  equivalent to month: 2, year: 2025, not leap
 
         #expect(gregorianCalendar.numberOfDaysInMonth(50, year: 2024) == 29) //  equivalent to month: 2, year: 2028, leap
+        #expect(gregorianCalendar.numberOfDaysInMonth(-22, year: 2026) == 29) //  equivalent to month: 2, year: 2024, leap
     }
 
     @Test func testRemoteJulianDayCrash() {
@@ -583,6 +584,19 @@ private struct GregorianCalendarTests {
             testAdding(.init(month: 2), to: date2, wrap: false, expected: Date(timeIntervalSince1970: 983404800)) // 2001-03-01 00:00:00 UTC, 2001-02-28 16:00:00 PT
         }
     }
+#if _pointerBitWidth(_64)
+    @Test func testAddLargeValue() throws {
+
+        let date = Date(timeIntervalSinceReferenceDate: 656157793.922098)
+        let calendar = Calendar(identifier: .gregorian)
+        let value = 578721382704613386
+
+        let allComponents: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+        for component in allComponents {
+            _ = calendar.date(byAdding: component, value: value, to: date)
+        }
+    }
+#endif
 
     // MARK: - Ordinality
 

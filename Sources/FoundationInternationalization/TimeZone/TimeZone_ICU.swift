@@ -39,13 +39,27 @@ private func _timeZoneIdentifier_ICU(forWindowsIdentifier windowsIdentifier: Str
 }
 #endif
 
-internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
+#if FOUNDATION_FRAMEWORK
+// For feature flag
+internal import _ForSwiftFoundation
+
+internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool {
+    _foundation_swift_ICUResourceTimeZone_feature_enabled()
+}
+#else
+internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool { return false }
+#endif
+
+final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     init?(secondsFromGMT: Int) {
         fatalError("Unexpected init")
     }
 
      // This is safe because it's only mutated at deinit time
-    nonisolated(unsafe) private let _timeZone : LockedState<UnsafePointer<UTimeZone?>>
+    nonisolated(unsafe) private let _timeZone : LockedState<UnsafePointer<UTimeZone?>>?
+
+    // This is only currently in use for foundation_swift_ICUResourceTimeZone_feature_enabled
+    let _timeZoneICUResource: _TimeZoneICUResource?
 
     // This type is safely sendable because it is guarded by a lock in _TimeZoneICU and we never vend it outside of the lock so it can only ever be accessed from within the lock
     struct State : @unchecked Sendable {
@@ -86,10 +100,13 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             ucal_close(c)
         }
 
-        _timeZone.withLock {
-            let mutableT = UnsafeMutablePointer(mutating: $0)
-            uatimezone_close(mutableT)
+        if let _timeZone {
+            _timeZone.withLock {
+                let mutableT = UnsafeMutablePointer(mutating: $0)
+                uatimezone_close(mutableT)
+            }
         }
+
     }
 
     required init?(identifier: String) {
@@ -120,9 +137,17 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         guard let timeZone else {
             return nil
         }
-        self._timeZone = .init(initialState:timeZone)
+
         self.name = name
         lock = LockedState(initialState: State())
+        if foundation_swift_ICUResourceTimeZone_feature_enabled(), let timeZoneICUResource = try? _TimeZoneICUResource(identifier: name) {
+            // TODO: add logging for when initializaiton fails
+            self._timeZoneICUResource = timeZoneICUResource
+            self._timeZone = nil
+        } else {
+            self._timeZone = .init(initialState:timeZone)
+            self._timeZoneICUResource = nil
+        }
     }
     
     // MARK: -
@@ -135,6 +160,17 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func secondsFromGMT(for date: Date) -> Int {
+        if let _timeZoneICUResource {
+            return _timeZoneICUResource.secondsFromGMT(for: date)
+        }
+
+        return _secondsFromGMT(for: date)
+    }
+
+    func _secondsFromGMT(for date: Date) -> Int {
+        guard let _timeZone else {
+            preconditionFailure()
+        }
        return _timeZone.withLock {
             var rawOffset: Int32 = 0
             var dstOffset: Int32 = 0
@@ -160,7 +196,17 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
-        _timeZone.withLock {
+        if let _timeZoneICUResource {
+            return _timeZoneICUResource.daylightSavingTimeOffset(for: date)
+        }
+        return _daylightSavingTimeOffset(for: date)
+    }
+
+    func _daylightSavingTimeOffset(for date: Date) -> TimeInterval {
+        guard let _timeZone else {
+            preconditionFailure()
+        }
+        return _timeZone.withLock {
             var rawOffset_unused: Int32 = 0
             var dstOffset: Int32 = 0
             var status = U_ZERO_ERROR
@@ -173,6 +219,16 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+        if let _timeZoneICUResource {
+            return _timeZoneICUResource.nextTransition(after: date, inclusive: false)
+        }
+        return _nextDaylightSavingTimeTransition(after: date)
+    }
+
+    func _nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+        guard let _timeZone else {
+            preconditionFailure()
+        }
         let limit = Date.validCalendarRange.upperBound
         let answer: UDate? = _timeZone.withLock {
             var status = U_ZERO_ERROR
@@ -192,6 +248,18 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
 
     func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+        if let _timeZoneICUResource {
+            let offsets = _timeZoneICUResource.rawAndDSTOffset(for: date, nonExistingTimePolicy: skippedTimePolicy, duplicatedTimePolicy: repeatedTimePolicy)
+            return (offsets.0, Double(offsets.1))
+        }
+        return _rawAndDaylightSavingTimeOffset(for: date, repeatedTimePolicy: repeatedTimePolicy, skippedTimePolicy: skippedTimePolicy)
+    }
+
+    func _rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+        guard let _timeZone else {
+            preconditionFailure()
+        }
+        
         let icuDuplicatedTime: UTimeZoneLocalOption
         switch repeatedTimePolicy {
         case .former:

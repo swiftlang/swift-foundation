@@ -227,6 +227,10 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 return offsetFixed(0)
             } else if let cached = fixedTimeZones[identifier] {
                 return cached
+            } else if let innerTZ = _timeZoneGMTClass().init(identifier: identifier) {
+                // Identifier takes a form of GMT offset such as "GMT+8"
+                fixedTimeZones[identifier] = innerTZ
+                return innerTZ
             } else {
                 if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
@@ -349,15 +353,35 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 bridgedFixedTimeZones[identifier] = bridged
                 return bridged
             }
-#if canImport(_FoundationICU)
-            if let innerTz = _TimeZoneICU(identifier: identifier) {
-                // In this case, the identifier is unique and we need to cache it (in two places)
-                fixedTimeZones[identifier] = innerTz
-                let bridgedTz = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTz))
-                bridgedFixedTimeZones[identifier] = bridgedTz
-                return bridgedTz
+
+            if identifier == "GMT" {
+                return bridgedOffsetFixed(0)
             }
+
+            let bridgedTZ: _NSSwiftTimeZone?
+            if let innerTZ = _TimeZoneGMT(identifier: identifier) {
+                // Identifier takes a form of GMT offset such as "GMT+8"
+                fixedTimeZones[identifier] = innerTZ
+                bridgedTZ = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTZ))
+            } else {
+#if canImport(_FoundationICU)
+                if let innerTz = _TimeZoneICU(identifier: identifier) {
+                    fixedTimeZones[identifier] = innerTz
+                    bridgedTZ = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTz))
+                } else {
+                    bridgedTZ = nil
+                }
+#else
+                bridgedTZ = nil
 #endif
+            }
+
+            if let bridgedTZ {
+                // In this case, the identifier is unique and we need to cache it, both in `fixedTimeZones` and `bridgedFixedTimeZones`
+                bridgedFixedTimeZones[identifier] = bridgedTZ
+                return bridgedTZ
+            }
+
             return nil
         }
 

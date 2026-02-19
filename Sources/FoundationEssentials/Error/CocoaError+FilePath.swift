@@ -43,7 +43,7 @@ extension CocoaError {
 // MARK: - POSIX Errors
 
 extension CocoaError.Code {
-    fileprivate init(fileErrno: Int32, reading: Bool) {
+    internal init(fileErrno: Int32, reading: Bool) {
         self = if reading {
             switch fileErrno {
             case EFBIG: .fileReadTooLarge
@@ -70,7 +70,7 @@ extension CocoaError.Code {
 }
 
 extension POSIXError {
-    fileprivate init?(errno: Int32) {
+    internal init?(errno: Int32) {
         // (130280235) POSIXError.Code does not have a case for EOPNOTSUPP
         guard errno != EOPNOTSUPP else { return nil }
         guard let code = POSIXError.Code(rawValue: errno) else {
@@ -81,21 +81,12 @@ extension POSIXError {
 }
 
 extension CocoaError {
-    static func errorWithFilePath(_ pathOrURL: PathOrURL, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
-        switch pathOrURL {
-        case .path(let path):
-            return Self.errorWithFilePath(path, errno: errno, reading: reading, variant: variant, source: source, destination: destination, debugDescription: debugDescription)
-        case .url(let url):
-            return Self.errorWithFilePath(url, errno: errno, reading: reading, variant: variant, source: source, destination: destination, debugDescription: debugDescription)
+    static func errorWithFilePath(_ path: borrowing some FileSystemRepresentable & ~Copyable, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        if let url = path.urlForError {
+            return CocoaError(Code(fileErrno: errno, reading: reading), url: url, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
+        } else {
+            return CocoaError(Code(fileErrno: errno, reading: reading), path: path.path, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
         }
-    }
-    
-    static func errorWithFilePath(_ path: String, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
-        CocoaError(Code(fileErrno: errno, reading: reading), path: path, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
-    }
-    
-    static func errorWithFilePath(_ url: URL, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
-        CocoaError(Code(fileErrno: errno, reading: reading), url: url, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
     }
 }
 
@@ -144,14 +135,8 @@ extension CocoaError.Code {
 }
 
 extension CocoaError {
-    static func errorWithFilePath(_ path: PathOrURL, win32 dwError: DWORD, reading: Bool, debugDescription: String? = nil) -> CocoaError {
-        switch path {
-        case let .path(path):
-            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path.isEmpty), path: path, underlying: Win32Error(dwError), debugDescription: debugDescription)
-        case let .url(url):
-            let pathStr = url.withUnsafeFileSystemRepresentation { String(cString: $0!) }
-            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: pathStr.isEmpty), path: pathStr, url: url, underlying: Win32Error(dwError), debugDescription: debugDescription)
-        }
+    static func errorWithFilePath(_ path: borrowing some FileSystemRepresentable & ~Copyable, win32 dwError: DWORD, reading: Bool, debugDescription: String? = nil) -> CocoaError {
+        return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path.isEmpty), path: path.path, underlying: Win32Error(dwError), debugDescription: debugDescription)
     }
     
     static func errorWithFilePath(_ path: String? = nil, win32 dwError: DWORD, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
@@ -184,7 +169,7 @@ extension CocoaError {
 // MARK: - Error creation funnel points
 
 extension CocoaError {
-    fileprivate init(
+    internal init(
         _ code: CocoaError.Code,
         path: String? = nil,
         underlying: (some Error)? = Optional<CocoaError>.none,
@@ -205,7 +190,7 @@ extension CocoaError {
         )
     }
     
-    fileprivate init(
+    internal init(
         _ code: CocoaError.Code,
         url: URL,
         underlying: (some Error)? = Optional<CocoaError>.none,
@@ -226,7 +211,7 @@ extension CocoaError {
         )
     }
     
-    fileprivate init(
+    internal init(
         _ code: CocoaError.Code,
         path: String?,
         url: URL?,

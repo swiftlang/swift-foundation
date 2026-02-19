@@ -93,14 +93,19 @@ fileprivate struct LoadedScopeCache : Sendable {
             }
         }
         
-        guard let handle = dlopen(path, RTLD_NOLOAD),
+        guard let handle = dlopen(path, RTLD_NOLOAD | RTLD_FIRST),
              let symbol = dlsym(handle, name) else {
             scopeMangledNames[name] = .notLoaded
             return nil
         }
         
         guard let type = unsafeBitCast(symbol, to: Any.Type.self) as? any AttributeScope.Type else {
-            fatalError("Symbol \(name) is not an AttributeScope type")
+            // RTLD_NOLOAD means that dlopen will check the image list without taking the dlopen() lock
+            // This means that it is possible the image is currently added to the image list (and a handle is returned), but static initializers have not finished and the image is not fully "loaded"
+            // In these scenarios, the scope symbol may exist, but its AttributeScope conformance may not yet be available to the dynamic cast machinery
+            // Return nil for now to indicate that the scope is not yet loaded, but avoid cacheing the value so that we try again next time after loading may have successfully finished
+            dlclose(handle)
+            return nil
         }
         scopeMangledNames[name] = .loaded(type)
         return type
@@ -117,6 +122,16 @@ fileprivate struct LoadedScopeCache : Sendable {
 }
 
 fileprivate let _loadedScopeCache = LockedState(initialState: LoadedScopeCache())
+
+extension AttributeScopes {
+    @_spi(AttributedStringDefaultScopes)
+    @objc
+    open class _DefaultScopeRegistration: NSObject, @unchecked Sendable {
+        open class func _attributeScopeType() -> any AttributeScope.Type {
+            fatalError("Class \(Self.self) does not implement _attributeScopeType()")
+        }
+    }
+}
 
 internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type] {
     // On native macOS, the UI framework that gets loaded is AppKit. On

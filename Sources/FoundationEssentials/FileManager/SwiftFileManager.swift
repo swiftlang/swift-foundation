@@ -180,8 +180,9 @@ open class FileManager : @unchecked Sendable {
     // Sendable note: _impl may only be mutated in `init`
     private var _impl: _FileManagerImpl
     private let _lock = LockedState<State>(initialState: .init(delegate: nil))
+    private let isDefault: Bool
     
-    private static let _default = FileManager()
+    private static let _default = FileManager(default: true)
     open class var `default`: FileManager {
         _default
     }
@@ -195,11 +196,19 @@ open class FileManager : @unchecked Sendable {
             _lock.withLock { $0.delegate }
         }
         set {
+            precondition(newValue == nil || !isDefault, "You cannot set a delegate on the default file manager. To use a delegate, create a non-global instance of a FileManager.")
             _lock.withLock { $0.delegate = newValue }
         }
     }
     
     public init() {
+        isDefault = false
+        _impl = _FileManagerImpl()
+        _impl._manager = self
+    }
+    
+    private init(default: Bool) {
+        isDefault = `default`
         _impl = _FileManagerImpl()
         _impl._manager = self
     }

@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2025-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -103,6 +103,12 @@ extension ICU.StringConverter {
                 byteCount: capacity,
                 alignment: MemoryLayout<CChar>.alignment
             )
+            var shouldFreeDest = true
+            defer {
+                if shouldFreeDest {
+                    dest.deallocate()
+                }
+            }
 
             var status: UErrorCode = U_ZERO_ERROR
             if lossy {
@@ -145,6 +151,8 @@ extension ICU.StringConverter {
                 &status
             )
             guard status.isSuccess else { return nil }
+
+            shouldFreeDest = false
             return Data(
                 bytesNoCopy: dest,
                 count: Int(actualLength),

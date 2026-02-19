@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2018 Apple Inc. and the Swift project authors
+// Copyright (c) 2018-2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -228,6 +228,73 @@ extension MutableDataProtocol {
         let r = range.relative(to: self)
         let count = distance(from: r.lowerBound, to: r.upperBound)
         replaceSubrange(r, with: repeatElement(UInt8(0), count: count))
+    }
+}
+
+//===--- DataProtocol Conformances ----------------------------------------===//
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data : MutableDataProtocol {
+    @inlinable // This is @inlinable as trivially computable.
+    public var regions: CollectionOfOne<Data> {
+        return CollectionOfOne(self)
+    }
+}
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data {
+    /// Copy the contents of the data to a pointer.
+    ///
+    /// - parameter pointer: A pointer to the buffer you wish to copy the bytes into.
+    /// - parameter count: The number of bytes to copy.
+    /// - warning: This method does not verify that the contents at pointer have enough space to hold `count` bytes.
+    @inlinable // This is @inlinable as trivially forwarding.
+    public func copyBytes(to pointer: UnsafeMutablePointer<UInt8>, count: Int) {
+        precondition(count >= 0, "count of bytes to copy must not be negative")
+        if count == 0 { return }
+        _copyBytesHelper(to: UnsafeMutableRawPointer(pointer), from: startIndex..<(startIndex + count))
+    }
+    
+    @inlinable // This is @inlinable as trivially forwarding.
+    internal func _copyBytesHelper(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
+        if range.isEmpty { return }
+        _representation.copyBytes(to: pointer, from: range)
+    }
+    
+    /// Copy a subset of the contents of the data to a pointer.
+    ///
+    /// - parameter pointer: A pointer to the buffer you wish to copy the bytes into.
+    /// - parameter range: The range in the `Data` to copy.
+    /// - warning: This method does not verify that the contents at pointer have enough space to hold the required number of bytes.
+    @inlinable // This is @inlinable as trivially forwarding.
+    public func copyBytes(to pointer: UnsafeMutablePointer<UInt8>, from range: Range<Index>) {
+        _copyBytesHelper(to: pointer, from: range)
+    }
+    
+    // Copy the contents of the data into a buffer.
+    ///
+    /// This function copies the bytes in `range` from the data into the buffer. If the count of the `range` is greater than `MemoryLayout<DestinationType>.stride * buffer.count` then the first N bytes will be copied into the buffer.
+    /// - precondition: The range must be within the bounds of the data. Otherwise `fatalError` is called.
+    /// - parameter buffer: A buffer to copy the data into.
+    /// - parameter range: A range in the data to copy into the buffer. If the range is empty, this function will return 0 without copying anything. If the range is nil, as much data as will fit into `buffer` is copied.
+    /// - returns: Number of bytes copied into the destination buffer.
+    @inlinable // This is @inlinable as generic and reasonably small.
+    public func copyBytes<DestinationType>(to buffer: UnsafeMutableBufferPointer<DestinationType>, from range: Range<Index>? = nil) -> Int {
+        let cnt = count
+        guard cnt > 0 else { return 0 }
+        
+        let copyRange : Range<Index>
+        if let r = range {
+            guard !r.isEmpty else { return 0 }
+            copyRange = r.lowerBound..<(r.lowerBound + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, r.upperBound - r.lowerBound))
+        } else {
+            copyRange = startIndex..<(startIndex + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, cnt))
+        }
+        
+        guard !copyRange.isEmpty else { return 0 }
+        
+        _copyBytesHelper(to: buffer.baseAddress!, from: copyRange)
+        return copyRange.upperBound - copyRange.lowerBound
     }
 }
 

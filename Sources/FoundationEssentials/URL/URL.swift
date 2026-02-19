@@ -1329,28 +1329,11 @@ public struct URL: Equatable, Sendable, Hashable {
     // MARK: - Bridging Support
 
     private init(reference: __shared NSURL) {
-        guard foundation_swift_nsurl_enabled() else {
-            _url = _BridgedURL(reference).convertingFileReference()
-            return
-        }
-        if let swift = reference as? _NSSwiftURL {
-            _url = _BridgedNSSwiftURL(swift).convertingFileReference()
-        } else {
-            // This is a custom NSURL subclass
-            _url = _BridgedURL(reference).convertingFileReference()
-        }
-    }
-
-    internal init(_ url: _NSSwiftURL) {
-        _url = _BridgedNSSwiftURL(url)
+        _url = _BridgedURL(reference).convertingFileReference()
     }
 
     private var ns: NSURL {
         return _url.bridgeToNSURL()
-    }
-
-    internal func isFileReferenceURL() -> Bool {
-        return _url.isFileReferenceURL()
     }
 
 #endif // FOUNDATION_FRAMEWORK
@@ -1358,10 +1341,6 @@ public struct URL: Equatable, Sendable, Hashable {
     internal var _swiftURL: _SwiftURL? {
         #if FOUNDATION_FRAMEWORK
         if let swift = _url as? _SwiftURL { return swift }
-        if let bridged = _url as? _BridgedNSSwiftURL { return bridged._wrapped.url }
-        if foundation_swift_nsurl_enabled(), let swift = ns._trueSelf()._url as? _SwiftURL {
-            return swift
-        }
         return _SwiftURL(stringOrEmpty: _url.relativeString, relativeTo: _url.baseURL)
         #else
         return _url
@@ -1405,8 +1384,8 @@ extension URL {
         case windows
     }
 
-    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true, compatibility: Bool = false) -> String {
-        _url.fileSystemPath(style: style, resolveAgainstBase: resolveAgainstBase, compatibility: compatibility)
+    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true) -> String {
+        _url.fileSystemPath(style: style, resolveAgainstBase: resolveAgainstBase)
     }
 
     #if os(Windows)
@@ -1451,8 +1430,9 @@ extension URL {
             return isAbsolute
         }
         #if !NO_FILESYSTEM
-        // Expand the tilde if present
-        if filePath.utf8.first == UInt8(ascii: "~") {
+        // Expand the tilde, but only for "~/" (no user)
+        // Treat a lone "~" as a potential file name and don't expand it
+        if filePath.utf8.starts(with: [UInt8(ascii: "~"), UInt8(ascii: "/")]) {
             filePath = filePath.expandingTildeInPath
         }
         #endif

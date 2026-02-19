@@ -45,7 +45,6 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 internal import CoreFoundation_Private
 #endif
 
-
 package struct Platform {
     static var pageSize: Int {
         _pageSize
@@ -369,7 +368,9 @@ extension Platform {
         if let processPath = CommandLine.arguments.first {
             return processPath
         }
+        return nil
+#else
+        return nil
 #endif
-    return nil
     }
 }

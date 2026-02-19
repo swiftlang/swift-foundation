@@ -47,6 +47,24 @@
 extern int _mkpath_np(const char *path, mode_t omode, const char **firstdir);
 #endif
 
+#if TARGET_OS_LINUX
+#include <linux/fs.h>
+
+static inline unsigned long _filemanager_shims_FICLONE(void) { return FICLONE; }
+#endif
+
+#if TARGET_OS_BSD
+static inline unsigned int _filemanager_shims_COPY_FILE_RANGE_CLONE(void) {
+#if defined(COPY_FILE_RANGE_CLONE)
+  return COPY_FILE_RANGE_CLONE;
+#else
+  // Compiled against an older unistd.h, but presumably running on FreeBSD 15.0
+  // or newer. SEE: https://github.com/freebsd/freebsd-src/blob/main/sys/sys/unistd.h
+  return 0x00800000;
+#endif
+}
+#endif
+
 #if TARGET_OS_ANDROID && __ANDROID_API__ <= 23
 #include <grp.h>
 #include <sys/types.h>

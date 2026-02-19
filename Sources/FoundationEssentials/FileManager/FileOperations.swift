@@ -366,15 +366,14 @@ enum _FileOperations {
             var stack = [(path, false)]
             while let (directory, checked) = stack.popLast() {
                 try directory.withNTPathRepresentation {
-                    let ntpath = String(decodingCString: $0, as: UTF16.self)
+                    let fullpath = String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix()
 
-                    guard checked || filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
-
+                    guard checked || filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                     if RemoveDirectoryW($0) { return }
                     let dwError: DWORD = GetLastError()
                     guard dwError == ERROR_DIR_NOT_EMPTY else {
                         let error = CocoaError.removeFileError(dwError, directory)
-                        guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: ntpath) ?? false) else {
+                        guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: fullpath) ?? false) else {
                             throw error
                         }
                         return
@@ -383,21 +382,21 @@ enum _FileOperations {
 
                     for entry in _Win32DirectoryContentsSequence(path: directory, appendSlashForDirectory: false, prefix: [directory]) {
                         try entry.fileNameWithPrefix.withNTPathRepresentation {
-                            let ntpath = String(decodingCString: $0, as: UTF16.self)
+                            let fullpath = String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix()
 
                             if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
                                     entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
-                                if filemanager?._shouldRemoveItemAtPath(ntpath) ?? true {
-                                    stack.append((ntpath, true))
+                                if filemanager?._shouldRemoveItemAtPath(fullpath) ?? true {
+                                    stack.append((fullpath, true))
                                 }
                             } else {
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_READONLY == FILE_ATTRIBUTE_READONLY {
                                     guard SetFileAttributesW($0, entry.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY) else {
-                                        throw CocoaError.removeFileError(GetLastError(), ntpath)
+                                        throw CocoaError.removeFileError(GetLastError(), entry.fileName)
                                     }
                                 }
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
-                                    guard filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
+                                    guard filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                                     if !RemoveDirectoryW($0) {
                                         let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
                                         guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
@@ -405,7 +404,7 @@ enum _FileOperations {
                                         }
                                     }
                                 } else {
-                                    guard filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
+                                    guard filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                                     if !DeleteFileW($0) {
                                         let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
                                         guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
@@ -873,19 +872,23 @@ enum _FileOperations {
     }
 #else
     #if !canImport(Darwin)
-    private static func _copyRegularFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate) throws {
-        var fileInfo = stat()
-        guard stat(srcPtr, &fileInfo) >= 0 else {
-            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
-            return
-        }
+    #if os(FreeBSD)
+    private static let _freeBSDRelease = getosreldate()
+    #endif
 
+    private static func _copyRegularFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate) throws {
         let srcfd = open(srcPtr, O_RDONLY)
         guard srcfd >= 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
         defer { close(srcfd) }
+        
+        var fileInfo = stat()
+        guard fstat(srcfd, &fileInfo) >= 0 else {
+            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
+            return
+        }
 
         let dstfd = open(dstPtr, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC, 0o666)
         guard dstfd >= 0 else {
@@ -907,8 +910,25 @@ enum _FileOperations {
             // no copying required
             return
         }
-        
+
         let total: Int = Int(fileInfo.st_size)
+
+        // Attempt to clone the file using platform-specific API. If this operation fails, don't throw
+        // an error and just fall back to chunked writes.
+        #if os(Linux)
+        if ioctl(dstfd, _filemanager_shims_FICLONE(), srcfd) != -1 {
+            return
+        }
+        #elseif os(FreeBSD)
+        if _freeBSDRelease >= 1500000 {
+            // `COPY_FILE_RANGE_CLONE` was introduced in FreeBSD 15.0.
+            let flags = _filemanager_shims_COPY_FILE_RANGE_CLONE()
+            if copy_file_range(srcfd, nil, dstfd, nil, total, flags) != -1 {
+                return
+            }
+        }
+        #endif
+
         // Respect the optimal block size for the file system if available
         // Some platforms including WASI don't provide this information, so we
         // fall back to the default chunk size 4KB, which is a common page size.

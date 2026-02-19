@@ -281,6 +281,12 @@ private final class DataTests {
         #expect(Data([1, 9, 8, 4, 5]) == d)
     }
 
+    @Test func replaceSubrangeEmptyBuffer() {
+        var d = Data([1, 2, 3, 4])
+        d.replaceSubrange(1 ..< 3, with: UnsafeBufferPointer<Int>(start: nil, count: 0))
+        #expect(d == Data([1, 4]))
+    }
+
     @Test func insertData() {
         let hello = dataFrom("Hello")
         let world = dataFrom(" World")
@@ -1731,7 +1737,7 @@ private final class DataTests {
         #expect(span.count == count)
         let v = UInt8.random(in: 10..<100)
         span[i] = v
-        var sub = span.extracting(i ..< i+1)
+        var sub = span._mutatingExtracting(i ..< i+1)
         sub.update(repeating: v)
         #expect(source[i] == v)
 #endif
@@ -1745,7 +1751,7 @@ private final class DataTests {
         var span = source.mutableSpan
         #expect(span.count == count)
         let i = try #require(span.indices.randomElement())
-        var sub = span.extracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i+1)
         sub.update(repeating: .max)
         #expect(source[i] == .max)
 #endif
@@ -1767,7 +1773,7 @@ private final class DataTests {
         let byteCount = span.byteCount
         #expect(byteCount == count)
         let v = UInt8.random(in: 10..<100)
-        var sub = span.extracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i+1)
         sub.storeBytes(of: v, as: UInt8.self)
         #expect(source[i] == v)
     }
@@ -2547,7 +2553,16 @@ extension DataTests {
 #endif
 
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
-@Suite("Large Data Tests", .serialized)
+@Suite("Large Data Tests",
+       .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
+       .disabled(if: {
+           #if os(watchOS) // Disable these tests on watchOS since the test runner will likely be terminated for consuming too much memory
+           true
+           #else
+           false
+           #endif
+       }(), "Allocating large amounts of data is not supported on this platform")
+)
 struct LargeDataTests {
 #if _pointerBitWidth(_64)
     let largeCount = Int(Int32.max)
