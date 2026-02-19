@@ -1490,6 +1490,67 @@ private final class DataTests {
         }
     }
 
+    private struct Value: ~Copyable {
+        var stored: Int
+        init(_ value: Int) { stored = value }
+    }
+
+    private enum LocalError: Error, Equatable { case error }
+
+    @Test func validateGeneralizedParameters_withUnsafeBytes() {
+        var data: Data
+
+        data = Data(repeating: 2, count: 12)
+        let value1 = data.withUnsafeBytes {
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value1.stored == 24)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+
+        data = Data(repeating: 1, count: 128)
+        let value2 = data.withUnsafeBytes {
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value2.stored == 128)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+    }
+
+    @Test func validateGeneralizedParameters_withUnsafeMutableBytes() {
+        var data: Data
+
+        data = Data(count: 12)
+        let value1 = data.withUnsafeMutableBytes {
+            $0.withMemoryRebound(to: UInt8.self) {
+                for i in $0.indices { $0[i] = 2 }
+            }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value1.stored == 24)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+
+        data = Data(count: 128)
+        let value2 = data.withUnsafeMutableBytes {
+            $0.withMemoryRebound(to: UInt8.self) {
+                for i in $0.indices { $0[i] = 1 }
+            }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value2.stored == 128)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+    }
+
     @Test func sliceHash() {
         let base1 = Data([0, 0xFF, 0xFF, 0])
         let base2 = Data([0, 0xFF, 0xFF, 0])

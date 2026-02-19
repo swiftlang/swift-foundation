@@ -126,22 +126,38 @@ extension Data {
             return count
         }
         
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        func withUnsafeBytes<Result>(_ apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
-            let count = Int(length)
-            return try Swift.withUnsafeBytes(of: bytes) { (rawBuffer) throws -> Result in
-                return try apply(UnsafeRawBufferPointer(start: rawBuffer.baseAddress, count: count))
+        @_alwaysEmitIntoClient
+        func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+            try Swift.withUnsafeBytes(of: bytes) { [count = Int(length)] (rawBuffer) throws(E) -> Result in
+                try apply(UnsafeRawBufferPointer(start: rawBuffer.baseAddress, count: count))
             }
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
-            let count = Int(length)
-            return try Swift.withUnsafeMutableBytes(of: &bytes) { (rawBuffer) throws -> Result in
-                return try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
+
+#if FOUNDATION_FRAMEWORK
+        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeBytes(body)
+        }
+#endif // FOUNDATION_FRAMEWORK
+
+        @_alwaysEmitIntoClient
+        mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+            try Swift.withUnsafeMutableBytes(of: &bytes) { [count = Int(length)] (rawBuffer) throws(E) -> Result in
+                try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
             }
         }
-        
+
+#if FOUNDATION_FRAMEWORK
+        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeMutableBytes(body)
+        }
+#endif // FOUNDATION_FRAMEWORK
+
         @inlinable // This is @inlinable as trivially computable.
         mutating func append(byte: UInt8) {
             let count = self.count
