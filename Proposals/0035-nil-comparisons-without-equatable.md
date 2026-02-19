@@ -1,10 +1,11 @@
 # Support for `nil` comparisons without `Equatable` conformance
 
-* Proposal: [SF-NNNN](NNNN-nil-comparisons-without-equatable.md)
+* Proposal: [SF-0035](0035-nil-comparisons-without-equatable.md)
 * Authors: [Matthew Turk](https://github.com/MatthewTurk247)
-* Review Manager: TBD
-* Status: **Pitch**
+* Review Manager: Jeremy S
+* Status: **Review: 2026-02-19...2026-01-25**
 * Bug: [swiftlang/swift-foundation#711](https://github.com/swiftlang/swift-foundation/issues/711)
+* Review: ([pitch](https://forums.swift.org/t/pitch-support-for-nil-comparisons-without-equatable-conformance/84684))
 
 ## Introduction/Motivation
 
