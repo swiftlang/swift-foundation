@@ -294,7 +294,7 @@ internal struct BuiltInUnicodeScalarSet {
     // CFUniCharGetBitmapPtrForPlane
     // Returns nil for whitespace, whitespace and newline, illegal, newline
     // Returns legal bitmap data for illegal charset, caller must invert it later
-    @_lifetime(borrow self)
+    @_lifetime(immortal)
     public func bitmapPtrForPlane(_ plane: Int) -> Span<UInt8>? {
         switch charset {
         case .whitespace, .whitespaceAndNewline, .newline:
@@ -319,7 +319,7 @@ internal struct BuiltInUnicodeScalarSet {
             }
             
             let temp = Span(_unsafeStart: planePtr, count: Self.byteCount)
-            return unsafe _overrideLifetime(temp, borrowing: self)
+            return unsafe _overrideLifetime(temp, copying: ())
         }
     }
     
@@ -330,7 +330,7 @@ internal struct BuiltInUnicodeScalarSet {
         var bitmapMutableSpan = bitmap.mutableSpan
         
         if let src = bitmapPtrForPlane(plane) {
-            assert(bitmapMutableSpan.indices.contains(0..<Self.byteCount))
+            assert(bitmapMutableSpan.count >= Self.byteCount)
             
             // For illegal charset, the bitmap data is stored as LEGAL characters
             // So we need to invert the sense of the inversion
@@ -391,7 +391,7 @@ internal struct BuiltInUnicodeScalarSet {
             }
             
             let nonFillValue: UInt8 = isInverted ? 0xFF : 0x00
-            assert(bitmapMutableSpan.indices.contains(0..<Self.byteCount))
+            assert(bitmapMutableSpan.count >= Self.byteCount)
             for i in 0..<Self.byteCount {
                 bitmapMutableSpan[i] = nonFillValue
             }
