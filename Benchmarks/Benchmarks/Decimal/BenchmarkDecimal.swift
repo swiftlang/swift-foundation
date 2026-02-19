@@ -25,18 +25,45 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxIterations = .count(100_000_000)
 
     Benchmark("Decimal init from Double") { benchmark in
-        for i in benchmark.scaledIterations {
-            let double = Double(i)
-            let result = Decimal(double)
-            blackHole(result)
+        let double = Double.pi
+
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            blackHole(Decimal(double))
         }
+        benchmark.stopMeasurement()
     }
 
     Benchmark("Decimal divide") { benchmark in
+        let value = Decimal(Double.pi)
         let divisor = Decimal(10_000)
-        for i in benchmark.scaledIterations {
-            let result = Decimal(i) / divisor
-            blackHole(result)
+
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            blackHole(value / divisor)
         }
+        benchmark.stopMeasurement()
+    }
+
+    Benchmark("Decimal multiply") { benchmark in
+        let value1 = Decimal(Double.pi)
+        let value2 = Decimal(Double.pi)
+
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            blackHole(value1 * value2)
+        }
+        benchmark.stopMeasurement()
+    }
+
+    Benchmark("Decimal add") { benchmark in
+        let value1 = Decimal(Double.pi)
+        let value2 = Decimal(Double.pi)
+
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            blackHole(value1 + value2)
+        }
+        benchmark.stopMeasurement()
     }
 }

@@ -751,29 +751,24 @@ extension Decimal {
     /// replacing `[UInt16]` to eliminate heap allocations on the critical path.
     struct VariableLengthInteger: ExpressibleByArrayLiteral, Sendable {
         // 2 x Mantissa is 16 + 1 for carry
-        @usableFromInline
-        static let maxCapacity = 17
-        @usableFromInline
+        static var maxCapacity: Int {
+            InlineStorage.count
+        }
         typealias InlineStorage = InlineArray<17, UInt16>
 
-        @usableFromInline
         var count: Int
-        @usableFromInline
         var storage: InlineStorage
 
-        @inlinable
         init() {
             self.count = 0
             self.storage = .init(repeating: 0)
         }
 
-        @inlinable
         init(repeating value: UInt16, count: Int) {
             self.count = count
             self.storage = .init(repeating: value)
         }
 
-        @inlinable
         init(mantissa: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)) {
             self.storage = .init(repeating: 0)
             self.storage[0] = mantissa.0
@@ -786,12 +781,11 @@ extension Decimal {
             self.storage[7] = mantissa.7
 
             self.count = 8
-            while count > 0 && self.storage[count - 1] == 0 {
-                count -= 1
+            while self.count > 0 && self.storage[self.count - 1] == 0 {
+                self.count -= 1
             }
         }
 
-        @inlinable
         init(arrayLiteral elements: UInt16...) {
             self.storage = .init(initializingWith: { span in
                 for idx in 0..<elements.count {
@@ -804,41 +798,33 @@ extension Decimal {
             self.count = elements.count
         }
 
-        @inlinable
         var isEmpty: Bool {
             self.count == 0
         }
 
-        @inlinable
         var last: UInt16? {
-            guard count > 0 else { return nil }
-            return self[count - 1]
+            guard self.count > 0 else { return nil }
+            return self[self.count - 1]
         }
 
-        @inlinable
         subscript(index: Int) -> UInt16 {
             get {
-                precondition(index >= 0 && index < self.count, "Index out of bounds")
                 return self.storage[index]
             }
             set {
-                precondition(index >= 0 && index < self.count, "Index out of bounds")
                 self.storage[index] = newValue
             }
         }
 
-        @inlinable
         mutating func append(_ value: UInt16) {
-            self.storage[count] = value
+            self.storage[self.count] = value
             self.count += 1
         }
 
-        @inlinable
         mutating func removeLast() {
             self.removeLast(1)
         }
 
-        @inlinable
         mutating func removeLast(_ n: Int) {
             precondition(self.count >= n, "Cannot removeLast \(n) from \(self.count) VariableLengthInteger")
             self.count -= n
