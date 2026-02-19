@@ -164,6 +164,64 @@ private final class DataTests {
         }
     }
 
+    @Test func initializationWithOutputRawSpan() throws {
+        struct LocalError: Error, Equatable {}
+
+        // Initialize the inline representation
+        var data = Data(rawCapacity: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(42)
+        }
+        switch data._representation {
+        case .inline:
+            #expect(data.count == 1)
+        default:
+            Issue.record("Data representation should be .inline")
+        }
+
+        data = Data(rawCapacity: 0) {
+            #expect($0.freeCapacity == 0)
+        }
+        switch data._representation {
+        case .empty:
+            #expect(data.count == 0)
+        default:
+            Issue.record("Data representation should be .empty")
+        }
+
+        do {
+            data = try Data(rawCapacity: 2) {
+                $0.append(42)
+                throw LocalError()
+            }
+            Issue.record("Reached unreachable code.")
+        } catch let error as LocalError {
+            #expect(error == LocalError())
+        }
+
+        let anInlineSliceSize = 96
+        // Initialize an "inline slice"
+        data = Data(rawCapacity: anInlineSliceSize) {
+            #expect($0.freeCapacity == anInlineSliceSize)
+            $0.append(42)
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == 1)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+    }
+
+    @Test func initializationWithOutputSpanOfUInt8() throws {
+        let data = Data(capacity: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(42)
+            #expect($0.freeCapacity == 0)
+        }
+        #expect(data.count == 1)
+    }
+
     @Test func mutableData() {
         let hello = dataFrom("hello")
         let helloLength = hello.count
@@ -2652,6 +2710,23 @@ struct LargeDataTests {
         #expect(data2[0] == 1)
         data2.withUnsafeBytes {
             #expect($0.baseAddress == originalPointer)
+        }
+    }
+
+    @Test func largeRepresentationOutputRawSpanInitAndAppend() throws {
+        let data = Data(rawCapacity: largeCount) {
+            #expect($0.freeCapacity == largeCount)
+            $0.withUnsafeMutableBytes { (buffer, count) in
+                buffer.initializeMemory(as: UInt8.self, repeating: .max)
+                count = buffer.count
+            }
+        }
+        #expect(data.count == largeCount)
+        switch data._representation {
+        case .large:
+          #expect(data.count == largeCount)
+        default:
+          Issue.record("Data representation should be .large")
         }
     }
 }

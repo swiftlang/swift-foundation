@@ -85,9 +85,10 @@ extension Data {
             do throws(E) {
                 let count = try Swift.withUnsafeMutableBytes(of: &bytes) {
                     buffer throws(E) in
-                    var output = OutputRawSpan(buffer: buffer, initializedCount: 0)
+                    let prefix = buffer.prefix(rawCapacity)
+                    var output = OutputRawSpan(buffer: prefix, initializedCount: 0)
                     try initializer(&output)
-                    return output.finalize(for: buffer)
+                    return output.finalize(for: prefix)
                 }
                 assert(count <= rawCapacity)
                 length = UInt8(count)
