@@ -186,7 +186,7 @@ extension Data {
             _ newCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
             assert(endIndex + newCapacity < HalfInt.max)
-            reserveCapacity(newCapacity)
+            reserveCapacity(endIndex + newCapacity)
             var appendedCount = 0
             defer {
                 slice = slice.lowerBound..<(slice.upperBound + HalfInt(appendedCount))

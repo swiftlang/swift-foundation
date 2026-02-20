@@ -201,7 +201,7 @@ extension Data {
                 defer {
                     let addedCount = unsafe span.finalize(for: slice)
                     newCount = oldCount + addedCount
-                    precondition(newCount <= newCapacity)
+                    assert(newCount <= newCapacity)
                     span = OutputRawSpan()
                 }
                 try initializer(&span)

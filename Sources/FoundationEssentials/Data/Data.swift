@@ -575,7 +575,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// will remain in the `Data` instance.
     ///
     /// - Parameters:
-    ///   - uninitializedCount: The number of new elements the array should have
+    ///   - uninitializedCount: The number of new elements the `Data` should have
     ///     space for.
     ///   - initializer: A closure to initialize memory.
     ///     - Parameters:
