@@ -329,7 +329,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         // We still check for fast paths here on ABI stable platforms (withContiguousStorageIfAvailable and ContiguousBytes) because older SDKs did not contain always-inline fast paths, so some callers may still be using this ABI entrypoint with values that have fast paths
 
         if let data = _specialize(elements, for: Data.self) {
-            self.init(data)
+            self = Data(data) // If we already have a Data, call the specialized entrypoint
             return
         }
 
