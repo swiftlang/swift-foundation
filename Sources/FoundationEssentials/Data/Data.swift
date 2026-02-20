@@ -267,21 +267,49 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    // Always inlined as it is trivially forwarding
     @inline(__always)
     @_alwaysEmitIntoClient
-    public init(_ elements: some Sequence<UInt8> & ContiguousBytes) {
-        // Since the sequence is already contiguous, access the underlying raw memory directly.
-        _representation = elements.withUnsafeBytes {
-            _Representation($0)
+    public init(_ data: Data) {
+        switch data._representation {
+        case .empty, .inline:
+            self = data
+        case .slice(let slice):
+            if slice.startIndex == 0 && slice.storage._deallocator == nil {
+                self = data
+            } else {
+                _representation = slice.withUnsafeBytes { _Representation($0) }
+            }
+        case .large(let large):
+            if large.startIndex == 0 && large.storage._deallocator == nil {
+                self = data
+            } else {
+                _representation = large.withUnsafeBytes { _Representation($0) }
+            }
         }
     }
 
-    // Always inlined as it is a trivially forwarding fast path
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public init(_ elements: some Sequence<UInt8> & ContiguousBytes) {
+        if let data = _specialize(elements, for: Data.self) {
+            self.init(data)
+            return
+        }
+        // Since the sequence is already contiguous, access the underlying raw memory directly.
+        self.init(representation: elements.withUnsafeBytes {
+            _Representation($0)
+        })
+    }
+
     @inline(__always)
     @_alwaysEmitIntoClient
     @abi(init(fastCheckElements elements: some Sequence<UInt8>))
     public init(_ elements: some Sequence<UInt8>) {
+        if let data = _specialize(elements, for: Data.self) {
+            self.init(data)
+            return
+        }
+
         // The sequence might be able to provide direct access to typed memory.
         // NOTE: It's safe to do this because we're already guarding on S's element as `UInt8`. This would not be safe on arbitrary sequences.
         if let representation = elements.withContiguousStorageIfAvailable({
@@ -299,6 +327,12 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     internal init<S: Sequence>(slowElements elements: S) where S.Element == UInt8 {
         #if FOUNDATION_FRAMEWORK
         // We still check for fast paths here on ABI stable platforms (withContiguousStorageIfAvailable and ContiguousBytes) because older SDKs did not contain always-inline fast paths, so some callers may still be using this ABI entrypoint with values that have fast paths
+
+        if let data = _specialize(elements, for: Data.self) {
+            self.init(data)
+            return
+        }
+
         // We check withContiguousStorageIfAvailable first because it is cheaper than a protocol conformance check and all Foundation-defined ContiguousBytes-conforming types respond to withContiguousStorageIfAvailable
         let representation = elements.withContiguousStorageIfAvailable {
             _Representation(UnsafeRawBufferPointer($0))

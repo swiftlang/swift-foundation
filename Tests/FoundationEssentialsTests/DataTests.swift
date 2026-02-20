@@ -2476,6 +2476,64 @@ extension DataTests {
         #expect(error.filePath == "/foo/bar")
     }
     #endif
+
+    @Test func dataInitDataElideCopy() {
+        do {
+            let data = Data(0 ..< 100)
+
+            // Initializing one Data from another should not copy the bytes
+            let data2 = Data(data)
+            data.withUnsafeBytes { bufferA in
+                data2.withUnsafeBytes { bufferB in
+                    #expect(bufferA.baseAddress == bufferB.baseAddress)
+                }
+            }
+        }
+
+        do {
+            let data = Data(0 ..< 100)
+
+            // Initializing one Data from another should not copy the bytes, even when sliced as a prefix
+            let data2 = Data(data.prefix(upTo: 50))
+            #expect(data2.startIndex == 0)
+            data.withUnsafeBytes { bufferA in
+                data2.withUnsafeBytes { bufferB in
+                    #expect(bufferA.baseAddress == bufferB.baseAddress)
+                }
+            }
+        }
+
+        do {
+            let data = Data(0 ..< 100)
+
+            // Initializing one Data from another should copy the bytes when the slice does not begin at 0
+            let data2 = Data(data[20 ..< 80])
+            #expect(data2.startIndex == 0)
+            data.withUnsafeBytes { bufferA in
+                data2.withUnsafeBytes { bufferB in
+                    #expect(bufferA.baseAddress != bufferB.baseAddress)
+                }
+            }
+        }
+
+        do {
+            withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 20) { stackBuffer in
+                let data = Data(bytesNoCopy: stackBuffer.baseAddress!, count: 20, deallocator: .none)
+                data.withUnsafeBytes {
+                    #expect($0.baseAddress == UnsafeRawPointer(stackBuffer.baseAddress!))
+                }
+                #expect(data.startIndex == 0)
+
+                // Initializing one Data from another should copy the bytes when no-copy initialized
+                let data2 = Data(data)
+                data.withUnsafeBytes { bufferA in
+                    data2.withUnsafeBytes { bufferB in
+                        #expect(bufferA.baseAddress != bufferB.baseAddress)
+                    }
+                }
+            }
+        }
+    }
 }
 
 #if FOUNDATION_FRAMEWORK // FIXME: Re-enable tests once range(of:) is implemented
