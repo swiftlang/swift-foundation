@@ -173,7 +173,7 @@ extension Data {
         mutating func append<E: Error>(
             _ newCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
-            reserveCapacity(newCapacity)
+            reserveCapacity(endIndex + newCapacity)
             var appendedCount = 0
             defer {
                 slice.range = slice.range.lowerBound..<(slice.range.upperBound + appendedCount)
