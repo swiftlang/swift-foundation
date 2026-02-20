@@ -102,12 +102,12 @@ extension Data {
                 self = (inline.count == 0) ? .empty : .inline(inline)
             } else {
                 let storage = __DataStorage(capacity: capacity)
-                var newCount = 0
-                try storage.withUninitializedBytes(capacity, &newCount, initializer)
-                if InlineSlice.canStore(count: newCount) {
-                    self = .slice(InlineSlice(storage, count: newCount))
+                var appendedCount = 0
+                try storage.withUninitializedBytes(capacity, &appendedCount, initializer)
+                if InlineSlice.canStore(count: appendedCount) {
+                    self = .slice(InlineSlice(storage, count: appendedCount))
                 } else {
-                    self = .large(LargeSlice(storage, count: newCount))
+                    self = .large(LargeSlice(storage, count: appendedCount))
                 }
             }
         }

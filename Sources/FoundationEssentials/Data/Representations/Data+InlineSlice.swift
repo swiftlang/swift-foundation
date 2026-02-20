@@ -187,11 +187,11 @@ extension Data {
         ) throws(E) {
             assert(endIndex + newCapacity < HalfInt.max)
             reserveCapacity(newCapacity)
-            var newCount = 0
+            var appendedCount = 0
             defer {
-                slice = slice.lowerBound..<(slice.upperBound + HalfInt(newCount))
+                slice = slice.lowerBound..<(slice.upperBound + HalfInt(appendedCount))
             }
-            try storage.withUninitializedBytes(newCapacity, &newCount, initializer)
+            try storage.withUninitializedBytes(newCapacity, &appendedCount, initializer)
         }
 
         @inlinable // This is @inlinable as reasonably small.

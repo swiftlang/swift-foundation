@@ -315,13 +315,13 @@ internal final class __DataStorage : @unchecked Sendable {
     
     @_alwaysEmitIntoClient
     func withUninitializedBytes<Result: ~Copyable, E: Error>(
-        _ newCapacity: Int, _ newCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
+        _ newCapacity: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
         let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: _length), count: newCapacity &- _length)
         var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
         defer {
-            newCount = outputSpan.finalize(for: buffer)
-            _length &+= newCount
+            appendedCount = outputSpan.finalize(for: buffer)
+            _length &+= appendedCount
             outputSpan = OutputRawSpan()
         }
         return try initializer(&outputSpan)

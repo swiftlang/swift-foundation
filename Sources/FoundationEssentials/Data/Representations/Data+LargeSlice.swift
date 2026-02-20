@@ -174,11 +174,11 @@ extension Data {
             _ newCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
             reserveCapacity(newCapacity)
-            var newCount = 0
+            var appendedCount = 0
             defer {
-                slice.range = slice.range.lowerBound..<(slice.range.upperBound + newCount)
+                slice.range = slice.range.lowerBound..<(slice.range.upperBound + appendedCount)
             }
-            try storage.withUninitializedBytes(newCapacity, &newCount, initializer)
+            try storage.withUninitializedBytes(newCapacity, &appendedCount, initializer)
         }
 
         @inlinable // This is @inlinable as trivially computable.
