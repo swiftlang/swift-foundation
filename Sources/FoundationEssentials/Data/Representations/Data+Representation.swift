@@ -338,17 +338,17 @@ extension Data {
                 } else {
                     let storage = __DataStorage(capacity: newCapacity)
                     inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
-                    let oldCount = storage.length
-                    var newCount = 0
+                    var appendedCount = 0
                     defer {
-                        assert(newCount+oldCount == storage.length)
+                        assert(inline.count+appendedCount == storage.length)
+                        let newCount = storage.length
                         if InlineSlice.canStore(count: newCount) {
-                            self = .slice(InlineSlice(storage, count: storage.length))
+                            self = .slice(InlineSlice(storage, count: newCount))
                         } else {
-                            self = .large(LargeSlice(storage, count: storage.length))
+                            self = .large(LargeSlice(storage, count: newCount))
                         }
                     }
-                    try storage.withUninitializedBytes(newCapacity, &newCount, initializer)
+                    try storage.withUninitializedBytes(newCapacity, &appendedCount, initializer)
                 }
             }
 
