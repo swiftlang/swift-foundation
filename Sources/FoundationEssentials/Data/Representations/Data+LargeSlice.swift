@@ -173,7 +173,6 @@ extension Data {
         mutating func append<E: Error>(
             _ newCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
-            ensureUniqueReference()
             reserveCapacity(newCapacity)
             var newCount = 0
             defer {
