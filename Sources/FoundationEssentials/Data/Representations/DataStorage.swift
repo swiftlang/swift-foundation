@@ -317,6 +317,8 @@ internal final class __DataStorage : @unchecked Sendable {
     func withUninitializedBytes<Result: ~Copyable, E: Error>(
         _ newCapacity: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
+        // We use the requested capacity to build the `OutputRawSpan`. The requested capacity may be less than the actual capacity.
+        assert(newCapacity <= capacity)
         let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: _length), count: newCapacity &- _length)
         var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
         defer {
