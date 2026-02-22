@@ -246,6 +246,90 @@ public func checkHashableGroups<Groups: Collection>(
         sourceLocation: sourceLocation)
 }
 
+public enum DecodingErrorValidator {
+
+    /// Returns the underlying error of the decoding error, if any.
+    public typealias Validator = (DecodingError) -> (any Error)?
+
+    public static func typeMismatch<ExpectedType>(
+        expectedType _: ExpectedType.Type,
+        codingPath: [String],
+        debugDescription: String,
+        sourceLocation: SourceLocation = #_sourceLocation,
+    ) -> Validator {
+        { error in
+            switch error {
+            case .typeMismatch(let type, let context):
+                #expect(type == ExpectedType.self, sourceLocation: sourceLocation)
+                #expect(context.codingPath.map(\.stringValue) == codingPath, sourceLocation: sourceLocation)
+                #expect(context.debugDescription == debugDescription, sourceLocation: sourceLocation)
+                return context.underlyingError
+            default:
+                Issue.record(error, "Unexpected error case", sourceLocation: sourceLocation)
+                return nil
+            }
+        }
+    }
+
+    public static func valueNotFound<ExpectedType>(
+        expectedType _: ExpectedType.Type,
+        codingPath: [String],
+        debugDescription: String,
+        sourceLocation: SourceLocation = #_sourceLocation,
+    ) -> Validator {
+        { error in
+            switch error {
+            case .valueNotFound(let type, let context):
+                #expect(type == ExpectedType.self, sourceLocation: sourceLocation)
+                #expect(context.codingPath.map(\.stringValue) == codingPath, sourceLocation: sourceLocation)
+                #expect(context.debugDescription == debugDescription, sourceLocation: sourceLocation)
+                return context.underlyingError
+            default:
+                Issue.record(error, "Unexpected error case", sourceLocation: sourceLocation)
+                return nil
+            }
+        }
+    }
+
+    public static func keyNotFound(
+        keyStringValue: String,
+        codingPath: [String],
+        debugDescription: String,
+        sourceLocation: SourceLocation = #_sourceLocation,
+    ) -> Validator {
+        { error in
+            switch error {
+            case .keyNotFound(let key, let context):
+                #expect(key.stringValue == keyStringValue, sourceLocation: sourceLocation)
+                #expect(context.codingPath.map(\.stringValue) == codingPath, sourceLocation: sourceLocation)
+                #expect(context.debugDescription == debugDescription, sourceLocation: sourceLocation)
+                return context.underlyingError
+            default:
+                Issue.record(error, "Unexpected error case", sourceLocation: sourceLocation)
+                return nil
+            }
+        }
+    }
+
+    public static func dataCorrupted(
+        codingPath: [String],
+        debugDescription: String,
+        sourceLocation: SourceLocation = #_sourceLocation,
+    ) -> Validator {
+        { error in
+            switch error {
+            case .dataCorrupted(let context):
+                #expect(context.codingPath.map(\.stringValue) == codingPath, sourceLocation: sourceLocation)
+                #expect(context.debugDescription == debugDescription, sourceLocation: sourceLocation)
+                return context.underlyingError
+            default:
+                Issue.record(error, "Unexpected error case", sourceLocation: sourceLocation)
+                return nil
+            }
+        }
+    }
+}
+
 // MARK: - Private Types
 
 private class Box<T> {
