@@ -60,7 +60,7 @@ public protocol ContiguousBytes /*: ~Escapable, ~Copyable*/ {
 #endif
 
     /*
-     NOTE: For now, this is not a protocol requirement because adding it can be a source breaking change for clients with MemberImportVisibility enabled (such as swift-crypto)
+     TODO: For now, this is not a protocol requirement because adding it can be a source breaking change for clients with MemberImportVisibility enabled (such as swift-crypto): https://github.com/swiftlang/swift/issues/87227
     /// Calls the given closure with the contents of underlying storage.
     ///
     /// - note: Calling `withBytes` multiple times does not guarantee that
