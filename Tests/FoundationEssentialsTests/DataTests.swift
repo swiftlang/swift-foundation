@@ -891,6 +891,7 @@ private final class DataTests {
 
     @Test func appendWithOutputRawSpan() {
         struct LocalError: Error, Equatable {}
+        let appendedValue: UInt8 = (7..<252).randomElement()!
 
         // Append to the inline representation
         var data = Data()
@@ -907,13 +908,13 @@ private final class DataTests {
         data = Data()
         try? data.append(addingRawCapacity: 1) {
             #expect($0.freeCapacity == 1)
-            $0.append(.max)
+            $0.append(appendedValue)
             throw LocalError()
         }
         switch data._representation {
         case .inline:
             #expect(data.count == 1)
-            #expect(data[0] == .max)
+            #expect(data[0] == appendedValue)
         default:
             Issue.record("Data representation should be .inline")
         }
@@ -931,7 +932,7 @@ private final class DataTests {
         }
 
         try? data.append(addingRawCapacity: 20) {
-            $0.append(repeating: .max, count: 20, as: UInt8.self)
+            $0.append(repeating: appendedValue, count: 20, as: UInt8.self)
             let full = $0.isFull
             #expect(full)
             throw LocalError()
@@ -939,7 +940,7 @@ private final class DataTests {
         switch data._representation {
         case .slice:
             #expect(data.count == 24)
-            #expect(data.last == .max)
+            #expect(data.last == appendedValue)
         default:
             Issue.record("Data representation should be .slice")
         }
@@ -947,17 +948,18 @@ private final class DataTests {
         // Append to the `InlineSlice` representation
         data = Data(0..<23)
         data.append(addingRawCapacity: 20) {
-          $0.append(0)
+          $0.append(appendedValue)
         }
         #expect(data.count == 24)
+        #expect(data.last == appendedValue)
         try? data.append(addingRawCapacity: 1) {
-            $0.append(.max)
+            $0.append(appendedValue)
             throw LocalError()
         }
         switch data._representation {
         case .slice:
             #expect(data.count == 25)
-            #expect(data.last == .max)
+            #expect(data.last == appendedValue)
         default:
             Issue.record("Data representation should be .slice")
         }
