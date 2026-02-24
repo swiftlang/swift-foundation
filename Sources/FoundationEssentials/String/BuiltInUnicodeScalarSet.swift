@@ -201,7 +201,7 @@ internal struct BuiltInUnicodeScalarSet {
         case .bitmapEmpty:
             // For empty result, return the appropriate fill pattern
             if isInverted {
-                return _CharacterSet.allOnes
+                return _CharacterSet.allZeros
             } else {
                 return _CharacterSet.allZeros
             }
