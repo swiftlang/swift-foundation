@@ -978,7 +978,6 @@ private final class DataTests {
 
         slice = data[20..<80]
         _ = consume data
-        print(capacity(slice), slice.count)
         slice.append(addingRawCapacity: 2) {
             $0.append(appendedValue)
         }
