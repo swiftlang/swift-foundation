@@ -186,22 +186,19 @@ extension Data {
         
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
-            _ newCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
+            _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
-            assert(newCapacity <= capacity)
             let oldCount = self.count
-            var newCount = 0
-            defer {
-                length = UInt8(truncatingIfNeeded: newCount)
-            }
+            let newCapacity = oldCount + extraCapacity
+            assert(newCapacity <= capacity)
             try Swift.withUnsafeMutableBytes(of: &bytes) {
                 buffer throws(E) in
                 let slice = buffer[oldCount..<newCapacity]
                 var span = OutputRawSpan(buffer: slice, initializedCount: 0)
                 defer {
                     let addedCount = unsafe span.finalize(for: slice)
-                    newCount = oldCount + addedCount
-                    assert(newCount <= newCapacity)
+                    length = UInt8(truncatingIfNeeded: oldCount + addedCount)
+                    assert(addedCount <= extraCapacity)
                     span = OutputRawSpan()
                 }
                 try initializer(&span)

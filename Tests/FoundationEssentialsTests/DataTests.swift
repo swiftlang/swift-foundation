@@ -964,6 +964,27 @@ private final class DataTests {
         }
     }
 
+    @Test func appendToSlicedInlineSlicesWithOutputRawSpan() {
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        let data = Data(0..<100)
+        #expect(data.count <= capacity(data))
+        var slice = data[20..<80]
+        #expect(slice.count <= capacity(slice))
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+
+        slice = data[20..<80]
+        _ = consume data
+        print(capacity(slice), slice.count)
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+    }
+
     // This test uses `repeatElement` to produce a sequence -- the produced sequence reports its actual count as its `.underestimatedCount`.
     @Test func appendingNonContiguousSequence_exactCount() {
         var d = Data()
@@ -2842,5 +2863,34 @@ struct LargeDataTests {
         default:
             Issue.record("Data representation should be .large")
         }
+    }
+
+    @Test func appendToSlicedLargeSlicesWithOutputRawSpan() {
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        let data = Data(count: largeCount + 1000)
+        #expect(data.count <= capacity(data))
+        var slice = data.dropFirst(100).dropLast(100)
+        #expect(slice.count <= capacity(slice))
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+
+        slice = data.dropFirst(100).dropLast(100)
+        _ = consume data
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+    }
+}
+
+private func capacity(_ data: consuming Data) -> Int {
+    switch data._representation {
+    case .empty: 0
+    case .inline: Data.InlineData.maximumCapacity
+    case .slice(let slice): slice.capacity
+    case .large(let slice): slice.capacity
     }
 }

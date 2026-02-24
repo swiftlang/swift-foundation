@@ -103,7 +103,7 @@ extension Data {
             } else {
                 let storage = __DataStorage(capacity: capacity)
                 var appendedCount = 0
-                try storage.withUninitializedBytes(capacity, &appendedCount, initializer)
+                try storage.withUninitializedBytes(extraCapacity: capacity, location: 0, &appendedCount, initializer)
                 if InlineSlice.canStore(count: appendedCount) {
                     self = .slice(InlineSlice(storage, count: appendedCount))
                 } else {
@@ -326,15 +326,14 @@ extension Data {
             addingCapacity uninitializedCount: Int,
             _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
-            let oldCount = count
-            let newCapacity = oldCount + uninitializedCount
+            let newCapacity = count + uninitializedCount
 
             func appendInline(_ inline: consuming InlineData) throws(E) {
                 if InlineData.canStore(count: newCapacity) {
                     defer {
                         self = (inline.count == 0) ? .empty : .inline(inline)
                     }
-                    try inline.append(newCapacity, initializer)
+                    try inline.append(uninitializedCount, initializer)
                 } else {
                     let storage = __DataStorage(capacity: newCapacity)
                     inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
@@ -348,7 +347,7 @@ extension Data {
                             self = .large(LargeSlice(storage, count: newCount))
                         }
                     }
-                    try storage.withUninitializedBytes(newCapacity, &appendedCount, initializer)
+                    try storage.withUninitializedBytes(extraCapacity: uninitializedCount, location: inline.count, &appendedCount, initializer)
                 }
             }
 
@@ -361,17 +360,17 @@ extension Data {
                 if InlineSlice.canStore(count: newCapacity) {
                     self = .empty
                     defer { self = .slice(slice) }
-                    try slice.append(newCapacity, initializer)
+                    try slice.append(uninitializedCount, initializer)
                 } else {
                     self = .empty
                     var newSlice = LargeSlice(slice)
                     defer { self = .large(newSlice) }
-                    try newSlice.append(newCapacity, initializer)
+                    try newSlice.append(uninitializedCount, initializer)
                 }
             case .large(var slice):
                 self = .empty
                 defer { self = .large(slice) }
-                try slice.append(newCapacity, initializer)
+                try slice.append(uninitializedCount, initializer)
             }
         }
 
