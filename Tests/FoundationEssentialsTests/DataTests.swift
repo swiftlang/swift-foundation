@@ -189,14 +189,12 @@ private final class DataTests {
             Issue.record("Data representation should be .empty")
         }
 
-        do {
+        #expect(throws: LocalError()) {
             data = try Data(rawCapacity: 2) {
                 $0.append(42)
                 throw LocalError()
             }
             Issue.record("Reached unreachable code.")
-        } catch let error as LocalError {
-            #expect(error == LocalError())
         }
 
         let anInlineSliceSize = 96
@@ -932,6 +930,7 @@ private final class DataTests {
         }
 
         try? data.append(addingRawCapacity: 20) {
+            #expect($0.freeCapacity == 20)
             $0.append(repeating: appendedValue, count: 20, as: UInt8.self)
             let full = $0.isFull
             #expect(full)
@@ -2794,10 +2793,7 @@ struct LargeDataTests {
 
         var data = Data(rawCapacity: largeCount) {
             #expect($0.freeCapacity == largeCount)
-            $0.withUnsafeMutableBytes { (buffer, count) in
-                buffer.initializeMemory(as: UInt8.self, repeating: .max)
-                count = buffer.count
-            }
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
         switch data._representation {
         case .large:
@@ -2824,10 +2820,8 @@ struct LargeDataTests {
         // transform from the `InlineData` form to the `LargeSlice` form
         data = Data([1, 2, 3])
         data.append(addingRawCapacity: largeCount) {
-            $0.withUnsafeMutableBytes { (buffer, count) in
-                buffer.initializeMemory(as: UInt8.self, repeating: .max)
-                count = buffer.count
-            }
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
         switch data._representation {
         case .large:
@@ -2839,10 +2833,8 @@ struct LargeDataTests {
         // transform from the `InlineSlice` form to the `LargeSlice` form
         data = Data(0..<24)
         data.append(addingRawCapacity: largeCount) {
-            $0.withUnsafeMutableBytes { (buffer, count) in
-                buffer.initializeMemory(as: UInt8.self, repeating: .max)
-                count = buffer.count
-            }
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
         switch data._representation {
         case .large:
