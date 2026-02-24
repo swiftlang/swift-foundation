@@ -195,29 +195,11 @@ internal struct BuiltInUnicodeScalarSet {
     
     // __CFCSetGetBitmap
     internal func getBitmap(isInverted: Bool) -> Data {
-        let (result, bitmapData) = bitmap(forPlane: 0, isInverted: isInverted)
-        
-        switch result {
-        case .bitmapEmpty:
-            // For empty result, return the appropriate fill pattern
-            if isInverted {
-                return _CharacterSet.allZeros
-            } else {
-                return _CharacterSet.allZeros
-            }
-            
-        case .bitmapAll:
-            // For all result, return the appropriate fill pattern
-            if isInverted {
-                return _CharacterSet.allZeros
-            } else {
-                return _CharacterSet.allOnes
-            }
-            
-        case .bitmapFilled:
-            // For filled result, use the bitmap data directly
-            return bitmapData
-        }
+        let (_, bitmapData) = bitmap(forPlane: 0, isInverted: isInverted)
+        // The method bitmap(forPlane:isInverted:) already handles all logic and returns
+        // appropriate bitmapData for all cases (.bitmapEmpty, .bitmapAll, .bitmapFilled)
+        // so we should not have to switch anymore.
+        return bitmapData
     }
     
     // CFUniCharIsMemberOf
