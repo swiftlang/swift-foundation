@@ -2864,7 +2864,14 @@ struct LargeDataTests {
         }
     }
 
-    @Test func appendToSlicedLargeSlicesWithOutputRawSpan() {
+    @Test(.disabled(if: {
+        #if os(tvOS) // Disable these tests on tvOS since the test runner will likely be terminated for consuming too much memory
+        true
+        #else
+        false
+        #endif
+    }(), "Allocating very large amounts of data is not supported on this platform"))
+    func appendToSlicedLargeSlicesWithOutputRawSpan() {
         let appendedValue: UInt8 = (7..<252).randomElement()!
 
         let data = Data(count: largeCount + 1000)
