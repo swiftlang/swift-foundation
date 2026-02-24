@@ -76,6 +76,7 @@ extension Data {
             length = UInt8(count)
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient @inline(__always)
         init<E: Error>(
             rawCapacity: Int,
