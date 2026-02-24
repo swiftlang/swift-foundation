@@ -519,6 +519,10 @@ let benchmarks = {
             blackHole(manyAttributesString.runs)
         }
     }
+
+    Benchmark("stringConversion") { benchmark in
+        blackHole(String(longString.characters))
+    }
 }
 
 

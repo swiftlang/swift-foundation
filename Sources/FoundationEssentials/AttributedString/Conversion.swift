@@ -27,19 +27,19 @@ extension String {
         self.init(characters._characters)
     }
 
-    #if false // FIXME: Make this public.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    @backDeployed(before: macOS 14, iOS 17, tvOS 17, watchOS 10)
+    @_alwaysEmitIntoClient
     public init(_ characters: AttributedString.CharacterView) {
-        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
-            self.init(_characters: characters)
+        #if FOUNDATION_FRAMEWORK
+        guard #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) else {
+            // Forward to the slice overload above, which somehow did end up shipping in
+            // the original AttributedString release.
+            self.init(characters[...])
             return
         }
-        // Forward to the slice overload above, which somehow did end up shipping in
-        // the original AttributedString release.
-        self.init(characters[...])
+        #endif
+        self.init(_characters: characters)
     }
-    #endif
 
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
