@@ -169,6 +169,7 @@ extension Data {
             slice.range = slice.range.lowerBound..<slice.range.upperBound + buffer.count
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
             _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void

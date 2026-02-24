@@ -257,6 +257,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputRawSpan` covering uninitialized memory with
     ///         space for the specified number of bytes.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public init<E: Error>(
         rawCapacity capacity: Int,
@@ -284,6 +285,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputSpan` covering uninitialized memory with
     ///         space for the specified number of elements.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public init<E: Error>(
         capacity: Int,
@@ -581,6 +583,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputRawSpan` covering uninitialized memory with
     ///         space for the specified number of additional bytes.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingRawCapacity uninitializedCount: Int,
@@ -609,6 +612,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputSpan` covering uninitialized memory with
     ///         space for the specified number of additional elements.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingCapacity uninitializedCount: Int,

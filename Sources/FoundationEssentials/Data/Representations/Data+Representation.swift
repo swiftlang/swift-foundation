@@ -93,6 +93,7 @@ extension Data {
             }
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient
         init<E: Error>(
             capacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
@@ -321,6 +322,7 @@ extension Data {
             }
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
             addingCapacity uninitializedCount: Int,

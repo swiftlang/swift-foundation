@@ -313,6 +313,7 @@ internal final class __DataStorage : @unchecked Sendable {
         __DataStorage.move(_bytes!.advanced(by: origLength), bytes, length)
     }
     
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     func withUninitializedBytes<Result: ~Copyable, E: Error>(
       extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
