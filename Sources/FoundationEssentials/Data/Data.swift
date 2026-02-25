@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -239,6 +239,68 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = .empty
     }
 
+    /// Creates a data instance with the specified capacity, and then calls the given
+    /// closure with an output span covering the instance's uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to the `OutputRawSpan`.
+    /// The `OutputRawSpan` keeps track of the initialized memory, ensuring
+    /// safety. Its `count` at the end of the closure will become the `count` of
+    /// the newly-initialized instance of `Data`.
+    ///
+    /// - Note: While the resulting `Data` may have a capacity larger than the
+    ///   requested amount, the `OutputRawSpan` passed to the closure will cover
+    ///   exactly the number of bytes requested.
+    ///
+    /// - Parameters:
+    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
+    ///   - initializer: A closure to initialize the allocated memory.
+    ///     - Parameters:
+    ///       - span: An `OutputRawSpan` covering uninitialized memory with
+    ///         space for the specified number of bytes.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public init<E: Error>(
+        rawCapacity capacity: Int,
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) {
+        precondition(capacity >= 0, "capacity must not be negative")
+        _representation = try _Representation(capacity: capacity, initializer)
+    }
+
+    /// Creates a data instance with the specified capacity, and then calls the given
+    /// closure with an output span covering the instance's uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to the `OutputSpan`.
+    /// The `OutputSpan` keeps track of the initialized memory, ensuring
+    /// safety. Its `count` at the end of the closure will become the `count` of
+    /// the newly-initialized instance of `Data`.
+    ///
+    /// - Note: While the resulting `Data` may have a capacity larger than the
+    ///   requested amount, the `OutputSpan` passed to the closure will cover
+    ///   exactly the number of bytes requested.
+    ///
+    /// - Parameters:
+    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
+    ///   - initializer: A closure to initialize the allocated memory.
+    ///     - Parameters:
+    ///       - span: An `OutputSpan` covering uninitialized memory with
+    ///         space for the specified number of elements.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public init<E: Error>(
+        capacity: Int,
+        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
+    ) throws(E) {
+        self = try Data(rawCapacity: capacity) { output throws(E) in
+            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
+                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
+                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
+                    try initializer(&span)
+                    count = span.finalize(for: buffer)
+                }
+            }
+        }
+    }
 
     /// Initialize a `Data` without copying the bytes.
     ///
@@ -533,6 +595,74 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         guard !other.isEmpty else { return }
         other.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
             _representation.append(contentsOf: buffer)
+        }
+    }
+
+    /// Grows this data to have enough capacity for the specified number of
+    /// bytes, then calls the closure with an output span covering the requested
+    /// amount of uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to `span`. It
+    /// ensures safety by keeping track of the initialized memory.
+    /// At the end of the closure, `span`'s `count` elements will have
+    /// been appended to this `Data` instance.
+    ///
+    /// If the closure throws an error, the items appended until that point
+    /// will remain in the `Data` instance.
+    ///
+    /// - Parameters:
+    ///   - uninitializedCount: The number of new elements the `Data` should have
+    ///     space for.
+    ///   - initializer: A closure to initialize memory.
+    ///     - Parameters:
+    ///       - span: An `OutputRawSpan` covering uninitialized memory with
+    ///         space for the specified number of additional bytes.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public mutating func append<E: Error>(
+        addingRawCapacity uninitializedCount: Int,
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) {
+        precondition(uninitializedCount >= 0, "uninitializedCount must not be negative")
+        try _representation.append(addingCapacity: uninitializedCount, initializer)
+    }
+
+    /// Grows this data to have enough capacity for the specified number of
+    /// bytes, then calls the closure with an output span covering the requested
+    /// amount of uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to `span`. It
+    /// ensures safety by keeping track of the initialized memory.
+    /// At the end of the closure, `span`'s `count` elements will have
+    /// been appended to this `Data` instance.
+    ///
+    /// If the closure throws an error, the items appended until that point
+    /// will remain in the `Data` instance.
+    ///
+    /// - Parameters:
+    ///   - uninitializedCount: The number of new elements the array should have
+    ///     space for.
+    ///   - initializer: A closure to initialize memory.
+    ///     - Parameters:
+    ///       - span: An `OutputSpan` covering uninitialized memory with
+    ///         space for the specified number of additional elements.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    public mutating func append<E: Error>(
+        addingCapacity uninitializedCount: Int,
+        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
+    ) throws(E) {
+        try self.append(addingRawCapacity: uninitializedCount) { output throws(E) in
+            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
+                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
+                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
+                    defer {
+                        count = span.finalize(for: buffer)
+                        span = OutputSpan()
+                    }
+                    try initializer(&span)
+                }
+            }
         }
     }
 

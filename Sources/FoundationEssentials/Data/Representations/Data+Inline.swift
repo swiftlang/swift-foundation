@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2025 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -76,6 +76,29 @@ extension Data {
             length = UInt8(count)
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        @_alwaysEmitIntoClient @inline(__always)
+        init<E: Error>(
+            rawCapacity: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            self.init()
+            do throws(E) {
+                let count = try Swift.withUnsafeMutableBytes(of: &bytes) {
+                    buffer throws(E) in
+                    let prefix = buffer.prefix(rawCapacity)
+                    var output = OutputRawSpan(buffer: prefix, initializedCount: 0)
+                    try initializer(&output)
+                    return output.finalize(for: prefix)
+                }
+                assert(count <= rawCapacity)
+                length = UInt8(count)
+            } catch {
+                self = .init()
+                throw error
+            }
+        }
+
         @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ slice: InlineSlice, count: Int) {
             self.init(count: count)
@@ -162,6 +185,28 @@ extension Data {
             length += UInt8(buffer.count)
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        @_alwaysEmitIntoClient
+        mutating func append<E: Error>(
+            _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            let oldCount = self.count
+            let newCapacity = oldCount + extraCapacity
+            assert(newCapacity <= capacity)
+            try Swift.withUnsafeMutableBytes(of: &bytes) {
+                buffer throws(E) in
+                let slice = buffer[oldCount..<newCapacity]
+                var span = OutputRawSpan(buffer: slice, initializedCount: 0)
+                defer {
+                    let addedCount = unsafe span.finalize(for: slice)
+                    length = UInt8(truncatingIfNeeded: oldCount + addedCount)
+                    assert(addedCount <= extraCapacity)
+                    span = OutputRawSpan()
+                }
+                try initializer(&span)
+            }
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         subscript(index: Index) -> UInt8 {
             get {

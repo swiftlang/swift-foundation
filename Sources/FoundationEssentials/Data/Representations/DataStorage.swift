@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -365,6 +365,23 @@ internal final class __DataStorage : @unchecked Sendable {
         __DataStorage.move(_bytes!.advanced(by: origLength), bytes, length)
     }
     
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    func withUninitializedBytes<Result: ~Copyable, E: Error>(
+      extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
+    ) throws(E) -> Result {
+        // We use the requested capacity to build the `OutputRawSpan`. The requested capacity may be less than the actual capacity.
+        assert((_length + extraCapacity) <= capacity)
+        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: location), count: extraCapacity)
+        var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
+        defer {
+            appendedCount = outputSpan.finalize(for: buffer)
+            _length &+= appendedCount
+            outputSpan = OutputRawSpan()
+        }
+        return try initializer(&outputSpan)
+    }
+
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func get(_ index: Int) -> UInt8 {
         // index must have already been validated by the caller

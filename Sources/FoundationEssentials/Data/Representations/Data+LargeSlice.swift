@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2025 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -169,6 +169,19 @@ extension Data {
             slice.range = slice.range.lowerBound..<slice.range.upperBound + buffer.count
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        @_alwaysEmitIntoClient
+        mutating func append<E: Error>(
+            _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            reserveCapacity(count + extraCapacity)
+            var appendedCount = 0
+            defer {
+                slice.range = slice.range.lowerBound..<(slice.range.upperBound + appendedCount)
+            }
+            try storage.withUninitializedBytes(extraCapacity: extraCapacity, location: endIndex, &appendedCount, initializer)
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         subscript(index: Index) -> UInt8 {
             get {

@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -162,6 +162,62 @@ private final class DataTests {
             let data5 = Data(buffer: tupleBuffer)
             #expect(data5 == Data([0xFF, 0x00, 0xFE, 0x00, 0xFD, 0x00, 0xFC, 0x00]))
         }
+    }
+
+    @Test func initializationWithOutputRawSpan() throws {
+        struct LocalError: Error, Equatable {}
+
+        // Initialize the inline representation
+        var data = Data(rawCapacity: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(42)
+        }
+        switch data._representation {
+        case .inline:
+            #expect(data.count == 1)
+        default:
+            Issue.record("Data representation should be .inline")
+        }
+
+        data = Data(rawCapacity: 0) {
+            #expect($0.freeCapacity == 0)
+        }
+        switch data._representation {
+        case .empty:
+            #expect(data.count == 0)
+        default:
+            Issue.record("Data representation should be .empty")
+        }
+
+        #expect(throws: LocalError()) {
+            data = try Data(rawCapacity: 2) {
+                $0.append(42)
+                throw LocalError()
+            }
+            Issue.record("Reached unreachable code.")
+        }
+
+        let anInlineSliceSize = 96
+        // Initialize an "inline slice"
+        data = Data(rawCapacity: anInlineSliceSize) {
+            #expect($0.freeCapacity == anInlineSliceSize)
+            $0.append(42)
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == 1)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+    }
+
+    @Test func initializationWithOutputSpanOfUInt8() throws {
+        let data = Data(capacity: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(42)
+            #expect($0.freeCapacity == 0)
+        }
+        #expect(data.count == 1)
     }
 
     @Test func mutableData() {
@@ -829,6 +885,103 @@ private final class DataTests {
         var d2 = Data()
         d2.append(slice)
         #expect(Data([1]) == slice)
+    }
+
+    @Test func appendWithOutputRawSpan() {
+        struct LocalError: Error, Equatable {}
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        // Append to the inline representation
+        var data = Data()
+        data.append(addingRawCapacity: 8) {
+            #expect($0.freeCapacity == 8)
+        }
+        switch data._representation {
+        case .empty:
+            #expect(data.isEmpty)
+        default:
+            Issue.record("Data representation should be .empty")
+        }
+
+        data = Data()
+        try? data.append(addingRawCapacity: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(appendedValue)
+            throw LocalError()
+        }
+        switch data._representation {
+        case .inline:
+            #expect(data.count == 1)
+            #expect(data[0] == appendedValue)
+        default:
+            Issue.record("Data representation should be .inline")
+        }
+
+        data = Data(0..<4)
+        let count0 = data.count
+        data.append(addingRawCapacity: 20) {
+            #expect($0.freeCapacity == 20)
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == count0)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+
+        try? data.append(addingRawCapacity: 20) {
+            #expect($0.freeCapacity == 20)
+            $0.append(repeating: appendedValue, count: 20, as: UInt8.self)
+            let full = $0.isFull
+            #expect(full)
+            throw LocalError()
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == 24)
+            #expect(data.last == appendedValue)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+
+        // Append to the `InlineSlice` representation
+        data = Data(0..<23)
+        data.append(addingRawCapacity: 20) {
+          $0.append(appendedValue)
+        }
+        #expect(data.count == 24)
+        #expect(data.last == appendedValue)
+        try? data.append(addingRawCapacity: 1) {
+            $0.append(appendedValue)
+            throw LocalError()
+        }
+        switch data._representation {
+        case .slice:
+            #expect(data.count == 25)
+            #expect(data.last == appendedValue)
+        default:
+            Issue.record("Data representation should be .slice")
+        }
+    }
+
+    @Test func appendToSlicedInlineSlicesWithOutputRawSpan() {
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        let data = Data(0..<100)
+        #expect(data.count <= capacity(data))
+        var slice = data[20..<80]
+        #expect(slice.count <= capacity(slice))
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+
+        slice = data[20..<80]
+        _ = consume data
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
     }
 
     // This test uses `repeatElement` to produce a sequence -- the produced sequence reports its actual count as its `.underestimatedCount`.
@@ -2711,5 +2864,97 @@ struct LargeDataTests {
         data2.withUnsafeBytes {
             #expect($0.baseAddress == originalPointer)
         }
+    }
+
+    @Test func largeRepresentationOutputRawSpanInitAndAppend() throws {
+        struct LocalError: Error, Equatable {}
+
+        var data = Data(rawCapacity: largeCount) {
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
+        }
+        switch data._representation {
+        case .large:
+            #expect(data.count == largeCount)
+        default:
+            Issue.record("Data representation should be .large")
+        }
+
+        // exercise `LargeSlice.append()`
+        data.append(addingRawCapacity: 20) {
+            #expect($0.freeCapacity == 20)
+            $0.append(51)
+        }
+        #expect(data.count == largeCount+1)
+        #expect(data.last == 51)
+        try? data.append(addingRawCapacity: 10) {
+            #expect($0.freeCapacity == 10)
+            $0.append(52)
+            throw LocalError()
+        }
+        #expect(data.count == largeCount+2)
+        #expect(data.last == 52)
+
+        // transform from the `InlineData` form to the `LargeSlice` form
+        data = Data([1, 2, 3])
+        data.append(addingRawCapacity: largeCount) {
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
+        }
+        switch data._representation {
+        case .large:
+            #expect(data.count == largeCount+3)
+        default:
+            Issue.record("Data representation should be .large")
+        }
+
+        // transform from the `InlineSlice` form to the `LargeSlice` form
+        data = Data(0..<24)
+        data.append(addingRawCapacity: largeCount) {
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
+        }
+        switch data._representation {
+        case .large:
+            #expect(data.count == largeCount+24)
+        default:
+            Issue.record("Data representation should be .large")
+        }
+    }
+
+    @Test(.disabled(if: {
+        #if os(tvOS) // Disable these tests on tvOS since the test runner will likely be terminated for consuming too much memory
+        true
+        #else
+        false
+        #endif
+    }(), "Allocating very large amounts of data is not supported on this platform"))
+    func appendToSlicedLargeSlicesWithOutputRawSpan() {
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        let data = Data(count: largeCount + 1000)
+        #expect(data.count <= capacity(data))
+        var slice = data.dropFirst(100).dropLast(100)
+        #expect(slice.count <= capacity(slice))
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+
+        slice = data.dropFirst(100).dropLast(100)
+        _ = consume data
+        slice.append(addingRawCapacity: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+    }
+}
+
+private func capacity(_ data: consuming Data) -> Int {
+    switch data._representation {
+    case .empty: 0
+    case .inline: Data.InlineData.maximumCapacity
+    case .slice(let slice): slice.capacity
+    case .large(let slice): slice.capacity
     }
 }
