@@ -948,7 +948,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     /// The end `Index` into the data.
     ///
-    /// This is the "one-past-the-end" position, and will always be equal to the `count`.
+    /// This is the "one-past-the-end" position—that is, the position one greater than the last valid subscript argument.
     @inlinable // This is @inlinable as trivially forwarding.
     public var endIndex: Index {
         get {
