@@ -520,7 +520,7 @@ private func lineNumberStrings(_ pInfo: _ParseInfo) -> Int {
             count += 1
 
             let nextIdx = pInfo.utf16.index(after: p)
-            if nextIdx < pInfo.utf16.endIndex && nextIdx < pInfo.curr && pInfo.utf16[nextIdx] == UInt16("\n") {
+            if nextIdx < pInfo.utf16.endIndex && nextIdx < pInfo.curr && pInfo.utf16[nextIdx] == UInt16(ascii: "\n") {
                 p = nextIdx
             }
         } else if pInfo.utf16[p] == UInt16(ascii: "\n") {
