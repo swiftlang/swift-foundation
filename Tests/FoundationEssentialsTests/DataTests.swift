@@ -46,6 +46,28 @@ extension Data {
     }
 }
 
+// A box that holds a pointer which may no longer reference valid memory
+// It cannot be dereferenced and may only be used for comparison to other pointers
+struct SafePointerComparison: Equatable {
+    private let pointer: UnsafeRawPointer?
+
+    init(_ pointer: UnsafeRawPointer?) {
+        self.pointer = pointer
+    }
+}
+
+extension Data {
+    var allocationForComparison: SafePointerComparison {
+        switch _representation {
+        case .empty, .inline:
+            preconditionFailure("Data does not have an allocation")
+        default:
+            // It is safe to escape the pointer from this closure because SafePointerComparison guarantees it will never be dereferenced
+            self.withUnsafeBytes { SafePointerComparison($0) }
+        }
+    }
+}
+
 @Suite("Data")
 private final class DataTests {
 
@@ -887,6 +909,74 @@ private final class DataTests {
         #expect(Data([1]) == slice)
     }
 
+    @Test func appendToSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: 80)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            #expect(capacity(slice) == 100)
+            let startPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: 80)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            #expect(capacity(slice) == 100)
+            let startPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
+    }
+
+    @Test func reserveCapacitySlices() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: 80)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            #expect(capacity(slice) == 100)
+            let startPointer = slice.allocationForComparison
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            let reallocedPointer = slice.allocationForComparison
+            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: 80)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            #expect(capacity(slice) == 100)
+            let startPointer = slice.allocationForComparison
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            let reallocedPointer = slice.allocationForComparison
+            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+        }
+    }
+
     @Test func appendWithOutputRawSpan() {
         struct LocalError: Error, Equatable {}
         let appendedValue: UInt8 = (7..<252).randomElement()!
@@ -982,6 +1072,44 @@ private final class DataTests {
             $0.append(appendedValue)
         }
         #expect(slice.last == appendedValue)
+    }
+
+    @Test func appendWithOutputRawSpanExtendSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: 80)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            #expect(capacity(slice) == 100)
+            let startPointer = slice.allocationForComparison
+            slice.append(addingCapacity: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25)
+                #expect($0.isFull == true)
+            }
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: 80)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            #expect(capacity(slice) == 100)
+            let startPointer = slice.allocationForComparison
+            slice.append(addingCapacity: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25)
+                #expect($0.isFull == true)
+            }
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
     }
 
     // This test uses `repeatElement` to produce a sequence -- the produced sequence reports its actual count as its `.underestimatedCount`.
@@ -1610,15 +1738,12 @@ private final class DataTests {
         }
         
         var data2 = Data(count: 32)
-        // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
-        
+        let originalPointer = data2.allocationForComparison
+
         var bytes = data2.mutableBytes
         bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
-        }
+        #expect(data2.allocationForComparison == originalPointer)
     }
     
     @Test func validateMutation_cow_mutableSpan() {
@@ -1633,14 +1758,12 @@ private final class DataTests {
         
         var data2 = Data(count: 32)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        let originalPointer = data2.allocationForComparison
         
         var bytes = data2.mutableSpan
         bytes[0] = 1
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
-        }
+        #expect(data2.allocationForComparison == originalPointer)
     }
 
     @Test func sliceHash() {
@@ -2636,11 +2759,7 @@ extension DataTests {
 
             // Initializing one Data from another should not copy the bytes
             let data2 = Data(data)
-            data.withUnsafeBytes { bufferA in
-                data2.withUnsafeBytes { bufferB in
-                    #expect(bufferA.baseAddress == bufferB.baseAddress)
-                }
-            }
+            #expect(data.allocationForComparison == data2.allocationForComparison)
         }
 
         do {
@@ -2649,11 +2768,7 @@ extension DataTests {
             // Initializing one Data from another should not copy the bytes, even when sliced as a prefix
             let data2 = Data(data.prefix(upTo: 50))
             #expect(data2.startIndex == 0)
-            data.withUnsafeBytes { bufferA in
-                data2.withUnsafeBytes { bufferB in
-                    #expect(bufferA.baseAddress == bufferB.baseAddress)
-                }
-            }
+            #expect(data.allocationForComparison == data2.allocationForComparison)
         }
 
         do {
@@ -2662,28 +2777,19 @@ extension DataTests {
             // Initializing one Data from another should copy the bytes when the slice does not begin at 0
             let data2 = Data(data[20 ..< 80])
             #expect(data2.startIndex == 0)
-            data.withUnsafeBytes { bufferA in
-                data2.withUnsafeBytes { bufferB in
-                    #expect(bufferA.baseAddress != bufferB.baseAddress)
-                }
-            }
+            #expect(data.allocationForComparison != data2.allocationForComparison)
         }
 
         do {
             withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 20) { stackBuffer in
+                let stackPointer = SafePointerComparison(stackBuffer.baseAddress)
                 let data = Data(bytesNoCopy: stackBuffer.baseAddress!, count: 20, deallocator: .none)
-                data.withUnsafeBytes {
-                    #expect($0.baseAddress == UnsafeRawPointer(stackBuffer.baseAddress!))
-                }
+                #expect(data.allocationForComparison == stackPointer)
                 #expect(data.startIndex == 0)
 
                 // Initializing one Data from another should copy the bytes when no-copy initialized
                 let data2 = Data(data)
-                data.withUnsafeBytes { bufferA in
-                    data2.withUnsafeBytes { bufferB in
-                        #expect(bufferA.baseAddress != bufferB.baseAddress)
-                    }
-                }
+                #expect(data.allocationForComparison != data2.allocationForComparison)
             }
         }
     }
@@ -2744,9 +2850,7 @@ extension DataTests {
         
         let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .free)
         let copy = data._bridgeToObjectiveC().copy() as! NSData
-        data.withUnsafeBytes { buffer in
-            #expect(buffer.baseAddress == copy.bytes)
-        }
+        #expect(data.allocationForComparison == copy.allocationForComparison)
     }
     
     @Test func noCopy_uaf_bridge() {
@@ -2755,24 +2859,38 @@ extension DataTests {
         
         let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .none)
         let copy = data._bridgeToObjectiveC().copy() as! NSData
-        data.withUnsafeBytes { buffer in
-            #expect(buffer.baseAddress != copy.bytes)
-        }
+        #expect(data.allocationForComparison == copy.allocationForComparison)
         bytes.deallocate()
     }
 }
 #endif
 
+extension Trait where Self == ConditionTrait {
+    static var requiresLargeData: ConditionTrait {
+        .enabled(if: {
+            #if os(watchOS)
+            false // watchOS memory limits are too small to allocate a large (2GB) data
+            #else
+            true
+            #endif
+        }(), "This platform does not support allocationg a large data")
+    }
+
+    static var requiresMultipleLargeData: ConditionTrait {
+        .enabled(if: {
+            #if os(watchOS) || os(tvOS)
+            false // watchOS and tvOS memory limits are too small to allocate multiple large (2GB) datas
+            #else
+            true
+            #endif
+        }(), "This platform does not support allocationg a large data")
+    }
+}
+
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
 @Suite("Large Data Tests",
-       .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
-       .disabled(if: {
-           #if os(watchOS) // Disable these tests on watchOS since the test runner will likely be terminated for consuming too much memory
-           true
-           #else
-           false
-           #endif
-       }(), "Allocating large amounts of data is not supported on this platform")
+   .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
+   .requiresLargeData
 )
 struct LargeDataTests {
 #if _pointerBitWidth(_64)
@@ -2832,14 +2950,12 @@ struct LargeDataTests {
         
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        let originalPointer = data2.allocationForComparison
         
         var bytes2 = data2.mutableBytes
         bytes2.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
-        }
+        #expect(data2.allocationForComparison == originalPointer)
     }
     
     @Test func validateMutation_cow_largeMutableSpan() {
@@ -2856,14 +2972,12 @@ struct LargeDataTests {
         
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        let originalPointer = data2.allocationForComparison
         
         var bytes2 = data2.mutableSpan
         bytes2[0] = 1
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
-        }
+        #expect(data2.allocationForComparison == originalPointer)
     }
 
     @Test func largeRepresentationOutputRawSpanInitAndAppend() throws {
@@ -2922,13 +3036,7 @@ struct LargeDataTests {
         }
     }
 
-    @Test(.disabled(if: {
-        #if os(tvOS) // Disable these tests on tvOS since the test runner will likely be terminated for consuming too much memory
-        true
-        #else
-        false
-        #endif
-    }(), "Allocating very large amounts of data is not supported on this platform"))
+    @Test(.requiresMultipleLargeData)
     func appendToSlicedLargeSlicesWithOutputRawSpan() {
         let appendedValue: UInt8 = (7..<252).randomElement()!
 
@@ -2947,6 +3055,110 @@ struct LargeDataTests {
             $0.append(appendedValue)
         }
         #expect(slice.last == appendedValue)
+    }
+
+    @Test(.requiresMultipleLargeData)
+    func appendToLargeSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: largeCount)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: largeCount)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
+    }
+
+    @Test(.requiresMultipleLargeData)
+    func reserveCapacityLargeSlices() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: largeCount)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startPointer = slice.allocationForComparison
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            let reallocedPointer = slice.allocationForComparison
+            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: largeCount)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startPointer = slice.allocationForComparison
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            let reallocedPointer = slice.allocationForComparison
+            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+        }
+    }
+
+    @Test(.requiresMultipleLargeData)
+    func appendWithOutputRawSpanExtendLargeSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: largeCount)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startPointer = slice.allocationForComparison
+            slice.append(addingCapacity: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25)
+                #expect($0.isFull == true)
+            }
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: 80)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            #expect(capacity(slice) == 100)
+            let startPointer = slice.allocationForComparison
+            slice.append(addingCapacity: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25)
+                #expect($0.isFull == true)
+            }
+            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
     }
 }
 

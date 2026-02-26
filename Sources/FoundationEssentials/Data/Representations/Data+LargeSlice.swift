@@ -115,12 +115,26 @@ extension Data {
         var capacity: Int {
             return storage.capacity
         }
-        
-        @inlinable // This is @inlinable as trivially computable.
+
+        #if FOUNDATION_FRAMEWORK
+        // Legacy ABI entry point for clients built against an older @inlinable reserveCapacity
+        @usableFromInline
+        @abi(mutating func reserveCapacity(_ minimumCapacity: Int))
+        mutating func __legacy_reserveCapacity(_ minimumCapacity: Int) {
+            reserveCapacity(minimumCapacity)
+        }
+        #endif
+
+        #if FOUNDATION_FRAMEWORK
+        @abi(mutating func __implementation_reserveCapacity(_ minimumCapacity: Int))
+        #endif
+        @_alwaysEmitIntoClient // Ensures that newer clients who may be using `__DataStorage.withUninitializedBytes` always use a new copy of reserveCapacity
         mutating func reserveCapacity(_ minimumCapacity: Int) {
             ensureUniqueReference()
             // the current capacity can be zero (representing externally owned buffer), and count can be greater than the capacity
-            storage.ensureUniqueBufferReference(growingTo: Swift.max(minimumCapacity, count))
+            // Capacity of the storage is relative to the start of the allocation, not start of the slice, so offset by the prefix before the slice
+            let prefixLength = startIndex - storage._offset
+            storage.ensureUniqueBufferReference(growingTo: prefixLength + Swift.max(minimumCapacity, count))
         }
         
         @inlinable // This is @inlinable as trivially computable.
