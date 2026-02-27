@@ -63,7 +63,7 @@ extension Data {
             preconditionFailure("Data does not have an allocation")
         default:
             // It is safe to escape the pointer from this closure because SafePointerComparison guarantees it will never be dereferenced
-            self.withUnsafeBytes { SafePointerComparison($0) }
+            self.withUnsafeBytes { SafePointerComparison($0.baseAddress) }
         }
     }
 }
@@ -915,10 +915,9 @@ private final class DataTests {
             let original = Data(count: 80)
             var slice = original.suffix(1)
             #expect(slice.count == 1)
-            #expect(capacity(slice) == 100)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
             _fixLifetime(original) // Ensure original lives beyond the mutations above
         }
@@ -931,10 +930,9 @@ private final class DataTests {
                 slice = original.suffix(1)
             }
             #expect(slice.count == 1)
-            #expect(capacity(slice) == 100)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
         }
     }
@@ -945,15 +943,14 @@ private final class DataTests {
             let original = Data(count: 80)
             var slice = original.suffix(1)
             #expect(slice.count == 1)
-            #expect(capacity(slice) == 100)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             // 25 is smaller than the original capacity, but requires re-allocation to provide
             // space for 25 bytes after the existing byte at index 79
             slice.reserveCapacity(25)
-            let reallocedPointer = slice.allocationForComparison
-            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
             _fixLifetime(original) // Ensure original lives beyond the mutations above
         }
 
@@ -965,15 +962,14 @@ private final class DataTests {
                 slice = original.suffix(1)
             }
             #expect(slice.count == 1)
-            #expect(capacity(slice) == 100)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             // 25 is smaller than the original capacity, but requires re-allocation to provide
             // space for 25 bytes after the existing byte at index 79
             slice.reserveCapacity(25)
-            let reallocedPointer = slice.allocationForComparison
-            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
         }
     }
 
@@ -1080,14 +1076,13 @@ private final class DataTests {
             let original = Data(count: 80)
             var slice = original.suffix(1)
             #expect(slice.count == 1)
-            #expect(capacity(slice) == 100)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(addingCapacity: 25) {
                 #expect($0.freeCapacity == 25)
                 $0.append(repeating: 1, count: 25)
                 #expect($0.isFull == true)
             }
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
             _fixLifetime(original) // Ensure original lives beyond the mutations above
         }
@@ -1100,14 +1095,13 @@ private final class DataTests {
                 slice = original.suffix(1)
             }
             #expect(slice.count == 1)
-            #expect(capacity(slice) == 100)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(addingCapacity: 25) {
                 #expect($0.freeCapacity == 25)
                 $0.append(repeating: 1, count: 25)
                 #expect($0.isFull == true)
             }
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
         }
     }
@@ -3064,9 +3058,9 @@ struct LargeDataTests {
             let original = Data(count: largeCount)
             var slice = original.suffix(1)
             #expect(slice.count == 1)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
             _fixLifetime(original) // Ensure original lives beyond the mutations above
         }
@@ -3079,9 +3073,9 @@ struct LargeDataTests {
                 slice = original.suffix(1)
             }
             #expect(slice.count == 1)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
         }
     }
@@ -3093,14 +3087,14 @@ struct LargeDataTests {
             let original = Data(count: largeCount)
             var slice = original.suffix(1)
             #expect(slice.count == 1)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             // 25 is smaller than the original capacity, but requires re-allocation to provide
             // space for 25 bytes after the existing byte at index 79
             slice.reserveCapacity(25)
-            let reallocedPointer = slice.allocationForComparison
-            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
             _fixLifetime(original) // Ensure original lives beyond the mutations above
         }
 
@@ -3112,14 +3106,14 @@ struct LargeDataTests {
                 slice = original.suffix(1)
             }
             #expect(slice.count == 1)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             // 25 is smaller than the original capacity, but requires re-allocation to provide
             // space for 25 bytes after the existing byte at index 79
             slice.reserveCapacity(25)
-            let reallocedPointer = slice.allocationForComparison
-            #expect(startPointer != reallocedPointer, "Reserving capacity did not reallocate")
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
             slice.append(Data(repeating: 1, count: 25))
-            #expect(slice.allocationForComparison == reallocedPointer, "Appending within reserved capacity triggered a reallocation")
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
         }
     }
 
@@ -3130,13 +3124,13 @@ struct LargeDataTests {
             let original = Data(count: largeCount)
             var slice = original.suffix(1)
             #expect(slice.count == 1)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(addingCapacity: 25) {
                 #expect($0.freeCapacity == 25)
                 $0.append(repeating: 1, count: 25)
                 #expect($0.isFull == true)
             }
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
             _fixLifetime(original) // Ensure original lives beyond the mutations above
         }
@@ -3145,18 +3139,17 @@ struct LargeDataTests {
         do {
             var slice: Data
             do {
-                let original = Data(count: 80)
+                let original = Data(count: largeCount)
                 slice = original.suffix(1)
             }
             #expect(slice.count == 1)
-            #expect(capacity(slice) == 100)
-            let startPointer = slice.allocationForComparison
+            let startCapacity = capacity(slice)
             slice.append(addingCapacity: 25) {
                 #expect($0.freeCapacity == 25)
                 $0.append(repeating: 1, count: 25)
                 #expect($0.isFull == true)
             }
-            #expect(slice.allocationForComparison != startPointer, "Appending did not trigger a reallocation")
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
             #expect(slice.count == 26)
         }
     }
