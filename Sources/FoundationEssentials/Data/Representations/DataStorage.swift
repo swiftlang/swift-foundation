@@ -87,24 +87,24 @@ internal final class __DataStorage : @unchecked Sendable {
 
     // Layout of __DataStorage's byte allocation:
     //
-    //            _bytes
-    //              ↓
-    //   ┌ ─ ─ ─ ─ ─┬───────────────────────────────┬───────────────────┐
-    //   ┊ prior    │ initialized bytes             ┊ uninitialized     │
-    //   ┊ prefix   │                               ┊ bytes             │
-    //   └ ─ ─ ─ ─ ─┴───────────────────────────────┴───────────────────┘
-    //   <─_offset─> <──────────── _length ────────>
-    //               <─────────────────── capacity ────────────────────>
+    //             _bytes
+    //               ↓
+    //   ┌─ ─ ─ ─ ─ ─┬───────────────────────────────┬───────────────────┐
+    //   ┊ prior     │ initialized bytes             ┊ uninitialized     │
+    //   ┊ prefix    │                               ┊ bytes             │
+    //   └─ ─ ─ ─ ─ ─┴───────────────────────────────┴───────────────────┘
+    //    <─_offset─> <──────────── _length ────────>
+    //                <─────────────────── capacity ────────────────────>
     //
     // Layout of Slices:
     //
-    //   ┌ ─ ─ ─ ─ ─┬──────────┬──────────────┬─────────┬───────────────┐
-    //   ┊ prior    │ prefix   ┊  slice       ┊ suffix  ┊ uninitialized │
-    //   ┊ prefix   │          ┊              ┊         ┊ bytes         │
-    //   └ ─ ─ ─ ─ ─┴──────────┴──────────────┴─────────┴───────────────┘
-    //   <─_offset─>
-    //   <─ slice.lowerBound ─>
-    //   <────── slice.upperBound ───────────>
+    //   ┌─ ─ ─ ─ ─ ─┬──────────┬──────────────┬─────────┬───────────────┐
+    //   ┊ prior     │ prefix   ┊ slice        ┊ suffix  ┊ uninitialized │
+    //   ┊ prefix    │          ┊              ┊         ┊ bytes         │
+    //   └─ ─ ─ ─ ─ ─┴──────────┴──────────────┴─────────┴───────────────┘
+    //    <─_offset─>
+    //    <─ slice.lowerBound ─>
+    //    <────── slice.upperBound ───────────>
     //
     //   The bounds of the slice are relative to the beginning of the prior prefix, not the start
     //   of the current allocation (_bytes). This guarantees that indices remain stable for slices

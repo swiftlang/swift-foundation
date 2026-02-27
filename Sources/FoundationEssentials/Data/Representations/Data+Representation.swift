@@ -138,7 +138,6 @@ extension Data {
                     self = .large(slice)
                 }
             case .slice(var slice):
-                guard minimumCapacity > slice.capacity else { return }
                 if InlineSlice.canStore(count: minimumCapacity) {
                     self = .empty
                     slice.reserveCapacity(minimumCapacity)
@@ -149,7 +148,6 @@ extension Data {
                     self = .large(large)
                 }
             case .large(var slice):
-                guard minimumCapacity > slice.capacity else { return }
                 self = .empty
                 slice.reserveCapacity(minimumCapacity)
                 self = .large(slice)
