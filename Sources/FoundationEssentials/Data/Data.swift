@@ -409,6 +409,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             _representation = contiguous.withUnsafeBytes { return _Representation($0) }
             return
         }
+
+        // This fast path should always be within the ABI function because Data(referencing:) is opaque anyways
+        if let nsData = elements as? NSData {
+            // If we have an NSData, bridge it rather than slow-copy it
+            self = Data(referencing: nsData)
+            return
+        }
         #endif
 
         // Copy as much as we can in one shot from the sequence.
