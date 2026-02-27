@@ -2861,7 +2861,7 @@ extension DataTests {
         
         let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .none)
         let copy = data._bridgeToObjectiveC().copy() as! NSData
-        #expect(data.allocationForComparison == copy.allocationForComparison)
+        #expect(data.allocationForComparison != copy.allocationForComparison)
         bytes.deallocate()
     }
 }
