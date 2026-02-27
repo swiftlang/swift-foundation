@@ -71,7 +71,7 @@ extension Data {
 #if FOUNDATION_FRAMEWORK
 extension NSData {
     var allocationForComparison: SafePointerComparison {
-        self.withUnsafeBytes { SafePointerComparison($0.baseAddress) }
+        SafePointerComparison(self.bytes)
     }
 }
 #endif
