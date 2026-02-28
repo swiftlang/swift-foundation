@@ -193,15 +193,15 @@ extension _FileManagerImpl {
             #else
             var result: Int32
             if followSymLinks {
-                result = lsetxattr(path, key, buffer.baseAddress!, buffer.count, 0)
-            } else {
                 result = setxattr(path, key, buffer.baseAddress!, buffer.count, 0)
+            } else {
+                result = lsetxattr(path, key, buffer.baseAddress!, buffer.count, 0)
             }
             #endif
 
             #if os(macOS) && FOUNDATION_FRAMEWORK
-            // if setxaddr failed and its a permission error for a sandbox app trying to set quaratine attribute, ignore it since its not
-            // permitted, the attribute will be put on the file by the quaratine MAC hook
+            // if setxattr failed and its a permission error for a sandbox app trying to set quarantine attribute, ignore it since its not
+            // permitted, the attribute will be put on the file by the quarantine MAC hook
             if result == -1 && errno == EPERM && _xpc_runtime_is_app_sandboxed() && strcmp(key, "com.apple.quarantine") == 0 {
                 return
             }

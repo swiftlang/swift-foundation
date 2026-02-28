@@ -1094,6 +1094,60 @@ private struct FileManagerTests {
         }
     }
 
+    // Extended attributes are not supported on all platforms
+    #if !os(Windows) && !os(WASI) && !os(OpenBSD) && !canImport(Android)
+    @Test func extendedAttributesOnSymlinks() async throws {
+        let xattrKey = FileAttributeKey("NSFileExtendedAttributes")
+        #if os(Linux)
+        // Linux requires the user.* namespace prefix for regular files
+        let attrName = "user.swift.foundation.symlinktest"
+        #else
+        let attrName = "org.swift.foundation.symlinktest"
+        #endif
+        let attrValue = Data([0xAA, 0xBB, 0xCC])
+        let attrValue2 = Data([0xDD, 0xEE, 0xFF])
+
+        try await FilePlayground {
+            File("target", contents: Data("payload".utf8))
+            SymbolicLink("link", destination: "target")
+        }.test { fileManager in
+            // First, validate that reading the attribute from the link does not read the value from the target
+            do {
+                try fileManager.setAttributes([xattrKey: [attrName: attrValue]], ofItemAtPath: "target")
+                let targetAttrs = try fileManager.attributesOfItem(atPath: "target")
+                let targetXAttrs = targetAttrs[xattrKey] as? [String: Data]
+                #expect(targetXAttrs?[attrName] == attrValue)
+                
+                let linkAttrs = try fileManager.attributesOfItem(atPath: "link")
+                let linkXAttrs = linkAttrs[xattrKey] as? [String: Data]
+                #expect(linkXAttrs?[attrName] == nil)
+            }
+
+            // Attempt to set xattrs on the symlink
+            #if os(Linux)
+            // On Linux, user xattrs cannot be set on symlinks
+            #expect(throws: CocoaError.self) {
+                try fileManager.setAttributes([xattrKey: [attrName: attrValue2]], ofItemAtPath: "link")
+            }
+            let expectedValue: Data? = nil
+            #else
+            try fileManager.setAttributes([xattrKey: [attrName: attrValue2]], ofItemAtPath: "link")
+            let expectedValue: Data? = attrValue2
+            #endif
+            
+            // Ensure that reading back the xattr of the link produces the expected value
+            let linkAttrs = try fileManager.attributesOfItem(atPath: "link")
+            let linkXAttrs = linkAttrs[xattrKey] as? [String: Data]
+            #expect(linkXAttrs?[attrName] == expectedValue)
+            
+            // Ensure that setting the xattr on the link did not set the xattr on the target
+            let targetAttrs = try fileManager.attributesOfItem(atPath: "target")
+            let targetXAttrs = targetAttrs[xattrKey] as? [String: Data]
+            #expect(targetXAttrs?[attrName] == attrValue)
+        }
+    }
+    #endif
+
     #if !canImport(Darwin) || os(macOS)
     @Test func currentUserHomeDirectory() async throws {
         let userName = ProcessInfo.processInfo.userName
