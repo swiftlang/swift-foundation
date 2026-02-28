@@ -147,7 +147,7 @@ private struct ProcessInfoTests {
         "ProcessInfo thinks we are on System 70")
     }
 
-#if os(macOS)
+#if canImport(Darwin) || os(Windows)
     @Test func userName() {
         #expect(!ProcessInfo.processInfo.userName.isEmpty)
     }

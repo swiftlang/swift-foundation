@@ -229,7 +229,7 @@ final class _ProcessInfo: Sendable {
         _ = GetUserNameExW(NameDisplay, nil, &ulLength)
 
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(ulLength)) { wszBuffer in
-            guard GetUserNameExW(NameDisplay, wszBuffer.baseAddress!, &ulLength) == 0 else {
+            guard GetUserNameExW(NameDisplay, wszBuffer.baseAddress!, &ulLength) != 0 else {
                 return ""
             }
             return String(decoding: wszBuffer.prefix(Int(ulLength)), as: UTF16.self)
