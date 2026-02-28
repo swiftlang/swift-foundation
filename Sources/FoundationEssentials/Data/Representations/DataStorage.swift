@@ -34,7 +34,11 @@ import ucrt
 internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
-    
+
+    #if !DATA_LEGACY_ABI
+    @usableFromInline static let empty = __DataStorage.init(bytes: nil, length: 0)
+    #endif
+
     static func allocate(_ size: Int, _ clear: Bool) -> UnsafeMutableRawPointer? {
 #if canImport(Darwin) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
@@ -147,13 +151,27 @@ internal final class __DataStorage : @unchecked Sendable {
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
     @discardableResult
     func withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
-        return try apply(UnsafeRawBufferPointer(start: _bytes?.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+        if let _bytes {
+            return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+        } else {
+            var byte = 0
+            return try Swift.withUnsafeBytes(of: &byte) { buffer in
+                return try apply(UnsafeRawBufferPointer(start: buffer.baseAddress!, count: 0))
+            }
+        }
     }
     
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
     @discardableResult
     func withUnsafeMutableBytes<Result>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
-        return try apply(UnsafeMutableRawBufferPointer(start: _bytes!.advanced(by:range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+        if let _bytes {
+            return try apply(UnsafeMutableRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+        } else {
+            var byte = 0
+            return try Swift.withUnsafeMutableBytes(of: &byte) { buffer in
+                return try apply(UnsafeMutableRawBufferPointer(start: buffer.baseAddress!, count: 0))
+            }
+        }
     }
 
     /// A pointer to the mutable referenced byte allocation, relative to the slice offsets
@@ -243,7 +261,6 @@ internal final class __DataStorage : @unchecked Sendable {
             _freeBytes()
             _bytes = newBytes
             _capacity = newCapacity
-            _length = newLength
             _needToZero = true
         } else {
             let cap = _capacity

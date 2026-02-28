@@ -152,7 +152,8 @@ let package = Package(
             .enableExperimentalFeature("AddressableTypes"),
             .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
-            .enableExperimentalFeature("AccessLevelOnImport")
+            .enableExperimentalFeature("AccessLevelOnImport"),
+            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
           ] + availabilityMacros + featureSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
@@ -167,7 +168,9 @@ let package = Package(
             resources: [
                 .copy("Resources")
             ],
-            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+            swiftSettings: [
+                .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
+            ] + availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
 
         // FoundationInternationalization
