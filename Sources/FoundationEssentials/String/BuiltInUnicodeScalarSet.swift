@@ -224,13 +224,13 @@ internal struct BuiltInUnicodeScalarSet {
                     return charInPlane > 0xFFFD
                 } else {
                     // fix for fetching ptr to legal
-                    let dataSpan = bitmapPtrForPlane(Int(planeNo))
-                    guard let dataSpan else {
+                    guard let (dataSpan, shouldInvert) = _bitmapPtrForPlane(Int(planeNo)) else {
                         return false
                     }
-                 
+
                     if planeNo < _numberOfPlanes {
-                        return !_isMemberOfBitmap(scalar, dataSpan)
+                        let isMember = _isMemberOfBitmap(scalar, dataSpan)
+                        return shouldInvert ? !isMember : isMember
                     }
                 }
             } else if charset == .controlAndFormatter {
@@ -239,19 +239,17 @@ internal struct BuiltInUnicodeScalarSet {
                     return ((charInPlane == 0x01) || ((charInPlane > 0x1F) && (charInPlane < 0x80))) ? true : false
                 } else {
                     // dataPtr will be nil for illegal case, causing the check to fail; the C implementation returns legal pointer for dataPtr
-                    let dataSpan = bitmapPtrForPlane(Int(planeNo))
-                    guard let dataSpan else {
+                    guard let dataSpan = bitmapPtrForPlane(Int(planeNo)) else {
                         return false
                     }
-                 
+
                     if planeNo < _numberOfPlanes {
                         return _isMemberOfBitmap(scalar, dataSpan)
                     }
                 }
             } else {
                 // dataPtr will be nil for illegal case, causing the check to fail; the C implementation returns legal pointer for dataPtr
-                let dataSpan = bitmapPtrForPlane(Int(planeNo))
-                guard let dataSpan else {
+                guard let dataSpan = bitmapPtrForPlane(Int(planeNo)) else {
                     return false
                 }
                 if planeNo < _numberOfPlanes {
@@ -274,10 +272,17 @@ internal struct BuiltInUnicodeScalarSet {
     }
     
     // CFUniCharGetBitmapPtrForPlane
-    // Returns nil for whitespace, whitespace and newline, newline
-    // Returns legal bitmap data for illegal charset, caller must invert it later
+    // Returns nil for whitespace, whitespaceAndNewline, newline.
+    // For callers that only need to check plane membership (not inversion), use this wrapper.
     @_lifetime(immortal)
     internal func bitmapPtrForPlane(_ plane: Int) -> Span<UInt8>? {
+        _bitmapPtrForPlane(plane)?.span
+    }
+
+    // Full version used internally; the `shouldInvert` flag indicates that the stored bitmap
+    // is the LEGAL set (for illegal charset) and callers must invert membership results.
+    @_lifetime(immortal)
+    private func _bitmapPtrForPlane(_ plane: Int) -> (span: Span<UInt8>, shouldInvert: Bool)? {
         switch charset {
         case .whitespace, .whitespaceAndNewline, .newline:
             return nil
@@ -285,23 +290,25 @@ internal struct BuiltInUnicodeScalarSet {
             guard let tableIndex = _bitmapTableIndex else {
                 return nil
             }
-            
+
             guard tableIndex < __CFUniCharNumberOfBitmaps else {
                 return nil
             }
-            
+
             let data = withUnsafePointer(to: __CFUniCharBitmapDataArray) { ptr in
                 ptr.withMemoryRebound(to: __CFUniCharBitmapData.self, capacity: Int(__CFUniCharNumberOfBitmaps)) { bitmapDataPtr in
                     bitmapDataPtr.advanced(by: tableIndex).pointee
                 }
             }
-            
+
             guard plane < data._numPlanes, let planePtr = data._planes[plane] else {
                 return nil
             }
-            
+
             let temp = Span(_unsafeStart: planePtr, count: Self.byteCount)
-            return unsafe _overrideLifetime(temp, copying: ())
+            let span = unsafe _overrideLifetime(temp, copying: ())
+            // For .illegal, the bitmap encodes LEGAL scalars, so membership must be inverted
+            return (span, shouldInvert: charset == .illegal)
         }
     }
     
@@ -311,12 +318,10 @@ internal struct BuiltInUnicodeScalarSet {
         var bitmap = _CharacterSet.allZeros
         var bitmapMutableSpan = bitmap.mutableSpan
         
-        if let src = bitmapPtrForPlane(plane) {
+        if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
             assert(bitmapMutableSpan.count >= Self.byteCount)
-            
-            // For illegal charset, the bitmap data is stored as LEGAL characters
-            // So we need to invert the sense of the inversion
-            let shouldInvert = (charset == .illegal) ? !isInverted : isInverted
+
+            let shouldInvert = invertBitmapData ? !isInverted : isInverted
             
             if shouldInvert {
                 for i in 0..<Self.byteCount {
