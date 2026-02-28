@@ -1141,6 +1141,24 @@ private struct FileManagerTests {
     }
     #endif
 
+    @Test(.enabled(if: isDarwin, "Birth time is only exposed on Darwin"))
+    func creationDateUsesBirthTime() async throws {
+        try await FilePlayground {
+            File("file")
+        }.test { fileManager in
+            let attrs1 = try fileManager.attributesOfItem(atPath: "file")
+            let creation1 = try #require(attrs1[.creationDate] as? Date)
+
+            // Mutate metadata to advance ctime without touching birth time
+            try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: "file")
+
+            let attrs2 = try fileManager.attributesOfItem(atPath: "file")
+            let creation2 = try #require(attrs2[.creationDate] as? Date)
+
+            #expect(creation1 == creation2, "Creation date should remain stable when metadata changes (uses birth time, not ctime)")
+        }
+    }
+
     #if canImport(Darwin)
     @Test func SearchPathsWithoutExpandingTilde() async throws {
         for path in _DarwinSearchPaths(for: .libraryDirectory, in: .userDomainMask, expandTilde: false) {
