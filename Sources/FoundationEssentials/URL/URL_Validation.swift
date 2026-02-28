@@ -51,6 +51,44 @@ internal func containsInvalidASCII<T: UnsignedInteger & FixedWidthInteger>(
     return false
 }
 
+// Validates the IP literal host portion inside the "[" and "]"
+// A return value of false can be encoded, nil means reject entirely
+@inline(__always)
+internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
+    innerHost: borrowing Span<T>,
+    useModernParsing: Bool
+) -> Bool? {
+    var i = 0
+    while i < innerHost.count && URLComponentAllowedSet.hostIPvFuture.contains(innerHost[i]) {
+        i += 1
+    }
+    if i == innerHost.count {
+        return true
+    }
+    // We found a character that's not allowed in .hostIPvFuture
+    guard useModernParsing else {
+        // For CFURL, allow arbitrary percent-encoding
+        return validate(span: innerHost.extracting(i...), component: .hostIPvFuture)
+    }
+    // Otherwise, only a zone ID (starting at "%") can be percent-encoded
+    guard innerHost[i] == UInt8(ascii: "%") else {
+        // The IP portion contained an invalid character that was
+        // not the start of a zone ID, so return nil.
+        return nil
+    }
+    // "%25" is the correctly-encoded zone ID delimiter for a URL
+    let isValidZoneID = (
+        i + 2 < innerHost.count
+        && innerHost[i + 1] == UInt8(ascii: "2")
+        && innerHost[i + 2] == UInt8(ascii: "5")
+        && validate(
+            span: innerHost.extracting((i + 3)...),
+            component: .hostZoneID
+        )
+    )
+    return isValidZoneID
+}
+
 // Don't allow percent-escape sequences when validating certain paths
 @inline(__always)
 internal func strictValidate(path: borrowing Span<UInt8>) -> Bool {
