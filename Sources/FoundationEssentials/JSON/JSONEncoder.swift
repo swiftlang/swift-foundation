@@ -1214,8 +1214,8 @@ private extension __JSONEncoder {
             return self.wrap(url.absoluteString)
         } else if let decimal = value as? Decimal {
             return .number(decimal.description)
-        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
-            return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
+        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONCodingKeyRepresentableDictionaryEncodableMarker {
+            return try self.wrap(encodable._stringKeyedDictionary, for: additionalKey)
         } else if let array = _asDirectArrayEncodable(value) {
             if options.outputFormatting.contains(.prettyPrinted) {
                 let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
@@ -1398,11 +1398,30 @@ extension JSONEncoder : @unchecked Sendable {}
 // Special-casing Support
 //===----------------------------------------------------------------------===//
 
-/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
+/// A marker protocol used to determine whether a value is a `CodingKeyRepresentable`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
-private protocol _JSONStringDictionaryEncodableMarker { }
+///
+/// The protocol provides `_stringKeyedDictionary` to convert keys using their `codingKey.stringValue`,
+/// allowing the encoder to use the optimized String-keyed encoding path.
+private protocol _JSONCodingKeyRepresentableDictionaryEncodableMarker {
+    var _stringKeyedDictionary: [String: Encodable] { get }
+}
 
-extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
+extension Dictionary: _JSONCodingKeyRepresentableDictionaryEncodableMarker where Key: CodingKeyRepresentable, Value: Encodable {
+    var _stringKeyedDictionary: [String: Encodable] {
+        // Fast path for String keys - return self without creating a new dictionary
+        if Key.self == String.self {
+            return self as! [String: Encodable]
+        }
+        // Convert other CodingKeyRepresentable keys to String
+        var result = [String: Encodable]()
+        result.reserveCapacity(count)
+        for (key, value) in self {
+            result[key.codingKey.stringValue] = value
+        }
+        return result
+    }
+}
 
 /// A protocol used to determine whether a value is an `Array` containing values that allow
 /// us to bypass UnkeyedEncodingContainer overhead by directly encoding the contents as
