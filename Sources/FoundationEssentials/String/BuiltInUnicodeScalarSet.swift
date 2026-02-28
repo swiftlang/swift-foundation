@@ -274,7 +274,7 @@ internal struct BuiltInUnicodeScalarSet {
     }
     
     // CFUniCharGetBitmapPtrForPlane
-    // Returns nil for whitespace, whitespace and newline, illegal, newline
+    // Returns nil for whitespace, whitespace and newline, newline
     // Returns legal bitmap data for illegal charset, caller must invert it later
     @_lifetime(immortal)
     internal func bitmapPtrForPlane(_ plane: Int) -> Span<UInt8>? {
