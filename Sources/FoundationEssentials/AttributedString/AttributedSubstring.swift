@@ -205,3 +205,23 @@ extension AttributedSubstring {
         }
     }
 }
+
+extension AttributedSubstring {
+  /// Returns a boolean value indicating whether this substring is identical to
+  /// `other`.
+  ///
+  /// Two substring values are identical if there is no way to distinguish
+  /// between them.
+  ///
+  /// Comparing substrings this way includes comparing (normally) hidden
+  /// implementation details such as the memory location of any underlying
+  /// substring storage object. Therefore, identical substrings are guaranteed
+  /// to compare equal with `==`, but not all equal substrings are considered
+  /// identical.
+  ///
+  /// - Performance: O(1)
+  public func isIdentical(to other: Self) -> Bool {
+    self._guts === other._guts &&
+    self._range == other._range
+  }
+}
