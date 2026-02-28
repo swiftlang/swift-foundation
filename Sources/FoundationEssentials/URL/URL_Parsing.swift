@@ -559,62 +559,83 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     }
 
     if flags.contains(.hasHost) {
-        let hostRange = impl.pointee.hostRange
+        guard checkHost() else { return false }
+    }
+
+    @inline(__always)
+    func checkHost() -> Bool {
+        assert(flags.contains(.hasHost))
+        let host = span.extracting(impl.pointee.hostRange)
         if flags.contains(.isIPLiteral) {
             // Ignore the leading and trailing brackets
-            var i = hostRange.startIndex + 1
-            let endBracketIndex = hostRange.endIndex - 1
-            while i < endBracketIndex && URLComponentAllowedSet.hostIPvFuture.contains(span[i]) {
+            let innerHost = host.extracting(1..<(host.count - 1))
+            var i = 0
+            while i < innerHost.count && URLComponentAllowedSet.hostIPvFuture.contains(innerHost[i]) {
                 i += 1
             }
-            if i < endBracketIndex {
-                // We found a character that's not allowed in .hostIPvFuture
-                // Only a zone ID (starting at "%") can be percent-encoded
-                guard span[i] == UInt8(ascii: "%") else {
-                    // The IP portion contained an invalid character that was
-                    // not the start of a zone ID, so return false.
-                    return false
-                }
-                // "%25" is the correctly-encoded zone ID delimiter for a URL
-                let isValidZoneID = (
-                    i + 2 < endBracketIndex
-                    && span[i + 1] == UInt8(ascii: "2")
-                    && span[i + 2] == UInt8(ascii: "5")
-                    && validate(
-                        span: span.extracting((i + 3)..<endBracketIndex),
-                        component: .hostZoneID
-                    )
-                )
-                if !isValidZoneID {
-                    // We have an invalid zone ID, but we can encode it
+            if i == innerHost.count {
+                return true
+            }
+            // We found a character that's not allowed in .hostIPvFuture
+            guard useModernParsing else {
+                // For CFURL, allow arbitrary percent-encoding
+                if !validate(span: innerHost.extracting(i...), component: .hostIPvFuture) {
                     guard allowEncoding else { return false }
                     flags.insert(.shouldEncodeHost)
                     shouldEncode = true
                 }
+                return true
             }
-        } else if !validate(span: span.extracting(hostRange), component: .host) {
+            // For NSURL, only a zone ID (starting at "%") can be percent-encoded
+            guard innerHost[i] == UInt8(ascii: "%") else {
+                // The IP portion contained an invalid character that was
+                // not the start of a zone ID, so return false.
+                return false
+            }
+            // "%25" is the correctly-encoded zone ID delimiter for a URL
+            let isValidZoneID = (
+                i + 2 < innerHost.count
+                && innerHost[i + 1] == UInt8(ascii: "2")
+                && innerHost[i + 2] == UInt8(ascii: "5")
+                && validate(
+                    span: innerHost.extracting((i + 3)...),
+                    component: .hostZoneID
+                )
+            )
+            if !isValidZoneID {
+                // We have an invalid zone ID, but we can encode it
+                guard allowEncoding else { return false }
+                flags.insert(.shouldEncodeHost)
+                shouldEncode = true
+            }
+        } else if !validate(span: host, component: .host) {
             guard allowEncoding else { return false }
-            guard span[hostRange.startIndex] != UInt8(ascii: "[") else { return false }
-            if useModernParsing && flags.contains(.hasSpecialScheme) {
-                // We will IDNA-encode the host, which doesn't encode ASCII
-                // characters. If there's an invalid ASCII character in the
-                // host, it would remain in the final string, so fail now.
-                if containsInvalidASCII(host: span.extracting(hostRange)) {
-                    return false
+            if useModernParsing {
+                if flags.contains(.hasSpecialScheme) {
+                    // We will IDNA-encode the host, which doesn't encode ASCII
+                    // characters. If there's an invalid ASCII character in the
+                    // host, it would remain in the final string, so fail now.
+                    if containsInvalidASCII(host: host) { return false }
+                } else {
+                    // Don't allow an unterminated IP-literal for any scheme
+                    assert(!host.isEmpty) // Validation failed, so host is non-empty
+                    if host[0] == UInt8(ascii: "[") { return false }
                 }
             }
             flags.insert(.shouldEncodeHost)
             shouldEncode = true
         }
+        return true
     }
 
     if flags.contains(.hasPort) {
+        let port = span.extracting(impl.pointee.portRange)
         if useModernParsing {
             // Validate the port only contains digits
             var isValid = true
-            for i in impl.pointee.portRange {
+            for i in port.indices {
                 // Checks for ASCII digits "0" through "9" for a generic UnsignedInteger
-                if (span[unchecked: i] &- 0x30) > 9 {
+                if (port[i] &- 0x30) > 9 {
                     isValid = false
                     break
                 }
@@ -628,7 +649,7 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
                     return false
                 }
             }
-        } else if !validate(span: span.extracting(impl.pointee.portRange), component: .anyValid) {
+        } else if !validate(span: port, component: .anyValid) {
             // Allow any valid URL character in the port for compatibility
             guard allowEncoding else { return false }
             shouldEncode = true
@@ -636,16 +657,15 @@ internal func parse<T: _URLEncoding, Impl: _URLParseable>(
     }
 
     // Path always exists
-    if !validate(span: span.extracting(impl.pointee.pathRange), component: .path) {
+    let path = span.extracting(impl.pointee.pathRange)
+    if !validate(span: path, component: .path) {
         guard allowEncoding else { return false }
-        if flags.isDisjoint(with: [.hasScheme, .hasHost]) {
+        if useModernParsing && flags.isDisjoint(with: [.hasScheme, .hasHost]) {
             // A relative-ref must not contain a ":" before the first "/"
-            let path = span.extracting(impl.pointee.pathRange)
             for i in path.indices {
-                let v = path[i]
-                if v == UInt8(ascii: "/") {
+                if path[i] == UInt8(ascii: "/") {
                     break
-                } else if v == UInt8(ascii: ":") {
+                } else if path[i] == UInt8(ascii: ":") {
                     return false
                 }
             }
@@ -1072,11 +1092,18 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
             let newHostStart = hostRange.startIndex + extraBytesAdded
             if flags.contains(.shouldEncodeHost) {
                 if flags.contains(.isIPLiteral) {
-                    // We can only be encoding a zone ID, find the start
-                    while copyEnd < hostRange.endIndex - 1 && span[copyEnd] != UInt8(ascii: "%") {
-                        copyEnd += 1
+                    copyEnd += 1 // Include leading "["
+                    let endBracketIndex = hostRange.endIndex - 1
+                    if updateRanges {
+                        // We can only be encoding a zone ID, find the start
+                        while copyEnd < endBracketIndex && span[copyEnd] != UInt8(ascii: "%") {
+                            copyEnd += 1
+                        }
+                        guard encodeZoneID(range: copyEnd..<endBracketIndex) else { return false }
+                    } else {
+                        // For CFURL, encode everything between the brackets
+                        guard encode(range: copyEnd..<endBracketIndex, component: .hostIPvFuture) else { return false }
                     }
-                    guard encodeZoneID(range: copyEnd..<(hostRange.endIndex - 1)) else { return false }
                     copyEnd += 1 // Include trailing "]"
                 } else if updateRanges && flags.contains(.hasSpecialScheme) && _uidnaHook() != nil {
                     // Support IDNA-encoding for NSURL (updateRanges: true)
