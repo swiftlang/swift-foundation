@@ -391,7 +391,7 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.Range<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Range")
         configuration.allowPartialType(PredicateExpressions.SequenceContains<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.SequenceContains")
         configuration.allowPartialType(PredicateExpressions.SequenceContainsWhere<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.SequenceContainsWhere")
-        configuration.allowPartialType(PredicateExpressions.SequenceContainsWhere<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.SequenceAllSatisfy")
+        configuration.allowPartialType(PredicateExpressions.SequenceAllSatisfy<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.SequenceAllSatisfy")
         configuration.allowPartialType(PredicateExpressions.SequenceStartsWith<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.SequenceStartsWith")
         configuration.allowPartialType(PredicateExpressions.SequenceMaximum<PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.SequenceMaximum")
         configuration.allowPartialType(PredicateExpressions.SequenceMinimum<PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.SequenceMinimum")
