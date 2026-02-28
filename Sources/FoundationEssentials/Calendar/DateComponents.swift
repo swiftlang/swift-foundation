@@ -448,7 +448,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     
     // MARK: -
     
-    /// Returns a new `DateComponents` where the subset of fields that can be scaled have been mulitplied by `value`.
+    /// Returns a new `DateComponents` where the subset of fields that can be scaled have been multiplied by `value`.
     internal func scaled(by value: Int) -> DateComponents {
         var dc = self
         if let era = _era { dc.era = era * value }

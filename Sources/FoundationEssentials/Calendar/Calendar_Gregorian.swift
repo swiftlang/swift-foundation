@@ -846,15 +846,15 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         if startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal {
             let targetDay = dateComponent(.day, from: updatedDate)
             var currentDay = targetDay
-            var udate = updatedDate
+            var update = updatedDate
             var prev: Date
             repeat {
-                prev = udate
-                udate = try self.add(.second, to: prev, amount: -1, inTimeZone: timeZone)
-                guard udate < prev else {
-                    throw GregorianCalendarError.notAdvancing(udate, prev)
+                prev = update
+                update = try self.add(.second, to: prev, amount: -1, inTimeZone: timeZone)
+                guard update < prev else {
+                    throw GregorianCalendarError.notAdvancing(update, prev)
                 }
-                currentDay = dateComponent(.day, from: udate)
+                currentDay = dateComponent(.day, from: update)
             } while targetDay == currentDay
 
             start = prev
@@ -989,13 +989,13 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .weekOfYear, .weekOfMonth: /* kCFCalendarUnitWeek_Deprecated */
                 guard var start = start(of: .era, at: date) else { return nil }
-                var (startMatchinWeekday, daysAdded) = try dateAfterDateWithTargetDoW(start, firstWeekday)
+                var (startMatchingWeekday, daysAdded) = try dateAfterDateWithTargetDoW(start, firstWeekday)
 
                 start += Double(daysAdded) * 86400.0
 
                 if minimumDaysInFirstWeek <= daysAdded {
                     // previous week chunk was big enough, count it
-                    startMatchinWeekday -= 7 * 86400.0
+                    startMatchingWeekday -= 7 * 86400.0
                     start -=  7 * 86400.0
                 }
                 var week = Int(floor(
@@ -2354,7 +2354,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
         switch field {
         case .era:
-            // We've been ignorning era historically. Do the same for compatibility reason.
+            // We've been ignoring era historically. Do the same for compatibility reason.
             return date
 
         case .yearForWeekOfYear:
@@ -2477,7 +2477,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 let newOffset = timeZone.secondsFromGMT(for: newDateInWholeSecond)
                 let prevOffset = timeZone.secondsFromGMT(for: date)
 
-                // No need for normal gmt-offset adjustment because the revelant bits are handled above individually
+                // No need for normal gmt-offset adjustment because the relevant bits are handled above individually
                 // We do have to adjust DST offset when the new date crosses DST boundary, such as adding an hour to dst transitioning day
                 if newOffset != prevOffset {
                     newDateInWholeSecond = newDateInWholeSecond + Double(prevOffset - newOffset)
