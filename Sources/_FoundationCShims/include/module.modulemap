@@ -1,4 +1,4 @@
-module _FoundationCShims {
+module _FoundationCShims [system] {
     header "_FoundationCShims.h"
 
     export *
