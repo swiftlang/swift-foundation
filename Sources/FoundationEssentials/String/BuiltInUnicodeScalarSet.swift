@@ -203,7 +203,7 @@ internal struct BuiltInUnicodeScalarSet {
     }
     
     // CFUniCharIsMemberOf
-    public func contains(_ scalar: Unicode.Scalar) -> Bool {
+    internal func contains(_ scalar: Unicode.Scalar) -> Bool {
         switch charset {
         case .whitespace:
             return isWhitespace(scalar)
@@ -277,7 +277,7 @@ internal struct BuiltInUnicodeScalarSet {
     // Returns nil for whitespace, whitespace and newline, illegal, newline
     // Returns legal bitmap data for illegal charset, caller must invert it later
     @_lifetime(immortal)
-    public func bitmapPtrForPlane(_ plane: Int) -> Span<UInt8>? {
+    internal func bitmapPtrForPlane(_ plane: Int) -> Span<UInt8>? {
         switch charset {
         case .whitespace, .whitespaceAndNewline, .newline:
             return nil
