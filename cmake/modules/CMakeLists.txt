@@ -12,6 +12,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+set(SWIFT_FOUNDATION_BUILD_MACROS_FILE ${CMAKE_CURRENT_BINARY_DIR}/FoundationBuildMacros.cmake)
 set(SWIFT_FOUNDATION_EXPORTS_FILE ${CMAKE_CURRENT_BINARY_DIR}/SwiftFoundationExports.cmake)
 set(SWIFT_FOUNDATION_ICU_EXPORTS_FILE ${SwiftFoundationICU_BINARY_DIR}/cmake/modules/SwiftFoundationICUExports.cmake)
 set(SWIFT_COLLECTIONS_EXPORTS_FILE ${SwiftCollections_BINARY_DIR}/cmake/modules/SwiftCollectionsExports.cmake)
