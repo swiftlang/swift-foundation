@@ -40,6 +40,17 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 6.4, *)
+extension PredicateExpressions {
+    public static func build_NotEqual<LHS, Wrapped>(lhs: LHS, rhs: NilLiteral<Wrapped>) -> NotEqual<OptionalFlatMap<LHS, Wrapped, Value<Bool>, Bool>, Value<Bool?>> {
+        NotEqual(lhs: OptionalFlatMap(lhs) { _ in Value(true) }, rhs: Value(nil))
+    }
+    
+    public static func build_NotEqual<Wrapped, RHS>(lhs: NilLiteral<Wrapped>, rhs: RHS) -> NotEqual<Value<Bool?>, OptionalFlatMap<RHS, Wrapped, Value<Bool>, Bool>> {
+        NotEqual(lhs: Value(nil), rhs: OptionalFlatMap(rhs) { _ in Value(true) })
+    }
+}
+
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.NotEqual : CustomStringConvertible {
     public var description: String {
