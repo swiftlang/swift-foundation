@@ -151,6 +151,21 @@ private struct UUIDTests {
         let fourthUUID = UUID.random(using: &generator)
         #expect(fourthUUID == UUID(uuidString: "2B29542E-F719-4D58-87B9-C6291ADD4541"))
     }
+    
+    func test_UUIDLosslessStringConvertible() {
+        let originalString = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
+        let uuidFromString = UUID(originalString)
+        XCTAssertNotNil(uuidFromString, "UUID must be constructible from valid UUID string via LosslessStringConvertible")
+        XCTAssertEqual(uuidFromString?.description, originalString, "Round-tripped description must match original UUID string")
+
+        let uuid = UUID(uuidString: originalString)!
+        XCTAssertEqual(uuid, UUID(uuid.description), "UUID must round-trip through LosslessStringConvertible")
+
+        let invalidString = "not-a-uuid"
+        let invalidUUID = UUID(invalidString)
+        XCTAssertNil(invalidUUID, "Invalid UUID strings must result in nil from LosslessStringConvertible initializer")
+    }
+
 }
 
 extension UUID {
