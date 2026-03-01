@@ -130,9 +130,6 @@ internal import _FoundationCShims
 
 // MARK: Directory Iteration
 
-// No FTS support in wasi-libc for now (https://github.com/WebAssembly/wasi-libc/issues/520)
-#if !os(WASI)
-
 struct _FTSSequence: Sequence {
     enum Element {
         struct SwiftFTSENT {
@@ -328,8 +325,6 @@ extension Sequence<_FTSSequence.Element> {
         }
     }
 }
-
-#endif // !os(WASI)
 
 struct _POSIXDirectoryContentsSequence: Sequence {
     #if canImport(Darwin)
