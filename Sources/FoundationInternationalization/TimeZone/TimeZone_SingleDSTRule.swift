@@ -165,7 +165,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
 
-    func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) -> (rawOffset: Int, dstOffset: Int) {
+    func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) -> (rawOffset: Int, dstSavings: Int) {
         if local {
             let secondsOffsets = _rawAndDSTOffsetForLocalDate(date, nonExistingTimeOpt: nonExistingTimePolicy, duplicatedTimeOpt: duplicatedTimePolicy)
             return secondsOffsets
@@ -349,7 +349,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     // MARK: - Utility Methods
 
-    func _rawAndDSTOffsetForLocalDate(_ date: Date, nonExistingTimeOpt: DaylightSavingTimePolicy, duplicatedTimeOpt: DaylightSavingTimePolicy) -> (rawOffset: Int, dstOffset: Int) {
+    func _rawAndDSTOffsetForLocalDate(_ date: Date, nonExistingTimeOpt: DaylightSavingTimePolicy, duplicatedTimeOpt: DaylightSavingTimePolicy) -> (rawOffset: Int, dstSavings: Int) {
         var dstOffset = _gmtOffset(forLocalDate: date) - rawOffset
         // Need to recalculate if either
         // 1. We're in DST AND options say we should try standard time
