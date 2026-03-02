@@ -205,8 +205,7 @@ extension _FileManagerImpl {
             }
         }
         return results
-#elseif os(WASI) || os(OpenBSD)
-        // wasi-libc does not support FTS for now
+#elseif os(OpenBSD)
         throw CocoaError.errorWithFilePath(.featureUnsupported, path)
 #else
         return try path.withFileSystemRepresentation { fileSystemRep in
