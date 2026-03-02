@@ -2867,41 +2867,24 @@ extension DataTests {
 }
 #endif
 
-extension Trait where Self == ConditionTrait {
-    static var requiresLargeData: ConditionTrait {
-        .enabled(if: {
-            #if os(watchOS)
-            false // watchOS memory limits are too small to allocate a large (2GB) data
-            #else
-            true
-            #endif
-        }(), "This platform does not support allocationg a large data")
-    }
-
-    static var requiresMultipleLargeData: ConditionTrait {
-        .enabled(if: {
-            #if os(watchOS) || os(tvOS)
-            false // watchOS and tvOS memory limits are too small to allocate multiple large (2GB) datas
-            #else
-            true
-            #endif
-        }(), "This platform does not support allocationg a large data")
-    }
-}
+#if _pointerBitWidth(_64)
+let largeCount = Int(Int32.max)
+#elseif _pointerBitWidth(_32)
+let largeCount = Int(Int16.max)
+#else
+#error("This test needs updating")
+#endif
 
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
 @Suite("Large Data Tests",
    .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
-   .requiresLargeData
+   .enabled(if: // Tests can create up to two large datas, require space for at least 3 to ensure we have sufficient room
+        ProcessInfo.processInfo.physicalMemory > (largeCount * 3),
+        "This device does not have sufficient memory to run large data tests (\(ProcessInfo.processInfo.physicalMemory) bytes available, \(largeCount * 3) bytes required)"
+    )
 )
 struct LargeDataTests {
-#if _pointerBitWidth(_64)
-    let largeCount = Int(Int32.max)
-#elseif _pointerBitWidth(_32)
-    let largeCount = Int(Int16.max)
-#else
-#error("This test needs updating")
-#endif
+
     @Test
     func largeSliceDataSpan() throws {
         let source = Data(repeating: 0, count: largeCount).dropFirst()
@@ -3038,7 +3021,7 @@ struct LargeDataTests {
         }
     }
 
-    @Test(.requiresMultipleLargeData)
+    @Test
     func appendToSlicedLargeSlicesWithOutputRawSpan() {
         let appendedValue: UInt8 = (7..<252).randomElement()!
 
@@ -3059,7 +3042,7 @@ struct LargeDataTests {
         #expect(slice.last == appendedValue)
     }
 
-    @Test(.requiresMultipleLargeData)
+    @Test
     func appendToLargeSlice() {
         // Test behavior when the contents should get copied (non-unique)
         do {
@@ -3088,7 +3071,7 @@ struct LargeDataTests {
         }
     }
 
-    @Test(.requiresMultipleLargeData)
+    @Test
     func reserveCapacityLargeSlices() {
         // Test behavior when the contents should get copied (non-unique)
         do {
@@ -3125,7 +3108,7 @@ struct LargeDataTests {
         }
     }
 
-    @Test(.requiresMultipleLargeData)
+    @Test
     func appendWithOutputRawSpanExtendLargeSlice() {
         // Test behavior when the contents should get copied (non-unique)
         do {
