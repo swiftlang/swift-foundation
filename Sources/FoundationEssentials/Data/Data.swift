@@ -441,24 +441,23 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             return
         }
 
-        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { unsafeBuffer in
-            var buffer = OutputRawSpan(buffer: unsafeBuffer, initializedCount: 0)
+        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { buffer in
+            var count = 0
 
             // Append the rest byte-wise, buffering through a temporary allocation.
             while let element = iter.next() {
-                buffer.append(element)
-                if buffer.isFull {
-                    buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
-                    buffer.removeAll()
+                buffer[count] = element
+                count += 1
+                if count == buffer.count {
+                    _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
+                    count = 0
                 }
             }
 
             // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
-            if !buffer.isEmpty {
-                buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
+            if count > 0 {
+                _representation.append(contentsOf: UnsafeRawBufferPointer(rebasing: buffer.prefix(upTo: count)))
             }
-
-            _ = buffer.finalize(for: unsafeBuffer)
         }
     }
 
@@ -720,24 +719,23 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             return
         }
 
-        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { unsafeBuffer in
-            var buffer = OutputRawSpan(buffer: unsafeBuffer, initializedCount: 0)
+        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { buffer in
+            var count = 0
 
             // Append the rest byte-wise, buffering through a temporary allocation.
             while let element = iter.next() {
-                buffer.append(element)
-                if buffer.isFull {
-                    buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
-                    buffer.removeAll()
+                buffer[count] = element
+                count += 1
+                if count == buffer.count {
+                    _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
+                    count = 0
                 }
             }
 
             // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
-            if !buffer.isEmpty {
-                buffer.bytes.withUnsafeBytes { _representation.append(contentsOf: $0) }
+            if count > 0 {
+                _representation.append(contentsOf: UnsafeRawBufferPointer(rebasing: buffer.prefix(upTo: count)))
             }
-
-            _ = buffer.finalize(for: unsafeBuffer)
         }
     }
 
