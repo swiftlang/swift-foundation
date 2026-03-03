@@ -118,6 +118,10 @@ extension Data {
             }
         }
 
+        mutating func stabilizeAddresses() {
+            reserveCapacity(InlineData.maximumCapacity + 1)
+        }
+
         @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
         mutating func reserveCapacity(_ minimumCapacity: Int) {
             guard minimumCapacity > 0 else { return }

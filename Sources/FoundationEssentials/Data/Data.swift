@@ -476,7 +476,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     mutating func stabilizeAddresses() {
-        reserveCapacity(1)
+        _representation.stabilizeAddresses()
     }
 
     /// The number of bytes in the data.

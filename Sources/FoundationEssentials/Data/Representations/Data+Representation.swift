@@ -93,6 +93,10 @@ extension Data {
             self.init(storage, count: appendedCount)
         }
 
+        mutating func stabiliizeAddresses() {
+            reserveCapacity(1)
+        }
+
         @_alwaysEmitIntoClient
         mutating func reserveCapacity(_ minimumCapacity: Int) {
             ensureUniqueReference()
