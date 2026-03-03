@@ -242,8 +242,6 @@ extension Data {
         @_alwaysEmitIntoClient
         func copyBytes(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
             precondition(startIndex <= range.lowerBound, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
-            precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
-            precondition(startIndex <= range.upperBound, "index \(range.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
             precondition(range.upperBound <= endIndex, "index \(range.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
             _storage.copyBytes(to: pointer, from: range)
         }
