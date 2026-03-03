@@ -221,7 +221,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
     func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         if let _timeZoneICUResource {
-            return _timeZoneICUResource.nextTransition(after: date, inclusive: false)
+            return _timeZoneICUResource.nextTransition(after: date)
         }
         return _nextDaylightSavingTimeTransition(after: date)
     }

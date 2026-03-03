@@ -20,7 +20,11 @@ import Testing
 @testable import Foundation
 #endif
 
-@Suite("Gregorian Calendar")
+extension Testing.Tag {
+    @Tag static var calendar: Self
+}
+
+@Suite("Gregorian Calendar", .tags(.calendar))
 private struct GregorianCalendarTests {
 
     // MARK: Basic

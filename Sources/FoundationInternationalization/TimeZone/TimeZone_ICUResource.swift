@@ -18,6 +18,33 @@ import FoundationEssentials
 internal import _FoundationICU
 #endif
 
+extension TimeZone {
+    enum Error: Swift.Error {
+        case dateOverflow
+        case dateUnderflow
+    }
+}
+
+extension Date {
+    // Returns nil if it's out of Int64 bound
+    func secondsSince1970() throws(TimeZone.Error) -> Int64 {
+        let sec = timeIntervalSince1970.rounded(.down)
+
+        guard sec < Double(Int64.max) else {
+            throw .dateOverflow
+        }
+
+        guard sec >= Double(Int64.min) else {
+            throw .dateUnderflow
+        }
+
+        return Int64(sec)
+    }
+
+    func checkBounds() throws(TimeZone.Error) {
+        _ = try self.secondsSince1970()
+    }
+}
 
 struct _TimeZoneOffsets: Sendable {
     // Fixed offset timezone rule (equivalent to ICU's simple rules)
@@ -437,64 +464,69 @@ internal final class _TimeZoneICUResource: Sendable {
     // MARK: - Timezone Methods
 
     func rawAndDSTOffset(for date: Date, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (Int, Int) {
-        let (rawOffset, dstOffset) = getOffset(date: date, local: true, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
-        return (Int(rawOffset), Int(dstOffset))
+        guard let result = try? getOffset(date: date, local: true, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy) else {
+            return (0, 0)
+        }
+        return (Int(result.rawOffset), Int(result.dstSavings))
     }
 
     func secondsFromGMT(for date: Date) -> Int {
-        guard Date.validCalendarRange.contains(date) else {
+        guard let (rawOffset, dstOffset) = try? getOffset(date: date, local: false) else {
             // TODO: We should throw an error properly, but for now return 0 just like how we handle this when calling into ICU timezone
             return 0
         }
-        let (rawOffset, dstOffset) = getOffset(date: date, local: false)
         return Int((rawOffset + dstOffset))
     }
     
     func isDaylightSavingTime(for date: Date) -> Bool {
-        let (_, dstOffset) = getOffset(date: date, local: false)
+        guard let (_, dstOffset) = try? getOffset(date: date, local: false) else {
+            return false
+        }
         return dstOffset != 0
     }
     
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
-        let (_, dstOffset) = getOffset(date: date, local: false)
+        guard let (_, dstOffset) = try? getOffset(date: date, local: false) else {
+            return 0
+        }
         return TimeInterval(dstOffset)
     }
     
     // MARK: - Offset Calculation
 
-    func rawAndDaylightSavingTimeOffset(for date: Date, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
-        let res = getOffset(date: date, local: true, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
+    func rawAndDaylightSavingTimeOffset(for date: Date, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws(TimeZone.Error) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+        let res = try getOffset(date: date, local: true, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
         return (Int(res.rawOffset), Double(res.dstSavings))
     }
 
     // Entry point for offset calculation that delegates to either historical or final zone
     // Returns: offsets in seconds
-    func getOffset(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, dstSavings: Int) {
+    func getOffset(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws(TimeZone.Error) -> (rawOffset: Int, dstSavings: Int) {
         // Check if we should use final zone first
         if let finalZone, let finalStartDate, date >= finalStartDate {
-            return finalZone.rawAndDaylightSavingTimeOffset(for: date, local: local, duplicatedTimePolicy: duplicatedTimePolicy, nonExistingTimePolicy: nonExistingTimePolicy)
+            return try finalZone.rawAndDaylightSavingTimeOffset(for: date, local: local, duplicatedTimePolicy: duplicatedTimePolicy, nonExistingTimePolicy: nonExistingTimePolicy)
         }
         
         // Otherwise use historical data
-        return historicalOffsets(date: date, local: local, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
+        return try historicalOffsets(date: date, local: local, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
     }
     
     // MARK: - Historical Offset Calculation
 
-    func historicalOffsets(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> (rawOffset: Int, dstSavings: Int) {
+    func historicalOffsets(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy) throws(TimeZone.Error)-> (rawOffset: Int, dstSavings: Int) {
         let transCount = allTransitionTimes.count
         guard transCount > 0 else {
             // No transitions, single pair of offsets only
             return (initialRawOffset, initialDSTOffset)
         }
 
-        let sec = Int64(date.timeIntervalSince1970.rounded(.down))
+        let sec = try date.secondsSince1970()
         if !local, let firstTransitionTime = allTransitionTimes.first, sec < firstTransitionTime {
             // Before the first transition time
             return (initialRawOffset, initialDSTOffset)
         }
 
-        let transIdx = binarySearchTransition(secondsSinceEpoch: sec, local: local, start: 0, end: transCount - 1, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
+        let transIdx = binarySearchTransition(secondsSince1970: sec, local: local, start: 0, end: transCount - 1, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
 
         return offsetsAt(transIdx)
     }
@@ -524,18 +556,15 @@ internal final class _TimeZoneICUResource: Sendable {
     // Find the next timezone transition after the given base date
     // - Parameters:
     //   - after: The base date to search after
-    //   - inclusive: If true, include transitions that occur exactly at the base time
     // - Returns: The next transition, or nil if no transition is found
-    func nextTransition(after base: Date, inclusive: Bool) -> Date? {
+    func nextTransition(after base: Date) -> Date? {
         // Check if we should use final zone first
         if let finalZone {
-            if inclusive, let firstFinalTZTransition, base == firstFinalTZTransition {
-                return firstFinalTZTransition
-            } else if let finalStartDate, base >= finalStartDate {
+            if let finalStartDate, base >= finalStartDate {
                 // Delegate to final zone for future transitions
                 if finalZone.useDaylight {
                     // Use the final zone to get the next DST transition, or nil if there's no more transitions in final zone
-                    return finalZone.dstTransition(after: base, inclusive: inclusive) ?? nil
+                    return finalZone.dstTransition(after: base)
                 } else {
                     // Final zone has no DST - no more transitions
                     return nil
@@ -543,8 +572,16 @@ internal final class _TimeZoneICUResource: Sendable {
             }
         }
         
+        if let firstTransition = self.firstTZTransition, base < firstTransition {
+            return firstTransition
+        }
+        
+        guard let baseSec = try? base.secondsSince1970() else {
+            return nil
+        }
+        
         // Search historical transitions
-        return nextHistoricalTransition(after: base, inclusive: inclusive)
+        return nextHistoricalTransition(afterTimeIntervalSince1970: baseSec)
     }
     
     // MARK: - Historical Transition Search (Direct Port from olsontz.cpp)
@@ -579,24 +616,28 @@ internal final class _TimeZoneICUResource: Sendable {
     }
 
     // Find next historical transition
-    // Follows ICU's backward search algorithm for now.
-    // TODO: This can be optimized with binary search
-    private func nextHistoricalTransition(after base: Date, inclusive: Bool) -> Date? {
+    private func nextHistoricalTransition(afterTimeIntervalSince1970 baseSec: Int64) -> Date? {
         let transCount = allTransitionTimes.count
         guard transCount > 0 else {
             return nil
         }
 
-        let baseSec = Int64(base.timeIntervalSince1970.rounded(.down))
-        var ttidx = transCount - 1
         
-        // Find the last transition that is <= base (or < base if not inclusive)
-        while ttidx >= 0 {
-            let transitionSec = transitionTimeInSeconds(at: ttidx)
-            if baseSec > transitionSec || (!inclusive && baseSec == transitionSec) {
-                break
+        // Find the last transition that is <= base
+        var left = 0
+        var right = transCount - 1
+        var ttidx = -1
+        
+        while left <= right {
+            let mid = left + (right - left) / 2
+            let transitionSec = allTransitionTimes[mid]
+            
+            if transitionSec <= baseSec {
+                ttidx = mid
+                left = mid + 1
+            } else {
+                right = mid - 1
             }
-            ttidx -= 1
         }
 
         if ttidx == transCount - 1 {
@@ -617,9 +658,9 @@ internal final class _TimeZoneICUResource: Sendable {
             // Check for non-transition data (same offsets)
             if fromOffsets == toOffsets {
                 // Skip non-transitions and recursively search
-                let nextBase = Date(timeIntervalSince1970: TimeInterval(transitionTimeInSeconds(at: nextIdx)))
+                let nextBase = transitionTimeInSeconds(at: nextIdx)
 
-                return nextHistoricalTransition(after: nextBase, inclusive: false)
+                return nextHistoricalTransition(afterTimeIntervalSince1970: nextBase)
             }
             
             let transitionTime = Date(timeIntervalSince1970: TimeInterval(transitionTimeInSeconds(at: nextIdx)))
@@ -629,13 +670,14 @@ internal final class _TimeZoneICUResource: Sendable {
     
     // Returns the index of the transition that applies to the given time
     private func binarySearchTransition(
-        secondsSinceEpoch sec: Int64,
+        secondsSince1970 sec: Int64,
         local: Bool,
         start: Int,
         end: Int,
         nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former,
         duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former
     ) -> Int {
+        
         var left = start
         var right = end
         

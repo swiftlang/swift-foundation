@@ -19,7 +19,11 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-@Suite("TimeZone")
+extension Testing.Tag {
+    @Tag static var timeZone: Self
+}
+
+@Suite("TimeZone", .tags(.timeZone))
 private struct TimeZoneTests {
     @Test func basics() {
         let tz = TimeZone(identifier: "America/Los_Angeles")!
@@ -243,7 +247,7 @@ private struct TimeZoneTests {
     }
 }
 
-@Suite("TimeZone GMT")
+@Suite("TimeZone GMT", .tags(.timeZone))
 private struct TimeZoneGMTTests {
     var tz: TimeZone {
         TimeZone(identifier: "GMT")!
@@ -313,7 +317,7 @@ private struct TimeZoneGMTTests {
     }
 }
 
-@Suite("TimeZone ICU")
+@Suite("TimeZone ICU", .tags(.timeZone))
 private struct TimeZoneICUTests {
     @Test func timeZoneOffset() throws {
         let tz = _TimeZoneICU(identifier: "America/Los_Angeles")!
@@ -392,7 +396,7 @@ private struct TimeZoneICUTests {
     }
 }
 
-@Suite("TimeZone_ICUResource")
+@Suite("TimeZone_ICUResource", .tags(.timeZone))
 private struct TimeZone_ICUResourceTests {
 
     let finalTimeZoneDates = {
@@ -422,7 +426,7 @@ private struct TimeZone_ICUResourceTests {
 
         for d in finalTimeZoneDates {
             for option in options {
-                let offsets = t.rawAndDaylightSavingTimeOffset(for: d, local: true, duplicatedTimePolicy: option.0, nonExistingTimePolicy: option.1)
+                let offsets = try t.rawAndDaylightSavingTimeOffset(for: d, local: true, duplicatedTimePolicy: option.0, nonExistingTimePolicy: option.1)
                 let offsets_expected = truth.rawAndDaylightSavingTimeOffset(for: d, repeatedTimePolicy: option.0, skippedTimePolicy: option.1)
 
                 #expect(offsets.0 == offsets_expected.0, "Date = Date(timeIntervalSince1970: \(d.timeIntervalSince1970)), option = \(option)")
@@ -477,7 +481,7 @@ private struct TimeZone_ICUResourceTests {
                 #expect(rawOffset == offsets_expected.0)
                 #expect(TimeInterval(dstOffset) == offsets_expected.1)
 
-                let nextDST = t.nextTransition(after: d, inclusive: false)
+                let nextDST = t.nextTransition(after: d)
                 let nextDST_expected = truth.nextDaylightSavingTimeTransition(after: d)
                 #expect(nextDST == nextDST_expected)
 
@@ -495,7 +499,7 @@ private struct TimeZone_ICUResourceTests {
 
             let offset = tz.secondsFromGMT(for: date)
             let isDST = tz.isDaylightSavingTime(for: date)
-            let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: date)
+            let (rawOffset, dstOffset) = try tz.rawAndDaylightSavingTimeOffset(for: date)
 
             #expect(offset == expectedOffsetFromGMT)
             #expect(rawOffset == expectedRawOffset)
@@ -572,7 +576,7 @@ private struct TimeZone_ICUResourceTests {
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
-@Suite("TimeZone Bridging")
+@Suite("TimeZone Bridging", .tags(.timeZone))
 private struct TimeZoneBridgingTests {
     @Test func customNSTimeZone() {
         // This test verifies that a custom ObjC subclass of NSTimeZone, bridged into Swift, still calls back into ObjC. `customTimeZone` returns an instances of "MyCustomTimeZone : NSTimeZone".

@@ -31,7 +31,7 @@ import WASILibc
 import CRT
 #endif
 
-@Suite("DateComponents")
+@Suite("DateComponents", .tags(.calendar))
 private struct DateComponentsTests {
 
     @Test func isValidDate() {
