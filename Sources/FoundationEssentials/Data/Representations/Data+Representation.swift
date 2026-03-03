@@ -93,7 +93,7 @@ extension Data {
             self.init(storage, count: appendedCount)
         }
 
-        mutating func stabiliizeAddresses() {
+        mutating func stabilizeAddresses() {
             reserveCapacity(1)
         }
 
