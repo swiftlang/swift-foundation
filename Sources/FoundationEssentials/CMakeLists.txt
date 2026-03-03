@@ -81,6 +81,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+    target_compile_options(FoundationEssentials PRIVATE
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-DDATA_LEGACY_ABI>")
+endif()
+
 target_compile_options(FoundationEssentials PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend VariadicGenerics>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend Lifetimes>"
