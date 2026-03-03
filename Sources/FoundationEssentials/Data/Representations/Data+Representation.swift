@@ -187,8 +187,6 @@ extension Data {
         @usableFromInline
         mutating func replaceSubrange(_ subrange: Range<Index>, with bytes: UnsafeRawPointer?, count cnt: Int) {
             precondition(startIndex <= subrange.lowerBound, "index \(subrange.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
-            precondition(subrange.lowerBound <= endIndex, "index \(subrange.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
-            precondition(startIndex <= subrange.upperBound, "index \(subrange.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
             precondition(subrange.upperBound <= endIndex, "index \(subrange.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
 
             ensureUniqueReference()
@@ -220,8 +218,6 @@ extension Data {
         subscript(bounds: Range<Index>) -> Data {
             get {
                 precondition(_slice.startIndex <= bounds.lowerBound, "Range \(bounds) out of bounds \(_slice)")
-                precondition(bounds.lowerBound <= _slice.endIndex, "Range \(bounds) out of bounds \(_slice)")
-                precondition(_slice.startIndex <= bounds.upperBound, "Range \(bounds) out of bounds \(_slice)")
                 precondition(bounds.upperBound <= _slice.endIndex, "Range \(bounds) out of bounds \(_slice)")
                 if bounds.lowerBound == 0 && bounds.upperBound == 0 {
                     return Data()
