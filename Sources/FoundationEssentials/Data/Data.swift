@@ -591,7 +591,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///       - span: An `OutputRawSpan` covering uninitialized memory with
     ///         space for the specified number of additional bytes.
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-//    @_alwaysEmitIntoClient
+    @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
         addingRawCapacity uninitializedCount: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
