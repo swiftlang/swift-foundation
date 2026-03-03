@@ -154,8 +154,7 @@ internal final class __DataStorage : @unchecked Sendable {
         if let _bytes {
             return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
         } else {
-            var byte = 0
-            return try Swift.withUnsafeBytes(of: &byte) { buffer in
+            return try Swift.withUnsafeBytes(of: 0) { buffer in
                 return try apply(UnsafeRawBufferPointer(start: buffer.baseAddress!, count: 0))
             }
         }
