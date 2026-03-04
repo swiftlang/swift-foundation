@@ -13,6 +13,8 @@
 
 #if canImport(Darwin)
 import Darwin
+#elseif canImport(Bionic)
+import Bionic
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)
