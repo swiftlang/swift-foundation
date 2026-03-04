@@ -342,7 +342,7 @@ public struct DecodingFieldUTF8SpanRawByteEquivalanceComparator: DecodingFieldUT
         guard !self.buffer.isEmpty else { return false }
         
         return span.span.withUnsafeBufferPointer { buf2 in
-            memcmp(self.buffer.baseAddress, buf2.baseAddress, self.buffer.count) == 0
+            memcmp(self.buffer.baseAddress!, buf2.baseAddress!, self.buffer.count) == 0
         }
     }
     

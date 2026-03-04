@@ -644,7 +644,7 @@ extension JSONParserDecoder {
                 do {
                     let cmp = try bytes.extracting(unchecked: readOffset..<endOffset).withUnsafeBytes { buff in
                         if buff.count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
-                        return memcmp(buff.baseAddress, str.utf8Start, str.utf8CodeUnitCount)
+                        return memcmp(buff.baseAddress!, str.utf8Start, str.utf8CodeUnitCount)
                     }
                     guard cmp == 0 else {
                         return false
@@ -666,7 +666,7 @@ extension JSONParserDecoder {
                 do {
                     let cmp = try bytes.extracting(unchecked: readOffset..<endOffset).withUnsafeBytes { buff in
                         if buff.count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
-                        return memcmp(buff.baseAddress, str.utf8Start, str.utf8CodeUnitCount)
+                        return memcmp(buff.baseAddress!, str.utf8Start, str.utf8CodeUnitCount)
                     }
                     guard cmp == 0 else {
                         throw errorForUnmatchedCharacter(in: str, typeDescriptor: typeDescriptor)
