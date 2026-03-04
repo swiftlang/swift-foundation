@@ -23,6 +23,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(ucrt)
+import ucrt
 #endif
 
 public struct NewJSONDecoder {
@@ -165,7 +167,7 @@ extension Double : PrevalidatedJSONNumberBufferConvertible {
             
             var endPtr: UnsafeMutablePointer<CChar>? = nil
             // TODO: strtoX_l everywhere.
-            let decodedValue = strtod(buff.baseAddress, &endPtr)
+            let decodedValue = strtod(buff.baseAddress!, &endPtr)
             if let endPtr {
                 if buff.baseAddress!.advanced(by: buff.count) == endPtr {
                     return decodedValue
@@ -188,7 +190,7 @@ extension Float : PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: RawSpan) {
         let decodedValue = buffer.withUnsafeBytes { buff -> Float? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = strtof(buff.baseAddress, &endPtr)
+            let decodedValue = strtof(buff.baseAddress!, &endPtr)
             if let endPtr, buff.baseAddress!.advanced(by: buff.count) == endPtr {
                 return decodedValue
             } else {

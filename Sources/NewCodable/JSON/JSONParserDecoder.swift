@@ -23,6 +23,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(ucrt)
+import ucrt
 #endif
 
 // TODO: EMBEDDED: Don't use the `final class` Internals type for Embedded only. We shouldn't have the same typed-throws overhead there anyway.
