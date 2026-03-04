@@ -28,11 +28,17 @@ internal import BasicContainers
 #endif
 
 #if canImport(Darwin)
-import Darwin
+internal import os
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
+#elseif canImport(CRT)
+import CRT
+#elseif os(WASI)
+@preconcurrency import WASILibc
 #endif
 
 import class Foundation.Bundle
