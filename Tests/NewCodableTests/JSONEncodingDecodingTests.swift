@@ -1456,9 +1456,9 @@ struct JSONEncodingDecodingTests {
     }
     
     @Test func decodeLargeDoubleAsInteger() throws {
-        let data = try JSONEncoder().encode(Double.greatestFiniteMagnitude)
+        let data = try NewJSONEncoder().encode(Double.greatestFiniteMagnitude)
         #expect(throws: (any Error).self) {
-            try JSONDecoder().decode(UInt64.self, from: data)
+            try NewJSONDecoder().decode(UInt64.self, from: data)
         }
     }
     
@@ -1478,10 +1478,10 @@ struct JSONEncodingDecodingTests {
         let prevLocale = uselocale(frLocale)
         defer { uselocale(prevLocale) }
         
-        let data = try JSONEncoder().encode(orig)
+        let data = try NewJSONEncoder().encode(orig)
         
         uselocale(enLocale)
-        let decoded = try JSONDecoder().decode(type(of: orig).self, from: data)
+        let decoded = try NewJSONDecoder().decode(type(of: orig).self, from: data)
         
         #expect(orig == decoded)
     }
@@ -1494,7 +1494,7 @@ struct JSONEncodingDecodingTests {
         ]
         for test in tests {
             let data = test.json.data(using: .utf8)!
-            let decoded = try! JSONDecoder().decode([String:Bool].self, from: data)
+            let decoded = try! NewJSONDecoder().decode([String:Bool].self, from: data)
             #expect(test.expected == decoded)
         }
     }
@@ -1776,7 +1776,7 @@ struct JSONEncodingDecodingTests {
         
         #expect(throws: Never.self, sourceLocation: sourceLocation) {
             // TODO: json5
-            let oldDecodedJSON = try JSONDecoder().decode(T.self, from: jsonData)
+            let oldDecodedJSON = try NewJSONDecoder().decode(T.self, from: jsonData)
             #expect(oldDecodedJSON == decoded)
         }
     }
