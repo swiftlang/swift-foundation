@@ -24,7 +24,7 @@ internal struct GrowableEncodingBytes: ~Copyable {
     @usableFromInline
     internal var _count: Int
     
-    @export(implementation)
+//    @export(implementation)
     deinit {
         if let pointer = unsafe _pointer {
             unsafe Self._deallocate(pointer)
