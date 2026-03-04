@@ -16,7 +16,14 @@ import FoundationEssentials
 #elseif FOUNDATION_FRAMEWORK
 import Foundation
 #endif
-import Darwin.C
+
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 
 // TODO: EMBEDDED: Don't use the `final class` Internals type for Embedded only. We shouldn't have the same typed-throws overhead there anyway.
 

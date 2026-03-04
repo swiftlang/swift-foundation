@@ -17,7 +17,14 @@ import FoundationEssentials
 import Foundation
 #endif
 
-import Darwin.C
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
+
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(BasicContainers)

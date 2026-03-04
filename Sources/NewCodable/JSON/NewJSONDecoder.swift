@@ -16,7 +16,14 @@ import FoundationEssentials
 #elseif FOUNDATION_FRAMEWORK
 import Foundation
 #endif
-import Darwin.C
+
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 
 public struct NewJSONDecoder {
     @usableFromInline
