@@ -20,17 +20,17 @@ import Foundation
 #endif
 
 #if canImport(Darwin)
-internal import os
+import Darwin
 #elseif canImport(Bionic)
-@preconcurrency import Bionic
+import Bionic
 #elseif canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
-@preconcurrency import Musl
+import Musl
 #elseif canImport(CRT)
 import CRT
 #elseif os(WASI)
-@preconcurrency import WASILibc
+import WASILibc
 #endif
 
 import NewCodable
@@ -1468,8 +1468,28 @@ struct JSONEncodingDecodingTests {
         }
     }
     
-    @Test func localeDecimalPolicyIndependence() throws {
-        let frLocale = newlocale(LC_ALL, "fr_FR", nil)
+    // Windows doesn't have thread-specific newlocale/uselocale which are important for running these tests in parallel.
+#if !os(Windows)
+    
+    static func hasLocales() -> Bool {
+        // The system must have a non-English, non-POSIX locale to test this behavior.
+        guard let frLocale = newlocale(LC_ALL, "fr_FR", nil) else { return false }
+        defer { freelocale(frLocale) }
+#if os(Windows)
+        let enLocale = newlocale(LC_ALL, "en_US", nil)
+#else
+        let enLocale = newlocale(LC_ALL, "en_US_POSIX", nil)
+#endif
+        guard let enLocale else { return false }
+        defer { freelocale(enLocale) }
+        return true
+    }
+    
+    @Test(.enabled(if: hasLocales()))
+    func localeDecimalPolicyIndependence() throws {
+        guard let frLocale = newlocale(LC_ALL, "fr_FR", nil) else {
+            return
+        }
         defer { freelocale(frLocale) }
         
 #if os(Windows)
@@ -1477,6 +1497,9 @@ struct JSONEncodingDecodingTests {
 #else
         let enLocale = newlocale(LC_ALL, "en_US_POSIX", nil)
 #endif
+        guard let enLocale else {
+            return
+        }
         defer { freelocale(enLocale) }
         
         let orig = ["decimalValue": 1.1]
@@ -1491,6 +1514,7 @@ struct JSONEncodingDecodingTests {
         
         #expect(orig == decoded)
     }
+#endif
     
     @Test func whitespace() {
         let tests : [(json: String, expected: [String:Bool])] = [

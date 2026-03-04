@@ -28,17 +28,17 @@ internal import BasicContainers
 #endif
 
 #if canImport(Darwin)
-internal import os
+import Darwin
 #elseif canImport(Bionic)
-@preconcurrency import Bionic
+import Bionic
 #elseif canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
-@preconcurrency import Musl
+import Musl
 #elseif canImport(CRT)
 import CRT
 #elseif os(WASI)
-@preconcurrency import WASILibc
+import WASILibc
 #endif
 
 import class Foundation.Bundle
@@ -563,9 +563,7 @@ struct NewCodableBenchmarks {
 
             print("(Old) Throughput: \(throughput(dur: (end.timeIntervalSince(start))/1000, bytes: data.count)) MB/s")
         }
-        
-        sleep(1)
-        
+                
         do {
             let decoder = NewJSONDecoder()
             let start = Date.now
