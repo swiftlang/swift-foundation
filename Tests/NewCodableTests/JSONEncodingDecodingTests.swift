@@ -29,7 +29,8 @@ import Musl
 
 import NewCodable
 
-@Suite("JSON Encoding/Decoding")
+// Temporarily .serailized to try working around a test issue.
+@Suite("JSON Encoding/Decoding", .serialized)
 struct JSONEncodingDecodingTests {
     
     // MARK: - Test Infrastructure
