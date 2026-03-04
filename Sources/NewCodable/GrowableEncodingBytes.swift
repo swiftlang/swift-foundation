@@ -41,7 +41,7 @@ extension GrowableEncodingBytes {
         self._count = 0
     }
     
-    @export(implementation)
+//    @export(implementation)
     public init(capacity: Int) {
         precondition(capacity >= 0, "GrowableEncodingBytes capacity must be nonnegative")
         if capacity > 0 {
@@ -57,7 +57,7 @@ extension GrowableEncodingBytes {
 // MARK: - Deconstruction
 
 extension GrowableEncodingBytes {
-    @export(implementation)
+//    @export(implementation)
     public consuming func deconstruct() -> (
         storage: UnsafeMutableRawBufferPointer, count: Int
     ) {
@@ -73,20 +73,20 @@ extension GrowableEncodingBytes {
 // MARK: - Helpers
 
 extension GrowableEncodingBytes {
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     internal func _pointer(at offset: Int) -> UnsafeMutableRawPointer {
         assert(unsafe _pointer != nil && offset < capacity && offset >= 0)
         return unsafe _pointer.unsafelyUnwrapped.advanced(by: offset)
     }
     
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     internal var _startPointer: UnsafeMutableRawPointer {
         unsafe _pointer(at: 0)
     }
     
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     internal var _freePointer: UnsafeMutableRawPointer {
         unsafe _pointer(at: count)
@@ -130,13 +130,13 @@ extension GrowableEncodingBytes {
 extension GrowableEncodingBytes: @unchecked Sendable {}
 
 extension GrowableEncodingBytes {
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     internal var capacity: Int {
         _assumeNonNegative(self._capacity)
     }
     
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     internal var freeCapacity: Int {
         _assumeNonNegative(self._capacity &- count)
@@ -144,12 +144,12 @@ extension GrowableEncodingBytes {
 }
 
 extension GrowableEncodingBytes {
-    @export(implementation)
+//    @export(implementation)
     public func copy() -> GrowableEncodingBytes {
         copy(capacity: count)
     }
     
-    @export(implementation)
+//    @export(implementation)
     public func copy(capacity: Int) -> Self {
         precondition(capacity >= count, "GrowableEncodingBytes capacity overflow")
         var copy = Self(capacity: capacity)
@@ -165,7 +165,7 @@ extension GrowableEncodingBytes {
 extension GrowableEncodingBytes {
     public var bytes: RawSpan {
         @_lifetime(borrow self)
-        @export(implementation)
+//        @export(implementation)
         @inline(__always)
         get {
             if let pointer = unsafe _pointer {
@@ -179,7 +179,7 @@ extension GrowableEncodingBytes {
     
     public var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
-        @export(implementation)
+//        @export(implementation)
         mutating get {
             if let pointer = unsafe _pointer {
                 let result = unsafe MutableRawSpan(_unsafeStart: pointer, byteCount: count)
@@ -192,13 +192,13 @@ extension GrowableEncodingBytes {
 }
 
 extension GrowableEncodingBytes {
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     public var count: Int {
         _assumeNonNegative(self._count)
     }
     
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     public var isEmpty: Bool {
         self.count == 0
@@ -208,7 +208,7 @@ extension GrowableEncodingBytes {
 
 // MARK: - Reallocation
 extension GrowableEncodingBytes {
-    @export(implementation)
+//    @export(implementation)
     public mutating func reallocate(capacity newCapacity: Int) {
         precondition(newCapacity >= count, "GrowableEncodingBytesGrowableEncodingBytes capacity overflow")
         guard newCapacity != capacity else { return }
@@ -229,7 +229,7 @@ extension GrowableEncodingBytes {
         _capacity = newCapacity
     }
     
-    @export(implementation)
+//    @export(implementation)
     @inline(__always)
     public mutating func reserveCapacity(_ n: Int) {
         guard capacity < n else { return }
@@ -240,14 +240,14 @@ extension GrowableEncodingBytes {
 // MARK: - Append
 
 extension GrowableEncodingBytes {
-    @export(implementation)
+//    @export(implementation)
     public mutating func append(_ byte: UInt8) {
         self.reserveCapacity(self.count + 1)
         unsafe _freePointer.storeBytes(of: byte, as: UInt8.self)
         _count += 1
     }
     
-    @export(implementation)
+//    @export(implementation)
     public mutating func append(_ bytes: borrowing RawSpan) {
         let newBytes = bytes.byteCount
         guard newBytes > 0 else { return }
