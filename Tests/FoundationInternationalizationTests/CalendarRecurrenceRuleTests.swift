@@ -19,6 +19,10 @@ import Testing
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 @Suite("Calendar RecurrenceRule", .tags(.calendar))
 private struct CalendarRecurrenceRuleTests {
     /// A Gregorian calendar with a time zone set to California

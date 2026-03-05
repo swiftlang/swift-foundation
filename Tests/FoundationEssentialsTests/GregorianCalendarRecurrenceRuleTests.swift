@@ -18,6 +18,10 @@ import Testing
 @testable import Foundation
 #endif
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 @Suite("GregorianCalendar RecurrenceRule", .tags(.calendar))
 private struct GregorianCalendarRecurrenceRuleTests {
     /// A Gregorian calendar in GMT with no time zone changes

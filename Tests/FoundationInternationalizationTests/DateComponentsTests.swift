@@ -19,6 +19,10 @@ import FoundationInternationalization
 import Foundation
 #endif
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)

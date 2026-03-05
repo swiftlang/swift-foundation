@@ -20,9 +20,9 @@ import Testing
 @testable import Foundation
 #endif
 
-extension Testing.Tag {
-    @Tag static var calendar: Self
-}
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
 @Suite("Gregorian Calendar", .tags(.calendar))
 private struct GregorianCalendarTests {
