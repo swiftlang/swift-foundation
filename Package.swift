@@ -90,7 +90,7 @@ let testOnlySwiftSettings: [SwiftSetting] = [
 
 let package = Package(
     name: "swift-foundation",
-    platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")],
+    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
     products: [
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
@@ -225,6 +225,57 @@ let package = Package(
                 "FoundationMacros"
             ],
             swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+        ),
+        
+        // NewCodable
+        .target(
+            name: "NewCodable",
+            dependencies: [
+                .target(name: "FoundationEssentials"),
+                .product(name: "OrderedCollections", package: "swift-collections"),
+                .product(name: "BasicContainers", package: "swift-collections"),
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("BuiltinModule"),
+                .enableExperimentalFeature("Lifetimes"),
+                .enableExperimentalFeature("SuppressedAssociatedTypes"),
+                .enableUpcomingFeature("MemberImportVisibility"),
+            ]
+        ),
+        .testTarget(
+            name: "NewCodableBenchmarks",
+            dependencies: [
+                .target(name: "NewCodable"),
+                .target(name: "FoundationEssentials"),
+                .product(name: "OrderedCollections", package: "swift-collections"),
+                .product(name: "BasicContainers", package: "swift-collections"),
+            ],
+            resources: [
+                .copy("Resources/twitter.json"),
+                .copy("Resources/canada.json"),
+                .copy("Resources/citm_catalog.json")
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("Lifetimes"),
+                .enableUpcomingFeature("MemberImportVisibility"),
+            ]
+        ),
+        .testTarget(
+            name: "NewCodableTests",
+            dependencies: [
+                .target(name: "NewCodable"),
+                .target(name: "FoundationEssentials"),
+                .product(name: "OrderedCollections", package: "swift-collections"),
+                .product(name: "BasicContainers", package: "swift-collections"),
+            ],
+            resources: [
+                .copy("Resources/JSON"),
+                .copy("Resources/JSON5")
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("Lifetimes"),
+                .enableUpcomingFeature("MemberImportVisibility"),
+            ]
         )
     ]
 )

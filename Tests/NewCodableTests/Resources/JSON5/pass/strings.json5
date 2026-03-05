@@ -1,0 +1,7 @@
+{
+    "Hello" : "World",
+    'Hello2' : 'World2',
+    "Hello3" : 'World3',
+    "hex1" : "hi\x7a",
+    "hex2" : "hi\x7a\x7a\x7aa",
+}
