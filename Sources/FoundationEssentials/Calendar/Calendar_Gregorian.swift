@@ -1963,7 +1963,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return dayOfYear
     }
 
-    static func isLeapYear(_ year: Int) -> Bool {
+    package static func isLeapYear(_ year: Int) -> Bool {
         (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0))
     }
     
