@@ -185,9 +185,9 @@ internal struct URLComponentAllowedSet: RawRepresentable {
         0b1111111,
         0b1111111,
         0b1111111,
-        0b1000000,
+        0b1011000, // "[" allowed in path, query, and fragment
         0b0000000,
-        0b1000000,
+        0b1011000, // "]" allowed in path, query, and fragment
         0b0000000,
         0b1111110,
         0b0000000,

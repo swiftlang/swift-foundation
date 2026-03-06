@@ -182,12 +182,12 @@ internal enum URLEncoder {
     static func addPercentEscapes(
         input: borrowing Span<UInt8>,
         output: inout OutputSpan<UInt8>,
-        component allowedMask: URLComponentAllowedMask
+        component allowedSet: URLComponentAllowedSet
     ) -> Bool {
         var readIndex = input.indices.startIndex
         while readIndex < input.indices.endIndex {
             let byte = input[readIndex]
-            if allowedMask.contains(byte) {
+            if allowedSet.contains(byte) {
                 guard !output.isFull else { return false }
                 // Write the allowed byte
                 output.append(byte)

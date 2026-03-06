@@ -942,7 +942,7 @@ private func encode<T: _URLEncoding, Impl: _URLParseable>(
 
         // Returns false if there's not enough room in the output buffer.
         @inline(__always)
-        func encode(range: Range<Int>, component: URLComponentAllowedMask) -> Bool {
+        func encode(range: Range<Int>, component: URLComponentAllowedSet) -> Bool {
             guard !range.isEmpty else { return true }
             guard flush() else { return false }
             let success = T._withUTF8(input: span.extracting(range)) { utf8Span in
