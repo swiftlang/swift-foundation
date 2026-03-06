@@ -94,6 +94,7 @@ let package = Package(
     products: [
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
+        .library(name: "NewCodable", targets: ["NewCodable"])
     ],
     dependencies: dependencies,
     targets: [
