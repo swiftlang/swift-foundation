@@ -1349,6 +1349,7 @@ public struct URL: Equatable, Sendable, Hashable {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(relativeString)
+        hasher.combine(baseURL)
     }
 
     public static func == (lhs: URL, rhs: URL) -> Bool {
