@@ -30,9 +30,7 @@
 ///         return bytes.withBytes { rawSpan in ... }
 ///     }
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol ContiguousBytes /*: ~Escapable, ~Copyable*/ {
-    // TODO: ContiguousBytes should refine ~Escapable, ~Copyable
-
+public protocol ContiguousBytes: ~Escapable, ~Copyable {
 #if !hasFeature(Embedded)
     /// Calls the given closure with the contents of underlying storage.
     ///
@@ -70,7 +68,7 @@ public protocol ContiguousBytes /*: ~Escapable, ~Copyable*/ {
      */
 }
 
-extension ContiguousBytes /*where Self: ~Escapable, Self: ~Copyable*/ {
+extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
     /// Calls the given closure with the contents of underlying storage.
     ///
     /// - note: Calling `withBytes` multiple times does not guarantee that
@@ -257,9 +255,8 @@ extension Slice : ContiguousBytes where Base : ContiguousBytes {
 
 //===--- Span Conformances -----------------------------------------===//
 
-// TODO: ContiguousBytes should refine ~Escapable and ~Copyable
-// @available(FoundationPreview 6.4, *)
-// extension RawSpan: ContiguousBytes { }
+@available(FoundationPreview 6.4, *)
+extension RawSpan: ContiguousBytes { }
 
 extension RawSpan {
     @_alwaysEmitIntoClient
@@ -268,9 +265,8 @@ extension RawSpan {
     }
 }
 
-// TODO: ContiguousBytes should refine ~Escapable and ~Copyable
-// @available(FoundationPreview 6.4, *)
-// extension MutableRawSpan: ContiguousBytes { }
+@available(FoundationPreview 6.4, *)
+extension MutableRawSpan: ContiguousBytes { }
 
 extension MutableRawSpan {
     @_alwaysEmitIntoClient
@@ -279,9 +275,8 @@ extension MutableRawSpan {
     }
 }
 
-// TODO: ContiguousBytes should refine ~Escapable and ~Copyable
-// @available(FoundationPreview 6.4, *)
-// extension OutputRawSpan: ContiguousBytes { }
+@available(FoundationPreview 6.4, *)
+extension OutputRawSpan: ContiguousBytes { }
 
 extension OutputRawSpan {
     @_alwaysEmitIntoClient
@@ -295,9 +290,8 @@ extension OutputRawSpan {
     }
 }
 
-// TODO: ContiguousBytes should refine ~Escapable and ~Copyable
-// @available(FoundationPreview 6.4, *)
-// extension UTF8Span: ContiguousBytes { }
+@available(FoundationPreview 6.4, *)
+extension UTF8Span: ContiguousBytes { }
 
 extension UTF8Span {
     @_alwaysEmitIntoClient
@@ -311,9 +305,8 @@ extension UTF8Span {
     }
 }
 
-// TODO: ContiguousBytes should refine ~Escapable and ~Copyable
-// @available(FoundationPreview 6.4, *)
-// extension Span: ContiguousBytes where Element == UInt8 { }
+@available(FoundationPreview 6.4, *)
+extension Span: ContiguousBytes where Element == UInt8 { }
 
 extension Span where Element == UInt8 {
     @_alwaysEmitIntoClient
@@ -322,9 +315,8 @@ extension Span where Element == UInt8 {
     }
 }
 
-// TODO: ContiguousBytes should refine ~Escapable and ~Copyable
-// @available(FoundationPreview 6.4, *)
-// extension MutableSpan: ContiguousBytes where Element == UInt8 { }
+@available(FoundationPreview 6.4, *)
+extension MutableSpan: ContiguousBytes where Element == UInt8 { }
 
 extension MutableSpan where Element == UInt8 {
     @_alwaysEmitIntoClient
@@ -333,9 +325,8 @@ extension MutableSpan where Element == UInt8 {
     }
 }
 
-// TODO: ContiguousBytes should refine ~Escapable and ~Copyable
-// @available(FoundationPreview 6.4, *)
-// extension OutputSpan: ContiguousBytes where Element == UInt8 { }
+@available(FoundationPreview 6.4, *)
+extension OutputSpan: ContiguousBytes where Element == UInt8 { }
 
 extension OutputSpan where Element == UInt8 {
     @_alwaysEmitIntoClient
