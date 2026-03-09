@@ -11,6 +11,10 @@
 
 internal import _FoundationCShims
 
+#if canImport(Synchronization)
+internal import Synchronization
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -129,6 +133,36 @@ internal struct BuiltInUnicodeScalarSet {
     static let bitShiftForMask = UInt16(7)
     static let byteCount = 8 * 1024
     
+    private struct BMPCacheKey: Hashable {
+        let type: SetType
+        let isInverted: Bool
+    }
+
+    #if canImport(Synchronization)
+    private static let bmpCache = Mutex<[BMPCacheKey: Data]>([:])
+    #else
+    private static let bmpCache = LockedState<[BMPCacheKey: Data]>(initialState: [:])
+    #endif
+
+    private static func cachedBMP(for type: SetType, isInverted: Bool) -> Data {
+        let key = BMPCacheKey(type: type, isInverted: isInverted)
+        return bmpCache.withLock { cache in
+            if let cached = cache[key] {
+                return cached
+            }
+            let set = BuiltInUnicodeScalarSet(type: type)
+            let (result, data) = set.bitmap(forPlane: 0, isInverted: isInverted)
+            let bitmap: Data
+            switch result {
+            case .bitmapFilled: bitmap = data
+            case .bitmapEmpty:  bitmap = _CharacterSet.allZeros
+            case .bitmapAll:    bitmap = _CharacterSet.allOnes
+            }
+            cache[key] = bitmap
+            return bitmap
+        }
+    }
+    
     // CFCharacterSetCreateBitmapRepresentation
     func bitmapRepresentation(isInverted: Bool) -> Data {
         let numNonBMPPlanes = isInverted ? 16 : _numberOfPlanes - 1
@@ -195,11 +229,7 @@ internal struct BuiltInUnicodeScalarSet {
     
     // __CFCSetGetBitmap
     internal func getBitmap(isInverted: Bool) -> Data {
-        let (_, bitmapData) = bitmap(forPlane: 0, isInverted: isInverted)
-        // The method bitmap(forPlane:isInverted:) already handles all logic and returns
-        // appropriate bitmapData for all cases (.bitmapEmpty, .bitmapAll, .bitmapFilled)
-        // so we should not have to switch anymore.
-        return bitmapData
+        return Self.cachedBMP(for: charset, isInverted: isInverted)
     }
     
     // CFUniCharIsMemberOf
