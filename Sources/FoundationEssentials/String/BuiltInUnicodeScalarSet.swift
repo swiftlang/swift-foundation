@@ -151,13 +151,9 @@ internal struct BuiltInUnicodeScalarSet {
                 return cached
             }
             let set = BuiltInUnicodeScalarSet(type: type)
-            let (result, data) = set.bitmap(forPlane: 0, isInverted: isInverted)
+            let (_, data) = set.bitmap(forPlane: 0, isInverted: isInverted)
             let bitmap: Data
-            switch result {
-            case .bitmapFilled: bitmap = data
-            case .bitmapEmpty:  bitmap = _CharacterSet.allZeros
-            case .bitmapAll:    bitmap = _CharacterSet.allOnes
-            }
+            bitmap = data
             cache[key] = bitmap
             return bitmap
         }
