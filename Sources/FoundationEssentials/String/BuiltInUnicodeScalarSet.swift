@@ -152,10 +152,8 @@ internal struct BuiltInUnicodeScalarSet {
             }
             let set = BuiltInUnicodeScalarSet(type: type)
             let (_, data) = set.bitmap(forPlane: 0, isInverted: isInverted)
-            let bitmap: Data
-            bitmap = data
-            cache[key] = bitmap
-            return bitmap
+            cache[key] = data
+            return data
         }
     }
     
