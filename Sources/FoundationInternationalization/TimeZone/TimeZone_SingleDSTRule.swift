@@ -165,7 +165,9 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
 
-    func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) -> (rawOffset: Int, dstSavings: Int) {
+    func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) throws(TimeZone.Error) -> (rawOffset: Int, dstSavings: Int) {
+        try date.checkBounds()
+
         if local {
             let secondsOffsets = _rawAndDSTOffsetForLocalDate(date, nonExistingTimeOpt: nonExistingTimePolicy, duplicatedTimeOpt: duplicatedTimePolicy)
             return secondsOffsets
@@ -184,21 +186,15 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     // Returns offset in seconds
     func _gmtOffset(forLocalDate date: Date) -> Int {
         // We already adjusted for offset at call site. So date is always local already, so we use a calendar in GMT timezone to avoid adjusting it again
-        let components = calendar.dateComponents([.era, .year, .month, .day, .weekday, .hour, .minute, .second, .nanosecond], from: date)
-
-        guard let era = components.era, let year = components.year, let month = components.month, let day = components.day, let dayOfWeek = components.weekday, let hour = components.hour, let minute = components.minute, let second = components.second, let nanosecond = components.nanosecond else {
+        guard let components = try? calendar._componentsForTimeZoneRule(from: date) else {
             return Int(rawOffset)
         }
 
-        // Convert to ICU-style parameters (0-based month, seconds since start of day)
-        let icuMonth = month - 1  // Convert from 1-based to 0-based
-        let icuDayOfWeek = dayOfWeek  // Sunday = 1
-        let seconds = hour * 3600 +
-                           minute * 60 +
-                           second +
-                           nanosecond / 1_000_000_000
+        let icuMonth = components.month - 1  // Convert from 1-based to 0-based
+        let icuDayOfWeek = components.weekday  // Sunday = 1
+        let seconds = components.hour * 3600 + components.minute * 60 + components.second + components.nanosecond / 1_000_000_000
 
-        return _gmtOffset(era: era, year: year, month: icuMonth, day: day, dayOfWeek: icuDayOfWeek, seconds: seconds)
+        return _gmtOffset(era: components.era, year: components.year, month: icuMonth, day: components.day, dayOfWeek: icuDayOfWeek, seconds: seconds)
     }
 
     // Returns offset in seconds
@@ -368,7 +364,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     private func monthLength(year: Int, month: Int) -> Int {
         precondition(month >= 0 && month < 12)
-        if month == 1 && !isLeapYear(year) {
+        if month == 1 && !_CalendarGregorian.isLeapYear(year) {
             // Adjust February for non-leap years
             return 28
         } else {
@@ -378,10 +374,6 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     private func previousMonthLength(year: Int, month: Int) -> Int {
         month == 0 ? 31 : monthLength(year: year, month: month - 1)
-    }
-
-    private func isLeapYear(_ year: Int) -> Bool {
-        (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0))
     }
     
     // Returns the day number from 1970, with day 0 == Jan 1 1970
@@ -396,8 +388,8 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         daysSinceBCE1 += priorYear / 400
 
         // Days in prior months this year
-        let isLeap = isLeapYear(year)
-        let daysInPriorMonths = isLeap ? 
+        let isLeap = _CalendarGregorian.isLeapYear(year)
+        let daysInPriorMonths = isLeap ?
             Self.DAYS_IN_PRIOR_MONTHS_LEAP_YEAR[Int(month)] :
             Self.DAYS_IN_PRIOR_MONTHS_NOT_LEAP_YEAR[Int(month)]
         let totalDaysSinceBCE1 = daysSinceBCE1 + Int(daysInPriorMonths) + Int(dayOfMonth)
@@ -563,7 +555,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             var targetDay = rule.day
             
             // Handle Feb <= 29 for non-leap years
-            if !after && rule.month == 1 && rule.day == 29 && !isLeapYear(year) { // February
+            if !after && rule.month == 1 && rule.day == 29 && !_CalendarGregorian.isLeapYear(year) { // February
                 targetDay = 28
             }
             
