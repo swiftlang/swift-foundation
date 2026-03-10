@@ -476,22 +476,21 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         var newPath = inPath.path
         var preRenameAttributes = PreRenameAttributes()
         var attrs = attrlist(bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_OBJTYPE | ATTR_CMN_ACCESSMASK | ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(ATTR_FILE_LINKCOUNT), forkattr: .init())
-        let result = getattrlist(inPathFileSystemRep, &attrs, &preRenameAttributes, MemoryLayout<PreRenameAttributes>.size, .init(FSOPT_NOFOLLOW))
+        // Provide FSOPT_UNIQUE to ensure that the file is a regular file with a single hard link (so that we can rely on ATTR_CMN_FULLPATH)
+        let result = getattrlist(inPathFileSystemRep, &attrs, &preRenameAttributes, MemoryLayout<PreRenameAttributes>.size, .init(FSOPT_NOFOLLOW | FSOPT_UNIQUE))
         if result == 0 {
             // Use the path from the buffer
             mode = mode_t(preRenameAttributes.mode)
-            if preRenameAttributes.fileType == VREG.rawValue && !(preRenameAttributes.nlink > 1) {
-                // Copy the contents of the getattrlist buffer for the string into a Swift String
-                withUnsafePointer(to: preRenameAttributes.fullPathBuf) { ptrToTuple in
-                    // The length of the string is passed back to us in the same struct as the C string itself
-                    // n.b. Length includes the null-termination byte. Use this size for the buffer.
-                    let length = Int(preRenameAttributes.fullPathAttr.attr_length)
-                    ptrToTuple.withMemoryRebound(to: CChar.self, capacity: length) { pointer in
-                        newPath = String(cString: pointer)
-                    }
+            // Copy the contents of the getattrlist buffer for the string into a Swift String
+            withUnsafePointer(to: preRenameAttributes.fullPathBuf) { ptrToTuple in
+                // The length of the string is passed back to us in the same struct as the C string itself
+                // n.b. Length includes the null-termination byte. Use this size for the buffer.
+                let length = Int(preRenameAttributes.fullPathAttr.attr_length)
+                ptrToTuple.withMemoryRebound(to: CChar.self, capacity: length) { pointer in
+                    newPath = String(cString: pointer)
                 }
             }
-        } else if (errno != ENOENT) && (errno != ENAMETOOLONG) {
+        } else if (errno != ENOENT) && (errno != ENAMETOOLONG) && (errno != ENOTCAPABLE) {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
 #else
@@ -595,7 +594,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
 #if FOUNDATION_FRAMEWORK
                     var attrs = attrlist(bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(), forkattr: .init())
                     var buffer = FullPathAttributes()
-                    let result = fgetattrlist(fd, &attrs, &buffer, MemoryLayout<FullPathAttributes>.size, .init(FSOPT_NOFOLLOW))
+                    let result = fgetattrlist(fd, &attrs, &buffer, MemoryLayout<FullPathAttributes>.size, .init(FSOPT_NOFOLLOW | FSOPT_UNIQUE))
                     // Compare the last one to this one
                     if result == 0 {
                         withUnsafePointer(to: buffer.fullPathBuf) { ptrToTuple in
