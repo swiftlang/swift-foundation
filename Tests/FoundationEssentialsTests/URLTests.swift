@@ -1780,4 +1780,26 @@ private struct URLTests {
             #expect(!symlinkURL.hasDirectoryPath)
         }
     }
+
+    @Test func squareBracketsAllowedInPathQueryFragment() {
+        let bracketSpan = "[]".utf8.span
+
+        // Square brackets should be allowed in path, query, and fragment
+        let pathValid = validate(span: bracketSpan, component: .path)
+        let queryValid = validate(span: bracketSpan, component: .query)
+        let fragmentValid = validate(span: bracketSpan, component: .fragment)
+        let anyValid = validate(span: bracketSpan, component: .anyValid)
+        #expect(pathValid)
+        #expect(queryValid)
+        #expect(fragmentValid)
+        #expect(anyValid)
+
+        // Square brackets are not allowed in userinfo or (non-IP literal) host
+        let userValid = validate(span: bracketSpan, component: .user)
+        let passwordValid = validate(span: bracketSpan, component: .password)
+        let hostValid = validate(span: bracketSpan, component: .host)
+        #expect(!userValid)
+        #expect(!passwordValid)
+        #expect(!hostValid)
+    }
 }
