@@ -39,7 +39,7 @@ struct JSONEncodableMacroTests {
                 let name: String
                 let age: Int
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case age
 
@@ -88,7 +88,7 @@ struct JSONEncodableMacroTests {
                 let publishDate: String
                 let title: String
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case publishDate
                     case title
 
@@ -137,7 +137,7 @@ struct JSONEncodableMacroTests {
                 let name: String
                 let rating: Double?
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case rating
 
@@ -190,7 +190,7 @@ struct JSONEncodableMacroTests {
                     get { name.uppercased() }
                 }
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
 
                     @_transparent
@@ -235,7 +235,7 @@ struct JSONEncodableMacroTests {
                 static let defaultName = "test"
                 let name: String
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
 
                     @_transparent
@@ -321,7 +321,7 @@ struct JSONEncodableMacroTests {
                 let name: String
                 lazy var uppercasedName: String = name.uppercased()
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
 
                     @_transparent
@@ -392,7 +392,7 @@ struct JSONEncodableMacroTests {
                 let name: String = "default"
                 let age: Int
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case age
 
@@ -441,7 +441,7 @@ struct JSONEncodableMacroTests {
                 let userName: String
                 let age: Int
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case userName
                     case age
 
@@ -496,7 +496,7 @@ struct JSONEncodableMacroTests {
                 }
                 let name: String
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case count
                     case name
 

@@ -151,7 +151,7 @@ extension JSONEncodableMacro: MemberMacro {
         }.joined(separator: "\n            ")
 
         let enumDecl: DeclSyntax = """
-        enum CodingFields: Int, JSONOptimizedCodingField {
+        enum CodingFields: JSONOptimizedCodingField {
             \(raw: cases)
 
             @_transparent

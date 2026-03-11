@@ -33,7 +33,7 @@ struct JSONCodableMacroTests {
                 let name: String
                 let age: Int
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case age
 
@@ -106,7 +106,7 @@ struct JSONCodableMacroTests {
                 let name: String
                 let rating: Double?
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case rating
 
@@ -176,7 +176,7 @@ struct JSONCodableMacroTests {
                 let publishDate: String
                 let title: String
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case publishDate
                     case title
 
@@ -278,7 +278,7 @@ struct JSONCodableMacroTests {
                 let name: String
                 let locale: String
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case locale
 
@@ -346,7 +346,7 @@ struct JSONCodableMacroTests {
             struct User {
                 let userName: String
 
-                enum CodingFields: Int, JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedCodingField {
                     case userName
 
                     @_transparent
