@@ -591,6 +591,7 @@ struct NewCodableTests {
                     guard let decodedCase else {
                         throw CodingError.dataCorrupted(debugDescription: "Missing enum case")
                     }
+                    let unknownError = CodingError.unknownKey(decodedCase.utf8Span)
                     // TODO: It'd be nice to figure out how to encapsulate this.
                     if contents.isEmpty {
                         return try structDecoder.withWrappingDecoder { wrappingDecoder throws(CodingError.Decoding) in
@@ -600,7 +601,7 @@ struct NewCodableTests {
                             case "bar":
                                 try decodeBar(from: &wrappingDecoder)
                             default:
-                                throw CodingError.unknownKey(decodedCase.utf8Span)
+                                throw unknownError
                             }
                         }
                     } else {
@@ -611,7 +612,7 @@ struct NewCodableTests {
                         case "bar":
                             return try decodeBar(from: &valueDecoder)
                         default:
-                            throw CodingError.unknownKey(decodedCase.utf8Span)
+                            throw unknownError
                         }
                     }
                 }

@@ -623,6 +623,7 @@ extension JSONDirectEncoder {
         try self.encode(arbitraryPrecisionNumber: decimal.description.utf8Span)
     }
     
+    @_lifetime(self: copy self)
     internal mutating func encodeGenericNonCopyable<T: CommonEncodable & ~Copyable>(_ value: borrowing T) throws(CodingError.Encoding) {
         try value.encode(to: &self)
     }
