@@ -23,3 +23,6 @@ public macro JSONCodable() = #externalMacro(module: "NewCodableMacros", type: "J
 
 @attached(peer)
 public macro CodingKey(_ name: String) = #externalMacro(module: "NewCodableMacros", type: "CodingKeyMacro")
+
+@attached(peer)
+public macro CodableDefault<T>(_ value: T) = #externalMacro(module: "NewCodableMacros", type: "CodableDefaultMacro")

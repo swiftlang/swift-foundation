@@ -121,6 +121,10 @@ extension JSONEncodableMacro: MemberMacro {
             "case .\($0.name): \"\($0.jsonKey)\""
         }.joined(separator: "\n            ")
 
+        let fieldForKeyCases = properties.map {
+            "case \"\($0.jsonKey)\": .\($0.name)"
+        }.joined(separator: "\n            ")
+
         let enumDecl: DeclSyntax = """
         enum CodingFields: Int, JSONOptimizedCodingField {
             \(raw: cases)
@@ -129,6 +133,13 @@ extension JSONEncodableMacro: MemberMacro {
             var staticString: StaticString {
                 switch self {
                 \(raw: switchCases)
+                }
+            }
+
+            static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                switch UTF8SpanComparator(key) {
+                \(raw: fieldForKeyCases)
+                default: throw CodingError.unknownKey(key)
                 }
             }
         }

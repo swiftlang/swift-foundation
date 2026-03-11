@@ -635,47 +635,6 @@ struct NewCodableTests {
     }
     
     @Test func testDefaultValue() throws {
-        /*
-         @JSONCodable
-         struct Foo {
-             @CodableDefault("hello")
-             let bar: String
-         }
-         */
-        
-        struct Foo: JSONDecodable, Equatable {
-            let bar: String
-            
-            enum CodingFields: JSONOptimizedDecodingField {
-                case bar
-                
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
-                    switch UTF8SpanComparator(key) {
-                    case "bar": .bar
-                    default: throw CodingError.unknownKey(key)
-                    }
-                }
-                
-                @inline(__always)
-                var staticString: StaticString {
-                    switch self {
-                    case .bar: "bar"
-                    }
-                }
-            }
-            
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Foo {
-                return try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
-                    var bar: String?
-                    var inOrder = false
-                    _ = try structDecoder.decodeExpectedOrderField(CodingFields.bar, inOrder: &inOrder, required: false) { valueDecoder throws(CodingError.Decoding) in
-                        bar = try valueDecoder.decode(String.self)
-                    }
-                    return Foo(bar: bar ?? "hello")
-                }
-            }
-        }
-        
         let emptyJSON = Data("{}".utf8)
         let decoder = NewJSONDecoder()
         let result = try decoder.decode(Foo.self, from: emptyJSON)

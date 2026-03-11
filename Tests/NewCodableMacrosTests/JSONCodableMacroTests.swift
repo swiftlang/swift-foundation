@@ -44,6 +44,14 @@ struct JSONCodableMacroTests {
                         case .age: "age"
                         }
                     }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "age": .age
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
                 }
             }
 
@@ -106,6 +114,14 @@ struct JSONCodableMacroTests {
                         case .rating: "rating"
                         }
                     }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "rating": .rating
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
                 }
             }
 
@@ -166,6 +182,14 @@ struct JSONCodableMacroTests {
                         switch self {
                         case .publishDate: "date_published"
                         case .title: "title"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "date_published": .publishDate
+                        case "title": .title
+                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -234,6 +258,76 @@ struct JSONCodableMacroTests {
         )
     }
 
+    @Test func defaultValue() {
+        assertMacroExpansion(
+            """
+            @JSONCodable
+            struct Config {
+                let name: String
+                @CodableDefault("en") let locale: String
+            }
+            """,
+            expandedSource: """
+            struct Config {
+                let name: String
+                let locale: String
+
+                enum CodingFields: Int, JSONOptimizedCodingField {
+                    case name
+                    case locale
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        case .locale: "locale"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "locale": .locale
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension Config: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: CodingFields.locale, value: self.locale)
+                    }
+                }
+            }
+
+            extension Config: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Config {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var name: String?
+                        var locale: String?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "name": name = try valueDecoder.decode(String.self)
+                            case "locale": locale = try valueDecoder.decode(String.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        }
+                        return Config(name: name, locale: locale ?? "en")
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
     @Test func errorOnNonStruct() {
         assertMacroExpansion(
             """
@@ -259,4 +353,5 @@ struct JSONCodableMacroTests {
 private let codableTestMacros: [String: Macro.Type] = [
     "JSONCodable": JSONCodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
+    "CodableDefault": CodableDefaultMacro.self,
 ]

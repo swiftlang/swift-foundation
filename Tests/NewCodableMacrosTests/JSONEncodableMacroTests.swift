@@ -49,6 +49,14 @@ struct JSONEncodableMacroTests {
                         case .age: "age"
                         }
                     }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "age": .age
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
                 }
             }
 
@@ -90,6 +98,14 @@ struct JSONEncodableMacroTests {
                         case .title: "title"
                         }
                     }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "date_published": .publishDate
+                        case "title": .title
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
                 }
             }
 
@@ -129,6 +145,14 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .name: "name"
                         case .rating: "rating"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "rating": .rating
+                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -174,6 +198,13 @@ struct JSONEncodableMacroTests {
                         case .name: "name"
                         }
                     }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
                 }
             }
 
@@ -210,6 +241,13 @@ struct JSONEncodableMacroTests {
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -291,6 +329,13 @@ struct JSONEncodableMacroTests {
                         case .name: "name"
                         }
                     }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
                 }
             }
 
@@ -357,6 +402,14 @@ struct JSONEncodableMacroTests {
                         case .age: "age"
                         }
                     }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "age": .age
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
                 }
             }
 
@@ -400,6 +453,14 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .count: "count"
                         case .name: "name"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "count": .count
+                        case "name": .name
+                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }

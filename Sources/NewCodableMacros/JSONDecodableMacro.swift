@@ -22,6 +22,11 @@ private struct DecodableStoredProperty {
     let jsonKey: String
     let typeName: String
     let isOptional: Bool
+    let defaultExpr: String?
+
+    var isRequired: Bool {
+        !isOptional && defaultExpr == nil
+    }
 }
 
 private func extractDecodableStoredProperties(
@@ -42,7 +47,8 @@ private func extractDecodableStoredProperties(
         }
 
         let customKey = decodableCustomCodingKey(from: varDecl.attributes)
-        if customKey != nil && varDecl.bindings.count > 1 {
+        let defaultExpr = decodableDefaultExpression(from: varDecl.attributes)
+        if (customKey != nil || defaultExpr != nil) && varDecl.bindings.count > 1 {
             context.diagnose(.init(
                 node: Syntax(varDecl),
                 message: JSONDecodableDiagnostic.codingKeyOnMultipleBindings
@@ -100,12 +106,27 @@ private func extractDecodableStoredProperties(
                 name: propertyName,
                 jsonKey: jsonKey,
                 typeName: typeName,
-                isOptional: isOptional
+                isOptional: isOptional,
+                defaultExpr: defaultExpr
             ))
         }
     }
 
     return properties
+}
+
+private func decodableDefaultExpression(from attributes: AttributeListSyntax) -> String? {
+    for attribute in attributes {
+        guard let attr = attribute.as(AttributeSyntax.self),
+              let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
+              identifierType.name.trimmedDescription == "CodableDefault",
+              let arguments = attr.arguments?.as(LabeledExprListSyntax.self),
+              let firstArg = arguments.first else {
+            continue
+        }
+        return firstArg.expression.trimmedDescription
+    }
+    return nil
 }
 
 private func decodableCustomCodingKey(from attributes: AttributeListSyntax) -> String? {
@@ -166,16 +187,24 @@ extension JSONDecodableMacro: ExtensionMacro {
                 "case \"\($0.jsonKey)\": \($0.name) = try valueDecoder.decode(\($0.typeName).self)"
             }.joined(separator: "\n                    ")
 
-            let requiredProperties = properties.filter { !$0.isOptional }
+            let requiredProperties = properties.filter { $0.isRequired }
 
             let guardAndReturn: String
             if requiredProperties.isEmpty {
-                let args = properties.map { "\($0.name): \($0.name)" }.joined(separator: ", ")
+                let args = properties.map { prop -> String in
+                    if let defaultExpr = prop.defaultExpr {
+                        return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
+                    }
+                    return "\(prop.name): \(prop.name)"
+                }.joined(separator: ", ")
                 guardAndReturn = "return \(typeName)(\(args))"
             } else {
                 let guardNames = requiredProperties.map { "let \($0.name)" }.joined(separator: ", ")
-                let args = properties.map {
-                    "\($0.name): \($0.name)"
+                let args = properties.map { prop -> String in
+                    if let defaultExpr = prop.defaultExpr {
+                        return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
+                    }
+                    return "\(prop.name): \(prop.name)"
                 }.joined(separator: ", ")
                 guardAndReturn = """
                 guard \(guardNames) else {

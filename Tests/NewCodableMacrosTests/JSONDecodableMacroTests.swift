@@ -356,9 +356,190 @@ struct JSONDecodableMacroTests {
             macros: decodableTestMacros
         )
     }
+
+    @Test func defaultValue() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct Config {
+                let name: String
+                @CodableDefault("en") let locale: String
+                @CodableDefault(0) let retryCount: Int
+            }
+            """,
+            expandedSource: """
+            struct Config {
+                let name: String
+                let locale: String
+                let retryCount: Int
+            }
+
+            extension Config: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Config {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var name: String?
+                        var locale: String?
+                        var retryCount: Int?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "name": name = try valueDecoder.decode(String.self)
+                            case "locale": locale = try valueDecoder.decode(String.self)
+                            case "retryCount": retryCount = try valueDecoder.decode(Int.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        }
+                        return Config(name: name, locale: locale ?? "en", retryCount: retryCount ?? 0)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func allDefaultValues() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct Defaults {
+                @CodableDefault("hello") let greeting: String
+                @CodableDefault(false) let verbose: Bool
+            }
+            """,
+            expandedSource: """
+            struct Defaults {
+                let greeting: String
+                let verbose: Bool
+            }
+
+            extension Defaults: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Defaults {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var greeting: String?
+                        var verbose: Bool?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "greeting": greeting = try valueDecoder.decode(String.self)
+                            case "verbose": verbose = try valueDecoder.decode(Bool.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        return Defaults(greeting: greeting ?? "hello", verbose: verbose ?? false)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func defaultWithCodingKey() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct Setting {
+                @CodingKey("max_retries") @CodableDefault(3) let maxRetries: Int
+            }
+            """,
+            expandedSource: """
+            struct Setting {
+                let maxRetries: Int
+            }
+
+            extension Setting: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Setting {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var maxRetries: Int?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "max_retries": maxRetries = try valueDecoder.decode(Int.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        return Setting(maxRetries: maxRetries ?? 3)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func defaultOnOptionalProperty() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct Prefs {
+                @CodableDefault("en") let locale: String?
+            }
+            """,
+            expandedSource: """
+            struct Prefs {
+                let locale: String?
+            }
+
+            extension Prefs: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Prefs {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var locale: String?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "locale": locale = try valueDecoder.decode(String.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        return Prefs(locale: locale ?? "en")
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func defaultWithArbitraryExpression() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct WithExpr {
+                @CodableDefault([]) let tags: [String]
+            }
+            """,
+            expandedSource: """
+            struct WithExpr {
+                let tags: [String]
+            }
+
+            extension WithExpr: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> WithExpr {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var tags: [String]?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "tags": tags = try valueDecoder.decode([String].self)
+                            default: break
+                            }
+                            return false
+                        }
+                        return WithExpr(tags: tags ?? [])
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
 }
 
 private let decodableTestMacros: [String: Macro.Type] = [
     "JSONDecodable": JSONDecodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
+    "CodableDefault": CodableDefaultMacro.self,
 ]
