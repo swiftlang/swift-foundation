@@ -71,13 +71,15 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var age: Int?
-                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch try CodingFields.field(for: key) {
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
                             case .name: name = try valueDecoder.decode(String.self)
                             case .age: age = try valueDecoder.decode(Int.self)
                             case .unknown: break
                             }
-                            return false
                         }
                         guard let name else {
                             throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
@@ -146,13 +148,15 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var rating: Double?
-                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch try CodingFields.field(for: key) {
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
                             case .name: name = try valueDecoder.decode(String.self)
                             case .rating: rating = try valueDecoder.decode(Double.self)
                             case .unknown: break
                             }
-                            return false
                         }
                         guard let name else {
                             throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
@@ -218,13 +222,15 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var publishDate: String?
                         var title: String?
-                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch try CodingFields.field(for: key) {
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
                             case .publishDate: publishDate = try valueDecoder.decode(String.self)
                             case .title: title = try valueDecoder.decode(String.self)
                             case .unknown: break
                             }
-                            return false
                         }
                         guard let publishDate else {
                             throw CodingError.dataCorrupted(debugDescription: "Missing required field 'date_published'")
@@ -322,13 +328,15 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var locale: String?
-                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch try CodingFields.field(for: key) {
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
                             case .name: name = try valueDecoder.decode(String.self)
                             case .locale: locale = try valueDecoder.decode(String.self)
                             case .unknown: break
                             }
-                            return false
                         }
                         guard let name else {
                             throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
@@ -388,12 +396,14 @@ struct JSONCodableMacroTests {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
-                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch try CodingFields.field(for: key) {
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
                             case .userName: userName = try valueDecoder.decode(String.self)
                             case .unknown: break
                             }
-                            return false
                         }
                         guard let userName else {
                             throw CodingError.dataCorrupted(debugDescription: "Missing required field 'userName'")
@@ -453,12 +463,14 @@ struct JSONCodableMacroTests {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
-                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch try CodingFields.field(for: key) {
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
                             case .userName: userName = try valueDecoder.decode(String.self)
                             case .unknown: break
                             }
-                            return false
                         }
                         guard let userName else {
                             throw CodingError.dataCorrupted(debugDescription: "Missing required field 'user_name'")

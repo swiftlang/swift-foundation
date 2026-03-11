@@ -275,12 +275,14 @@ extension JSONDecodableMacro: ExtensionMacro {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         \(raw: varDeclarations)
-                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch try CodingFields.field(for: key) {
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
                             \(raw: switchCases)
                             case .unknown: break
                             }
-                            return false
                         }
                         \(raw: guardAndReturn)
                     }
