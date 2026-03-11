@@ -26,3 +26,6 @@ public macro CodingKey(_ name: String) = #externalMacro(module: "NewCodableMacro
 
 @attached(peer)
 public macro CodableDefault<T>(_ value: T) = #externalMacro(module: "NewCodableMacros", type: "CodableDefaultMacro")
+
+@attached(peer)
+public macro CodableAlias(_ names: String...) = #externalMacro(module: "NewCodableMacros", type: "CodableAliasMacro")

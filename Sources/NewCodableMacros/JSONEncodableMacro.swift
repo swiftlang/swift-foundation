@@ -20,6 +20,7 @@ public struct JSONEncodableMacro { }
 private struct StoredProperty {
     let name: String
     let jsonKey: String
+    let aliases: [String]
 }
 
 private func extractStoredProperties(
@@ -40,7 +41,8 @@ private func extractStoredProperties(
         }
 
         let customKey = customCodingKey(from: varDecl.attributes)
-        if customKey != nil && varDecl.bindings.count > 1 {
+        let aliases = codableAliases(from: varDecl.attributes)
+        if (customKey != nil || !aliases.isEmpty) && varDecl.bindings.count > 1 {
             context.diagnose(.init(
                 node: Syntax(varDecl),
                 message: JSONEncodableDiagnostic.codingKeyOnMultipleBindings
@@ -71,7 +73,7 @@ private func extractStoredProperties(
             let propertyName = pattern.identifier.trimmedDescription
             let jsonKey = customKey ?? propertyName
 
-            properties.append(StoredProperty(name: propertyName, jsonKey: jsonKey))
+            properties.append(StoredProperty(name: propertyName, jsonKey: jsonKey, aliases: aliases))
         }
     }
 
@@ -92,6 +94,25 @@ private func customCodingKey(from attributes: AttributeListSyntax) -> String? {
         return segment.content.text
     }
     return nil
+}
+
+private func codableAliases(from attributes: AttributeListSyntax) -> [String] {
+    var aliases: [String] = []
+    for attribute in attributes {
+        guard let attr = attribute.as(AttributeSyntax.self),
+              let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
+              identifierType.name.trimmedDescription == "CodableAlias",
+              let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
+            continue
+        }
+        for arg in arguments {
+            if let stringLiteral = arg.expression.as(StringLiteralExprSyntax.self),
+               let segment = stringLiteral.segments.first?.as(StringSegmentSyntax.self) {
+                aliases.append(segment.content.text)
+            }
+        }
+    }
+    return aliases
 }
 
 extension JSONEncodableMacro: MemberMacro {
@@ -121,8 +142,12 @@ extension JSONEncodableMacro: MemberMacro {
             "case .\($0.name): \"\($0.jsonKey)\""
         }.joined(separator: "\n            ")
 
-        let fieldForKeyCases = properties.map {
-            "case \"\($0.jsonKey)\": .\($0.name)"
+        let fieldForKeyCases = properties.flatMap { prop -> [String] in
+            var cases = ["case \"\(prop.jsonKey)\": .\(prop.name)"]
+            for alias in prop.aliases {
+                cases.append("case \"\(alias)\": .\(prop.name)")
+            }
+            return cases
         }.joined(separator: "\n            ")
 
         let enumDecl: DeclSyntax = """

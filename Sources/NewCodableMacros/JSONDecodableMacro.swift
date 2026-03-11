@@ -20,6 +20,7 @@ public struct JSONDecodableMacro { }
 private struct DecodableStoredProperty {
     let name: String
     let jsonKey: String
+    let aliases: [String]
     let typeName: String
     let isOptional: Bool
     let defaultExpr: String?
@@ -48,7 +49,8 @@ private func extractDecodableStoredProperties(
 
         let customKey = decodableCustomCodingKey(from: varDecl.attributes)
         let defaultExpr = decodableDefaultExpression(from: varDecl.attributes)
-        if (customKey != nil || defaultExpr != nil) && varDecl.bindings.count > 1 {
+        let aliases = decodableAliases(from: varDecl.attributes)
+        if (customKey != nil || defaultExpr != nil || !aliases.isEmpty) && varDecl.bindings.count > 1 {
             context.diagnose(.init(
                 node: Syntax(varDecl),
                 message: JSONDecodableDiagnostic.codingKeyOnMultipleBindings
@@ -105,6 +107,7 @@ private func extractDecodableStoredProperties(
             properties.append(DecodableStoredProperty(
                 name: propertyName,
                 jsonKey: jsonKey,
+                aliases: aliases,
                 typeName: typeName,
                 isOptional: isOptional,
                 defaultExpr: defaultExpr
@@ -145,6 +148,25 @@ private func decodableCustomCodingKey(from attributes: AttributeListSyntax) -> S
     return nil
 }
 
+private func decodableAliases(from attributes: AttributeListSyntax) -> [String] {
+    var aliases: [String] = []
+    for attribute in attributes {
+        guard let attr = attribute.as(AttributeSyntax.self),
+              let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
+              identifierType.name.trimmedDescription == "CodableAlias",
+              let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
+            continue
+        }
+        for arg in arguments {
+            if let stringLiteral = arg.expression.as(StringLiteralExprSyntax.self),
+               let segment = stringLiteral.segments.first?.as(StringSegmentSyntax.self) {
+                aliases.append(segment.content.text)
+            }
+        }
+    }
+    return aliases
+}
+
 extension JSONDecodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -183,8 +205,13 @@ extension JSONDecodableMacro: ExtensionMacro {
                 "var \($0.name): \($0.typeName)?"
             }.joined(separator: "\n            ")
 
-            let switchCases = properties.map {
-                "case \"\($0.jsonKey)\": \($0.name) = try valueDecoder.decode(\($0.typeName).self)"
+            let switchCases = properties.flatMap { prop -> [String] in
+                let decodeExpr = "\(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
+                var cases = ["case \"\(prop.jsonKey)\": \(decodeExpr)"]
+                for alias in prop.aliases {
+                    cases.append("case \"\(alias)\": \(decodeExpr)")
+                }
+                return cases
             }.joined(separator: "\n                    ")
 
             let requiredProperties = properties.filter { $0.isRequired }

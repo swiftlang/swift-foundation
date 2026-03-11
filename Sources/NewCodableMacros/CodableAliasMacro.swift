@@ -10,17 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+import SwiftSyntax
 import SwiftSyntaxMacros
-import SwiftCompilerPlugin
 
-@main
-struct NewCodableMacrosPlugin: CompilerPlugin {
-    var providingMacros: [Macro.Type] = [
-        JSONEncodableMacro.self,
-        JSONDecodableMacro.self,
-        JSONCodableMacro.self,
-        CodingKeyMacro.self,
-        CodableDefaultMacro.self,
-        CodableAliasMacro.self,
-    ]
+public struct CodableAliasMacro: PeerMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        []
+    }
 }

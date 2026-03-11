@@ -536,10 +536,128 @@ struct JSONDecodableMacroTests {
             macros: decodableTestMacros
         )
     }
+
+    @Test func aliasBasic() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct User {
+                @CodableAlias("user_name") let userName: String
+                let age: Int
+            }
+            """,
+            expandedSource: """
+            struct User {
+                let userName: String
+                let age: Int
+            }
+
+            extension User: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var userName: String?
+                        var age: Int?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "userName": userName = try valueDecoder.decode(String.self)
+                            case "user_name": userName = try valueDecoder.decode(String.self)
+                            case "age": age = try valueDecoder.decode(Int.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        guard let userName, let age else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        }
+                        return User(userName: userName, age: age)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func aliasCombinedWithCodingKey() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct User {
+                @CodingKey("user_name") @CodableAlias("username") let userName: String
+            }
+            """,
+            expandedSource: """
+            struct User {
+                let userName: String
+            }
+
+            extension User: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var userName: String?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "user_name": userName = try valueDecoder.decode(String.self)
+                            case "username": userName = try valueDecoder.decode(String.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        guard let userName else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        }
+                        return User(userName: userName)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func aliasMultiple() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            struct User {
+                @CodableAlias("a", "b", "c") let name: String
+            }
+            """,
+            expandedSource: """
+            struct User {
+                let name: String
+            }
+
+            extension User: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var name: String?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            case "name": name = try valueDecoder.decode(String.self)
+                            case "a": name = try valueDecoder.decode(String.self)
+                            case "b": name = try valueDecoder.decode(String.self)
+                            case "c": name = try valueDecoder.decode(String.self)
+                            default: break
+                            }
+                            return false
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        }
+                        return User(name: name)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
 }
 
 private let decodableTestMacros: [String: Macro.Type] = [
     "JSONDecodable": JSONDecodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
     "CodableDefault": CodableDefaultMacro.self,
+    "CodableAlias": CodableAliasMacro.self,
 ]

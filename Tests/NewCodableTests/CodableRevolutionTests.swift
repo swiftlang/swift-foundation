@@ -637,45 +637,15 @@ struct NewCodableTests {
     @Test func testDefaultValue() throws {
         let emptyJSON = Data("{}".utf8)
         let decoder = NewJSONDecoder()
-        let result = try decoder.decode(Foo.self, from: emptyJSON)
-        #expect(result == Foo(bar: "hello"))
+        let result = try decoder.decode(CodableStructWithDefaultedProperty.self, from: emptyJSON)
+        #expect(result.bar == "hello")
     }
     
     @Test func testAliases() throws {
-        /*
-         @JSONCodable
-         struct Foo {
-             @CodableAlias("baz", "qux")
-             let bar: String
-         }
-         */
-        
-        struct Foo: JSONDecodable, Equatable {
-            let bar: String
-            
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Foo {
-                return try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
-                    var bar: String?
-                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                        switch key {
-                            // TODO: Deal with duplicates.
-                        case "baz": bar = try valueDecoder.decode(String.self)
-                        case "bar": bar = try valueDecoder.decode(String.self)
-                        case "qux": bar = try valueDecoder.decode(String.self)
-                        default: break // Skip.
-                            
-                        }
-                        return false
-                    }
-                    return Foo(bar: bar ?? "hello")
-                }
-            }
-        }
-        
         let qux = Data("{ \"qux\" : \"hello\" }".utf8)
         let decoder = NewJSONDecoder()
-        let result = try decoder.decode(Foo.self, from: qux)
-        #expect(result == Foo(bar: "hello"))
+        let result = try decoder.decode(CodableStructWithAliasedProperty.self, from: qux)
+        #expect(result.bar == "hello")
     }
     
     @Test func testEmbeddedEncodable() throws {
@@ -2082,6 +2052,18 @@ struct CodablePost {
     let title: String
     @CodingKey("date_published") let publishDate: String
     let rating: Double?
+}
+
+@JSONCodable
+struct CodableStructWithDefaultedProperty {
+    @CodableDefault("hello")
+    let bar: String
+}
+
+@JSONCodable
+struct CodableStructWithAliasedProperty {
+    @CodableAlias("baz", "qux")
+    let bar: String
 }
 
 @Suite("@JSONEncodable Macro Integration")

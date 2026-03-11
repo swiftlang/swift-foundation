@@ -19,6 +19,7 @@ import NewCodableMacros
 let testMacros: [String: Macro.Type] = [
     "JSONEncodable": JSONEncodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
+    "CodableAlias": CodableAliasMacro.self,
 ]
 
 @Suite("@JSONEncodable Macro")
@@ -417,6 +418,57 @@ struct JSONEncodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: CodingFields.age, value: self.age)
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test func aliasInFieldForKey() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            struct User {
+                @CodableAlias("user_name", "username") let userName: String
+                let age: Int
+            }
+            """,
+            expandedSource: """
+            struct User {
+                let userName: String
+                let age: Int
+
+                enum CodingFields: Int, JSONOptimizedCodingField {
+                    case userName
+                    case age
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .userName: "userName"
+                        case .age: "age"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "userName": .userName
+                        case "user_name": .userName
+                        case "username": .userName
+                        case "age": .age
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension User: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.userName, value: self.userName)
                         try structEncoder.encode(field: CodingFields.age, value: self.age)
                     }
                 }
