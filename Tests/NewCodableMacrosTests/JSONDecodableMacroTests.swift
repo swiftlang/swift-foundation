@@ -32,6 +32,27 @@ struct JSONDecodableMacroTests {
             struct Person {
                 let name: String
                 let age: Int
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+                    case age
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        case .age: "age"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "age": .age
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Person: JSONDecodable {
@@ -75,6 +96,27 @@ struct JSONDecodableMacroTests {
             struct Item {
                 let name: String
                 let rating: Double?
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+                    case rating
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        case .rating: "rating"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "rating": .rating
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Item: JSONDecodable {
@@ -115,6 +157,27 @@ struct JSONDecodableMacroTests {
             struct Preferences {
                 let theme: String?
                 let fontSize: Int?
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case theme
+                    case fontSize
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .theme: "theme"
+                        case .fontSize: "fontSize"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "theme": .theme
+                        case "fontSize": .fontSize
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Preferences: JSONDecodable {
@@ -152,6 +215,27 @@ struct JSONDecodableMacroTests {
             struct Post {
                 let publishDate: String
                 let title: String
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case publishDate
+                    case title
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .publishDate: "date_published"
+                        case .title: "title"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "date_published": .publishDate
+                        case "title": .title
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Post: JSONDecodable {
@@ -199,6 +283,24 @@ struct JSONDecodableMacroTests {
                 var displayName: String {
                     get { name.uppercased() }
                 }
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Thing: JSONDecodable {
@@ -237,6 +339,24 @@ struct JSONDecodableMacroTests {
             struct Config {
                 static let defaultName = "test"
                 let name: String
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Config: JSONDecodable {
@@ -275,6 +395,24 @@ struct JSONDecodableMacroTests {
             struct Cached {
                 let name: String
                 lazy var uppercasedName: String = name.uppercased()
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Cached: JSONDecodable {
@@ -378,6 +516,30 @@ struct JSONDecodableMacroTests {
                 let name: String
                 let locale: String
                 let retryCount: Int
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+                    case locale
+                    case retryCount
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        case .locale: "locale"
+                        case .retryCount: "retryCount"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "locale": .locale
+                        case "retryCount": .retryCount
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Config: JSONDecodable {
@@ -420,6 +582,27 @@ struct JSONDecodableMacroTests {
             struct Defaults {
                 let greeting: String
                 let verbose: Bool
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case greeting
+                    case verbose
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .greeting: "greeting"
+                        case .verbose: "verbose"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "greeting": .greeting
+                        case "verbose": .verbose
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Defaults: JSONDecodable {
@@ -455,6 +638,24 @@ struct JSONDecodableMacroTests {
             expandedSource: """
             struct Setting {
                 let maxRetries: Int
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case maxRetries
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .maxRetries: "max_retries"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "max_retries": .maxRetries
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Setting: JSONDecodable {
@@ -488,6 +689,24 @@ struct JSONDecodableMacroTests {
             expandedSource: """
             struct Prefs {
                 let locale: String?
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case locale
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .locale: "locale"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "locale": .locale
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension Prefs: JSONDecodable {
@@ -521,6 +740,24 @@ struct JSONDecodableMacroTests {
             expandedSource: """
             struct WithExpr {
                 let tags: [String]
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case tags
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .tags: "tags"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "tags": .tags
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension WithExpr: JSONDecodable {
@@ -556,6 +793,28 @@ struct JSONDecodableMacroTests {
             struct User {
                 let userName: String
                 let age: Int
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case userName
+                    case age
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .userName: "userName"
+                        case .age: "age"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "userName": .userName
+                        case "user_name": .userName
+                        case "age": .age
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension User: JSONDecodable {
@@ -598,6 +857,25 @@ struct JSONDecodableMacroTests {
             expandedSource: """
             struct User {
                 let userName: String
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case userName
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .userName: "user_name"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "user_name": .userName
+                        case "username": .userName
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension User: JSONDecodable {
@@ -635,6 +913,27 @@ struct JSONDecodableMacroTests {
             expandedSource: """
             struct User {
                 let name: String
+
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name: "name"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name": .name
+                        case "a": .name
+                        case "b": .name
+                        case "c": .name
+                        default: throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
             }
 
             extension User: JSONDecodable {

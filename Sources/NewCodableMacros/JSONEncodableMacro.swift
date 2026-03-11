@@ -17,13 +17,93 @@ import SwiftDiagnostics
 
 public struct JSONEncodableMacro { }
 
-private struct StoredProperty {
+enum CodingFieldExpansionKind {
+    case encodingOnly
+    case decodingOnly
+    case coding
+
+    var protocolName: String {
+        switch self {
+        case .encodingOnly:
+            return "JSONOptimizedEncodingField"
+        case .decodingOnly:
+            return "JSONOptimizedDecodingField"
+        case .coding:
+            return "JSONOptimizedCodingField"
+        }
+    }
+
+    var includesKeyLookup: Bool {
+        switch self {
+        case .encodingOnly:
+            return false
+        case .decodingOnly, .coding:
+            return true
+        }
+    }
+}
+
+struct StoredProperty {
     let name: String
     let jsonKey: String
     let aliases: [String]
 }
 
-private func extractStoredProperties(
+func makeCodingFieldsDecl(
+    from properties: [StoredProperty],
+    kind: CodingFieldExpansionKind
+) -> DeclSyntax {
+    let cases = properties.map { "case \($0.name)" }.joined(separator: "\n        ")
+
+    let switchCases = properties.map {
+        "case .\($0.name): \"\($0.jsonKey)\""
+    }.joined(separator: "\n            ")
+
+    if kind.includesKeyLookup {
+        let fieldForKeyCases = properties.flatMap { prop -> [String] in
+            var cases = ["case \"\(prop.jsonKey)\": .\(prop.name)"]
+            for alias in prop.aliases {
+                cases.append("case \"\(alias)\": .\(prop.name)")
+            }
+            return cases
+        }.joined(separator: "\n            ")
+
+        return """
+        enum CodingFields: \(raw: kind.protocolName) {
+            \(raw: cases)
+
+            @_transparent
+            var staticString: StaticString {
+                switch self {
+                \(raw: switchCases)
+                }
+            }
+
+            static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                switch UTF8SpanComparator(key) {
+                \(raw: fieldForKeyCases)
+                default: throw CodingError.unknownKey(key)
+                }
+            }
+        }
+        """
+    } else {
+        return """
+        enum CodingFields: \(raw: kind.protocolName) {
+            \(raw: cases)
+        
+            @_transparent
+            var staticString: StaticString {
+                switch self {
+                \(raw: switchCases)
+                }
+            }
+        }
+        """
+    }
+}
+
+func extractStoredProperties(
     from members: MemberBlockSyntax,
     in context: some MacroExpansionContext
 ) -> [StoredProperty] {
@@ -136,41 +216,7 @@ extension JSONEncodableMacro: MemberMacro {
             return []
         }
 
-        let cases = properties.map { "case \($0.name)" }.joined(separator: "\n        ")
-
-        let switchCases = properties.map {
-            "case .\($0.name): \"\($0.jsonKey)\""
-        }.joined(separator: "\n            ")
-
-        let fieldForKeyCases = properties.flatMap { prop -> [String] in
-            var cases = ["case \"\(prop.jsonKey)\": .\(prop.name)"]
-            for alias in prop.aliases {
-                cases.append("case \"\(alias)\": .\(prop.name)")
-            }
-            return cases
-        }.joined(separator: "\n            ")
-
-        let enumDecl: DeclSyntax = """
-        enum CodingFields: JSONOptimizedCodingField {
-            \(raw: cases)
-
-            @_transparent
-            var staticString: StaticString {
-                switch self {
-                \(raw: switchCases)
-                }
-            }
-
-            static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                switch UTF8SpanComparator(key) {
-                \(raw: fieldForKeyCases)
-                default: throw CodingError.unknownKey(key)
-                }
-            }
-        }
-        """
-
-        return [enumDecl]
+        return [makeCodingFieldsDecl(from: properties, kind: .encodingOnly)]
     }
 }
 

@@ -167,6 +167,36 @@ private func decodableAliases(from attributes: AttributeListSyntax) -> [String] 
     return aliases
 }
 
+extension JSONDecodableMacro: MemberMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingMembersOf declaration: some DeclGroupSyntax,
+        conformingTo protocols: [TypeSyntax],
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        guard declaration.is(StructDeclSyntax.self) else {
+            context.diagnose(.init(
+                node: node,
+                message: JSONDecodableDiagnostic.notAStruct
+            ))
+            return []
+        }
+
+        guard let properties = extractDecodableStoredProperties(from: declaration.memberBlock, in: context) else {
+            return []
+        }
+
+        if properties.isEmpty {
+            return []
+        }
+
+        let codingFields = properties.map {
+            StoredProperty(name: $0.name, jsonKey: $0.jsonKey, aliases: $0.aliases)
+        }
+        return [makeCodingFieldsDecl(from: codingFields, kind: .decodingOnly)]
+    }
+}
+
 extension JSONDecodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,

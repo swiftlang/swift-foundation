@@ -39,7 +39,7 @@ struct JSONEncodableMacroTests {
                 let name: String
                 let age: Int
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case name
                     case age
 
@@ -48,14 +48,6 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .name: "name"
                         case .age: "age"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "age": .age
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -88,7 +80,7 @@ struct JSONEncodableMacroTests {
                 let publishDate: String
                 let title: String
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case publishDate
                     case title
 
@@ -97,14 +89,6 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .publishDate: "date_published"
                         case .title: "title"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "date_published": .publishDate
-                        case "title": .title
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -137,7 +121,7 @@ struct JSONEncodableMacroTests {
                 let name: String
                 let rating: Double?
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case name
                     case rating
 
@@ -146,14 +130,6 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .name: "name"
                         case .rating: "rating"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "rating": .rating
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -190,20 +166,13 @@ struct JSONEncodableMacroTests {
                     get { name.uppercased() }
                 }
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -235,20 +204,13 @@ struct JSONEncodableMacroTests {
                 static let defaultName = "test"
                 let name: String
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -321,20 +283,13 @@ struct JSONEncodableMacroTests {
                 let name: String
                 lazy var uppercasedName: String = name.uppercased()
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -392,7 +347,7 @@ struct JSONEncodableMacroTests {
                 let name: String = "default"
                 let age: Int
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case name
                     case age
 
@@ -401,14 +356,6 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .name: "name"
                         case .age: "age"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "age": .age
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -441,7 +388,7 @@ struct JSONEncodableMacroTests {
                 let userName: String
                 let age: Int
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case userName
                     case age
 
@@ -450,16 +397,6 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .userName: "userName"
                         case .age: "age"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "userName": .userName
-                        case "user_name": .userName
-                        case "username": .userName
-                        case "age": .age
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }
@@ -496,7 +433,7 @@ struct JSONEncodableMacroTests {
                 }
                 let name: String
 
-                enum CodingFields: JSONOptimizedCodingField {
+                enum CodingFields: JSONOptimizedEncodingField {
                     case count
                     case name
 
@@ -505,14 +442,6 @@ struct JSONEncodableMacroTests {
                         switch self {
                         case .count: "count"
                         case .name: "name"
-                        }
-                    }
-
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                        switch UTF8SpanComparator(key) {
-                        case "count": .count
-                        case "name": .name
-                        default: throw CodingError.unknownKey(key)
                         }
                     }
                 }

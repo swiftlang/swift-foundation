@@ -20,6 +20,7 @@
 public macro JSONEncodable() = #externalMacro(module: "NewCodableMacros", type: "JSONEncodableMacro")
 
 /// Experimental macro that synthesizes `JSONDecodable` conformance.
+@attached(member, names: named(CodingFields))
 @attached(extension, conformances: JSONDecodable, names: named(decode))
 public macro JSONDecodable() = #externalMacro(module: "NewCodableMacros", type: "JSONDecodableMacro")
 

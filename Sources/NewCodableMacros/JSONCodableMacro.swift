@@ -12,6 +12,7 @@
 
 import SwiftSyntax
 import SwiftSyntaxMacros
+import SwiftDiagnostics
 
 public struct JSONCodableMacro { }
 
@@ -22,12 +23,20 @@ extension JSONCodableMacro: MemberMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        try JSONEncodableMacro.expansion(
-            of: node,
-            providingMembersOf: declaration,
-            conformingTo: protocols,
-            in: context
-        )
+        guard declaration.is(StructDeclSyntax.self) else {
+            context.diagnose(.init(
+                node: node,
+                message: JSONEncodableDiagnostic.notAStruct
+            ))
+            return []
+        }
+
+        let properties = extractStoredProperties(from: declaration.memberBlock, in: context)
+        guard !properties.isEmpty else {
+            return []
+        }
+
+        return [makeCodingFieldsDecl(from: properties, kind: .coding)]
     }
 }
 
