@@ -249,16 +249,36 @@ extension JSONParserDecoder {
                     try skipString()
                 case ._openbrace:
                     // TODO: Restore depth checks
+                    var dictionaryNode: InlineArray = [
+                        JSONParserDecoder.CodingPathNode.newDictionaryNode(withParent: self.currentTopCodingPathNode)
+                    ]
+                    var nodeSpan = dictionaryNode.mutableSpan
+                    self.currentTopCodingPathNode = nodeSpan.withUnsafeMutableBufferPointer {
+                        $0.baseAddress!
+                    }
                     var decoder = try JSONParserDecoder.StructDecoder(parserState: self, midContainer: false)
                     _ = try BlackHoleVisitor().visit(decoder: &decoder)
                     try decoder._finish()
                     self = decoder.parserState
+                    withExtendedLifetime(nodeSpan) {
+                        self.currentTopCodingPathNode.unwindToParent()
+                    }
                 case ._openbracket:
                     // TODO: Restore depth checks
+                    var arrayNode: InlineArray = [
+                        JSONParserDecoder.CodingPathNode.newArrayNode(withParent: self.currentTopCodingPathNode)
+                    ]
+                    var nodeSpan = arrayNode.mutableSpan
+                    self.currentTopCodingPathNode = nodeSpan.withUnsafeMutableBufferPointer {
+                        $0.baseAddress!
+                    }
                     var decoder = try JSONParserDecoder.ArrayDecoder(parserState: self, midContainer: false)
                     _ = try BlackHoleVisitor().visit(decoder: &decoder)
                     try decoder._finish()
                     self = decoder.innerParser.state
+                    withExtendedLifetime(nodeSpan) {
+                        self.currentTopCodingPathNode.unwindToParent()
+                    }
                 case UInt8(ascii: "f"), UInt8(ascii: "t"):
                     _ = try reader.readBool()
                 case UInt8(ascii: "n"):
