@@ -1,0 +1,236 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2026 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftSyntax
+import SwiftSyntaxMacros
+import SwiftSyntaxBuilder
+import SwiftDiagnostics
+
+public struct JSONDecodableMacro { }
+
+private struct DecodableStoredProperty {
+    let name: String
+    let jsonKey: String
+    let typeName: String
+    let isOptional: Bool
+}
+
+private func extractDecodableStoredProperties(
+    from members: MemberBlockSyntax,
+    in context: some MacroExpansionContext
+) -> [DecodableStoredProperty]? {
+    var properties: [DecodableStoredProperty] = []
+
+    for member in members.members {
+        guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
+            continue
+        }
+
+        if varDecl.modifiers.contains(where: {
+            $0.name.tokenKind == .keyword(.static) || $0.name.tokenKind == .keyword(.lazy)
+        }) {
+            continue
+        }
+
+        let customKey = decodableCustomCodingKey(from: varDecl.attributes)
+        if customKey != nil && varDecl.bindings.count > 1 {
+            context.diagnose(.init(
+                node: Syntax(varDecl),
+                message: JSONDecodableDiagnostic.codingKeyOnMultipleBindings
+            ))
+            continue
+        }
+
+        for binding in varDecl.bindings {
+            if let accessorBlock = binding.accessorBlock {
+                switch accessorBlock.accessors {
+                case .getter:
+                    continue
+                case .accessors(let accessors):
+                    let hasGetOrSet = accessors.contains {
+                        $0.accessorSpecifier.tokenKind == .keyword(.get) ||
+                        $0.accessorSpecifier.tokenKind == .keyword(.set)
+                    }
+                    if hasGetOrSet {
+                        continue
+                    }
+                }
+            }
+
+            guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+                continue
+            }
+
+            guard let typeAnnotation = binding.typeAnnotation else {
+                context.diagnose(.init(
+                    node: Syntax(binding),
+                    message: JSONDecodableDiagnostic.missingTypeAnnotation
+                ))
+                return nil
+            }
+
+            let propertyName = pattern.identifier.trimmedDescription
+            let jsonKey = customKey ?? propertyName
+
+            let type = typeAnnotation.type
+            let isOptional: Bool
+            let typeName: String
+
+            if let optionalType = type.as(OptionalTypeSyntax.self) {
+                isOptional = true
+                typeName = optionalType.wrappedType.trimmedDescription
+            } else if let iuoType = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+                isOptional = true
+                typeName = iuoType.wrappedType.trimmedDescription
+            } else {
+                isOptional = false
+                typeName = type.trimmedDescription
+            }
+
+            properties.append(DecodableStoredProperty(
+                name: propertyName,
+                jsonKey: jsonKey,
+                typeName: typeName,
+                isOptional: isOptional
+            ))
+        }
+    }
+
+    return properties
+}
+
+private func decodableCustomCodingKey(from attributes: AttributeListSyntax) -> String? {
+    for attribute in attributes {
+        guard let attr = attribute.as(AttributeSyntax.self),
+              let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
+              identifierType.name.trimmedDescription == "CodingKey",
+              let arguments = attr.arguments?.as(LabeledExprListSyntax.self),
+              let firstArg = arguments.first,
+              let stringLiteral = firstArg.expression.as(StringLiteralExprSyntax.self),
+              let segment = stringLiteral.segments.first?.as(StringSegmentSyntax.self) else {
+            continue
+        }
+        return segment.content.text
+    }
+    return nil
+}
+
+extension JSONDecodableMacro: ExtensionMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingExtensionsOf type: some TypeSyntaxProtocol,
+        conformingTo protocols: [TypeSyntax],
+        in context: some MacroExpansionContext
+    ) throws -> [ExtensionDeclSyntax] {
+        guard declaration.is(StructDeclSyntax.self) else {
+            context.diagnose(.init(
+                node: node,
+                message: JSONDecodableDiagnostic.notAStruct
+            ))
+            return []
+        }
+
+        guard let properties = extractDecodableStoredProperties(from: declaration.memberBlock, in: context) else {
+            return []
+        }
+
+        let typeName = type.trimmed
+
+        let extensionDecl: DeclSyntax
+        if properties.isEmpty {
+            extensionDecl = """
+            extension \(typeName): JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
+                    try decoder.decodeStruct { _ throws(CodingError.Decoding) in
+                        \(typeName)()
+                    }
+                }
+            }
+            """
+        } else {
+            let varDeclarations = properties.map {
+                "var \($0.name): \($0.typeName)?"
+            }.joined(separator: "\n            ")
+
+            let switchCases = properties.map {
+                "case \"\($0.jsonKey)\": \($0.name) = try valueDecoder.decode(\($0.typeName).self)"
+            }.joined(separator: "\n                    ")
+
+            let requiredProperties = properties.filter { !$0.isOptional }
+
+            let guardAndReturn: String
+            if requiredProperties.isEmpty {
+                let args = properties.map { "\($0.name): \($0.name)" }.joined(separator: ", ")
+                guardAndReturn = "return \(typeName)(\(args))"
+            } else {
+                let guardNames = requiredProperties.map { "let \($0.name)" }.joined(separator: ", ")
+                let args = properties.map {
+                    "\($0.name): \($0.name)"
+                }.joined(separator: ", ")
+                guardAndReturn = """
+                guard \(guardNames) else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        }
+                        return \(typeName)(\(args))
+                """
+            }
+
+            extensionDecl = """
+            extension \(typeName): JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        \(raw: varDeclarations)
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch key {
+                            \(raw: switchCases)
+                            default: break
+                            }
+                            return false
+                        }
+                        \(raw: guardAndReturn)
+                    }
+                }
+            }
+            """
+        }
+
+        guard let ext = extensionDecl.as(ExtensionDeclSyntax.self) else {
+            return []
+        }
+
+        return [ext]
+    }
+}
+
+enum JSONDecodableDiagnostic: String, DiagnosticMessage {
+    case notAStruct
+    case codingKeyOnMultipleBindings
+    case missingTypeAnnotation
+
+    var message: String {
+        switch self {
+        case .notAStruct:
+            return "@JSONDecodable can only be applied to structs"
+        case .codingKeyOnMultipleBindings:
+            return "@CodingKey cannot be applied to a declaration with multiple bindings"
+        case .missingTypeAnnotation:
+            return "@JSONDecodable requires all stored properties to have explicit type annotations"
+        }
+    }
+
+    var diagnosticID: MessageID {
+        MessageID(domain: "NewCodableMacros", id: rawValue)
+    }
+
+    var severity: DiagnosticSeverity { .error }
+}

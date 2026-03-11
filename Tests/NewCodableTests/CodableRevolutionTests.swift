@@ -2090,6 +2090,28 @@ struct BlogPost {
 @JSONEncodable
 struct EmptyEncodable {}
 
+@JSONEncodable @JSONDecodable
+struct RoundTripPerson {
+    let name: String
+    let age: Int
+}
+
+@JSONEncodable @JSONDecodable
+struct RoundTripPost {
+    let title: String
+    @CodingKey("date_published") let publishDate: String
+    let rating: Double?
+}
+
+@JSONDecodable
+struct DecodableOnly {
+    let name: String
+    let value: Int
+}
+
+@JSONDecodable
+struct EmptyDecodable {}
+
 @Suite("@JSONEncodable Macro Integration")
 struct JSONEncodableMacroIntegrationTests {
 
@@ -2123,5 +2145,49 @@ struct JSONEncodableMacroIntegrationTests {
         let data = try NewJSONEncoder().encode(empty)
         let json = String(data: data, encoding: .utf8)!
         #expect(json == "{}")
+    }
+}
+
+@Suite("@JSONDecodable Macro Integration")
+struct JSONDecodableMacroIntegrationTests {
+
+    @Test func roundTripBasic() throws {
+        let original = RoundTripPerson(name: "Alice", age: 30)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(RoundTripPerson.self, from: data)
+        #expect(decoded.name == "Alice")
+        #expect(decoded.age == 30)
+    }
+
+    @Test func roundTripCustomCodingKey() throws {
+        let original = RoundTripPost(title: "Hello", publishDate: "2026-01-01", rating: 4.5)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        let decoded = try NewJSONDecoder().decode(RoundTripPost.self, from: data)
+        #expect(decoded.title == "Hello")
+        #expect(decoded.publishDate == "2026-01-01")
+        #expect(decoded.rating == 4.5)
+    }
+
+    @Test func roundTripOptionalNil() throws {
+        let original = RoundTripPost(title: "Test", publishDate: "2026-03-05", rating: nil)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(RoundTripPost.self, from: data)
+        #expect(decoded.title == "Test")
+        #expect(decoded.rating == nil)
+    }
+
+    @Test func decodeOnly() throws {
+        let json = Data(#"{"name":"Bob","value":42}"#.utf8)
+        let decoded = try NewJSONDecoder().decode(DecodableOnly.self, from: json)
+        #expect(decoded.name == "Bob")
+        #expect(decoded.value == 42)
+    }
+
+    @Test func emptyDecodable() throws {
+        let json = Data("{}".utf8)
+        let decoded = try NewJSONDecoder().decode(EmptyDecodable.self, from: json)
+        _ = decoded
     }
 }

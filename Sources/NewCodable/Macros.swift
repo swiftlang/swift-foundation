@@ -14,5 +14,8 @@
 @attached(extension, conformances: JSONEncodable, names: named(encode))
 public macro JSONEncodable() = #externalMacro(module: "NewCodableMacros", type: "JSONEncodableMacro")
 
+@attached(extension, conformances: JSONDecodable, names: named(decode))
+public macro JSONDecodable() = #externalMacro(module: "NewCodableMacros", type: "JSONDecodableMacro")
+
 @attached(peer)
 public macro CodingKey(_ name: String) = #externalMacro(module: "NewCodableMacros", type: "CodingKeyMacro")

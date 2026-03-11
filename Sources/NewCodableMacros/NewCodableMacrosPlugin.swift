@@ -17,6 +17,7 @@ import SwiftCompilerPlugin
 struct NewCodableMacrosPlugin: CompilerPlugin {
     var providingMacros: [Macro.Type] = [
         JSONEncodableMacro.self,
+        JSONDecodableMacro.self,
         CodingKeyMacro.self,
     ]
 }
