@@ -39,6 +39,15 @@ private func extractStoredProperties(
             continue
         }
 
+        let customKey = customCodingKey(from: varDecl.attributes)
+        if customKey != nil && varDecl.bindings.count > 1 {
+            context.diagnose(.init(
+                node: Syntax(varDecl),
+                message: JSONEncodableDiagnostic.codingKeyOnMultipleBindings
+            ))
+            continue
+        }
+
         for binding in varDecl.bindings {
             if let accessorBlock = binding.accessorBlock {
                 switch accessorBlock.accessors {
@@ -60,13 +69,29 @@ private func extractStoredProperties(
             }
 
             let propertyName = pattern.identifier.trimmedDescription
-            let jsonKey = propertyName
+            let jsonKey = customKey ?? propertyName
 
             properties.append(StoredProperty(name: propertyName, jsonKey: jsonKey))
         }
     }
 
     return properties
+}
+
+private func customCodingKey(from attributes: AttributeListSyntax) -> String? {
+    for attribute in attributes {
+        guard let attr = attribute.as(AttributeSyntax.self),
+              let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
+              identifierType.name.trimmedDescription == "CodingKey",
+              let arguments = attr.arguments?.as(LabeledExprListSyntax.self),
+              let firstArg = arguments.first,
+              let stringLiteral = firstArg.expression.as(StringLiteralExprSyntax.self),
+              let segment = stringLiteral.segments.first?.as(StringSegmentSyntax.self) else {
+            continue
+        }
+        return segment.content.text
+    }
+    return nil
 }
 
 extension JSONEncodableMacro: MemberMacro {
@@ -164,11 +189,14 @@ extension JSONEncodableMacro: ExtensionMacro {
 
 enum JSONEncodableDiagnostic: String, DiagnosticMessage {
     case notAStruct
+    case codingKeyOnMultipleBindings
 
     var message: String {
         switch self {
         case .notAStruct:
             return "@JSONEncodable can only be applied to structs"
+        case .codingKeyOnMultipleBindings:
+            return "@CodingKey cannot be applied to a declaration with multiple bindings"
         }
     }
 

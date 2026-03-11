@@ -10,9 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-@attached(member, names: named(CodingFields))
-@attached(extension, conformances: JSONEncodable, names: named(encode))
-public macro JSONEncodable() = #externalMacro(module: "NewCodableMacros", type: "JSONEncodableMacro")
+import SwiftSyntax
+import SwiftSyntaxMacros
 
-@attached(peer)
-public macro CodingKey(_ name: String) = #externalMacro(module: "NewCodableMacros", type: "CodingKeyMacro")
+public struct CodingKeyMacro: PeerMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        []
+    }
+}

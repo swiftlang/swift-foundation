@@ -18,6 +18,7 @@ import NewCodableMacros
 
 let testMacros: [String: Macro.Type] = [
     "JSONEncodable": JSONEncodableMacro.self,
+    "CodingKey": CodingKeyMacro.self,
 ]
 
 @Suite("@JSONEncodable Macro")
@@ -56,6 +57,47 @@ struct JSONEncodableMacroTests {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
                         try structEncoder.encode(field: CodingFields.age, value: self.age)
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test func customCodingKey() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            struct Post {
+                @CodingKey("date_published") let publishDate: String
+                let title: String
+            }
+            """,
+            expandedSource: """
+            struct Post {
+                let publishDate: String
+                let title: String
+
+                enum CodingFields: Int, JSONOptimizedCodingField {
+                    case publishDate
+                    case title
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .publishDate: "date_published"
+                        case .title: "title"
+                        }
+                    }
+                }
+            }
+
+            extension Post: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.publishDate, value: self.publishDate)
+                        try structEncoder.encode(field: CodingFields.title, value: self.title)
                     }
                 }
             }
@@ -260,6 +302,32 @@ struct JSONEncodableMacroTests {
                 }
             }
             """,
+            macros: testMacros
+        )
+    }
+
+    @Test func codingKeyOnMultipleBindingsError() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            struct Multi {
+                @CodingKey("custom") var x, y: Int
+            }
+            """,
+            expandedSource: """
+            struct Multi {
+                var x, y: Int
+            }
+
+            extension Multi: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in }
+                }
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "@CodingKey cannot be applied to a declaration with multiple bindings", line: 3, column: 5)
+            ],
             macros: testMacros
         )
     }

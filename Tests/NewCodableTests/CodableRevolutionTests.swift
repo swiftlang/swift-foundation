@@ -2080,6 +2080,14 @@ struct SimplePost {
 }
 
 @JSONEncodable
+struct BlogPost {
+    let title: String
+    @CodingKey("date_published") let publishDate: String
+    let tags: [String]
+    let rating: Double?
+}
+
+@JSONEncodable
 struct EmptyEncodable {}
 
 @Suite("@JSONEncodable Macro Integration")
@@ -2091,6 +2099,23 @@ struct JSONEncodableMacroIntegrationTests {
         let json = String(data: data, encoding: .utf8)!
         #expect(json.contains("\"title\":\"Hello\""))
         #expect(json.contains("\"body\":\"World\""))
+    }
+
+    @Test func customCodingKey() throws {
+        let post = BlogPost(title: "Test", publishDate: "2026-01-01", tags: ["swift"], rating: 4.5)
+        let data = try NewJSONEncoder().encode(post)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        #expect(json.contains("\"title\":\"Test\""))
+        #expect(json.contains("\"tags\":[\"swift\"]"))
+        #expect(json.contains("\"rating\":4.5"))
+    }
+
+    @Test func optionalNilValue() throws {
+        let post = BlogPost(title: "Test", publishDate: "2026-01-01", tags: [], rating: nil)
+        let data = try NewJSONEncoder().encode(post)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"rating\":null"))
     }
 
     @Test func emptyStruct() throws {
