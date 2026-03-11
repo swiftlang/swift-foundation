@@ -2112,6 +2112,19 @@ struct DecodableOnly {
 @JSONDecodable
 struct EmptyDecodable {}
 
+@JSONCodable
+struct CodablePerson {
+    let name: String
+    let age: Int
+}
+
+@JSONCodable
+struct CodablePost {
+    let title: String
+    @CodingKey("date_published") let publishDate: String
+    let rating: Double?
+}
+
 @Suite("@JSONEncodable Macro Integration")
 struct JSONEncodableMacroIntegrationTests {
 
@@ -2189,5 +2202,36 @@ struct JSONDecodableMacroIntegrationTests {
         let json = Data("{}".utf8)
         let decoded = try NewJSONDecoder().decode(EmptyDecodable.self, from: json)
         _ = decoded
+    }
+}
+
+@Suite("@JSONCodable Macro Integration")
+struct JSONCodableMacroIntegrationTests {
+
+    @Test func roundTrip() throws {
+        let original = CodablePerson(name: "Alice", age: 30)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(CodablePerson.self, from: data)
+        #expect(decoded.name == "Alice")
+        #expect(decoded.age == 30)
+    }
+
+    @Test func roundTripWithCustomKey() throws {
+        let original = CodablePost(title: "Hello", publishDate: "2026-01-01", rating: 4.5)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        let decoded = try NewJSONDecoder().decode(CodablePost.self, from: data)
+        #expect(decoded.title == "Hello")
+        #expect(decoded.publishDate == "2026-01-01")
+        #expect(decoded.rating == 4.5)
+    }
+
+    @Test func roundTripOptionalNil() throws {
+        let original = CodablePost(title: "Test", publishDate: "2026-03-10", rating: nil)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(CodablePost.self, from: data)
+        #expect(decoded.title == "Test")
+        #expect(decoded.rating == nil)
     }
 }

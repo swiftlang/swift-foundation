@@ -17,5 +17,9 @@ public macro JSONEncodable() = #externalMacro(module: "NewCodableMacros", type: 
 @attached(extension, conformances: JSONDecodable, names: named(decode))
 public macro JSONDecodable() = #externalMacro(module: "NewCodableMacros", type: "JSONDecodableMacro")
 
+@attached(member, names: named(CodingFields))
+@attached(extension, conformances: JSONEncodable, JSONDecodable, names: named(encode), named(decode))
+public macro JSONCodable() = #externalMacro(module: "NewCodableMacros", type: "JSONCodableMacro")
+
 @attached(peer)
 public macro CodingKey(_ name: String) = #externalMacro(module: "NewCodableMacros", type: "CodingKeyMacro")

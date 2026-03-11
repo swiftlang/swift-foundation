@@ -18,6 +18,7 @@ struct NewCodableMacrosPlugin: CompilerPlugin {
     var providingMacros: [Macro.Type] = [
         JSONEncodableMacro.self,
         JSONDecodableMacro.self,
+        JSONCodableMacro.self,
         CodingKeyMacro.self,
     ]
 }
