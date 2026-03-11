@@ -36,12 +36,14 @@ struct JSONDecodableMacroTests {
                 enum CodingFields: JSONOptimizedDecodingField {
                     case name
                     case age
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
                         case .age: "age"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -49,7 +51,7 @@ struct JSONDecodableMacroTests {
                         switch UTF8SpanComparator(key) {
                         case "name": .name
                         case "age": .age
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -61,10 +63,10 @@ struct JSONDecodableMacroTests {
                         var name: String?
                         var age: Int?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "name": name = try valueDecoder.decode(String.self)
-                            case "age": age = try valueDecoder.decode(Int.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .name: name = try valueDecoder.decode(String.self)
+                            case .age: age = try valueDecoder.decode(Int.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -100,12 +102,14 @@ struct JSONDecodableMacroTests {
                 enum CodingFields: JSONOptimizedDecodingField {
                     case name
                     case rating
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
                         case .rating: "rating"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -113,7 +117,7 @@ struct JSONDecodableMacroTests {
                         switch UTF8SpanComparator(key) {
                         case "name": .name
                         case "rating": .rating
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -125,10 +129,10 @@ struct JSONDecodableMacroTests {
                         var name: String?
                         var rating: Double?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "name": name = try valueDecoder.decode(String.self)
-                            case "rating": rating = try valueDecoder.decode(Double.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .name: name = try valueDecoder.decode(String.self)
+                            case .rating: rating = try valueDecoder.decode(Double.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -161,12 +165,14 @@ struct JSONDecodableMacroTests {
                 enum CodingFields: JSONOptimizedDecodingField {
                     case theme
                     case fontSize
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .theme: "theme"
                         case .fontSize: "fontSize"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -174,7 +180,7 @@ struct JSONDecodableMacroTests {
                         switch UTF8SpanComparator(key) {
                         case "theme": .theme
                         case "fontSize": .fontSize
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -186,10 +192,10 @@ struct JSONDecodableMacroTests {
                         var theme: String?
                         var fontSize: Int?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "theme": theme = try valueDecoder.decode(String.self)
-                            case "fontSize": fontSize = try valueDecoder.decode(Int.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .theme: theme = try valueDecoder.decode(String.self)
+                            case .fontSize: fontSize = try valueDecoder.decode(Int.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -219,12 +225,14 @@ struct JSONDecodableMacroTests {
                 enum CodingFields: JSONOptimizedDecodingField {
                     case publishDate
                     case title
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .publishDate: "date_published"
                         case .title: "title"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -232,7 +240,7 @@ struct JSONDecodableMacroTests {
                         switch UTF8SpanComparator(key) {
                         case "date_published": .publishDate
                         case "title": .title
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -244,10 +252,10 @@ struct JSONDecodableMacroTests {
                         var publishDate: String?
                         var title: String?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "date_published": publishDate = try valueDecoder.decode(String.self)
-                            case "title": title = try valueDecoder.decode(String.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .publishDate: publishDate = try valueDecoder.decode(String.self)
+                            case .title: title = try valueDecoder.decode(String.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -286,18 +294,20 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case name
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
+                        case .unknown: fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name": .name
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -308,9 +318,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "name": name = try valueDecoder.decode(String.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .name: name = try valueDecoder.decode(String.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -342,18 +352,20 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case name
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
+                        case .unknown: fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name": .name
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -364,9 +376,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "name": name = try valueDecoder.decode(String.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .name: name = try valueDecoder.decode(String.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -398,18 +410,20 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case name
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
+                        case .unknown: fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name": .name
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -420,9 +434,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "name": name = try valueDecoder.decode(String.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .name: name = try valueDecoder.decode(String.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -521,6 +535,7 @@ struct JSONDecodableMacroTests {
                     case name
                     case locale
                     case retryCount
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
@@ -528,6 +543,7 @@ struct JSONDecodableMacroTests {
                         case .name: "name"
                         case .locale: "locale"
                         case .retryCount: "retryCount"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -536,7 +552,7 @@ struct JSONDecodableMacroTests {
                         case "name": .name
                         case "locale": .locale
                         case "retryCount": .retryCount
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -549,11 +565,11 @@ struct JSONDecodableMacroTests {
                         var locale: String?
                         var retryCount: Int?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "name": name = try valueDecoder.decode(String.self)
-                            case "locale": locale = try valueDecoder.decode(String.self)
-                            case "retryCount": retryCount = try valueDecoder.decode(Int.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .name: name = try valueDecoder.decode(String.self)
+                            case .locale: locale = try valueDecoder.decode(String.self)
+                            case .retryCount: retryCount = try valueDecoder.decode(Int.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -586,12 +602,14 @@ struct JSONDecodableMacroTests {
                 enum CodingFields: JSONOptimizedDecodingField {
                     case greeting
                     case verbose
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .greeting: "greeting"
                         case .verbose: "verbose"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -599,7 +617,7 @@ struct JSONDecodableMacroTests {
                         switch UTF8SpanComparator(key) {
                         case "greeting": .greeting
                         case "verbose": .verbose
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -611,10 +629,10 @@ struct JSONDecodableMacroTests {
                         var greeting: String?
                         var verbose: Bool?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "greeting": greeting = try valueDecoder.decode(String.self)
-                            case "verbose": verbose = try valueDecoder.decode(Bool.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .greeting: greeting = try valueDecoder.decode(String.self)
+                            case .verbose: verbose = try valueDecoder.decode(Bool.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -641,18 +659,20 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case maxRetries
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .maxRetries: "max_retries"
+                        case .unknown: fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
                         case "max_retries": .maxRetries
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -663,9 +683,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var maxRetries: Int?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "max_retries": maxRetries = try valueDecoder.decode(Int.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .maxRetries: maxRetries = try valueDecoder.decode(Int.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -692,18 +712,20 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case locale
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .locale: "locale"
+                        case .unknown: fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
                         case "locale": .locale
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -714,9 +736,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var locale: String?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "locale": locale = try valueDecoder.decode(String.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .locale: locale = try valueDecoder.decode(String.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -743,18 +765,20 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case tags
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .tags: "tags"
+                        case .unknown: fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
                         case "tags": .tags
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -765,9 +789,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var tags: [String]?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "tags": tags = try valueDecoder.decode([String].self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .tags: tags = try valueDecoder.decode([String].self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -797,12 +821,14 @@ struct JSONDecodableMacroTests {
                 enum CodingFields: JSONOptimizedDecodingField {
                     case userName
                     case age
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .userName: "userName"
                         case .age: "age"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -811,7 +837,7 @@ struct JSONDecodableMacroTests {
                         case "userName": .userName
                         case "user_name": .userName
                         case "age": .age
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -823,11 +849,10 @@ struct JSONDecodableMacroTests {
                         var userName: String?
                         var age: Int?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "userName": userName = try valueDecoder.decode(String.self)
-                            case "user_name": userName = try valueDecoder.decode(String.self)
-                            case "age": age = try valueDecoder.decode(Int.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .userName: userName = try valueDecoder.decode(String.self)
+                            case .age: age = try valueDecoder.decode(Int.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -860,11 +885,13 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case userName
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .userName: "user_name"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -872,7 +899,7 @@ struct JSONDecodableMacroTests {
                         switch UTF8SpanComparator(key) {
                         case "user_name": .userName
                         case "username": .userName
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -883,10 +910,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "user_name": userName = try valueDecoder.decode(String.self)
-                            case "username": userName = try valueDecoder.decode(String.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .userName: userName = try valueDecoder.decode(String.self)
+                            case .unknown: break
                             }
                             return false
                         }
@@ -916,11 +942,13 @@ struct JSONDecodableMacroTests {
 
                 enum CodingFields: JSONOptimizedDecodingField {
                     case name
+                    case unknown
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
                         case .name: "name"
+                        case .unknown: fatalError()
                         }
                     }
 
@@ -930,7 +958,7 @@ struct JSONDecodableMacroTests {
                         case "a": .name
                         case "b": .name
                         case "c": .name
-                        default: throw CodingError.unknownKey(key)
+                        default: .unknown
                         }
                     }
                 }
@@ -941,12 +969,9 @@ struct JSONDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
-                            case "name": name = try valueDecoder.decode(String.self)
-                            case "a": name = try valueDecoder.decode(String.self)
-                            case "b": name = try valueDecoder.decode(String.self)
-                            case "c": name = try valueDecoder.decode(String.self)
-                            default: break
+                            switch try CodingFields.field(for: key) {
+                            case .name: name = try valueDecoder.decode(String.self)
+                            case .unknown: break
                             }
                             return false
                         }

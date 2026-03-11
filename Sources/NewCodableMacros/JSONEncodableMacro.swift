@@ -41,6 +41,15 @@ enum CodingFieldExpansionKind {
             return true
         }
     }
+
+    var includesUnknownCase: Bool {
+        switch self {
+        case .encodingOnly:
+            return false
+        case .decodingOnly, .coding:
+            return true
+        }
+    }
 }
 
 struct StoredProperty {
@@ -53,11 +62,13 @@ func makeCodingFieldsDecl(
     from properties: [StoredProperty],
     kind: CodingFieldExpansionKind
 ) -> DeclSyntax {
-    let cases = properties.map { "case \($0.name)" }.joined(separator: "\n        ")
+    let cases = (properties.map { "case \($0.name)" } + (kind.includesUnknownCase ? ["case unknown"] : []))
+        .joined(separator: "\n        ")
 
     let switchCases = properties.map {
         "case .\($0.name): \"\($0.jsonKey)\""
-    }.joined(separator: "\n            ")
+    } + (kind.includesUnknownCase ? ["case .unknown: fatalError()"] : [])
+    let joinedSwitchCases = switchCases.joined(separator: "\n            ")
 
     if kind.includesKeyLookup {
         let fieldForKeyCases = properties.flatMap { prop -> [String] in
@@ -68,6 +79,8 @@ func makeCodingFieldsDecl(
             return cases
         }.joined(separator: "\n            ")
 
+        let defaultCase = kind.includesUnknownCase ? ".unknown" : "throw CodingError.unknownKey(key)"
+
         return """
         enum CodingFields: \(raw: kind.protocolName) {
             \(raw: cases)
@@ -75,14 +88,14 @@ func makeCodingFieldsDecl(
             @_transparent
             var staticString: StaticString {
                 switch self {
-                \(raw: switchCases)
+                \(raw: joinedSwitchCases)
                 }
             }
 
             static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                 switch UTF8SpanComparator(key) {
                 \(raw: fieldForKeyCases)
-                default: throw CodingError.unknownKey(key)
+                default: \(raw: defaultCase)
                 }
             }
         }
@@ -95,7 +108,7 @@ func makeCodingFieldsDecl(
             @_transparent
             var staticString: StaticString {
                 switch self {
-                \(raw: switchCases)
+                \(raw: joinedSwitchCases)
                 }
             }
         }

@@ -235,14 +235,9 @@ extension JSONDecodableMacro: ExtensionMacro {
                 "var \($0.name): \($0.typeName)?"
             }.joined(separator: "\n            ")
 
-            let switchCases = properties.flatMap { prop -> [String] in
-                let decodeExpr = "\(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
-                var cases = ["case \"\(prop.jsonKey)\": \(decodeExpr)"]
-                for alias in prop.aliases {
-                    cases.append("case \"\(alias)\": \(decodeExpr)")
-                }
-                return cases
-            }.joined(separator: "\n                    ")
+            let switchCases = properties.map { prop in
+                "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
+            }.joined(separator: "\n                            ")
 
             let requiredProperties = properties.filter { $0.isRequired }
 
@@ -281,9 +276,9 @@ extension JSONDecodableMacro: ExtensionMacro {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         \(raw: varDeclarations)
                         try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                            switch key {
+                            switch try CodingFields.field(for: key) {
                             \(raw: switchCases)
-                            default: break
+                            case .unknown: break
                             }
                             return false
                         }
