@@ -1749,6 +1749,7 @@ extension JSONParserDecoder.ArrayDecoder: CommonArrayDecoder {
 }
 
 extension JSONParserDecoder.StructDecoder: CommonStructDecoder {
+    @_lifetime(self: copy self)
     public mutating func decodeExpectedOrderField(required: Bool, matchingClosure: (UTF8Span) -> Bool, andValue valueDecoderClosure: (inout JSONParserDecoder) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding) -> Bool {
         try self.decodeExpectedOrderField(required: required, matchingClosure: matchingClosure, optimizedSafeStringKey: nil, andValue: valueDecoderClosure)
     }

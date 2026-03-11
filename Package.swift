@@ -228,11 +228,25 @@ let package = Package(
             swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
         
+        // NewCodableMacros
+        .macro(
+            name: "NewCodableMacros",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+                .product(name: "SwiftDiagnostics", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+            ],
+            swiftSettings: featureSettings
+        ),
+
         // NewCodable
         .target(
             name: "NewCodable",
             dependencies: [
                 .target(name: "FoundationEssentials"),
+                "NewCodableMacros",
                 .product(name: "OrderedCollections", package: "swift-collections"),
                 .product(name: "BasicContainers", package: "swift-collections"),
             ],
@@ -277,6 +291,14 @@ let package = Package(
                 .enableExperimentalFeature("Lifetimes"),
                 .enableUpcomingFeature("MemberImportVisibility"),
             ]
+        ),
+        .testTarget(
+            name: "NewCodableMacrosTests",
+            dependencies: [
+                "NewCodableMacros",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+            ],
+            swiftSettings: featureSettings
         )
     ]
 )

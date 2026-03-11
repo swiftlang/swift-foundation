@@ -591,6 +591,7 @@ struct NewCodableTests {
                     guard let decodedCase else {
                         throw CodingError.dataCorrupted(debugDescription: "Missing enum case")
                     }
+                    let unknownError = CodingError.unknownKey(decodedCase.utf8Span)
                     // TODO: It'd be nice to figure out how to encapsulate this.
                     if contents.isEmpty {
                         return try structDecoder.withWrappingDecoder { wrappingDecoder throws(CodingError.Decoding) in
@@ -600,7 +601,7 @@ struct NewCodableTests {
                             case "bar":
                                 try decodeBar(from: &wrappingDecoder)
                             default:
-                                throw CodingError.unknownKey(decodedCase.utf8Span)
+                                throw unknownError
                             }
                         }
                     } else {
@@ -611,7 +612,7 @@ struct NewCodableTests {
                         case "bar":
                             return try decodeBar(from: &valueDecoder)
                         default:
-                            throw CodingError.unknownKey(decodedCase.utf8Span)
+                            throw unknownError
                         }
                     }
                 }
@@ -634,88 +635,17 @@ struct NewCodableTests {
     }
     
     @Test func testDefaultValue() throws {
-        /*
-         @JSONCodable
-         struct Foo {
-             @CodableDefault("hello")
-             let bar: String
-         }
-         */
-        
-        struct Foo: JSONDecodable, Equatable {
-            let bar: String
-            
-            enum CodingFields: JSONOptimizedDecodingField {
-                case bar
-                
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
-                    switch UTF8SpanComparator(key) {
-                    case "bar": .bar
-                    default: throw CodingError.unknownKey(key)
-                    }
-                }
-                
-                @inline(__always)
-                var staticString: StaticString {
-                    switch self {
-                    case .bar: "bar"
-                    }
-                }
-            }
-            
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Foo {
-                return try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
-                    var bar: String?
-                    var inOrder = false
-                    _ = try structDecoder.decodeExpectedOrderField(CodingFields.bar, inOrder: &inOrder, required: false) { valueDecoder throws(CodingError.Decoding) in
-                        bar = try valueDecoder.decode(String.self)
-                    }
-                    return Foo(bar: bar ?? "hello")
-                }
-            }
-        }
-        
         let emptyJSON = Data("{}".utf8)
         let decoder = NewJSONDecoder()
-        let result = try decoder.decode(Foo.self, from: emptyJSON)
-        #expect(result == Foo(bar: "hello"))
+        let result = try decoder.decode(CodableStructWithDefaultedProperty.self, from: emptyJSON)
+        #expect(result.bar == "hello")
     }
     
     @Test func testAliases() throws {
-        /*
-         @JSONCodable
-         struct Foo {
-             @CodableAlias("baz", "qux")
-             let bar: String
-         }
-         */
-        
-        struct Foo: JSONDecodable, Equatable {
-            let bar: String
-            
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Foo {
-                return try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
-                    var bar: String?
-                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-                        switch key {
-                            // TODO: Deal with duplicates.
-                        case "baz": bar = try valueDecoder.decode(String.self)
-                        case "bar": bar = try valueDecoder.decode(String.self)
-                        case "qux": bar = try valueDecoder.decode(String.self)
-                        default: break // Skip.
-                            
-                        }
-                        return false
-                    }
-                    return Foo(bar: bar ?? "hello")
-                }
-            }
-        }
-        
         let qux = Data("{ \"qux\" : \"hello\" }".utf8)
         let decoder = NewJSONDecoder()
-        let result = try decoder.decode(Foo.self, from: qux)
-        #expect(result == Foo(bar: "hello"))
+        let result = try decoder.decode(CodableStructWithAliasedProperty.self, from: qux)
+        #expect(result.bar == "hello")
     }
     
     @Test func testEmbeddedEncodable() throws {
@@ -2069,5 +1999,198 @@ extension Array where Element: BinaryFloatingPoint {
             if !nanAllowableEqual(lhs: e1, rhs: e2) { return false }
         }
         return true
+    }
+}
+
+@JSONEncodable
+struct SimplePost {
+    let title: String
+    let body: String
+}
+
+@JSONEncodable
+struct BlogPost {
+    let title: String
+    @CodingKey("date_published") let publishDate: String
+    let tags: [String]
+    let rating: Double?
+}
+
+@JSONEncodable
+struct EmptyEncodable {}
+
+@JSONCodable
+struct RoundTripPerson {
+    let name: String
+    let age: Int
+}
+
+@JSONCodable
+struct RoundTripPost {
+    let title: String
+    @CodingKey("date_published") let publishDate: String
+    let rating: Double?
+}
+
+@JSONDecodable
+struct DecodableOnly {
+    let name: String
+    let value: Int
+}
+
+@JSONDecodable
+struct DecodableOnlyWithRequiredCustomKey {
+    @CodingKey("date_published") let publishDate: String
+}
+
+@JSONDecodable
+struct EmptyDecodable {}
+
+@JSONCodable
+struct CodablePerson {
+    let name: String
+    let age: Int
+}
+
+@JSONCodable
+struct CodablePost {
+    let title: String
+    @CodingKey("date_published") let publishDate: String
+    let rating: Double?
+}
+
+@JSONCodable
+struct CodableStructWithDefaultedProperty {
+    @CodableDefault("hello")
+    let bar: String
+}
+
+@JSONCodable
+struct CodableStructWithAliasedProperty {
+    @DecodableAlias("baz", "qux")
+    let bar: String
+}
+
+@Suite("@JSONEncodable Macro Integration")
+struct JSONEncodableMacroIntegrationTests {
+
+    @Test func simpleStruct() throws {
+        let post = SimplePost(title: "Hello", body: "World")
+        let data = try NewJSONEncoder().encode(post)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"title\":\"Hello\""))
+        #expect(json.contains("\"body\":\"World\""))
+    }
+
+    @Test func customCodingKey() throws {
+        let post = BlogPost(title: "Test", publishDate: "2026-01-01", tags: ["swift"], rating: 4.5)
+        let data = try NewJSONEncoder().encode(post)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        #expect(json.contains("\"title\":\"Test\""))
+        #expect(json.contains("\"tags\":[\"swift\"]"))
+        #expect(json.contains("\"rating\":4.5"))
+    }
+
+    @Test func optionalNilValue() throws {
+        let post = BlogPost(title: "Test", publishDate: "2026-01-01", tags: [], rating: nil)
+        let data = try NewJSONEncoder().encode(post)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"rating\":null"))
+    }
+
+    @Test func emptyStruct() throws {
+        let empty = EmptyEncodable()
+        let data = try NewJSONEncoder().encode(empty)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == "{}")
+    }
+}
+
+@Suite("@JSONDecodable Macro Integration")
+struct JSONDecodableMacroIntegrationTests {
+
+    @Test func roundTripBasic() throws {
+        let original = RoundTripPerson(name: "Alice", age: 30)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(RoundTripPerson.self, from: data)
+        #expect(decoded.name == "Alice")
+        #expect(decoded.age == 30)
+    }
+
+    @Test func roundTripCustomCodingKey() throws {
+        let original = RoundTripPost(title: "Hello", publishDate: "2026-01-01", rating: 4.5)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        let decoded = try NewJSONDecoder().decode(RoundTripPost.self, from: data)
+        #expect(decoded.title == "Hello")
+        #expect(decoded.publishDate == "2026-01-01")
+        #expect(decoded.rating == 4.5)
+    }
+
+    @Test func roundTripOptionalNil() throws {
+        let original = RoundTripPost(title: "Test", publishDate: "2026-03-05", rating: nil)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(RoundTripPost.self, from: data)
+        #expect(decoded.title == "Test")
+        #expect(decoded.rating == nil)
+    }
+
+    @Test func decodeOnly() throws {
+        let json = Data(#"{"name":"Bob","value":42}"#.utf8)
+        let decoded = try NewJSONDecoder().decode(DecodableOnly.self, from: json)
+        #expect(decoded.name == "Bob")
+        #expect(decoded.value == 42)
+    }
+
+    @Test func missingRequiredFieldErrorIncludesCustomKeyName() {
+        let json = Data("{}".utf8)
+
+        let error = #expect(throws: CodingError.Decoding.self) {
+            try NewJSONDecoder().decode(DecodableOnlyWithRequiredCustomKey.self, from: json)
+        }
+        guard case .dataCorrupted = error?.kind else {
+            Issue.record("Unexpected CodingError.Decoding type: \(error)")
+            return
+        }
+        #expect(error.debugDescription.contains("Missing required field 'date_published'"))
+    }
+
+    @Test func emptyDecodable() throws {
+        let json = Data("{}".utf8)
+        let decoded = try NewJSONDecoder().decode(EmptyDecodable.self, from: json)
+        _ = decoded
+    }
+}
+
+@Suite("@JSONCodable Macro Integration")
+struct JSONCodableMacroIntegrationTests {
+
+    @Test func roundTrip() throws {
+        let original = CodablePerson(name: "Alice", age: 30)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(CodablePerson.self, from: data)
+        #expect(decoded.name == "Alice")
+        #expect(decoded.age == 30)
+    }
+
+    @Test func roundTripWithCustomKey() throws {
+        let original = CodablePost(title: "Hello", publishDate: "2026-01-01", rating: 4.5)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        let decoded = try NewJSONDecoder().decode(CodablePost.self, from: data)
+        #expect(decoded.title == "Hello")
+        #expect(decoded.publishDate == "2026-01-01")
+        #expect(decoded.rating == 4.5)
+    }
+
+    @Test func roundTripOptionalNil() throws {
+        let original = CodablePost(title: "Test", publishDate: "2026-03-10", rating: nil)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(CodablePost.self, from: data)
+        #expect(decoded.title == "Test")
+        #expect(decoded.rating == nil)
     }
 }
