@@ -2067,7 +2067,7 @@ struct CodableStructWithDefaultedProperty {
 
 @JSONCodable
 struct CodableStructWithAliasedProperty {
-    @CodableAlias("baz", "qux")
+    @DecodableAlias("baz", "qux")
     let bar: String
 }
 

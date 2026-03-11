@@ -153,7 +153,7 @@ private func decodableAliases(from attributes: AttributeListSyntax) -> [String] 
     for attribute in attributes {
         guard let attr = attribute.as(AttributeSyntax.self),
               let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
-              identifierType.name.trimmedDescription == "CodableAlias",
+              identifierType.name.trimmedDescription == "DecodableAlias",
               let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
             continue
         }

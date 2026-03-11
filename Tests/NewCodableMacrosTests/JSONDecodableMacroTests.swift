@@ -809,7 +809,7 @@ struct JSONDecodableMacroTests {
             """
             @JSONDecodable
             struct User {
-                @CodableAlias("user_name") let userName: String
+                @DecodableAlias("user_name") let userName: String
                 let age: Int
             }
             """,
@@ -876,7 +876,7 @@ struct JSONDecodableMacroTests {
             """
             @JSONDecodable
             struct User {
-                @CodingKey("user_name") @CodableAlias("username") let userName: String
+                @CodingKey("user_name") @DecodableAlias("username") let userName: String
             }
             """,
             expandedSource: """
@@ -933,7 +933,7 @@ struct JSONDecodableMacroTests {
             """
             @JSONDecodable
             struct User {
-                @CodableAlias("a", "b", "c") let name: String
+                @DecodableAlias("a", "b", "c") let name: String
             }
             """,
             expandedSource: """
@@ -992,5 +992,5 @@ private let decodableTestMacros: [String: Macro.Type] = [
     "JSONDecodable": JSONDecodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
     "CodableDefault": CodableDefaultMacro.self,
-    "CodableAlias": CodableAliasMacro.self,
+    "DecodableAlias": DecodableAliasMacro.self,
 ]

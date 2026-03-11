@@ -13,7 +13,7 @@
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-public struct CodableAliasMacro: PeerMacro {
+public struct DecodableAliasMacro: PeerMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingPeersOf declaration: some DeclSyntaxProtocol,

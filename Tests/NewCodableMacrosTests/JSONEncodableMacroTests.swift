@@ -19,7 +19,7 @@ import NewCodableMacros
 let testMacros: [String: Macro.Type] = [
     "JSONEncodable": JSONEncodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
-    "CodableAlias": CodableAliasMacro.self,
+    "DecodableAlias": DecodableAliasMacro.self,
 ]
 
 @Suite("@JSONEncodable Macro")
@@ -374,12 +374,12 @@ struct JSONEncodableMacroTests {
         )
     }
 
-    @Test func aliasInFieldForKey() {
+    @Test func decodableAliasIgnoredForEncodingOnly() {
         assertMacroExpansion(
             """
             @JSONEncodable
             struct User {
-                @CodableAlias("user_name", "username") let userName: String
+                @DecodableAlias("user_name", "username") let userName: String
                 let age: Int
             }
             """,

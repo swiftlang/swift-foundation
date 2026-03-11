@@ -39,4 +39,4 @@ public macro CodableDefault<T>(_ value: T) = #externalMacro(module: "NewCodableM
 
 /// Experimental per-property marker macro for accepting alternate decoding keys.
 @attached(peer)
-public macro CodableAlias(_ names: String...) = #externalMacro(module: "NewCodableMacros", type: "CodableAliasMacro")
+public macro DecodableAlias(_ names: String...) = #externalMacro(module: "NewCodableMacros", type: "DecodableAliasMacro")

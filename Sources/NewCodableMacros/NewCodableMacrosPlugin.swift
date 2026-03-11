@@ -21,6 +21,6 @@ struct NewCodableMacrosPlugin: CompilerPlugin {
         JSONCodableMacro.self,
         CodingKeyMacro.self,
         CodableDefaultMacro.self,
-        CodableAliasMacro.self,
+        DecodableAliasMacro.self,
     ]
 }

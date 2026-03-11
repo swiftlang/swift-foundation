@@ -134,7 +134,7 @@ func extractStoredProperties(
         }
 
         let customKey = customCodingKey(from: varDecl.attributes)
-        let aliases = codableAliases(from: varDecl.attributes)
+        let aliases = decodableAliases(from: varDecl.attributes)
         if (customKey != nil || !aliases.isEmpty) && varDecl.bindings.count > 1 {
             context.diagnose(.init(
                 node: Syntax(varDecl),
@@ -189,12 +189,12 @@ private func customCodingKey(from attributes: AttributeListSyntax) -> String? {
     return nil
 }
 
-private func codableAliases(from attributes: AttributeListSyntax) -> [String] {
+private func decodableAliases(from attributes: AttributeListSyntax) -> [String] {
     var aliases: [String] = []
     for attribute in attributes {
         guard let attr = attribute.as(AttributeSyntax.self),
               let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
-              identifierType.name.trimmedDescription == "CodableAlias",
+              identifierType.name.trimmedDescription == "DecodableAlias",
               let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
             continue
         }

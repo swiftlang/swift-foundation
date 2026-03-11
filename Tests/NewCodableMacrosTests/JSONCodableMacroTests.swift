@@ -347,7 +347,7 @@ struct JSONCodableMacroTests {
             """
             @JSONCodable
             struct User {
-                @CodableAlias("user_name") let userName: String
+                @DecodableAlias("user_name") let userName: String
             }
             """,
             expandedSource: """
@@ -407,6 +407,71 @@ struct JSONCodableMacroTests {
         )
     }
 
+    @Test func aliasCombinedWithCodingKey() {
+        assertMacroExpansion(
+            """
+            @JSONCodable
+            struct User {
+                @CodingKey("user_name") @DecodableAlias("username") let userName: String
+            }
+            """,
+            expandedSource: """
+            struct User {
+                let userName: String
+
+                enum CodingFields: JSONOptimizedCodingField {
+                    case userName
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .userName: "user_name"
+                        case .unknown: fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "user_name": .userName
+                        case "username": .userName
+                        default: .unknown
+                        }
+                    }
+                }
+            }
+
+            extension User: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.userName, value: self.userName)
+                    }
+                }
+            }
+
+            extension User: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var userName: String?
+                        try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                            switch try CodingFields.field(for: key) {
+                            case .userName: userName = try valueDecoder.decode(String.self)
+                            case .unknown: break
+                            }
+                            return false
+                        }
+                        guard let userName else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'user_name'")
+                        }
+                        return User(userName: userName)
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
     @Test func errorOnNonStruct() {
         assertMacroExpansion(
             """
@@ -433,5 +498,5 @@ private let codableTestMacros: [String: Macro.Type] = [
     "JSONCodable": JSONCodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
     "CodableDefault": CodableDefaultMacro.self,
-    "CodableAlias": CodableAliasMacro.self,
+    "DecodableAlias": DecodableAliasMacro.self,
 ]
