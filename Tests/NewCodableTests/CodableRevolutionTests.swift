@@ -2072,3 +2072,31 @@ extension Array where Element: BinaryFloatingPoint {
         return true
     }
 }
+
+@JSONEncodable
+struct SimplePost {
+    let title: String
+    let body: String
+}
+
+@JSONEncodable
+struct EmptyEncodable {}
+
+@Suite("@JSONEncodable Macro Integration")
+struct JSONEncodableMacroIntegrationTests {
+
+    @Test func simpleStruct() throws {
+        let post = SimplePost(title: "Hello", body: "World")
+        let data = try NewJSONEncoder().encode(post)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"title\":\"Hello\""))
+        #expect(json.contains("\"body\":\"World\""))
+    }
+
+    @Test func emptyStruct() throws {
+        let empty = EmptyEncodable()
+        let data = try NewJSONEncoder().encode(empty)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == "{}")
+    }
+}
