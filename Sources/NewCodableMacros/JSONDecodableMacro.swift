@@ -226,7 +226,13 @@ extension JSONDecodableMacro: ExtensionMacro {
                 }.joined(separator: ", ")
                 guardAndReturn = "return \(typeName)(\(args))"
             } else {
-                let guardNames = requiredProperties.map { "let \($0.name)" }.joined(separator: ", ")
+                let requiredFieldGuards = requiredProperties.map {
+                    """
+                    guard let \($0.name) else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required field '\($0.jsonKey)'")
+                            }
+                    """
+                }.joined(separator: "\n                        ")
                 let args = properties.map { prop -> String in
                     if let defaultExpr = prop.defaultExpr {
                         return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
@@ -234,9 +240,7 @@ extension JSONDecodableMacro: ExtensionMacro {
                     return "\(prop.name): \(prop.name)"
                 }.joined(separator: ", ")
                 guardAndReturn = """
-                guard \(guardNames) else {
-                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
-                        }
+                \(requiredFieldGuards)
                         return \(typeName)(\(args))
                 """
             }

@@ -2039,6 +2039,11 @@ struct DecodableOnly {
 }
 
 @JSONDecodable
+struct DecodableOnlyWithRequiredCustomKey {
+    @CodingKey("date_published") let publishDate: String
+}
+
+@JSONDecodable
 struct EmptyDecodable {}
 
 @JSONCodable
@@ -2137,6 +2142,21 @@ struct JSONDecodableMacroIntegrationTests {
         let decoded = try NewJSONDecoder().decode(DecodableOnly.self, from: json)
         #expect(decoded.name == "Bob")
         #expect(decoded.value == 42)
+    }
+
+    @Test func missingRequiredFieldErrorIncludesCustomKeyName() {
+        let json = Data("{}".utf8)
+
+        do {
+            _ = try NewJSONDecoder().decode(DecodableOnlyWithRequiredCustomKey.self, from: json)
+            Issue.record("Expected decoding to fail for a missing required field")
+        } catch let error {
+            guard case .dataCorrupted = error.kind else {
+                Issue.record("Unexpected CodingError.Decoding type: \(error)")
+                return
+            }
+            #expect(error.debugDescription.contains("Missing required field 'date_published'"))
+        }
     }
 
     @Test func emptyDecodable() throws {

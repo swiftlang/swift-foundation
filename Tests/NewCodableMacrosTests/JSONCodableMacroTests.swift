@@ -77,8 +77,11 @@ struct JSONCodableMacroTests {
                             }
                             return false
                         }
-                        guard let name, let age else {
-                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        guard let age else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'age'")
                         }
                         return Person(name: name, age: age)
                     }
@@ -148,7 +151,7 @@ struct JSONCodableMacroTests {
                             return false
                         }
                         guard let name else {
-                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
                         }
                         return Item(name: name, rating: rating)
                     }
@@ -217,8 +220,11 @@ struct JSONCodableMacroTests {
                             }
                             return false
                         }
-                        guard let publishDate, let title else {
-                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                        guard let publishDate else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'date_published'")
+                        }
+                        guard let title else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'title'")
                         }
                         return Post(publishDate: publishDate, title: title)
                     }
@@ -317,7 +323,7 @@ struct JSONCodableMacroTests {
                             return false
                         }
                         guard let name else {
-                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
                         }
                         return Config(name: name, locale: locale ?? "en")
                     }
@@ -381,7 +387,7 @@ struct JSONCodableMacroTests {
                             return false
                         }
                         guard let userName else {
-                            throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'userName'")
                         }
                         return User(userName: userName)
                     }
