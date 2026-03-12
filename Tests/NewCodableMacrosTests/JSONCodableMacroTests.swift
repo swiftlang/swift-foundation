@@ -154,7 +154,7 @@ struct JSONCodableMacroTests {
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name: name = try valueDecoder.decode(String.self)
-                            case .rating: rating = try valueDecoder.decode(Double.self)
+                            case .rating: rating = try valueDecoder.decode(Double?.self)
                             case .unknown: break
                             }
                         }
