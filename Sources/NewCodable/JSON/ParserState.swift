@@ -239,13 +239,15 @@ extension JSONParserDecoder {
                     self.currentTopCodingPathNode = nodeSpan.withUnsafeMutableBufferPointer {
                         $0.baseAddress!
                     }
+                    defer {
+                        withExtendedLifetime(nodeSpan) {
+                            self.currentTopCodingPathNode.unwindToParent()
+                        }
+                    }
                     var decoder = try JSONParserDecoder.StructDecoder(parserState: self, midContainer: false)
                     _ = try BlackHoleVisitor().visit(decoder: &decoder)
                     try decoder._finish()
                     self = decoder.parserState
-                    withExtendedLifetime(nodeSpan) {
-                        self.currentTopCodingPathNode.unwindToParent()
-                    }
                 case ._openbracket:
                     // TODO: Restore depth checks
                     var arrayNode: InlineArray = [
@@ -255,13 +257,15 @@ extension JSONParserDecoder {
                     self.currentTopCodingPathNode = nodeSpan.withUnsafeMutableBufferPointer {
                         $0.baseAddress!
                     }
+                    defer {
+                        withExtendedLifetime(nodeSpan) {
+                            self.currentTopCodingPathNode.unwindToParent()
+                        }
+                    }
                     var decoder = try JSONParserDecoder.ArrayDecoder(parserState: self, midContainer: false)
                     _ = try BlackHoleVisitor().visit(decoder: &decoder)
                     try decoder._finish()
                     self = decoder.innerParser.state
-                    withExtendedLifetime(nodeSpan) {
-                        self.currentTopCodingPathNode.unwindToParent()
-                    }
                 case UInt8(ascii: "f"), UInt8(ascii: "t"):
                     _ = try reader.readBool()
                 case UInt8(ascii: "n"):
