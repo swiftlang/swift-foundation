@@ -759,7 +759,7 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
                     try Key.codingStringKeyVisitor.visitString(string)
                 }
                 try prepareForDictValue()
-                let value = try Value.decode(from: &self)
+                let value = try self.decode(Value.self)
                 result[key] = value
             } while try prepareForDictKey(first: false)
             
@@ -840,7 +840,7 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
             repeat {
                 state.currentTopCodingPathNode.pointee.incrementArrayIndex()
                 
-                let value = try Element.decode(from: &self)
+                let value = try self.decode(Element.self)
                 result.append(value)
             } while try prepareForArrayElement(first: false)
             
@@ -1529,7 +1529,7 @@ extension JSONParserDecoder: CommonDecoder {
                     try Key.codingStringKeyVisitor.visitString(string)
                 }
                 try prepareForDictValue()
-                let value = try Value.decode(from: &self)
+                let value = try self.decode(Value.self)
                 result[key] = value
             } while try prepareForDictKey(first: false)
             
@@ -1560,7 +1560,7 @@ extension JSONParserDecoder: CommonDecoder {
             // TODO: Append to CodingPath
             
             repeat {
-                let value = try Element.decode(from: &self)
+                let value = try self.decode(Element.self)
                 result.append(value)
             } while try prepareForArrayElement(first: false)
             
