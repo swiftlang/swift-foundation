@@ -55,6 +55,8 @@ public enum JSONPrimitive {
 
                     // TODO: Classic JSONDecoder would retry Decimal -> integer parsing
                     return integer
+                case .notANumber:
+                    fatalError("TODO: Throw error")
                 }
             }
         }

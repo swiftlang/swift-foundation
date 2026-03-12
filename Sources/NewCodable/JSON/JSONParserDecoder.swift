@@ -928,7 +928,7 @@ extension JSONParserDecoder {
             case UInt8(ascii: "f"), UInt8(ascii: "t"):
                 return try state.reader.readBool()
             default:
-                throw state.reader.decodingError(expectedTypeDescription: "boolean", at: codingPath)
+                throw state.decodingError(expectedTypeDescription: "boolean")
             }
         } catch let error as JSONError {
             throw error.at(self.codingPath)
@@ -942,100 +942,100 @@ extension JSONParserDecoder {
     public mutating func decode(_ hint: Int.Type) throws(CodingError.Decoding) -> Int {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: Int8.Type) throws(CodingError.Decoding) -> Int8 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: Int16.Type) throws(CodingError.Decoding) -> Int16 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: Int32.Type) throws(CodingError.Decoding) -> Int32 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: Int64.Type) throws(CodingError.Decoding) -> Int64 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: UInt.Type) throws(CodingError.Decoding) -> UInt {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: UInt8.Type) throws(CodingError.Decoding) -> UInt8 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: UInt16.Type) throws(CodingError.Decoding) -> UInt16 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: UInt32.Type) throws(CodingError.Decoding) -> UInt32 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: UInt64.Type) throws(CodingError.Decoding) -> UInt64 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
-            return try state.decode(hint)
         } catch {
             throw error.at(self.codingPath)
         }
+        return try state.decode(hint)
     }
     
     @_lifetime(self: copy self)
@@ -1075,7 +1075,7 @@ extension JSONParserDecoder {
                 _ = try state.reader.parseStringContentAndTrailingQuote(&key)
                 return key
             default:
-                throw state.reader.decodingError(expectedTypeDescription: "string", at: codingPath)
+                throw state.decodingError(expectedTypeDescription: "string")
             }
         } catch let error as JSONError {
             throw error.at(self.codingPath)
@@ -1101,7 +1101,7 @@ extension JSONParserDecoder {
                     return try visitor.visitString(string)
                 }
             default:
-                throw state.reader.decodingError(expectedTypeDescription: "string", at: codingPath)
+                throw state.decodingError(expectedTypeDescription: "string")
             }
         } catch let error as JSONError {
             throw error.at(self.codingPath)
@@ -1119,7 +1119,7 @@ extension JSONParserDecoder {
             let (_, _) = state.reader.skipNumber()
             let end = state.reader.readOffset
             guard end > start else {
-                throw state.reader.decodingError(expectedTypeDescription: "number", at: codingPath)
+                throw state.decodingError(expectedTypeDescription: "number")
             }
             let span = state.reader.bytes.extracting(unchecked: start..<end)
             let utf8Span = UTF8Span(unchecked: .init(_bytes: span), isKnownASCII: true)
@@ -1624,14 +1624,13 @@ extension JSONParserDecoder: CommonDecoder {
                 default:
                     break
                 }
-                defer {
-                    first = false
-                }
-                
-                return try state.decode(UInt8.self)
             } catch {
                 throw error.at(state.codingPath)
             }
+            defer {
+                first = false
+            }
+            return try state.decode(UInt8.self)
         }
     }
     
@@ -1690,7 +1689,7 @@ extension JSONParserDecoder: CommonDecoder {
                 self.state.copyRelevantState(from: iterator.state)
                 return result
             default:
-                throw state.reader.decodingError(expectedTypeDescription: "base64 string or integer array", at: self.codingPath)
+                throw state.decodingError(expectedTypeDescription: "base64 string or integer array")
             }
         } catch let error as JSONError {
             throw error.at(self.codingPath)
