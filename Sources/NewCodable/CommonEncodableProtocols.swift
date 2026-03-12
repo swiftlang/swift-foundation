@@ -471,10 +471,26 @@ public extension CommonDictionaryEncoder where Self: ~Copyable & ~Escapable {
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
+    // TODO: This overload is a workaround for the inability for encoders to dynamically cast to particular Copyable types.
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    @_lifetime(self: copy self)
+    mutating func encode(key: String, value: some CommonEncodable & Copyable) throws(CodingError.Encoding) {
+        try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
+    }
+    
     @inline(__always)
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
     mutating func encode(key: UTF8Span, value: borrowing some CommonEncodable & ~Copyable) throws(CodingError.Encoding) {
+        try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
+    }
+    
+    // TODO: This overload is a workaround for the inability for encoders to dynamically cast to particular Copyable types.
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    @_lifetime(self: copy self)
+    mutating func encode(key: UTF8Span, value: some CommonEncodable) throws(CodingError.Encoding) {
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     

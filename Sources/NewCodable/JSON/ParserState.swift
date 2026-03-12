@@ -83,16 +83,16 @@ extension JSONParserDecoder {
             reader.moveReaderIndex(forwardBy: 1) // consume end quote.
         }
         
-        @_lifetime(self: copy self) mutating func decode(_ t: Int.Type) throws(JSONError) -> Int { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: Int8.Type) throws(JSONError) -> Int8 { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: Int16.Type) throws(JSONError) -> Int16 { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: Int32.Type) throws(JSONError) -> Int32 { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: Int64.Type) throws(JSONError) -> Int64 { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: UInt.Type) throws(JSONError) -> UInt { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: UInt8.Type) throws(JSONError) -> UInt8 { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: UInt16.Type) throws(JSONError) -> UInt16 { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: UInt32.Type) throws(JSONError) -> UInt32 { try decode() }
-        @_lifetime(self: copy self) mutating func decode(_ t: UInt64.Type) throws(JSONError) -> UInt64 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: Int.Type) throws(CodingError.Decoding) -> Int { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: Int8.Type) throws(CodingError.Decoding) -> Int8 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: Int16.Type) throws(CodingError.Decoding) -> Int16 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: Int32.Type) throws(CodingError.Decoding) -> Int32 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: Int64.Type) throws(CodingError.Decoding) -> Int64 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: UInt.Type) throws(CodingError.Decoding) -> UInt { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: UInt8.Type) throws(CodingError.Decoding) -> UInt8 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: UInt16.Type) throws(CodingError.Decoding) -> UInt16 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: UInt32.Type) throws(CodingError.Decoding) -> UInt32 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: UInt64.Type) throws(CodingError.Decoding) -> UInt64 { try decode() }
         
         @usableFromInline
         internal struct FloatingPointNonConformingStringValueVisitor<T: BinaryFloatingPoint & PrevalidatedJSONNumberBufferConvertible>: DecodingStringVisitor {
@@ -146,7 +146,7 @@ extension JSONParserDecoder {
                 case ._minus, _asciiNumbers:
                     return try reader.parseFloatingPoint(as: t)
                 default:
-                    throw reader.decodingError(expectedTypeDescription: "floating point number", at: self.codingPath)
+                    throw decodingError(expectedTypeDescription: "floating point number")
                 }
             } catch let error as JSONError {
                 throw error.at(self.codingPath)
@@ -162,21 +162,30 @@ extension JSONParserDecoder {
 
         @inlinable
         @inline(__always)
-        mutating func decode<T: FixedWidthInteger>() throws(JSONError) -> T {
+        mutating func decode<T: FixedWidthInteger>() throws(CodingError.Decoding) -> T {
             // TODO: TEST NEGATIVE FLOATS HERE. I think `parseInteger` consumes the `-` and doesn't restore it on returning .retryAsFloatingPoint
-            switch try reader.parseInteger(as: T.self) {
-            case .pureInteger(let integer):
-                return integer
-            case .retryAsFloatingPoint:
-                // TODO: Slowpath? Lots of inlined code here.
-                let double = try reader.parseFloatingPoint(as: Double.self)
-                guard let integer = T(exactly: double) else {
-                    // TODO: Include the parsed string? Explain we're trying to represent as an integer?
-                    throw JSONError.numberIsNotRepresentableInSwift(parsed: String(double))
+            do {
+                switch try reader.parseInteger(as: T.self) {
+                case .pureInteger(let integer):
+                    return integer
+                case .retryAsFloatingPoint:
+                    // TODO: Slowpath? Lots of inlined code here.
+                    let double = try reader.parseFloatingPoint(as: Double.self)
+                    guard let integer = T(exactly: double) else {
+                        // TODO: Include the parsed string? Explain we're trying to represent as an integer?
+                        throw JSONError.numberIsNotRepresentableInSwift(parsed: String(double))
+                    }
+                    
+                    // TODO: Classic JSONDecoder would retry Decimal -> integer parsing
+                    return integer
+                case .notANumber:
+                    throw decodingError(expectedTypeDescription: "integer number")
                 }
-
-                // TODO: Classic JSONDecoder would retry Decimal -> integer parsing
-                return integer
+            } catch let error as JSONError {
+                throw error.at(self.codingPath)
+            } catch {
+                // TODO: Fix unsavory language workaround
+                throw error as! CodingError.Decoding
             }
         }
         
@@ -1026,6 +1035,7 @@ extension JSONParserDecoder {
             enum IntegerParseResult<Result: FixedWidthInteger> {
                 case pureInteger(Result)
                 case retryAsFloatingPoint
+                case notANumber
             }
 
             @inlinable
@@ -1077,7 +1087,9 @@ extension JSONParserDecoder {
                     self.readOffset = startOffset
                     return .retryAsFloatingPoint
                 } else {
-                    throw JSONError.unexpectedCharacter(context: "in number", ascii: firstDigit, location: .countingLinesAndColumns(upTo: startOffset, in: bytes))
+                    // This doesn't look like it's a number at all. Rewind.
+                    self.readOffset = startOffset
+                    return .notANumber
                 }
 
                 let multiplicand: Result = 10
@@ -1122,7 +1134,6 @@ extension JSONParserDecoder {
             @inline(__always)
             @_lifetime(self: copy self)
             mutating func parseInteger<Result: FixedWidthInteger>(as _: Result.Type) throws(JSONError) -> IntegerParseResult<Result> {
-                // TODO: Somewhere in this path, we need to throw "type mismatch" errors.
                 switch peek() {
                 case ._minus:
                     moveReaderIndex(forwardBy: 1)
@@ -1607,9 +1618,19 @@ extension JSONParserDecoder.ParserState.DocumentReader {
         }
     }
     
+    // Returns false if end of object is found
+    @discardableResult
     @inline(__always)
-    func expectBeginningOfObjectKey(_ ascii: UInt8) throws(JSONError) {
-        guard ascii == ._quote else {
+    func expectBeginningOfObjectKey(_ ascii: UInt8, orEndOfObjectAfterTrailingQuote allowEndOfObject: Bool = false) throws(JSONError) -> Bool {
+        switch ascii {
+        case ._quote:
+            return true
+        case ._closebrace:
+            if allowEndOfObject {
+                return false
+            }
+            fallthrough
+        default:
             throw JSONError.unexpectedCharacter(context: "at beginning of object key", ascii: ascii, location: self.sourceLocation)
         }
     }
@@ -1636,28 +1657,26 @@ extension JSONParserDecoder.ParserState.DocumentReader {
     }
 }
 
-extension JSONParserDecoder.ParserState.DocumentReader {
-    func typeDescription(peekedCharacter: UInt8) -> String? {
-        switch peekedCharacter {
-        case ._quote: "string"
-        case ._openbrace: "object"
-        case ._openbracket: "array"
-        case UInt8(ascii: "f"), UInt8(ascii: "t"): "boolean"
-        case UInt8(ascii: "n"): "null"
-        case UInt8(ascii: "-"): "number"
-        case _asciiNumbers: "number"
-        default: nil
+extension JSONParserDecoder.ParserState {
+    func typeDescription(primitive: JSONPrimitive) -> String {
+        switch primitive {
+        case .string: "string"
+        case .dictionary: "object"
+        case .array: "array"
+        case .bool: "boolean"
+        case .null: "null"
+        case .number: "number"
         }
     }
     
     @usableFromInline
-    func decodingError(expectedTypeDescription: String, at codingPath: CodingPath) -> CodingError.Decoding {
-        guard let char = peek() else {
-            return JSONError.unexpectedEndOfFile.at(codingPath)
+    func decodingError(expectedTypeDescription: String) -> CodingError.Decoding {
+        var decoder = JSONParserDecoder(state: self)
+        do {
+            let primitive = try decoder.decodeJSONPrimitive()
+            return CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: typeDescription(primitive: primitive), at: self.codingPath)
+        } catch {
+            return error
         }
-        guard let valueDescription = typeDescription(peekedCharacter: char) else {
-            return JSONError.unexpectedCharacter(ascii: char, location: self.sourceLocation).at(codingPath)
-        }
-        return CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: valueDescription, at: codingPath)
     }
 }

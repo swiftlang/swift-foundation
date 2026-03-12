@@ -129,7 +129,7 @@ public struct NewJSONDecoder {
     @inlinable
     public func decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from data: Data) throws(CodingError.Decoding) -> T {
         try _decode(type, from: data) { inner throws(CodingError.Decoding) in
-            try type.decode(from: &inner)
+            try inner.decode(type)
         }
     }
 
@@ -150,7 +150,7 @@ public struct NewJSONDecoder {
     @inlinable
     public func decode<T: CommonDecodable>(_ type: T.Type, from data: Data) throws(CodingError.Decoding) -> T {
         try _decode(type, from: data) { parserDecoder throws(CodingError.Decoding) in
-            try type.decode(from: &parserDecoder)
+            try parserDecoder.decode(type)
         }
     }
 }
