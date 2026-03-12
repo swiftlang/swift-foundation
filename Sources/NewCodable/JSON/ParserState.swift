@@ -1607,9 +1607,19 @@ extension JSONParserDecoder.ParserState.DocumentReader {
         }
     }
     
+    // Returns false if end of object is found
+    @discardableResult
     @inline(__always)
-    func expectBeginningOfObjectKey(_ ascii: UInt8) throws(JSONError) {
-        guard ascii == ._quote else {
+    func expectBeginningOfObjectKey(_ ascii: UInt8, orEndOfObjectAfterTrailingQuote allowEndOfObject: Bool = false) throws(JSONError) -> Bool {
+        switch ascii {
+        case ._quote:
+            return true
+        case ._closebrace:
+            if allowEndOfObject {
+                return false
+            }
+            fallthrough
+        default:
             throw JSONError.unexpectedCharacter(context: "at beginning of object key", ascii: ascii, location: self.sourceLocation)
         }
     }

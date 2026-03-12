@@ -1203,16 +1203,219 @@ struct JSONEncodingDecodingTests {
         
     }
     
-    // TODO: Bring back trailing comma support?
-    @Test func jsonPermitsTrailingCommas() throws {
-        // Trailing commas aren't valid JSON and should never be emitted, but are syntactically unambiguous and are allowed by
-        // most parsers for ease of use.
+    // MARK: - Trailing Comma Tests
+    // Trailing commas aren't valid JSON and should never be emitted, but are syntactically unambiguous and are allowed by
+    // most parsers for ease of use. Each test below exercises a distinct code path in JSONParserDecoder.
+
+    // Tests prepareForArrayElement (JSONDecodable path) and prepareForDictKey (CommonDecodable [String:V] path)
+    @Test func trailingComma_dictionaryOfArrays() throws {
         let json = "{\"key\" : [ true, ],}"
-        let data = json.data(using: .utf8)!
-        
+        let data = Data(json.utf8)
+
         let result = try NewJSONDecoder().decode([String:[Bool]].self, from: data)
-        let expected = ["key" : [true]]
-        #expect(result == expected)
+        #expect(result == ["key" : [true]])
+    }
+
+    // Tests prepareForArrayElement via decode([Element].Type) with JSONDecodable elements
+    @Test func trailingComma_topLevelArray() throws {
+        let json = "[1, 2, 3,]"
+        let data = Data(json.utf8)
+
+        let result = try NewJSONDecoder().decode([Int].self, from: data)
+        #expect(result == [1, 2, 3])
+    }
+
+    // Tests prepareForArrayElement via ArrayDecoder.decodeEachElement
+    @Test func trailingComma_arrayDecoder() throws {
+        struct Counter: JSONDecodable, Equatable {
+            let count: Int
+
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Counter {
+                var count = 0
+                try decoder.decodeArray { arrayDecoder throws(CodingError.Decoding) in
+                    try arrayDecoder.decodeEachElement { elementDecoder throws(CodingError.Decoding) in
+                        _ = try elementDecoder.decode(Int.self)
+                        count += 1
+                    }
+                }
+                return Counter(count: count)
+            }
+        }
+        let json = "[10, 20,]"
+        let data = Data(json.utf8)
+
+        let result = try NewJSONDecoder().decode(Counter.self, from: data)
+        #expect(result == Counter(count: 2))
+    }
+
+    // Tests StructDecoder.decodeEachKeyAndValue (the most common struct decoding path)
+    @Test func trailingComma_structDecodeEachKeyAndValue() throws {
+        let json = "{\"name\" : \"Alice\", \"age\" : 30,}"
+        let data = Data(json.utf8)
+
+        let result = try NewJSONDecoder().decode(SimpleStruct.self, from: data)
+        #expect(result == SimpleStruct(name: "Alice", age: 30))
+    }
+
+    // Tests StructDecoder.decodeExpectedOrderField comma handling
+    @Test func trailingComma_structDecodeExpectedOrderField() throws {
+        struct Ordered: JSONDecodable, Equatable {
+            let x: Int
+            let y: Int
+            
+            enum Field: JSONOptimizedDecodingField {
+                case x
+                case y
+                
+                var staticString: StaticString {
+                    switch self {
+                    case .x: "x"
+                    case .y: "y"
+                    }
+                }
+                
+                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Ordered.Field {
+                    switch UTF8SpanComparator(key) {
+                    case "x": .x
+                    case "y": .y
+                    default: throw CodingError.unknownKey(key)
+                    }
+                }
+            }
+
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Ordered {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var x: Int?
+                    var y: Int?
+
+                    var unused = true
+                    _ = try structDecoder.decodeExpectedOrderField(Field.x, inOrder: &unused) { valueDecoder throws(CodingError.Decoding) in
+                        x = try valueDecoder.decode(Int.self)
+                    }
+                    _ = try structDecoder.decodeExpectedOrderField(Field.y, inOrder: &unused) { valueDecoder throws(CodingError.Decoding) in
+                        y = try valueDecoder.decode(Int.self)
+                    }
+
+                    guard let x, let y else {
+                        throw CodingError.Decoding(kind: .dataCorrupted)
+                    }
+                    return Ordered(x: x, y: y)
+                }
+            }
+        }
+        let json = "{\"x\": 1, \"y\": 2,}"
+        let data = Data(json.utf8)
+
+        let result = try NewJSONDecoder().decode(Ordered.self, from: data)
+        #expect(result == Ordered(x: 1, y: 2))
+    }
+
+    // Tests StructDecoder.decodeEachField (FieldDecoder path, used by macro-generated code)
+    @Test func trailingComma_structDecodeEachField() throws {
+        struct FieldBased: JSONDecodable, Equatable {
+            let a: Int
+            let b: String
+
+            enum Fields: JSONOptimizedDecodingField {
+                case a
+                case b
+
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
+                    switch UTF8SpanComparator(key) {
+                    case "a": .a
+                    case "b": .b
+                    default: throw CodingError.unknownKey(key)
+                    }
+                }
+
+                @inline(__always)
+                var staticString: StaticString {
+                    switch self {
+                    case .a: "a"
+                    case .b: "b"
+                    }
+                }
+            }
+
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> FieldBased {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var a: Int?
+                    var b: String?
+                    var key: Fields?
+
+                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                        key = try fieldDecoder.decode(Fields.self)
+                    } andValue: { valueDecoder throws(CodingError.Decoding) in
+                        switch key! {
+                        case .a: a = try valueDecoder.decode(Int.self)
+                        case .b: b = try valueDecoder.decode(String.self)
+                        }
+                    }
+
+                    guard let a, let b else {
+                        throw CodingError.Decoding(kind: .dataCorrupted)
+                    }
+                    return FieldBased(a: a, b: b)
+                }
+            }
+        }
+        let json = "{\"a\": 42, \"b\": \"hello\",}"
+        let data = Data(json.utf8)
+
+        let result = try NewJSONDecoder().decode(FieldBased.self, from: data)
+        #expect(result == FieldBased(a: 42, b: "hello"))
+    }
+
+    // Tests Data decoded via deferredToData (which uses decode([UInt8].self) -> prepareForArrayElement)
+    @Test func trailingComma_dataByteArray() throws {
+        let json = "[72, 101, 108, 108, 111,]"
+        let data = Data(json.utf8)
+        let options = NewJSONDecoder.Options(dataDecodingStrategy: .deferredToData)
+        let decoder = NewJSONDecoder(options: options)
+
+        let result = try decoder.decode(Data.self, from: data)
+        #expect(result == Data([72, 101, 108, 108, 111]))
+    }
+
+    // Tests prepareForDictKey (used by [Key:Value] dictionary decoding for CommonDecodable values)
+    @Test func trailingComma_topLevelDictionary() throws {
+        let json = "{\"a\": 1, \"b\": 2,}"
+        let data = Data(json.utf8)
+
+        let result = try NewJSONDecoder().decode([String: Int].self, from: data)
+        #expect(result == ["a": 1, "b": 2])
+    }
+
+    // Tests nested trailing commas at multiple levels simultaneously
+    @Test func trailingComma_nestedContainers() throws {
+        let json = "{\"person\": {\"name\": \"Bob\", \"age\": 25,}, \"metadata\": {\"role\": \"dev\",},}"
+        let data = Data(json.utf8)
+
+        let result = try NewJSONDecoder().decode(NestedStruct.self, from: data)
+        #expect(result == NestedStruct(
+            person: SimpleStruct(name: "Bob", age: 25),
+            metadata: ["role": "dev"]
+        ))
+    }
+
+    // Tests that a trailing comma in an empty container is rejected (not a trailing comma — it's a leading comma)
+    @Test func trailingComma_emptyArrayRejects() throws {
+        let json = "[,]"
+        let data = Data(json.utf8)
+
+        #expect(throws: (any Error).self) {
+            try NewJSONDecoder().decode([Int].self, from: data)
+        }
+    }
+
+    // Tests that a trailing comma in an empty object is rejected
+    @Test func trailingComma_emptyObjectRejects() throws {
+        let json = "{,}"
+        let data = Data(json.utf8)
+
+        #expect(throws: (any Error).self) {
+            try NewJSONDecoder().decode([String: Int].self, from: data)
+        }
     }
     
     @Test func whitespaceOnlyData() {
@@ -1649,7 +1852,7 @@ struct JSONEncodingDecodingTests {
     //        }
     //    }
     
-    // TODO: This test fails. Determine what the desired behavior is. We should have some freedom with a brand new API.
+    // TODO: This test does not exemplify desired client behavior and it differs from traditional JSONEncoder behacior. It's unclear whether we will want to tolerate this kind of behavior from clients, or what we should do to prevent it.
     @Test func typeEncodesNothing() {
         struct EncodesNothing : JSONEncodable {
             func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
@@ -1658,17 +1861,20 @@ struct JSONEncodingDecodingTests {
         }
         let enc = NewJSONEncoder()
         
-        #expect(throws: (any Error).self) {
-            try enc.encode(EncodesNothing())
+        #expect(throws: Never.self) {
+            let nothing = try enc.encode(EncodesNothing())
+            #expect(nothing.count == 0)
         }
         
-        // Unknown if the following behavior is strictly correct, but it's what the prior implementation does, so this test exists to make sure we maintain compatibility.
+        #expect(throws: Never.self) {
+            let nothingArray = try enc.encode([EncodesNothing(), EncodesNothing()])
+            #expect("[,]" == String(data: nothingArray, encoding: .utf8))
+        }
         
-        let arrayData = try! enc.encode([EncodesNothing()])
-        #expect("[{}]" == String(data: arrayData, encoding: .utf8))
-        
-        let objectData = try! enc.encode(["test" : EncodesNothing()])
-        #expect(#"{"test":{}}"# == String(data: objectData, encoding: .utf8))
+        #expect(throws: Never.self) {
+            let nothingDict = try enc.encode(["test" : EncodesNothing()])
+            #expect(#"{"test":}"# == String(data: nothingDict, encoding: .utf8))
+        }
     }
     
     @Test func redundantKeys() throws {

@@ -98,9 +98,6 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
                 // The dictionary could be empty.
                 let nextChar = try parserState.reader.consumeWhitespaceAndPeek()
                 if nextChar == ._closebrace {
-                    if required {
-                        print("Break here")
-                    }
                     return !required
                 }
                 
@@ -123,9 +120,6 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
                 
                 guard matches, parserState.reader.read() == ._quote else {
                     parserState.reader.readOffset = savedPosition
-                    if required {
-                        print("Break here")
-                    }
                     return !required
                 }
                 
@@ -212,7 +206,11 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
                     case ._comma:
                         parserState.reader.moveReaderIndex(forwardBy: 1) // consume comma (which *could* be a trailing comma)
                         
-                        foundQuote = try parserState.reader.consumeWhitespaceAndPeek() == ._quote
+                        switch try parserState.reader.consumeWhitespaceAndPeek() {
+                        case ._quote: foundQuote = true
+                        case ._closebrace: foundCloseBrace = true
+                        default: break
+                        }
                     case ._closebrace:
                         foundCloseBrace = true
                     default:
@@ -274,7 +272,11 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
                     case ._comma:
                         parserState.reader.moveReaderIndex(forwardBy: 1) // consume comma (which *could* be a trailing comma)
                         
-                        foundQuote = try parserState.reader.consumeWhitespaceAndPeek() == ._quote
+                        switch try parserState.reader.consumeWhitespaceAndPeek() {
+                        case ._quote: foundQuote = true
+                        case ._closebrace: foundCloseBrace = true
+                        default: break
+                        }
                     case ._closebrace:
                         foundCloseBrace = true
                     default:
@@ -714,7 +716,10 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
         case (false, ._comma):
             state.reader.moveReaderIndex(forwardBy: 1) // Consume comma.
             let nextChar = try state.reader.consumeWhitespaceAndPeek()
-            try state.reader.expectBeginningOfObjectKey(nextChar)
+            if try state.reader.expectBeginningOfObjectKey(nextChar, orEndOfObjectAfterTrailingQuote: true) == false {
+                state.reader.moveReaderIndex(forwardBy: 1) // Consume close brace.
+                return false
+            }
             fallthrough // to quote
         case (true, ._quote):
             state.reader.moveReaderIndex(forwardBy: 1) // Consume quote.
@@ -780,7 +785,6 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
         state.reader.moveReaderIndex(forwardBy: 1) // Consume open bracket.
     }
     
-    // TODO: If we're tolerant of trailing comma, then what if we see [,]?
     @usableFromInline
     @_lifetime(self: copy self)
     internal mutating func prepareForArrayElement(first: Bool, consumingCloseBracket: Bool = true) throws(JSONError) -> Bool {
@@ -793,7 +797,12 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
             return false
         case (false, ._comma):
             state.reader.moveReaderIndex(forwardBy: 1) // Consume comma
-            try state.reader.consumeWhitespaceAndPeek()
+            if try state.reader.consumeWhitespaceAndPeek() == ._closebracket {
+                if consumingCloseBracket {
+                    state.reader.moveReaderIndex(forwardBy: 1) // Consume close bracket
+                }
+                return false
+            }
             return true
         case (true, _):
             return true
@@ -1608,7 +1617,10 @@ extension JSONParserDecoder: CommonDecoder {
                     return nil
                 case ._comma where first == false:
                     state.reader.moveReaderIndex(forwardBy: 1) // Consume comma.
-                    _ = try state.reader.consumeWhitespaceAndPeek()
+                    if try state.reader.consumeWhitespaceAndPeek() == ._closebracket {
+                        foundCloseBracket = true
+                        return nil
+                    }
                 default:
                     break
                 }
@@ -1803,6 +1815,10 @@ extension JSONParserDecoder.DictionaryDecoder: CommonDictionaryDecoder {
                 switch next {
                 case ._comma:
                     parserState.reader.moveReaderIndex(forwardBy: 1) // consume comma (which *could* be a trailing comma)
+                    let nextChar = try parserState.reader.consumeWhitespaceAndPeek()
+                    if try parserState.reader.expectBeginningOfObjectKey(nextChar, orEndOfObjectAfterTrailingQuote: true) == false {
+                        foundCloseBrace = true
+                    }
                 case ._closebrace:
                     foundCloseBrace = true
                 default:
