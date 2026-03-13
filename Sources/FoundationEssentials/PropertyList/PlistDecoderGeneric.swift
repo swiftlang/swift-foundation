@@ -122,7 +122,7 @@ extension _PlistDecoder {
         if Format.valueIsNull(value) {
             throw DecodingError.valueNotFound(expectedType, DecodingError.Context(
                 codingPath: codingPathNode.path(byAppending: additionalKey),
-                debugDescription: "Cannot get value of \(expectedType) -- found null value instead"
+                debugDescription: "Found null value instead"
             ))
         }
     }
@@ -635,7 +635,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
     @inline(never)
     private func errorForEndOfContainer<T>(type: T.Type) -> DecodingError {
         var message = "Unkeyed container is at end."
-        if T.self is any UnkeyedDecodingContainer {
+        if T.self == (any UnkeyedDecodingContainer).self {
             message = "Cannot get nested unkeyed container -- unkeyed container is at end."
         }
         if T.self == Decoder.self {
