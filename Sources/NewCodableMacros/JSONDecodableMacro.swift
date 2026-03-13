@@ -236,7 +236,11 @@ extension JSONDecodableMacro: ExtensionMacro {
             }.joined(separator: "\n            ")
 
             let switchCases = properties.map { prop in
-                "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
+                if prop.isOptional {
+                    return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName)?.self)"
+                } else {
+                    return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
+                }
             }.joined(separator: "\n                            ")
 
             let requiredProperties = properties.filter { $0.isRequired }

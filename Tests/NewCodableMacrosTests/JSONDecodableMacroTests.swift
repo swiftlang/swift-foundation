@@ -136,7 +136,7 @@ struct JSONDecodableMacroTests {
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name: name = try valueDecoder.decode(String.self)
-                            case .rating: rating = try valueDecoder.decode(Double.self)
+                            case .rating: rating = try valueDecoder.decode(Double?.self)
                             case .unknown: break
                             }
                         }
@@ -200,8 +200,8 @@ struct JSONDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .theme: theme = try valueDecoder.decode(String.self)
-                            case .fontSize: fontSize = try valueDecoder.decode(Int.self)
+                            case .theme: theme = try valueDecoder.decode(String?.self)
+                            case .fontSize: fontSize = try valueDecoder.decode(Int?.self)
                             case .unknown: break
                             }
                         }
@@ -760,7 +760,7 @@ struct JSONDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .locale: locale = try valueDecoder.decode(String.self)
+                            case .locale: locale = try valueDecoder.decode(String?.self)
                             case .unknown: break
                             }
                         }
