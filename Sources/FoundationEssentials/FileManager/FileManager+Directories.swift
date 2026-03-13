@@ -30,6 +30,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 internal import _FoundationCShims
@@ -205,7 +207,7 @@ extension _FileManagerImpl {
             }
         }
         return results
-#elseif os(OpenBSD)
+#elseif os(OpenBSD) || os(Emscripten)
         throw CocoaError.errorWithFilePath(.featureUnsupported, path)
 #else
         return try path.withFileSystemRepresentation { fileSystemRep in

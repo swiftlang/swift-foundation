@@ -20,6 +20,8 @@ import Darwin
 @preconcurrency import Musl
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if canImport(CRT)
