@@ -55,8 +55,16 @@ extension JSONParserDecoder {
         
         @inlinable
         @_lifetime(copy span, copy options)
-        init(span: RawSpan, options: _Borrow<NewJSONDecoder.Options>, topCodingPathNode: UnsafeMutablePointer<CodingPathNode>) {
+        init(unvalidatedUTF8Span span: RawSpan, options: _Borrow<NewJSONDecoder.Options>, topCodingPathNode: UnsafeMutablePointer<CodingPathNode>) {
             self.reader = .init(bytes: span)
+            self.options = options
+            self.currentTopCodingPathNode = topCodingPathNode
+        }
+        
+        @inlinable
+        @_lifetime(copy utf8, copy options)
+        init(utf8: UTF8Span, options: _Borrow<NewJSONDecoder.Options>, topCodingPathNode: UnsafeMutablePointer<CodingPathNode>) {
+            self.reader = .init(utf8: utf8)
             self.options = options
             self.currentTopCodingPathNode = topCodingPathNode
         }
@@ -273,9 +281,11 @@ extension JSONParserDecoder {
         @frozen
         public struct DocumentReader: ~Escapable {
 
-            // TODO: UTF8Span?
             @usableFromInline
             let bytes: RawSpan
+            
+            @usableFromInline
+            let utf8Validated: Bool
 
             @usableFromInline
             internal var readOffset : Int
@@ -320,6 +330,15 @@ extension JSONParserDecoder {
             init(bytes: RawSpan) {
                 self.bytes = bytes
                 self.readOffset = 0
+                self.utf8Validated = false
+            }
+            
+            @inlinable
+            @_lifetime(copy utf8)
+            init(utf8: UTF8Span) {
+                self.bytes = utf8.span.bytes
+                self.readOffset = 0
+                self.utf8Validated = true
             }
 
             @inlinable
@@ -929,7 +948,11 @@ extension JSONParserDecoder {
                 let firstSectionSubspan = bytes.extracting(unchecked: startIndex..<readOffset-1)
                 let firstSectionUTF8Span: UTF8Span
                 do {
-                    firstSectionUTF8Span = try UTF8Span(validating: .init(_bytes: firstSectionSubspan))
+                    if utf8Validated {
+                        firstSectionUTF8Span = UTF8Span(unchecked: .init(_bytes: firstSectionSubspan), isKnownASCII: false)
+                    } else {
+                        firstSectionUTF8Span = try UTF8Span(validating: .init(_bytes: firstSectionSubspan))
+                    }
                 } catch {
                     // TODO: This source location doesn't work any more.
                     throw .cannotConvertInputStringDataToUTF8(location: .countingLinesAndColumns(upTo: startIndex, in: bytes))
@@ -953,7 +976,12 @@ extension JSONParserDecoder {
 
                 do {
                     // TODO: Creation of the String should be deferred until we know that the DecodingField or DecodingStringVisitor client wants a `String`. We could easily just give them the UTF8Span (or byte span?) instead.
-                    let utf8Span = try UTF8Span(validating: buffer.span)
+                    let span = buffer.span
+                    let utf8Span: UTF8Span = if utf8Validated {
+                        UTF8Span(unchecked: span, isKnownASCII: false)
+                    } else {
+                        try UTF8Span(validating: span)
+                    }
                     let output = firstStringChunk + String(copying: utf8Span)
                     
                     let subspan = bytes.extracting(unchecked: Range(uncheckedBounds: (startIndex, readOffset-1)))

@@ -128,7 +128,7 @@ public struct NewJSONEncoder {
         internal var nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy
         internal var withoutEscapingSlashes: Bool
         internal var pretty: Bool
-
+        
         public init(assumesTopLevelDictionary: Bool = false,
                     dataEncodingStrategy: DataEncodingStrategy = .base64,
                     dateEncodingStrategy: DateEncodingStrategy = .deferredToDate,
@@ -151,14 +151,53 @@ public struct NewJSONEncoder {
         self.options = options
     }
     
-    public func encode(_ value: borrowing some JSONEncodable & ~Copyable) throws(CodingError.Encoding) -> Data {
+    internal func encode(_ value: borrowing some JSONEncodable & ~Copyable) throws(CodingError.Encoding) -> GrowableEncodingBytes {
         var rootNodeArray: InlineArray = [JSONDirectEncoder.CodingPathNode.root]
         var nodeSpan = rootNodeArray.mutableSpan
         return try nodeSpan.withUnsafeMutableBufferPointer { ptr throws(CodingError.Encoding) in
             var inner = JSONDirectEncoder(options: self.options, topCodingPathNode: ptr.baseAddress!)
             try value.encode(to: &inner)
-            return inner.takeData()
+            return inner.takeBytes()
         }
+    }
+    
+    internal func encode(_ value: borrowing some CommonEncodable & ~Copyable) throws(CodingError.Encoding) -> GrowableEncodingBytes {
+        var rootNodeArray: InlineArray = [JSONDirectEncoder.CodingPathNode.root]
+        var nodeSpan = rootNodeArray.mutableSpan
+        return try nodeSpan.withUnsafeMutableBufferPointer { ptr throws(CodingError.Encoding) in
+            var inner = JSONDirectEncoder(options: self.options, topCodingPathNode: ptr.baseAddress!)
+            try value.encode(to: &inner)
+            return inner.takeBytes()
+        }
+    }
+    
+    // TODO: Replace with a more desirable span-based interface 
+    public func encode<T: ~Copyable>(_ value: borrowing some JSONEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws -> T) throws -> T {
+        let bytes: GrowableEncodingBytes = try self.encode(value)
+        return try resultSpanClosure(bytes.span.bytes)
+    }
+    
+    public func encode<T: ~Copyable>(_ value: borrowing some JSONEncodable & CommonEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws -> T) throws -> T {
+        @_transparent func asJSON<TAsJSON: JSONEncodable & ~Copyable>(_ value: borrowing TAsJSON) throws -> T {
+            try self.encode(value, resultSpanClosure)
+        }
+        return try asJSON(value)
+    }
+    
+    public func encode<T: ~Copyable>(_ value: borrowing some CommonEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws -> T) throws -> T {
+        let bytes: GrowableEncodingBytes = try self.encode(value)
+        return try resultSpanClosure(bytes.span.bytes)
+    }
+}
+
+// TODO: Move to Foundation + JSON cross-module import.
+extension NewJSONEncoder {
+    public func encode(_ value: borrowing some JSONEncodable & ~Copyable) throws(CodingError.Encoding) -> Data {
+        let bytes: GrowableEncodingBytes = try self.encode(value)
+        
+        let (storage, count) = bytes.deconstruct()
+        guard let pointer = storage.baseAddress else { return Data() }
+        return Data(bytesNoCopy: pointer, count: count, deallocator: .custom({ptr, _ in ptr.deallocate() }))
     }
     
     public func encode(_ value: borrowing some JSONEncodable & CommonEncodable & ~Copyable) throws(CodingError.Encoding) -> Data {
@@ -169,13 +208,11 @@ public struct NewJSONEncoder {
     }
     
     public func encode(_ value: borrowing some CommonEncodable & ~Copyable) throws(CodingError.Encoding) -> Data {
-        var rootNodeArray: InlineArray = [JSONDirectEncoder.CodingPathNode.root]
-        var nodeSpan = rootNodeArray.mutableSpan
-        return try nodeSpan.withUnsafeMutableBufferPointer { ptr throws(CodingError.Encoding) in
-            var inner = JSONDirectEncoder(options: self.options, topCodingPathNode: ptr.baseAddress!)
-            try value.encode(to: &inner)
-            return inner.takeData()
-        }
+        let bytes: GrowableEncodingBytes = try self.encode(value)
+        
+        let (storage, count) = bytes.deconstruct()
+        guard let pointer = storage.baseAddress else { return Data() }
+        return Data(bytesNoCopy: pointer, count: count, deallocator: .custom({ptr, _ in ptr.deallocate() }))
     }
 }
 
@@ -286,10 +323,8 @@ public struct JSONDirectEncoder: CommonEncoder, ~Copyable, ~Escapable {
         self.state.currentTopCodingPathNode.pointee.printCodingPathAddrs()
     }
     
-    consuming func takeData() -> Data {
-        let (storage, count) = self.state.writer.data.deconstruct()
-        guard let pointer = storage.baseAddress else { return Data() }
-        return Data(bytesNoCopy: pointer, count: count, deallocator: .custom({ptr, _ in ptr.deallocate() }))
+    consuming func takeBytes() -> GrowableEncodingBytes {
+        return self.state.writer.data
     }
     
     public mutating func encodeNil() throws(CodingError.Encoding) {
