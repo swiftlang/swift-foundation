@@ -522,21 +522,21 @@ extension _FileManagerImpl {
     
     private func _extendedAttributes(at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> [String : Data]? {
         #if canImport(Darwin)
-        var size = listxattr(path, nil, 0, 0)
+        var size = listxattr(path, nil, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
         #elseif os(FreeBSD)
         var size = (followSymlinks ? extattr_list_file : extattr_list_link)(path, EXTATTR_NAMESPACE_USER, nil, 0)
         #else
-        var size = listxattr(path, nil, 0)
+        var size = followSymlinks ? listxattr(path, nil, 0) : llistxattr(path, nil, 0)
         #endif
         guard size > 0 else { return nil }
         let keyList = UnsafeMutableBufferPointer<CChar>.allocate(capacity: size)
         defer { keyList.deallocate() }
         #if canImport(Darwin)
-        size = listxattr(path, keyList.baseAddress!, size, 0)
+        size = listxattr(path, keyList.baseAddress!, size, followSymlinks ? 0 : XATTR_NOFOLLOW)
         #elseif os(FreeBSD)
-        size = (followSymlinks ? extattr_list_file : extattr_list_link)(path, EXTATTR_NAMESPACE_USER, nil, 0)
+        size = (followSymlinks ? extattr_list_file : extattr_list_link)(path, EXTATTR_NAMESPACE_USER, keyList.baseAddress!, size)
         #else
-        size = listxattr(path, keyList.baseAddress!, size)
+        size = followSymlinks ? listxattr(path, keyList.baseAddress!, size) : llistxattr(path, keyList.baseAddress!, size)
         #endif
         guard size > 0 else { return nil }
         
@@ -553,7 +553,7 @@ extension _FileManagerImpl {
             }
             #endif
             
-            if let value = try _extendedAttribute(current, at: path, followSymlinks: false) {
+            if let value = try _extendedAttribute(current, at: path, followSymlinks: followSymlinks) {
                 extendedAttrs[currentKey] = value
             }
         }
