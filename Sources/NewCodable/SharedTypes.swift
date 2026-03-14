@@ -205,12 +205,8 @@ public extension DecodingStringVisitor where Self: ~Copyable & ~Escapable {
         // TODO: watchOS/32-bit.
         return try visitUTF8Bytes(string.utf8Span)
     }
-    // TODO: Temporary compatibility
-    func visitUTF8Bytes(_ buffer: UnsafeBufferPointer<UInt8>) throws(CodingError.Decoding) -> DecodedValue {
-        let span = UTF8Span(unchecked: Span(_unsafeElements: buffer))
-        return try visitUTF8Bytes(span)
-    }
 }
+
 /// A type that will visit a collection of encoded bytes from a decoder to produce a decoded value.
 public protocol DecodingBytesVisitor: BaseDecodingVisitor & ~Copyable & ~Escapable {
     /// Produces a `DecodedValue` from the `RawSpan` encountered by the decoder

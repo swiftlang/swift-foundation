@@ -177,6 +177,15 @@ extension GrowableEncodingBytes {
         }
     }
     
+    public var span: Span<UInt8> {
+        @_lifetime(borrow self)
+//        @export(implementation)
+        @inline(__always)
+        get {
+            unsafe bytes._unsafeView(as: UInt8.self)
+        }
+    }
+    
     public var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
 //        @export(implementation)
