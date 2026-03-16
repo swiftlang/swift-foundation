@@ -12,6 +12,10 @@
 
 import Testing
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -2766,6 +2770,64 @@ extension DataTests {
             }
         }
     }
+
+    @Test func writingOptionsSetAlgebra() {
+        var elements: [Data.WritingOptions] = [
+            .atomic, .withoutOverwriting,
+            .noFileProtection, .completeFileProtection,
+            .completeFileProtectionUnlessOpen, .completeFileProtectionUntilFirstUserAuthentication,
+            .fileProtectionMask
+        ]
+#if FOUNDATION_FRAMEWORK && !os(macOS)
+        elements.append(.completeFileProtectionWhenUserInactive)
+#endif
+
+        Data.WritingOptions.validateConformance(
+            elements: elements,
+            groupings: [
+                [.atomic],
+                [.withoutOverwriting],
+                [.noFileProtection],
+                [.completeFileProtection],
+                [.completeFileProtectionUnlessOpen],
+                [.completeFileProtectionUntilFirstUserAuthentication],
+                [.noFileProtection, .atomic],
+                [.completeFileProtection, .atomic],
+                [.completeFileProtectionUnlessOpen, .withoutOverwriting],
+                [.completeFileProtectionUntilFirstUserAuthentication, .atomic],
+            ]
+        )
+
+        #expect(Data.WritingOptions.completeFileProtection.contains(.completeFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtection.contains(.noFileProtection))
+        #expect(!Data.WritingOptions.noFileProtection.contains(.completeFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtectionUnlessOpen.contains(.noFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtectionUnlessOpen.contains(.completeFileProtection))
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).contains(.completeFileProtection))
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).contains(.atomic))
+        #expect(!Data.WritingOptions([.completeFileProtection, .atomic]).contains(.noFileProtection))
+        #expect(!Data.WritingOptions([.completeFileProtection, .atomic]).contains(.withoutOverwriting))
+
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).intersection(.noFileProtection) == [])
+        #expect(Data.WritingOptions([.noFileProtection, .withoutOverwriting]).intersection(.noFileProtection) == .noFileProtection)
+        #expect(Data.WritingOptions.atomic.intersection(.fileProtectionMask) == [])
+
+        // Verify that remove() works correctly
+        var opts: Data.WritingOptions = [.completeFileProtection, .atomic]
+        let removed = opts.remove(.completeFileProtection)
+        #expect(removed == .completeFileProtection)
+        #expect(opts == .atomic)
+
+        var opts2: Data.WritingOptions = [.completeFileProtection, .atomic]
+        let notRemoved = opts2.remove(.noFileProtection)
+        #expect(notRemoved == nil)
+        #expect(opts2 == [.completeFileProtection, .atomic])
+
+        var opts3: Data.WritingOptions = [.noFileProtection, .atomic, .withoutOverwriting]
+        let removedOpts = opts3.remove(.atomic)
+        #expect(removedOpts == .atomic)
+        #expect(opts3 == [.noFileProtection, .withoutOverwriting])
+    }
 }
 
 #if FOUNDATION_FRAMEWORK // FIXME: Re-enable tests once range(of:) is implemented
@@ -3178,4 +3240,35 @@ private func capacity(_ data: consuming Data) -> Int {
     #else
     data._representation._storage.capacity
     #endif
+}
+
+// MARK: - WritingOptions SetAlgebra Tests
+
+extension Data.WritingOptions: TestableOptionSet {
+    public var _description: String {
+        let protectionPart = Self(rawValue: self.rawValue & Self.fileProtectionMask.rawValue)
+        let protectionString = switch protectionPart {
+        case .noFileProtection: "noProtection"
+        case .completeFileProtection: "complete"
+        case .completeFileProtectionUnlessOpen: "unlessOpen"
+        case .completeFileProtectionUntilFirstUserAuthentication: "untilFirstAuth"
+#if FOUNDATION_FRAMEWORK && !os(macOS)
+        case .completeFileProtectionWhenUserInactive: "whenUserInactive"
+#endif
+        case []: "<none>"
+        default: "unknown (0x\(String(protectionPart.rawValue, radix: 16)))"
+        }
+
+        var options = [String]()
+        if self.rawValue & Self.atomic.rawValue != 0 {
+            options.append("atomic")
+        }
+        if self.rawValue & Self.withoutOverwriting.rawValue != 0 {
+            options.append("withoutOverwriting")
+        }
+        if options.isEmpty {
+            options.append("<none>")
+        }
+        return "(protection: \(protectionString), options: \(options.joined(separator: ", ")))"
+    }
 }
