@@ -434,15 +434,7 @@ public struct JSONDirectEncoder: CommonEncoder, ~Copyable, ~Escapable {
     
     @_lifetime(self: copy self)
     public mutating func encodeBytes(_ bytes: [UInt8]) throws(CodingError.Encoding) {
-        fatalError("TODO: Disabled to allow the compiler to work??")
-//        do {
-//            try bytes.withUnsafeBytes { ptr throws(CodingError.Encoding) in
-//                try self.encodeBytes(ptr, count: ptr.count)
-//            }
-//        } catch {
-//            // TODO: Fix unsavory workaround
-//            throw error as! CodingError.Encoding
-//        }
+        try self.encodeBytes(bytes.span.bytes)
     }
     
     @_lifetime(self: copy self)
