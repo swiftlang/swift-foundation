@@ -113,12 +113,13 @@ public struct NewJSONDecoder {
         self.options = options
     }
     
+    // TODO: RawSpan-taking functions need to detect Unicode encoding (including BOM) and convert to UTF-8, if necessary.
     @usableFromInline
-    internal func _decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from data: Data, closure: (inout JSONParserDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
+    internal func _decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from bytes: RawSpan, closure: (inout JSONParserDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
         var node = JSONParserDecoder.CodingPathNode.root
         return try withUnsafeMutablePointer(to: &node) { ptr throws(CodingError.Decoding) in
             let localOptions = self.options
-            let parserState = JSONParserDecoder.ParserState(span: data.span.bytes, options: localOptions&, topCodingPathNode: ptr)
+            let parserState = JSONParserDecoder.ParserState(unvalidatedUTF8Span: bytes, options: localOptions&, topCodingPathNode: ptr)
             var inner = JSONParserDecoder(state: parserState)
             let result = try closure(&inner)
             try inner._finishDecode()
@@ -127,18 +128,18 @@ public struct NewJSONDecoder {
     }
     
     @inlinable
-    public func decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from data: Data) throws(CodingError.Decoding) -> T {
-        try _decode(type, from: data) { inner throws(CodingError.Decoding) in
+    public func decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from bytes: RawSpan) throws(CodingError.Decoding) -> T {
+        try _decode(type, from: bytes) { inner throws(CodingError.Decoding) in
             try inner.decode(type)
         }
     }
 
     @usableFromInline
-    internal func _decode<T: CommonDecodable>(_ type: T.Type, from data: Data, closure: (inout JSONParserDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
+    internal func _decode<T: CommonDecodable>(_ type: T.Type, from bytes: RawSpan, closure: (inout JSONParserDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
         var node = JSONParserDecoder.CodingPathNode.root
         return try withUnsafeMutablePointer(to: &node) { ptr throws(CodingError.Decoding) in
             let localOptions = self.options
-            let parserState = JSONParserDecoder.ParserState(span: data.span.bytes, options: localOptions&, topCodingPathNode: ptr)
+            let parserState = JSONParserDecoder.ParserState(unvalidatedUTF8Span: bytes, options: localOptions&, topCodingPathNode: ptr)
             var inner = JSONParserDecoder(state: parserState)
             let result = try closure(&inner)
             try inner._finishDecode()
@@ -148,10 +149,65 @@ public struct NewJSONDecoder {
 
     @_disfavoredOverload
     @inlinable
-    public func decode<T: CommonDecodable>(_ type: T.Type, from data: Data) throws(CodingError.Decoding) -> T {
-        try _decode(type, from: data) { parserDecoder throws(CodingError.Decoding) in
+    public func decode<T: CommonDecodable>(_ type: T.Type, from bytes: RawSpan) throws(CodingError.Decoding) -> T {
+        try _decode(type, from: bytes) { parserDecoder throws(CodingError.Decoding) in
             try parserDecoder.decode(type)
         }
+    }
+    
+    @usableFromInline
+    internal func _decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from utf8: UTF8Span, closure: (inout JSONParserDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
+        var node = JSONParserDecoder.CodingPathNode.root
+        return try withUnsafeMutablePointer(to: &node) { ptr throws(CodingError.Decoding) in
+            let localOptions = self.options
+            let parserState = JSONParserDecoder.ParserState(utf8: utf8, options: localOptions&, topCodingPathNode: ptr)
+            var inner = JSONParserDecoder(state: parserState)
+            let result = try closure(&inner)
+            try inner._finishDecode()
+            return result
+        }
+    }
+    
+    @inlinable
+    public func decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from utf8: UTF8Span) throws(CodingError.Decoding) -> T {
+        try _decode(type, from: utf8) { inner throws(CodingError.Decoding) in
+            try inner.decode(type)
+        }
+    }
+
+    @usableFromInline
+    internal func _decode<T: CommonDecodable>(_ type: T.Type, from utf8: UTF8Span, closure: (inout JSONParserDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
+        var node = JSONParserDecoder.CodingPathNode.root
+        return try withUnsafeMutablePointer(to: &node) { ptr throws(CodingError.Decoding) in
+            let localOptions = self.options
+            let parserState = JSONParserDecoder.ParserState(utf8: utf8, options: localOptions&, topCodingPathNode: ptr)
+            var inner = JSONParserDecoder(state: parserState)
+            let result = try closure(&inner)
+            try inner._finishDecode()
+            return result
+        }
+    }
+
+    @_disfavoredOverload
+    @inlinable
+    public func decode<T: CommonDecodable>(_ type: T.Type, from utf8: UTF8Span) throws(CodingError.Decoding) -> T {
+        try _decode(type, from: utf8) { parserDecoder throws(CodingError.Decoding) in
+            try parserDecoder.decode(type)
+        }
+    }
+}
+
+// TODO: Move to Foundation + JSON cross-module import.
+extension NewJSONDecoder {
+    @_alwaysEmitIntoClient
+    public func decode<T: JSONDecodable & ~Copyable>(_ type: T.Type, from data: Data) throws(CodingError.Decoding) -> T {
+        try self.decode(type, from: data.bytes)
+    }
+    
+    @_disfavoredOverload
+    @_alwaysEmitIntoClient
+    public func decode<T: CommonDecodable>(_ type: T.Type, from data: Data) throws(CodingError.Decoding) -> T {
+        try self.decode(type, from: data.bytes)
     }
 }
 
