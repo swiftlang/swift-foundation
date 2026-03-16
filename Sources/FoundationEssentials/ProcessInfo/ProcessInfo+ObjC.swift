@@ -14,14 +14,15 @@
 internal import _ForSwiftFoundation
 internal import MachO_Private.dyld
 internal import CoreFoundation_Private
+internal import Synchronization
 
 @objc(_NSSwiftProcessInfo)
 internal final class _NSSwiftProcessInfo: ProcessInfo, @unchecked Sendable {
 
     private static let _shared: _NSSwiftProcessInfo = _NSSwiftProcessInfo()
 
-    internal static let _globalState: LockedState<GlobalState> = .init(initialState: .init())
-    internal let _state: LockedState<State>
+    internal static let _globalState: Mutex<GlobalState> = .init(.init())
+    internal let _state: Mutex<State>
     private let _processInfo: _ProcessInfo
 
     override static var processInfo: ProcessInfo {
@@ -29,7 +30,7 @@ internal final class _NSSwiftProcessInfo: ProcessInfo, @unchecked Sendable {
     }
 
     override init() {
-        _state = .init(initialState: .init())
+        _state = .init(.init())
         _processInfo = _ProcessInfo.processInfo
         super.init()
     }

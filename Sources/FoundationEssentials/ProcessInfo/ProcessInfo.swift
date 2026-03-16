@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 internal import _FoundationCShims
+internal import Synchronization
 
 #if canImport(Darwin)
 import Darwin
@@ -32,16 +33,16 @@ import WinSDK
 final class _ProcessInfo: Sendable {
     static let processInfo: _ProcessInfo = _ProcessInfo()
 
-    private let state: LockedState<State>
+    private let state: Mutex<State>
     // Host name resolution CAN take infinite time,
     // so at the bare min do not share the lock with the
     // rest of the state
-    private let _hostName: LockedState<String?>
+    private let _hostName: Mutex<String?>
 
     internal init() {
         let state: State = State()
-        self.state = LockedState(initialState: state)
-        self._hostName = LockedState(initialState: nil)
+        self.state = Mutex(state)
+        self._hostName = Mutex(nil)
     }
 
     var arguments: [String] {

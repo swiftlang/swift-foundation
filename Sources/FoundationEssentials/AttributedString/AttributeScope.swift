@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import Synchronization
+
 // Developers can also add the attributes to pre-defined scopes of attributes, which are used to provide type information to the encoding and decoding of AttributedString values, as well as allow for dynamic member lookup in Runs of AttributedStrings.
 // Example, where ForegroundColor is an existing AttributedStringKey:
 // struct MyAttributes : AttributeScope {
@@ -121,7 +123,7 @@ fileprivate struct LoadedScopeCache : Sendable {
     }
 }
 
-fileprivate let _loadedScopeCache = LockedState(initialState: LoadedScopeCache())
+fileprivate let _loadedScopeCache = Mutex(LoadedScopeCache())
 
 extension AttributeScopes {
     @_spi(AttributedStringDefaultScopes)

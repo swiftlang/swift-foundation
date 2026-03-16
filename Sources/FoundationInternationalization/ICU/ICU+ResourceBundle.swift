@@ -17,9 +17,7 @@ internal import _FoundationICU
 import FoundationEssentials
 #endif
 
-#if canImport(Synchronization)
 internal import Synchronization
-#endif
 
 extension ICU {
 

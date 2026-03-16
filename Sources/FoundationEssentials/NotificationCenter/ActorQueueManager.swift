@@ -16,6 +16,8 @@ internal class _NotificationCenterActorQueueManagerNSObjectWrapper: NSObject, @u
 internal class _NotificationCenterActorQueueManagerNSObjectWrapper: @unchecked Sendable {}
 #endif
 
+internal import Synchronization
+
 #if FOUNDATION_FRAMEWORK
 @objc(_NotificationCenterActorQueueManager)
 #endif
@@ -26,7 +28,7 @@ internal final class _NotificationCenterActorQueueManager: _NotificationCenterAc
         var continuation: UnsafeContinuation<(@Sendable () async -> Void)?, Never>?
         var isCancelled: Bool = false
         
-        static func waitForWork(_ state: LockedState<State>) async -> (@Sendable () async -> Void)? {
+        static func waitForWork(_ state: borrowing Mutex<State>) async -> (@Sendable () async -> Void)? {
             return await withTaskCancellationHandler {
                 return await withUnsafeContinuation { continuation in
                     let (work, resumeContinuation) = state.withLock { state -> ((@Sendable () async -> Void)?, Bool) in
@@ -58,14 +60,22 @@ internal final class _NotificationCenterActorQueueManager: _NotificationCenterAc
         }
     }
     
-    let state: LockedState<State>
+    let stateRef: StateReference
     let workerTask: Task<(), Never>
-    
+
+    final class StateReference: Sendable {
+        let state: Mutex<State>
+
+        init(_ state: consuming Mutex<State>) {
+            self.state = state
+        }
+    }
+
     override init() {
-        state = LockedState(initialState: State())
-        workerTask = Task.detached { [state] in
+        stateRef = StateReference(Mutex(State()))
+        workerTask = Task.detached { [stateRef] in
             await withDiscardingTaskGroup { group in
-                while let work = await State.waitForWork(state) {
+                while let work = await State.waitForWork(stateRef.state) {
                     group.addTask(operation: work)
                 }
             }
@@ -78,7 +88,7 @@ internal final class _NotificationCenterActorQueueManager: _NotificationCenterAc
     }
     
     func enqueue(_ work: @escaping @Sendable () async -> Void) {
-        state.withLock { state in
+        stateRef.state.withLock { state in
             state.buffer.append(work)
             if let continuation = state.continuation {
                 state.continuation = nil

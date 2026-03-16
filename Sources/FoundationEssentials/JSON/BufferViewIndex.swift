@@ -24,6 +24,8 @@ internal struct BufferViewIndex<Element> {
     }
 }
 
+extension BufferViewIndex: @unchecked Sendable where Element: Sendable {}
+
 extension BufferViewIndex: Equatable {}
 
 extension BufferViewIndex: Hashable {}
@@ -48,6 +50,3 @@ extension BufferViewIndex: Comparable {
         lhs._rawValue < rhs._rawValue
     }
 }
-
-@available(*, unavailable)
-extension BufferViewIndex: Sendable {}
