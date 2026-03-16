@@ -120,6 +120,7 @@ extension GrowableEncodingBytes {
     }
     
     @usableFromInline
+    @inline(never)
     internal mutating func _grow(ensuringCapacity capacity: Int) {
         // TODO: Round/scale up to good value
         let newCapacity = capacity * 3 / 2
