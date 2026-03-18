@@ -58,7 +58,8 @@ extension ICU {
         }
 
         func lowercase(_ s: String) -> String? {
-            s.utf8CString.withUnsafeBufferPointer { srcBuf in
+            var s = s
+            return s.withUTF8 { srcBuf in
                 _withResizingCharBuffer { destBuf, destSize, status in
                     ucasemap_utf8ToLower(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
                 }
@@ -66,7 +67,8 @@ extension ICU {
         }
 
         func uppercase(_ s: String) -> String? {
-            s.utf8CString.withUnsafeBufferPointer { srcBuf in
+            var s = s
+            return s.withUTF8 { srcBuf in
                 _withResizingCharBuffer { destBuf, destSize, status in
                     ucasemap_utf8ToUpper(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
                 }
@@ -89,7 +91,8 @@ extension ICU {
         func titlecase(_ s: String) -> String? {
             // `ucasemap_utf8ToTitle` isn't thread-safe
             lock.withLock { _ in
-                s.utf8CString.withUnsafeBufferPointer { srcBuf in
+                var s = s
+                return s.withUTF8 { srcBuf in
                     _withResizingCharBuffer { destBuf, destSize, status in
                         ucasemap_utf8ToTitle(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
                     }
@@ -98,7 +101,8 @@ extension ICU {
         }
 
         func foldcase(_ s: String) -> String? {
-            s.utf8CString.withUnsafeBufferPointer { srcBuf in
+            var s = s
+            return s.withUTF8 { srcBuf in
                 _withResizingCharBuffer { destBuf, destSize, status in
                     ucasemap_utf8FoldCase(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
                 }
