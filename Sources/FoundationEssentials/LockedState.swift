@@ -39,8 +39,8 @@ package struct LockedState<State> {
         typealias Primitive = pthread_mutex_t
 #elseif canImport(WinSDK)
         typealias Primitive = SRWLOCK
-#elseif os(WASI)
-        // WASI is single-threaded, so we don't need a lock.
+#elseif os(WASI) || os(Emscripten)
+        // Single-threaded, so we don't need a lock.
         typealias Primitive = Void
 #endif
 
@@ -54,7 +54,7 @@ package struct LockedState<State> {
             pthread_mutex_init(platformLock, nil)
 #elseif canImport(WinSDK)
             InitializeSRWLock(platformLock)
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
             // no-op
 #else
 #error("LockedState._Lock.initialize is unimplemented on this platform")
@@ -75,7 +75,7 @@ package struct LockedState<State> {
             pthread_mutex_lock(platformLock)
 #elseif canImport(WinSDK)
             AcquireSRWLockExclusive(platformLock)
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
             // no-op
 #else
 #error("LockedState._Lock.lock is unimplemented on this platform")
@@ -89,7 +89,7 @@ package struct LockedState<State> {
             pthread_mutex_unlock(platformLock)
 #elseif canImport(WinSDK)
             ReleaseSRWLockExclusive(platformLock)
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
             // no-op
 #else
 #error("LockedState._Lock.unlock is unimplemented on this platform")
