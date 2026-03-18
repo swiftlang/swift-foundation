@@ -26,12 +26,38 @@ let benchmarks = {
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
     
     // MARK: UUID
-    
+
     Benchmark("UUIDEqual", configuration: .init(scalingFactor: .mega)) { benchmark in
         let u1 = UUID()
         let u2 = UUID()
         for _ in benchmark.scaledIterations {
             assert(u1 != u2)
+        }
+    }
+
+    Benchmark("UUIDCreate") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(UUID())
+        }
+    }
+
+    Benchmark("UUIDCreateTimeOrdered") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(UUID.timeOrdered())
+        }
+    }
+
+    Benchmark("UUIDString") { benchmark in
+        let uuid = UUID()
+        for _ in benchmark.scaledIterations {
+            blackHole(uuid.uuidString)
+        }
+    }
+
+    Benchmark("UUIDStringLower") { benchmark in
+        let uuid = UUID()
+        for _ in benchmark.scaledIterations {
+            blackHole(uuid.uuidStringLower)
         }
     }
 }

@@ -47,6 +47,24 @@ private struct UUIDTests {
         #expect(uuid.uuidString == "E621E1F8-C36C-495A-93FC-0C247A3E6E5F", "The uuidString representation must be uppercase.")
     }
 
+    @available(FoundationPreview 6.4, *)
+    @Test func uuidStringLower() {
+        let uuid = UUID(uuid: (0xe6,0x21,0xe1,0xf8,0xc3,0x6c,0x49,0x5a,0x93,0xfc,0x0c,0x24,0x7a,0x3e,0x6e,0x5f))
+        #expect(uuid.uuidStringLower == "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func uuidStringLowerMatchesUpperCaseContent() {
+        let uuid = UUID()
+        #expect(uuid.uuidStringLower == uuid.uuidString.lowercased())
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func uuidStringLowerNilAndMax() {
+        #expect(UUID.nil.uuidStringLower == "00000000-0000-0000-0000-000000000000")
+        #expect(UUID.max.uuidStringLower == "ffffffff-ffff-ffff-ffff-ffffffffffff")
+    }
+
     @Test func description() {
         let uuid = UUID()
         let description: String = uuid.description
@@ -132,6 +150,240 @@ private struct UUIDTests {
             let uuid = UUID.random(using: &generator)
             #expect(uuid.versionNumber == 0b0100)
             #expect(uuid.varint == 0b10)
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func nilUUID() {
+        let nilUUID = UUID.nil
+        #expect(nilUUID.uuidString == "00000000-0000-0000-0000-000000000000")
+        let s = nilUUID.span
+        for i in 0..<16 {
+            #expect(s[i] == 0)
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func maxUUID() {
+        let maxUUID = UUID.max
+        #expect(maxUUID.uuidString == "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")
+        let s = maxUUID.span
+        for i in 0..<16 {
+            #expect(s[i] == 0xFF)
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func nilAndMaxOrdering() {
+        let nilUUID = UUID.nil
+        let maxUUID = UUID.max
+        let randomUUID = UUID()
+        #expect(nilUUID < randomUUID)
+        #expect(randomUUID < maxUUID)
+        #expect(nilUUID < maxUUID)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func spanProperty() {
+        let uuid = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
+        let s = uuid.span
+        #expect(s.count == 16)
+        #expect(s[0] == 0xe6)
+        #expect(s[1] == 0x21)
+        #expect(s[6] == 0x49)
+        #expect(s[15] == 0x5f)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func spanMatchesUUIDBytes() {
+        let uuid = UUID()
+        let s = uuid.span
+        let t = uuid.uuid
+        #expect(s[0] == t.0)
+        #expect(s[1] == t.1)
+        #expect(s[6] == t.6)
+        #expect(s[8] == t.8)
+        #expect(s[15] == t.15)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func initializingWithOutputSpan() {
+        let uuid = UUID { (output: inout OutputSpan<UInt8>) in
+            for i: UInt8 in 0..<16 {
+                output.append(i)
+            }
+        }
+        let s = uuid.span
+        for i: UInt8 in 0..<16 {
+            #expect(s[Int(i)] == i)
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func initializingWithOutputSpanMatchesUUIDInit() {
+        let expected = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
+        let bytes: [UInt8] = [0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f]
+        let uuid = UUID { (output: inout OutputSpan<UInt8>) in
+            for b in bytes {
+                output.append(b)
+            }
+        }
+        #expect(uuid == expected)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func initFromSpan() {
+        let bytes: [UInt8] = [0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f]
+        let span = bytes.span
+        let uuid = UUID(copying: span)
+        let expected = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
+        #expect(uuid == expected)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func versionProperty() {
+        // UUID() creates v4
+        let v4 = UUID()
+        #expect(v4.version == .random)
+
+        // RFC 9562 Appendix A test vectors
+        // A.1: UUIDv1
+        let v1 = UUID(uuidString: "C232AB00-9414-11EC-B3C8-9F6BDECED846")!
+        #expect(v1.version == .timeBased)
+
+        // A.2: UUIDv3
+        let v3 = UUID(uuidString: "5df41881-3aed-3515-88a7-2f4a814cf09e")!
+        #expect(v3.version == .nameBasedMD5)
+
+        // A.3: UUIDv4
+        let v4rfc = UUID(uuidString: "919108f7-52d1-4320-9bac-f847db4148a8")!
+        #expect(v4rfc.version == .random)
+
+        // A.4: UUIDv5
+        let v5 = UUID(uuidString: "2ed6657d-e927-568b-95e1-2665a8aea6a2")!
+        #expect(v5.version == .nameBasedSHA1)
+
+        // A.5: UUIDv6
+        let v6 = UUID(uuidString: "1EC9414C-232A-6B00-B3C8-9F6BDECED846")!
+        #expect(v6.version == .reorderedTimeBased)
+
+        // A.6: UUIDv7
+        let v7 = UUID(uuidString: "017F22E2-79B0-7CC3-98C4-DC0C0C07398F")!
+        #expect(v7.version == .timeOrdered)
+
+        // B.1: UUIDv8
+        let v8 = UUID(uuidString: "2489E9AD-2EE2-8E00-8EC9-32D5F69181C0")!
+        #expect(v8.version == .custom)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedVersionAndVariant() {
+        for _ in 0..<10000 {
+            let uuid = UUID.timeOrdered()
+            #expect(uuid.versionNumber == 0b0111)
+            #expect(uuid.varint == 0b10)
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedUsingGeneratorVersionAndVariant() {
+        var generator = SystemRandomNumberGenerator()
+        for _ in 0..<10000 {
+            let uuid = UUID.timeOrdered(using: &generator)
+            #expect(uuid.versionNumber == 0b0111)
+            #expect(uuid.varint == 0b10)
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedUsingGeneratorTimestamp() throws {
+        var generator = SystemRandomNumberGenerator()
+        let before = Date()
+        let uuid = UUID.timeOrdered(using: &generator)
+        let after = Date()
+
+        let timestamp = try #require(uuid.timeOrderedTimestamp)
+        #expect(timestamp >= before.addingTimeInterval(-0.1))
+        #expect(timestamp <= after.addingTimeInterval(0.1))
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedUsingDeterministicGenerator() {
+        var gen1 = PCGRandomNumberGenerator(seed: 42)
+        var gen2 = PCGRandomNumberGenerator(seed: 42)
+        let uuid1 = UUID.timeOrdered(using: &gen1)
+        let uuid2 = UUID.timeOrdered(using: &gen2)
+        // Same seed at the same millisecond should produce the same random bits.
+        // The timestamps may differ slightly, so just check the random portions match.
+        // rand_a is the lower 12 bits of byte 6–7 (after version), rand_b is bytes 8–15 (after variant).
+        let s1 = uuid1.span
+        let s2 = uuid2.span
+        // Lower nibble of byte 6 + byte 7 = rand_a
+        #expect(s1[6] & 0x0F == s2[6] & 0x0F)
+        #expect(s1[7] == s2[7])
+        // Lower 6 bits of byte 8 + bytes 9–15 = rand_b
+        #expect(s1[8] & 0x3F == s2[8] & 0x3F)
+        for i in 9..<16 {
+            #expect(s1[i] == s2[i])
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedMonotonicity() async throws {
+        var previous = UUID.timeOrdered()
+        for _ in 0..<100 {
+            try await Task.sleep(for: .milliseconds(2))
+            let current = UUID.timeOrdered()
+            #expect(previous < current)
+            previous = current
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedTimestamp() throws {
+        let before = Date()
+        let uuid = UUID.timeOrdered()
+        let after = Date()
+
+        let timestamp = try #require(uuid.timeOrderedTimestamp)
+        #expect(timestamp >= before.addingTimeInterval(-0.1))
+        #expect(timestamp <= after.addingTimeInterval(0.1))
+    }
+
+    // RFC 9562 Appendix A.6: UUIDv7 test vector with known timestamp
+    // Tuesday, February 22, 2022 2:22:22.00 PM GMT-05:00 = 1645557742000 ms
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedTimestampRFCVector() throws {
+        let v7 = UUID(uuidString: "017F22E2-79B0-7CC3-98C4-DC0C0C07398F")!
+        let timestamp = try #require(v7.timeOrderedTimestamp)
+        let expected = Date(timeIntervalSince1970: 1645557742.0)
+        #expect(timestamp == expected)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedTimestampNilForV4() {
+        let uuid = UUID()
+        #expect(uuid.timeOrderedTimestamp == nil)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func versionRawValue() {
+        #expect(UUID.Version(rawValue: 1) == .timeBased)
+        #expect(UUID.Version(rawValue: 3) == .nameBasedMD5)
+        #expect(UUID.Version(rawValue: 4) == .random)
+        #expect(UUID.Version(rawValue: 5) == .nameBasedSHA1)
+        #expect(UUID.Version(rawValue: 6) == .reorderedTimeBased)
+        #expect(UUID.Version(rawValue: 7) == .timeOrdered)
+        #expect(UUID.Version(rawValue: 8) == .custom)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func versionForArbitraryBytes() {
+        for v: UInt8 in 0..<16 {
+            // Construct a UUID with the version nibble set to `v`
+            let byte6 = v << 4
+            let uuid = UUID(uuid: (0, 0, 0, 0, 0, 0, byte6, 0, 0x80, 0, 0, 0, 0, 0, 0, 0))
+            #expect(uuid.version.rawValue == v)
         }
     }
 
