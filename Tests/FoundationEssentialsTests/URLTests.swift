@@ -610,9 +610,17 @@ private struct URLTests {
 
         let base = URL(filePath: #"\d:\path\"#, directoryHint: .isDirectory)
         url = URL(filePath: #"%43:\fake\letter"#, directoryHint: .notDirectory, relativeTo: base)
-        // ":" is encoded to "%3A" in the first path segment so it's not mistaken as the scheme separator
-        #expect(url.relativeString == "%2543%3A/fake/letter")
-        #expect(url.path() == "/d:/path/%2543%3A/fake/letter")
+        if foundation_swift_url_v2_enabled() {
+            // More compatible with the old implementation recognizing that
+            // non-scheme characters like "%" cannot be interpreted as part
+            // of a scheme and must instead represent a relative path.
+            #expect(url.relativeString == "%2543:/fake/letter")
+            #expect(url.path() == "/d:/path/%2543:/fake/letter")
+        } else {
+            // ":" is encoded to "%3A" in the first path segment so it's not mistaken as the scheme separator
+            #expect(url.relativeString == "%2543%3A/fake/letter")
+            #expect(url.path() == "/d:/path/%2543%3A/fake/letter")
+        }
         #expect(url.path == "d:/path/%43:/fake/letter")
         #expect(url.fileSystemPath() == "d:/path/%43:/fake/letter")
 
@@ -936,7 +944,11 @@ private struct URLTests {
 
         relative = URL(filePath: "relative/..", relativeTo: absolute)
         #expect(relative.relativePath == "relative/..")
-        checkBehavior(relative.hasDirectoryPath, new: true, old: false)
+        if !foundation_swift_url_v2_enabled() {
+            checkBehavior(relative.hasDirectoryPath, new: true, old: false)
+        } else {
+            #expect(relative.hasDirectoryPath == false) // Compatible with old behavior
+        }
         #expect(relative.path == "/absolute")
 
         relative.deleteLastPathComponent()
@@ -1699,10 +1711,652 @@ private struct URLTests {
         #expect(comp.path == "/my\u{0}path")
     }
 
-    @Test func standardizedEmptyString() {
-        let url = URL(string: "../../../")!
-        let standardized = url.standardized
-        #expect(standardized.path().isEmpty)
+    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
+    func standardizedDotSegments() throws {
+        var standardized = try #require(URL(string: "../../../")).standardized
+        // URL should not remove leading dot segments until it's actually
+        // resolved against a base (longstanding CFURL behavior, too).
+        #expect(standardized.path() == "../../../")
+
+        let base = URL(filePath: "/base/directory/")
+        let relative = URL(filePath: "dev", relativeTo: base)
+        let combined = relative.appending(path: "../thing")
+        standardized = combined.standardized
+        let expected = URL(filePath: "thing", relativeTo: base)
+
+        #expect(standardized == expected)
+        #expect(standardized.relativeString == expected.relativeString)
+        #expect(standardized.relativeString == "thing")
+        #expect(standardized.path() == expected.path())
+        #expect(standardized.path() == "/base/directory/thing")
+        #expect(standardized.absoluteURL.path() == expected.absoluteURL.path())
+        #expect(standardized.absoluteURL.path() == "/base/directory/thing")
+    }
+
+    @Test func standardizedEdgeCases() throws {
+        // Empty path with empty authority standardizes to "/"
+        var url = try #require(URL(string: "https://"))
+        #expect(url.standardized.relativeString == "https:///")
+        #expect(url.standardized.path() == "/")
+
+        url = try #require(URL(string: "https://example.com/a/b/../c/./d"))
+        #expect(url.standardized.path() == "/a/c/d")
+
+        url = try #require(URL(string: "https://example.com/a/b/."))
+        #expect(url.standardized.path() == "/a/b/")
+
+        url = try #require(URL(string: "https://example.com/a/b/.."))
+        #expect(url.standardized.path() == "/a/")
+
+        if foundation_swift_url_v2_enabled() {
+            // Preserve leading dot segments until resolution (RFC 1808)
+            url = try #require(URL(string: "https://example.com/../../a"))
+            #expect(url.standardized.path() == "/../../a")
+
+            url = try #require(URL(string: "../../a/b"))
+            #expect(url.standardized.path() == "../../a/b")
+        }
+
+        #if FOUNDATION_FRAMEWORK
+        // Non-decomposable URL returns self
+        url = try #require(URL(string: "mailto:user@example.com"))
+        #expect(url.standardized.absoluteString == "mailto:user@example.com")
+        #endif
+    }
+
+    @Test func pathComponents() throws {
+        var url = URL(filePath: "/")
+        #expect(url.pathComponents == ["/"])
+
+        url = URL(filePath: "/file")
+        #expect(url.pathComponents == ["/", "file"])
+
+        url = URL(filePath: "/a/b/c")
+        #expect(url.pathComponents == ["/", "a", "b", "c"])
+
+        url = URL(filePath: "/a/b/", directoryHint: .isDirectory)
+        #expect(url.pathComponents == ["/", "a", "b"])
+
+        url = try #require(URL(string: "relative/path"))
+        #expect(url.pathComponents == ["relative", "path"])
+
+        url = try #require(URL(string: "file"))
+        #expect(url.pathComponents == ["file"])
+
+        url = try #require(URL(string: "https://example.com/a%20b/c"))
+        #expect(url.pathComponents == ["/", "a b", "c"])
+
+        // %2F is not treated as a path separator
+        url = try #require(URL(string: "https://example.com/a%2Fb"))
+        #expect(url.pathComponents == ["/", "a/b"])
+
+        url = try #require(URL(string: "https://example.com"))
+        #expect(url.pathComponents == [])
+
+        url = try #require(URL(string: "scheme:"))
+        #expect(url.pathComponents == [])
+
+        url = try #require(URL(string: "scheme:path/to/thing"))
+        #expect(url.pathComponents == ["path", "to", "thing"])
+
+        url = try #require(URL(string: "https://example.com/"))
+        #expect(url.pathComponents == ["/"])
+
+        // Dot segments are preserved (not resolved) without a base URL
+        url = try #require(URL(string: "https://example.com/a/./b/../c"))
+        #expect(url.pathComponents == ["/", "a", ".", "b", "..", "c"])
+
+        url = URL(filePath: "/a///b")
+        #expect(url.pathComponents == ["/", "a", "b"])
+
+        url = try #require(URL(string: "https://example.com/caf%C3%A9/na%C3%AFve"))
+        #expect(url.pathComponents == ["/", "café", "naïve"])
+
+        url = URL(filePath: "/path to/my file")
+        #expect(url.pathComponents == ["/", "path to", "my file"])
+
+        url = try #require(URL(string: "https://example.com/a/b?q=1#frag"))
+        #expect(url.pathComponents == ["/", "a", "b"])
+
+        // URL(filePath:) and URL(string:) with equivalent encoding produce the same result
+        url = URL(filePath: "/a b/c&d")
+        let urlFromString = try #require(URL(string: "file:///a%20b/c%26d"))
+        #expect(url.pathComponents == urlFromString.pathComponents)
+        #expect(url.pathComponents == ["/", "a b", "c&d"])
+
+        // %2F is decoded in pathComponents regardless of file scheme
+        url = try #require(URL(string: "file:///dir/a%2Fb"))
+        #expect(url.pathComponents == ["/", "dir", "a/b"])
+    }
+
+    @Test func pathComponentsRelativeToBase() throws {
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+
+        var url = URL(filePath: "file.txt", relativeTo: base)
+        #expect(url.pathComponents == ["/", "base", "dir", "file.txt"])
+
+        url = URL(filePath: "sub/file.txt", relativeTo: base)
+        #expect(url.pathComponents == ["/", "base", "dir", "sub", "file.txt"])
+
+        url = URL(filePath: "../file.txt", relativeTo: base)
+        #expect(url.pathComponents == ["/", "base", "file.txt"])
+
+        url = URL(filePath: "../../file.txt", relativeTo: base)
+        #expect(url.pathComponents == ["/", "file.txt"])
+
+        // ".." beyond root stops at root
+        url = URL(filePath: "../../../file.txt", relativeTo: base)
+        #expect(url.pathComponents == ["/", "file.txt"])
+
+        url = URL(filePath: "./file.txt", relativeTo: base)
+        #expect(url.pathComponents == ["/", "base", "dir", "file.txt"])
+
+        url = URL(filePath: "./sub/../file.txt", relativeTo: base)
+        #expect(url.pathComponents == ["/", "base", "dir", "file.txt"])
+
+        url = URL(filePath: "", relativeTo: base)
+        #expect(url.pathComponents == ["/", "base", "dir"])
+
+        let httpBase = try #require(URL(string: "https://example.com/a/b/"))
+        url = try #require(URL(string: "../c", relativeTo: httpBase))
+        #expect(url.pathComponents == ["/", "a", "c"])
+
+        url = try #require(URL(string: "../../c", relativeTo: httpBase))
+        #expect(url.pathComponents == ["/", "c"])
+
+        url = try #require(URL(string: "../../../c", relativeTo: httpBase))
+        #expect(url.pathComponents == ["/", "c"])
+
+        // Base without trailing slash resolves ".." relative to parent
+        let nonDirBase = try #require(URL(string: "https://example.com/a/b"))
+        url = try #require(URL(string: "../c", relativeTo: nonDirBase))
+        #expect(url.pathComponents == ["/", "c"])
+
+        url = try #require(URL(string: ".", relativeTo: nonDirBase))
+        #expect(url.pathComponents == ["/", "a"])
+    }
+
+    @Test func lastPathComponent() throws {
+        var url = URL(filePath: "/")
+        #expect(url.lastPathComponent == "/")
+
+        url = URL(filePath: "/file.txt")
+        #expect(url.lastPathComponent == "file.txt")
+
+        url = URL(filePath: "/a/b/c")
+        #expect(url.lastPathComponent == "c")
+
+        url = URL(filePath: "/a/b/", directoryHint: .isDirectory)
+        #expect(url.lastPathComponent == "b")
+
+        url = try #require(URL(string: "https://example.com"))
+        #expect(url.lastPathComponent == "")
+
+        url = try #require(URL(string: "https://example.com/"))
+        #expect(url.lastPathComponent == "/")
+
+        url = try #require(URL(string: "https://example.com/caf%C3%A9"))
+        #expect(url.lastPathComponent == "café")
+
+        // %2F is not treated as a path separator
+        url = try #require(URL(string: "https://example.com/a%2Fb"))
+        #expect(url.lastPathComponent == "a/b")
+
+        url = try #require(URL(string: "https://example.com/my%20file"))
+        #expect(url.lastPathComponent == "my file")
+
+        url = URL(filePath: "/path to/my file")
+        #expect(url.lastPathComponent == "my file")
+
+        url = URL(filePath: "/dir/.hidden")
+        #expect(url.lastPathComponent == ".hidden")
+
+        url = URL(filePath: "/dir/archive.tar.gz")
+        #expect(url.lastPathComponent == "archive.tar.gz")
+
+        url = try #require(URL(string: "https://example.com/a/."))
+        #expect(url.lastPathComponent == ".")
+
+        url = try #require(URL(string: "https://example.com/a/.."))
+        #expect(url.lastPathComponent == "..")
+
+        url = try #require(URL(string: "relative/path"))
+        #expect(url.lastPathComponent == "path")
+
+        url = try #require(URL(string: "file"))
+        #expect(url.lastPathComponent == "file")
+
+        url = try #require(URL(string: "scheme:path/to/thing"))
+        #expect(url.lastPathComponent == "thing")
+
+        // Query and fragment do not affect last path component
+        url = try #require(URL(string: "https://example.com/a/b?q=1#frag"))
+        #expect(url.lastPathComponent == "b")
+
+        url = URL(filePath: "/a///b")
+        #expect(url.lastPathComponent == "b")
+
+        url = try #require(URL(string: "https://example.com/%E4%B8%AD%E6%96%87"))
+        #expect(url.lastPathComponent == "中文")
+
+        // File URLs preserve %2F via posixPath exclusion mask
+        url = try #require(URL(string: "file:///dir/a%2Fb"))
+        #expect(url.lastPathComponent == "a%2Fb")
+
+        // Non-file URLs decode %2F
+        url = try #require(URL(string: "https://example.com/a%2Fb"))
+        #expect(url.lastPathComponent == "a/b")
+
+        // URL(filePath:) and URL(string:) with equivalent encoding produce the same result
+        url = URL(filePath: "/a b/c&d")
+        let urlFromString = try #require(URL(string: "file:///a%20b/c%26d"))
+        #expect(url.lastPathComponent == urlFromString.lastPathComponent)
+        #expect(url.lastPathComponent == "c&d")
+
+        url = try #require(URL(string: "scheme:plain"))
+        #expect(url.lastPathComponent == "plain")
+    }
+
+    @Test func lastPathComponentRelativeToBase() throws {
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+
+        var url = URL(filePath: "file.txt", relativeTo: base)
+        #expect(url.lastPathComponent == "file.txt")
+
+        url = URL(filePath: "../file.txt", relativeTo: base)
+        #expect(url.lastPathComponent == "file.txt")
+
+        url = URL(filePath: "../../file.txt", relativeTo: base)
+        #expect(url.lastPathComponent == "file.txt")
+
+        url = URL(filePath: "../../../file.txt", relativeTo: base)
+        #expect(url.lastPathComponent == "file.txt")
+
+        url = URL(filePath: "./sub/file.txt", relativeTo: base)
+        #expect(url.lastPathComponent == "file.txt")
+
+        url = URL(filePath: "", relativeTo: base)
+        #expect(url.lastPathComponent == "dir")
+
+        url = URL(filePath: "..", relativeTo: base)
+        #expect(url.lastPathComponent == "base")
+
+        url = URL(filePath: "../..", relativeTo: base)
+        #expect(url.lastPathComponent == "/")
+
+        let httpBase = try #require(URL(string: "https://example.com/a/b/"))
+        url = try #require(URL(string: "../c", relativeTo: httpBase))
+        #expect(url.lastPathComponent == "c")
+
+        url = try #require(URL(string: "..", relativeTo: httpBase))
+        #expect(url.lastPathComponent == "a")
+
+        let nonDirBase = try #require(URL(string: "https://example.com/a/b"))
+        url = try #require(URL(string: ".", relativeTo: nonDirBase))
+        #expect(url.lastPathComponent == "a")
+
+        url = try #require(URL(string: "../c", relativeTo: nonDirBase))
+        #expect(url.lastPathComponent == "c")
+    }
+
+    @Test func pathExtensionsContinued() throws {
+        var url = URL(filePath: "/file")
+        #expect(url.pathExtension == "")
+
+        url = URL(filePath: "/path/.hidden")
+        #expect(url.pathExtension == "")
+
+        url = URL(filePath: "/archive.tar.gz")
+        #expect(url.pathExtension == "gz")
+
+        url = URL(filePath: "/file.")
+        #expect(url.pathExtension == "")
+
+        url = URL(filePath: "/path/..")
+        #expect(url.pathExtension == "")
+
+        url = URL(filePath: "/path.ext/", directoryHint: .isDirectory)
+        #expect(url.pathExtension == "ext")
+
+        // Percent-encoded dot is decoded before dot search
+        url = try #require(URL(string: "https://example.com/file%2Etxt"))
+        #expect(url.pathExtension == "txt")
+
+        url = try #require(URL(string: "https://example.com/file.t%78t"))
+        #expect(url.pathExtension == "txt")
+
+        url = try #require(URL(string: "https://example.com/file.txt?q=1#frag"))
+        #expect(url.pathExtension == "txt")
+
+        url = try #require(URL(string: "relative/file.txt"))
+        #expect(url.pathExtension == "txt")
+
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+        url = URL(filePath: "file.txt", relativeTo: base)
+        #expect(url.pathExtension == "txt")
+
+        url = URL(filePath: "../file.txt", relativeTo: base)
+        #expect(url.pathExtension == "txt")
+
+        url = URL(filePath: "..", relativeTo: base)
+        #expect(url.pathExtension == "")
+
+        url = URL(filePath: "", relativeTo: base)
+        #expect(url.pathExtension == "")
+
+        // Empty path against base with extension picks up the base's extension
+        let extBase = URL(filePath: "/path/dir.framework/", directoryHint: .isDirectory)
+        url = URL(filePath: "", relativeTo: extBase)
+        #expect(url.pathExtension == "framework")
+
+        url = try #require(URL(string: "scheme:file.txt"))
+        #expect(url.pathExtension == "txt")
+
+        url = try #require(URL(string: "https://example.com"))
+        #expect(url.pathExtension == "")
+
+        url = try #require(URL(string: "https://example.com/"))
+        #expect(url.pathExtension == "")
+
+        // File URLs preserve %2F in path, so ".txt" appears
+        // as an extension and not as a hidden file.
+        url = try #require(URL(string: "file:///dir/name%2F.txt"))
+        #expect(url.pathExtension == "txt")
+
+        // Non-file URLs decode %2F, changing which component is "last"
+        url = try #require(URL(string: "https://example.com/name%2F.hidden"))
+        #expect(url.pathExtension == "")
+
+        url = try #require(URL(string: "https://example.com/name.txt%2Fother"))
+        #expect(url.pathExtension == "")
+    }
+
+    @Test func appendingPathExtension() throws {
+        var url = URL(filePath: "/file")
+
+        // Invalid extensions return self
+        #expect(url.appendingPathExtension("") == url)
+        #expect(url.appendingPathExtension("a/b") == url)
+        #expect(url.appendingPathExtension("ext.") == url)
+        if foundation_swift_url_v2_enabled() {
+            // v1 got this wrong and allowed invalid characters to be
+            // percent-encoded in the extension, which is problematic
+            // when they're decoded by a path method.
+            #expect(url.appendingPathExtension(" ") == url)
+            #expect(url.appendingPathExtension("a b") == url)
+            #expect(url.appendingPathExtension("x\u{202A}y") == url)
+            #expect(url.appendingPathExtension("x\u{202D}y") == url)
+            #expect(url.appendingPathExtension("x\u{2066}y") == url)
+        }
+
+        var extended = url.appendingPathExtension("tar.gz")
+        #expect(extended.pathExtension == "gz")
+
+        extended = url.appendingPathExtension("txt")
+        #expect(extended.path() == "/file.txt")
+
+        // Preserves trailing slash for directories
+        url = URL(filePath: "/dir/file", directoryHint: .isDirectory)
+        extended = url.appendingPathExtension("txt")
+        #expect(extended.path() == "/dir/file.txt/")
+
+        if foundation_swift_url_v2_enabled() {
+            // Don't append to a root-only path to prevent the path from
+            // being interpreted as having a special root prefix.
+            url = URL(filePath: "/")
+            #expect(url.appendingPathExtension("txt") == url)
+        }
+
+        // Empty path returns self
+        url = try #require(URL(string: "https://example.com"))
+        #expect(url.appendingPathExtension("txt") == url)
+
+        url = try #require(URL(string: "scheme:"))
+        #expect(url.appendingPathExtension("txt") == url)
+
+        // Preserves query and fragment
+        url = try #require(URL(string: "https://example.com/file?q=1#frag"))
+        extended = url.appendingPathExtension("txt")
+        #expect(extended.path() == "/file.txt")
+        #expect(extended.query() == "q=1")
+        #expect(extended.fragment() == "frag")
+
+        // Relative path with base
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+        url = URL(filePath: "file", relativeTo: base)
+        extended = url.appendingPathExtension("txt")
+        #expect(extended.relativePath == "file.txt")
+
+        url = try #require(URL(string: "scheme:file"))
+        extended = url.appendingPathExtension("txt")
+        #expect(extended.absoluteString == "scheme:file.txt")
+    }
+
+    @Test func deletingPathExtension() throws {
+        var url = URL(filePath: "/file.txt")
+        #expect(url.deletingPathExtension().path() == "/file")
+
+        url = URL(filePath: "/archive.tar.gz")
+        #expect(url.deletingPathExtension().path() == "/archive.tar")
+
+        url = URL(filePath: "/file")
+        #expect(url.deletingPathExtension() == url)
+
+        url = URL(filePath: "/path/.hidden")
+        #expect(url.deletingPathExtension() == url)
+
+        url = URL(filePath: "/file.")
+        #expect(url.deletingPathExtension() == url)
+
+        url = URL(filePath: "/path/..")
+        #expect(url.deletingPathExtension() == url)
+
+        url = try #require(URL(string: "https://example.com"))
+        #expect(url.deletingPathExtension() == url)
+
+        url = try #require(URL(string: "scheme:"))
+        #expect(url.deletingPathExtension() == url)
+
+        url = URL(filePath: "/")
+        #expect(url.deletingPathExtension() == url)
+
+        // Preserves trailing slash and hasDirectoryPath
+        url = URL(filePath: "/dir/file.txt/", directoryHint: .isDirectory)
+        #expect(url.deletingPathExtension().path() == "/dir/file/")
+        #expect(url.deletingPathExtension().hasDirectoryPath)
+
+        // Preserves query and fragment
+        url = try #require(URL(string: "https://example.com/file.txt?q=1#frag"))
+        var deleted = url.deletingPathExtension()
+        #expect(deleted.path() == "/file")
+        #expect(deleted.query() == "q=1")
+        #expect(deleted.fragment() == "frag")
+
+        url = try #require(URL(string: "https://example.com/a/b/file.txt"))
+        #expect(url.deletingPathExtension().path() == "/a/b/file")
+
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+        url = URL(filePath: "file.txt", relativeTo: base)
+        deleted = url.deletingPathExtension()
+        #expect(deleted.relativePath == "file")
+        #expect(deleted.path() == "/base/dir/file")
+
+        url = try #require(URL(string: "scheme:file.txt"))
+        #expect(url.deletingPathExtension().absoluteString == "scheme:file")
+
+        // Delete then append restores the extension
+        url = URL(filePath: "/path/file.txt")
+        deleted = url.deletingPathExtension()
+        let restored = deleted.appendingPathExtension("txt")
+        #expect(restored.path() == url.path())
+
+        // deletingPathExtension operates on the relative path only,
+        // so the base's extension should not be affected.
+        let extBase = URL(filePath: "/path/dir.framework/", directoryHint: .isDirectory)
+        url = URL(filePath: "./", relativeTo: extBase)
+        #expect(url.pathExtension == "framework") // From the absolute path
+        #expect(url.deletingPathExtension() == url)
+        #expect(url.deletingPathExtension().path() == "/path/dir.framework/")
+    }
+
+    @Test func hasDirectoryPathDotSegments() throws {
+        var url = try #require(URL(string: "https://example.com/."))
+        #expect(url.hasDirectoryPath)
+
+        url = try #require(URL(string: "https://example.com/.."))
+        #expect(url.hasDirectoryPath)
+
+        url = try #require(URL(string: "https://example.com/./"))
+        #expect(url.hasDirectoryPath)
+
+        url = try #require(URL(string: "https://example.com/../"))
+        #expect(url.hasDirectoryPath)
+    }
+
+    @Test func queryFragmentBaseURL() throws {
+        let base = try #require(URL(string: "https://example.com/path?baseQ=1#baseFrag"))
+
+        var url = try #require(URL(string: "#frag", relativeTo: base))
+        #expect(url.query() == "baseQ=1")
+        #expect(url.fragment() == "frag")
+
+        url = try #require(URL(string: "//other.com", relativeTo: base))
+        #expect(url.query() == nil)
+        #expect(url.fragment() == nil)
+
+        url = try #require(URL(string: "other", relativeTo: base))
+        #expect(url.query() == nil)
+        #expect(url.fragment() == nil)
+
+        url = try #require(URL(string: "?myQ=2", relativeTo: base))
+        #expect(url.query() == "myQ=2")
+        #expect(url.fragment() == nil)
+
+        url = try #require(URL(string: "?myQ=2#myFrag", relativeTo: base))
+        #expect(url.query() == "myQ=2")
+        #expect(url.fragment() == "myFrag")
+
+        url = try #require(URL(string: "?", relativeTo: base))
+        #expect(url.query() == "")
+        #expect(url.fragment() == nil)
+
+        url = try #require(URL(string: "?#frag", relativeTo: base))
+        #expect(url.query() == "")
+        #expect(url.fragment() == "frag")
+
+        url = try #require(URL(string: "#override", relativeTo: base))
+        #expect(url.query() == "baseQ=1")
+        #expect(url.fragment() == "override")
+
+        url = try #require(URL(string: "#", relativeTo: base))
+        #expect(url.query() == "baseQ=1")
+        #expect(url.fragment() == "")
+
+        let queryOnlyBase = try #require(URL(string: "https://example.com/path?baseQ=1"))
+        url = try #require(URL(string: "#frag", relativeTo: queryOnlyBase))
+        #expect(url.query() == "baseQ=1")
+        #expect(url.fragment() == "frag")
+
+        let plainBase = try #require(URL(string: "https://example.com/path"))
+        url = try #require(URL(string: "#frag", relativeTo: plainBase))
+        #expect(url.query() == nil)
+        #expect(url.fragment() == "frag")
+
+        let encodedBase = try #require(URL(string: "https://example.com/path?q=a%20b"))
+        url = try #require(URL(string: "#frag", relativeTo: encodedBase))
+        #expect(url.query() == "q=a%20b")
+        #expect(url.query(percentEncoded: false) == "q=a b")
+
+        url = try #require(URL(string: "//example.com?q=1", relativeTo: base))
+        #expect(url.query() == "q=1")
+        url = try #require(URL(string: "//example.com", relativeTo: base))
+        #expect(url.query() == nil)
+    }
+
+    @Test func standardizedFileURLAndResolvingSymlinks() async throws {
+        try await FilePlayground {
+            Directory("a") {
+                Directory("b") {
+                    "file.txt"
+                }
+                SymbolicLink("link", destination: "b/file.txt")
+            }
+        }.test {
+            let base = URL(filePath: $0.currentDirectoryPath, directoryHint: .isDirectory)
+            // standardizedFileURL and resolvingSymlinksInPath resolve
+            // symlinks like /private/var -> /var, so resolve basePath, too.
+            let basePath = base.standardizedFileURL.path()
+
+            var url = URL(filePath: "a/b/../b/file.txt", relativeTo: base)
+            var standardized = url.standardizedFileURL
+            #expect(standardized.path() == "\(basePath)a/b/file.txt")
+
+            url = URL(filePath: "a/b/../b/", directoryHint: .isDirectory)
+            standardized = url.standardizedFileURL
+            #expect(standardized.path() == "\(basePath)a/b/")
+            #expect(standardized.hasDirectoryPath)
+
+            url = base.appending(path: "a/link", directoryHint: .notDirectory)
+            let resolved = url.resolvingSymlinksInPath()
+            #expect(resolved.path() == "\(basePath)a/b/file.txt")
+        }
+
+        // Non-file URL returns self
+        let httpURL = try #require(URL(string: "https://example.com/../path"))
+        #expect(httpURL.standardizedFileURL.absoluteString == httpURL.absoluteString)
+        #expect(httpURL.resolvingSymlinksInPath().absoluteString == httpURL.absoluteString)
+    }
+
+    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
+    func dataRepresentationRoundTrip() throws {
+        // Empty data returns nil
+        #expect(URL(dataRepresentation: Data(), relativeTo: nil) == nil)
+
+        // Pure ASCII round-trips as UTF8
+        let asciiData = Data("https://example.com/path?q=v#frag".utf8)
+        let asciiURL = try #require(URL(dataRepresentation: asciiData, relativeTo: nil))
+        #expect(asciiURL.dataRepresentation == asciiData)
+        #expect(asciiURL.scheme == "https")
+        #expect(asciiURL.host() == "example.com")
+        #expect(asciiURL.path() == "/path")
+
+        // Valid UTF8 with non-ASCII characters round-trips as UTF8
+        let utf8Data = Data("https://example.com/caf\u{00E9}".utf8)
+        let utf8URL = try #require(URL(dataRepresentation: utf8Data, relativeTo: nil))
+        #expect(utf8URL.dataRepresentation == utf8Data)
+        #expect(utf8URL.path(percentEncoded: false) == "/café")
+
+        // ISOLatin1 data with non-ASCII bytes (0xE9 = é) fails UTF8
+        // decoding but succeeds as ISOLatin1. The non-ASCII bytes get
+        // percent-encoded as their UTF8 equivalents during parsing.
+        var latin1Data = Data("https://example.com/caf".utf8)
+        latin1Data.append(0xE9) // ISOLatin1 "é"
+        #expect(String(data: latin1Data, encoding: .utf8) == nil)
+        let latin1URL = try #require(URL(dataRepresentation: latin1Data, relativeTo: nil))
+        #expect(latin1URL.absoluteString == "https://example.com/caf%C3%A9")
+        #expect(latin1URL.path(percentEncoded: false) == "/café")
+        // dataRepresentation must round-trip using the original encoding
+        #expect(latin1URL.dataRepresentation == latin1Data)
+
+        // ISOLatin1 with multiple non-ASCII bytes
+        var multiLatin1 = Data("https://example.com/".utf8)
+        multiLatin1.append(contentsOf: [0xFC, 0x62, 0x65, 0x72]) // "über" in Latin1
+        let multiURL = try #require(URL(dataRepresentation: multiLatin1, relativeTo: nil))
+        #expect(multiURL.path(percentEncoded: false) == "/über")
+        #expect(multiURL.dataRepresentation == multiLatin1)
+
+        // Relative URL with base, ISOLatin1
+        var relativeLatin1 = Data("caf".utf8)
+        relativeLatin1.append(0xE9)
+        let base = try #require(URL(string: "https://example.com/dir/"))
+        let relativeURL = try #require(URL(dataRepresentation: relativeLatin1, relativeTo: base))
+        #expect(relativeURL.absoluteString == "https://example.com/dir/caf%C3%A9")
+        #expect(relativeURL.dataRepresentation == relativeLatin1)
+
+        // isAbsolute: true resolves against the base
+        let absoluteURL = try #require(URL(dataRepresentation: relativeLatin1, relativeTo: base, isAbsolute: true))
+        #expect(absoluteURL.baseURL == nil)
+        #expect(absoluteURL.absoluteString == "https://example.com/dir/caf%C3%A9")
     }
 
 #if FOUNDATION_FRAMEWORK

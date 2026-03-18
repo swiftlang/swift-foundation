@@ -51,6 +51,18 @@ internal func containsInvalidASCII<T: UnsignedInteger & FixedWidthInteger>(
     return false
 }
 
+// Don't allow percent-escape sequences when validating certain paths
+@inline(__always)
+internal func strictValidate(path: borrowing Span<UInt8>) -> Bool {
+    let allowedSet = URLComponentAllowedSet.path
+    for i in path.indices {
+        guard allowedSet.contains(path[i]) else {
+            return false
+        }
+    }
+    return true
+}
+
 private func isHexDigit<T: UnsignedInteger & FixedWidthInteger>(
     _ codeUnit: T
 ) -> Bool {
