@@ -1089,3 +1089,14 @@ extension Data : Codable {
         }
     }
 }
+
+
+extension Data {
+    @_alwaysEmitIntoClient
+    @inline(__always)
+    public static func + (_ lhs: Data, _ rhs: Data) -> Data {
+        var result = lhs
+        result.append(rhs)
+        return result
+    }
+}
