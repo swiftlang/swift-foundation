@@ -139,28 +139,30 @@ extension JSONParserDecoder {
         @inline(__always)
         @_lifetime(self: copy self)
         mutating func decodeFloatingPoint<T: BinaryFloatingPoint & PrevalidatedJSONNumberBufferConvertible>(_ t: T.Type) throws(CodingError.Decoding) -> T {
-            do {
+            do throws(_JSONDecodingError) {
                 guard let char = reader.peek() else {
-                    throw JSONError.unexpectedEndOfFile
+                    throw .json(JSONError.unexpectedEndOfFile)
                 }
                 
                 switch char {
                 case ._quote:
                     let policy = self.options[].nonConformingFloatDecodingStrategy
                     var decoder = JSONParserDecoder(state: self)
-                    let result = try decoder.decodeString(FloatingPointNonConformingStringValueVisitor<T>(policy: policy))
+                    let result = try decoder.decodeString(FloatingPointNonConformingStringValueVisitor<T>(policy: policy)) ^^ .decodingError
                     self.copyRelevantState(from: decoder.state)
                     return result
                 case ._minus, _asciiNumbers:
-                    return try reader.parseFloatingPoint(as: t)
+                    return try reader.parseFloatingPoint(as: t) ^^ .jsonError
                 default:
-                    throw decodingError(expectedTypeDescription: "floating point number")
+                    throw .decoding(decodingError(expectedTypeDescription: "floating point number"))
                 }
-            } catch let error as JSONError {
-                throw error.at(self.codingPath)
             } catch {
-                // TODO: Fix unsavory language workaround
-                throw error as! CodingError.Decoding
+                switch error {
+                case .json(let error):
+                    throw error.at(self.codingPath)
+                case .decoding(let error):
+                    throw error
+                }
             }
             
         }
@@ -172,28 +174,30 @@ extension JSONParserDecoder {
         @inline(__always)
         mutating func decode<T: FixedWidthInteger>() throws(CodingError.Decoding) -> T {
             // TODO: TEST NEGATIVE FLOATS HERE. I think `parseInteger` consumes the `-` and doesn't restore it on returning .retryAsFloatingPoint
-            do {
-                switch try reader.parseInteger(as: T.self) {
+            do throws(_JSONDecodingError) {
+                switch try reader.parseInteger(as: T.self) ^^ .jsonError {
                 case .pureInteger(let integer):
                     return integer
                 case .retryAsFloatingPoint:
                     // TODO: Slowpath? Lots of inlined code here.
-                    let double = try reader.parseFloatingPoint(as: Double.self)
+                    let double = try reader.parseFloatingPoint(as: Double.self) ^^ .jsonError
                     guard let integer = T(exactly: double) else {
                         // TODO: Include the parsed string? Explain we're trying to represent as an integer?
-                        throw JSONError.numberIsNotRepresentableInSwift(parsed: String(double))
+                        throw .json(JSONError.numberIsNotRepresentableInSwift(parsed: String(double)))
                     }
                     
                     // TODO: Classic JSONDecoder would retry Decimal -> integer parsing
                     return integer
                 case .notANumber:
-                    throw decodingError(expectedTypeDescription: "integer number")
+                    throw .decoding(decodingError(expectedTypeDescription: "integer number"))
                 }
-            } catch let error as JSONError {
-                throw error.at(self.codingPath)
             } catch {
-                // TODO: Fix unsavory language workaround
-                throw error as! CodingError.Decoding
+                switch error {
+                case .json(let error):
+                    throw error.at(self.codingPath)
+                case .decoding(let error):
+                    throw error
+                }
             }
         }
         
@@ -217,64 +221,70 @@ extension JSONParserDecoder {
         
         @_lifetime(self: copy self)
         mutating func decodeUnhintedNumberCommon<V: DecodingNumberVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing V, isNegative: Bool) throws(CodingError.Decoding) -> V.DecodedValue {
-            do {
+            do throws(_JSONDecodingError) {
                 // TODO: Consider constraining the visited integer type to the smallest that will fit it. Default visitor implementations would promote back to the largest implemented visitor.
                 if isNegative {
                     reader.moveReaderIndex(forwardBy: 1) // consume '-'
-                    if case let .pureInteger(integer) = try reader._parseIntegerDigits(isNegative: true) as DocumentReader.IntegerParseResult<Int64> {
-                        return try visitor.visit(integer)
+                    if case let .pureInteger(integer) = try reader._parseIntegerDigits(isNegative: true) as DocumentReader.IntegerParseResult<Int64> ^^ .jsonError {
+                        return try visitor.visit(integer) ^^ .decodingError
                     }
                     // retry as floating point, push back `-`
                     reader.moveReaderIndex(forwardBy: -1)
                 } else {
-                    if case let .pureInteger(integer) = try reader._parseIntegerDigits(isNegative: false) as DocumentReader.IntegerParseResult<UInt64> {
-                        return try visitor.visit(integer)
+                    if case let .pureInteger(integer) = try reader._parseIntegerDigits(isNegative: false) as DocumentReader.IntegerParseResult<UInt64> ^^ .jsonError {
+                        return try visitor.visit(integer) ^^ .decodingError
                     }
                 }
-                let double = try reader.parseFloatingPoint(as: Double.self)
-                return try visitor.visit(double)
-            } catch let error as JSONError {
-                throw error.at(self.codingPath)
+                let double = try reader.parseFloatingPoint(as: Double.self) ^^ .jsonError
+                return try visitor.visit(double) ^^ .decodingError
             } catch {
-                // TODO: Fix unsavory language workaround
-                throw error as! CodingError.Decoding
+                switch error {
+                case .json(let error):
+                    throw error.at(self.codingPath)
+                case .decoding(let error):
+                    throw error
+                }
             }
         }
         
         mutating func skipValue() throws(CodingError.Decoding) {
-            do {
-                let byte = try reader.consumeWhitespaceAndPeek()
+            do throws(_JSONDecodingError) {
+                let byte = try reader.consumeWhitespaceAndPeek() ^^ .jsonError
                 switch byte {
                 case ._quote:
-                    try skipString()
+                    try skipString() ^^ .jsonError
                 case ._openbrace:
                     // TODO: Restore depth checks
-                    var decoder = try JSONParserDecoder.StructDecoder(parserState: self, midContainer: false)
-                    _ = try BlackHoleVisitor().visit(decoder: &decoder)
-                    try decoder._finish()
+                    var decoder: JSONParserDecoder.StructDecoder
+                    do throws(JSONError) { decoder = try JSONParserDecoder.StructDecoder(parserState: self, midContainer: false) } catch { throw .json(error) }
+                    _ = try BlackHoleVisitor().visit(decoder: &decoder) ^^ .decodingError
+                    try decoder._finish() ^^ .decodingError
                     self = decoder.parserState
                 case ._openbracket:
                     // TODO: Restore depth checks
-                    var decoder = try JSONParserDecoder.ArrayDecoder(parserState: self, midContainer: false)
-                    _ = try BlackHoleVisitor().visit(decoder: &decoder)
-                    try decoder._finish()
+                    var decoder: JSONParserDecoder.ArrayDecoder
+                    do throws(JSONError) { decoder = try JSONParserDecoder.ArrayDecoder(parserState: self, midContainer: false) } catch { throw .json(error) }
+                    _ = try BlackHoleVisitor().visit(decoder: &decoder) ^^ .decodingError
+                    try decoder._finish() ^^ .decodingError
                     self = decoder.innerParser.state
                 case UInt8(ascii: "f"), UInt8(ascii: "t"):
-                    _ = try reader.readBool()
+                    _ = try reader.readBool() ^^ .jsonError
                 case UInt8(ascii: "n"):
-                    try reader.readNull()
+                    try reader.readNull() ^^ .jsonError
                 case UInt8(ascii: "-"), _asciiNumbers:
                     reader.skipNumber()
                 case ._space, ._return, ._newline, ._tab:
                     assertionFailure("Expected that all white space is consumed")
                 default:
-                    throw JSONError.unexpectedCharacter(ascii: byte, location: reader.sourceLocation)
+                    throw .json(JSONError.unexpectedCharacter(ascii: byte, location: reader.sourceLocation))
                 }
-            } catch let error as JSONError {
-                throw error.at(self.codingPath)
             } catch {
-                // TODO: Fix unsavory language workaround
-                throw error as! CodingError.Decoding
+                switch error {
+                case .json(let error):
+                    throw error.at(self.codingPath)
+                case .decoding(let error):
+                    throw error
+                }
             }
         }
 
@@ -916,9 +926,10 @@ extension JSONParserDecoder {
                 }
             }
 
+            // Because this returns a ~Escapable type, throws _JSONDecodingError to improve ergonomics at the callsite.
             @usableFromInline
             @_lifetime(copy self)
-            mutating func parsedStringContentAndTrailingQuote() throws(JSONError) -> ParsedString {
+            mutating func parsedStringContentAndTrailingQuote() throws(_JSONDecodingError) -> ParsedString {
                 // Assume easy path first -- no escapes, no characters requiring escapes.
                 let startIndex = self.readOffset
                 var foundEndOfString = false
@@ -926,11 +937,11 @@ extension JSONParserDecoder {
 
                 ReadLoop:
                 while true {
-                    let byte = try skipUTF8StringTillQuoteOrBackslashOrInvalidCharacter()
+                    let byte = try skipUTF8StringTillQuoteOrBackslashOrInvalidCharacter() ^^ .jsonError
                     guard _fastPath(byte & 0xe0 != 0) else {
                         // TODO: Wrong index.
                         // TODO: This doesn't work any more, since the offsets don't translate.
-                        throw JSONError.unescapedControlCharacterInString(ascii: byte, location: .countingLinesAndColumns(upTo: readOffset, in: bytes))
+                        throw .json(.unescapedControlCharacterInString(ascii: byte, location: .countingLinesAndColumns(upTo: readOffset, in: bytes)))
                     }
                     switch byte {
                     case ._backslash:
@@ -955,7 +966,7 @@ extension JSONParserDecoder {
                     }
                 } catch {
                     // TODO: This source location doesn't work any more.
-                    throw .cannotConvertInputStringDataToUTF8(location: .countingLinesAndColumns(upTo: startIndex, in: bytes))
+                    throw .json(.cannotConvertInputStringDataToUTF8(location: .countingLinesAndColumns(upTo: startIndex, in: bytes)))
                 }
                 
                 if foundEndOfString {
@@ -964,15 +975,15 @@ extension JSONParserDecoder {
                 }
                 
                 guard foundBackslash else {
-                    throw .unexpectedEndOfFile
+                    throw .json(.unexpectedEndOfFile)
                 }
                 
                 let firstStringChunk = String(copying: firstSectionUTF8Span)
                 var buffer = UniqueArray<UInt8>()
 
                 // Parse the escape sequence, then keep looping.
-                try _parseEscapeSequence(into: &buffer)
-                try _slowpath_continueParsingString(into: &buffer)
+                try _parseEscapeSequence(into: &buffer) ^^ .jsonError
+                try _slowpath_continueParsingString(into: &buffer) ^^ .jsonError
 
                 do {
                     // TODO: Creation of the String should be deferred until we know that the DecodingField or DecodingStringVisitor client wants a `String`. We could easily just give them the UTF8Span (or byte span?) instead.
@@ -989,7 +1000,7 @@ extension JSONParserDecoder {
                     return .string(output, fullContentsSpan)
                 } catch {
                     // TODO: This source location doesn't work any more.
-                    throw .cannotConvertInputStringDataToUTF8(location: .countingLinesAndColumns(upTo: startIndex, in: bytes))
+                    throw .json(.cannotConvertInputStringDataToUTF8(location: .countingLinesAndColumns(upTo: startIndex, in: bytes)))
 
                 }
             }
