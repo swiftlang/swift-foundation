@@ -582,13 +582,15 @@ extension JSONPrimitiveDecoder {
     }
     
     func decodeUnhintedNumberCommon<V: DecodingNumberVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing V, number: JSONPrimitive.Number) throws(CodingError.Decoding) -> V.DecodedValue {
-        do {
+        do throws(_JSONDecodingError) {
             return try number.visit(visitor)
-        } catch let error as JSONError {
-            throw error.at(self.codingPath)
         } catch {
-            // TODO: Fix unsavory language workaround
-            throw error as! CodingError.Decoding
+            switch error {
+            case .json(let error):
+                throw error.at(self.codingPath)
+            case .decoding(let error):
+                throw error
+            }
         }
     }
     
@@ -759,26 +761,28 @@ extension JSONPrimitiveDecoder: CommonDecoder {
     
     
     public mutating func decodeBytes<V: DecodingBytesVisitor>(visitor: V) throws(CodingError.Decoding) -> V.DecodedValue {
-        do {
+        do throws(_JSONDecodingError) {
             // TODO: Respect data decoding options?
             switch self.value {
             case .string(let string):
                 var iterator = JSONBase64ByteIterator(iterator: JSONPrimitiveStringByteIterator(string: string))
-                let result = try visitor.visitBytes(&iterator)
-                try iterator.finish()
+                let result = try visitor.visitBytes(&iterator) ^^ .decodingError
+                try iterator.finish() ^^ .jsonError
                 return result
             case .array(let array):
                 var iterator = JSONPrimitiveArrayByteIterator(iterator: array.makeIterator())
-                let result = try visitor.visitBytes(&iterator)
+                let result = try visitor.visitBytes(&iterator) ^^ .decodingError
                 return result
             default:
-                throw self.value.typeMismatchError(expectedTypeDescription: "base64 string or byte array", at: self.codingPath)
+                throw .decoding(self.value.typeMismatchError(expectedTypeDescription: "base64 string or byte array", at: self.codingPath))
             }
-        } catch let error as JSONError {
-            throw error.at(self.codingPath)
         } catch {
-            // TODO: Fix unsavory language workaround
-            throw error as! CodingError.Decoding
+            switch error {
+            case .json(let error):
+                throw error.at(self.codingPath)
+            case .decoding(let error):
+                throw error
+            }
         }
     }
     
