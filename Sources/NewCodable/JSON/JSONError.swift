@@ -172,3 +172,55 @@ extension JSONError {
         }
     }
 }
+
+// MARK: - Mixed Error Handling
+
+// A typed union of the two error types that can be thrown during JSON decoding.
+// This avoids the need for `any Error` existential catch blocks.
+@frozen @usableFromInline
+enum _JSONDecodingError: Error {
+    case json(JSONError)
+    case decoding(CodingError.Decoding)
+}
+
+// Tag types for the `^^` operator. These allow syntax like `try expr ^^ .decodingError`
+// by giving the compiler a concrete enum type to resolve the shorthand member
+// expression against. This is a little more ergonomic than `try expr ^^ CodingError.Decoding.self`
+// Ideally `^^` would be a postfix unary operator with the throws(X) type of the
+// autoclosure used to disambiguate overloads, but that currently isn't implemented
+// by the language.
+@frozen @usableFromInline enum _LiftJSON { case jsonError }
+@frozen @usableFromInline enum _LiftCoding { case decodingError }
+
+// Operator for lifting typed-throw expressions into _JSONDecodingError.
+// Uses CastingPrecedence (same as `as`/`is`) because `^^` is semantically
+// behaving as a cast for the error type.
+infix operator ^^: CastingPrecedence
+
+// Lifts a `JSONError`-throwing expression into `_JSONDecodingError`.
+// Usage: `try expr ^^ .jsonError`
+@inlinable @inline(__always)
+func ^^ <T: ~Copyable>(
+    _ body: @autoclosure () throws(JSONError) -> T,
+    _ tag: _LiftJSON
+) throws(_JSONDecodingError) -> T {
+    do throws(JSONError) {
+        return try body()
+    } catch {
+        throw .json(error)
+    }
+}
+
+// Lifts a `CodingError.Decoding`-throwing expression into `_JSONDecodingError`.
+// Usage: `try expr ^^ .decodingError`
+@inlinable @inline(__always)
+func ^^ <T: ~Copyable>(
+    _ body: @autoclosure () throws(CodingError.Decoding) -> T,
+    _ tag: _LiftCoding
+) throws(_JSONDecodingError) -> T {
+    do throws(CodingError.Decoding) {
+        return try body()
+    } catch {
+        throw .decoding(error)
+    }
+}

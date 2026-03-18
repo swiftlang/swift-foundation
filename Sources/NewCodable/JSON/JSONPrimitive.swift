@@ -72,7 +72,7 @@ public enum JSONPrimitive {
             }
         }
         
-        internal func visit<Visitor: DecodingNumberVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing Visitor) throws -> Visitor.DecodedValue {
+        internal func visit<Visitor: DecodingNumberVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing Visitor) throws(_JSONDecodingError) -> Visitor.DecodedValue {
             // TODO: Consider constraining the visited integer type to the smallest that will fit it. Default visitor implementations would promote back to the largest implemented visitor.
 
             // TODO: We probably need to convert these errors to something else because it will present information like SourceLocation. What even is the type of the error?
@@ -82,17 +82,17 @@ public enum JSONPrimitive {
             // TODO: Copied from ParserState. Creating one requires faking more than we really need to.
             // TODO: TEST NEGATIVE FLOATS HERE. I think `parseInteger` consumes the `-` and doesn't restore it on returning .retryAsFloatingPoint
             if self.isNegative {
-                if case let .pureInteger(integer) = try reader.parseInteger(as: Int64.self) {
-                    return try visitor.visit(integer)
+                if case let .pureInteger(integer) = try reader.parseInteger(as: Int64.self) ^^ .jsonError {
+                    return try visitor.visit(integer) ^^ .decodingError
                 }
                 // fall through to Double
             } else {
-                if case let .pureInteger(integer) = try reader.parseInteger(as: UInt64.self) {
-                    return try visitor.visit(integer)
+                if case let .pureInteger(integer) = try reader.parseInteger(as: UInt64.self) ^^ .jsonError {
+                    return try visitor.visit(integer) ^^ .decodingError
                 }
             }
-            let double = try reader.parseFloatingPoint(as: Double.self)
-            return try visitor.visit(double)
+            let double = try reader.parseFloatingPoint(as: Double.self) ^^ .jsonError
+            return try visitor.visit(double) ^^ .decodingError
         }
 
         // TODO: Name: `full(Available)PrecisionRepresentation` ? 
