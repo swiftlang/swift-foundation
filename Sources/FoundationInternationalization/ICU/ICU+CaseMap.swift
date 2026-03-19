@@ -60,8 +60,10 @@ extension ICU {
         func lowercase(_ s: String) -> String? {
             var s = s
             return s.withUTF8 { srcBuf in
-                _withResizingCharBuffer { destBuf, destSize, status in
-                    ucasemap_utf8ToLower(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                    _withResizingCharBuffer { destBuf, destSize, status in
+                        ucasemap_utf8ToLower(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                    }
                 }
             }
         }
@@ -69,8 +71,10 @@ extension ICU {
         func uppercase(_ s: String) -> String? {
             var s = s
             return s.withUTF8 { srcBuf in
-                _withResizingCharBuffer { destBuf, destSize, status in
-                    ucasemap_utf8ToUpper(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                    _withResizingCharBuffer { destBuf, destSize, status in
+                        ucasemap_utf8ToUpper(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                    }
                 }
             }
         }
@@ -79,9 +83,11 @@ extension ICU {
             lock.withLock { _ in
                 var s = s
                 return s.withUTF8 { srcBuf in
-                    srcBuf.withMemoryRebound(to: CChar.self) { buffer in
-                        _withResizingCharBuffer { destBuf, destSize, status in
-                            ucasemap_utf8ToTitle(casemap, destBuf, destSize, buffer.baseAddress!, Int32(buffer.count), &status)
+                    srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                        srcBuf.withMemoryRebound(to: CChar.self) { buffer in
+                            _withResizingCharBuffer { destBuf, destSize, status in
+                                ucasemap_utf8ToTitle(casemap, destBuf, destSize, buffer.baseAddress!, Int32(buffer.count), &status)
+                            }
                         }
                     }
                 }
@@ -93,8 +99,10 @@ extension ICU {
             lock.withLock { _ in
                 var s = s
                 return s.withUTF8 { srcBuf in
-                    _withResizingCharBuffer { destBuf, destSize, status in
-                        ucasemap_utf8ToTitle(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                    srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                        _withResizingCharBuffer { destBuf, destSize, status in
+                            ucasemap_utf8ToTitle(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                        }
                     }
                 }
             }
@@ -103,8 +111,10 @@ extension ICU {
         func foldcase(_ s: String) -> String? {
             var s = s
             return s.withUTF8 { srcBuf in
-                _withResizingCharBuffer { destBuf, destSize, status in
-                    ucasemap_utf8FoldCase(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                    _withResizingCharBuffer { destBuf, destSize, status in
+                        ucasemap_utf8FoldCase(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                    }
                 }
             }
         }
