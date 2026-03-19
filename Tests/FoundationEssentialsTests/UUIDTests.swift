@@ -333,23 +333,38 @@ private struct UUIDTests {
 
     @available(FoundationPreview 6.4, *)
     @Test func timeOrderedUsingDeterministicGenerator() {
+        let fixedDate = Date(timeIntervalSince1970: 1645557742.0) // RFC 9562 A.6 timestamp
         var gen1 = PCGRandomNumberGenerator(seed: 42)
         var gen2 = PCGRandomNumberGenerator(seed: 42)
-        let uuid1 = UUID.timeOrdered(using: &gen1)
-        let uuid2 = UUID.timeOrdered(using: &gen2)
-        // Same seed at the same millisecond should produce the same random bits.
-        // The timestamps may differ slightly, so just check the random portions match.
-        // rand_a is the lower 12 bits of byte 6–7 (after version), rand_b is bytes 8–15 (after variant).
-        let s1 = uuid1.span
-        let s2 = uuid2.span
-        // Lower nibble of byte 6 + byte 7 = rand_a
-        #expect(s1[6] & 0x0F == s2[6] & 0x0F)
-        #expect(s1[7] == s2[7])
-        // Lower 6 bits of byte 8 + bytes 9–15 = rand_b
-        #expect(s1[8] & 0x3F == s2[8] & 0x3F)
-        for i in 9..<16 {
-            #expect(s1[i] == s2[i])
-        }
+        let uuid1 = UUID.timeOrdered(using: &gen1, at: fixedDate)
+        let uuid2 = UUID.timeOrdered(using: &gen2, at: fixedDate)
+        // Same seed and same date produces identical UUIDs
+        #expect(uuid1 == uuid2)
+        // Verify the timestamp round-trips
+        #expect(uuid1.timeOrderedTimestamp == fixedDate)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedDifferentSeedsSameDate() {
+        let fixedDate = Date(timeIntervalSince1970: 1645557742.0)
+        var gen1 = PCGRandomNumberGenerator(seed: 42)
+        var gen2 = PCGRandomNumberGenerator(seed: 99)
+        let uuid1 = UUID.timeOrdered(using: &gen1, at: fixedDate)
+        let uuid2 = UUID.timeOrdered(using: &gen2, at: fixedDate)
+        // Same date but different seeds produces different UUIDs
+        #expect(uuid1 != uuid2)
+        // Both should still have the same timestamp
+        #expect(uuid1.timeOrderedTimestamp == uuid2.timeOrderedTimestamp)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedAtSpecificDate() throws {
+        let date = Date(timeIntervalSince1970: 1000.0)
+        var generator = SystemRandomNumberGenerator()
+        let uuid = UUID.timeOrdered(using: &generator, at: date)
+        let timestamp = try #require(uuid.timeOrderedTimestamp)
+        #expect(timestamp == date)
+        #expect(uuid.version == .timeOrdered)
     }
 
     @available(FoundationPreview 6.4, *)

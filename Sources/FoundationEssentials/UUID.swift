@@ -353,9 +353,10 @@ extension UUID {
     ///   when creating the random portions of the UUID.
     /// - Returns: A version 7 UUID.
     public static func timeOrdered(
-        using generator: inout some RandomNumberGenerator
+        using generator: inout some RandomNumberGenerator,
+        at date: Date? = nil
     ) -> UUID {
-        let now = Date()
+        let now = date ?? Date.now
         let rawMS = now.timeIntervalSince1970 * 1000.0
         // Clamp to the 48-bit unsigned range (0 ... 0xFFFF_FFFF_FFFF).
         // Below 0 corresponds to dates before 1970-01-01.
