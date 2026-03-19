@@ -144,7 +144,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 
     /// Returns a lowercase string created from the UUID, such as "e621e1f8-c36c-495a-93fc-0c247a3e6e5f"
     @available(FoundationPreview 6.4, *)
-    public var uuidStringLower: String {
+    public var lowercasedUUIDString: String {
         String(unsafeUninitializedCapacity: 36) { buffer in
             _unparse(into: buffer, hexTable: UUID._lowerHex)
         }

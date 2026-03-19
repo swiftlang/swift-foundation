@@ -57,7 +57,7 @@ let benchmarks = {
     Benchmark("UUIDStringLower") { benchmark in
         let uuid = UUID()
         for _ in benchmark.scaledIterations {
-            blackHole(uuid.uuidStringLower)
+            blackHole(uuid.lowercasedUUIDString)
         }
     }
 }
