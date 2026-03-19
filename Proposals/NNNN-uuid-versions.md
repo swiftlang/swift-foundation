@@ -208,14 +208,17 @@ extension UUID {
     ///
     /// - Parameter generator: The random number generator to use
     ///   when creating the random portions of the UUID.
+    /// - Parameter date: The date to encode in the timestamp field.
+    ///   If `nil`, the current date is used.
     /// - Returns: A version 7 UUID.
     public static func timeOrdered(
-        using generator: inout some RandomNumberGenerator
+        using generator: inout some RandomNumberGenerator,
+        at date: Date? = nil
     ) -> UUID
 }
 ```
 
-The resulting UUID contains a millisecond-precision Unix timestamp in bits 0–47, with version and variant fields set per RFC 9562. The remaining bits are filled using the system random number generator (for `timeOrdered()`) or the provided generator (for `timeOrdered(using:)`). The `timeOrdered()` convenience delegates to `timeOrdered(using:)` with a `SystemRandomNumberGenerator`.
+The resulting UUID contains a millisecond-precision Unix timestamp in bits 0–47, with version and variant fields set per RFC 9562. The remaining bits are filled using the system random number generator (for `timeOrdered()`) or the provided generator (for `timeOrdered(using:at:)`). The `timeOrdered()` convenience delegates to `timeOrdered(using:)` with a `SystemRandomNumberGenerator`. The optional `date` parameter allows embedding a specific timestamp rather than the current time.
 
 ### Extracting the timestamp
 
