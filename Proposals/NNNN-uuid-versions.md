@@ -78,11 +78,11 @@ The nil UUID (`00000000-0000-0000-0000-000000000000`) and max UUID (`FFFFFFFF-FF
 extension UUID {
     /// Returns a lowercase string created from the UUID, such as
     /// "e621e1f8-c36c-495a-93fc-0c247a3e6e5f".
-    public var uuidStringLower: String { get }
+    public var lowercasedUUIDString: String { get }
 }
 ```
 
-The existing `uuidString` property returns an uppercase representation. Many systems — including web APIs, databases, and URN formatting (RFC 4122 §3) — conventionally use lowercase UUIDs. `uuidStringLower` avoids the need to call `uuidString.lowercased()`, which allocates an intermediate `String`.
+The existing `uuidString` property returns an uppercase representation. Many systems — including web APIs, databases, and URN formatting (RFC 4122 §3) — conventionally use lowercase UUIDs. `lowercasedUUIDString` avoids the need to call `uuidString.lowercased()`, which allocates an intermediate `String`.
 
 ### `span` property
 

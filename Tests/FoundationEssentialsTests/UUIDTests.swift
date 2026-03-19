@@ -48,21 +48,21 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func uuidStringLower() {
+    @Test func lowercasedUUIDString() {
         let uuid = UUID(uuid: (0xe6,0x21,0xe1,0xf8,0xc3,0x6c,0x49,0x5a,0x93,0xfc,0x0c,0x24,0x7a,0x3e,0x6e,0x5f))
-        #expect(uuid.uuidStringLower == "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")
+        #expect(uuid.lowercasedUUIDString == "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func uuidStringLowerMatchesUpperCaseContent() {
+    @Test func lowercasedUUIDStringMatchesUpperCaseContent() {
         let uuid = UUID()
-        #expect(uuid.uuidStringLower == uuid.uuidString.lowercased())
+        #expect(uuid.lowercasedUUIDString == uuid.uuidString.lowercased())
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func uuidStringLowerNilAndMax() {
-        #expect(UUID.nil.uuidStringLower == "00000000-0000-0000-0000-000000000000")
-        #expect(UUID.max.uuidStringLower == "ffffffff-ffff-ffff-ffff-ffffffffffff")
+    @Test func lowercasedUUIDStringNilAndMax() {
+        #expect(UUID.nil.lowercasedUUIDString == "00000000-0000-0000-0000-000000000000")
+        #expect(UUID.max.lowercasedUUIDString == "ffffffff-ffff-ffff-ffff-ffffffffffff")
     }
 
     @Test func description() {
