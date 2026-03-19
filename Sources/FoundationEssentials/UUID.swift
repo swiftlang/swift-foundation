@@ -253,12 +253,12 @@ extension UUID : Codable {
 
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// The nil UUID, where all bits are set to zero.
+    /// The `nil` (or minimum) UUID, where all bits are set to zero.
     ///
     /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.9),
     /// the nil UUID is a special form where all 128 bits are zero.
     /// It can be used to represent the absence of a UUID value.
-    public static let `nil` = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+    public static let min = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
     /// The max UUID, where all bits are set to one.
     ///
