@@ -280,6 +280,14 @@ extension UUID {
             _storage.span
         }
     }
+
+    /// A `MutableSpan<UInt8>` view of the UUID's 16 bytes.
+    public var mutableSpan: MutableSpan<UInt8> {
+        @_lifetime(&self)
+        mutating get {
+            _storage.mutableSpan
+        }
+    }
 }
 
 // MARK: - UUID Version

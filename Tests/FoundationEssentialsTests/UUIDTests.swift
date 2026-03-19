@@ -207,6 +207,30 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
+    @Test func mutableSpan() {
+        var uuid = UUID.nil
+        var span = uuid.mutableSpan
+        span[0] = 0xAB
+        span[15] = 0xCD
+        #expect(uuid.span[0] == 0xAB)
+        #expect(uuid.span[15] == 0xCD)
+        // Other bytes remain zero
+        for i in 1..<15 {
+            #expect(uuid.span[i] == 0)
+        }
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func mutableSpanModifiesUUID() {
+        var uuid = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
+        // Overwrite version nibble to v7
+        let previousValue = uuid.span[6]
+        var span = uuid.mutableSpan
+        span[6] = (previousValue & 0x0F) | 0x70
+        #expect(uuid.version == .timeOrdered)
+    }
+
+    @available(FoundationPreview 6.4, *)
     @Test func initializingWithOutputSpan() {
         let uuid = UUID { (output: inout OutputSpan<UInt8>) in
             for i: UInt8 in 0..<16 {

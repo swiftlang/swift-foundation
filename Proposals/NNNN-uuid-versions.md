@@ -84,17 +84,20 @@ extension UUID {
 
 The existing `uuidString` property returns an uppercase representation. Many systems — including web APIs, databases, and URN formatting (RFC 4122 §3) — conventionally use lowercase UUIDs. `lowercasedUUIDString` avoids the need to call `uuidString.lowercased()`, which allocates an intermediate `String`.
 
-### `span` property
+### `span` and `mutableSpan` properties
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
     /// A `Span<UInt8>` view of the UUID's 16 bytes.
     public var span: Span<UInt8> { get }
+
+    /// A `MutableSpan<UInt8>` view of the UUID's 16 bytes.
+    public var mutableSpan: MutableSpan<UInt8> { mutating get }
 }
 ```
 
-This property provides zero-copy, bounds-checked access to the UUID's bytes without the need for `withUnsafeBytes` or tuple element access. The returned `Span<UInt8>` is lifetime-dependent on the UUID value.
+These properties provide bounds-checked access to the UUID's bytes without the need for `withUnsafeBytes` or tuple element access. `span` provides read-only access; `mutableSpan` allows direct modification of the underlying bytes. Both are lifetime-dependent on the UUID value.
 
 ### Initializing from a `Span`
 
