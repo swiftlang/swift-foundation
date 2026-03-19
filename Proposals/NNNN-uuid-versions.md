@@ -4,8 +4,8 @@
 * Authors: [Tony Parker](https://github.com/parkera)
 * Review Manager: TBD
 * Status: **Awaiting review**
-* Implementation: [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/pull/NNNNN)
-* Review: ([pitch](https://forums.swift.org/...))
+* Implementation: [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/pull/1836)
+* Review: ([pitch](https://forums.swift.org/t/pitch-uuid-v7-other-improvements/85427))
 
 ## Introduction
 
