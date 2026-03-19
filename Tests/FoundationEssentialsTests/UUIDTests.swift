@@ -61,7 +61,7 @@ private struct UUIDTests {
 
     @available(FoundationPreview 6.4, *)
     @Test func lowercasedUUIDStringNilAndMax() {
-        #expect(UUID.nil.lowercasedUUIDString == "00000000-0000-0000-0000-000000000000")
+        #expect(UUID.min.lowercasedUUIDString == "00000000-0000-0000-0000-000000000000")
         #expect(UUID.max.lowercasedUUIDString == "ffffffff-ffff-ffff-ffff-ffffffffffff")
     }
 
@@ -154,10 +154,10 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func nilUUID() {
-        let nilUUID = UUID.nil
-        #expect(nilUUID.uuidString == "00000000-0000-0000-0000-000000000000")
-        let s = nilUUID.span
+    @Test func minUUID() {
+        let minUUID = UUID.min
+        #expect(minUUID.uuidString == "00000000-0000-0000-0000-000000000000")
+        let s = minUUID.span
         for i in 0..<16 {
             #expect(s[i] == 0)
         }
@@ -174,13 +174,13 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func nilAndMaxOrdering() {
-        let nilUUID = UUID.nil
+    @Test func minAndMaxOrdering() {
+        let minUUID = UUID.min
         let maxUUID = UUID.max
         let randomUUID = UUID()
-        #expect(nilUUID < randomUUID)
+        #expect(minUUID < randomUUID)
         #expect(randomUUID < maxUUID)
-        #expect(nilUUID < maxUUID)
+        #expect(minUUID < maxUUID)
     }
 
     @available(FoundationPreview 6.4, *)
@@ -208,7 +208,7 @@ private struct UUIDTests {
 
     @available(FoundationPreview 6.4, *)
     @Test func mutableSpan() {
-        var uuid = UUID.nil
+        var uuid = UUID.min
         var span = uuid.mutableSpan
         span[0] = 0xAB
         span[15] = 0xCD

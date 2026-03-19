@@ -11,7 +11,7 @@
 
 Foundation's `UUID` type currently generates only version 4 (random) UUIDs. [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562) defines several UUID versions, each suited to different use cases. This proposal adds support for creating UUIDs of version 7 (time-ordered) which has become widely adopted for database keys and distributed systems due to its monotonically increasing, sortable nature.
 
-In addition, `UUID` is in need of a few more additions for modern usage, including support for lowercase strings, access to the bytes using `Span`, and accessors for the commonly used `nil` and `max` sentinel values.
+In addition, `UUID` is in need of a few more additions for modern usage, including support for lowercase strings, access to the bytes using `Span`, and accessors for the commonly used `min` and `max` sentinel values.
 
 ## Motivation
 
@@ -21,7 +21,7 @@ Today, developers who need time-ordered UUIDs usually construct the bytes manual
 
 ## Proposed solution
 
-Add a `UUID.Version` struct representing the well-known UUID versions from RFC 9562, a `version` property on `UUID` for introspection, a static factory method for creating version 7 UUIDs, and convenience properties for the nil and max UUIDs.
+Add a `UUID.Version` struct representing the well-known UUID versions from RFC 9562, a `version` property on `UUID` for introspection, a static factory method for creating version 7 UUIDs, and convenience properties for the nil (which we name `min` to avoid confusion in Swift) and max UUIDs.
 
 ```swift
 // Create a time-ordered UUID
@@ -41,8 +41,8 @@ default:
 let randomID = UUID()
 assert(randomID.version == .random)
 
-// Nil and max UUIDs for sentinel values
-let nilID = UUID.nil   // 00000000-0000-0000-0000-000000000000
+// Min and max UUIDs for sentinel values
+let minID = UUID.min   // 00000000-0000-0000-0000-000000000000
 let maxID = UUID.max   // FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
 
 // Access the raw bytes without copying
@@ -52,15 +52,15 @@ let span: Span<UInt8> = uuid.span      // 16-element typed span
 
 ## Detailed design
 
-### Nil and Max UUIDs
+### Min and Max UUIDs
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// The nil UUID, where all 128 bits are set to zero, as defined by
+    /// The minimum UUID, where all 128 bits are set to zero, as defined by
     /// RFC 9562 Section 5.9. Can be used to represent the absence of a
     /// UUID value.
-    public static let `nil`: UUID
+    public static let min: UUID
 
     /// The max UUID, where all 128 bits are set to one, as defined by
     /// RFC 9562 Section 5.10. Can be used as a sentinel value, for example
@@ -69,7 +69,7 @@ extension UUID {
 }
 ```
 
-The nil UUID (`00000000-0000-0000-0000-000000000000`) and max UUID (`FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF`) are special forms defined by RFC 9562. They are useful as sentinel values — for example, representing "no UUID" or defining the bounds of a UUID range. Note that neither the nil UUID nor the max UUID has a meaningful version or variant field; the `version` property returns `Version(rawValue: 0)` and `Version(rawValue: 15)` respectively.
+The min UUID (`00000000-0000-0000-0000-000000000000`) and max UUID (`FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF`) are special forms defined by RFC 9562. They are useful as sentinel values — for example, representing "no UUID" or defining the bounds of a UUID range. Note that neither the min UUID nor the max UUID has a meaningful version or variant field; the `version` property returns `Version(rawValue: 0)` and `Version(rawValue: 15)` respectively.
 
 ### Lowercase string representation
 
@@ -171,7 +171,7 @@ extension UUID {
 }
 ```
 
-The version value is encoded in bits 48–51 of the UUID (the high nibble of byte 6), per RFC 9562. `Version` is a `RawRepresentable` struct rather than an enum, allowing new versions to be added without breaking source or binary compatibility. The well-known versions from RFC 9562 are provided as static properties. Versions 2 (DCE Security), 0 (nil UUID), and 15 (max UUID) do not have static properties but can be represented using `Version(rawValue:)` if needed.
+The version value is encoded in bits 48–51 of the UUID (the high nibble of byte 6), per RFC 9562. `Version` is a `RawRepresentable` struct rather than an enum, allowing new versions to be added without breaking source or binary compatibility. The well-known versions from RFC 9562 are provided as static properties. Versions 2 (DCE Security), 0 (min UUID), and 15 (max UUID) do not have static properties but can be represented using `Version(rawValue:)` if needed.
 
 ### `version` property
 
