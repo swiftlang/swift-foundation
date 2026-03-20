@@ -10,19 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
+#if DATA_LEGACY_ABI
 @_spi(FoundationLegacyABI) @testable import Foundation
 import Testing
 
 @Suite("Foundation Legacy ABI")
 private final class FoundationLegacyABITests {
 
-    @Test func validateDataLegacyABI() {
+    @Test func validateDataLegacyABI() throws {
         var data = Data()
 
-        data._legacy_withUnsafeBytes { _ in }
-        data._legacy_withUnsafeMutableBytes { _ in }
+        // Test the existing API
+        data.withUnsafeBytes { _ in }
+        data.withUnsafeMutableBytes { _ in }
+
+        try data._legacy_withUnsafeBytes { _ in }
+        try data._legacy_withUnsafeMutableBytes { _ in }
     }
 }
 
-#endif // FOUNDATION_FRAMEWORK
+#endif // DATA_LEGACY_ABI

@@ -1783,7 +1783,7 @@ private final class DataTests {
         }
         #expect(value1.stored == 24)
         #expect(throws: LocalError.error) {
-            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
         }
 
         data = Data(count: 128)
@@ -1796,7 +1796,7 @@ private final class DataTests {
         }
         #expect(value2.stored == 128)
         #expect(throws: LocalError.error) {
-            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
         }
     }
 

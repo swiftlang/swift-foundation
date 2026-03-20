@@ -148,6 +148,7 @@ internal final class __DataStorage : @unchecked Sendable {
         return UnsafeRawPointer(_bytes)?.advanced(by: -_offset)
     }
 
+    @inline(__always)
     @_alwaysEmitIntoClient
     func withUnsafeBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
@@ -159,15 +160,16 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+#if DATA_LEGACY_ABI
     @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
     @_spi(FoundationLegacyABI)
     @usableFromInline
     func _legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
         try withUnsafeBytes(in: range, apply: apply)
     }
-#endif // FOUNDATION_FRAMEWORK
+#endif // DATA_LEGACY_ABI
 
+    @inline(__always)
     @_alwaysEmitIntoClient
     func withUnsafeMutableBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
@@ -180,14 +182,14 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+#if DATA_LEGACY_ABI
     @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
     @_spi(FoundationLegacyABI)
     @usableFromInline
     internal func _legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeMutableBytes(in: range, apply: apply)
     }
-#endif // FOUNDATION_FRAMEWORK
+#endif // DATA_LEGACY_ABI
 
     /// A pointer to the mutable referenced byte allocation, relative to the slice offsets
     ///
