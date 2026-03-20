@@ -208,17 +208,19 @@ extension UUID {
     ///
     /// - Parameter generator: The random number generator to use
     ///   when creating the random portions of the UUID.
-    /// - Parameter date: The date to encode in the timestamp field.
-    ///   If `nil`, the current date is used.
+    /// - Parameter timeSince1970: The time since the Unix epoch to
+    ///   encode in the timestamp field. If `nil`, the current time
+    ///   is used. `Duration` provides sub-millisecond precision
+    ///   without floating-point loss.
     /// - Returns: A version 7 UUID.
     public static func timeOrdered(
         using generator: inout some RandomNumberGenerator,
-        at date: Date? = nil
+        timeSince1970: Duration? = nil
     ) -> UUID
 }
 ```
 
-The resulting UUID contains a millisecond-precision Unix timestamp in bits 0–47, with version and variant fields set per RFC 9562. The remaining bits are filled using the system random number generator (for `timeOrdered()`) or the provided generator (for `timeOrdered(using:at:)`). The `timeOrdered()` convenience delegates to `timeOrdered(using:)` with a `SystemRandomNumberGenerator`. The optional `date` parameter allows embedding a specific timestamp rather than the current time.
+The resulting UUID contains a millisecond-precision Unix timestamp in bits 0–47, with version and variant fields set per RFC 9562. The 12-bit `rand_a` field (bits 52–63) encodes sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3: the fractional millisecond is scaled to 12 bits using integer arithmetic on `Duration`'s attosecond components, avoiding any floating-point precision loss. The remaining 62 bits (`rand_b`) are filled using the system random number generator (for `timeOrdered()`) or the provided generator (for `timeOrdered(using:timeSince1970:)`). The `timeOrdered()` convenience delegates to `timeOrdered(using:)` with a `SystemRandomNumberGenerator`. The optional `timeSince1970` parameter accepts a `Duration` representing the time since the Unix epoch, allowing callers to embed a specific timestamp.
 
 ### Extracting the timestamp
 
