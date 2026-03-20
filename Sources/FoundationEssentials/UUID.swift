@@ -23,6 +23,8 @@ import WinSDK
 @preconcurrency import WASILibc
 #endif
 
+internal import Synchronization
+
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
@@ -41,7 +43,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         }
     }
 
-    /* Create a new UUID with RFC 4122 version 4 random bytes */
+    /// Create a new UUID with RFC 4122 version 4 random bytes.
     public init() {
         var generator = SystemRandomNumberGenerator()
         self = UUID.random(using: &generator)
@@ -97,15 +99,9 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         }
     }
 
-    /// Creates a UUID by filling its 16 bytes using a closure that
-    /// writes into an `OutputRawSpan`.
+    /// Creates a UUID by filling its 16 bytes using a closure that writes into an `OutputSpan<UInt8>`.
     ///
     /// The closure must write exactly 16 bytes into the output span.
-    ///
-    ///     let uuid = UUID { output in
-    ///         output.append(myTimestampBytes)
-    ///         output.append(myRandomBytes)
-    ///     }
     @available(FoundationPreview 6.4, *)
     public init<E: Error>(
         initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> ()
@@ -117,13 +113,11 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         })
     }
 
-    // Hex lookup tables for UUID string formatting.
-    // Each byte is converted to two hex characters via table lookup.
+    // Hex lookup tables for UUID string formatting. Each byte is converted to two hex characters via table lookup.
     private static let _upperHex: StaticString = "0123456789ABCDEF"
     private static let _lowerHex: StaticString = "0123456789abcdef"
 
-    /// Writes the UUID as a 36-character hex string into `buffer`
-    /// using the given hex digit lookup table. Returns 36.
+    /// Writes the UUID as a 36-character hex string into `buffer` using the given hex digit lookup table. Returns 36.
     private func _unparse(
         into buffer: UnsafeMutableBufferPointer<UInt8>,
         hexTable: StaticString
@@ -269,17 +263,12 @@ extension UUID : Codable {
 extension UUID {
     /// The `nil` (or minimum) UUID, where all bits are set to zero.
     ///
-    /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.9),
-    /// the nil UUID is a special form where all 128 bits are zero.
-    /// It can be used to represent the absence of a UUID value.
+    /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.9), the nil UUID is a special form where all 128 bits are zero. It can be used to represent the absence of a UUID value.
     public static let min = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
     /// The max UUID, where all bits are set to one.
     ///
-    /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.10),
-    /// the max UUID is a special form where all 128 bits are one.
-    /// It can be used as a sentinel value, for example to represent
-    /// "the largest possible UUID" in a sorted range.
+    /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.10), the max UUID is a special form where all 128 bits are one. It can be used as a sentinel value, for example to represent "the largest possible UUID" in a sorted range.
     public static let max = UUID(uuid: (0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF))
 }
 
@@ -335,49 +324,49 @@ extension UUID {
         public static var custom: Version { Version(rawValue: 8) }
     }
 
-    /// The version of this UUID, derived from the version bits
-    /// (bits 48–51) as defined by RFC 9562.
+    /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
     public var version: UUID.Version {
         Version(rawValue: _storage[6] >> 4)
     }
 
-    /// Creates a new UUID with RFC 9562 version 7 layout: a Unix
-    /// timestamp in milliseconds in the most significant 48 bits,
-    /// followed by random bits. The variant and version fields are
-    /// set per the RFC.
+    /// Creates a new UUID with RFC 9562 version 7 layout: a Unix timestamp in milliseconds in the most significant 48 bits, followed by random bits. The variant and version fields are set per the RFC.
     ///
-    /// Version 7 UUIDs sort in approximate chronological order
-    /// when compared using the standard `<` operator, making them
-    /// well-suited as database primary keys. UUIDs created within
-    /// the same millisecond are distinguished by random bits and
-    /// may not reflect exact creation order.
+    /// Version 7 UUIDs sort in chronological order when compared using the standard `<` operator, making them well-suited as database primary keys. UUIDs generated within the same process are guaranteed to be monotonically increasing.
     public static func timeOrdered() -> UUID {
         var generator = SystemRandomNumberGenerator()
         return timeOrdered(using: &generator)
     }
 
-    /// Creates a new UUID with RFC 9562 version 7 layout using
-    /// the specified random number generator for the random bits.
+    /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
     ///
-    /// The most significant 48 bits contain a millisecond-precision
-    /// Unix timestamp. The 12 bits following the version field
-    /// (`rand_a`) encode sub-millisecond timestamp precision per
-    /// RFC 9562 Section 6.2, Method 3. The remaining 62 bits
-    /// (`rand_b`, after the variant field) are filled using `generator`.
+    /// When called without an `at` argument, the timestamp portion is guaranteed to be monotonically increasing within the current process, even under high-frequency generation or clock adjustments.
     ///
-    /// - Parameter generator: The random number generator to use
-    ///   when creating the random portions of the UUID.
-    /// - Parameter timeSince1970: The time since the Unix epoch to
-    ///   encode in the timestamp field. If `nil`, the current time
-    ///   is used. `Duration` provides sub-millisecond precision
-    ///   without floating-point loss.
+    /// - Parameter generator: The random number generator to use when creating the random portions of the UUID.
+    /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
+    /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
     /// - Returns: A version 7 UUID.
     public static func timeOrdered(
         using generator: inout some RandomNumberGenerator,
-        timeSince1970: Duration? = nil
+        at date: Date? = nil,
+        offset: Duration = .zero
     ) -> UUID {
-        let elapsed = timeSince1970 ?? Duration.durationSince1970
-        let (ms, subMS) = elapsed._uuidTimestampComponents
+        // The most significant 48 bits contain a millisecond-precision Unix timestamp.
+        // The 12 bits following the version field (`rand_a`) encode sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3.
+        // The remaining 62 bits (`rand_b`, after the variant field) are filled using `generator`.
+        let combined: UInt64
+        if let date {
+            // Caller-provided date (plus offset): convert to Duration,
+            // no monotonic guard
+            let elapsed = Duration.seconds(date.timeIntervalSince1970) + offset
+            let (ms, subMS) = elapsed._uuidTimestampComponents
+            combined = ms << 12 | UInt64(subMS)
+        } else {
+            // Current time (plus offset) with monotonic guarantee
+            combined = _nextMonotonicTimestamp(offset: offset)
+        }
+
+        let ms = combined >> 12
+        let subMS = UInt16(combined & 0x0FFF)
 
         var first: UInt64 = 0
         // Bits 0–47: millisecond timestamp
@@ -414,10 +403,11 @@ extension UUID {
         }
     }
 
-    /// For version 7 UUIDs, returns the `Date` encoded in the
-    /// most significant 48 bits. Returns `nil` for all other versions.
-    /// The returned date has millisecond precision, as specified
-    /// by RFC 9562.
+    /// For version 7 UUIDs, returns the `Date` encoded in the most significant 48 bits. Returns `nil` for all other versions.
+    ///
+    /// The returned date has millisecond precision, as specified by RFC 9562.
+    ///
+    /// - Note: Even though this implementation, or others, may choose to encode more precision into other bytes of the `UUID`, this method may only return the portion of the timestamp stored in the RFC-specified bytes.
     public var timeOrderedTimestamp: Date? {
         guard version == .timeOrdered else { return nil }
         let ms: UInt64 = UInt64(_storage[0]) << 40 | UInt64(_storage[1]) << 32
@@ -426,15 +416,39 @@ extension UUID {
         return Date(timeIntervalSince1970: Double(ms) / 1000.0)
     }
 
-    // MARK: - Private time helpers
+    // MARK: - Monotonic timestamp
+
+    /// Tracks the last combined timestamp value to ensure monotonically increasing v7 UUIDs within a process.
+    private static let _lastTimestamp = Atomic<UInt64>(0)
+
+    /// Returns a combined 60-bit timestamp, which is guaranteed to be strictly greater than any previously returned value. If the clock hasn't advanced since the last call, the previous value is incremented by 1.
+    private static func _nextMonotonicTimestamp(offset: Duration) -> UInt64 {
+        let elapsed = Duration.durationSince1970 + offset
+        let (ms, subMS) = elapsed._uuidTimestampComponents
+        
+        let current = ms << 12 | UInt64(subMS)
+        var old = _lastTimestamp.load(ordering: .relaxed)
+        
+        while true {
+            let next = Swift.max(current, old &+ 1)
+            let (exchanged, original) = _lastTimestamp.compareExchange(
+                expected: old,
+                desired: next,
+                ordering: .relaxed
+            )
+            if exchanged {
+                return next
+            }
+            old = original
+        }
+    }
 }
 
 extension Duration {
     /// Attoseconds per millisecond (10^15).
     private static let _attosPerMS: Int64 = 1_000_000_000_000_000
 
-    /// The current wall clock time as a `Duration` since the Unix epoch,
-    /// using the highest precision time source available on the platform.
+    /// The current wall clock time as a `Duration` since the Unix epoch, using the highest precision time source available on the platform.
     fileprivate static var durationSince1970: Duration {
 #if canImport(WinSDK)
         // FILETIME is 100-nanosecond intervals since January 1, 1601 (UTC).
@@ -458,12 +472,9 @@ extension Duration {
 #endif
     }
 
-    /// Extracts the 48-bit millisecond timestamp and 12-bit
-    /// sub-millisecond fraction from this duration (interpreted as
-    /// time since Unix epoch), using pure integer arithmetic.
+    /// Extracts the 48-bit millisecond timestamp and 12-bit sub-millisecond fraction from this duration (interpreted as time since Unix epoch), using pure integer arithmetic.
     ///
-    /// Returns `(ms, subMS)` where `ms` is clamped to 48 bits and
-    /// `subMS` is 0–4095.
+    /// Returns `(ms, subMS)` where `ms` is clamped to 48 bits and `subMS` is 0–4095.
     fileprivate var _uuidTimestampComponents: (ms: UInt64, subMS: UInt16) {
         let (secs, attos) = self.components
 
