@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import Testing
+import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

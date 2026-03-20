@@ -12,6 +12,8 @@
 
 #if !FOUNDATION_FRAMEWORK
 
+internal import Synchronization
+
 public struct FileAttributeType : Hashable, RawRepresentable, Sendable {
     public let rawValue: String
     public init(rawValue: String) {
@@ -179,7 +181,7 @@ extension FileManager {
 open class FileManager : @unchecked Sendable {
     // Sendable note: _impl may only be mutated in `init`
     private var _impl: _FileManagerImpl
-    private let _lock = LockedState<State>(initialState: .init(delegate: nil))
+    private let _lock = Mutex(State(delegate: nil))
     private let isDefault: Bool
     
     private static let _default = FileManager(default: true)

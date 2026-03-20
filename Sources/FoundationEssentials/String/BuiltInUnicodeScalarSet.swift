@@ -11,9 +11,7 @@
 
 internal import _FoundationCShims
 
-#if canImport(Synchronization)
 internal import Synchronization
-#endif
 
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
@@ -138,11 +136,7 @@ internal struct BuiltInUnicodeScalarSet {
         let isInverted: Bool
     }
 
-    #if canImport(Synchronization)
     private static let bmpCache = Mutex<[BMPCacheKey: Data]>([:])
-    #else
-    private static let bmpCache = LockedState<[BMPCacheKey: Data]>(initialState: [:])
-    #endif
 
     private static func cachedBMP(for type: SetType, isInverted: Bool) -> Data {
         let key = BMPCacheKey(type: type, isInverted: isInverted)

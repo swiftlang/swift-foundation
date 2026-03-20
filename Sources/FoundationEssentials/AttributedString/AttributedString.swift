@@ -18,6 +18,8 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
+internal import Synchronization
+
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributedString : Sendable {
@@ -30,12 +32,9 @@ public struct AttributedString : Sendable {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal static let currentIdentity = LockedState(initialState: 0)
+    internal static let currentIdentity = Atomic(0)
     internal static var _nextModifyIdentity : Int {
-        currentIdentity.withLock { identity in
-            identity += 1
-            return identity
-        }
+        currentIdentity.wrappingAdd(1, ordering: .relaxed).newValue
     }
 }
 
