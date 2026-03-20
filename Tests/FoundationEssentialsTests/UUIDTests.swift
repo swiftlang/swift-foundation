@@ -299,41 +299,41 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedVersionAndVariant() {
+    @Test func version7VersionAndVariant() {
         for _ in 0..<10000 {
-            let uuid = UUID.timeOrdered()
+            let uuid = UUID.version7()
             #expect(uuid.version == 7)
             #expect(uuid.variant == 0b10)
         }
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedUsingGeneratorVersionAndVariant() {
+    @Test func version7UsingGeneratorVersionAndVariant() {
         var generator = SystemRandomNumberGenerator()
         for _ in 0..<10000 {
-            let uuid = UUID.timeOrdered(using: &generator)
+            let uuid = UUID.version7(using: &generator)
             #expect(uuid.version == 7)
             #expect(uuid.variant == 0b10)
         }
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedUsingGeneratorTimestamp() throws {
+    @Test func version7UsingGeneratorTimestamp() throws {
         var generator = SystemRandomNumberGenerator()
         let date = Date(timeIntervalSince1970: 1700000000.123)
-        let uuid = UUID.timeOrdered(using: &generator, at: date)
+        let uuid = UUID.version7(using: &generator, at: date)
         let timestamp = try #require(uuid.date)
         // We will lose some precision from the original date in the encoded date.
         #expect(timestamp.timeIntervalSince1970.rounded(.down) == date.timeIntervalSince1970.rounded(.down))
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedUsingDeterministicGenerator() {
+    @Test func version7UsingDeterministicGenerator() {
         let fixedDate = Date(timeIntervalSince1970: 1645557742.0) // RFC 9562 A.6 timestamp
         var gen1 = PCGRandomNumberGenerator(seed: 42)
         var gen2 = PCGRandomNumberGenerator(seed: 42)
-        let uuid1 = UUID.timeOrdered(using: &gen1, at: fixedDate)
-        let uuid2 = UUID.timeOrdered(using: &gen2, at: fixedDate)
+        let uuid1 = UUID.version7(using: &gen1, at: fixedDate)
+        let uuid2 = UUID.version7(using: &gen2, at: fixedDate)
         // Same seed and same date produces identical UUIDs
         #expect(uuid1 == uuid2)
         // Verify the timestamp round-trips
@@ -341,12 +341,12 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedDifferentSeedsSameDate() {
+    @Test func version7DifferentSeedsSameDate() {
         let fixedDate = Date(timeIntervalSince1970: 1645557742.0)
         var gen1 = PCGRandomNumberGenerator(seed: 42)
         var gen2 = PCGRandomNumberGenerator(seed: 99)
-        let uuid1 = UUID.timeOrdered(using: &gen1, at: fixedDate)
-        let uuid2 = UUID.timeOrdered(using: &gen2, at: fixedDate)
+        let uuid1 = UUID.version7(using: &gen1, at: fixedDate)
+        let uuid2 = UUID.version7(using: &gen2, at: fixedDate)
         // Same date but different seeds produces different UUIDs
         #expect(uuid1 != uuid2)
         // Both should still have the same timestamp
@@ -354,22 +354,22 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedAtSpecificDate() throws {
+    @Test func version7AtSpecificDate() throws {
         let date = Date(timeIntervalSince1970: 1000.0)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, at: date)
+        let uuid = UUID.version7(using: &generator, at: date)
         let timestamp = try #require(uuid.date)
         #expect(timestamp == date)
         #expect(uuid.version == 7)
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedSubMillisecondPrecision() {
+    @Test func version7SubMillisecondPrecision() {
         // RFC 9562 Section 6.2 Method 3: rand_a encodes sub-ms precision.
         // Use a whole-millisecond date (no sub-ms fraction) to verify rand_a == 0
         let date = Date(timeIntervalSince1970: 1000.123)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, at: date)
+        let uuid = UUID.version7(using: &generator, at: date)
         // rand_a is the lower nibble of byte 6 and all of byte 7
         let randA = (UInt16(uuid.span[6]) & 0x0F) << 8 | UInt16(uuid.span[7])
         #expect(randA == 0)
@@ -378,33 +378,33 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedWithOffsetFromDate() throws {
+    @Test func version7WithOffsetFromDate() throws {
         let base = Date(timeIntervalSince1970: 1000.0)
         let offset = Duration.seconds(60)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, at: base, offset: offset)
+        let uuid = UUID.version7(using: &generator, at: base, offset: offset)
         let timestamp = try #require(uuid.date)
         // Should encode base + 60s = 1060.0
         #expect(timestamp == Date(timeIntervalSince1970: 1060.0))
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedWithNegativeOffset() throws {
+    @Test func version7WithNegativeOffset() throws {
         let base = Date(timeIntervalSince1970: 2000.0)
         let offset = Duration.seconds(-500)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, at: base, offset: offset)
+        let uuid = UUID.version7(using: &generator, at: base, offset: offset)
         let timestamp = try #require(uuid.date)
         // Should encode base - 500s = 1500.0
         #expect(timestamp == Date(timeIntervalSince1970: 1500.0))
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedWithOffsetFromCurrentTime() {
+    @Test func version7WithOffsetFromCurrentTime() {
         // Offset of +1 hour from current time should produce a UUID with a timestamp roughly 1 hour in the future
         let before = Date().addingTimeInterval(3600.0 - 1.0)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, offset: .seconds(3600))
+        let uuid = UUID.version7(using: &generator, offset: .seconds(3600))
         let timestamp = uuid.date!
         let after = Date().addingTimeInterval(3600.0 + 1.0)
         #expect(timestamp >= before)
@@ -412,22 +412,22 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedMonotonicity() {
+    @Test func version7Monotonicity() {
         // Generate many UUIDs in a tight loop without any delays.
         // The monotonic guarantee ensures each is strictly greater than the previous, even within the same sub-millisecond.
-        var previous = UUID.timeOrdered()
+        var previous = UUID.version7()
         for _ in 0..<10_000 {
-            let current = UUID.timeOrdered()
+            let current = UUID.version7()
             #expect(previous < current)
             previous = current
         }
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedDate() throws {
+    @Test func version7Date() throws {
         let date = Date(timeIntervalSince1970: 1700000000.456)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, at: date)
+        let uuid = UUID.version7(using: &generator, at: date)
         let timestamp = try #require(uuid.date)
         #expect(timestamp == date)
     }
@@ -435,7 +435,7 @@ private struct UUIDTests {
     // RFC 9562 Appendix A.6: UUIDv7 test vector with known timestamp
     // Tuesday, February 22, 2022 2:22:22.00 PM GMT-05:00 = 1645557742000 ms
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedDateRFCVector() throws {
+    @Test func version7DateRFCVector() throws {
         let v7 = UUID(uuidString: "017F22E2-79B0-7CC3-98C4-DC0C0C07398F")!
         let timestamp = try #require(v7.date)
         let expected = Date(timeIntervalSince1970: 1645557742.0)
@@ -443,7 +443,7 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedDateNilForV4() {
+    @Test func version7DateNilForV4() {
         let uuid = UUID()
         #expect(uuid.date == nil)
     }

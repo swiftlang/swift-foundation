@@ -43,7 +43,7 @@ let benchmarks = {
 
     Benchmark("UUIDCreateTimeOrdered") { benchmark in
         for _ in benchmark.scaledIterations {
-            blackHole(UUID.timeOrdered())
+            blackHole(UUID.version7())
         }
     }
 

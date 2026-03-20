@@ -302,12 +302,18 @@ extension UUID {
         Int(_storage[6] >> 4)
     }
 
+    /// Creates a new UUID with RFC 9562 version 4 (random) layout. This is equivalent to calling `UUID()`.
+    @export(implementation)
+    public static func version4() -> UUID {
+        UUID()
+    }
+
     /// Creates a new UUID with RFC 9562 version 7 layout: a Unix timestamp in milliseconds in the most significant 48 bits, followed by random bits. The variant and version fields are set per the RFC.
     ///
     /// Version 7 UUIDs sort in chronological order when compared using the standard `<` operator, making them well-suited as database primary keys. UUIDs generated within the same process are guaranteed to be monotonically increasing.
-    public static func timeOrdered() -> UUID {
+    public static func version7() -> UUID {
         var generator = SystemRandomNumberGenerator()
-        return timeOrdered(using: &generator)
+        return version7(using: &generator)
     }
 
     /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
@@ -318,7 +324,7 @@ extension UUID {
     /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
     /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
     /// - Returns: A version 7 UUID.
-    public static func timeOrdered(
+    public static func version7(
         using generator: inout some RandomNumberGenerator,
         at date: Date? = nil,
         offset: Duration = .zero
