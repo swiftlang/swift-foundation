@@ -9,6 +9,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(WinSDK)
+import WinSDK
+#elseif os(WASI)
+@preconcurrency import WASILibc
+#endif
+
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
@@ -346,33 +360,35 @@ extension UUID {
     /// the specified random number generator for the random bits.
     ///
     /// The most significant 48 bits contain a millisecond-precision
-    /// Unix timestamp. The remaining bits (excluding version and
-    /// variant fields) are filled using `generator`.
+    /// Unix timestamp. The 12 bits following the version field
+    /// (`rand_a`) encode sub-millisecond timestamp precision per
+    /// RFC 9562 Section 6.2, Method 3. The remaining 62 bits
+    /// (`rand_b`, after the variant field) are filled using `generator`.
     ///
     /// - Parameter generator: The random number generator to use
     ///   when creating the random portions of the UUID.
+    /// - Parameter timeSince1970: The time since the Unix epoch to
+    ///   encode in the timestamp field. If `nil`, the current time
+    ///   is used. `Duration` provides sub-millisecond precision
+    ///   without floating-point loss.
     /// - Returns: A version 7 UUID.
     public static func timeOrdered(
         using generator: inout some RandomNumberGenerator,
-        at date: Date? = nil
+        timeSince1970: Duration? = nil
     ) -> UUID {
-        let now = date ?? Date.now
-        let rawMS = now.timeIntervalSince1970 * 1000.0
-        // Clamp to the 48-bit unsigned range (0 ... 0xFFFF_FFFF_FFFF).
-        // Below 0 corresponds to dates before 1970-01-01.
-        // Above 0xFFFF_FFFF_FFFF corresponds to dates after approximately year 10889.
-        let ms = UInt64(clamping: Int64(Swift.max(0, Swift.min(rawMS, Double(0xFFFF_FFFF_FFFF)))))
+        let elapsed = timeSince1970 ?? Duration.durationSince1970
+        let (ms, subMS) = elapsed._uuidTimestampComponents
 
-        var first = UInt64.random(in: .min ... .max, using: &generator)
+        var first: UInt64 = 0
+        // Bits 0–47: millisecond timestamp
+        first |= ms << 16
+        // Bits 48–51: version 7 (0111)
+        first |= 0x7000
+        // Bits 52–63: sub-millisecond precision (12 bits)
+        first |= UInt64(subMS)
+
+        // Bits 64–127: variant + random
         var second = UInt64.random(in: .min ... .max, using: &generator)
-
-        // Set bits 0–47 to the millisecond timestamp
-        first = (first & 0x0000_0000_0000_FFFF) | (ms << 16)
-
-        // Set the version to 7 (0111) in bits 48–51
-        first &= 0xFFFF_FFFF_FFFF_0FFF
-        first |= 0x0000_0000_0000_7000
-
         // Set the variant to '10' in bits 64–65
         second &= 0x3FFF_FFFF_FFFF_FFFF
         second |= 0x8000_0000_0000_0000
@@ -408,6 +424,62 @@ extension UUID {
             | UInt64(_storage[2]) << 24 | UInt64(_storage[3]) << 16
             | UInt64(_storage[4]) << 8 | UInt64(_storage[5])
         return Date(timeIntervalSince1970: Double(ms) / 1000.0)
+    }
+
+    // MARK: - Private time helpers
+}
+
+extension Duration {
+    /// Attoseconds per millisecond (10^15).
+    private static let _attosPerMS: Int64 = 1_000_000_000_000_000
+
+    /// The current wall clock time as a `Duration` since the Unix epoch,
+    /// using the highest precision time source available on the platform.
+    fileprivate static var durationSince1970: Duration {
+#if canImport(WinSDK)
+        // FILETIME is 100-nanosecond intervals since January 1, 1601 (UTC).
+        // Subtract the 1601-to-1970 offset to get Unix epoch time.
+        var ft = FILETIME()
+        GetSystemTimePreciseAsFileTime(&ft)
+        var li = ULARGE_INTEGER()
+        li.LowPart = ft.dwLowDateTime
+        li.HighPart = ft.dwHighDateTime
+        // 100-ns ticks from 1601 to 1970
+        let epochOffset: UInt64 = 116_444_736_000_000_000
+        let ticks = li.QuadPart - epochOffset
+        let seconds = Int64(ticks / 10_000_000)
+        // Each tick is 100ns = 100_000_000_000 attoseconds
+        let remainingTicks = Int64(ticks % 10_000_000)
+        return Duration.seconds(seconds) + Duration(secondsComponent: 0, attosecondsComponent: remainingTicks * 100_000_000_000)
+#else
+        var ts = timespec()
+        clock_gettime(CLOCK_REALTIME, &ts)
+        return Duration.seconds(ts.tv_sec) + Duration.nanoseconds(ts.tv_nsec)
+#endif
+    }
+
+    /// Extracts the 48-bit millisecond timestamp and 12-bit
+    /// sub-millisecond fraction from this duration (interpreted as
+    /// time since Unix epoch), using pure integer arithmetic.
+    ///
+    /// Returns `(ms, subMS)` where `ms` is clamped to 48 bits and
+    /// `subMS` is 0–4095.
+    fileprivate var _uuidTimestampComponents: (ms: UInt64, subMS: UInt16) {
+        let (secs, attos) = self.components
+
+        // Total milliseconds = seconds * 1000 + attoseconds / attosPerMS
+        let totalMS = Int64(secs) * 1000 + attos / Self._attosPerMS
+
+        // Clamp to the 48-bit unsigned range (0 ... 0xFFFF_FFFF_FFFF)
+        let ms = UInt64(clamping: Swift.max(0, totalMS))
+            & 0xFFFF_FFFF_FFFF
+
+        // Sub-millisecond fraction: remaining attoseconds after
+        // removing whole milliseconds, scaled to 12 bits.
+        let remainingAttos = attos % Self._attosPerMS
+        let subMS = UInt16((remainingAttos * 4096) / Self._attosPerMS)
+
+        return (ms, subMS)
     }
 }
 
