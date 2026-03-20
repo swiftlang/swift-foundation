@@ -297,36 +297,9 @@ extension UUID {
 
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// The version of a UUID, as defined by RFC 9562.
-    public struct Version: Sendable, Hashable, Codable, RawRepresentable {
-        public let rawValue: UInt8
-        public init(rawValue: UInt8) { self.rawValue = rawValue }
-
-        /// Version 1: Gregorian time-based UUID with node identifier.
-        public static var timeBased: Version { Version(rawValue: 1) }
-
-        /// Version 3: Name-based UUID using MD5 hashing.
-        public static var nameBasedMD5: Version { Version(rawValue: 3) }
-
-        /// Version 4: Random UUID.
-        public static var random: Version { Version(rawValue: 4) }
-
-        /// Version 5: Name-based UUID using SHA-1 hashing.
-        public static var nameBasedSHA1: Version { Version(rawValue: 5) }
-
-        /// Version 6: Reordered Gregorian time-based UUID.
-        public static var reorderedTimeBased: Version { Version(rawValue: 6) }
-
-        /// Version 7: Unix Epoch time-based UUID with random bits.
-        public static var timeOrdered: Version { Version(rawValue: 7) }
-
-        /// Version 8: Custom UUID with user-defined layout.
-        public static var custom: Version { Version(rawValue: 8) }
-    }
-
     /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
-    public var version: UUID.Version {
-        Version(rawValue: _storage[6] >> 4)
+    public var version: Int {
+        Int(_storage[6] >> 4)
     }
 
     /// Creates a new UUID with RFC 9562 version 7 layout: a Unix timestamp in milliseconds in the most significant 48 bits, followed by random bits. The variant and version fields are set per the RFC.
@@ -339,7 +312,7 @@ extension UUID {
 
     /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
     ///
-    /// When called without an `at` argument, the timestamp portion is guaranteed to be monotonically increasing within the current process, even under high-frequency generation or clock adjustments.
+    /// When called without an `at` argument, the timestamp portion is guaranteed to be monotonically increasing within the current process.
     ///
     /// - Parameter generator: The random number generator to use when creating the random portions of the UUID.
     /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
@@ -408,8 +381,8 @@ extension UUID {
     /// The returned date has millisecond precision, as specified by RFC 9562.
     ///
     /// - Note: Even though this implementation, or others, may choose to encode more precision into other bytes of the `UUID`, this method may only return the portion of the timestamp stored in the RFC-specified bytes.
-    public var timeOrderedTimestamp: Date? {
-        guard version == .timeOrdered else { return nil }
+    public var date: Date? {
+        guard version == 7 else { return nil }
         let ms: UInt64 = UInt64(_storage[0]) << 40 | UInt64(_storage[1]) << 32
             | UInt64(_storage[2]) << 24 | UInt64(_storage[3]) << 16
             | UInt64(_storage[4]) << 8 | UInt64(_storage[5])

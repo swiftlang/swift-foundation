@@ -21,7 +21,7 @@ Today, developers who need time-ordered UUIDs usually construct the bytes manual
 
 ## Proposed solution
 
-Add a `UUID.Version` struct representing the well-known UUID versions from RFC 9562, a `version` property on `UUID` for introspection, a static factory method for creating version 7 UUIDs, and convenience properties for the nil (which we name `min` to avoid confusion in Swift) and max UUIDs.
+Add a `version` property on `UUID` for introspection, a static factory method for creating version 7 UUIDs, and convenience properties for the nil (which we name `min` to avoid confusion in Swift) and max UUIDs.
 
 ```swift
 // Create a time-ordered UUID
@@ -29,9 +29,9 @@ let id = UUID.timeOrdered()
 
 // Inspect the version of any UUID
 switch id.version {
-case .timeOrdered:
+case 7:
     print("v7 UUID, sortable by creation time")
-case .random:
+case 4:
     print("v4 UUID")
 default:
     print("other version")
@@ -39,7 +39,7 @@ default:
 
 // The existing init() continues to create version 4 UUIDs
 let randomID = UUID()
-assert(randomID.version == .random)
+assert(randomID.version == 4)
 
 // Min and max UUIDs for sentinel values
 let minID = UUID.min   // 00000000-0000-0000-0000-000000000000
@@ -69,7 +69,7 @@ extension UUID {
 }
 ```
 
-The min UUID (`00000000-0000-0000-0000-000000000000`) and max UUID (`FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF`) are special forms defined by RFC 9562. They are useful as sentinel values — for example, representing "no UUID" or defining the bounds of a UUID range. Note that neither the min UUID nor the max UUID has a meaningful version or variant field; the `version` property returns `Version(rawValue: 0)` and `Version(rawValue: 15)` respectively.
+The min UUID (`00000000-0000-0000-0000-000000000000`) and max UUID (`FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF`) are special forms defined by RFC 9562. They are useful as sentinel values — for example, representing "no UUID" or defining the bounds of a UUID range. Note that neither the min UUID nor the max UUID has a meaningful version or variant field; the `version` property returns `0` and `15` respectively.
 
 ### Lowercase string representation
 
@@ -137,54 +137,17 @@ let uuid = UUID { output in
 
 The closure receives an `OutputSpan<UInt8>` backed by the UUID's 16-byte storage. If the closure writes fewer or more than 16 bytes, the initializer traps. If the closure throws, the error is propagated with its original type.
 
-### `UUID.Version`
-
-```swift
-@available(FoundationPreview 6.4, *)
-extension UUID {
-    /// The version of a UUID, as defined by RFC 9562.
-    public struct Version: Sendable, Hashable, Codable, RawRepresentable {
-        public let rawValue: UInt8
-        public init(rawValue: UInt8)
-
-        /// Version 1: Gregorian time-based UUID with node identifier.
-        public static var timeBased: Version { get }
-
-        /// Version 3: Name-based UUID using MD5 hashing.
-        public static var nameBasedMD5: Version { get }
-
-        /// Version 4: Random UUID.
-        public static var random: Version { get }
-
-        /// Version 5: Name-based UUID using SHA-1 hashing.
-        public static var nameBasedSHA1: Version { get }
-
-        /// Version 6: Reordered Gregorian time-based UUID.
-        public static var reorderedTimeBased: Version { get }
-
-        /// Version 7: Unix Epoch time-based UUID with random bits.
-        public static var timeOrdered: Version { get }
-
-        /// Version 8: Custom UUID with user-defined layout.
-        public static var custom: Version { get }
-    }
-}
-```
-
-The version value is encoded in bits 48–51 of the UUID (the high nibble of byte 6), per RFC 9562. `Version` is a `RawRepresentable` struct rather than an enum, allowing new versions to be added without breaking source or binary compatibility. The well-known versions from RFC 9562 are provided as static properties. Versions 2 (DCE Security), 0 (min UUID), and 15 (max UUID) do not have static properties but can be represented using `Version(rawValue:)` if needed.
-
 ### `version` property
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// The version of this UUID, derived from the version bits
-    /// (bits 48–51) as defined by RFC 9562.
-    public var version: UUID.Version {
-        get
-    }
+    /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
+    public var version: Int { get }
 }
 ```
+
+The version value is encoded in bits 48–51 of the UUID (the high nibble of byte 6), per RFC 9562. The returned `Int` ranges from 0 to 15. Well-known versions include 1 (time-based), 3 (name-based MD5), 4 (random), 5 (name-based SHA-1), 6 (reordered time-based), 7 (time-ordered), and 8 (custom).
 
 ### Creating version 7 UUIDs
 
@@ -198,7 +161,7 @@ extension UUID {
 
     /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
     ///
-    /// When called without an `at` argument, the timestamp portion is guaranteed to be monotonically increasing within the current process, even under high-frequency generation or clock adjustments.
+    /// When called without an `at` argument, the timestamp portion is guaranteed to be monotonically increasing within the current process.
     ///
     /// - Parameter generator: The random number generator to use when creating the random portions of the UUID.
     /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
@@ -216,7 +179,7 @@ The most significant 48 bits contain a millisecond-precision Unix timestamp. The
 
 When called without a `Date` argument, the combined timestamp (milliseconds + sub-millisecond precision) is guaranteed to be monotonically increasing within the current process. An atomic value tracks the last returned timestamp; if the system clock has not advanced since the previous call, the value is incremented by one sub-millisecond tick. This ensures strict ordering even under high-frequency generation or clock adjustments, following the same approach used by Go's `google/uuid` and PostgreSQL. When a caller provides an explicit `date`, the monotonicity guarantee does not apply.
 
-### Extracting the timestamp
+### Extracting the date
 
 ```swift
 @available(FoundationPreview 6.4, *)
@@ -226,7 +189,7 @@ extension UUID {
     /// The returned date has millisecond precision, as specified by RFC 9562.
     ///
     /// - Note: Even though this implementation, or others, may choose to encode more precision into other bytes of the `UUID`, this method may only return the portion of the timestamp stored in the RFC-specified bytes.
-    public var timeOrderedTimestamp: Date? {
+    public var date: Date? {
         get
     }
 }
@@ -251,12 +214,8 @@ This feature can be freely adopted and un-adopted in source code with no deploym
 
 ### Adding version as a parameter to `init()`
 
-Instead of `UUID.timeOrdered()`, we considered `UUID(version: .timeOrdered)`. However, different versions require different parameters — version 5 needs a name and namespace, version 8 needs custom data — so a single initializer would either need to accept many optional parameters or use an associated-value enum. Static factory methods are clearer and allow each version to have its own natural parameter list.
-
-### Using an `enum` for `Version`
-
-We considered making `Version` an `enum` with a `UInt8` raw value. However, a `struct` with `RawRepresentable` conformance allows new versions to be added in the future without breaking source or binary compatibility. Since the UUID version field is only 4 bits, the full space of 16 values is defined by the RFC, but using a struct is more consistent with Foundation's conventions for open sets of values (e.g., `NSNotificationName`, `RunLoop.Mode`) and avoids the need for an `unknown` case or optional return from the `version` property.
+Instead of `UUID.timeOrdered()`, we considered `UUID(version: 7)`. However, different versions require different parameters — version 5 needs a name and namespace, version 8 needs custom data — so a single initializer would either need to accept many optional parameters or use an associated-value enum. Static factory methods are clearer and allow each version to have its own natural parameter list.
 
 ### Supporting all UUID versions immediately
 
-We considered adding factory methods for all versions (1, 3, 5, 6, 7, 8), but the immediate need is version 7. Version 1 (time-based with MAC address) has privacy implications. Versions 3 and 5 require different parameters. Version 6 is a reordering of version 1 and shares its concerns. Version 8 is intentionally application-defined. Starting with version 7 keeps the proposal focused while the `Version` struct provides the foundation to add others incrementally.
+We considered adding factory methods for all versions (1, 3, 5, 6, 7, 8), but the immediate need is version 7. Version 1 (time-based with MAC address) has privacy implications. Versions 3 and 5 require different parameters. Version 6 is a reordering of version 1 and shares its concerns. Version 8 is intentionally application-defined. Starting with version 7 keeps the proposal focused.
