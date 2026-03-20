@@ -24,8 +24,8 @@ Today, developers who need time-ordered UUIDs usually construct the bytes manual
 Add a `version` property on `UUID` for introspection, a static factory method for creating version 7 UUIDs, and convenience properties for the nil (which we name `min` to avoid confusion in Swift) and max UUIDs.
 
 ```swift
-// Create a time-ordered UUID
-let id = UUID.timeOrdered()
+// Create a version 7 UUID
+let id = UUID.version7()
 
 // Inspect the version of any UUID
 switch id.version {
@@ -130,8 +130,9 @@ This initializer provides a safe, typed-throw-compatible way to construct a UUID
 
 ```swift
 let uuid = UUID { output in
-    output.append(timestampBytes)
-    output.append(randomBytes)
+    // Note: It is up to the custom implementation here to create a valid UUID.
+    output.append(...)
+    output.append(...)
 }
 ```
 
@@ -149,15 +150,18 @@ extension UUID {
 
 The version value is encoded in bits 48–51 of the UUID (the high nibble of byte 6), per RFC 9562. The returned `Int` ranges from 0 to 15. Well-known versions include 1 (time-based), 3 (name-based MD5), 4 (random), 5 (name-based SHA-1), 6 (reordered time-based), 7 (time-ordered), and 8 (custom).
 
-### Creating version 7 UUIDs
+### Creating version 4 and version 7 UUIDs
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
+    /// Creates a new UUID with RFC 9562 version 4 (random) layout. This is equivalent to calling `UUID()`.
+    public static func version4() -> UUID
+
     /// Creates a new UUID with RFC 9562 version 7 layout: a Unix timestamp in milliseconds in the most significant 48 bits, followed by random bits. The variant and version fields are set per the RFC.
     ///
     /// Version 7 UUIDs sort in chronological order when compared using the standard `<` operator, making them well-suited as database primary keys. UUIDs generated within the same process are guaranteed to be monotonically increasing.
-    public static func timeOrdered() -> UUID
+    public static func version7() -> UUID
 
     /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
     ///
@@ -167,7 +171,7 @@ extension UUID {
     /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
     /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
     /// - Returns: A version 7 UUID.
-    public static func timeOrdered(
+    public static func version7(
         using generator: inout some RandomNumberGenerator,
         at date: Date? = nil,
         offset: Duration = .zero
@@ -175,7 +179,7 @@ extension UUID {
 }
 ```
 
-The most significant 48 bits contain a millisecond-precision Unix timestamp. The 12 bits following the version field (`rand_a`) encode sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3. The remaining 62 bits (`rand_b`, after the variant field) are filled using `generator`. The `timeOrdered()` convenience delegates to `timeOrdered(using:)` with a `SystemRandomNumberGenerator`.
+The most significant 48 bits contain a millisecond-precision Unix timestamp. The 12 bits following the version field (`rand_a`) encode sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3. The remaining 62 bits (`rand_b`, after the variant field) are filled using `generator`. The `version7()` convenience delegates to `version7(using:)` with a `SystemRandomNumberGenerator`.
 
 When called without a `Date` argument, the combined timestamp (milliseconds + sub-millisecond precision) is guaranteed to be monotonically increasing within the current process. An atomic value tracks the last returned timestamp; if the system clock has not advanced since the previous call, the value is incremented by one sub-millisecond tick. This ensures strict ordering even under high-frequency generation or clock adjustments, following the same approach used by Go's `google/uuid` and PostgreSQL. When a caller provides an explicit `date`, the monotonicity guarantee does not apply.
 
@@ -199,7 +203,7 @@ extension UUID {
 
 This proposal is purely additive. The existing `UUID()` initializer continues to create version 4 random UUIDs. The `random(using:)` static method is unaffected. No existing behavior changes.
 
-UUIDs created by `timeOrdered()` are fully valid UUIDs and interoperate with all existing APIs that accept `UUID` or `NSUUID`, including `Codable`, `Comparable`, bridging, and string serialization.
+UUIDs created by `version7()` are fully valid UUIDs and interoperate with all existing APIs that accept `UUID` or `NSUUID`, including `Codable`, `Comparable`, bridging, and string serialization.
 
 ## Implications on adoption
 
@@ -214,7 +218,7 @@ This feature can be freely adopted and un-adopted in source code with no deploym
 
 ### Adding version as a parameter to `init()`
 
-Instead of `UUID.timeOrdered()`, we considered `UUID(version: 7)`. However, different versions require different parameters — version 5 needs a name and namespace, version 8 needs custom data — so a single initializer would either need to accept many optional parameters or use an associated-value enum. Static factory methods are clearer and allow each version to have its own natural parameter list.
+Instead of `UUID.version7()`, we considered `UUID(version: 7)`. However, different versions require different parameters — version 5 needs a name and namespace, version 8 needs custom data — so a single initializer would either need to accept many optional parameters or use an associated-value enum. Static factory methods are clearer and allow each version to have its own natural parameter list.
 
 ### Supporting all UUID versions immediately
 
