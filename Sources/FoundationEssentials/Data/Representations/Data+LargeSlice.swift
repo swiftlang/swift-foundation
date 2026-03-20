@@ -161,18 +161,34 @@ extension Data {
         var range: Range<Int> {
             return slice.range
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        func withUnsafeBytes<Result>(_ apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
-            return try storage.withUnsafeBytes(in: range, apply: apply)
+
+        @inline(__always)
+        @_alwaysEmitIntoClient
+        func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+            try storage.withUnsafeBytes(in: range, apply: apply)
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
+
+        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeBytes(body)
+        }
+
+        @inline(__always)
+        @_alwaysEmitIntoClient
+        mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             ensureUniqueReference()
             return try storage.withUnsafeMutableBytes(in: range, apply: apply)
         }
-        
+
+        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+        @_spi(FoundationLegacyABI)
+        @usableFromInline
+        internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeMutableBytes(body)
+        }
+
         @inlinable // This is @inlinable as reasonably small.
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
             ensureUniqueReference()

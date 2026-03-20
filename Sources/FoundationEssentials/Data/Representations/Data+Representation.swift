@@ -150,12 +150,12 @@ extension Data {
         }
         
         @_alwaysEmitIntoClient @inline(__always)
-        func withUnsafeBytes<Result>(_ apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
+        func withUnsafeBytes<Result: ~Copyable, E>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             try _storage.withUnsafeBytes(in: _slice, apply: apply)
         }
         
         @_alwaysEmitIntoClient @inline(__always)
-        mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
+        mutating func withUnsafeMutableBytes<Result: ~Copyable, E>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             ensureUniqueReference()
             return try _storage.withUnsafeMutableBytes(in: _slice, apply: apply)
         }

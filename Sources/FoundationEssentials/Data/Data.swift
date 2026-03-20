@@ -491,10 +491,20 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    public func withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
-        return try _representation.withUnsafeBytes(body)
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<E, ResultType: ~Copyable>(_ body: (UnsafeRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
+        try _representation.withUnsafeBytes(body)
     }
+
+#if DATA_LEGACY_ABI
+    @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    @_spi(FoundationLegacyABI)
+    @usableFromInline
+    internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        try withUnsafeBytes(body)
+    }
+#endif // DATA_LEGACY_ABI
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
@@ -537,17 +547,30 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    @inline(__always)
     @_alwaysEmitIntoClient
-    public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
-        return try _representation.withUnsafeBytes {
-            return try $0.withMemoryRebound(to: UInt8.self, body)
+    public func withContiguousStorageIfAvailable<E, ResultType: ~Copyable>(
+      _ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws(E) -> ResultType
+    ) throws(E) -> ResultType? {
+        try _representation.withUnsafeBytes { bytes throws(E) in
+          try bytes.withMemoryRebound(to: UInt8.self, body)
         }
     }
 
-    @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    public mutating func withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
-        return try _representation.withUnsafeMutableBytes(body)
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public mutating func withUnsafeMutableBytes<E, ResultType: ~Copyable>(_ body: (UnsafeMutableRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
+        try _representation.withUnsafeMutableBytes(body)
     }
+
+#if DATA_LEGACY_ABI
+    @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+    @_spi(FoundationLegacyABI)
+    @usableFromInline
+    internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        try withUnsafeMutableBytes(body)
+    }
+#endif // DATA_LEGACY_ABI
 
     // MARK: -
 
