@@ -126,7 +126,7 @@ extension UUID {
 }
 ```
 
-This initializer provides a safe, typed-throw-compatible way to construct a UUID from raw bytes without going through `uuid_t`:
+This initializer provides a safe, typed-throw-compatible way to construct a UUID from bytes without going through `uuid_t`:
 
 ```swift
 let uuid = UUID { output in
@@ -191,46 +191,41 @@ extension UUID {
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// Creates a new UUID with RFC 9562 version 7 layout: a Unix
-    /// timestamp in milliseconds in the most significant 48 bits,
-    /// followed by random bits. The variant and version fields are
-    /// set per the RFC.
+    /// Creates a new UUID with RFC 9562 version 7 layout: a Unix timestamp in milliseconds in the most significant 48 bits, followed by random bits. The variant and version fields are set per the RFC.
     ///
-    /// Version 7 UUIDs sort in approximate chronological order
-    /// when compared using the standard `<` operator, making them
-    /// well-suited as database primary keys. UUIDs created within
-    /// the same millisecond are distinguished by random bits and
-    /// may not reflect exact creation order.
+    /// Version 7 UUIDs sort in chronological order when compared using the standard `<` operator, making them well-suited as database primary keys. UUIDs generated within the same process are guaranteed to be monotonically increasing.
     public static func timeOrdered() -> UUID
 
-    /// Creates a new UUID with RFC 9562 version 7 layout using
-    /// the specified random number generator for the random bits.
+    /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
     ///
-    /// - Parameter generator: The random number generator to use
-    ///   when creating the random portions of the UUID.
-    /// - Parameter timeSince1970: The time since the Unix epoch to
-    ///   encode in the timestamp field. If `nil`, the current time
-    ///   is used. `Duration` provides sub-millisecond precision
-    ///   without floating-point loss.
+    /// When called without an `at` argument, the timestamp portion is guaranteed to be monotonically increasing within the current process, even under high-frequency generation or clock adjustments.
+    ///
+    /// - Parameter generator: The random number generator to use when creating the random portions of the UUID.
+    /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
+    /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
     /// - Returns: A version 7 UUID.
     public static func timeOrdered(
         using generator: inout some RandomNumberGenerator,
-        timeSince1970: Duration? = nil
+        at date: Date? = nil,
+        offset: Duration = .zero
     ) -> UUID
 }
 ```
 
-The resulting UUID contains a millisecond-precision Unix timestamp in bits 0–47, with version and variant fields set per RFC 9562. The 12-bit `rand_a` field (bits 52–63) encodes sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3: the fractional millisecond is scaled to 12 bits using integer arithmetic on `Duration`'s attosecond components, avoiding any floating-point precision loss. The remaining 62 bits (`rand_b`) are filled using the system random number generator (for `timeOrdered()`) or the provided generator (for `timeOrdered(using:timeSince1970:)`). The `timeOrdered()` convenience delegates to `timeOrdered(using:)` with a `SystemRandomNumberGenerator`. The optional `timeSince1970` parameter accepts a `Duration` representing the time since the Unix epoch, allowing callers to embed a specific timestamp.
+The most significant 48 bits contain a millisecond-precision Unix timestamp. The 12 bits following the version field (`rand_a`) encode sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3. The remaining 62 bits (`rand_b`, after the variant field) are filled using `generator`. The `timeOrdered()` convenience delegates to `timeOrdered(using:)` with a `SystemRandomNumberGenerator`.
+
+When called without a `Date` argument, the combined timestamp (milliseconds + sub-millisecond precision) is guaranteed to be monotonically increasing within the current process. An atomic value tracks the last returned timestamp; if the system clock has not advanced since the previous call, the value is incremented by one sub-millisecond tick. This ensures strict ordering even under high-frequency generation or clock adjustments, following the same approach used by Go's `google/uuid` and PostgreSQL. When a caller provides an explicit `date`, the monotonicity guarantee does not apply.
 
 ### Extracting the timestamp
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// For version 7 UUIDs, returns the `Date` encoded in the
-    /// most significant 48 bits. Returns `nil` for all other versions.
-    /// The returned date has millisecond precision, as specified
-    /// by RFC 9562.
+    /// For version 7 UUIDs, returns the `Date` encoded in the most significant 48 bits. Returns `nil` for all other versions.
+    ///
+    /// The returned date has millisecond precision, as specified by RFC 9562.
+    ///
+    /// - Note: Even though this implementation, or others, may choose to encode more precision into other bytes of the `UUID`, this method may only return the portion of the timestamp stored in the RFC-specified bytes.
     public var timeOrderedTimestamp: Date? {
         get
     }

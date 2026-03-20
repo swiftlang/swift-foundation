@@ -333,25 +333,25 @@ private struct UUIDTests {
 
     @available(FoundationPreview 6.4, *)
     @Test func timeOrderedUsingDeterministicGenerator() {
-        let fixedTime = Duration.seconds(1645557742) // RFC 9562 A.6 timestamp
+        let fixedDate = Date(timeIntervalSince1970: 1645557742.0) // RFC 9562 A.6 timestamp
         var gen1 = PCGRandomNumberGenerator(seed: 42)
         var gen2 = PCGRandomNumberGenerator(seed: 42)
-        let uuid1 = UUID.timeOrdered(using: &gen1, timeSince1970: fixedTime)
-        let uuid2 = UUID.timeOrdered(using: &gen2, timeSince1970: fixedTime)
-        // Same seed and same time produces identical UUIDs
+        let uuid1 = UUID.timeOrdered(using: &gen1, at: fixedDate)
+        let uuid2 = UUID.timeOrdered(using: &gen2, at: fixedDate)
+        // Same seed and same date produces identical UUIDs
         #expect(uuid1 == uuid2)
         // Verify the timestamp round-trips
-        #expect(uuid1.timeOrderedTimestamp == Date(timeIntervalSince1970: 1645557742.0))
+        #expect(uuid1.timeOrderedTimestamp == fixedDate)
     }
 
     @available(FoundationPreview 6.4, *)
     @Test func timeOrderedDifferentSeedsSameDate() {
-        let fixedTime = Duration.seconds(1645557742)
+        let fixedDate = Date(timeIntervalSince1970: 1645557742.0)
         var gen1 = PCGRandomNumberGenerator(seed: 42)
         var gen2 = PCGRandomNumberGenerator(seed: 99)
-        let uuid1 = UUID.timeOrdered(using: &gen1, timeSince1970: fixedTime)
-        let uuid2 = UUID.timeOrdered(using: &gen2, timeSince1970: fixedTime)
-        // Same time but different seeds produces different UUIDs
+        let uuid1 = UUID.timeOrdered(using: &gen1, at: fixedDate)
+        let uuid2 = UUID.timeOrdered(using: &gen2, at: fixedDate)
+        // Same date but different seeds produces different UUIDs
         #expect(uuid1 != uuid2)
         // Both should still have the same timestamp
         #expect(uuid1.timeOrderedTimestamp == uuid2.timeOrderedTimestamp)
@@ -359,32 +359,71 @@ private struct UUIDTests {
 
     @available(FoundationPreview 6.4, *)
     @Test func timeOrderedAtSpecificDate() throws {
-        let time = Duration.seconds(1000)
+        let date = Date(timeIntervalSince1970: 1000.0)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, timeSince1970: time)
+        let uuid = UUID.timeOrdered(using: &generator, at: date)
         let timestamp = try #require(uuid.timeOrderedTimestamp)
-        #expect(timestamp == Date(timeIntervalSince1970: 1000.0))
+        #expect(timestamp == date)
         #expect(uuid.version == .timeOrdered)
     }
 
     @available(FoundationPreview 6.4, *)
     @Test func timeOrderedSubMillisecondPrecision() {
         // RFC 9562 Section 6.2 Method 3: rand_a encodes sub-ms precision.
-        // 456_789 nanoseconds = 456_789_000_000_000 attoseconds
-        // rand_a = (456_789_000_000_000 * 4096) / 1_000_000_000_000_000 = 1871
-        let time = Duration.seconds(1000) + Duration.nanoseconds(123_456_789)
+        // Date with 0.123456789 fractional seconds → 456_789 µs sub-ms
+        // Duration.seconds converts through Double, so we use a value
+        // with exact binary representation for the sub-ms test.
+        // 0.5 ms fraction → 0.5 * 4096 = 2048
+        let date = Date(timeIntervalSince1970: 1000.0005)
         var generator = SystemRandomNumberGenerator()
-        let uuid = UUID.timeOrdered(using: &generator, timeSince1970: time)
+        let uuid = UUID.timeOrdered(using: &generator, at: date)
         // rand_a is the lower nibble of byte 6 and all of byte 7
         let randA = (UInt16(uuid.span[6]) & 0x0F) << 8 | UInt16(uuid.span[7])
-        #expect(randA == 1871)
+        #expect(randA == 2048)
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func timeOrderedMonotonicity() async throws {
+    @Test func timeOrderedWithOffsetFromDate() throws {
+        let base = Date(timeIntervalSince1970: 1000.0)
+        let offset = Duration.seconds(60)
+        var generator = SystemRandomNumberGenerator()
+        let uuid = UUID.timeOrdered(using: &generator, at: base, offset: offset)
+        let timestamp = try #require(uuid.timeOrderedTimestamp)
+        // Should encode base + 60s = 1060.0
+        #expect(timestamp == Date(timeIntervalSince1970: 1060.0))
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedWithNegativeOffset() throws {
+        let base = Date(timeIntervalSince1970: 2000.0)
+        let offset = Duration.seconds(-500)
+        var generator = SystemRandomNumberGenerator()
+        let uuid = UUID.timeOrdered(using: &generator, at: base, offset: offset)
+        let timestamp = try #require(uuid.timeOrderedTimestamp)
+        // Should encode base - 500s = 1500.0
+        #expect(timestamp == Date(timeIntervalSince1970: 1500.0))
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedWithOffsetFromCurrentTime() {
+        // Offset of +1 hour from current time should produce a UUID
+        // with a timestamp roughly 1 hour in the future
+        let before = Date().addingTimeInterval(3600.0 - 1.0)
+        var generator = SystemRandomNumberGenerator()
+        let uuid = UUID.timeOrdered(using: &generator, offset: .seconds(3600))
+        let timestamp = uuid.timeOrderedTimestamp!
+        let after = Date().addingTimeInterval(3600.0 + 1.0)
+        #expect(timestamp >= before)
+        #expect(timestamp <= after)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func timeOrderedMonotonicity() {
+        // Generate many UUIDs in a tight loop without any delays.
+        // The monotonic guarantee ensures each is strictly greater
+        // than the previous, even within the same sub-millisecond.
         var previous = UUID.timeOrdered()
-        for _ in 0..<100 {
-            try await Task.sleep(for: .milliseconds(2))
+        for _ in 0..<10_000 {
             let current = UUID.timeOrdered()
             #expect(previous < current)
             previous = current
