@@ -541,4 +541,16 @@ private struct PredicateTests {
             #expect(try expression.evaluate(i) == i + 1)
         }
     }
+    
+    @Test(arguments: [#Predicate<Object?> { $0 == nil }, #Predicate<Object?> { nil == $0 }])
+    func nilLiteral(equality: Predicate<Object?>) throws {
+        #expect(try equality.evaluate(nil))
+        #expect(try !equality.evaluate(Object(a: 9, b: "abc", c: 0.72, d: 64, e: "c", f: true, g: [5, 7, 5, 1])))
+    }
+    
+    @Test(arguments: [#Predicate<Object?> { $0 != nil }, #Predicate<Object?> { nil != $0 }])
+    func nilLiteral(inequality: Predicate<Object?>) throws {
+        #expect(try !inequality.evaluate(nil))
+        #expect(try inequality.evaluate(Object(a: 9, b: "abc", c: 0.72, d: 64, e: "c", f: true, g: [5, 7, 5, 1])))
+    }
 }
