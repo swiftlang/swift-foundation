@@ -2166,4 +2166,43 @@ struct JSONEncodingDecodingTests {
         // Optional data should encode the same way.
         _testRoundTrip(of: Optional(data), expectedJSON: expectedJSON)
     }
+
+    /// A simple type that only decodes the "name" field and skips all unknown keys.
+    struct SkipValueOuter: JSONDecodable, Equatable {
+        var name: String
+
+        static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> SkipValueOuter {
+            try decoder.decodeStruct { s throws(CodingError.Decoding) in
+                var name: String?
+                try s.decodeEachKeyAndValue {
+                    (key, valueDecoder: inout _) throws(CodingError.Decoding) -> Void in
+                    switch key {
+                    case "name": name = try valueDecoder.decode(String.self)
+                    default: break
+                    }
+                }
+                return SkipValueOuter(name: name ?? "")
+            }
+        }
+    }
+
+    @Test func skipUnknownScalarValue() throws {
+        let decoded = try NewJSONDecoder().decode(SkipValueOuter.self, from: Data(#"{"name":"hello","extra":42}"#.utf8))
+        #expect(decoded == SkipValueOuter(name: "hello"))
+    }
+
+    @Test func skipUnknownArrayValue() throws {
+        let decoded = try NewJSONDecoder().decode(SkipValueOuter.self, from: Data(#"{"name":"hello","tags":["a","b"]}"#.utf8))
+        #expect(decoded == SkipValueOuter(name: "hello"))
+    }
+
+    @Test func skipUnknownObjectValue() throws {
+        let decoded = try NewJSONDecoder().decode(SkipValueOuter.self, from: Data(#"{"name":"hello","meta":{"k":"v"}}"#.utf8))
+        #expect(decoded == SkipValueOuter(name: "hello"))
+    }
+
+    @Test func skipUnknownNestedArrayValue() throws {
+        let decoded = try NewJSONDecoder().decode(SkipValueOuter.self, from: Data(#"{"name":"hello","items":[{"id":1},{"id":2}]}"#.utf8))
+        #expect(decoded == SkipValueOuter(name: "hello"))
+    }
 }
