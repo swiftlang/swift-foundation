@@ -161,7 +161,7 @@ private struct ProcessInfoTests {
 #if FOUNDATION_FRAMEWORK
         let targetNames = ["TestHost"]
 #elseif os(Linux) || os(Windows) || os(Android) || os(FreeBSD)
-        let targetNames = ["swift-foundationPackageTests.xctest"]
+        let targetNames = ["swift-foundationPackageTests.xctest", "FoundationEssentialsTests-test-runner", "FoundationEssentialsTests-test-runner.exe"]
 #else
         let targetNames = ["swiftpm-testing-helper", "xctest"]
 #endif
