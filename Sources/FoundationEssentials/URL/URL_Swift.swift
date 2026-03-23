@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -587,8 +589,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         }
     }
 
-    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true) -> String {
-        let urlPath = resolveAgainstBase ? absolutePath(percentEncoded: true) : relativePath(percentEncoded: true)
+    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle) -> String {
+        let urlPath = absolutePath(percentEncoded: true)
         return Self.fileSystemPath(for: urlPath, style: style)
     }
 
@@ -1341,4 +1343,5 @@ extension _SwiftURL {
         }
     }
 }
-#endif
+#endif // FOUNDATION_FRAMEWORK
+#endif // FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2

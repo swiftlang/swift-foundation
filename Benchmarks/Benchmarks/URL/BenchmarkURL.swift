@@ -26,9 +26,10 @@ let benchmarks = {
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .throughput]
 
-    let validURLString = "scheme://username:password@app.example.com:80/pathwithoutspaces/morepath?queryname=queryvalue#fragmentwithoutspaces"
+    let validURLString = "http://example.com/path/index.html?query=value&some#fragment"
     let invalidURLString = "scheme://username:password@example.com:invalidport/path?query#fragment"
-    let encodableURLString = "scheme://user name:pass word@😂😂😂.example.com:80/path with spaces/more path?query name=query value#fragment with spaces"
+    let encodableASCIIString = "http://example.com/users/John Doe/home?date=01\\01\\2001"
+    let encodableUnicodeString = "http://😂😂😂.com/users/i❤️swift/home%2Fpath?date=01∕01∕2001"
 
     // MARK: - String Parsing
 
@@ -57,15 +58,27 @@ let benchmarks = {
     }
 
     #if os(macOS) || compiler(>=6)
-    Benchmark("URL.ParseAndEncode") { benchmark in
+    Benchmark("URL.ParseAndEncodeASCII") { benchmark in
         for _ in benchmark.scaledIterations {
-            blackHole(URL(string: encodableURLString))
+            blackHole(URL(string: encodableASCIIString))
         }
     }
 
-    Benchmark("URLComponents.ParseAndEncode") { benchmark in
+    Benchmark("URLComponents.ParseAndEncodeASCII") { benchmark in
         for _ in benchmark.scaledIterations {
-            blackHole(URLComponents(string: encodableURLString))
+            blackHole(URLComponents(string: encodableASCIIString))
+        }
+    }
+
+    Benchmark("URL.ParseAndEncodeUnicode") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URL(string: encodableUnicodeString))
+        }
+    }
+
+    Benchmark("URLComponents.ParseAndEncodeUnicode") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URLComponents(string: encodableUnicodeString))
         }
     }
     #endif
@@ -277,6 +290,177 @@ let benchmarks = {
             for t in templates {
                 blackHole(URL(template: t, variables: variables))
             }
+        }
+    }
+
+    // MARK: - Non-File URL Path Manipulation
+
+    let url = URL(string: "https://www.swift.org/api/v1/install/")!
+
+    Benchmark("URL.isFileURL") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(url.isFileURL)
+        }
+    }
+
+    Benchmark("URL.AppendingPathComponent") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(url.appending(path: "releases.json"))
+        }
+    }
+
+    Benchmark("URL.DeletingLastPathComponent") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(url.deletingLastPathComponent())
+        }
+    }
+
+    Benchmark("URL.PathComponents") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(url.pathComponents)
+        }
+    }
+
+    let swiftly = URL(string: ".././swiftly.json", relativeTo: url)!
+
+    Benchmark("URL.Standardized") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(swiftly.standardized)
+        }
+    }
+
+    Benchmark("URL.AbsoluteURL") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(swiftly.absoluteURL)
+        }
+    }
+
+    // MARK: - File URL
+
+    Benchmark("URL.ParseFilePath") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URL(filePath: "/Users/Foo/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/"))
+        }
+    }
+
+    let fileURL = URL(filePath: "/Users/Foo/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/")
+
+    Benchmark("FileURL.isFileURL") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.isFileURL)
+        }
+    }
+
+    Benchmark("FileURL.GetPath") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.path)
+        }
+    }
+
+    Benchmark("FileURL.AppendingPathComponent") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.appending(path: "modules.timestamp"))
+        }
+    }
+
+    Benchmark("FileURL.DeletingLastPathComponent") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.deletingLastPathComponent())
+        }
+    }
+
+    Benchmark("FileURL.LastPathComponent") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.lastPathComponent)
+        }
+    }
+
+    Benchmark("FileURL.PathComponents") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.pathComponents)
+        }
+    }
+
+    Benchmark("FileURL.AppendingPathExtension") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.appendingPathExtension("tar.gz"))
+        }
+    }
+
+    Benchmark("FileURL.DeletingPathExtension") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.deletingPathExtension())
+        }
+    }
+
+    Benchmark("FileURL.PathExtension") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURL.pathExtension)
+        }
+    }
+
+    let fileURLWithDots = URL(filePath: "/Users/Foo/./Downloads/../Library//Developer/./Xcode/DerivedData/..")
+
+    Benchmark("FileURL.Standardized") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(fileURLWithDots.standardized)
+        }
+    }
+
+    Benchmark("URL.ParseAndEncodeFilePath") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URL(filePath: "/Users/John Doe/Application Support/Xcode/"))
+        }
+    }
+
+    let encodableFileURL = URL(filePath: "/Users/John Doe/Application Support/Xcode/")
+
+    Benchmark("FileURL.GetDecodedPath") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(encodableFileURL.path)
+        }
+    }
+
+    // MARK: - Data Round Trip
+
+    var data = Data("data:".utf8)
+    for i in 0..<1000 {
+        data.append(UInt8(i % 128))
+    }
+
+    Benchmark("URL.DataRepresentation") { benchmark in
+        for _ in benchmark.scaledIterations {
+            let url = URL(dataRepresentation: data, relativeTo: nil)!
+            blackHole(url)
+            blackHole(url.dataRepresentation)
+        }
+    }
+
+    // MARK: - Long Strings
+
+    let longDataString = {
+        var string = "data:text/plain;base64,"
+        for i in 0..<2048 {
+            string += "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9w"
+        }
+        return string
+    }()
+
+    Benchmark("URL.ParseBigString") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URL(string: longDataString))
+        }
+    }
+
+    Benchmark("URL.ParseBigFilePath") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URL(filePath: "/Lorem/ipsum/dolor/sit/amet,/consectetur/adipiscing/elit./Aliquam/aliquam/a/libero/sit/amet/eleifend./Nulla/sapien/mi,/eleifend/quis/accumsan/id,/sollicitudin/in/nulla./Fusce/non/sodales/dolor./Morbi/luctus/consequat/felis/vitae/elementum./Nam/id/ex/in/sapien/congue/varius/nec/quis/eros./Proin/ut/turpis/eu/nisl/efficitur/tempus./Donec/mattis/congue/arcu/vel/convallis./Integer/sit/amet/nunc/sagittis,/gravida/ligula/eu,/varius/quam./Phasellus/sodales/ut/libero/id/ultrices./Mauris/tristique/risus/quis/massa/porta,/vel/ornare/libero/pharetra./Phasellus/id/suscipit/magna./Etiam/porta/nunc/ut/dolor/sollicitudin/commodo./Praesent/consequat/elit/a/ipsum/sodales/rhoncus./Fusce/malesuada/sed/diam/eget/rhoncus./Mauris/et/interdum/nulla./Sed/egestas/egestas/turpis/nec/imperdiet."))
+        }
+    }
+
+    Benchmark("URL.ParseAndEncodeBigFilePath") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URL(filePath: "/Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquam a libero sit amet eleifend. Nulla sapien mi, eleifend quis accumsan id, sollicitudin in nulla. Fusce non sodales dolor. Morbi luctus consequat felis vitae elementum. Nam id ex in sapien congue varius nec quis eros. Proin ut turpis eu nisl efficitur tempus. Donec mattis congue arcu vel convallis. Integer sit amet nunc sagittis, gravida ligula eu, varius quam. Phasellus sodales ut libero id ultrices. Mauris tristique risus quis massa porta, vel ornare libero pharetra. Phasellus id suscipit magna. Etiam porta nunc ut dolor sollicitudin commodo. Praesent consequat elit a ipsum sodales rhoncus. Fusce malesuada sed diam eget rhoncus. Mauris et interdum nulla. Sed egestas egestas turpis nec imperdiet."))
         }
     }
 }

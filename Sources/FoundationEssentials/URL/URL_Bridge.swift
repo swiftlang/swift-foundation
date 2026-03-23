@@ -239,8 +239,8 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         return nil
     }
 
-    func fileSystemPath(style: URL.PathStyle, resolveAgainstBase: Bool) -> String {
-        let path = resolveAgainstBase ? absolutePath(percentEncoded: true) : relativePath(percentEncoded: true)
+    func fileSystemPath(style: URL.PathStyle) -> String {
+        let path = absolutePath(percentEncoded: true)
         return _SwiftURL.fileSystemPath(for: path, style: style)
     }
 
