@@ -18,6 +18,10 @@
 internal import _ForSwiftFoundation
 #endif
 
+#if canImport(Darwin)
+import Darwin
+#endif
+
 // MARK: - Encoding types for URL buffers
 
 // URL types percent-encode invalid characters using their UTF8 representation,

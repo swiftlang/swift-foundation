@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Darwin)
+import Darwin
+#endif
+
 @inline(__always)
 private func isSeparator(_ byte: UInt8) -> Bool {
     #if os(Windows)
