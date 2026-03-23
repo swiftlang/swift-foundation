@@ -1,7 +1,7 @@
 import Benchmark
 
 
-#if os(macOS) && USE_PACKAGE
+#if !FOUNDATION_FRAMEWORK
 let benchmarks = {
     calendarBenchmarks()
     localeBenchmarks()
