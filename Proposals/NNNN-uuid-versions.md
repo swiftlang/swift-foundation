@@ -223,3 +223,7 @@ Instead of `UUID.version7()`, we considered `UUID(version: 7)`. However, differe
 ### Supporting all UUID versions immediately
 
 We considered adding factory methods for all versions (1, 3, 5, 6, 7, 8), but the immediate need is version 7. Version 1 (time-based with MAC address) has privacy implications. Versions 3 and 5 require different parameters. Version 6 is a reordering of version 1 and shares its concerns. Version 8 is intentionally application-defined. Starting with version 7 keeps the proposal focused.
+
+### Accepting a `Clock` parameter instead of `Date`
+
+We considered accepting a `Clock` argument to allow callers to inject a custom time source. However, RFC 9562 requires the timestamp to represent [Unix time](https://en.wikipedia.org/wiki/Unix_time) — specifically, the number of milliseconds since the Unix epoch (1 January 1970 UTC). This corresponds to what Swift would call a `UTCClock` (see the [UTCClock pitch](https://forums.swift.org/t/pitch-utcclock/78018)), not an arbitrary clock. A `SuspendingClock` or `ContinuousClock` measures elapsed time since boot, which would produce an incorrect UUID timestamp. Any clock that *does* produce correct results would necessarily be equivalent to `UTCClock`, making the generality unnecessary. Instead, we accept an optional `Date` for callers who need to embed a specific point in time. This matches the convention used across Foundation for representations of time since the Unix epoch.
