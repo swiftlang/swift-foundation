@@ -3,7 +3,7 @@
 <!--
 This source file is part of the Swift.org open source project
 
-Copyright (c) 2025 Apple Inc. and the Swift project authors
+Copyright (c) 2026 Apple Inc. and the Swift project authors
 Licensed under Apache License v2.0 with Runtime Library Exception
 
 See https://swift.org/LICENSE.txt for license information
@@ -24,8 +24,6 @@ Foundation is distributed in the following places:
   framework built into the operating system.
 * In [Swift.org toolchains][install], versions 6.0 and later (for
   [supported platforms][]), as a library included in the toolchain.
-* In Apple's [Xcode IDE][], versions 16.0 and later.
-* In Apple's [Command Line Tools for Xcode package][], versions 16.0 and later.
 
 The locations above are considered **built-in** because they're included with a
 larger collection of software (such as an operating system, toolchain, or IDE)
@@ -39,9 +37,7 @@ and consist of _pre-compiled_ copies of the `FoundationEssentials` and
 Foundation is also available as a Swift **package library product** from the
 [swiftlang/swift-foundation][swift-foundation] repository. This copy is _not_
 considered built-in because it must be downloaded and compiled separately by
-each client. The package version is generally considered to have a lower level
-of support than the built-in copies above due to the [known caveats][caveats]
-described in the following section.
+each client.
 
 ## Caveats when using swift-foundation as a package
 
@@ -49,18 +45,8 @@ Although Foundation is available as a Swift package and you _can_ declare a
 dependency on [swift-foundation][] to use it, doing so is not generally
 recommended because it has several downsides:
 
-* **It requires building Foundation from source.** This significantly increases
-  your build time. Since builds for development are typically for debug
-  configuration, the locally-built copy will not include performance
-  optimizations.
-* **It requires building Foundation's dependencies.** This further increases
-  build time, as [swift-collections][], [swift-foundation-icu][], and
-  [swift-syntax][] must also be compiled locally.
-* **It may not integrate as well with supporting tools/IDEs as a built-in copy.**
-  Tools which integrate with Foundation, such as Swift Package Manager or
-  Apple's Xcode IDE, often optimize for the copy included in the same
-  distribution. Some features may not work as well or be missing entirely when
-  using Foundation as a package.
+* **It requires building Foundation and its dependencies from source.** This significantly increases
+  your build time.
 * **It may encounter build failures when another package uses a built-in
   Foundation.** If you use swift-foundation as a package, but you depend on a
   library from another package which uses a built-in copy of Foundation (as
@@ -70,7 +56,7 @@ recommended because it has several downsides:
 ## When to use swift-foundation as a package
 
 The primary reason swift-foundation is available as a Swift package is to
-support its own development. The core contributors regularly develop Foundation
+support development. The core contributors regularly develop Foundation
 by building it locally as a package, following workflows described in
 [Contributing][], and its CI builds that way as well.
 
