@@ -99,11 +99,9 @@ private final class DataTests {
     // String of course has its own way to get data, but this way tests our own data struct
     func dataFrom(_ string : String) -> Data {
         // Create a Data out of those bytes
-        return string.utf8CString.withUnsafeBufferPointer { (ptr) in
-            ptr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: ptr.count) {
-                // Subtract 1 so we don't get the null terminator byte. This matches NSString behavior.
-                return Data(bytes: $0, count: ptr.count - 1)
-            }
+        var string = string
+        return string.withUTF8 { (ptr) in
+            return Data(buffer: ptr)
         }
     }
 

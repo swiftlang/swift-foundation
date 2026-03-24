@@ -158,9 +158,7 @@ internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_K
 /// Use this function for ICU API which takes a C string and returns a C string. ICU may choose to return the original pointer, making the usual pattern of simply calling `String(cString: result)` use deallocated memory.
 /// See also: rdar://104711456 and rdar://104710940
 internal func _withStringAsCString(_ input: String, _ body: (UnsafePointer<CChar>) -> UnsafePointer<CChar>?) -> String? {
-    return input.utf8CString.withUnsafeBufferPointer { buffer -> String? in
-        // Intentional force unwrap
-        let base = buffer.baseAddress!
+    return input.withCString { base -> String? in
         guard let result = body(base) else {
             return nil
         }
