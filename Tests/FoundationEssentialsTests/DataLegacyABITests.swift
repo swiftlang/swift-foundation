@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if DATA_LEGACY_ABI
+#if FOUNDATION_FRAMEWORK
 @_spi(FoundationLegacyABI) @testable import Foundation
 import Testing
 
