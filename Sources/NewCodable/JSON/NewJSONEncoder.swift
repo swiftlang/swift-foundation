@@ -795,18 +795,14 @@ extension JSONDirectEncoder.DictionaryEncoder {
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
     public mutating func encode(field: some EncodingField, valueEncoder: (inout JSONDirectEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encode(key: span, checkForEscapes: true, valueEncoder: valueEncoder)
-        }
+        try self.encode(key: field.utf8Span, checkForEscapes: true, valueEncoder: valueEncoder)
     }
     
     @inline(__always)
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
     public mutating func encode(field: some JSONOptimizedEncodingField, valueEncoder: (inout JSONDirectEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encode(key: span, checkForEscapes: false, valueEncoder: valueEncoder)
-        }
+        try self.encode(key: field.utf8Span, checkForEscapes: false, valueEncoder: valueEncoder)
     }
     
     /// Convenience: encode a JSONEncodable value for a key.
