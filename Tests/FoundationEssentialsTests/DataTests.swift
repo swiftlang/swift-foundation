@@ -2967,12 +2967,24 @@ let largeCount = Int(Int16.max)
 #error("This test needs updating")
 #endif
 
+private var availableMemory: UInt64 {
+    #if canImport(Darwin) && !os(macOS)
+    // If the system has imposed memory limits on this process, provide the remaining memory within that limit
+    let remainingWithinLimits = UInt64(os_proc_available_memory())
+    if remainingWithinLimits != 0 {
+        return remainingWithinLimits
+    }
+    #endif
+    // Otherwise, provide the total memory available to the system
+    return ProcessInfo.processInfo.physicalMemory
+}
+
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
 @Suite("Large Data Tests",
    .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
    .enabled(if: // Tests can create up to two large datas, require space for at least 3 to ensure we have sufficient room
-        ProcessInfo.processInfo.physicalMemory > (largeCount * 3),
-        "This device does not have sufficient memory to run large data tests (\(ProcessInfo.processInfo.physicalMemory) bytes available, \(largeCount * 3) bytes required)"
+        availableMemory > (largeCount * 3),
+        "This device does not have sufficient memory to run large data tests (\(availableMemory) bytes available, \(largeCount * 3) bytes required)"
     )
 )
 struct LargeDataTests {
