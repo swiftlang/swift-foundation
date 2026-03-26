@@ -255,11 +255,10 @@ extension JSONPrimitive {
         return try number[type]
     }
     func decode(_ type: Int128.Type) throws -> Int128 {
-        fatalError("TODO")
-//        guard case .number(let number) = self else {
-//            fatalError("ERROR")
-//        }
-//        return try number[type]
+        guard case .number(let number) = self else {
+            fatalError("ERROR")
+        }
+        return try number[type]
     }
     func decode(_ type: UInt.Type) throws -> UInt {
         guard case .number(let number) = self else {
@@ -305,7 +304,12 @@ extension JSONPrimitive {
         }
         return try number[type]
     }
-    func decode(_ type: UInt128.Type) throws -> UInt128 { fatalError("TODO") }
+    func decode(_ type: UInt128.Type) throws -> UInt128 {
+        guard case .number(let number) = self else {
+            fatalError("ERROR")
+        }
+        return try number[type]
+    }
     func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
         let decoder = _JSONValueDecoder(self)
         return try type.init(from: decoder)

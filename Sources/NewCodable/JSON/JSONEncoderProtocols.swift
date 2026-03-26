@@ -98,6 +98,13 @@ extension Int64: JSONEncodable {
     }
 }
 
+extension Int128: JSONEncodable {
+    @inlinable
+    public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+        try encoder.encode(self)
+    }
+}
+
 extension UInt: JSONEncodable {
     @inlinable
     public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
@@ -127,6 +134,13 @@ extension UInt32: JSONEncodable {
 }
 
 extension UInt64: JSONEncodable {
+    @inlinable
+    public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+        try encoder.encode(self)
+    }
+}
+
+extension UInt128: JSONEncodable {
     @inlinable
     public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
         try encoder.encode(self)

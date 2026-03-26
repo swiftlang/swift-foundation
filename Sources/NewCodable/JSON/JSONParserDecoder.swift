@@ -1019,6 +1019,17 @@ extension JSONParserDecoder {
     }
     
     @_lifetime(self: copy self)
+    public mutating func decode(_ hint: Int128.Type) throws(CodingError.Decoding) -> Int128 {
+        do {
+            try state.reader.consumeWhitespaceAndPeek()
+        } catch {
+            throw error.at(self.codingPath)
+        }
+        return try state.decode(hint)
+    }
+    
+    
+    @_lifetime(self: copy self)
     public mutating func decode(_ hint: UInt.Type) throws(CodingError.Decoding) -> UInt {
         do {
             try state.reader.consumeWhitespaceAndPeek()
@@ -1060,6 +1071,16 @@ extension JSONParserDecoder {
     
     @_lifetime(self: copy self)
     public mutating func decode(_ hint: UInt64.Type) throws(CodingError.Decoding) -> UInt64 {
+        do {
+            try state.reader.consumeWhitespaceAndPeek()
+        } catch {
+            throw error.at(self.codingPath)
+        }
+        return try state.decode(hint)
+    }
+
+    @_lifetime(self: copy self)
+    public mutating func decode(_ hint: UInt128.Type) throws(CodingError.Decoding) -> UInt128 {
         do {
             try state.reader.consumeWhitespaceAndPeek()
         } catch {
