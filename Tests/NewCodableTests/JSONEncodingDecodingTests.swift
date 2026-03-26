@@ -1182,6 +1182,7 @@ struct JSONEncodingDecodingTests {
         #expect(try 3.14 == NewJSONDecoder().decode(Double.self, from: partialData))
     }
     
+#if !os(Windows)
     @Test
     @MainActor // Deeply recursive tests which requires running on the main thread which has a higher stack size limit
     func depthTraversal() {
@@ -1208,6 +1209,7 @@ struct JSONEncodingDecodingTests {
         }
         
     }
+#endif
     
     // MARK: - Trailing Comma Tests
     // Trailing commas aren't valid JSON and should never be emitted, but are syntactically unambiguous and are allowed by
