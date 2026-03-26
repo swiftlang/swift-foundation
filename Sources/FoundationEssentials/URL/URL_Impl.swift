@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || FOUNDATION_SWIFT_URL_V2
-
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -1483,4 +1481,3 @@ extension _URL {
 }
 
 #endif // FOUNDATION_FRAMEWORK
-#endif // FOUNDATION_FRAMEWORK || FOUNDATION_SWIFT_URL_V2
