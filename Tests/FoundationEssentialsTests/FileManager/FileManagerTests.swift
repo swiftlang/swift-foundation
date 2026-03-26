@@ -886,6 +886,27 @@ private struct FileManagerTests {
         }
     }
 
+    @Test func testSetAttributesModificationDate() async throws {
+        try await FilePlayground {
+            "testFile"
+            Directory("testDir") {}
+        }.test { fileManager in
+            // Test setAttributes with modificationDate on files
+            let fileTestDate = Date(timeIntervalSince1970: 1234567890)
+            try fileManager.setAttributes([.modificationDate: fileTestDate], ofItemAtPath: "testFile")
+            let fileAttrs = try fileManager.attributesOfItem(atPath: "testFile")
+            let fileModDate = try #require(fileAttrs[.modificationDate] as? Date)
+            #expect(abs(fileModDate.timeIntervalSince1970 - fileTestDate.timeIntervalSince1970) < 2.0, "File modification date should be set correctly")
+
+            // Test setAttributes with modificationDate on directories
+            let dirTestDate = Date(timeIntervalSince1970: 1234567890)
+            try fileManager.setAttributes([.modificationDate: dirTestDate], ofItemAtPath: "testDir")
+            let directoryAttrs = try fileManager.attributesOfItem(atPath: "testDir")
+            let directoryModDate = try #require(directoryAttrs[.modificationDate] as? Date)
+            #expect(abs(directoryModDate.timeIntervalSince1970 - dirTestDate.timeIntervalSince1970) < 2.0, "Directory modification date should be set correctly")
+        }
+    }
+
     @Test func malformedModificationDateAttribute() async throws {
         let sentinelDate = Date(timeIntervalSince1970: 100)
         try await FilePlayground {
