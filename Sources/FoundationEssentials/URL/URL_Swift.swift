@@ -10,30 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2
-
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Android)
-@preconcurrency import Android
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif os(Windows)
-import WinSDK
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#endif
+#if FOUNDATION_FRAMEWORK
 
 #if canImport(os)
 internal import os
 #endif
-
-#if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
-#endif
-
 internal import Synchronization
 
 /// `_SwiftURL` provides the new Swift implementation for `URL`, using the same parser
@@ -1087,7 +1069,6 @@ private extension String {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
 internal import CoreFoundation_Private.CFURL
 
 /// This conformance is only needed in `FOUNDATION_FRAMEWORK`,
@@ -1344,4 +1325,3 @@ extension _SwiftURL {
     }
 }
 #endif // FOUNDATION_FRAMEWORK
-#endif // FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2
