@@ -615,8 +615,18 @@ internal func foundation_swift_url_enabled() -> Bool {
 internal func foundation_swift_nsurl_enabled() -> Bool {
     return _foundation_swift_nsurl_feature_enabled()
 }
+internal func foundation_swift_url_v2_enabled() -> Bool {
+    return _foundation_swift_url_v2_enabled()
+}
 #else
 internal func foundation_swift_url_enabled() -> Bool { return true }
+internal func foundation_swift_url_v2_enabled() -> Bool {
+    #if FOUNDATION_SWIFT_URL_V2
+    return true
+    #else
+    return false
+    #endif
+}
 #endif
 
 #if canImport(os)
@@ -638,27 +648,33 @@ public struct URL: Equatable, Sendable, Hashable {
 #endif
 
 #if FOUNDATION_FRAMEWORK
+    internal typealias _Impl = any _URLProtocol & AnyObject
+
     private static var _type: any _URLProtocol.Type {
         if URL.compatibility2 {
-            return _BridgedURL.self
+            _BridgedURL.self
+        } else if foundation_swift_url_v2_enabled() {
+            _URL.self
+        } else if foundation_swift_url_enabled() {
+            _SwiftURL.self
+        } else {
+            _BridgedURL.self
         }
-        return foundation_swift_url_enabled() ? _SwiftURL.self : _BridgedURL.self
     }
 #else
-    private static let _type = _SwiftURL.self
+    #if FOUNDATION_SWIFT_URL_V2
+    internal typealias _Impl = _URL
+    #else
+    internal typealias _Impl = _SwiftURL
+    #endif
+
+    private static let _type = _Impl.self
 #endif
 
-#if FOUNDATION_FRAMEWORK
-    internal let _url: any _URLProtocol & AnyObject
-    internal init(_ url: any _URLProtocol & AnyObject) {
+    internal let _url: _Impl
+    internal init(_ url: _Impl) {
         _url = url
     }
-#else
-    private let _url: _SwiftURL
-    internal init(_ url: _SwiftURL) {
-        _url = url
-    }
-#endif
 
 #if os(Linux)
     // Workaround to fix a Linux-only crash in swift_release.
@@ -774,8 +790,8 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        // Infer from the path to prevent a file system check for what is likely a non-existant, malformed, or inaccessible path
-        _url = _SwiftURL(filePath: path, directoryHint: .inferFromPath).convertingFileReference()
+        // Infer from the path to prevent a file system check for what is likely a non-existent, malformed, or inaccessible path
+        _url = URL._type.init(filePath: path, directoryHint: .inferFromPath, relativeTo: nil).convertingFileReference()
     }
 
     /// Initializes a newly created URL using the contents of the given data, relative to a base URL.
@@ -1338,6 +1354,7 @@ public struct URL: Equatable, Sendable, Hashable {
 
 #endif // FOUNDATION_FRAMEWORK
 
+#if FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2
     internal var _swiftURL: _SwiftURL? {
         #if FOUNDATION_FRAMEWORK
         if let swift = _url as? _SwiftURL { return swift }
@@ -1346,6 +1363,7 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url
         #endif
     }
+#endif
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(relativeString)
@@ -1384,8 +1402,8 @@ extension URL {
         case windows
     }
 
-    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true) -> String {
-        _url.fileSystemPath(style: style, resolveAgainstBase: resolveAgainstBase)
+    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle) -> String {
+        _url.fileSystemPath(style: style)
     }
 
     #if os(Windows)

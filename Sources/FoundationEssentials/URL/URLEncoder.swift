@@ -13,7 +13,6 @@
 // Note: we should consolidate the encoding logic in URLParser.swift to call
 // into these functions, but keep them separate for now to minimize risk while
 // we test the new implementations.
-#if FOUNDATION_FRAMEWORK
 
 // Percent-encoding using a given encoding means "get the string bytes in this
 // encoding, then percent-encode those bytes."
@@ -30,6 +29,9 @@
 extension URLComponentAllowedMask {
     // Used to encode ";" in a path component
     static let pathNoSemicolon = Self(rawValue: 0x47fffffe87ffffff27ffffd200000000)
+
+    // Used to encode "/" in a path component
+    static let pathNoSlash = Self(rawValue: 0x47fffffe87ffffff2fff7fd200000000)
 
     // Used to encode ";" and "/" in a path component
     static let pathNoSemicolonNoSlash = Self(rawValue: 0x47fffffe87ffffff27ff7fd200000000)
@@ -286,14 +288,29 @@ internal enum URLEncoder {
     ///   was an invalid escape sequence.
     static func percentDecodeUnchecked(
         input: UnsafeBufferPointer<UInt8>,
-        output: UnsafeMutableBufferPointer<UInt8>
+        output: UnsafeMutableBufferPointer<UInt8>,
+        excludingASCII: PercentDecodingASCIIExclusionMask = .none
     ) -> Int? {
         return _percentDecode(
             input: input,
             output: output,
-            excludingASCII: .none,
+            excludingASCII: excludingASCII,
             checkBounds: false
         )
+    }
+
+    static func percentDecodeUnchecked(
+        input: borrowing Span<UInt8>,
+        output: UnsafeMutableBufferPointer<UInt8>,
+        excludingASCII: PercentDecodingASCIIExclusionMask = .none
+    ) -> Int? {
+        return input.withUnsafeBufferPointer {
+            return percentDecodeUnchecked(
+                input: $0,
+                output: output,
+                excludingASCII: excludingASCII
+            )
+        }
     }
 
     // MARK: String encoding and decoding
@@ -429,6 +446,8 @@ internal enum URLEncoder {
         }
     }
 
+    // Non-UTF8 encodings aren't used outside of CFURL
+    #if FOUNDATION_FRAMEWORK
     static func percentDecode(
         string: String,
         encoding: String.Encoding,
@@ -637,6 +656,5 @@ internal enum URLEncoder {
             return writeIndex
         }
     }
+    #endif // FOUNDATION_FRAMEWORK
 }
-
-#endif

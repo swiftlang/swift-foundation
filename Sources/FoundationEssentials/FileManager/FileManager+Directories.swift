@@ -526,3 +526,19 @@ extension _FileManagerImpl {
 #endif
     }
 }
+
+extension URL {
+    /// Returns `nil` if `getcwd` fails instead of an empty path `URL`.
+    static func currentDirectoryOrNil() -> URL? {
+        #if os(Windows)
+        URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        #else
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
+            guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
+                return nil
+            }
+            return URL(fileURLWithFileSystemRepresentation: buffer.baseAddress!, isDirectory: true, relativeTo: nil)
+        }
+        #endif
+    }
+}
