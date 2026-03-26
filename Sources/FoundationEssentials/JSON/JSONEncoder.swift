@@ -1303,7 +1303,10 @@ private extension __JSONEncoder {
     func returnEncoder(_ encoder: inout __JSONEncoder) {
         if encoder !== self, sharedSubEncoder == nil, isKnownUniquelyReferenced(&encoder) {
             encoder.codingKey = nil
-            encoder.ownerEncoder = nil // Prevent retain cycle.
+            encoder.ownerEncoder = nil
+            encoder.singleValue = nil
+            encoder.object = nil
+            encoder.array = nil
             sharedSubEncoder = encoder
         }
     }
