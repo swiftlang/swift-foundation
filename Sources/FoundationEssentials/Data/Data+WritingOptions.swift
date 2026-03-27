@@ -42,6 +42,7 @@ extension Data.WritingOptions {
         }
     }
 
+    @discardableResult
     @_alwaysEmitIntoClient
     public mutating func insert(_ newMember: Data.WritingOptions) -> (inserted: Bool, memberAfterInsert: Data.WritingOptions) {
         let inserted = !self.contains(newMember)
@@ -49,6 +50,7 @@ extension Data.WritingOptions {
         return (inserted, newMember)
     }
 
+    @discardableResult
     @_alwaysEmitIntoClient
     public mutating func remove(_ member: Data.WritingOptions) -> Data.WritingOptions? {
         // Remove the file protection if self has the same protection level as member
