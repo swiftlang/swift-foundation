@@ -3169,6 +3169,75 @@ extension JSONEncoderTests {
     }
 }
 
+// MARK: - SharedSubEncoder Stale State Tests
+extension JSONEncoderTests {
+    /// Regression test: encoding a dictionary containing a throwing value via `try?`,
+    /// followed by two nil Optional encodings, used to crash with SIGTRAP because the
+    /// cached sharedSubEncoder retained stale storage from the failed encoding.
+    @Test func sharedSubEncoderStaleStateCrash() throws {
+        struct AlwaysFailingValue: Encodable {
+            func encode(to encoder: Encoder) throws {
+                throw EncodingError.invalidValue(
+                    self,
+                    .init(codingPath: encoder.codingPath,
+                          debugDescription: "Value cannot be encoded"))
+            }
+        }
+
+        struct Model: Encodable {
+            enum CodingKeys: String, CodingKey {
+                case dict, nilField1, nilField2
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try? container.encode(["key": AlwaysFailingValue()], forKey: .dict)
+                try? container.encode(nil as Int?, forKey: .nilField1)
+                try? container.encode(nil as Int?, forKey: .nilField2)
+            }
+        }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let data = try encoder.encode(Model())
+        let jsonString = try #require(String(data: data, encoding: .utf8))
+        #expect(jsonString.contains("\"nilField1\":null"))
+        #expect(jsonString.contains("\"nilField2\":null"))
+        #expect(!jsonString.contains("\"nilField1\":{}"))
+        #expect(!jsonString.contains("\"nilField2\":{}"))
+    }
+
+    /// Regression test: after a failed dictionary encoding via `try?`, a single nil
+    /// Optional should produce `null` rather than the stale `{}` object.
+    @Test func sharedSubEncoderStaleStateDataCorrectness() throws {
+        struct AlwaysFailingValue: Encodable {
+            func encode(to encoder: Encoder) throws {
+                throw EncodingError.invalidValue(
+                    self,
+                    .init(codingPath: encoder.codingPath,
+                          debugDescription: "Value cannot be encoded"))
+            }
+        }
+
+        struct Model: Encodable {
+            enum CodingKeys: String, CodingKey {
+                case dict, nilField
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try? container.encode(["key": AlwaysFailingValue()], forKey: .dict)
+                try? container.encode(nil as Int?, forKey: .nilField)
+            }
+        }
+
+        let data = try JSONEncoder().encode(Model())
+        let jsonString = try #require(String(data: data, encoding: .utf8))
+        #expect(jsonString.contains("\"nilField\":null"))
+        #expect(!jsonString.contains("\"nilField\":{}"))
+    }
+}
+
 // MARK: - Helper Global Functions
 func expectEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String, sourceLocation: SourceLocation = #_sourceLocation) {
     if lhs.count != rhs.count {
