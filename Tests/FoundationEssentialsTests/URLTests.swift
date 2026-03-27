@@ -2273,6 +2273,7 @@ private struct URLTests {
         #expect(url.query() == nil)
     }
 
+    #if !os(Windows)
     @Test func standardizedFileURLAndResolvingSymlinks() async throws {
         try await FilePlayground {
             Directory("a") {
@@ -2306,6 +2307,7 @@ private struct URLTests {
         #expect(httpURL.standardizedFileURL.absoluteString == httpURL.absoluteString)
         #expect(httpURL.resolvingSymlinksInPath().absoluteString == httpURL.absoluteString)
     }
+    #endif
 
     @Test(.enabled(if: foundation_swift_url_v2_enabled()))
     func dataRepresentationRoundTrip() throws {
