@@ -254,6 +254,7 @@ let package = Package(
                 .enableExperimentalFeature("BuiltinModule"),
                 .enableExperimentalFeature("Lifetimes"),
                 .enableExperimentalFeature("SuppressedAssociatedTypes"),
+                .enableExperimentalFeature("CoroutineAccessors"),
                 .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
@@ -272,6 +273,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("Lifetimes"),
+                .enableExperimentalFeature("CoroutineAccessors"),
                 .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
@@ -289,6 +291,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("Lifetimes"),
+                .enableExperimentalFeature("CoroutineAccessors"),
                 .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
