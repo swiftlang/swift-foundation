@@ -933,19 +933,18 @@ struct JSONEncodingDecodingTests {
     
     // MARK: - Type coercion
     @Test func typeCoercion() {
-        // TODO: (U)Int128 support.
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int8].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int16].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int32].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int64].self)
-        //        _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int128].self)
+        _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int128].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt8].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt16].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt32].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt64].self)
-        //        _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt128].self)
+        _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt128].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Float].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Double].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int], as: [Bool].self)
@@ -953,13 +952,13 @@ struct JSONEncodingDecodingTests {
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int16], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int32], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int64], as: [Bool].self)
-        //        _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int128], as: [Bool].self)
+        _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int128], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt8], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt16], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt32], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt64], as: [Bool].self)
-        //        _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt128], as: [Bool].self)
+        _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt128], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0.0, 1.0] as [Float], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0.0, 1.0] as [Double], as: [Bool].self)
     }
@@ -1522,84 +1521,83 @@ struct JSONEncodingDecodingTests {
         _testRoundTrip(of: testValue)
     }
     
-    // TODO: (U)Int128 support + proting.
-    //    @Test func roundTrippingInt128() {
-    //        for i128 in [Int128.min,
-    //                        Int128.min + 1,
-    //                        -0x1_0000_0000_0000_0000,
-    //                        0x0_8000_0000_0000_0000,
-    //                        -1,
-    //                        0,
-    //                        0x7fff_ffff_ffff_ffff,
-    //                        0x8000_0000_0000_0000,
-    //                        0xffff_ffff_ffff_ffff,
-    //                        0x1_0000_0000_0000_0000,
-    //                     .max] {
-    //            _testRoundTrip(of: i128)
-    //        }
-    //    }
-    //
-    //    @Test func int128SlowPath() throws {
-    //        let decoder = JSONDecoder()
-    //        let work: [Int128] = [18446744073709551615, -18446744073709551615]
-    //        for value in work {
-    //            // force the slow-path by appending ".0"
-    //            let json = "\(value).0".data(using: .utf8)!
-    //            #expect(try value == decoder.decode(Int128.self, from: json))
-    //        }
-    //        // These should work, but making them do so probably requires
-    //        // rewriting the slow path to use a dedicated parser. For now,
-    //        // we ensure that they throw instead of returning some bogus
-    //        // result.
-    //        let shouldWorkButDontYet: [Int128] = [
-    //            .min, -18446744073709551616, 18446744073709551616, .max
-    //        ]
-    //        for value in shouldWorkButDontYet {
-    //            // force the slow-path by appending ".0"
-    //            let json = "\(value).0".data(using: .utf8)!
-    //            #expect(throws: (any Error).self) {
-    //                try decoder.decode(Int128.self, from: json)
-    //            }
-    //        }
-    //    }
-    //
-    //    @Test func roundTrippingUInt128() {
-    //        for u128 in [UInt128.zero,
-    //                     1,
-    //                     0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
-    //                     0x0000_0000_0000_0000_8000_0000_0000_0000,
-    //                     0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
-    //                     0x0000_0000_0000_0001_0000_0000_0000_0000,
-    //                     0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
-    //                     0x8000_0000_0000_0000_0000_0000_0000_0000,
-    //                     .max] {
-    //            _testRoundTrip(of: u128)
-    //        }
-    //    }
-    //
-    //    @Test func uint128SlowPath() throws {
-    //        let decoder = JSONDecoder()
-    //        let work: [UInt128] = [18446744073709551615]
-    //        for value in work {
-    //            // force the slow-path by appending ".0"
-    //            let json = "\(value).0".data(using: .utf8)!
-    //            #expect(try value == decoder.decode(UInt128.self, from: json))
-    //        }
-    //        // These should work, but making them do so probably requires
-    //        // rewriting the slow path to use a dedicated parser. For now,
-    //        // we ensure that they throw instead of returning some bogus
-    //        // result.
-    //        let shouldWorkButDontYet: [UInt128] = [
-    //            18446744073709551616, .max
-    //        ]
-    //        for value in shouldWorkButDontYet {
-    //            // force the slow-path by appending ".0"
-    //            let json = "\(value).0".data(using: .utf8)!
-    //            #expect(throws: (any Error).self) {
-    //                try decoder.decode(UInt128.self, from: json)
-    //            }
-    //        }
-    //    }
+    @Test func roundTrippingInt128() {
+        for i128 in [Int128.min,
+                        Int128.min + 1,
+                        -0x1_0000_0000_0000_0000,
+                        0x0_8000_0000_0000_0000,
+                        -1,
+                        0,
+                        0x7fff_ffff_ffff_ffff,
+                        0x8000_0000_0000_0000,
+                        0xffff_ffff_ffff_ffff,
+                        0x1_0000_0000_0000_0000,
+                     .max] {
+            _testRoundTrip(of: i128)
+        }
+    }
+
+    @Test func int128SlowPath() throws {
+        let decoder = NewJSONDecoder()
+        let work: [Int128] = [0, 1, -1, 256, -256, 65536, -65536]
+        for value in work {
+            // force the slow-path by appending ".0"
+            let json = "\(value).0".data(using: .utf8)!
+            #expect(try value == decoder.decode(Int128.self, from: json))
+        }
+        // These should work, but making them do so probably requires
+        // rewriting the slow path to use a dedicated parser. For now,
+        // we ensure that they throw instead of returning some bogus
+        // result.
+        let shouldWorkButDontYet: [Int128] = [
+            18446744073709551615, -18446744073709551615, // These values work in JSONDecoder because of its Decimal fallback.
+            .min, -18446744073709551616, 18446744073709551616, .max
+        ]
+        for value in shouldWorkButDontYet {
+            let json = "\(value).0".data(using: .utf8)!
+            #expect(throws: (any Error).self) {
+                try decoder.decode(Int128.self, from: json)
+            }
+        }
+    }
+
+    @Test func roundTrippingUInt128() {
+        for u128 in [UInt128.zero,
+                     1,
+                     0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
+                     0x0000_0000_0000_0000_8000_0000_0000_0000,
+                     0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
+                     0x0000_0000_0000_0001_0000_0000_0000_0000,
+                     0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
+                     0x8000_0000_0000_0000_0000_0000_0000_0000,
+                     .max] {
+            _testRoundTrip(of: u128)
+        }
+    }
+
+    @Test func uint128SlowPath() throws {
+        let decoder = NewJSONDecoder()
+        let work: [UInt128] = [0, 1, 256, 65536]
+        for value in work {
+            // force the slow-path by appending ".0"
+            let json = "\(value).0".data(using: .utf8)!
+            #expect(try value == decoder.decode(UInt128.self, from: json))
+        }
+        // These should work, but making them do so probably requires
+        // rewriting the slow path to use a dedicated parser. For now,
+        // we ensure that they throw instead of returning some bogus
+        // result.
+        let shouldWorkButDontYet: [UInt128] = [
+            18446744073709551615, // This value works in JSONDecoder because of its Decimal fallback.
+            18446744073709551616, .max
+        ]
+        for value in shouldWorkButDontYet {
+            let json = "\(value).0".data(using: .utf8)!
+            #expect(throws: (any Error).self) {
+                try decoder.decode(UInt128.self, from: json)
+            }
+        }
+    }
     
     @Test func roundTrippingDoubleValues() {
         struct Numbers : JSONEncodable, JSONDecodable, Equatable {

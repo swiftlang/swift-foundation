@@ -96,11 +96,13 @@ extension JSONParserDecoder {
         @_lifetime(self: copy self) mutating func decode(_ t: Int16.Type) throws(CodingError.Decoding) -> Int16 { try decode() }
         @_lifetime(self: copy self) mutating func decode(_ t: Int32.Type) throws(CodingError.Decoding) -> Int32 { try decode() }
         @_lifetime(self: copy self) mutating func decode(_ t: Int64.Type) throws(CodingError.Decoding) -> Int64 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: Int128.Type) throws(CodingError.Decoding) -> Int128 { try decode() }
         @_lifetime(self: copy self) mutating func decode(_ t: UInt.Type) throws(CodingError.Decoding) -> UInt { try decode() }
         @_lifetime(self: copy self) mutating func decode(_ t: UInt8.Type) throws(CodingError.Decoding) -> UInt8 { try decode() }
         @_lifetime(self: copy self) mutating func decode(_ t: UInt16.Type) throws(CodingError.Decoding) -> UInt16 { try decode() }
         @_lifetime(self: copy self) mutating func decode(_ t: UInt32.Type) throws(CodingError.Decoding) -> UInt32 { try decode() }
         @_lifetime(self: copy self) mutating func decode(_ t: UInt64.Type) throws(CodingError.Decoding) -> UInt64 { try decode() }
+        @_lifetime(self: copy self) mutating func decode(_ t: UInt128.Type) throws(CodingError.Decoding) -> UInt128 { try decode() }
         
         @usableFromInline
         internal struct FloatingPointNonConformingStringValueVisitor<T: BinaryFloatingPoint & PrevalidatedJSONNumberBufferConvertible>: DecodingStringVisitor {
@@ -173,7 +175,6 @@ extension JSONParserDecoder {
         @inlinable
         @inline(__always)
         mutating func decode<T: FixedWidthInteger>() throws(CodingError.Decoding) -> T {
-            // TODO: TEST NEGATIVE FLOATS HERE. I think `parseInteger` consumes the `-` and doesn't restore it on returning .retryAsFloatingPoint
             do throws(_JSONDecodingError) {
                 switch try reader.parseInteger(as: T.self) ^^ .jsonError {
                 case .pureInteger(let integer):
@@ -186,7 +187,13 @@ extension JSONParserDecoder {
                         throw .json(JSONError.numberIsNotRepresentableInSwift(parsed: String(double)))
                     }
                     
-                    // TODO: Classic JSONDecoder would retry Decimal -> integer parsing
+                    // Double only has 53 bits of significand, so values with magnitude >= 2^53
+                    // may have been rounded. Reject them to avoid silently returning wrong integers.
+                    // TODO: Classic JSONDecoder would retry Decimal -> integer parsing for these values.
+                    if double.magnitude >= Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
+                        throw .json(JSONError.numberIsNotRepresentableInSwift(parsed: String(double)))
+                    }
+                    
                     return integer
                 case .notANumber:
                     throw .decoding(decodingError(expectedTypeDescription: "integer number"))
@@ -1198,7 +1205,13 @@ extension JSONParserDecoder {
                 switch peek() {
                 case ._minus:
                     moveReaderIndex(forwardBy: 1)
-                    return try _parseIntegerDigits(isNegative: true)
+                    let result = try _parseIntegerDigits(isNegative: true) as IntegerParseResult<Result>
+                    if case .retryAsFloatingPoint = result {
+                        // _parseIntegerDigits rewinds to its own start, but the '-' was consumed
+                        // before it was called. Rewind one more byte so parseFloatingPoint sees it.
+                        moveReaderIndex(forwardBy: -1)
+                    }
+                    return result
                 case ._plus:
                     moveReaderIndex(forwardBy: 1)
                     fallthrough

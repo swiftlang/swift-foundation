@@ -210,6 +210,9 @@ public protocol JSONDecoderProtocol: ~Escapable {
     mutating func decode(_ hint: Int64.Type) throws(CodingError.Decoding) -> Int64
     
     @_lifetime(self: copy self)
+    mutating func decode(_ hint: Int128.Type) throws(CodingError.Decoding) -> Int128
+    
+    @_lifetime(self: copy self)
     mutating func decode(_ hint: UInt.Type) throws(CodingError.Decoding) -> UInt
     
     @_lifetime(self: copy self)
@@ -223,6 +226,9 @@ public protocol JSONDecoderProtocol: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decode(_ hint: UInt64.Type) throws(CodingError.Decoding) -> UInt64
+    
+    @_lifetime(self: copy self)
+    mutating func decode(_ hint: UInt128.Type) throws(CodingError.Decoding) -> UInt128
     
     @_lifetime(self: copy self)
     mutating func decode(_ hint: Float.Type) throws(CodingError.Decoding) -> Float
@@ -387,6 +393,14 @@ extension Int64: JSONDecodable {
     }
 }
 
+extension Int128: JSONDecodable {
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+        return try decoder.decode(Self.self)
+    }
+}
+
 extension UInt: JSONDecodable {
     @inline(__always)
     @_alwaysEmitIntoClient
@@ -420,6 +434,14 @@ extension UInt32: JSONDecodable {
 }
 
 extension UInt64: JSONDecodable {
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+        return try decoder.decode(Self.self)
+    }
+}
+
+extension UInt128: JSONDecodable {
     @inline(__always)
     @_alwaysEmitIntoClient
     public static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {

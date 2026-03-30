@@ -124,6 +124,9 @@ public protocol CommonDecoder: ~Escapable {
     mutating func decode(_ hint: Int64.Type) throws(CodingError.Decoding) -> Int64
     
     @_lifetime(self: copy self)
+    mutating func decode(_ hint: Int128.Type) throws(CodingError.Decoding) -> Int128
+    
+    @_lifetime(self: copy self)
     mutating func decode(_ hint: UInt.Type) throws(CodingError.Decoding) -> UInt
     
     @_lifetime(self: copy self)
@@ -137,6 +140,9 @@ public protocol CommonDecoder: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decode(_ hint: UInt64.Type) throws(CodingError.Decoding) -> UInt64
+    
+    @_lifetime(self: copy self)
+    mutating func decode(_ hint: UInt128.Type) throws(CodingError.Decoding) -> UInt128
     
     @_lifetime(self: copy self)
     mutating func decode(_ hint: Float.Type) throws(CodingError.Decoding) -> Float
@@ -394,6 +400,9 @@ public extension CommonDecoder where Self: ~Escapable {
     mutating func decode(_ hint: Int64.Type) throws(CodingError.Decoding) -> Int64 { throw CodingError.unsupportedDecodingType("Int64") }
     
     @_lifetime(self: copy self)
+    mutating func decode(_ hint: Int128.Type) throws(CodingError.Decoding) -> Int128 { throw CodingError.unsupportedDecodingType("Int128") }
+    
+    @_lifetime(self: copy self)
     mutating func decode(_ hint: UInt.Type) throws(CodingError.Decoding) -> UInt { throw CodingError.unsupportedDecodingType("UInt") }
     
     @_lifetime(self: copy self)
@@ -407,6 +416,9 @@ public extension CommonDecoder where Self: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decode(_ hint: UInt64.Type) throws(CodingError.Decoding) -> UInt64 { throw CodingError.unsupportedDecodingType("UInt64") }
+    
+    @_lifetime(self: copy self)
+    mutating func decode(_ hint: UInt128.Type) throws(CodingError.Decoding) -> UInt128 { throw CodingError.unsupportedDecodingType("UInt128") }
     
     @_lifetime(self: copy self)
     mutating func decode(_ hint: Float.Type) throws(CodingError.Decoding) -> Float { throw CodingError.unsupportedDecodingType("Float") }

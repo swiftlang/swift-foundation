@@ -55,6 +55,12 @@ extension Int64: CommonEncodable {
     }
 }
 
+extension Int128: CommonEncodable {
+    public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+        try encoder.encode(self)
+    }
+}
+
 extension UInt: CommonEncodable {
     public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
         try encoder.encode(self)
@@ -80,6 +86,12 @@ extension UInt32: CommonEncodable {
 }
 
 extension UInt64: CommonEncodable {
+    public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+        try encoder.encode(self)
+    }
+}
+
+extension UInt128: CommonEncodable {
     public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
         try encoder.encode(self)
     }

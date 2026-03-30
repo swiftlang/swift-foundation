@@ -66,6 +66,14 @@ extension Int64: CommonDecodable {
     }
 }
 
+extension Int128: CommonDecodable {
+    @_alwaysEmitIntoClient
+    @inline(__always)
+    public static func decode<D: CommonDecoder & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+        return try decoder.decode(Self.self)
+    }
+}
+
 extension UInt: CommonDecodable {
     @_alwaysEmitIntoClient
     @inline(__always)
@@ -99,6 +107,14 @@ extension UInt32: CommonDecodable {
 }
 
 extension UInt64: CommonDecodable {
+    @_alwaysEmitIntoClient
+    @inline(__always)
+    public static func decode<D: CommonDecoder & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+        return try decoder.decode(Self.self)
+    }
+}
+
+extension UInt128: CommonDecodable {
     @_alwaysEmitIntoClient
     @inline(__always)
     public static func decode<D: CommonDecoder & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
