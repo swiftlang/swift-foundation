@@ -246,6 +246,7 @@ let package = Package(
             name: "NewCodable",
             dependencies: [
                 .target(name: "FoundationEssentials"),
+                .target(name: "_FoundationCShims"),
                 "NewCodableMacros",
                 .product(name: "OrderedCollections", package: "swift-collections"),
                 .product(name: "BasicContainers", package: "swift-collections"),
