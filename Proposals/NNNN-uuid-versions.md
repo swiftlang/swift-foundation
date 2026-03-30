@@ -220,10 +220,28 @@ This feature can be freely adopted and un-adopted in source code with no deploym
 
 Instead of `UUID.version7()`, we considered `UUID(version: 7)`. However, different versions require different parameters — version 5 needs a name and namespace, version 8 needs custom data — so a single initializer would either need to accept many optional parameters or use an associated-value enum. Static factory methods are clearer and allow each version to have its own natural parameter list.
 
+We also considered using an enumeration for each version with associated types for the different parameters. In practice, this doesn't look or act much differently than simply adding functions to `UUID` with the required arguments.
+
 ### Supporting all UUID versions immediately
 
 We considered adding factory methods for all versions (1, 3, 5, 6, 7, 8), but the immediate need is version 7. Version 1 (time-based with MAC address) has privacy implications. Versions 3 and 5 require different parameters. Version 6 is a reordering of version 1 and shares its concerns. Version 8 is intentionally application-defined. Starting with version 7 keeps the proposal focused.
 
+### Different types for different versions
+
+We considered adding different types for each version of a UUID. Community feedback suggests that it is rare to need to restrict version at a _type_ level. If this functionality is needed, the `version` property can be checked dynamically at runtime.
+
 ### Accepting a `Clock` parameter instead of `Date`
 
 We considered accepting a `Clock` argument to allow callers to inject a custom time source. However, RFC 9562 requires the timestamp to represent [Unix time](https://en.wikipedia.org/wiki/Unix_time) — specifically, the number of milliseconds since the Unix epoch (1 January 1970 UTC). This corresponds to what Swift would call a `UTCClock` (see the [UTCClock pitch](https://forums.swift.org/t/pitch-utcclock/78018)), not an arbitrary clock. A `SuspendingClock` or `ContinuousClock` measures elapsed time since boot, which would produce an incorrect UUID timestamp. Any clock that *does* produce correct results would necessarily be equivalent to `UTCClock`, making the generality unnecessary. Instead, we accept an optional `Date` for callers who need to embed a specific point in time. This matches the convention used across Foundation for representations of time since the Unix epoch.
+
+### Static function names
+
+Many contributors suggested the use of shorter names like `v7`. While this is unlikely to be confusing to readers, the short name feels overly informal. The Swift API guidelines also suggest avoiding abbreviations. 
+
+We considered prefixing the function name with `make`, as the Swift naming guidelines suggest for some factory methods. However, this pattern is actually rare for similar Foundation API. Similar unprefixed API include `Date.now`, `RecurrenceRule` constructors like `.hourly(...)`, `.monthly(...)`, `CocoaError.error(...)`, `URL.temporaryDirectory`, `URL.homeDirectory(forUser: ...)` and more.
+
+### Deprecating `UUID()`
+
+We considered deprecating the no-argument initializer for `UUID`. We believe that this could be counter-productive in the long term, because it can create "deprecation fatigue." This may encourage callers to ignore warnings because they feel somewhat arbitrary, especially when existing code is correct and will continue to work in the future.
+
+For similar reasons, we cannot change the behavior of the current methods to change the case of the string or version of the result. For example, we expect there to be existing code that would break if we change the result of the `uuidString` to be lowercased.
