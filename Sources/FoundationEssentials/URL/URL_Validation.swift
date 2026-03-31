@@ -58,6 +58,10 @@ internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
     innerHost: borrowing Span<T>,
     useModernParsing: Bool
 ) -> Bool? {
+    guard useModernParsing else {
+        // For CFURL, allow arbitrary percent-encoding
+        return validate(span: innerHost, component: .hostIPvFuture)
+    }
     var i = 0
     while i < innerHost.count && URLComponentAllowedSet.hostIPvFuture.contains(innerHost[i]) {
         i += 1
@@ -66,11 +70,7 @@ internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
         return true
     }
     // We found a character that's not allowed in .hostIPvFuture
-    guard useModernParsing else {
-        // For CFURL, allow arbitrary percent-encoding
-        return validate(span: innerHost.extracting(i...), component: .hostIPvFuture)
-    }
-    // Otherwise, only a zone ID (starting at "%") can be percent-encoded
+    // Only a zone ID (starting at "%") can be percent-encoded
     guard innerHost[i] == UInt8(ascii: "%") else {
         // The IP portion contained an invalid character that was
         // not the start of a zone ID, so return nil.
