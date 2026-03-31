@@ -147,7 +147,7 @@ private struct UUIDTests {
         for _ in 0..<10000 {
             let uuid = UUID.random(using: &generator)
             #expect(uuid.version == 0b0100)
-            #expect(uuid.variant == 0b10)
+            #expect(uuid.variant == .rfc9562)
         }
     }
 
@@ -303,7 +303,7 @@ private struct UUIDTests {
         for _ in 0..<10000 {
             let uuid = UUID.version7()
             #expect(uuid.version == 7)
-            #expect(uuid.variant == 0b10)
+            #expect(uuid.variant == .rfc9562)
         }
     }
 
@@ -313,7 +313,7 @@ private struct UUIDTests {
         for _ in 0..<10000 {
             let uuid = UUID.version7(using: &generator)
             #expect(uuid.version == 7)
-            #expect(uuid.variant == 0b10)
+            #expect(uuid.variant == .rfc9562)
         }
     }
 
@@ -458,6 +458,43 @@ private struct UUIDTests {
         }
     }
 
+    @available(FoundationPreview 6.4, *)
+    @Test func versionSetter() {
+        var uuid = UUID()
+        #expect(uuid.version == 4)
+        uuid.version = 7
+        #expect(uuid.version == 7)
+        // The lower nibble of byte 6 should be preserved
+        let original = UUID()
+        var modified = original
+        modified.version = 7
+        #expect(modified.span[6] & 0x0F == original.span[6] & 0x0F)
+        #expect(modified.version == 7)
+    }
+
+    @available(FoundationPreview 6.4, *)
+    @Test func variantProperty() {
+        // v4 UUIDs have RFC 9562 variant
+        let uuid = UUID()
+        #expect(uuid.variant == .rfc9562)
+
+        // v7 UUIDs have RFC 9562 variant
+        let v7 = UUID.version7()
+        #expect(v7.variant == .rfc9562)
+
+        // Manually constructed UUID with NCS variant (top bit 0)
+        let ncs = UUID(uuid: (0, 0, 0, 0, 0, 0, 0x40, 0, 0x00, 0, 0, 0, 0, 0, 0, 0))
+        #expect(ncs.variant == .ncs)
+
+        // Microsoft variant (top 3 bits 110)
+        let ms = UUID(uuid: (0, 0, 0, 0, 0, 0, 0x40, 0, 0xC0, 0, 0, 0, 0, 0, 0, 0))
+        #expect(ms.variant == .microsoft)
+
+        // Reserved variant (top 3 bits 111)
+        let res = UUID(uuid: (0, 0, 0, 0, 0, 0, 0x40, 0, 0xE0, 0, 0, 0, 0, 0, 0, 0))
+        #expect(res.variant == .reserved)
+    }
+
     @available(FoundationPreview 6.3, *)
     @Test func deterministicRandomGeneration() {
         var generator = PCGRandomNumberGenerator(seed: 123456789)
@@ -473,12 +510,6 @@ private struct UUIDTests {
         
         let fourthUUID = UUID.random(using: &generator)
         #expect(fourthUUID == UUID(uuidString: "2B29542E-F719-4D58-87B9-C6291ADD4541"))
-    }
-}
-
-extension UUID {
-    fileprivate var variant: Int {
-        Int(self.uuid.8 >> 6 & 0b11)
     }
 }
 
