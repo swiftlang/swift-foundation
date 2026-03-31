@@ -367,6 +367,11 @@ private struct URLTests {
         var unreservedResults = ValidationResults()
         var anyValidResults = ValidationResults()
 
+        // These allow "[" and "]" unlike their counterparts above
+        var pathV2Results = ValidationResults()
+        var queryV2Results = ValidationResults()
+        var fragmentV2Results = ValidationResults()
+
         for codeUnit in UInt8(0)...UInt8(255) {
             func isAllowed(component: URLComponentAllowedSet) -> Bool {
                 component.contains(codeUnit)
@@ -404,6 +409,18 @@ private struct URLTests {
             if isAllowed(component: .anyValid) {
                 anyValidResults.setAllowed(codeUnit)
             }
+            if codeUnit == UInt8(ascii: "[") || codeUnit == UInt8(ascii: "]") {
+                continue
+            }
+            if isAllowed(component: .path) {
+                pathV2Results.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .query) {
+                queryV2Results.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .fragment) {
+                fragmentV2Results.setAllowed(codeUnit)
+            }
         }
 
         // Non-ASCII characters shouldn't be allowed in any component
@@ -419,6 +436,10 @@ private struct URLTests {
         #expect(unreservedResults.upper == 0)
         #expect(anyValidResults.upper == 0)
 
+        #expect(pathV2Results.upper == 0)
+        #expect(queryV2Results.upper == 0)
+        #expect(fragmentV2Results.upper == 0)
+
         // ASCII bit masks should match those of URLComponentAllowedMask
         #expect(schemeResults.lower == URLComponentAllowedMask.scheme.rawValue)
         #expect(userResults.lower == URLComponentAllowedMask.user.rawValue)
@@ -431,6 +452,10 @@ private struct URLTests {
         #expect(fragmentResults.lower == URLComponentAllowedMask.fragment.rawValue)
         #expect(unreservedResults.lower == URLComponentAllowedMask.unreserved.rawValue)
         #expect(anyValidResults.lower == URLComponentAllowedMask.anyValid.rawValue)
+
+        #expect(pathV2Results.lower == URLComponentAllowedMask.path.rawValue)
+        #expect(queryV2Results.lower == URLComponentAllowedMask.query.rawValue)
+        #expect(fragmentV2Results.lower == URLComponentAllowedMask.fragment.rawValue)
     }
 
     
