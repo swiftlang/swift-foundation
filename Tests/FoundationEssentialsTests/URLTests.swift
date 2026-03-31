@@ -1755,6 +1755,24 @@ private struct URLTests {
 
             url = try #require(URL(string: "../../a/b"))
             #expect(url.standardized.path() == "../../a/b")
+
+            url = try #require(URL(string: "../../.."))
+            #expect(url.relativeString == "../../..")
+            #expect(url.hasDirectoryPath)
+
+            // URL should maintain directory path status for "../../.."
+            // even though the path doesn't end in an explicit "/"
+            url.standardize()
+            #expect(url.relativeString == "../../..")
+            #expect(url.hasDirectoryPath)
+
+            url = try #require(URL(string: ".."))
+            #expect(url.relativeString == "..")
+            #expect(url.hasDirectoryPath)
+
+            url.standardize()
+            #expect(url.relativeString == "..")
+            #expect(url.hasDirectoryPath)
         }
 
         #if FOUNDATION_FRAMEWORK
@@ -2160,6 +2178,20 @@ private struct URLTests {
         url = URL(filePath: "/")
         #expect(url.deletingPathExtension() == url)
 
+        // Don't allow "." or ".." file names
+        url = URL(filePath: "..ext")
+        #expect(url.deletingPathExtension() == url)
+        url = URL(filePath: "...ext")
+        #expect(url.deletingPathExtension() == url)
+        url = URL(filePath: "/path/..ext")
+        #expect(url.deletingPathExtension() == url)
+        url = URL(filePath: "/path/...ext")
+        #expect(url.deletingPathExtension() == url)
+        url = URL(filePath: "/path/..ext/")
+        #expect(url.deletingPathExtension() == url)
+        url = URL(filePath: "/path/...ext/")
+        #expect(url.deletingPathExtension() == url)
+
         // Preserves trailing slash and hasDirectoryPath
         url = URL(filePath: "/dir/file.txt/", directoryHint: .isDirectory)
         #expect(url.deletingPathExtension().path() == "/dir/file/")
@@ -2457,5 +2489,22 @@ private struct URLTests {
         #expect(!userValid)
         #expect(!passwordValid)
         #expect(!hostValid)
+    }
+
+    @Test func squareBracketsNotAllowedInFilePathAPIs() {
+        var url = URL(filePath: "/hello/wor[d")
+        #expect(url.relativeString == "file:///hello/wor%5Bd")
+        url = URL(filePath: "/hello/wor]d")
+        #expect(url.relativeString == "file:///hello/wor%5Dd")
+
+        url.append(path: "le[ft")
+        #expect(url.relativeString == "file:///hello/wor%5Dd/le%5Bft")
+        url.append(path: "ri]ght")
+        #expect(url.relativeString == "file:///hello/wor%5Dd/le%5Bft/ri%5Dght")
+
+        url.appendPathExtension("tx[t")
+        #expect(url.relativeString == "file:///hello/wor%5Dd/le%5Bft/ri%5Dght.tx%5Bt")
+        url.appendPathExtension("tx]t")
+        #expect(url.relativeString == "file:///hello/wor%5Dd/le%5Bft/ri%5Dght.tx%5Bt.tx%5Dt")
     }
 }

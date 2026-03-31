@@ -197,10 +197,17 @@ extension Span<UInt8> {
             return nil
         }
         let lastDot = i
+        // Find the start of the last component (after the last separator)
+        var componentStart = lastDot - 1
+        while componentStart >= 0 && !isSeparator(self[componentStart]) {
+            componentStart -= 1
+        }
+        componentStart += 1
+        let stemLength = lastDot - componentStart
         // Guard against "." and ".." file names
         let badFileName = (
-            (lastDot == 1 && self[0] == ._dot) ||
-            (lastDot == 2 && self[0] == ._dot && self[1] == ._dot)
+            (stemLength == 1 && self[componentStart] == ._dot) ||
+            (stemLength == 2 && self[componentStart] == ._dot && self[componentStart + 1] == ._dot)
         )
         guard !badFileName else {
             return nil

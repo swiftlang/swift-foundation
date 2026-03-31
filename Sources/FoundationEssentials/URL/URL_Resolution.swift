@@ -246,8 +246,13 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
     }
 
     switch state {
-    case .slash: fallthrough
-    case .slashDot:
+    case .dotDot:
+        if useRFC1808 {
+            buffer[writeIndex] = dot
+            buffer[writeIndex + 1] = dot
+            writeIndex += 2
+        }
+    case .slash, .slashDot:
         buffer[writeIndex] = slash
         writeIndex += 1
     case .slashDotDot:

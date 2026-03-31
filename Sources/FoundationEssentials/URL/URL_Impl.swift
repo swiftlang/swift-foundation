@@ -945,12 +945,19 @@ extension _URL {
             }
 
             return Self.withEncodedURLPath(for: spanToAppend, encodingSlashes: encodingSlashes, isFileURL: isFileURL) {
-                // If encodingSlashes is false, we know validation failed
-                // above, so we must have encoded the appended path.
+                // If encodingSlashes is false, we know validation failed above,
+                // so we must have encoded the appended path; however, Windows
+                // paths may have backslashes that fail strictValidate but are
+                // now converted to "/", leaving a possibly un-encoded path.
+                #if os(Windows)
+                let state = _URLInfo.PathEncodingState.unknown
+                #else
+                let state: _URLInfo.PathEncodingState = encodingSlashes ? .unknown : .encoded
+                #endif
                 return appending(
                     span: $0,
                     isDirectory: isDirectory,
-                    encodingState: encodingSlashes ? .unknown : .encoded
+                    encodingState: state
                 )
             }
         }
@@ -1341,7 +1348,6 @@ extension _URL {
                 let span = buffer.span.extracting(first: pathLength)
                 return replacing(
                     path: span,
-                    isDirectory: span.last == ._slash,
                     encodingState: hasEncodedPath ? .unknown : .notEncoded
                 )
             }
