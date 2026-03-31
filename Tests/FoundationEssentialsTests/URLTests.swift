@@ -342,6 +342,97 @@ private struct URLTests {
         #expect(fragmentResults.lower == 0x47fffffe87ffffffafffffd200000000)
     }
 
+    @Test func checkURLComponentAllowedSets() throws {
+        struct ValidationResults: Equatable {
+            var lower: UInt128 = 0
+            var upper: UInt128 = 0
+            mutating func setAllowed(_ codeUnit: UInt8) {
+                if codeUnit < 128 {
+                    lower |= (UInt128(1) << codeUnit)
+                } else {
+                    upper |= (UInt128(1) << codeUnit)
+                }
+            }
+        }
+
+        var schemeResults = ValidationResults()
+        var userResults = ValidationResults()
+        var passwordResults = ValidationResults()
+        var hostResults = ValidationResults()
+        var hostIPvFutureResults = ValidationResults()
+        var hostZoneIDResults = ValidationResults()
+        var pathResults = ValidationResults()
+        var queryResults = ValidationResults()
+        var fragmentResults = ValidationResults()
+        var unreservedResults = ValidationResults()
+        var anyValidResults = ValidationResults()
+
+        for codeUnit in UInt8(0)...UInt8(255) {
+            func isAllowed(component: URLComponentAllowedSet) -> Bool {
+                component.contains(codeUnit)
+            }
+            if isAllowed(component: .scheme) {
+                schemeResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .user) {
+                userResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .password) {
+                passwordResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .host) {
+                hostResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .hostIPvFuture) {
+                hostIPvFutureResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .hostZoneID) {
+                hostZoneIDResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .rfc3986Path) {
+                pathResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .rfc3986Query) {
+                queryResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .rfc3986Fragment) {
+                fragmentResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .unreserved) {
+                unreservedResults.setAllowed(codeUnit)
+            }
+            if isAllowed(component: .anyValid) {
+                anyValidResults.setAllowed(codeUnit)
+            }
+        }
+
+        // Non-ASCII characters shouldn't be allowed in any component
+        #expect(schemeResults.upper == 0)
+        #expect(userResults.upper == 0)
+        #expect(passwordResults.upper == 0)
+        #expect(hostResults.upper == 0)
+        #expect(hostIPvFutureResults.upper == 0)
+        #expect(hostZoneIDResults.upper == 0)
+        #expect(pathResults.upper == 0)
+        #expect(queryResults.upper == 0)
+        #expect(fragmentResults.upper == 0)
+        #expect(unreservedResults.upper == 0)
+        #expect(anyValidResults.upper == 0)
+
+        // ASCII bit masks should match those of URLComponentAllowedMask
+        #expect(schemeResults.lower == URLComponentAllowedMask.scheme.rawValue)
+        #expect(userResults.lower == URLComponentAllowedMask.user.rawValue)
+        #expect(passwordResults.lower == URLComponentAllowedMask.password.rawValue)
+        #expect(hostResults.lower == URLComponentAllowedMask.host.rawValue)
+        #expect(hostIPvFutureResults.lower == URLComponentAllowedMask.hostIPvFuture.rawValue)
+        #expect(hostZoneIDResults.lower == URLComponentAllowedMask.hostZoneID.rawValue)
+        #expect(pathResults.lower == URLComponentAllowedMask.path.rawValue)
+        #expect(queryResults.lower == URLComponentAllowedMask.query.rawValue)
+        #expect(fragmentResults.lower == URLComponentAllowedMask.fragment.rawValue)
+        #expect(unreservedResults.lower == URLComponentAllowedMask.unreserved.rawValue)
+        #expect(anyValidResults.lower == URLComponentAllowedMask.anyValid.rawValue)
+    }
+
     
     @Test(.enabled(if: foundation_swift_url_enabled()))
     func pathComponentsPercentEncodedSlash() throws {
