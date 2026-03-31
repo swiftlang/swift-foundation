@@ -114,20 +114,38 @@ internal final class __DataStorage : @unchecked Sendable {
     //   of the current allocation (_bytes). This guarantees that indices remain stable for slices
     //   that are mutated
 
+    // The properties below use @exclusivity(unchecked) in release mode to avoid dynamic exclusivity checking. Exclusivity is guaranteed by the copy-on-write implementation of Data itself.
+    // Dynamic exclusivity checks are still enabled in debug builds to catch issues with the copy-on-write implementation at-desk and in unit tests.
+
     /// A pointer to the start of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _bytes: UnsafeMutableRawPointer?
 
     /// The size of the initialized portion of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _length: Int
 
     /// The total capacity of the initialized portion of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _capacity: Int
 
     /// The size of the prior slice's prefix if the allocation was copied from a slice (to maintain
     /// stable indexing)
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _offset: Int
 
     /// The deallocator to use when discarding the byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?
 
     /// Whether the uninitialized portion of the byte allocation needs to be cleared before use
@@ -136,6 +154,9 @@ internal final class __DataStorage : @unchecked Sendable {
     /// `true`, `_needToZero` indicates the uninitialized portion has nondeterministic contents and
     /// needs to be cleared. When `false`, the uninitialized portion is guaranteed to already be
     /// zeroed and does not need to be cleared before use.
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _needToZero: Bool
 
     /// A pointer to the referenced byte allocation, relative to the slice offsets
