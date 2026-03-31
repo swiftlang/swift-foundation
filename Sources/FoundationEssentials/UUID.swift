@@ -299,7 +299,41 @@ extension UUID {
 extension UUID {
     /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
     public var version: Int {
-        Int(_storage[6] >> 4)
+        get {
+            Int(_storage[6] >> 4)
+        }
+        set {
+            _storage[6] = (_storage[6] & 0x0F) | (UInt8(newValue & 0x0F) << 4)
+        }
+    }
+
+    /// The variant of a UUID, as defined by RFC 9562 Section 4.1.
+    public enum Variant: Sendable, Hashable {
+        /// NCS backward compatibility (variant bits `0xx`).
+        case ncs
+
+        /// The variant specified by RFC 9562 (variant bits `10x`).
+        case rfc9562
+
+        /// Microsoft backward compatibility (variant bits `110`).
+        case microsoft
+
+        /// Reserved for future use (variant bits `111`).
+        case reserved
+    }
+
+    /// The variant of this UUID, derived from the variant bits (bits 64–65) as defined by RFC 9562.
+    public var variant: Variant {
+        let byte = _storage[8]
+        if byte & 0x80 == 0 {
+            return .ncs
+        } else if byte & 0xC0 == 0x80 {
+            return .rfc9562
+        } else if byte & 0xE0 == 0xC0 {
+            return .microsoft
+        } else {
+            return .reserved
+        }
     }
 
     /// Creates a new UUID with RFC 9562 version 4 (random) layout. This is equivalent to calling `UUID()`.

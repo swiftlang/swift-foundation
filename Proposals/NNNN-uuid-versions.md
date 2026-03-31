@@ -138,17 +138,37 @@ let uuid = UUID { output in
 
 The closure receives an `OutputSpan<UInt8>` backed by the UUID's 16-byte storage. If the closure writes fewer or more than 16 bytes, the initializer traps. If the closure throws, the error is propagated with its original type.
 
-### `version` property
+### `version` and `variant` properties
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
+    /// The variant of a UUID, as defined by RFC 9562 Section 4.1.
+    public enum Variant: Sendable, Hashable {
+        /// NCS backward compatibility (variant bits `0xx`).
+        case ncs
+
+        /// The variant specified by RFC 9562 (variant bits `10x`).
+        case rfc9562
+
+        /// Microsoft backward compatibility (variant bits `110`).
+        case microsoft
+
+        /// Reserved for future use (variant bits `111`).
+        case reserved
+    }
+
     /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
-    public var version: Int { get }
+    public var version: Int { get set }
+
+    /// The variant of this UUID, derived from the variant bits (bits 64–65) as defined by RFC 9562.
+    public var variant: Variant { get }
 }
 ```
 
-The version value is encoded in bits 48–51 of the UUID (the high nibble of byte 6), per RFC 9562. The returned `Int` ranges from 0 to 15. Well-known versions include 1 (time-based), 3 (name-based MD5), 4 (random), 5 (name-based SHA-1), 6 (reordered time-based), 7 (time-ordered), and 8 (custom).
+The version value is encoded in bits 48–51 of the UUID (the high nibble of byte 6), per RFC 9562. The returned `Int` ranges from 0 to 15. Well-known versions include 1 (time-based), 3 (name-based MD5), 4 (random), 5 (name-based SHA-1), 6 (reordered time-based), 7 (time-ordered), and 8 (custom). The setter replaces only the version nibble, preserving all other bits.
+
+The variant value is encoded in the high bits of byte 8 (bits 64–65). UUIDs created by Foundation use the RFC 9562 variant (`.rfc9562`, binary `10`). The `Variant` enum covers all four variant values defined by RFC 9562.
 
 ### Creating version 4 and version 7 UUIDs
 
