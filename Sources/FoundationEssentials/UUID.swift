@@ -345,9 +345,12 @@ extension UUID {
     /// Creates a new UUID with RFC 9562 version 7 layout: a Unix timestamp in milliseconds in the most significant 48 bits, followed by random bits. The variant and version fields are set per the RFC.
     ///
     /// Version 7 UUIDs sort in chronological order when compared using the standard `<` operator, making them well-suited as database primary keys. UUIDs generated within the same process are guaranteed to be monotonically increasing.
-    public static func version7() -> UUID {
+    ///
+    /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
+    /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
+    public static func version7(at date: Date? = nil, offset: Duration = .zero) -> UUID {
         var generator = SystemRandomNumberGenerator()
-        return version7(using: &generator)
+        return version7(using: &generator, at: date, offset: offset)
     }
 
     /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
