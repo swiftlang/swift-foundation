@@ -669,12 +669,14 @@ private struct CalendarTests {
 #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
     @Test func test_isRepeatedDayProperty() throws {
         var c = Calendar(identifier: .vikram)
-        c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        c.timeZone = TimeZone(identifier: "GMT")!
 
-        // Gregorian 2025-04-13 is the first Vikram 2082-02-01
-        // Gregorian 2025-04-14 is the second Vikram 2082-02-01 (repeated lunar day, a.k.a. "adhika tithi")
-        let d1 = try Date("2025-04-13 12:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
-        let d2 = try Date("2025-04-14 12:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        // Gregorian 2025-04-14 is the first Vikram 2082-02-02
+        // Gregorian 2025-04-15 is the second Vikram 2082-02-02 (repeated lunar day, a.k.a. "adhika tithi")
+        let d1 = try Date("2025-04-14 12:00:00 GMT", strategy: .iso8601.dateTimeSeparator(.space))
+        let d2 = try Date("2025-04-15 12:00:00 GMT", strategy: .iso8601.dateTimeSeparator(.space))
         
         var components = DateComponents()
         components.isRepeatedDay = true
@@ -687,18 +689,20 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_YMD_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
 
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
         comps.year = 2082
         comps.month = 3
-        comps.day = 27
+        comps.day = 28
 
         let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
         #expect(normalDate == expectedNormalDate)
@@ -711,17 +715,19 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_MD_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+        let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
 
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
         comps.month = 3
-        comps.day = 27
+        comps.day = 28
 
         let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
         #expect(normalDate == expectedNormalDate)
@@ -734,16 +740,18 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_D_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
 
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
-        comps.day = 27
+        comps.day = 28
 
         let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
         #expect(normalDate == expectedNormalDate)
@@ -756,11 +764,13 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
         comps.isRepeatedDay = true
