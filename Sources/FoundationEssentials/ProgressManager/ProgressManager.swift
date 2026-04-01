@@ -384,7 +384,9 @@ internal import _FoundationCollections
             state.markChildDirty(at: position)
         }
         if let parents = parents {
+            // rdar://172950622 (Async stream observation of ProgressManager's fractionCompleted does not receive updates from subsubprogress and beyond.)
             markSelfDirty(parents: parents)
+            self.withMutation(keyPath: \.completedCount) {}
         }
     }
     
