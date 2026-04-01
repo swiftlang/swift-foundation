@@ -99,7 +99,7 @@ internal struct URLComponentAllowedSet: RawRepresentable {
     // "[" and "]" for compatibility with CFURL and WHATWG behavior.
     static var rfc3986Path:     Self { Self(rawValue: UInt16(1) << 7) }
     static var rfc3986Query:    Self { Self(rawValue: UInt16(1) << 8) }
-    static var rfc3986Fragment: Self { Self(rawValue: UInt16(1) << 8) }
+    static var rfc3986Fragment: Self { .rfc3986Query } // Same set as query
 
     func contains<T: UnsignedInteger & FixedWidthInteger>(
         _ codeUnit: T
