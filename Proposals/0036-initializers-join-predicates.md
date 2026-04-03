@@ -1,9 +1,10 @@
 # Initializers for joining a sequence of predicates
 
-* Proposal: [SF-NNNN](NNNN-initializers-join-predicates.md)
+* Proposal: [SF-0036](0036-initializers-join-predicates.md)
 * Authors: [Matthew Turk](https://github.com/MatthewTurk247)
-* Review Manager: TBD
-* Status: **Pitch**
+* Review Manager: Jeremy S
+* Status: **Review: 2026-04-03...2026-04-09**
+* Review: ([pitch](https://forums.swift.org/t/pitch-initializers-for-joining-a-sequence-of-predicates/85652))
 
 ## Introduction
 
