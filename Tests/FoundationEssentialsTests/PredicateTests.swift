@@ -541,4 +541,42 @@ private struct PredicateTests {
             #expect(try expression.evaluate(i) == i + 1)
         }
     }
+    
+    @Test func all() throws {
+        #expect(try Predicate(all: []).evaluate(42))
+        #expect(try !Predicate(all: [Predicate.true, Predicate.false]).evaluate(42))
+        let input = Object(a: 6, b: "xyz", c: 0.27, d: 97, e: "u", f: false, g: [7, 42, 1, 0, 25])
+        var predicates: [Predicate<Object>] = [
+            #Predicate { $0.a == 6 },
+            #Predicate { $0.b == "xyz" },
+            #Predicate { $0.c < 0.3 },
+            #Predicate { $0.d == 97 },
+            #Predicate { $0.d % 2 != 0 },
+            #Predicate { !$0.f },
+            #Predicate { $0.g.contains(42) },
+            #Predicate { $0.g.min() == 0 }
+        ]
+        #expect(try Predicate(all: predicates).evaluate(input))
+        predicates.append(#Predicate { $0.g.max() == 7 })
+        #expect(try !Predicate(all: predicates).evaluate(input))
+        predicates.append(#Predicate { $0.c < 0.0 })
+        #expect(try !Predicate(all: predicates).evaluate(input))
+    }
+    
+    @Test func any() throws {
+        #expect(try !Predicate(any: []).evaluate(42))
+        #expect(try Predicate(any: [Predicate.true, Predicate.false]).evaluate(42))
+        let input = Object(a: 6, b: "xyz", c: 0.27, d: 97, e: "u", f: false, g: [7, 42, 1, 0, 25])
+        let predicates: [Predicate<Object>] = [
+            #Predicate { $0.g.max() == 7 },
+            #Predicate { $0.c < 0.0 },
+            #Predicate { $0.a == 6 },
+            #Predicate { $0.b == "xyz" },
+            #Predicate { $0.c < 0.3 }
+        ]
+        #expect(try Predicate(any: predicates.dropLast()).evaluate(input))
+        #expect(try Predicate(any: predicates.dropLast(2)).evaluate(input))
+        #expect(try !Predicate(any: predicates.dropLast(3)).evaluate(input))
+        #expect(try !Predicate(any: predicates.dropLast(4)).evaluate(input))
+    }
 }
