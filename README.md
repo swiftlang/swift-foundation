@@ -15,6 +15,18 @@ On macOS, iOS, and other Apple platforms, apps should use the Foundation that co
 
 On all other Swift platforms, `swift-foundation` is available as part of the toolchain. Simply `import FoundationEssentials` or `import FoundationInternationalization` to use its API. It is also re-exported from [swift-corelibs-foundation](http://github.com/apple/swift-corelibs-foundation)'s `Foundation`, `FoundationXML`, and `FoundationNetworking` modules.
 
+## Obtaining Foundation
+
+Foundation is available in several forms — built into the OS on Apple platforms,
+included in Swift toolchains, and as a Swift package. For guidance on which to
+use and the tradeoffs involved, see [Distributions.md](Distributions.md).
+
+> [!IMPORTANT]
+> The swift-foundation package is intended to support development and testing of
+> Foundation itself. It is not recommended for use as a package dependency in
+> other projects. Prefer the built-in copy of Foundation that ships with your
+> toolchain or operating system instead.
+
 ## Building and Testing
 
 > [!NOTE]
