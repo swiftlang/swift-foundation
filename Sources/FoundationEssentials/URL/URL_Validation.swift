@@ -120,11 +120,12 @@ internal struct URLComponentAllowedSet: RawRepresentable {
     static var hostIPvFuture: Self { Self(rawValue: UInt16(1) << 1) }
 
     static var host: Self { Self(rawValue: UInt16(1) << 2) }
-    static var path: Self { Self(rawValue: UInt16(1) << 3) }
 
-    // query and fragment use the same allowed character set.
-    static var query:    Self { Self(rawValue: UInt16(1) << 4) }
-    static var fragment: Self { Self(rawValue: UInt16(1) << 4) }
+    // These sets are "lax" because they allow "[" and "]" during
+    // validation for compatibility with old CFURL behavior.
+    static var laxPath:     Self { Self(rawValue: UInt16(1) << 3) }
+    static var laxQuery:    Self { Self(rawValue: UInt16(1) << 4) }
+    static var laxFragment: Self { .laxQuery } // Same set as query
 
     // hostZoneID uses the `unreserved` character set from RFC 3986.
     static var hostZoneID: Self { Self(rawValue: UInt16(1) << 5) }

@@ -412,13 +412,13 @@ private struct URLTests {
             if codeUnit == UInt8(ascii: "[") || codeUnit == UInt8(ascii: "]") {
                 continue
             }
-            if isAllowed(component: .path) {
+            if isAllowed(component: .laxPath) {
                 pathV2Results.setAllowed(codeUnit)
             }
-            if isAllowed(component: .query) {
+            if isAllowed(component: .laxQuery) {
                 queryV2Results.setAllowed(codeUnit)
             }
-            if isAllowed(component: .fragment) {
+            if isAllowed(component: .laxFragment) {
                 fragmentV2Results.setAllowed(codeUnit)
             }
         }
@@ -456,6 +456,26 @@ private struct URLTests {
         #expect(pathV2Results.lower == URLComponentAllowedMask.path.rawValue)
         #expect(queryV2Results.lower == URLComponentAllowedMask.query.rawValue)
         #expect(fragmentV2Results.lower == URLComponentAllowedMask.fragment.rawValue)
+    }
+
+    @Test func checkURLComponentsAPICompatibility() throws {
+        let string = "http://example.com/path[0]?query[1]#frag[2]"
+        var components = try #require(URLComponents(string: string))
+        let url = try #require(URL(string: string))
+        
+        #expect(url.relativeString == components.string)
+        #expect(url.path() == components.percentEncodedPath)
+        #expect(url.query() == components.percentEncodedQuery)
+        #expect(url.fragment() == components.percentEncodedFragment)
+
+        components.percentEncodedPath = url.path()
+        components.percentEncodedQuery = url.query()
+        components.percentEncodedFragment = url.fragment()
+
+        #expect(url.relativeString == components.string)
+        #expect(url.path() == components.percentEncodedPath)
+        #expect(url.query() == components.percentEncodedQuery)
+        #expect(url.fragment() == components.percentEncodedFragment)
     }
 
     
@@ -2589,9 +2609,9 @@ private struct URLTests {
         let bracketSpan = "[]".utf8.span
 
         // Square brackets should be allowed in path, query, and fragment
-        let pathValid = validate(span: bracketSpan, component: .path)
-        let queryValid = validate(span: bracketSpan, component: .query)
-        let fragmentValid = validate(span: bracketSpan, component: .fragment)
+        let pathValid = validate(span: bracketSpan, component: .laxPath)
+        let queryValid = validate(span: bracketSpan, component: .laxQuery)
+        let fragmentValid = validate(span: bracketSpan, component: .laxFragment)
         let anyValid = validate(span: bracketSpan, component: .anyValid)
         #expect(pathValid)
         #expect(queryValid)

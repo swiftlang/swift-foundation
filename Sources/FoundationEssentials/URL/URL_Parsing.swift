@@ -640,32 +640,49 @@ extension URL {
 
         // Path always exists
         let path = span.extracting(impl.pointee.pathRange)
-        if !validate(span: path, component: .path) {
-            guard allowEncoding else { return false }
-            if useModernParsing && flags.isDisjoint(with: [.hasScheme, .hasHost]) {
-                // A relative-ref must not contain a ":" before the first "/"
-                for i in path.indices {
-                    if path[i] == UInt8(ascii: "/") {
-                        break
-                    } else if path[i] == UInt8(ascii: ":") {
-                        return false
+        if !validate(span: path, component: .rfc3986Path) {
+            if useModernParsing {
+                guard allowEncoding else { return false }
+                if flags.isDisjoint(with: [.hasScheme, .hasHost]) {
+                    // A relative-ref must not contain ":" before the first "/"
+                    for i in path.indices {
+                        if path[i] == UInt8(ascii: "/") {
+                            break
+                        } else if path[i] == UInt8(ascii: ":") {
+                            return false
+                        }
                     }
                 }
+            } else if !validate(span: path, component: .laxPath) {
+                guard allowEncoding else { return false }
             }
+            // If useModernParsing == false and .laxPath validation succeeds,
+            // we are a CFURL that needs to allow "[" and "]" regardless of
+            // allowEncoding but still encode those characters.
             flags.insert(.shouldEncodePath)
             shouldEncode = true
         }
 
-        if flags.contains(.hasQuery) && !validate(span: span.extracting(impl.pointee.queryRange), component: .query) {
-            guard allowEncoding else { return false }
-            flags.insert(.shouldEncodeQuery)
-            shouldEncode = true
+        if flags.contains(.hasQuery) {
+            let query = span.extracting(impl.pointee.queryRange)
+            if !validate(span: query, component: .rfc3986Query) {
+                if useModernParsing || !validate(span: query, component: .laxQuery) {
+                    guard allowEncoding else { return false }
+                }
+                flags.insert(.shouldEncodeQuery)
+                shouldEncode = true
+            }
         }
 
-        if flags.contains(.hasFragment) && !validate(span: span.extracting(impl.pointee.fragmentRange), component: .fragment) {
-            guard allowEncoding else { return false }
-            flags.insert(.shouldEncodeFragment)
-            shouldEncode = true
+        if flags.contains(.hasFragment) {
+            let fragment = span.extracting(impl.pointee.fragmentRange)
+            if !validate(span: fragment, component: .rfc3986Fragment) {
+                if useModernParsing || !validate(span: fragment, component: .laxFragment) {
+                    guard allowEncoding else { return false }
+                }
+                flags.insert(.shouldEncodeFragment)
+                shouldEncode = true
+            }
         }
 
         // MARK: Encoding (if needed)
@@ -1122,7 +1139,7 @@ extension URL {
             let pathRange = impl.pointee.pathRange
             let newPathStart = pathRange.startIndex + extraBytesAdded
             if flags.contains(.shouldEncodePath) {
-                guard encode(range: pathRange, component: .path) else { return false }
+                guard encode(range: pathRange, component: .rfc3986Path) else { return false }
             } else {
                 copyEnd = pathRange.endIndex
             }
@@ -1133,7 +1150,7 @@ extension URL {
                 let queryRange = impl.pointee.queryRange
                 let newQueryStart = queryRange.startIndex + extraBytesAdded
                 if flags.contains(.shouldEncodeQuery) {
-                    guard encode(range: queryRange, component: .query) else { return false }
+                    guard encode(range: queryRange, component: .rfc3986Query) else { return false }
                 } else {
                     copyEnd = queryRange.endIndex
                 }
@@ -1145,7 +1162,7 @@ extension URL {
                 let fragmentRange = impl.pointee.fragmentRange
                 let newFragmentStart = fragmentRange.startIndex + extraBytesAdded
                 if flags.contains(.shouldEncodeFragment) {
-                    guard encode(range: fragmentRange, component: .fragment) else { return false }
+                    guard encode(range: fragmentRange, component: .rfc3986Fragment) else { return false }
                 } else {
                     copyEnd = fragmentRange.endIndex
                 }
