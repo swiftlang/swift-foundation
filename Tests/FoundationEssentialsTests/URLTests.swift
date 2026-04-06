@@ -329,8 +329,8 @@ private struct URLTests {
 
         // Actual checks for valid ASCII characters
         #expect(schemeResults.lower == 0x07fffffe07fffffe03ff680000000000)
-        #expect(userResults.lower == 0x47fffffe87fffffe2fff7fd200000000)
-        #expect(passwordResults.lower == 0x47fffffe87fffffe2fff7fd200000000)
+        #expect(userResults.lower == 0x47fffffe87fffffe2bff7fd200000000)
+        #expect(passwordResults.lower == 0x47fffffe87fffffe2bff7fd200000000)
         #expect(hostResults.lower == 0x47fffffe87fffffe2bff7fd200000000)
         #expect(hostIPvFutureResults.lower == 0x47fffffe87fffffe2fff7fd200000000)
         #expect(hostZoneIDResults.lower == 0x47fffffe87fffffe03ff600000000000)
@@ -379,10 +379,12 @@ private struct URLTests {
             if isAllowed(component: .scheme) {
                 schemeResults.setAllowed(codeUnit)
             }
-            if isAllowed(component: .user) {
+            // URLComponentAllowedMask doesn't allow ":" in user or password,
+            // but CFURL does allow it unencoded in these components.
+            if isAllowed(component: .user) && codeUnit != UInt8(ascii: ":") {
                 userResults.setAllowed(codeUnit)
             }
-            if isAllowed(component: .password) {
+            if isAllowed(component: .password) && codeUnit != UInt8(ascii: ":") {
                 passwordResults.setAllowed(codeUnit)
             }
             if isAllowed(component: .host) {
