@@ -27,6 +27,7 @@ import WinSDK
 #endif
 
 internal import _FoundationCShims
+internal import Synchronization
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
@@ -418,12 +419,12 @@ struct TimeZoneCache : Sendable, ~Copyable {
 #endif // FOUNDATION_FRAMEWORK
     }
 
-    let lock: LockedState<State>
+    let lock: Mutex<State>
 
     static let cache = TimeZoneCache()
 
     fileprivate init() {
-        lock = LockedState(initialState: State())
+        lock = Mutex(State())
     }
 
     func reset() -> TimeZone? {

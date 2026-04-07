@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-
 internal import _ForSwiftFoundation
+#endif
 
 // MARK: - Path resolution
 
@@ -246,8 +246,13 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
     }
 
     switch state {
-    case .slash: fallthrough
-    case .slashDot:
+    case .dotDot:
+        if useRFC1808 {
+            buffer[writeIndex] = dot
+            buffer[writeIndex + 1] = dot
+            writeIndex += 2
+        }
+    case .slash, .slashDot:
         buffer[writeIndex] = slash
         writeIndex += 1
     case .slashDotDot:
@@ -324,6 +329,7 @@ internal protocol _URLHeader {
     var hasFragment:    Bool { get }
 }
 
+#if FOUNDATION_FRAMEWORK
 private extension CFRange {
     @inline(__always)
     func toIntRange() -> Range<Int> {
@@ -350,6 +356,7 @@ extension UnsafePointer<__CFURLHeader>: _URLHeader {
     var hasQuery:       Bool { pointee._flags.contains(.hasQuery) }
     var hasFragment:    Bool { pointee._flags.contains(.hasFragment) }
 }
+#endif
 
 // MARK: - Absolute URL resolution
 
@@ -369,8 +376,11 @@ extension Slice {
     }
 }
 
+@_specialize(where T == UInt8,  Header == _URLInfo)
+#if FOUNDATION_FRAMEWORK
 @_specialize(where T == UInt8,  Header == UnsafePointer<__CFURLHeader>)
 @_specialize(where T == UInt16, Header == UnsafePointer<__CFURLHeader>)
+#endif
 internal func resolveURLBuffers<
     T: UnsignedInteger & FixedWidthInteger, Header: _URLHeader
 >(
@@ -479,5 +489,3 @@ internal func resolveURLBuffers<
         fromSpan: relativeSpan.extracting(relativePathRange.endIndex...)
     )
 }
-
-#endif // FOUNDATION_FRAMEWORK

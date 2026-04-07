@@ -923,3 +923,13 @@ extension StringProtocol {
         return prefixEnd == endIndex || utf8[prefixEnd] == ._slash
     }
 }
+
+#if !FOUNDATION_FRAMEWORK
+internal func rootLength(path: String) -> Int {
+    return 1
+}
+
+internal func rootLength(pathBuffer: UnsafeBufferPointer<UInt8>, length: Int) -> Int {
+    return 1
+}
+#endif

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 internal import _FoundationCShims
+internal import Synchronization
 
 typealias BPlistObjectIndex = Int
 
@@ -98,10 +99,10 @@ class BPlistMap : PlistDecodingMap {
     private let trailer : BPlistTrailer
     let topObjectIndex : BPlistObjectIndex
     let objectOffsets : [UInt64]
-    var dataLock : LockedState<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
+    let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
     init (buffer: BufferView<UInt8>, trailer: BPlistTrailer, objectOffsets: [UInt64]) {
-        self.dataLock = .init(initialState: (buffer: buffer, allocation: nil))
+        self.dataLock = .init((buffer: buffer, allocation: nil))
         self.trailer = trailer
         self.topObjectIndex = BPlistObjectIndex(trailer._topObject)
         self.objectOffsets = objectOffsets
@@ -127,11 +128,11 @@ class BPlistMap : PlistDecodingMap {
     }
 
     @inline(__always)
-    func withBuffer<T>(
-      for region: Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
-    ) rethrows -> T {
-        try dataLock.withLock {
-            return try closure($0.buffer[region], $0.buffer)
+    func withBuffer<T: ~Copyable, E>(
+      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try dataLock.withLock { state throws(E) in
+            return try closure(state.buffer[region], state.buffer)
         }
     }
 
@@ -157,8 +158,7 @@ class BPlistMap : PlistDecodingMap {
     }
 
     func loadValue(at idx: BPlistObjectIndex) throws -> Value {
-        // Sendable note: We do not mutate self from within this lock
-        return try dataLock.withLockUnchecked { state in
+        return try dataLock.withLock { state in
             guard Int(idx) < objectOffsets.count else {
                 throw BPlistError.corruptedValue("object index")
             }
@@ -171,7 +171,7 @@ class BPlistMap : PlistDecodingMap {
     /// Fetch an index as an ASCII span. This avoids overhead of intermediate creation of "value" types for a common case of looking for an ASCII key string.
     /// Returns an empty span if the value was not an ASCII string (either not a string at all, or UTF16BE string).
     func withASCIIString<T>(at idx: BPlistObjectIndex, body: (Span<UInt8>) throws -> T) rethrows -> T {
-        try dataLock.withLockUnchecked { state in
+        try dataLock.withLock { state in
             guard Int(idx) < objectOffsets.count else {
                 throw BPlistError.corruptedValue("object index")
             }

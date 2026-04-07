@@ -841,7 +841,7 @@ extension _FileManagerImpl {
                 ftTime.dwLowDateTime = uiTime.LowPart
                 ftTime.dwHighDateTime = uiTime.HighPart
 
-                let hFile: HANDLE = CreateFileW($0, GENERIC_WRITE, FILE_SHARE_WRITE, nil, OPEN_EXISTING, 0, nil)
+                let hFile: HANDLE = CreateFileW($0, GENERIC_WRITE, FILE_SHARE_WRITE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
                 if hFile == INVALID_HANDLE_VALUE {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
                 }

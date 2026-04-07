@@ -144,17 +144,18 @@ extension NSURL {
     /// a trailing slash if present.
     ///
     /// - Note: Interprets the decoded file system representation as UTF8.
-    static func __copySwiftPOSIXPath(forFileURLString string: String) -> String {
+    static func __copySwiftPOSIXPath(forFileURLString string: String, allocator: CFAllocator) -> Unmanaged<CFString>? {
         assert(string.utf8.starts(with: "file://".utf8))
         var mut = string
         return mut.withUTF8 { buffer in
             let filePrefixSize = 7 // "file://"
-            return String(unsafeUninitializedCapacity: buffer.count - filePrefixSize) { outputBuffer in
-                guard let pathLength = URLEncoder.percentDecode(
+            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: buffer.count - filePrefixSize) { outputBuffer in
+                guard let baseAddress = outputBuffer.baseAddress,
+                      var pathLength = URLEncoder.percentDecode(
                     input: UnsafeBufferPointer(rebasing: buffer[filePrefixSize...]),
                     output: outputBuffer
                 ) else {
-                    return 0
+                    return nil
                 }
                 let rootLength = rootLength(
                     pathBuffer: UnsafeBufferPointer(outputBuffer),
@@ -162,9 +163,14 @@ extension NSURL {
                 )
                 if pathLength > rootLength && outputBuffer[pathLength - 1] == UInt8(ascii: "/") {
                     // Strip the trailing slash
-                    return pathLength - 1
+                    pathLength -= 1
                 }
-                return pathLength
+                guard let result = CFStringCreateWithBytes(
+                    allocator, baseAddress, pathLength, CFStringBuiltInEncodings.UTF8.rawValue, false
+                ) else {
+                    return nil
+                }
+                return Unmanaged.passRetained(result)
             }
         }
     }
@@ -219,6 +225,17 @@ extension NSURL {
             }
             return true
         }
+    }
+}
+
+@objc
+extension NSString {
+    func __copySwiftStringByAddingPercentEncoding(withAllowedCharacters allowedCharacters: CharacterSet) -> String? {
+        (self as String).addingPercentEncoding(withAllowedCharacters: allowedCharacters)
+    }
+
+    func __copySwiftStringByRemovingPercentEncoding() -> String? {
+        (self as String).removingPercentEncoding
     }
 }
 

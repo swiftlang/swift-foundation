@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
 import Benchmark
 import func Benchmark.blackHole
 
@@ -22,7 +21,7 @@ import Foundation
 #endif
 
 let benchmarks = {
-    
+    #if FOUNDATION_FRAMEWORK
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
@@ -162,5 +161,5 @@ let benchmarks = {
             blackHole(!CharacterSet.alphanumerics.isSuperset(of: CharacterSet(charactersIn: invalidAlphanumericsInput)))
         }
     }
+    #endif // FOUNDATION_FRAMEWORK
 }
-#endif

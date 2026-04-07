@@ -75,6 +75,8 @@ extension BufferView /*where Element: BitwiseCopyable*/ {
     }
 }
 
+extension BufferView: Sendable where Element: Sendable {}
+
 //MARK: Sequence
 
 extension BufferView: Sequence {
@@ -93,9 +95,6 @@ extension BufferView: Sequence {
         }
     }
 }
-
-@available(*, unavailable)
-extension BufferView: Sendable {}
 
 extension BufferView where Element: Equatable {
 

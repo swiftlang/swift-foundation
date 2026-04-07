@@ -12,6 +12,10 @@
 
 import Testing
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -95,11 +99,9 @@ private final class DataTests {
     // String of course has its own way to get data, but this way tests our own data struct
     func dataFrom(_ string : String) -> Data {
         // Create a Data out of those bytes
-        return string.utf8CString.withUnsafeBufferPointer { (ptr) in
-            ptr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: ptr.count) {
-                // Subtract 1 so we don't get the null terminator byte. This matches NSString behavior.
-                return Data(bytes: $0, count: ptr.count - 1)
-            }
+        var string = string
+        return string.withUTF8 { (ptr) in
+            return Data(buffer: ptr)
         }
     }
 
@@ -1739,6 +1741,67 @@ private final class DataTests {
         #expect(data2.allocationForComparison == originalPointer)
     }
 
+    private struct Value: ~Copyable {
+        var stored: Int
+        init(_ value: Int) { stored = value }
+    }
+
+    private enum LocalError: Error, Equatable { case error }
+
+    @Test func validateGeneralizedParameters_withUnsafeBytes() {
+        var data: Data
+
+        data = Data(repeating: 2, count: 12)
+        let value1 = data.withUnsafeBytes {
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value1.stored == 24)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+
+        data = Data(repeating: 1, count: 128)
+        let value2 = data.withUnsafeBytes {
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value2.stored == 128)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+    }
+
+    @Test func validateGeneralizedParameters_withUnsafeMutableBytes() {
+        var data: Data
+
+        data = Data(count: 12)
+        let value1 = data.withUnsafeMutableBytes {
+            $0.withMemoryRebound(to: UInt8.self) {
+                for i in $0.indices { $0[i] = 2 }
+            }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value1.stored == 24)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+
+        data = Data(count: 128)
+        let value2 = data.withUnsafeMutableBytes {
+            $0.withMemoryRebound(to: UInt8.self) {
+                for i in $0.indices { $0[i] = 1 }
+            }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value2.stored == 128)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+    }
+
     @Test func sliceHash() {
         let base1 = Data([0, 0xFF, 0xFF, 0])
         let base2 = Data([0, 0xFF, 0xFF, 0])
@@ -2766,6 +2829,64 @@ extension DataTests {
             }
         }
     }
+
+    @Test func writingOptionsSetAlgebra() {
+        var elements: [Data.WritingOptions] = [
+            .atomic, .withoutOverwriting,
+            .noFileProtection, .completeFileProtection,
+            .completeFileProtectionUnlessOpen, .completeFileProtectionUntilFirstUserAuthentication,
+            .fileProtectionMask
+        ]
+#if FOUNDATION_FRAMEWORK && !os(macOS)
+        elements.append(.completeFileProtectionWhenUserInactive)
+#endif
+
+        Data.WritingOptions.validateConformance(
+            elements: elements,
+            groupings: [
+                [.atomic],
+                [.withoutOverwriting],
+                [.noFileProtection],
+                [.completeFileProtection],
+                [.completeFileProtectionUnlessOpen],
+                [.completeFileProtectionUntilFirstUserAuthentication],
+                [.noFileProtection, .atomic],
+                [.completeFileProtection, .atomic],
+                [.completeFileProtectionUnlessOpen, .withoutOverwriting],
+                [.completeFileProtectionUntilFirstUserAuthentication, .atomic],
+            ]
+        )
+
+        #expect(Data.WritingOptions.completeFileProtection.contains(.completeFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtection.contains(.noFileProtection))
+        #expect(!Data.WritingOptions.noFileProtection.contains(.completeFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtectionUnlessOpen.contains(.noFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtectionUnlessOpen.contains(.completeFileProtection))
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).contains(.completeFileProtection))
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).contains(.atomic))
+        #expect(!Data.WritingOptions([.completeFileProtection, .atomic]).contains(.noFileProtection))
+        #expect(!Data.WritingOptions([.completeFileProtection, .atomic]).contains(.withoutOverwriting))
+
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).intersection(.noFileProtection) == [])
+        #expect(Data.WritingOptions([.noFileProtection, .withoutOverwriting]).intersection(.noFileProtection) == .noFileProtection)
+        #expect(Data.WritingOptions.atomic.intersection(.fileProtectionMask) == [])
+
+        // Verify that remove() works correctly
+        var opts: Data.WritingOptions = [.completeFileProtection, .atomic]
+        let removed = opts.remove(.completeFileProtection)
+        #expect(removed == .completeFileProtection)
+        #expect(opts == .atomic)
+
+        var opts2: Data.WritingOptions = [.completeFileProtection, .atomic]
+        let notRemoved = opts2.remove(.noFileProtection)
+        #expect(notRemoved == nil)
+        #expect(opts2 == [.completeFileProtection, .atomic])
+
+        var opts3: Data.WritingOptions = [.noFileProtection, .atomic, .withoutOverwriting]
+        let removedOpts = opts3.remove(.atomic)
+        #expect(removedOpts == .atomic)
+        #expect(opts3 == [.noFileProtection, .withoutOverwriting])
+    }
 }
 
 #if FOUNDATION_FRAMEWORK // FIXME: Re-enable tests once range(of:) is implemented
@@ -2846,12 +2967,24 @@ let largeCount = Int(Int16.max)
 #error("This test needs updating")
 #endif
 
+private var availableMemory: UInt64 {
+    #if canImport(Darwin) && !os(macOS)
+    // If the system has imposed memory limits on this process, provide the remaining memory within that limit
+    let remainingWithinLimits = UInt64(os_proc_available_memory())
+    if remainingWithinLimits != 0 {
+        return remainingWithinLimits
+    }
+    #endif
+    // Otherwise, provide the total memory available to the system
+    return ProcessInfo.processInfo.physicalMemory
+}
+
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
 @Suite("Large Data Tests",
    .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
    .enabled(if: // Tests can create up to two large datas, require space for at least 3 to ensure we have sufficient room
-        ProcessInfo.processInfo.physicalMemory > (largeCount * 3),
-        "This device does not have sufficient memory to run large data tests (\(ProcessInfo.processInfo.physicalMemory) bytes available, \(largeCount * 3) bytes required)"
+        availableMemory > (largeCount * 3),
+        "This device does not have sufficient memory to run large data tests (\(availableMemory) bytes available, \(largeCount * 3) bytes required)"
     )
 )
 struct LargeDataTests {
@@ -3178,4 +3311,35 @@ private func capacity(_ data: consuming Data) -> Int {
     #else
     data._representation._storage.capacity
     #endif
+}
+
+// MARK: - WritingOptions SetAlgebra Tests
+
+extension Data.WritingOptions: TestableOptionSet {
+    public var _description: String {
+        let protectionPart = Self(rawValue: self.rawValue & Self.fileProtectionMask.rawValue)
+        let protectionString = switch protectionPart {
+        case .noFileProtection: "noProtection"
+        case .completeFileProtection: "complete"
+        case .completeFileProtectionUnlessOpen: "unlessOpen"
+        case .completeFileProtectionUntilFirstUserAuthentication: "untilFirstAuth"
+#if FOUNDATION_FRAMEWORK && !os(macOS)
+        case .completeFileProtectionWhenUserInactive: "whenUserInactive"
+#endif
+        case []: "<none>"
+        default: "unknown (0x\(String(protectionPart.rawValue, radix: 16)))"
+        }
+
+        var options = [String]()
+        if self.rawValue & Self.atomic.rawValue != 0 {
+            options.append("atomic")
+        }
+        if self.rawValue & Self.withoutOverwriting.rawValue != 0 {
+            options.append("withoutOverwriting")
+        }
+        if options.isEmpty {
+            options.append("<none>")
+        }
+        return "(protection: \(protectionString), options: \(options.joined(separator: ", ")))"
+    }
 }

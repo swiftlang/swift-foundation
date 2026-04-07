@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -32,6 +34,8 @@ internal import os
 internal import _ForSwiftFoundation
 #endif
 
+internal import Synchronization
+
 /// `_SwiftURL` provides the new Swift implementation for `URL`, using the same parser
 /// and `URLParseInfo` as `URLComponents`, but with a few compatibility behaviors.
 ///
@@ -53,10 +57,10 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     private var isDecomposable: Bool {
         return _parseInfo.scheme == nil || hasAuthority || _parseInfo.path.utf8.first == ._slash
     }
-
+    
     // Note: We use a lock instead of a lazy var to ensure that we always
     // bridge to the same NSURL even if the URL was copied across threads.
-    private let _nsurlLock = LockedState<NSURL?>(initialState: nil)
+    private let _nsurlLock = Mutex<NSURL?>(nil)
     private var _nsurl: NSURL {
         return _nsurlLock.withLock {
             if let nsurl = $0 { return nsurl }
@@ -585,8 +589,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         }
     }
 
-    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true) -> String {
-        let urlPath = resolveAgainstBase ? absolutePath(percentEncoded: true) : relativePath(percentEncoded: true)
+    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle) -> String {
+        let urlPath = absolutePath(percentEncoded: true)
         return Self.fileSystemPath(for: urlPath, style: style)
     }
 
@@ -1339,4 +1343,5 @@ extension _SwiftURL {
         }
     }
 }
-#endif
+#endif // FOUNDATION_FRAMEWORK
+#endif // FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2

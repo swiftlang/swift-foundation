@@ -15,6 +15,8 @@ internal import _ForSwiftFoundation
 import CoreFoundation
 #endif
 
+internal import Synchronization
+
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
 internal func _calendarICUClass() -> _CalendarProtocol.Type? {
     _CalendarICU.self
@@ -41,9 +43,9 @@ struct CalendarCache : Sendable, ~Copyable {
     
     // The values stored in these two locks do not depend upon each other, so it is safe to access them with separate locks. This helps avoids contention on a single lock.
     
-    private let _current = LockedState<(any _CalendarProtocol)?>(initialState: nil)
-    private let _fixed = LockedState<[Calendar.Identifier: any _CalendarProtocol]>(initialState: [:])
-    
+    private let _current = Mutex<(any _CalendarProtocol)?>(nil)
+    private let _fixed = Mutex<[Calendar.Identifier: any _CalendarProtocol]>([:])
+
     fileprivate init() {
     }
     

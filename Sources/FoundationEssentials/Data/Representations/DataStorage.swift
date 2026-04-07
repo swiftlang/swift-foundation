@@ -114,20 +114,38 @@ internal final class __DataStorage : @unchecked Sendable {
     //   of the current allocation (_bytes). This guarantees that indices remain stable for slices
     //   that are mutated
 
+    // The properties below use @exclusivity(unchecked) in release mode to avoid dynamic exclusivity checking. Exclusivity is guaranteed by the copy-on-write implementation of Data itself.
+    // Dynamic exclusivity checks are still enabled in debug builds to catch issues with the copy-on-write implementation at-desk and in unit tests.
+
     /// A pointer to the start of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _bytes: UnsafeMutableRawPointer?
 
     /// The size of the initialized portion of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _length: Int
 
     /// The total capacity of the initialized portion of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _capacity: Int
 
     /// The size of the prior slice's prefix if the allocation was copied from a slice (to maintain
     /// stable indexing)
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _offset: Int
 
     /// The deallocator to use when discarding the byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?
 
     /// Whether the uninitialized portion of the byte allocation needs to be cleared before use
@@ -136,6 +154,9 @@ internal final class __DataStorage : @unchecked Sendable {
     /// `true`, `_needToZero` indicates the uninitialized portion has nondeterministic contents and
     /// needs to be cleared. When `false`, the uninitialized portion is guaranteed to already be
     /// zeroed and does not need to be cleared before use.
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _needToZero: Bool
 
     /// A pointer to the referenced byte allocation, relative to the slice offsets
@@ -147,31 +168,49 @@ internal final class __DataStorage : @unchecked Sendable {
     var bytes: UnsafeRawPointer? {
         return UnsafeRawPointer(_bytes)?.advanced(by: -_offset)
     }
-    
-    @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
-    @discardableResult
-    func withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
+
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    func withUnsafeBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
             return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
         } else {
-            return try Swift.withUnsafeBytes(of: 0) { buffer in
+            return try Swift.withUnsafeBytes(of: 0) { buffer throws(E) in
                 return try apply(UnsafeRawBufferPointer(start: buffer.baseAddress!, count: 0))
             }
         }
     }
-    
-    @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
-    @discardableResult
-    func withUnsafeMutableBytes<Result>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
+
+#if DATA_LEGACY_ABI
+    @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    @_spi(FoundationLegacyABI)
+    @usableFromInline
+    func _legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
+        try withUnsafeBytes(in: range, apply: apply)
+    }
+#endif // DATA_LEGACY_ABI
+
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    func withUnsafeMutableBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
             return try apply(UnsafeMutableRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
         } else {
             var byte = 0
-            return try Swift.withUnsafeMutableBytes(of: &byte) { buffer in
+            return try Swift.withUnsafeMutableBytes(of: &byte) { buffer throws(E) in
                 return try apply(UnsafeMutableRawBufferPointer(start: buffer.baseAddress!, count: 0))
             }
         }
     }
+
+#if DATA_LEGACY_ABI
+    @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+    @_spi(FoundationLegacyABI)
+    @usableFromInline
+    internal func _legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        try withUnsafeMutableBytes(in: range, apply: apply)
+    }
+#endif // DATA_LEGACY_ABI
 
     /// A pointer to the mutable referenced byte allocation, relative to the slice offsets
     ///

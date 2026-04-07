@@ -853,7 +853,7 @@ extension CurrencyFormatStyleConfiguration.Collection {
             s += roundingIncrement.skeleton + " "
         }
         if let group = group {
-            s += group.skeleton
+            s += group.skeleton + " "
         }
         if let signDisplayStrategy = signDisplayStrategy {
             s += signDisplayStrategy.skeleton + " "

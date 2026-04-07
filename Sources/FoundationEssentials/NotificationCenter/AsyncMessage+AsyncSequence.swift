@@ -21,6 +21,7 @@ internal import _FoundationCollections
 #if canImport(os)
 internal import os.log
 #endif
+internal import Synchronization
 
 @available(FoundationPreview 6.2, *)
 extension NotificationCenter {
@@ -118,10 +119,10 @@ extension NotificationCenter {
             }
         }
         
-        let state: LockedState<State>
+        let state: Mutex<State>
         
         init(center: NotificationCenter, object: AnyObject?, bufferSize: Int) {
-            self.state = LockedState(initialState: State(bufferSize: bufferSize))
+            self.state = Mutex(State(bufferSize: bufferSize))
             
 #if FOUNDATION_FRAMEWORK
             let observerBlock: @Sendable (Notification) -> Void =  { [weak self] notification in

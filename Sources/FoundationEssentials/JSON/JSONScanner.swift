@@ -60,6 +60,7 @@ import Darwin
 #endif // canImport(Darwin)
 
 internal import _FoundationCShims
+internal import Synchronization
 
 internal class JSONMap {
     enum TypeDescriptor : Int {
@@ -98,11 +99,11 @@ internal class JSONMap {
     }
 
     let mapBuffer : [Int]
-    var dataLock : LockedState<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
+    let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
     init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
         self.mapBuffer = mapBuffer
-        self.dataLock = .init(initialState: (buffer: dataBuffer, allocation: nil))
+        self.dataLock = .init((buffer: dataBuffer, allocation: nil))
     }
 
     func copyInBuffer() {
@@ -126,11 +127,11 @@ internal class JSONMap {
 
 
     @inline(__always)
-    func withBuffer<T>(
-      for region: Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
-    ) rethrows -> T {
-        try dataLock.withLock {
-            return try closure($0.buffer[region], $0.buffer)
+    func withBuffer<T: ~Copyable, E>(
+      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try dataLock.withLock { state throws(E) in
+            return try closure(state.buffer[region], state.buffer)
         }
     }
 

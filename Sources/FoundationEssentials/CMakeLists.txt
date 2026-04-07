@@ -23,8 +23,8 @@ add_library(FoundationEssentials
     DateInterval.swift
     FoundationEssentials.swift
     IndexPath.swift
-    LockedState.swift
     Logging.swift
+    Mutex+ExtendedLifetime.swift
     OutputBuffer.swift
     Platform.swift
     Progress+Stub.swift

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import Synchronization
+
 //===----------------------------------------------------------------------===//
 // Plist Encoder
 //===----------------------------------------------------------------------===//
@@ -30,22 +32,22 @@ open class PropertyListEncoder {
     /// The output format to write the property list data in. Defaults to `.binary`.
     open var outputFormat: PropertyListDecoder.PropertyListFormat {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.outputFormat
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.outputFormat
             defer {
                 options.outputFormat = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.outputFormat = newValue
         }
     }
@@ -54,22 +56,22 @@ open class PropertyListEncoder {
     @preconcurrency
     open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.userInfo
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.userInfo
             defer {
                 options.userInfo = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.userInfo = newValue
         }
     }
@@ -82,7 +84,7 @@ open class PropertyListEncoder {
 
     /// The options set on the top-level encoder.
     fileprivate var options: _Options = _Options()
-    fileprivate let optionsLock = LockedState<Void>()
+    fileprivate let optionsLock = Mutex<Void>(())
 
     // MARK: - Constructing a Property List Encoder
 

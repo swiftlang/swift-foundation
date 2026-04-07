@@ -30,6 +30,7 @@ target_sources(FoundationEssentials PRIVATE
     Data+Reading.swift
     Data+Searching.swift
     Data+Writing.swift
+    Data+WritingOptions.swift
     DataProtocol.swift
     FileSystemRepresentable.swift
     Pointers+DataProtocol.swift)

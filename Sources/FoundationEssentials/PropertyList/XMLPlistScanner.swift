@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 internal import _FoundationCShims
+internal import Synchronization
 
 private let plistBytes : StaticString = "plist"
 private let arrayBytes : StaticString = "array"
@@ -169,11 +170,11 @@ class XMLPlistMap : PlistDecodingMap {
     static var nullValue: Value { .null }
 
     let mapBuffer : [Int]
-    var dataLock : LockedState<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
+    let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
     init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
         self.mapBuffer = mapBuffer
-        self.dataLock = .init(initialState: (buffer: dataBuffer, allocation: nil))
+        self.dataLock = .init((buffer: dataBuffer, allocation: nil))
     }
 
     deinit {
@@ -195,11 +196,11 @@ class XMLPlistMap : PlistDecodingMap {
     }
 
     @inline(__always)
-    func withBuffer<T>(
-      for region: Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
-    ) rethrows -> T {
-        try dataLock.withLock {
-            return try closure($0.buffer[region], $0.buffer)
+    func withBuffer<T: ~Copyable, E>(
+      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try dataLock.withLock { state throws(E) in
+            return try closure(state.buffer[region], state.buffer)
         }
     }
 
@@ -604,7 +605,7 @@ extension XMLPlistMap.Value {
         }
     }
 
-    func integerValue<T: FixedWidthInteger>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    func integerValue<T: FixedWidthInteger & Sendable>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         if case .real = self {
             let double = try self.realValue(in: map, as: Double.self, for: codingPathNode, additionalKey)
             guard let integer = T(exactly: double) else {
@@ -700,7 +701,7 @@ extension XMLPlistMap.Value {
         }
     }
     
-    func realValue<T: BinaryFloatingPoint>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    func realValue<T: BinaryFloatingPoint & Sendable>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         if case .integer = self {
             if let uintValue = try? self.integerValue(in: map, as: UInt64.self, for: codingPathNode, additionalKey) {
                 return T(uintValue)

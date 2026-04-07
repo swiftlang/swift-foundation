@@ -10,10 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+internal import _ForSwiftFoundation
+#endif
+
 // Note: we should consolidate the encoding logic in URLParser.swift to call
 // into these functions, but keep them separate for now to minimize risk while
 // we test the new implementations.
-#if FOUNDATION_FRAMEWORK
 
 // Percent-encoding using a given encoding means "get the string bytes in this
 // encoding, then percent-encode those bytes."
@@ -30,6 +33,9 @@
 extension URLComponentAllowedMask {
     // Used to encode ";" in a path component
     static let pathNoSemicolon = Self(rawValue: 0x47fffffe87ffffff27ffffd200000000)
+
+    // Used to encode "/" in a path component
+    static let pathNoSlash = Self(rawValue: 0x47fffffe87ffffff2fff7fd200000000)
 
     // Used to encode ";" and "/" in a path component
     static let pathNoSemicolonNoSlash = Self(rawValue: 0x47fffffe87ffffff27ff7fd200000000)
@@ -182,12 +188,12 @@ internal enum URLEncoder {
     static func addPercentEscapes(
         input: borrowing Span<UInt8>,
         output: inout OutputSpan<UInt8>,
-        component allowedMask: URLComponentAllowedMask
+        component allowedSet: URLComponentAllowedSet
     ) -> Bool {
         var readIndex = input.indices.startIndex
         while readIndex < input.indices.endIndex {
             let byte = input[readIndex]
-            if allowedMask.contains(byte) {
+            if allowedSet.contains(byte) {
                 guard !output.isFull else { return false }
                 // Write the allowed byte
                 output.append(byte)
@@ -286,14 +292,29 @@ internal enum URLEncoder {
     ///   was an invalid escape sequence.
     static func percentDecodeUnchecked(
         input: UnsafeBufferPointer<UInt8>,
-        output: UnsafeMutableBufferPointer<UInt8>
+        output: UnsafeMutableBufferPointer<UInt8>,
+        excludingASCII: PercentDecodingASCIIExclusionMask = .none
     ) -> Int? {
         return _percentDecode(
             input: input,
             output: output,
-            excludingASCII: .none,
+            excludingASCII: excludingASCII,
             checkBounds: false
         )
+    }
+
+    static func percentDecodeUnchecked(
+        input: borrowing Span<UInt8>,
+        output: UnsafeMutableBufferPointer<UInt8>,
+        excludingASCII: PercentDecodingASCIIExclusionMask = .none
+    ) -> Int? {
+        return input.withUnsafeBufferPointer {
+            return percentDecodeUnchecked(
+                input: $0,
+                output: output,
+                excludingASCII: excludingASCII
+            )
+        }
     }
 
     // MARK: String encoding and decoding
@@ -429,6 +450,8 @@ internal enum URLEncoder {
         }
     }
 
+    // Non-UTF8 encodings aren't used outside of CFURL
+    #if FOUNDATION_FRAMEWORK
     static func percentDecode(
         string: String,
         encoding: String.Encoding,
@@ -637,6 +660,136 @@ internal enum URLEncoder {
             return writeIndex
         }
     }
+    #endif // FOUNDATION_FRAMEWORK
 }
 
+extension URLEncoder {
+    static func percentEncode(path: String) -> String {
+        guard !path.isEmpty else { return path }
+        var mut = path
+        return mut.withUTF8 { buffer in
+            String(unsafeUninitializedCapacity: 3 * buffer.count) { output in
+                // ":" is encoded in the first path segment to prevent it
+                // from being mistaken as a scheme separator.
+                var writeIndex = 0
+                var i = 0
+                while i < buffer.count {
+                    let byte = buffer[i]
+                    if byte == UInt8(ascii: "/") {
+                        break
+                    } else if byte == UInt8(ascii: ":") {
+                        output[writeIndex + 0] = UInt8(ascii: "%")
+                        output[writeIndex + 1] = UInt8(ascii: "3")
+                        output[writeIndex + 2] = UInt8(ascii: "A")
+                        writeIndex += 3
+                    } else if URLComponentAllowedSet.rfc3986Path.contains(byte) {
+                        output[writeIndex] = byte
+                        writeIndex += 1
+                    } else {
+                        output[writeIndex + 0] = UInt8(ascii: "%")
+                        output[writeIndex + 1] = hexToAscii(byte >> 4)
+                        output[writeIndex + 2] = hexToAscii(byte & 0xF)
+                        writeIndex += 3
+                    }
+                    i += 1
+                }
+                writeIndex += percentEncodeUnchecked(
+                    input: .init(rebasing: buffer[i...]),
+                    output: .init(rebasing: output[writeIndex...]),
+                    component: .path,
+                    skipAlreadyEncoded: false
+                )
+                return writeIndex
+            }
+        }
+    }
+
+    static func percentEncode(host: String) -> String {
+        guard !host.isEmpty else { return host }
+        var mut = host
+        return mut.withUTF8 { buffer in
+            String(unsafeUninitializedCapacity: 3 * buffer.count) { output in
+                var writeIndex = 0
+                var inputStart = 0
+                var inputEnd = buffer.count
+                let isIPLiteral = (
+                    buffer.first == UInt8(ascii: "[") && buffer.last == UInt8(ascii: "]")
+                )
+                if isIPLiteral {
+                    output[0] = UInt8(ascii: "[")
+                    writeIndex += 1
+                    inputStart += 1
+                    inputEnd -= 1
+                }
+                writeIndex += percentEncodeUnchecked(
+                    input: .init(rebasing: buffer[inputStart..<inputEnd]),
+                    output: .init(rebasing: output[writeIndex...]),
+                    component: isIPLiteral ? .hostIPvFuture : .host,
+                    skipAlreadyEncoded: false
+                )
+                if isIPLiteral {
+                    output[writeIndex] = UInt8(ascii: "]")
+                    writeIndex += 1
+                }
+                return writeIndex
+            }
+        }
+    }
+}
+
+#if FOUNDATION_FRAMEWORK // Requires CharacterSet
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension StringProtocol {
+    /// Returns a new string created by replacing all characters not in the
+    /// specified set with percent-encoded characters.
+    public func addingPercentEncoding(withAllowedCharacters allowedCharacters: CharacterSet) -> String? {
+
+        // rdar://17901698 The documentation states that this method can return
+        // nil if the transformation is not possible. The old NS implementation
+        // could only return nil if malloc() failed, so in practice that does
+        // not occur. Still, to be consistent with the docs, this Swift method
+        // was declared to return an optional String.
+
+        #if FOUNDATION_FRAMEWORK
+        guard foundation_swift_characterSet_enabled() else {
+            return allowedCharacters.withUnsafeImmutableStorage {
+                return _ns._stringByAddingPercentEncoding(withAllowedCharacters: $0)
+            }
+        }
+        #endif
+
+        let string = _specializingCast(self, to: String.self) ?? String(self)
+        if allowedCharacters.hasIdenticalStorage(to: .urlPathAllowed) {
+            return URLEncoder.percentEncode(path: string)
+        } else if allowedCharacters.hasIdenticalStorage(to: .urlHostAllowed) {
+            return URLEncoder.percentEncode(host: string)
+        } else if allowedCharacters.hasIdenticalStorage(to: .urlQueryAllowed) {
+            return URLEncoder.percentEncode(string: string, component: .query, skipAlreadyEncoded: false)
+        } else if allowedCharacters.hasIdenticalStorage(to: .urlFragmentAllowed) {
+            return URLEncoder.percentEncode(string: string, component: .fragment, skipAlreadyEncoded: false)
+        } else if allowedCharacters.hasIdenticalStorage(to: .urlUserAllowed) {
+            return URLEncoder.percentEncode(string: string, component: .user, skipAlreadyEncoded: false)
+        } else if allowedCharacters.hasIdenticalStorage(to: .urlPasswordAllowed) {
+            return URLEncoder.percentEncode(string: string, component: .password, skipAlreadyEncoded: false)
+        }
+
+        // Not a pre-defined URL component CharacterSet, use the given set.
+        // Note: non-ASCII characters are ignored by this API.
+        let mask = URLComponentAllowedMask(rawValue: allowedCharacters.asciiAllowedMask)
+        return URLEncoder.percentEncode(string: string, component: mask, skipAlreadyEncoded: false)
+    }
+
+    /// Returns a new string created by replacing all percent-encoded sequences
+    /// with the matching UTF-8 characters.
+    public var removingPercentEncoding: String? {
+        #if FOUNDATION_FRAMEWORK
+        guard foundation_swift_characterSet_enabled() else {
+            return _ns.removingPercentEncoding
+        }
+        #endif
+        return URLEncoder.percentDecode(
+            string: _specializingCast(self, to: String.self) ?? String(self)
+        )
+    }
+}
 #endif

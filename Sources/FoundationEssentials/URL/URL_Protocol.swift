@@ -64,7 +64,7 @@ internal protocol _URLProtocol: AnyObject, Sendable {
     var fragment: String? { get }
     func fragment(percentEncoded: Bool) -> String?
 
-    func fileSystemPath(style: URL.PathStyle, resolveAgainstBase: Bool) -> String
+    func fileSystemPath(style: URL.PathStyle) -> String
     func withUnsafeFileSystemRepresentation<ResultType>(_ block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType
 
     var hasDirectoryPath: Bool { get }
