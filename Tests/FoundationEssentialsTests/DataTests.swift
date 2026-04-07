@@ -2251,25 +2251,27 @@ private final class DataTests {
             if let ptr = $0.baseAddress {
                 #expect(ptr.alignedUp(for: UInt64.self) == ptr)
             }
+            #expect($0.isEmpty)
         }
         d.withUnsafeMutableBytes {
             if let ptr = $0.baseAddress {
                 #expect(ptr.alignedUp(for: UInt64.self) == ptr)
             }
+            #expect($0.isEmpty)
         }
     }
 
-    @Test func inlineDataPointerAlignment() {
+    @Test func inlineDataPointerAlignment() throws {
         var d = Data(count: 5)
-        d.withUnsafeBytes {
-            if let ptr = $0.baseAddress {
-                #expect(ptr.alignedUp(for: UInt64.self) == ptr)
-            }
+        try d.withUnsafeBytes {
+            let ptr = try #require($0.baseAddress)
+            #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            #expect($0.count == 5)
         }
-        d.withUnsafeMutableBytes {
-            if let ptr = $0.baseAddress {
-                #expect(ptr.alignedUp(for: UInt64.self) == ptr)
-            }
+        try d.withUnsafeMutableBytes {
+            let ptr = try #require($0.baseAddress)
+            #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            #expect($0.count == 5)
         }
     }
 }

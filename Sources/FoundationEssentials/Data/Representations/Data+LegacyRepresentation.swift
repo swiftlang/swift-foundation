@@ -310,7 +310,9 @@ extension Data {
             switch self {
             case .empty:
                 var value: UInt64 = 0
-                return try Swift.withUnsafeBytes(of: &value, apply)
+                return try Swift.withUnsafeBytes(of: &value) { buffer throws(E) in
+                    try apply(UnsafeRawBufferPointer(start: buffer.baseAddress, count: 0))
+                }
             case .inline(let inline):
                 return try inline.withUnsafeBytes(apply)
             case .slice(let slice):
@@ -333,7 +335,9 @@ extension Data {
             switch self {
             case .empty:
                 var value: UInt64 = 0
-                return try Swift.withUnsafeMutableBytes(of: &value, apply)
+                return try Swift.withUnsafeMutableBytes(of: &value) { buffer throws(E) in
+                    try apply(UnsafeMutableRawBufferPointer(start: buffer.baseAddress, count: 0))
+                }
             case .inline(var inline):
                 defer { self = .inline(inline) }
                 return try inline.withUnsafeMutableBytes(apply)
