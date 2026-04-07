@@ -1,5 +1,3 @@
-# Obtaining Foundation
-
 <!--
 This source file is part of the Swift.org open source project
 
@@ -9,6 +7,8 @@ Licensed under Apache License v2.0 with Runtime Library Exception
 See https://swift.org/LICENSE.txt for license information
 See https://swift.org/CONTRIBUTORS.txt for Swift project authors
 -->
+
+# Obtaining Foundation
 
 There are multiple ways to obtain Foundation, and they have different tradeoffs
 to consider. This document discusses the various ways Foundation is distributed
@@ -22,8 +22,7 @@ Foundation is distributed in the following places:
 
 * In Apple's [macOS, iOS, and other Apple platforms][apple-platforms], as a
   framework built into the operating system.
-* In [Swift.org toolchains][install], versions 6.0 and later (for
-  [supported platforms][]), as a library included in the toolchain.
+* In [Swift.org toolchains][install], as a library included in the toolchain.
 
 The locations above are considered **built-in** because they're included with a
 larger collection of software (such as an operating system, toolchain, or IDE)
@@ -41,17 +40,17 @@ each client.
 
 ## Caveats when using swift-foundation as a package
 
-Although Foundation is available as a Swift package and you _can_ declare a
+Although Foundation is available as a Swift package, and hence you _can_ declare a
 dependency on [swift-foundation][] during development, it is not suitable for
 use in a package or app that you intend to ship. Doing so has several
 downsides:
 
 * **It requires building Foundation and its dependencies from source.** This significantly increases
   your build time.
-* **It may encounter build failures when another package uses a built-in
+* **You may encounter build failures when another package uses a built-in
   Foundation.** If you use swift-foundation as a package, but you depend on a
   library from another package which uses a built-in copy of Foundation (as
-  this document recommends), this can cause build failures due to duplicate
+  this document recommends), this can cause build failures due to ambiguity
   symbol definitions or module conflicts.
 
 ## When to use swift-foundation as a package
