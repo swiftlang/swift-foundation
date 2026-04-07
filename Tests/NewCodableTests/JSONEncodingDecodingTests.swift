@@ -995,6 +995,13 @@ struct JSONEncodingDecodingTests {
 """.data(using: .utf8)!)
     }
     
+    @Test func jsonNonEscapedForwardSlashes() {
+        _testRoundTrip(of: ["/":1], expectedJSON:
+"""
+{"/":1}
+""".data(using: .utf8)!, encoderOptions: .init(withoutEscapingSlashes: true))
+    }
+    
     @Test func jsonUnicodeCharacters() {
         // UTF8:
         // E9 96 86 E5 B4 AC EB B0 BA EB 80 AB E9 A2 92

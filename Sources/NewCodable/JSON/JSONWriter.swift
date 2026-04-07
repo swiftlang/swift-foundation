@@ -24,7 +24,8 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
     
     private var indent = 0
     private let pretty: Bool
-    private let withoutEscapingSlashes: Bool
+    private let escapeTable: StaticString
+    private let escapeLengths: [UInt8]
     
     var data: GrowableEncodingBytes
     
@@ -32,7 +33,13 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
     internal init(pretty: Bool, withoutEscapingSlashes: Bool) {
         self.data = .init()
         self.pretty = pretty
-        self.withoutEscapingSlashes = withoutEscapingSlashes
+        if withoutEscapingSlashes {
+            self.escapeTable = Self.escapeTable
+            self.escapeLengths = Self.escapeLens
+        } else {
+            self.escapeTable = Self.escapeTableWithEscapedForwardSlash
+            self.escapeLengths = Self.escapeLensWithEscapedForwardSlash
+        }
     }
     
     @inline(__always)
@@ -235,14 +242,14 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
     @inline(__always)
     func escapeLength(for byte: UInt8) -> Int {
         let byteInt = Int(byte)
-        let escapeLen = Self.escapeLensWithEscapedForwardSlash[byteInt]
+        let escapeLen = self.escapeLengths[byteInt]
         return Int(escapeLen)
     }
     
     @inline(__always)
     @_lifetime(self: copy self)
     mutating func writeEscape(byte: UInt8, length: Int) {
-        var ptr = Self.escapeTableWithEscapedForwardSlash.utf8Start
+        var ptr = self.escapeTable.utf8Start
         ptr += 8 * Int(byte)
         self.write(pointer: ptr, count: length)
     }
@@ -251,13 +258,6 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
     mutating func serializeStringContentsSpan(_ span: UTF8Span) {
         if span.isEmpty {
             return
-        }
-        
-        @inline(__always)
-        func appendAccumulatedBytes(from mark: UnsafePointer<UInt8>, to cursor: UnsafePointer<UInt8>) {
-            if cursor > mark {
-                write(pointer: mark, count: cursor-mark)
-            }
         }
         
         @inline(__always)
@@ -275,7 +275,7 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
             var shift = 0
             while shift < T.bitWidth {
                 result |= 0x01 << shift
-                shift += UInt8.bitWidth
+                shift &+= UInt8.bitWidth
             }
             return result
         }
@@ -321,51 +321,17 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
         }
         
         @inline(__always)
-        func writeNonEscapingCharacters_SIMD(cursor: inout UnsafePointer<UInt8>, end: UnsafePointer<UInt8>) {
-            let start = cursor
-            if (end - cursor) > MemoryLayout<SIMD16<UInt8>>.size * 2 { // Only do SIMD if we have at least two vectors worth.
-                let spaces = SIMD16<UInt8>(repeating: ._space)
-                let quotes = SIMD16<UInt8>(repeating: ._quote)
-                let slash = SIMD16<UInt8>(repeating: ._slash)
-                let backslash = SIMD16<UInt8>(repeating: ._backslash)
-                
-                let packedDistance = MemoryLayout<SIMD16<UInt8>>.size
-                while (end - cursor) > packedDistance {
-                    let input = UnsafeRawPointer(cursor).loadUnaligned(as: SIMD16<UInt8>.self)
-                    let hasControlChars = input .< spaces
-                    let hasQuotes = input .== quotes
-                    let hasSlashes = input .== slash
-                    let hasBackslashes = input .== backslash
-                    let result = hasControlChars .| hasQuotes .| hasSlashes .| hasBackslashes
-                    if any(result) == false {
-                        cursor += packedDistance
-                        continue
-                    } else {
-                        let bitcast = unsafeBitCast(result, to: UInt128.self)
-                        let zeroBytes = bitcast.trailingZeroBitCount / 8
-                        cursor += zeroBytes
-                        break
-                    }
-                }
-            }
-            let len = cursor - start
-            if len > 0 {
-                self.write(pointer: start, count: len)
-            }
-        }
-        
-        @inline(__always)
         func writeNonEscapingCharacters_SIMD(in span: Span<UInt8>, from cursor: inout Int) {
             let start = cursor
             let end = span.count
-            if (end - cursor) > MemoryLayout<SIMD16<UInt8>>.size * 2 { // Only do SIMD if we have at least two vectors worth.
+            if (end &- cursor) > MemoryLayout<SIMD16<UInt8>>.size * 2 { // Only do SIMD if we have at least two vectors worth.
                 let spaces = SIMD16<UInt8>(repeating: ._space)
                 let quotes = SIMD16<UInt8>(repeating: ._quote)
                 let slash = SIMD16<UInt8>(repeating: ._slash)
                 let backslash = SIMD16<UInt8>(repeating: ._backslash)
                 
                 let packedDistance = MemoryLayout<SIMD16<UInt8>>.size
-                while (end - cursor) > packedDistance {
+                while (end &- cursor) > packedDistance {
                     let input = span.bytes.unsafeLoadUnaligned(fromUncheckedByteOffset: cursor, as: SIMD16<UInt8>.self)
                     let hasControlChars = input .< spaces
                     let hasQuotes = input .== quotes
@@ -373,17 +339,17 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
                     let hasBackslashes = input .== backslash
                     let result = hasControlChars .| hasQuotes .| hasSlashes .| hasBackslashes
                     if any(result) == false {
-                        cursor += packedDistance
+                        cursor &+= packedDistance
                         continue
                     } else {
                         let bitcast = unsafeBitCast(result, to: UInt128.self)
                         let zeroBytes = bitcast.trailingZeroBitCount / 8
-                        cursor += zeroBytes
+                        cursor &+= zeroBytes
                         break
                     }
                 }
             }
-            let len = cursor - start
+            let len = cursor &- start
             if len > 0 {
                 appendAccumulatedBytes(in: span, from: start, to: cursor)
             }
@@ -393,42 +359,27 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
         func skipNonEscapingCharacters_SWAR(in span: Span<UInt8>, at cursor: inout Int) -> Bool {
             do {
                 let packedDistance = MemoryLayout<UInt64>.size
-                if (span.count - cursor) >= packedDistance {
+                if (span.count &- cursor) >= packedDistance {
                     let integer = span.bytes.unsafeLoadUnaligned(fromUncheckedByteOffset: cursor, as: UInt64.self)
                     let bytesBeforeEscape = bytesBeforeEscape(input: integer)
-                    cursor += bytesBeforeEscape
+                    cursor &+= bytesBeforeEscape
                     return bytesBeforeEscape == MemoryLayout<UInt64>.size
                 }
             }
             
             do {
                 let packedDistance = MemoryLayout<UInt32>.size
-                if (span.count - cursor) >= packedDistance {
+                if (span.count &- cursor) >= packedDistance {
                     let integer = span.bytes.unsafeLoadUnaligned(fromUncheckedByteOffset: cursor, as: UInt32.self)
                     let bytesBeforeEscape = bytesBeforeEscape(input: integer)
-                    cursor += bytesBeforeEscape
+                    cursor &+= bytesBeforeEscape
                     return bytesBeforeEscape == MemoryLayout<UInt32>.size
                 }
             }
             
             return false
         }
-        
-        @inline(__always)
-        func processByte(at cursor: inout UnsafePointer<UInt8>, mark: inout UnsafePointer<UInt8>) {
-            let byte = cursor.pointee
-            let escapeLen = escapeLength(for: byte)
-            if escapeLen > 0 {
-                appendAccumulatedBytes(from: cursor, to: mark)
-                writeEscape(byte: byte, length: escapeLen)
-                cursor += 1
-                mark = cursor
-            } else {
-                // Accumulate byte
-                cursor += 1
-            }
-        }
-        
+
         @inline(__always)
         func processByte(in span: Span<UInt8>, at cursor: inout Int, mark: inout Int) {
             let byte = span[unchecked: cursor]
@@ -436,11 +387,11 @@ internal struct JSONWriter: ~Copyable, ~Escapable {
             if escapeLen > 0 {
                 appendAccumulatedBytes(in: span, from: mark, to: cursor)
                 writeEscape(byte: byte, length: escapeLen)
-                cursor += 1
+                cursor &+= 1
                 mark = cursor
             } else {
                 // Accumulate byte
-                cursor += 1
+                cursor &+= 1
             }
         }
         
