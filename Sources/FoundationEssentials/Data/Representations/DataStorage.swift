@@ -175,7 +175,8 @@ internal final class __DataStorage : @unchecked Sendable {
         if let _bytes {
             return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
         } else {
-            return try Swift.withUnsafeBytes(of: 0) { buffer throws(E) in
+            var value: UInt64 = 0
+            return try Swift.withUnsafeBytes(of: &value) { buffer throws(E) in
                 return try apply(UnsafeRawBufferPointer(start: buffer.baseAddress!, count: 0))
             }
         }
@@ -196,8 +197,8 @@ internal final class __DataStorage : @unchecked Sendable {
         if let _bytes {
             return try apply(UnsafeMutableRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
         } else {
-            var byte = 0
-            return try Swift.withUnsafeMutableBytes(of: &byte) { buffer throws(E) in
+            var value: UInt64 = 0
+            return try Swift.withUnsafeMutableBytes(of: &value) { buffer throws(E) in
                 return try apply(UnsafeMutableRawBufferPointer(start: buffer.baseAddress!, count: 0))
             }
         }
