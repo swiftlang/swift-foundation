@@ -1138,9 +1138,11 @@ internal struct URLComponentAllowedMask: RawRepresentable {
 
     static let scheme           = Self(rawValue: 0x07fffffe07fffffe03ff680000000000)
 
-    // user, password, and hostIPvFuture use the same allowed character set.
-    static let user             = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
-    static let password         = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
+    // user and password use the same allowed character set.
+    static let user             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+    static let password         = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+
+    // hostIPvFuture is the user/password set + ":"
     static let hostIPvFuture    = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
 
     static let host             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)

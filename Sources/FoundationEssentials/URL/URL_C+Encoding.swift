@@ -228,4 +228,15 @@ extension NSURL {
     }
 }
 
+@objc
+extension NSString {
+    func __copySwiftStringByAddingPercentEncoding(withAllowedCharacters allowedCharacters: CharacterSet) -> String? {
+        (self as String).addingPercentEncoding(withAllowedCharacters: allowedCharacters)
+    }
+
+    func __copySwiftStringByRemovingPercentEncoding() -> String? {
+        (self as String).removingPercentEncoding
+    }
+}
+
 #endif
