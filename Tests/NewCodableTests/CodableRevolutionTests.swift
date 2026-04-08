@@ -47,7 +47,7 @@ struct NewCodableTests {
         struct Test: JSONDecodable {
             let numberStr: String
 
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Test {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Test {
                 let number = try decoder.decodeNumber()
                 return .init(numberStr: number.extendedPrecisionRepresentation)
             }
@@ -89,7 +89,7 @@ struct NewCodableTests {
                 case name
                 case address
                 
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
                     switch UTF8SpanComparator(key) {
                     case "name": .name
                     case "address": .address
@@ -111,7 +111,7 @@ struct NewCodableTests {
                 let state: String
             }
             
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Person {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var name: String?
                     var address: Address?
@@ -146,6 +146,157 @@ struct NewCodableTests {
         #expect(person == expected)
     }
     
+    @Test func standardDecodableInteroperability() throws {
+        let json = Data("""
+            {
+                "title": "My Blog Post",
+                "author": { "name": "Alice", "email": "alice@example.com" },
+                "metadata": { "wordCount": 1500, "readTime": 5 },
+                "comments": [
+                    { "author": "Bob", "text": "Great post!" },
+                    { "author": "Charlie", "text": "Very helpful, thanks!" }
+                ]
+            }
+            """.utf8)
+        
+        // Standard Decodable types that don't conform to CommonDecodable
+        struct Author: Decodable, Equatable {
+            let name: String
+            let email: String
+        }
+        
+        struct Metadata: Decodable, Equatable {
+            let wordCount: Int
+            let readTime: Int
+        }
+        
+        struct Comment: Decodable, Equatable {
+            let author: String
+            let text: String
+        }
+        
+        // A CommonDecodable type that contains standard Decodable types
+        struct BlogPost: CommonDecodable, Equatable {
+            let title: String
+            let author: Author
+            let metadata: Metadata
+            let comments: [Comment]
+            
+            static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> BlogPost {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var title: String?
+                    var author: Author?
+                    var metadata: Metadata?
+                    var comments: [Comment]?
+                    
+                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                        switch key {
+                        case "title":
+                            title = try valueDecoder.decode(String.self)
+                        case "author":
+                            // This should use our new decode<D: Decodable> method!
+                            author = try valueDecoder.decode(Author.self)
+                        case "metadata":
+                            // This should use our new decode<D: Decodable> method!
+                            metadata = try valueDecoder.decode(Metadata.self)
+                        case "comments":
+                            // This should use our new decode<D: Decodable> method for the array elements!
+                            comments = try valueDecoder.decode([Comment].self)
+                        default:
+                            break // Skip unknown keys
+                        }
+                        return false
+                    }
+                    
+                    guard let title, let author, let metadata, let comments else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                    }
+                    return BlogPost(title: title, author: author, metadata: metadata, comments: comments)
+                }
+            }
+        }
+        
+        let decoder = NewJSONDecoder()
+        let blogPost = try decoder.decode(BlogPost.self, from: json)
+        
+        let expectedPost = BlogPost(
+            title: "My Blog Post",
+            author: Author(name: "Alice", email: "alice@example.com"),
+            metadata: Metadata(wordCount: 1500, readTime: 5),
+            comments: [
+                Comment(author: "Bob", text: "Great post!"),
+                Comment(author: "Charlie", text: "Very helpful, thanks!")
+            ]
+        )
+        
+        #expect(blogPost == expectedPost)
+    }
+    
+    @Test func standardDecodableWithPrimitives() throws {
+        let json = Data("""
+            {
+                "user": { "id": 42, "active": true },
+                "scores": [98.5, 87.2, 92.1],
+                "settings": { "notifications": true, "theme": "dark" }
+            }
+            """.utf8)
+        
+        // Standard Decodable types with various primitive types
+        struct User: Decodable, Equatable {
+            let id: Int
+            let active: Bool
+        }
+        
+        struct Settings: Decodable, Equatable {
+            let notifications: Bool
+            let theme: String
+        }
+        
+        struct Report: CommonDecodable, Equatable {
+            let user: User
+            let scores: [Double]
+            let settings: Settings
+            
+            static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Report {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var user: User?
+                    var scores: [Double]?
+                    var settings: Settings?
+                    
+                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                        switch key {
+                        case "user":
+                            user = try valueDecoder.decode(User.self)
+                        case "scores":
+                            scores = try valueDecoder.decode([Double].self, sizeHint: 0)
+                        case "settings":
+                            settings = try valueDecoder.decode(Settings.self)
+                        default:
+                            break
+                        }
+                        return false
+                    }
+                    
+                    guard let user, let scores, let settings else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                    }
+                    return Report(user: user, scores: scores, settings: settings)
+                }
+            }
+        }
+        
+        let decoder = NewJSONDecoder()
+        let report = try decoder.decode(Report.self, from: json)
+        
+        let expectedReport = Report(
+            user: User(id: 42, active: true),
+            scores: [98.5, 87.2, 92.1],
+            settings: Settings(notifications: true, theme: "dark")
+        )
+        
+        #expect(report == expectedReport)
+    }
+    
     @Test func testFlatten() throws {
         /*
          @Codable
@@ -171,7 +322,7 @@ struct NewCodableTests {
                 let city: String
                 let state: String
                 
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Address {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Address {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var city: String?
                         var state: String?
@@ -189,7 +340,7 @@ struct NewCodableTests {
                 }
             }
                         
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Person {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     let requiredFields = 1
                     var requiredFieldsSeen = 0
@@ -254,7 +405,7 @@ struct NewCodableTests {
                 case _1
                 case _2
                 
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
                     switch UTF8SpanComparator(key) {
                     case "_0": ._0
                     case "_1": ._1
@@ -278,7 +429,7 @@ struct NewCodableTests {
                 case _1
                 case _2
                 
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
                     switch UTF8SpanComparator(key) {
                     case "first": .first
                     case "_1": ._1
@@ -302,7 +453,7 @@ struct NewCodableTests {
                 case second
                 case third
                 
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
                     switch UTF8SpanComparator(key) {
                     case "first": .first
                     case "second": .second
@@ -324,7 +475,7 @@ struct NewCodableTests {
             enum SingleUntaggedFields: Int, JSONOptimizedDecodingField {
                 case _0 = 0
                 
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
                     switch UTF8SpanComparator(key) {
                     case "_0": ._0
                     default: throw CodingError.unknownKey(key)
@@ -345,7 +496,7 @@ struct NewCodableTests {
                 case allTagged
                 case singleUntagged
                 
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
                     switch UTF8SpanComparator(key) {
                     case "allUntagged": .allUntagged
                     case "someTagged": .someTagged
@@ -366,7 +517,7 @@ struct NewCodableTests {
                 }
             }
             
-            static func decodeAllUntagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Tests {
+            static func decodeAllUntagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Tests {
                 var _0: Int?
                 var _1: Int?
                 var _2: Int?
@@ -386,7 +537,7 @@ struct NewCodableTests {
                 return .allUntagged(_0, _1, _2)
             }
             
-            static func decodeSomeTagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Tests {
+            static func decodeSomeTagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Tests {
                 var first: Int?
                 var _1: Int?
                 var _2: Int?
@@ -406,7 +557,7 @@ struct NewCodableTests {
                 return .someTagged(first: first, _1, _2)
             }
             
-            static func decodeAllTagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Tests {
+            static func decodeAllTagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Tests {
                 var first: Int?
                 var second: Int?
                 var third: Int?
@@ -426,7 +577,7 @@ struct NewCodableTests {
                 return .allTagged(first: first, second: second, third: third)
             }
             
-            static func decodeSingleUntagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Tests {
+            static func decodeSingleUntagged(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Tests {
                 var _0: Int?
                 var key: SingleUntaggedFields?
                 try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
@@ -442,7 +593,7 @@ struct NewCodableTests {
                 return .singleUntagged(_0)
             }
             
-            static func decode(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> Tests {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Tests {
                 return try decoder.decodeEnumCase { fieldDecoder, valuesDecoder throws(CodingError.Decoding) in
                     let field = try fieldDecoder.decode(CodingFields.self)
                     return switch field {
@@ -483,7 +634,7 @@ struct NewCodableTests {
                 case two
                 case three
                 
-                static func field(for key: UTF8Span) throws(NewCodable.CodingError.Decoding) -> Self {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> Self {
                     switch UTF8SpanComparator(key) {
                     case "one": .one
                     case "two": .two
@@ -502,7 +653,7 @@ struct NewCodableTests {
                 }
             }
             
-            static func decode(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> NoAssociatedType {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> NoAssociatedType {
                 try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
                     let field = try fieldDecoder.decode(CodingFields.self)
                     return switch field {
@@ -547,7 +698,7 @@ struct NewCodableTests {
             case foo(label: String)
             case bar(other: String)
             
-            static func decodeFoo(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> InternallyTagged {
+            static func decodeFoo(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> InternallyTagged {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var label: String?
                     try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
@@ -560,7 +711,7 @@ struct NewCodableTests {
                 }
             }
             
-            static func decodeBar(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> InternallyTagged {
+            static func decodeBar(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> InternallyTagged {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var other: String?
                     try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
@@ -573,7 +724,7 @@ struct NewCodableTests {
                 }
             }
             
-            static func decode(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(NewCodable.CodingError.Decoding) -> InternallyTagged {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> InternallyTagged {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var decodedCase: String?
                     var contents = structDecoder.prepareIntermediateValueStorage()
@@ -1201,7 +1352,7 @@ struct NewCodableTests {
             let count: Int
             let suffixedStrings: [String]
             
-            static func decode(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Aggregate {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Aggregate {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var count: Int?
                     var suffixedStrings: [String]?
@@ -1289,7 +1440,7 @@ struct NewCodableTests {
             let outerData: Data
             let inner: Inner
             
-            static func decode(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Test {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Test {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var outerData: Data?
                     var inner: Inner?
@@ -1312,7 +1463,7 @@ struct NewCodableTests {
                 }
             }
             
-            func encode(to encoder: inout NewCodable.JSONDirectEncoder) throws(CodingError.Encoding) {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                 try encoder.encodeDictionary(elementCount: 2) { dictEncoder throws(CodingError.Encoding) in
                     try dictEncoder.encode(key: "outerData", value: outerData)
                     try dictEncoder.encode(key: "inner", value: inner)
@@ -1405,7 +1556,7 @@ struct NewCodableTests {
             let outerDate: Date
             let inner: Inner
             
-            static func decode(from decoder: inout some NewCodable.JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Test {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Test {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var outerDate: Date?
                     var inner: Inner?
@@ -1429,7 +1580,7 @@ struct NewCodableTests {
                 }
             }
             
-            func encode(to encoder: inout NewCodable.JSONDirectEncoder) throws(CodingError.Encoding) {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                 try encoder.encodeDictionary(elementCount: 2) { dictEncoder throws(CodingError.Encoding) in
                     try dictEncoder.encode(key: "outerDate", value: outerDate)
                     try dictEncoder.encode(key: "inner", value: inner)
@@ -1559,14 +1710,14 @@ struct NewCodableTests {
             let array: [Double]
             let old: OldCodable
             
-            func encode(to encoder: inout NewCodable.JSONDirectEncoder) throws(CodingError.Encoding) {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                 try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                     try structEncoder.encode(key: "array", value: array)
                     try structEncoder.encode(key: "old", value: old)
                 }
             }
             
-            static func decode<D>(from decoder: inout D) throws(CodingError.Decoding) -> Test where D : NewCodable.JSONDecoderProtocol, D : ~Escapable {
+            static func decode<D>(from decoder: inout D) throws(CodingError.Decoding) -> Test where D : JSONDecoderProtocol, D : ~Escapable {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var array: [Double]?
                     var old: OldCodable?
@@ -1614,7 +1765,7 @@ struct NewCodableTests {
     @Test func testPrettyEncoding() throws {
         // TODO: More extensive testing.
         struct Test: JSONEncodable {
-            func encode(to encoder: inout NewCodable.JSONDirectEncoder) throws(CodingError.Encoding) {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                 try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                     try structEncoder.encode(key: "foo", value: "bar")
                     try structEncoder.encode(key: "num", value: 42)

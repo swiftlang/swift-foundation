@@ -1781,18 +1781,13 @@ extension JSONParserDecoder: CommonDecoder {
             case ._quote:
                 result = try self.decodeString(visitor) ^^ .decodingError
             case ._openbrace:
-                // TODO: Dict + array. Test when not all elements are parsed.
-                var dictDecoder: DictionaryDecoder
-                do throws(JSONError) { dictDecoder = try DictionaryDecoder(parserState: self.state, midContainer: false) } catch { throw .json(error) }
-                result = try visitor.visit(decoder: &dictDecoder) ^^ .decodingError
-                try dictDecoder._finish() ^^ .decodingError
-                self.state.copyRelevantState(from: dictDecoder.parserState)
+                result = try self.decodeDictionary { dictDecoder throws(CodingError.Decoding) in
+                    try visitor.visit(decoder: &dictDecoder)
+                } ^^ .decodingError
             case ._openbracket:
-                var seqDecoder: ArrayDecoder
-                do throws(JSONError) { seqDecoder = try ArrayDecoder(parserState: self.state, midContainer: false) } catch { throw .json(error) }
-                result = try visitor.visit(decoder: &seqDecoder) ^^ .decodingError
-                try seqDecoder._finish() ^^ .decodingError
-                self.state.copyRelevantState(from: seqDecoder.innerParser.state)
+                result = try self.decodeArray { seqDecoder throws(CodingError.Decoding) in
+                    try visitor.visit(decoder: &seqDecoder)
+                } ^^ .decodingError
             case UInt8(ascii: "f"), UInt8(ascii: "t"):
                 let bool = try state.reader.readBool() ^^ .jsonError
                 result = try visitor.visit(bool) ^^ .decodingError
