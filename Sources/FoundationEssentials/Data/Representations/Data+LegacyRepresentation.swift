@@ -309,8 +309,10 @@ extension Data {
         func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             switch self {
             case .empty:
-                let empty = InlineData()
-                return try empty.withUnsafeBytes(apply)
+                var value: UInt64 = 0
+                return try Swift.withUnsafeBytes(of: &value) { buffer throws(E) in
+                    try apply(UnsafeRawBufferPointer(start: buffer.baseAddress, count: 0))
+                }
             case .inline(let inline):
                 return try inline.withUnsafeBytes(apply)
             case .slice(let slice):
@@ -332,8 +334,10 @@ extension Data {
         mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             switch self {
             case .empty:
-                var empty = InlineData()
-                return try empty.withUnsafeMutableBytes(apply)
+                var value: UInt64 = 0
+                return try Swift.withUnsafeMutableBytes(of: &value) { buffer throws(E) in
+                    try apply(UnsafeMutableRawBufferPointer(start: buffer.baseAddress, count: 0))
+                }
             case .inline(var inline):
                 defer { self = .inline(inline) }
                 return try inline.withUnsafeMutableBytes(apply)
