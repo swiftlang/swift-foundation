@@ -798,9 +798,32 @@ struct NewCodableTests {
         let result = try decoder.decode(CodableStructWithAliasedProperty.self, from: qux)
         #expect(result.bar == "hello")
     }
+
+    @JSONCodable
+    struct Person: Equatable {
+        let name: String
+        let address: Address
+        
+        struct Address: Codable, Equatable {
+            let city: String
+            let state: String
+            let zip: Int
+        }
+    }
     
-    @Test func testEmbeddedEncodable() throws {
-        struct Person: JSONEncodable, JSONDecodable, Equatable {
+    @Test func testEmbeddedEncodableForJSON() throws {
+        let testValue = Person(
+            name: "John",
+            address: .init(city: "Cupertino", state: "CA", zip: 95014)
+        )
+        
+        let data = try NewJSONEncoder().encode(testValue)
+        let redecoded = try NewJSONDecoder().decode(Person.self, from: data)
+        #expect(testValue == redecoded)
+    }
+    
+    @Test func testEmbeddedEncodableForCommon() throws {
+        struct PersonCommon: CommonCodable, Equatable {
             let name: String
             let address: Address
             
@@ -810,45 +833,45 @@ struct NewCodableTests {
                 let zip: Int
             }
             
-            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-                try encoder.encodeDictionary { dictEncoder throws(CodingError.Encoding) in
+            func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                try encoder.encodeDictionary(elementCount: 2) { dictEncoder throws(CodingError.Encoding) in
                     try dictEncoder.encode(key: "name", value: name)
                     try dictEncoder.encode(key: "address", value: address)
                 }
             }
             
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
+            static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> PersonCommon {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     var name: String?
                     var address: Address?
                     
                     try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
                         switch key {
-                        case "name": 
+                        case "name":
                             name = try valueDecoder.decode(String.self)
-                        case "address": 
+                        case "address":
                             address = try valueDecoder.decode(Address.self)
-                        default: 
+                        default:
                             break // Skip unknown keys
                         }
                         return false
                     }
                     
-                    guard let name, let address else { 
+                    guard let name, let address else {
                         throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
                     }
-                    return Person(name: name, address: address)
+                    return PersonCommon(name: name, address: address)
                 }
             }
         }
         
-        let testValue = Person(
+        let testValue = PersonCommon(
             name: "John",
             address: .init(city: "Cupertino", state: "CA", zip: 95014)
         )
         
         let data = try NewJSONEncoder().encode(testValue)
-        let redecoded = try NewJSONDecoder().decode(Person.self, from: data)
+        let redecoded = try NewJSONDecoder().decode(PersonCommon.self, from: data)
         #expect(testValue == redecoded)
     }
     
