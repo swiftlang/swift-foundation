@@ -122,7 +122,7 @@ private func parseFileSystemRepresentation(
             isDirectory: isDirectory
         )
         let path = pathBuffer.span.extracting(first: finalLength)
-        return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: true)
+        return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: true)
     }
 }
 
@@ -159,7 +159,7 @@ private func parsePOSIX(_ path: CFString, flags: inout _URLFlags, isDirectory: B
             isDirectory: isDirectory
         )
         let path = pathBuffer.span.extracting(first: finalLength)
-        return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: true)
+        return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: true)
     }
 }
 
@@ -187,7 +187,7 @@ private func parseHFS(_ path: String, flags: inout _URLFlags, isDirectory: Bool)
     guard !path.isEmpty else {
         return ""
     }
-    return URL.parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: true)
+    return URL.parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: true)
 }
 
 // Note this does not percent-encode the path

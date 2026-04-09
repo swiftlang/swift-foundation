@@ -77,7 +77,7 @@ extension URL {
     static func parseFinalFileSystemRepresentation(
         path: borrowing Span<UInt8>,
         flags: inout _URLFlags,
-        compatibility: Bool
+        encodeSemicolons: Bool
     ) -> String {
         guard path.count > 0 else {
             return ""
@@ -109,8 +109,8 @@ extension URL {
                 URLEncoder.percentEncodeUnchecked(
                     input: pathBuffer,
                     output: .init(rebasing: encodedBuffer[pathStart...]),
-                    // Encode ";" for CF/NSURL (compatibility: true)
-                    component: compatibility ? .pathNoSemicolon : .path,
+                    // Encode ";" for CF/NSURL (encodeSemicolons: true)
+                    component: encodeSemicolons ? .pathNoSemicolon : .path,
                     skipAlreadyEncoded: false
                 )
             }
@@ -122,7 +122,7 @@ extension URL {
         }
     }
 
-    static func parseUTF8Path(_ path: String, flags: inout _URLFlags, isDirectory: Bool, compatibility: Bool) -> String {
+    static func parseUTF8Path(_ path: String, flags: inout _URLFlags, isDirectory: Bool, encodeSemicolons: Bool) -> String {
         var path = path
         return path.withUTF8 { pathBuffer in
             // Allocate an extra byte in case we need to append a directory slash.
@@ -134,7 +134,7 @@ extension URL {
                     isDirectory: isDirectory
                 )
                 let path = $0.span.extracting(first: pathLength)
-                return parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: compatibility)
+                return parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: encodeSemicolons)
             }
         }
     }
@@ -145,7 +145,7 @@ extension URL {
         #if FOUNDATION_FRAMEWORK
         #if !os(watchOS)
         if path.utf8Span.isKnownASCII {
-            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: false)
+            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
         }
         #endif
         // Convert path to its decomposed file system representation
@@ -164,7 +164,7 @@ extension URL {
                     isDirectory: isDirectory
                 )
                 let path = pathBuffer.span.extracting(first: finalLength)
-                return parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: false)
+                return parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: false)
             }
 
             // Decomposition failed or there was an embedded null byte.
@@ -177,10 +177,10 @@ extension URL {
             // to a "file not found" error, this is more practical and debuggable
             // than returning an empty URL or crashing with fatalError().
 
-            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: false)
+            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
         }
         #else
-        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: false)
+        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
         #endif
     }
 
@@ -191,6 +191,6 @@ extension URL {
         guard !path.isEmpty else {
             return ""
         }
-        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: false)
+        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
     }
 }
