@@ -40,17 +40,16 @@ each client.
 
 ## Caveats when using swift-foundation as a package
 
-Although Foundation is available as a Swift package, and hence you _can_ declare a
-dependency on [swift-foundation][] during development, it is not suitable for
-use in a package or app that you intend to ship. Doing so has several
-downsides:
+Although Foundation is available as a Swift package, and hence you _can_ declare 
+a dependency on [swift-foundation][] during development, it is not suitable for
+use in a package or app that you intend to ship. Doing so has several downsides:
 
-* **It requires building Foundation and its dependencies from source.** This significantly increases
-  your build time.
+* **It requires building Foundation and its dependencies from source.** 
+  This significantly increases your build time.
 * **You may encounter build failures when another package uses a built-in
   Foundation.** If you use swift-foundation as a package, but you depend on a
   library from another package which uses a built-in copy of Foundation (as
-  this document recommends), this can cause build failures due to ambiguity
+  this document recommends), this can cause build failures due to ambiguous
   symbol definitions or module conflicts.
 
 ## When to use swift-foundation as a package
@@ -65,8 +64,7 @@ validate how changes made to Foundation will impact tools or libraries that
 depend on it, or to test changes to both Foundation and a related project in
 conjunction with each other. When using one of these workflows locally, it's
 important to be mindful of the [caveats][] above, but during local development
-it's often possible to take extra care and control things sufficiently to avoid
-those problems.
+it's often possible to take extra care to avoid those problems.
 
 [apple-platforms]: https://developer.apple.com/documentation/foundation
 [install]: https://www.swift.org/install

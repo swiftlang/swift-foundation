@@ -23,9 +23,9 @@ use and the tradeoffs involved, see [Distributions.md](Distributions.md).
 
 > [!IMPORTANT]
 > The swift-foundation package is intended to support development and testing of
-> Foundation itself. It is not recommended for use as a package dependency in
-> other projects. Prefer the built-in copy of Foundation that ships with your
-> toolchain or operating system instead.
+> Foundation itself. It is not supported for use as a package dependency in
+> other shipping projects. Prefer the built-in copy of Foundation that ships with 
+> your toolchain or operating system instead.
 
 ## Building and Testing
 
