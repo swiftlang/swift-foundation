@@ -561,6 +561,22 @@ private struct URLTests {
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
+    @Test func filePathAPIsWithSemicolon() throws {
+        // The NSURL and CFURL file path APIs encode ";" in file paths
+        // for compatibility. URL and other modern parsers do not.
+        var url = URL(filePath: "/path;to/file")
+        #expect(url.path == "/path;to/file")
+        #expect(url.relativeString == "file:///path;to/file")
+
+        url.append(path: "hello;world")
+        #expect(url.path == "/path;to/file/hello;world")
+        #expect(url.relativeString == "file:///path;to/file/hello;world")
+
+        url.appendPathExtension("some;ext")
+        #expect(url.path == "/path;to/file/hello;world.some;ext")
+        #expect(url.relativeString == "file:///path;to/file/hello;world.some;ext")
+    }
+
     #if FOUNDATION_FRAMEWORK
     @Test func fileSystemRepresentations() throws {
         let base = "/base/"
