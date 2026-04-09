@@ -296,6 +296,8 @@ public protocol CommonEncoder: ~Copyable, ~Escapable {
     @_disfavoredOverload
     @_lifetime(self: copy self)
     mutating func encode(_ value: some Encodable) throws(CodingError.Encoding)
+    
+    var codingPath: CodingPath { get }
 }
 
 public extension CommonEncoder where Self: ~Copyable & ~Escapable {
@@ -454,6 +456,8 @@ public protocol CommonDictionaryEncoder: ~Copyable, ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func encode(key: UTF8Span, valueEncoder: (inout ValueEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding)
+    
+    var codingPath: CodingPath { get }
 }
 
 public extension CommonDictionaryEncoder where Self: ~Copyable & ~Escapable {
@@ -516,6 +520,8 @@ public protocol CommonStructEncoder: ~Copyable, ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func encode(key: UTF8Span, valueEncoder: (inout ValueEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding)
+    
+    var codingPath: CodingPath { get }
 }
 
 public extension CommonStructEncoder where Self: ~Copyable & ~Escapable {

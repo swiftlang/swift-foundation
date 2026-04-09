@@ -185,6 +185,8 @@ public protocol CommonDecoder: ~Escapable {
     @_disfavoredOverload
     @_lifetime(self: copy self)
     mutating func decode<D: Decodable>(_: D.Type) throws(CodingError.Decoding) -> D
+    
+    var codingPath: CodingPath { get }
 }
 
 extension CommonDecoder where Self: ~Escapable {
@@ -243,6 +245,7 @@ public protocol CommonStructDecoder: ~Escapable {
     mutating func decodeEachKeyAndValue(_ closure: (String, inout ValueDecoder) throws(CodingError.Decoding) -> Bool) throws(CodingError.Decoding)
     
     var sizeHint: Int? { get }
+    var codingPath: CodingPath { get }
 }
 
 public extension CommonStructDecoder where Self: ~Escapable {
@@ -274,6 +277,8 @@ public protocol CommonDictionaryDecoder: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decodeKey(_ keyDecodingClosure: (inout KeyDecoder) throws(CodingError.Decoding) -> Void, andValue valueDecoderClosure: (inout ValueDecoder) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding) -> Bool
+    
+    var codingPath: CodingPath { get }
 }
 
 public protocol CommonArrayDecoder: ~Escapable {
@@ -286,6 +291,7 @@ public protocol CommonArrayDecoder: ~Escapable {
     mutating func decodeEachElement(_ closure: (inout ElementDecoder) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding)
     
     var sizeHint: Int? { get }
+    var codingPath: CodingPath { get }
 }
 
 public extension CommonArrayDecoder where Self: ~Escapable {
@@ -521,9 +527,7 @@ public extension CommonDecoder where Self: ~Escapable {
         
         let visitor = CommonElementVisitor()
         let element = try self.decodeAny(visitor)
-        // TODO: Context?
-        // TODO: CodingPath
-        let decoder = AdaptorDecoder(value: element, decoderContext: [:], codingPath: [])
+        let decoder = AdaptorDecoder(value: element, decoderContext: [:], codingPath: self.codingPath.toCodingKeys())
         
         do {
             return try D(from: decoder)

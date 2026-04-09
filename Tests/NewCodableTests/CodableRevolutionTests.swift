@@ -2157,6 +2157,74 @@ struct NewCodableTests {
         
         #expect(valueResult.capturedPaths == expectedPaths)
     }
+    
+    @Test func testCodingPathOfEmbeddedDecodable() throws {
+        struct ArrayContainer: CommonDecodable {
+            let items: [DecodableItem]
+            
+            static func decode(from decoder: inout some (CommonDecoder & ~Escapable)) throws(CodingError.Decoding) -> Self {
+                return try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var decodableItems: [DecodableItem] = []
+                    
+                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                        if key == "items" {
+                            decodableItems = try valueDecoder.decode([DecodableItem].self)
+                        }
+                        return false
+                    }
+                    
+                    return ArrayContainer(items: decodableItems)
+                }
+            }
+        }
+        
+        struct DecodableItem: Decodable {
+            let id: Int
+            let capturedCodingPath: [any CodingKey]
+            
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.capturedCodingPath = decoder.codingPath
+                self.id = try container.decode(Int.self, forKey: .id)
+            }
+            
+            enum CodingKeys: String, CodingKey {
+                case id
+            }
+        }
+        
+        let jsonString = """
+        {
+            "items": [
+                { "id": 100 },
+                { "id": 200 },
+                { "id": 300 }
+            ]
+        }
+        """
+        
+        let jsonData = jsonString.data(using: .utf8)!
+        let decoder = NewJSONDecoder()
+        let result = try decoder.decode(ArrayContainer.self, from: jsonData)
+        
+        #expect(result.items.count == 3)
+        
+        // Verify each item has the correct coding path with array indices
+        Testing.__checkBinaryOperation(result.items[0].capturedCodingPath.count,{ $0 == $1() },2,expression: .__fromBinaryOperation(.__fromSyntaxNode("result.items[0].capturedCodingPath.count"),"==",.__fromSyntaxNode("2")),comments: [.__line("// Verify each item has the correct coding path with array indices")],isRequired: false,sourceLocation: Testing.SourceLocation.__here()).__expected()
+        #expect(result.items[0].capturedCodingPath[0].stringValue == "items")
+        #expect(result.items[0].capturedCodingPath[1].intValue == 0)
+        #expect(result.items[0].id == 100)
+        
+        #expect(result.items[1].capturedCodingPath.count == 2)
+        #expect(result.items[1].capturedCodingPath[0].stringValue == "items")
+        #expect(result.items[1].capturedCodingPath[1].intValue == 1)
+        #expect(result.items[1].id == 200)
+        
+        #expect(result.items[2].capturedCodingPath.count == 2)
+        #expect(result.items[2].capturedCodingPath[0].stringValue == "items")
+        #expect(result.items[2].capturedCodingPath[1].intValue == 2)
+        #expect(result.items[2].id == 300)
+    }
 }
 
 extension Array where Element: BinaryFloatingPoint {

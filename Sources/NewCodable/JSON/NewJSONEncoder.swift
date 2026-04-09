@@ -763,6 +763,10 @@ extension JSONDirectEncoder {
         
         // TODO: Integer implementations.
         
+        public var codingPath: CodingPath {
+            innerEncoder.codingPath
+        }
+        
         @_transparent
         @inline(__always)
         @_lifetime(encoder: copy encoder)
@@ -1004,7 +1008,6 @@ extension JSONDirectEncoder {
     @_lifetime(self: copy self)
     public mutating func encode<T: Encodable>(_ value: T) throws(CodingError.Encoding) {
         do {
-            // TODO: Encoder context
             let encoder = AdaptorEncoder<JSONPrimitive>(encoderContext: .init(userInfo: [:], options: state.options), codingPath: self.codingPath.toCodingKeys())
             try encoder.encode(value)
             let encodedValue = encoder.encodedValue
