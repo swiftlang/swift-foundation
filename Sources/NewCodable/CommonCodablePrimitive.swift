@@ -17,8 +17,7 @@ import Foundation
 #endif
 
 /// An internal enum representing all the types that `CommonDecoder` supports.
-/// This serves as the `DecodedValue` type for bridging between CommonDecoder and standard Decodable.
-internal enum CommonElement {
+internal enum CommonCodablePrimitive {
     case bool(Bool)
     case int64(Int64)
     case uint64(UInt64)
@@ -28,98 +27,94 @@ internal enum CommonElement {
     case string(String)
     case bytes([UInt8])
     case null
-    case dictionary([(key: String, value: CommonElement)])
-    case array([CommonElement])
+    case dictionary([(key: String, value: CommonCodablePrimitive)])
+    case array([CommonCodablePrimitive])
 }
 
-/// A visitor that adapts decoded values for use with standard `Decodable` types.
-///
-/// This visitor captures raw values from `decodeAny` as `CommonElement` values
-/// and then converts them to `AdaptorDecoder` for standard decoding.
-internal struct CommonElementVisitor: CommonDecodingVisitor {
-    typealias DecodedValue = CommonElement
+/// This visitor captures raw values from `decodeAny` as `CommonCodablePrimitive` values
+internal struct CommonPrimitiveVisitor: CommonDecodingVisitor {
+    typealias DecodedValue = CommonCodablePrimitive
     
     init() {}
     
-    func visit(_ value: Bool) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Bool) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .bool(value)
     }
     
-    func visit(_ value: Int) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Int) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .int64(Int64(value))
     }
     
-    func visit(_ value: Int8) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Int8) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .int64(Int64(value))
     }
     
-    func visit(_ value: Int16) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Int16) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .int64(Int64(value))
     }
     
-    func visit(_ value: Int32) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Int32) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .int64(Int64(value))
     }
     
-    func visit(_ value: Int64) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Int64) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .int64(value)
     }
     
-    func visit(_ value: Int128) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Int128) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .int128(value)
     }
     
-    func visit(_ value: UInt) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: UInt) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .uint64(UInt64(value))
     }
     
-    func visit(_ value: UInt8) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: UInt8) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .uint64(UInt64(value))
     }
     
-    func visit(_ value: UInt16) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: UInt16) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .uint64(UInt64(value))
     }
     
-    func visit(_ value: UInt32) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: UInt32) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .uint64(UInt64(value))
     }
     
-    func visit(_ value: UInt64) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: UInt64) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .uint64(value)
     }
     
-    func visit(_ value: UInt128) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: UInt128) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .uint128(value)
     }
     
-    func visit(_ value: Float) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Float) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .double(Double(value))
     }
     
-    func visit(_ value: Double) throws(CodingError.Decoding) -> CommonElement {
+    func visit(_ value: Double) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .double(value)
     }
     
-    func visitString(_ value: String) throws(CodingError.Decoding) -> CommonElement {
+    func visitString(_ value: String) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .string(value)
     }
     
-    func visitUTF8Bytes(_ buffer: UTF8Span) throws(CodingError.Decoding) -> CommonElement {
-        // Convert UTF8Span to String using the proper API
+    func visitUTF8Bytes(_ buffer: UTF8Span) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         let string = String(copying: buffer)
         return .string(string)
     }
     
-    func visitBytes(_ array: [UInt8]) throws(CodingError.Decoding) -> CommonElement {
+    func visitBytes(_ array: [UInt8]) throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .bytes(array)
     }
     
-    func visit(decoder: inout some CommonStructDecoder & ~Escapable) throws(CodingError.Decoding) -> CommonElement {
-        var result: [(key: String, value: CommonElement)] = []
+    func visit(decoder: inout some CommonStructDecoder & ~Escapable) throws(CodingError.Decoding) -> CommonCodablePrimitive {
+        var result: [(key: String, value: CommonCodablePrimitive)] = []
         
         try decoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
-            let elementVisitor = CommonElementVisitor()
+            let elementVisitor = CommonPrimitiveVisitor()
             let element = try valueDecoder.decodeAny(elementVisitor)
             result.append((key: key, value: element))
             return false
@@ -128,11 +123,11 @@ internal struct CommonElementVisitor: CommonDecodingVisitor {
         return .dictionary(result)
     }
     
-    func visit(decoder: inout some CommonArrayDecoder & ~Escapable) throws(CodingError.Decoding) -> CommonElement {
-        var result: [CommonElement] = []
+    func visit(decoder: inout some CommonArrayDecoder & ~Escapable) throws(CodingError.Decoding) -> CommonCodablePrimitive {
+        var result: [CommonCodablePrimitive] = []
         
         try decoder.decodeEachElement { elementDecoder throws(CodingError.Decoding) in
-            let elementVisitor = CommonElementVisitor()
+            let elementVisitor = CommonPrimitiveVisitor()
             let element = try elementDecoder.decodeAny(elementVisitor)
             result.append(element)
         }
@@ -140,29 +135,30 @@ internal struct CommonElementVisitor: CommonDecodingVisitor {
         return .array(result)
     }
     
-    func visitNone() throws(CodingError.Decoding) -> CommonElement {
+    func visitNone() throws(CodingError.Decoding) -> CommonCodablePrimitive {
         return .null
     }
 }
 
-extension CommonElement: AdaptableDecodableValue {
-    typealias ArrayIterator = Array<CommonElement>.Iterator
+/// Conformance that allows decoding Decodable types in a CommonDecoder.
+extension CommonCodablePrimitive: AdaptableDecodableValue {
+    typealias ArrayIterator = Array<CommonCodablePrimitive>.Iterator
     
-    func decodeNil(context: AdaptorDecodableValueContext<CommonElement>) -> Bool {
+    func decodeNil(context: AdaptorDecodableValueContext<CommonCodablePrimitive>) -> Bool {
         if case .null = self {
             return true
         }
         return false
     }
     
-    func decode(_ type: Bool.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Bool {
+    func decode(_ type: Bool.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Bool {
         if case .bool(let value) = self {
             return value
         }
         throw CodingError.dataCorrupted(debugDescription: "Expected Bool but found \(self)")
     }
     
-    func decode(_ type: Int.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Int {
+    func decode(_ type: Int.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Int {
         switch self {
         case .int64(let value):
             guard let result = Int(exactly: value) else {
@@ -189,7 +185,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: Int8.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Int8 {
+    func decode(_ type: Int8.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Int8 {
         switch self {
         case .int64(let value):
             guard let result = Int8(exactly: value) else {
@@ -216,7 +212,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: Int16.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Int16 {
+    func decode(_ type: Int16.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Int16 {
         switch self {
         case .int64(let value):
             guard let result = Int16(exactly: value) else {
@@ -243,7 +239,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: Int32.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Int32 {
+    func decode(_ type: Int32.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Int32 {
         switch self {
         case .int64(let value):
             guard let result = Int32(exactly: value) else {
@@ -270,7 +266,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: Int64.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Int64 {
+    func decode(_ type: Int64.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Int64 {
         switch self {
         case .int64(let value):
             return value
@@ -294,7 +290,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: Int128.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Int128 {
+    func decode(_ type: Int128.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Int128 {
         switch self {
         case .int64(let value):
             return Int128(value)
@@ -312,7 +308,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: UInt.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> UInt {
+    func decode(_ type: UInt.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> UInt {
         switch self {
         case .int64(let value):
             guard let result = UInt(exactly: value) else {
@@ -339,7 +335,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: UInt8.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> UInt8 {
+    func decode(_ type: UInt8.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> UInt8 {
         switch self {
         case .int64(let value):
             guard let result = UInt8(exactly: value) else {
@@ -366,7 +362,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: UInt16.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> UInt16 {
+    func decode(_ type: UInt16.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> UInt16 {
         switch self {
         case .int64(let value):
             guard let result = UInt16(exactly: value) else {
@@ -393,7 +389,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: UInt32.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> UInt32 {
+    func decode(_ type: UInt32.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> UInt32 {
         switch self {
         case .int64(let value):
             guard let result = UInt32(exactly: value) else {
@@ -420,7 +416,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: UInt64.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> UInt64 {
+    func decode(_ type: UInt64.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> UInt64 {
         switch self {
         case .int64(let value):
             guard let result = UInt64(exactly: value) else {
@@ -444,7 +440,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: UInt128.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> UInt128 {
+    func decode(_ type: UInt128.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> UInt128 {
         switch self {
         case .int64(let value):
             guard let result = UInt128(exactly: value) else {
@@ -465,7 +461,7 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func decode(_ type: Float.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Float {
+    func decode(_ type: Float.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Float {
         if case .double(let value) = self {
             guard let result = Float(exactly: value) else {
                 throw CodingError.dataCorrupted(debugDescription: "Double value \(value) cannot be represented as Float")
@@ -475,21 +471,21 @@ extension CommonElement: AdaptableDecodableValue {
         throw CodingError.dataCorrupted(debugDescription: "Expected Double but found \(self)")
     }
     
-    func decode(_ type: Double.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> Double {
+    func decode(_ type: Double.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> Double {
         if case .double(let value) = self {
             return value
         }
         throw CodingError.dataCorrupted(debugDescription: "Expected Double but found \(self)")
     }
     
-    func decode(_ type: String.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> String {
+    func decode(_ type: String.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> String {
         if case .string(let value) = self {
             return value
         }
         throw CodingError.dataCorrupted(debugDescription: "Expected String but found \(self)")
     }
     
-    func decode<U: Decodable>(_ type: U.Type, context: AdaptorDecodableValueContext<CommonElement>) throws -> U {
+    func decode<U: Decodable>(_ type: U.Type, context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> U {
         // For generic Decodable types, we need to recursively create an AdaptorDecoder
         let decoder = AdaptorDecoder(value: self, decoderContext: context.decoderContext, codingPath: context.codingPath)
         do {
@@ -500,9 +496,9 @@ extension CommonElement: AdaptableDecodableValue {
         }
     }
     
-    func makeDictionary(context: AdaptorDecodableValueContext<CommonElement>) throws -> [String : CommonElement] {
+    func makeDictionary(context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> [String : CommonCodablePrimitive] {
         if case .dictionary(let keyValuePairs) = self {
-            var result: [String: CommonElement] = [:]
+            var result: [String: CommonCodablePrimitive] = [:]
             for pair in keyValuePairs {
                 result[pair.key] = pair.value
             }
@@ -511,7 +507,7 @@ extension CommonElement: AdaptableDecodableValue {
         throw CodingError.dataCorrupted(debugDescription: "Expected dictionary but found \(self)")
     }
     
-    func makeArrayIterator(context: AdaptorDecodableValueContext<CommonElement>) throws -> (Array<CommonElement>.Iterator, countHint: Int?) {
+    func makeArrayIterator(context: AdaptorDecodableValueContext<CommonCodablePrimitive>) throws -> (Array<CommonCodablePrimitive>.Iterator, countHint: Int?) {
         if case .array(let elements) = self {
             return (elements.makeIterator(), elements.count)
         }

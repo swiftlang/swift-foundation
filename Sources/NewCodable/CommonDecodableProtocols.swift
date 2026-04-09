@@ -517,7 +517,7 @@ public extension CommonDecodingVisitor where Self: ~Copyable & ~Escapable {
 public extension CommonDecoder where Self: ~Escapable {
     /// Default implementation for decoding standard `Decodable` types using `decodeAny` and `AdaptorDecoder`.
     ///
-    /// This implementation uses a visitor pattern to capture the raw value as `CommonElement` via `decodeAny`,
+    /// This implementation uses a visitor pattern to capture the raw value as `CommonCodablePrimitive` via `decodeAny`,
     /// then wraps it in an `AdaptorDecoder` to provide the standard `Decoder` interface expected by `Decodable` types.
     @_lifetime(self: copy self)
     mutating func decode<D: Decodable>(_: D.Type) throws(CodingError.Decoding) -> D {
@@ -525,7 +525,7 @@ public extension CommonDecoder where Self: ~Escapable {
             throw CodingError.unsupportedDecodingType("any")
         }
         
-        let visitor = CommonElementVisitor()
+        let visitor = CommonPrimitiveVisitor()
         let element = try self.decodeAny(visitor)
         let decoder = AdaptorDecoder(value: element, decoderContext: [:], codingPath: self.codingPath.toCodingKeys())
         
