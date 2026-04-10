@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 import Testing
+import Observation
+import Synchronization
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -791,5 +793,57 @@ extension Tag {
         }
 
         #expect(manager.completedCount == 1000)
+    }
+
+    // rdar://172950622 (Async stream observation of ProgressManager's fractionCompleted does not receive updates from subsubprogress and beyond.)
+    // Verify that observation propagates to all ancestors when a leaf node is mutated,
+    // and that re-subscribing works across repeated increments to completion,
+    // matching the real-world pattern where an async stream re-registers after each onChange.
+    @Test func observationPropagatesAcrossMultipleLevels() {
+        let root = ProgressManager(totalCount: 5)
+        let child = root.subprogress(assigningCount: 5).start(totalCount: 5)
+        let grandchild = child.subprogress(assigningCount: 5).start(totalCount: 5)
+        let greatGrandchild = grandchild.subprogress(assigningCount: 5).start(totalCount: 5)
+
+        for i in 1...5 {
+            let rootObserved = Mutex(false)
+            let childObserved = Mutex(false)
+            let grandchildObserved = Mutex(false)
+            let rootValue = Mutex(0.0)
+            let childValue = Mutex(0.0)
+
+            // Re-subscribe before each increment, just like an async stream would
+            withObservationTracking {
+                let _ = root.fractionCompleted
+            } onChange: {
+                rootObserved.withLock { $0 = true }
+                rootValue.withLock { $0 = root.fractionCompleted }
+            }
+
+            withObservationTracking {
+                let _ = child.fractionCompleted
+            } onChange: {
+                childObserved.withLock { $0 = true }
+                childValue.withLock { $0 = child.fractionCompleted }
+            }
+
+            withObservationTracking {
+                let _ = grandchild.fractionCompleted
+            } onChange: {
+                grandchildObserved.withLock { $0 = true }
+            }
+
+            greatGrandchild.complete(count: 1)
+
+            let expected = Double(i) / 5.0
+            #expect(grandchildObserved.withLock { $0 }, "Grandchild observation should fire on increment \(i)")
+            #expect(childObserved.withLock { $0 }, "Child observation should fire on increment \(i)")
+            #expect(rootObserved.withLock { $0 }, "Root observation should fire on increment \(i)")
+            #expect(rootValue.withLock { $0 } == expected, "Root should see \(expected) inside onChange on increment \(i)")
+            #expect(childValue.withLock { $0 } == expected, "Child should see \(expected) inside onChange on increment \(i)")
+        }
+
+        #expect(root.fractionCompleted == 1.0)
+        #expect(root.isFinished)
     }
 }
