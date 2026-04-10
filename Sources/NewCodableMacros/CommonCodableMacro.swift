@@ -14,9 +14,9 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftDiagnostics
 
-public struct JSONCodableMacro { }
+public struct CommonCodableMacro { }
 
-extension JSONCodableMacro: MemberMacro {
+extension CommonCodableMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -29,12 +29,12 @@ extension JSONCodableMacro: MemberMacro {
             conformingTo: protocols,
             in: context,
             generateCodingFields: makeCodingFieldsDecl,
-            kind: JSONCodingFieldKind.both
+            kind: CommonCodingFieldExpansionKind.both
         )
     }
 }
 
-extension JSONCodableMacro: ExtensionMacro {
+extension CommonCodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -42,14 +42,14 @@ extension JSONCodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        let encodableExtensions = try JSONEncodableMacro.expansion(
+        let encodableExtensions = try CommonEncodableMacro.expansion(
             of: node,
             attachedTo: declaration,
             providingExtensionsOf: type,
             conformingTo: protocols,
             in: context
         )
-        let decodableExtensions = try JSONDecodableMacro.expansion(
+        let decodableExtensions = try CommonDecodableMacro.expansion(
             of: node,
             attachedTo: declaration,
             providingExtensionsOf: type,

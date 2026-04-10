@@ -15,9 +15,9 @@ import SwiftSyntaxMacros
 import SwiftSyntaxBuilder
 import SwiftDiagnostics
 
-public struct JSONDecodableMacro { }
+public struct CommonDecodableMacro { }
 
-extension JSONDecodableMacro: MemberMacro {
+extension CommonDecodableMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -30,12 +30,12 @@ extension JSONDecodableMacro: MemberMacro {
             conformingTo: protocols,
             in: context,
             generateCodingFields: makeCodingFieldsDecl,
-            kind: JSONCodingFieldKind.decodingOnly
+            kind: CommonCodingFieldExpansionKind.decodingOnly
         )
     }
 }
 
-extension JSONDecodableMacro: ExtensionMacro {
+extension CommonDecodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -49,19 +49,54 @@ extension JSONDecodableMacro: ExtensionMacro {
             providingExtensionsOf: type,
             conformingTo: protocols,
             in: context,
-            generateExtension: generateJSONDecodableExtension
+            generateExtension: generateCommonDecodableExtension
         )
     }
 }
 
-func generateJSONDecodableExtension(
+enum CommonCodingFieldExpansionKind: CodingFieldExpansionKind {
+    case encodingOnly
+    case decodingOnly
+    case both
+
+    var protocolName: String {
+        switch self {
+        case .encodingOnly:
+            return "StaticStringEncodingField"
+        case .decodingOnly:
+            return "StaticStringDecodingField"
+        case .both:
+            return "StaticStringCodingField"
+        }
+    }
+
+    var supportsEncoding: Bool {
+        switch self {
+        case .encodingOnly, .both:
+            return true
+        case .decodingOnly:
+            return false
+        }
+    }
+    
+    var supportsDecoding: Bool {
+        switch self {
+        case .decodingOnly, .both:
+            return true
+        case .encodingOnly:
+            return false
+        }
+    }
+}
+
+func generateCommonDecodableExtension(
     for typeName: TokenSyntax,
     with properties: [DetailedStoredProperty]
 ) -> DeclSyntax {
     if properties.isEmpty {
         return """
-        extension \(typeName): JSONDecodable {
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
+        extension \(typeName): CommonDecodable {
+            static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
                 try decoder.decodeStruct { _ throws(CodingError.Decoding) in
                     \(typeName)()
                 }
@@ -113,8 +148,8 @@ func generateJSONDecodableExtension(
         }
 
         return """
-        extension \(typeName): JSONDecodable {
-            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
+        extension \(typeName): CommonDecodable {
+            static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     \(raw: varDeclarations)
                     var _codingField: CodingFields?

@@ -15,26 +15,9 @@ import SwiftSyntaxMacros
 import SwiftSyntaxBuilder
 import SwiftDiagnostics
 
-public struct JSONEncodableMacro { }
+public struct CommonEncodableMacro { }
 
-enum JSONCodingFieldKind: CodingFieldExpansionKind {
-    case encodingOnly
-    case decodingOnly
-    case both
-    
-    var protocolName: String {
-        switch self {
-        case .encodingOnly:
-            return "JSONOptimizedEncodingField"
-        case .decodingOnly:
-            return "JSONOptimizedDecodingField"
-        case .both:
-            return "JSONOptimizedCodingField"
-        }
-    }
-}
-
-extension JSONEncodableMacro: MemberMacro {
+extension CommonEncodableMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -47,12 +30,12 @@ extension JSONEncodableMacro: MemberMacro {
             conformingTo: protocols,
             in: context,
             generateCodingFields: makeCodingFieldsDecl,
-            kind: JSONCodingFieldKind.encodingOnly
+            kind: CommonCodingFieldExpansionKind.encodingOnly
         )
     }
 }
 
-extension JSONEncodableMacro: ExtensionMacro {
+extension CommonEncodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -69,8 +52,8 @@ extension JSONEncodableMacro: ExtensionMacro {
         let extensionDecl: DeclSyntax
         if properties.isEmpty {
             extensionDecl = """
-            extension \(type.trimmed): JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension \(type.trimmed): CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in }
                 }
             }
@@ -83,8 +66,8 @@ extension JSONEncodableMacro: ExtensionMacro {
             let fieldCount = properties.count
 
             extensionDecl = """
-            extension \(type.trimmed): JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension \(type.trimmed): CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: \(raw: fieldCount)) { structEncoder throws(CodingError.Encoding) in
                         \(raw: encodeStatements)
                     }
@@ -99,21 +82,4 @@ extension JSONEncodableMacro: ExtensionMacro {
 
         return [ext]
     }
-}
-
-enum JSONEncodableDiagnostic: String, DiagnosticMessage {
-    case notAStruct
-
-    var message: String {
-        switch self {
-        case .notAStruct:
-            return "@JSONEncodable can only be applied to structs"
-        }
-    }
-
-    var diagnosticID: MessageID {
-        MessageID(domain: "NewCodableMacros", id: rawValue)
-    }
-
-    var severity: DiagnosticSeverity { .error }
 }
