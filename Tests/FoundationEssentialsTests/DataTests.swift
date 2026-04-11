@@ -2919,7 +2919,6 @@ extension DataTests {
     }
 }
 
-#if FOUNDATION_FRAMEWORK // FIXME: Re-enable tests once range(of:) is implemented
 extension DataTests {
     @Test func range() {
         let helloWorld = dataFrom("Hello World")
@@ -2965,7 +2964,6 @@ extension DataTests {
         #expect(range == 4..<5 as Range<Data.Index>)
     }
 }
-#endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK // Bridging is not available in the FoundationPreview package
 extension DataTests {

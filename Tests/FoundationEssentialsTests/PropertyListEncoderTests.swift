@@ -547,8 +547,6 @@ private struct PropertyListEncoderTests {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
-    // TODO: Depends on data's range(of:) implementation
     @Test func nonStringDictionaryKey() throws {
         let decoder = PropertyListDecoder()
         let encoder = PropertyListEncoder()
@@ -567,7 +565,6 @@ private struct PropertyListEncoderTests {
             try decoder.decode([String:String].self, from: xmlData)
         }
     }
-#endif
 
     struct GenericProperties : Decodable {
         var assertionFailure: String?
