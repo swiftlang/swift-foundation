@@ -17,13 +17,6 @@ import SwiftDiagnostics
 
 // MARK: - Shared Data Types
 
-/// Represents a stored property with its coding configuration
-struct StoredProperty {
-    let name: String
-    let key: String
-    let aliases: [String]
-}
-
 /// Represents a detailed stored property with type information and default values
 struct DetailedStoredProperty {
     let name: String
@@ -89,63 +82,6 @@ extension CodingFieldExpansionKind {
 }
 
 // MARK: - Shared Property Extraction
-
-func extractStoredProperties(
-    from members: MemberBlockSyntax,
-    in context: some MacroExpansionContext
-) -> [StoredProperty] {
-    var properties: [StoredProperty] = []
-
-    for member in members.members {
-        guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
-            continue
-        }
-
-        if varDecl.modifiers.contains(where: {
-            $0.name.tokenKind == .keyword(.static) || $0.name.tokenKind == .keyword(.lazy)
-        }) {
-            continue
-        }
-
-        let customKey = customCodingKey(from: varDecl.attributes)
-        let aliases = decodableAliases(from: varDecl.attributes)
-        if (customKey != nil || !aliases.isEmpty) && varDecl.bindings.count > 1 {
-            context.diagnose(.init(
-                node: Syntax(varDecl),
-                message: SharedMacroDiagnostic.codingKeyOnMultipleBindings
-            ))
-            continue
-        }
-
-        for binding in varDecl.bindings {
-            if let accessorBlock = binding.accessorBlock {
-                switch accessorBlock.accessors {
-                case .getter:
-                    continue
-                case .accessors(let accessors):
-                    let hasGetOrSet = accessors.contains {
-                        $0.accessorSpecifier.tokenKind == .keyword(.get) ||
-                        $0.accessorSpecifier.tokenKind == .keyword(.set)
-                    }
-                    if hasGetOrSet {
-                        continue
-                    }
-                }
-            }
-
-            guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
-                continue
-            }
-
-            let propertyName = pattern.identifier.trimmedDescription
-            let key = customKey ?? propertyName
-
-            properties.append(StoredProperty(name: propertyName, key: key, aliases: aliases))
-        }
-    }
-
-    return properties
-}
 
 func extractDetailedStoredProperties(
     from members: MemberBlockSyntax,
