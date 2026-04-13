@@ -11,7 +11,7 @@
 
 Foundation's `UUID` type currently generates only version 4 (random) UUIDs. [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562) defines several UUID versions, each suited to different use cases. This proposal adds support for creating UUIDs of version 7 (time-ordered) which has become widely adopted for database keys and distributed systems due to its monotonically increasing, sortable nature.
 
-In addition, `UUID` is in need of a few more additions for modern usage, including support for lowercase strings, access to the bytes using `Span`, and accessors for the commonly used `min` and `max` sentinel values.
+In addition, `UUID` is in need of a few more additions for modern usage, including support for lowercase strings, access to the bytes using `RawSpan`, and accessors for the commonly used `min` and `max` sentinel values.
 
 ## Motivation
 
@@ -47,7 +47,7 @@ let maxID = UUID.max   // FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
 
 // Access the raw bytes without copying
 let uuid = UUID()
-let span: Span<UInt8> = uuid.span      // 16-element typed span
+let rawBytes: RawSpan = uuid.bytes     // 16-byte raw span
 ```
 
 ## Detailed design
@@ -84,44 +84,44 @@ extension UUID {
 
 The existing `uuidString` property returns an uppercase representation. Many systems — including web APIs, databases, and URN formatting (RFC 4122 §3) — conventionally use lowercase UUIDs. `lowercasedUUIDString` avoids the need to call `uuidString.lowercased()`, which allocates an intermediate `String`.
 
-### `span` and `mutableSpan` properties
+### `bytes` and `mutableBytes` properties
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// A `Span<UInt8>` view of the UUID's 16 bytes.
-    public var span: Span<UInt8> { get }
+    /// A `RawSpan` view of the UUID's 16 bytes.
+    public var bytes: RawSpan { get }
 
-    /// A `MutableSpan<UInt8>` view of the UUID's 16 bytes.
-    public var mutableSpan: MutableSpan<UInt8> { mutating get }
+    /// A `MutableRawSpan` view of the UUID's 16 bytes.
+    public var mutableBytes: MutableRawSpan { mutating get }
 }
 ```
 
-These properties provide bounds-checked access to the UUID's bytes without the need for `withUnsafeBytes` or tuple element access. `span` provides read-only access; `mutableSpan` allows direct modification of the underlying bytes. Both are lifetime-dependent on the UUID value.
+These properties provide bounds-checked access to the UUID's raw bytes without the need for `withUnsafeBytes` or tuple element access. `bytes` provides read-only access; `mutableBytes` allows direct modification of the underlying bytes. Both are lifetime-dependent on the UUID value.
 
-### Initializing from a `Span`
+### Initializing from a `RawSpan`
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// Creates a UUID by copying exactly 16 bytes from a `Span<UInt8>`.
-    public init(copying span: Span<UInt8>)
+    /// Creates a UUID by copying exactly 16 bytes from a `RawSpan`.
+    public init(copying bytes: RawSpan)
 }
 ```
 
-This initializer copies the bytes from a `Span<UInt8>` into a new UUID. The span must contain exactly 16 bytes; otherwise, the initializer traps.
+This initializer copies the bytes from a `RawSpan` into a new UUID. The span must contain exactly 16 bytes; otherwise, the initializer traps.
 
-### Initializing from an `OutputSpan`
+### Initializing from an `OutputRawSpan`
 
 ```swift
 @available(FoundationPreview 6.4, *)
 extension UUID {
     /// Creates a UUID by filling its 16 bytes using a closure that
-    /// writes into an `OutputSpan<UInt8>`.
+    /// writes into an `OutputRawSpan`.
     ///
     /// The closure must write exactly 16 bytes into the output span.
     public init<E: Error>(
-        initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> ()
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> ()
     ) throws(E)
 }
 ```
@@ -136,7 +136,7 @@ let uuid = UUID { output in
 }
 ```
 
-The closure receives an `OutputSpan<UInt8>` backed by the UUID's 16-byte storage. If the closure writes fewer or more than 16 bytes, the initializer traps. If the closure throws, the error is propagated with its original type.
+The closure receives an `OutputRawSpan` backed by the UUID's 16-byte storage. If the closure writes fewer or more than 16 bytes, the initializer traps. If the closure throws, the error is propagated with its original type.
 
 ### `version` and `variant` properties
 
@@ -235,7 +235,7 @@ This feature can be freely adopted and un-adopted in source code with no deploym
 ## Future directions
 
 - **Version 5 (name-based SHA-1)**: A factory method like `UUID.nameBased(name:namespace:)` could be added in a future proposal for deterministic UUID generation.
-- **Version 8 (custom)**: Could be exposed via an initializer that accepts the custom data bits while setting the version and variant fields automatically. For now, we do provide an initializer that allows for setting all of the bytes directly via `OutputSpan`.
+- **Version 8 (custom)**: Could be exposed via an initializer that accepts the custom data bits while setting the version and variant fields automatically. For now, we do provide an initializer that allows for setting all of the bytes directly via `OutputRawSpan`.
 
 ## Alternatives considered
 

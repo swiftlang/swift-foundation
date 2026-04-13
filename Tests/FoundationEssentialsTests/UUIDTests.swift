@@ -13,9 +13,9 @@
 import Testing
 
 #if canImport(FoundationEssentials)
-import FoundationEssentials
+@testable import FoundationEssentials
 #elseif FOUNDATION_FRAMEWORK
-import Foundation
+@testable import Foundation
 #endif
 
 #if canImport(TestSupport)
@@ -24,6 +24,17 @@ import TestSupport
 
 @Suite("UUID")
 private struct UUIDTests {
+    @Test func misalignedSpanTrap() {
+        // Validates that we do not produce misaligned access
+        struct Misaligned {
+            var pad: UInt8 = 0xFF
+            var uuid: UUID = UUID()
+        }
+        let container = Misaligned()
+        let halves = Span<UInt64>(_bytes: container.uuid.bytes)
+        #expect(halves.bytes.byteCount == 16)
+     }
+
     @Test func equality() {
         let uuidA = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")
         let uuidB = UUID(uuidString: "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")
@@ -155,7 +166,7 @@ private struct UUIDTests {
     @Test func minUUID() {
         let minUUID = UUID.min
         #expect(minUUID.uuidString == "00000000-0000-0000-0000-000000000000")
-        let s = minUUID.span
+        let s = minUUID.bytes
         for i in 0..<16 {
             #expect(s[i] == 0)
         }
@@ -165,7 +176,7 @@ private struct UUIDTests {
     @Test func maxUUID() {
         let maxUUID = UUID.max
         #expect(maxUUID.uuidString == "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")
-        let s = maxUUID.span
+        let s = maxUUID.bytes
         for i in 0..<16 {
             #expect(s[i] == 0xFF)
         }
@@ -182,10 +193,10 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func spanProperty() {
+    @Test func bytesProperty() {
         let uuid = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
-        let s = uuid.span
-        #expect(s.count == 16)
+        let s = uuid.bytes
+        #expect(s.byteCount == 16)
         #expect(s[0] == 0xe6)
         #expect(s[1] == 0x21)
         #expect(s[6] == 0x49)
@@ -195,7 +206,7 @@ private struct UUIDTests {
     @available(FoundationPreview 6.4, *)
     @Test func spanMatchesUUIDBytes() {
         let uuid = UUID()
-        let s = uuid.span
+        let s = uuid.bytes
         let t = uuid.uuid
         #expect(s[0] == t.0)
         #expect(s[1] == t.1)
@@ -205,37 +216,37 @@ private struct UUIDTests {
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func mutableSpan() {
+    @Test func mutableBytes() {
         var uuid = UUID.min
-        var span = uuid.mutableSpan
+        var span = uuid.mutableBytes
         span[0] = 0xAB
         span[15] = 0xCD
-        #expect(uuid.span[0] == 0xAB)
-        #expect(uuid.span[15] == 0xCD)
+        #expect(uuid.bytes[0] == 0xAB)
+        #expect(uuid.bytes[15] == 0xCD)
         // Other bytes remain zero
         for i in 1..<15 {
-            #expect(uuid.span[i] == 0)
+            #expect(uuid.bytes[i] == 0)
         }
     }
 
     @available(FoundationPreview 6.4, *)
-    @Test func mutableSpanModifiesUUID() {
+    @Test func mutableBytesModifiesUUID() {
         var uuid = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         // Overwrite version nibble to v7
-        let previousValue = uuid.span[6]
-        var span = uuid.mutableSpan
+        let previousValue = uuid.bytes[6]
+        var span = uuid.mutableBytes
         span[6] = (previousValue & 0x0F) | 0x70
         #expect(uuid.version == 7)
     }
 
     @available(FoundationPreview 6.4, *)
     @Test func initializingWithOutputSpan() {
-        let uuid = UUID { (output: inout OutputSpan<UInt8>) in
+        let uuid = UUID { (output: inout OutputRawSpan) in
             for i: UInt8 in 0..<16 {
                 output.append(i)
             }
         }
-        let s = uuid.span
+        let s = uuid.bytes
         for i: UInt8 in 0..<16 {
             #expect(s[Int(i)] == i)
         }
@@ -245,7 +256,7 @@ private struct UUIDTests {
     @Test func initializingWithOutputSpanMatchesUUIDInit() {
         let expected = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         let bytes: [UInt8] = [0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f]
-        let uuid = UUID { (output: inout OutputSpan<UInt8>) in
+        let uuid = UUID { (output: inout OutputRawSpan) in
             for b in bytes {
                 output.append(b)
             }
@@ -257,7 +268,7 @@ private struct UUIDTests {
     @Test func initFromSpan() {
         let bytes: [UInt8] = [0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f]
         let span = bytes.span
-        let uuid = UUID(copying: span)
+        let uuid = UUID(copying: span.bytes)
         let expected = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         #expect(uuid == expected)
     }
@@ -371,7 +382,7 @@ private struct UUIDTests {
         var generator = SystemRandomNumberGenerator()
         let uuid = UUID.version7(using: &generator, at: date)
         // rand_a is the lower nibble of byte 6 and all of byte 7
-        let randA = (UInt16(uuid.span[6]) & 0x0F) << 8 | UInt16(uuid.span[7])
+        let randA = (UInt16(uuid.bytes[6]) & 0x0F) << 8 | UInt16(uuid.bytes[7])
         #expect(randA == 0)
         // Verify the millisecond timestamp is correct
         #expect(uuid.date == Date(timeIntervalSince1970: 1000.123))
@@ -468,7 +479,7 @@ private struct UUIDTests {
         let original = UUID()
         var modified = original
         modified.version = 7
-        #expect(modified.span[6] & 0x0F == original.span[6] & 0x0F)
+        #expect(modified.bytes[6] & 0x0F == original.bytes[6] & 0x0F)
         #expect(modified.version == 7)
     }
 

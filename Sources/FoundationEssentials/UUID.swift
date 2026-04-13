@@ -28,10 +28,73 @@ internal import Synchronization
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
+extension RawSpan {
+    // Placeholder for SE-0525
+    internal subscript(index: Int) -> UInt8 {
+        unsafeLoad(fromByteOffset: index, as: UInt8.self)
+    }
+}
+
+extension MutableRawSpan {
+    // Placeholder for SE-0525
+    internal subscript(index: Int) -> UInt8 {
+        get {
+            unsafeLoad(fromByteOffset: index, as: UInt8.self)
+        }
+        set {
+            storeBytes(of: newValue, toByteOffset: index, as: UInt8.self)
+        }
+    }
+}
+
+extension Span {
+    // Placeholder for SE-0525
+    @_lifetime(borrow bytes)
+    fileprivate init(viewing bytes: RawSpan) where Element: BitwiseCopyable {
+        self.init(_bytes: bytes)
+    }
+}
+
+extension MutableSpan {
+    // Placeholder for SE-0525
+    @_lifetime(&mutableBytes)
+    fileprivate init(mutating mutableBytes: inout MutableRawSpan) where Element: BitwiseCopyable {
+        self = mutableBytes._unsafeMutableView(as: Element.self)
+    }
+}
+
+extension OutputSpan where Element: BitwiseCopyable {
+    // Placeholder for SE-0525
+//    @_lifetime(copy self)
+    mutating func append<E: Error>(
+        elements n: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) {
+        try self.withUnsafeMutableBufferPointer { buffer, initializedCount throws(E) in
+            let rawBuffer = UnsafeMutableRawBufferPointer(buffer)
+            var rawSpan = OutputRawSpan(buffer: rawBuffer, initializedCount: initializedCount)
+            defer {
+                initializedCount = rawSpan.finalize(for: rawBuffer) / MemoryLayout<Element>.stride
+                rawSpan = OutputRawSpan()
+            }
+            return try initializer(&rawSpan)
+        }
+    }
+}
+
+extension OutputRawSpan {
+    // Placeholder for SE-0525
+    mutating func append(copying other: RawSpan) {
+        for i in other.byteOffsets {
+            self.append(other[i])
+        }
+    }
+}
+
 /// Represents UUID strings, which can be used to uniquely identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
 public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
-    internal var _storage = InlineArray<16, UInt8>(repeating: 0)
+    internal var _storage = InlineArray<2, UInt64>(repeating: 0)
 
     /// The UUID bytes as a `uuid_t` tuple.
     public var uuid: uuid_t {
@@ -39,7 +102,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
             return unsafeBitCast(_storage, to: uuid_t.self)
         }
         set {
-            _storage = unsafeBitCast(newValue, to: InlineArray<16, UInt8>.self)
+            _storage = unsafeBitCast(newValue, to: InlineArray<2, UInt64>.self)
         }
     }
 
@@ -63,19 +126,22 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         while charIdx < 36 {
             switch charIdx {
             case 8, 13, 18, 23:
-                guard utf8.span[charIdx] == UInt8(ascii: "-") else {
+                guard utf8.span.bytes[charIdx] == UInt8(ascii: "-") else {
                     return nil
                 }
                 charIdx += 1
             default:
                 // from CodableUtilities.swift
-                guard let b1 = utf8.span[charIdx].hexDigitValue else {
+                guard let b1 = utf8.span.bytes[charIdx].hexDigitValue else {
                     return nil
                 }
-                guard let b2 = utf8.span[charIdx + 1].hexDigitValue else {
+                guard let b2 = utf8.span.bytes[charIdx + 1].hexDigitValue else {
                     return nil
                 }
-                _storage[byteIdx] = b1 << 4 | b2
+                // Will be: _storage.mutableSpan.mutableBytes[byteIdx] = b1 << 4 | b2
+                var mutableSpan = _storage.mutableSpan
+                var mutableBytes = mutableSpan.mutableBytes
+                mutableBytes[byteIdx] = b1 << 4 | b2
                 byteIdx += 1
                 charIdx += 2
             }
@@ -84,18 +150,20 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 
     /// Create a UUID from a `uuid_t`.
     public init(uuid: uuid_t) {
-        self._storage = unsafeBitCast(uuid, to: InlineArray<16, UInt8>.self)
+        self._storage = unsafeBitCast(uuid, to: InlineArray<2, UInt64>.self)
     }
 
     /// Creates a UUID by copying exactly 16 bytes from a `Span<UInt8>`.
     ///
     /// - Precondition: `span.count` must be exactly 16.
     @available(FoundationPreview 6.4, *)
-    public init(copying span: Span<UInt8>) {
-        precondition(span.count == 16, "UUID requires exactly 16 bytes, but \(span.count) were provided")
-        self.init()
-        for i in 0..<16 {
-            _storage[i] = span[i]
+    public init(copying span: RawSpan) {
+        precondition(span.byteCount == 16, "UUID requires exactly 16 bytes, but \(span.byteCount) were provided")
+        // Is this safe? Probably not because we don't know the alignment of span
+        // let pieces = Span<UInt64>(viewing: span)
+        // _storage = [pieces[0], pieces[1]]
+        self.init { outputRawSpan in
+            outputRawSpan.append(copying: span)
         }
     }
 
@@ -104,12 +172,14 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     /// The closure must write exactly 16 bytes into the output span.
     @available(FoundationPreview 6.4, *)
     public init<E: Error>(
-        initializingWith initializer: (inout OutputSpan<UInt8>) throws(E) -> ()
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> ()
     ) throws(E) {
-        _storage = try InlineArray<16, UInt8>(initializingWith: { outputSpan throws(E) -> Void in
-            try initializer(&outputSpan)
-            let count = outputSpan.count
-            precondition(count == 16, "UUID requires exactly 16 bytes, but \(count) were provided")
+        _storage = try InlineArray<2, UInt64>(initializingWith: { outputSpan throws(E) -> Void in
+            try outputSpan.append(elements: 2) { outputRawSpan throws(E) in
+                try initializer(&outputRawSpan)
+                let count = outputRawSpan.byteCount
+                precondition(count == 16, "UUID requires exactly 16 bytes, but \(count) were provided")
+            }
         })
     }
 
@@ -133,7 +203,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
                 default:
                     break
                 }
-                let byte = _storage[i]
+                let byte = _storage.span.bytes[i]
                 buffer[o] = hex[Int(byte &>> 4)]
                 buffer[o &+ 1] = hex[Int(byte & 0xF)]
                 o &+= 2
@@ -186,26 +256,8 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         secondBits &= 0b00111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111 // Clear the 2 most significant bits
         secondBits |= 0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 // Set the two MSB to '10'
 
-        let uuidBytes = (
-            UInt8(truncatingIfNeeded: firstBits >> 56),
-            UInt8(truncatingIfNeeded: firstBits >> 48),
-            UInt8(truncatingIfNeeded: firstBits >> 40),
-            UInt8(truncatingIfNeeded: firstBits >> 32),
-            UInt8(truncatingIfNeeded: firstBits >> 24),
-            UInt8(truncatingIfNeeded: firstBits >> 16),
-            UInt8(truncatingIfNeeded: firstBits >> 8),
-            UInt8(truncatingIfNeeded: firstBits),
-            UInt8(truncatingIfNeeded: secondBits >> 56),
-            UInt8(truncatingIfNeeded: secondBits >> 48),
-            UInt8(truncatingIfNeeded: secondBits >> 40),
-            UInt8(truncatingIfNeeded: secondBits >> 32),
-            UInt8(truncatingIfNeeded: secondBits >> 24),
-            UInt8(truncatingIfNeeded: secondBits >> 16),
-            UInt8(truncatingIfNeeded: secondBits >> 8),
-            UInt8(truncatingIfNeeded: secondBits)
-        )
-
-        return UUID(uuid: uuidBytes)
+        let inline: [2 of UInt64] = [firstBits.bigEndian, secondBits.bigEndian]
+        return UUID(copying: inline.span.bytes)
     }
 
     public var description: String {
@@ -218,13 +270,14 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 
     public static func ==(lhs: UUID, rhs: UUID) -> Bool {
         // Implementation note: This operation is designed to avoid short-circuited early exits, so that comparison of any two UUID values is done in the same amount of time.
-        withUnsafeBytes(of: lhs._storage) { lhsPtr in
-            withUnsafeBytes(of: rhs._storage) { rhsPtr in
-                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
-                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
-                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
-            }
-        }
+//        withUnsafeBytes(of: lhs._storage) { lhsPtr in
+//            withUnsafeBytes(of: rhs._storage) { rhsPtr in
+//                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+//                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+//                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
+//            }
+//        }
+        return lhs._storage[0] ^ rhs._storage[0] | (lhs._storage[1] ^ rhs._storage[1]) == 0
     }
 }
 
@@ -276,19 +329,21 @@ extension UUID {
 
 @available(FoundationPreview 6.4, *)
 extension UUID {
-    /// A `Span<UInt8>` view of the UUID's 16 bytes.
-    public var span: Span<UInt8> {
+    /// A `RawSpan` view of the UUID's 16 bytes.
+    public var bytes: RawSpan {
         @_lifetime(borrow self)
         borrowing get {
-            _storage.span
+            _storage.span.bytes
         }
     }
 
-    /// A `MutableSpan<UInt8>` view of the UUID's 16 bytes.
-    public var mutableSpan: MutableSpan<UInt8> {
+    /// A `MutableRawSpan` view of the UUID's 16 bytes.
+    public var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
         mutating get {
-            _storage.mutableSpan
+            // Will be: _storage.mutableSpan.mutableBytes
+            var s = _overrideLifetime(_storage.mutableSpan, copying: ())
+            return _overrideLifetime(s.mutableBytes, mutating: &self)
         }
     }
 }
@@ -300,10 +355,12 @@ extension UUID {
     /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
     public var version: Int {
         get {
-            Int(_storage[6] >> 4)
+            Int(_storage.span.bytes[6] >> 4)
         }
         set {
-            _storage[6] = (_storage[6] & 0x0F) | (UInt8(newValue & 0x0F) << 4)
+            var s = _storage.mutableSpan
+            var b = s.mutableBytes
+            b[6] = (b[6] & 0x0F) | (UInt8(newValue & 0x0F) << 4)
         }
     }
 
@@ -324,7 +381,7 @@ extension UUID {
 
     /// The variant of this UUID, derived from the variant bits (bits 64–65) as defined by RFC 9562.
     public var variant: Variant {
-        let byte = _storage[8]
+        let byte = _storage.span.bytes[8]
         if byte & 0x80 == 0 {
             return .ncs
         } else if byte & 0xC0 == 0x80 {
@@ -398,25 +455,8 @@ extension UUID {
         second &= 0x3FFF_FFFF_FFFF_FFFF
         second |= 0x8000_0000_0000_0000
 
-        return UUID { span in
-            // TODO: when OutputSpan has OutputRawSpan, we can append two UInt64 directly instead of breaking it down into bytes.
-            span.append(UInt8(truncatingIfNeeded: first >> 56))
-            span.append(UInt8(truncatingIfNeeded: first >> 48))
-            span.append(UInt8(truncatingIfNeeded: first >> 40))
-            span.append(UInt8(truncatingIfNeeded: first >> 32))
-            span.append(UInt8(truncatingIfNeeded: first >> 24))
-            span.append(UInt8(truncatingIfNeeded: first >> 16))
-            span.append(UInt8(truncatingIfNeeded: first >> 8))
-            span.append(UInt8(truncatingIfNeeded: first))
-            span.append(UInt8(truncatingIfNeeded: second >> 56))
-            span.append(UInt8(truncatingIfNeeded: second >> 48))
-            span.append(UInt8(truncatingIfNeeded: second >> 40))
-            span.append(UInt8(truncatingIfNeeded: second >> 32))
-            span.append(UInt8(truncatingIfNeeded: second >> 24))
-            span.append(UInt8(truncatingIfNeeded: second >> 16))
-            span.append(UInt8(truncatingIfNeeded: second >> 8))
-            span.append(UInt8(truncatingIfNeeded: second))
-        }
+        let inline: [2 of UInt64] = [first.bigEndian, second.bigEndian]
+        return UUID(copying: inline.span.bytes)
     }
 
     /// For version 7 UUIDs, returns the `Date` encoded in the most significant 48 bits. Returns `nil` for all other versions.
@@ -426,9 +466,7 @@ extension UUID {
     /// - Note: Even though this implementation, or others, may choose to encode more precision into other bytes of the `UUID`, this method may only return the portion of the timestamp stored in the RFC-specified bytes.
     public var date: Date? {
         guard version == 7 else { return nil }
-        let ms: UInt64 = UInt64(_storage[0]) << 40 | UInt64(_storage[1]) << 32
-            | UInt64(_storage[2]) << 24 | UInt64(_storage[3]) << 16
-            | UInt64(_storage[4]) << 8 | UInt64(_storage[5])
+        let ms: UInt64 = (_storage[0].bigEndian & 0xFFFFFFFFFFFF0000) >> 16
         return Date(timeIntervalSince1970: Double(ms) / 1000.0)
     }
 
