@@ -42,3 +42,8 @@ extension CommonEncodableMacro: ExtensionMacro {
         return [codingFields, impl].compactMap { $0 }
     }
 }
+
+struct CommonEncodableExpansionKind: EncodableExpansionKind {
+    var protocolName: String { "CommonEncodable" }
+    var encoderType: String { "inout some CommonEncoder & ~Copyable & ~Escapable" }
+}

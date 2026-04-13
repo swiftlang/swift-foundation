@@ -38,88 +38,12 @@ extension CommonDecodableMacro: ExtensionMacro {
         }
         
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.decodingOnly)
-        let impl = generateExtension(for: typeName, with: properties)
+        let impl = makeDecodableExtension(for: typeName, with: properties, kind: CommonDecodableExpansionKind())
         return [codingFields, impl].compactMap { $0 }
     }
-    
-    static func generateExtension(for typeName: TokenSyntax, with properties: [DetailedStoredProperty]) -> ExtensionDeclSyntax? {
-        let decl: DeclSyntax
-        if properties.isEmpty {
-            decl = """
-            extension \(typeName): CommonDecodable {
-                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
-                    try decoder.decodeStruct { _ throws(CodingError.Decoding) in
-                        \(typeName)()
-                    }
-                }
-            }
-            """
-        } else {
-            let varDeclarations = properties.map {
-                "var \($0.name): \($0.typeName)?"
-            }.joined(separator: "\n")
+}
 
-            let switchCases = properties.map { prop in
-                if prop.isOptional {
-                    return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName)?.self)"
-                } else {
-                    return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
-                }
-            }.joined(separator: "\n")
-
-            let requiredProperties = properties.filter { $0.isRequired }
-
-            let guardAndReturn: String
-            if requiredProperties.isEmpty {
-                let args = properties.map { prop -> String in
-                    if let defaultExpr = prop.defaultExpr {
-                        return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
-                    }
-                    return "\(prop.name): \(prop.name)"
-                }.joined(separator: ", ")
-                guardAndReturn = "return \(typeName)(\(args))"
-            } else {
-                let requiredFieldGuards = requiredProperties.map {
-                    """
-                    guard let \($0.name) else {
-                    throw CodingError.dataCorrupted(debugDescription: "Missing required field '\($0.key)'")
-                    }
-                    """
-                }.joined(separator: "\n")
-                let args = properties.map { prop -> String in
-                    if let defaultExpr = prop.defaultExpr {
-                        return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
-                    }
-                    return "\(prop.name): \(prop.name)"
-                }.joined(separator: ", ")
-                guardAndReturn = """
-                \(requiredFieldGuards)
-                return \(typeName)(\(args))
-                """
-            }
-
-            decl = """
-            extension \(typeName): CommonDecodable {
-                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
-                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
-                        \(raw: varDeclarations)
-                        var _codingField: CodingFields?
-                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
-                        } andValue: { valueDecoder throws(CodingError.Decoding) in
-                            switch _codingField! {
-                            \(raw: switchCases)
-                            case .unknown: break
-                            }
-                        }
-                        \(raw: guardAndReturn)
-                    }
-                }
-            }
-            """
-        }
-        
-        return decl.as(ExtensionDeclSyntax.self)
-    }
-    
+struct CommonDecodableExpansionKind: DecodableExpansionKind {
+    var protocolName: String { "CommonDecodable" }
+    var decoderType: String { "inout some CommonDecoder & ~Escapable" }
 }

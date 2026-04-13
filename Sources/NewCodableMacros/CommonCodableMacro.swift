@@ -38,7 +38,7 @@ extension CommonCodableMacro: ExtensionMacro {
         
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.both)
         let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind())
-        let decodingImpl = CommonDecodableMacro.generateExtension(for: typeName, with: properties)
+        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: CommonDecodableExpansionKind())
         return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
     }
 }
@@ -59,9 +59,3 @@ enum CommonCodingFieldExpansionKind: CodingFieldExpansionKind {
         }
     }
 }
-
-struct CommonEncodableExpansionKind: EncodableExpansionKind {
-    var protocolName: String { "CommonEncodable" }
-    var encoderType: String { "inout some CommonEncoder & ~Copyable & ~Escapable" }
-}
-

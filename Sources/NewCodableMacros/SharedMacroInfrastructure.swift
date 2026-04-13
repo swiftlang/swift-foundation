@@ -451,6 +451,101 @@ func makeEncodableExtension(
     return extensionDecl.as(ExtensionDeclSyntax.self)
 }
 
+// MARK: - Decodable Extension Generation
+
+/// Abstracts over the differences between Common and JSON decodable macro expansions
+protocol DecodableExpansionKind {
+    /// The protocol the generated extension conforms to (e.g. "CommonDecodable", "JSONDecodable")
+    var protocolName: String { get }
+    
+    /// The decoder parameter type in the decode function signature
+    var decoderType: String { get }
+}
+
+func makeDecodableExtension(
+    for typeName: TokenSyntax,
+    with properties: [DetailedStoredProperty],
+    kind: some DecodableExpansionKind
+) -> ExtensionDeclSyntax? {
+    let decl: DeclSyntax
+    if properties.isEmpty {
+        decl = """
+        extension \(typeName): \(raw: kind.protocolName) {
+            static func decode(from decoder: \(raw: kind.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
+                try decoder.decodeStruct { _ throws(CodingError.Decoding) in
+                    \(typeName)()
+                }
+            }
+        }
+        """
+    } else {
+        let varDeclarations = properties.map {
+            "var \($0.name): \($0.typeName)?"
+        }.joined(separator: "\n")
+
+        let switchCases = properties.map { prop in
+            if prop.isOptional {
+                return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName)?.self)"
+            } else {
+                return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
+            }
+        }.joined(separator: "\n")
+
+        let requiredProperties = properties.filter { $0.isRequired }
+
+        let guardAndReturn: String
+        if requiredProperties.isEmpty {
+            let args = properties.map { prop -> String in
+                if let defaultExpr = prop.defaultExpr {
+                    return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
+                }
+                return "\(prop.name): \(prop.name)"
+            }.joined(separator: ", ")
+            guardAndReturn = "return \(typeName)(\(args))"
+        } else {
+            let requiredFieldGuards = requiredProperties.map {
+                """
+                guard let \($0.name) else {
+                throw CodingError.dataCorrupted(debugDescription: "Missing required field '\($0.key)'")
+                }
+                """
+            }.joined(separator: "\n")
+            let args = properties.map { prop -> String in
+                if let defaultExpr = prop.defaultExpr {
+                    return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
+                }
+                return "\(prop.name): \(prop.name)"
+            }.joined(separator: ", ")
+            guardAndReturn = """
+            \(requiredFieldGuards)
+            return \(typeName)(\(args))
+            """
+        }
+
+        decl = """
+        extension \(typeName): \(raw: kind.protocolName) {
+            static func decode(from decoder: \(raw: kind.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    \(raw: varDeclarations)
+                    var _codingField: CodingFields?
+                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } andValue: { valueDecoder throws(CodingError.Decoding) in
+                        switch _codingField! {
+                        \(raw: switchCases)
+                        case .unknown: break
+                        }
+                    }
+                    \(raw: guardAndReturn)
+                }
+            }
+        }
+        """
+    }
+
+    return decl.as(ExtensionDeclSyntax.self)
+}
+
 // MARK: - Shared Macro Implementation Patterns
 
 func extractTypeNameAndStoredProperties(

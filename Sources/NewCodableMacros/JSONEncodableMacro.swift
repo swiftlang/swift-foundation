@@ -42,3 +42,8 @@ extension JSONEncodableMacro: ExtensionMacro {
         return [codingFields, impl].compactMap { $0 }
     }
 }
+
+struct JSONEncodableExpansionKind: EncodableExpansionKind {
+    var protocolName: String { "JSONEncodable" }
+    var encoderType: String { "inout JSONDirectEncoder" }
+}
