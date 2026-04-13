@@ -13,6 +13,7 @@ import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
+import Synchronization
 
 /// Unit tests for interop methods that support building Progress trees with both Progress and ProgressManager
 @Suite("Progress Manager Interop", .tags(.progressManager)) struct ProgressManagerInteropTests {
@@ -303,7 +304,7 @@ import Testing
         receiveProgress(progress: interopChild)
         #expect(overallProgress2.totalUnitCount == 0)
     }
-    
+
     #if FOUNDATION_EXIT_TESTS
     @Test func indirectParticipationOfProgressInAcyclicGraph() async throws {
         await #expect(processExitsWith: .failure) {
