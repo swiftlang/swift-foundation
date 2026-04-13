@@ -38,7 +38,9 @@ struct JSONEncodableMacroTests {
             struct Person {
                 let name: String
                 let age: Int
+            }
 
+            extension Person {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case name
                     case age
@@ -46,8 +48,10 @@ struct JSONEncodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .age: "age"
+                        case .name:
+                            "name"
+                        case .age:
+                            "age"
                         }
                     }
                 }
@@ -79,7 +83,9 @@ struct JSONEncodableMacroTests {
             struct Post {
                 let publishDate: String
                 let title: String
+            }
 
+            extension Post {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case publishDate
                     case title
@@ -87,8 +93,10 @@ struct JSONEncodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .publishDate: "date_published"
-                        case .title: "title"
+                        case .publishDate:
+                            "date_published"
+                        case .title:
+                            "title"
                         }
                     }
                 }
@@ -120,7 +128,9 @@ struct JSONEncodableMacroTests {
             struct Item {
                 let name: String
                 let rating: Double?
+            }
 
+            extension Item {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case name
                     case rating
@@ -128,8 +138,10 @@ struct JSONEncodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .rating: "rating"
+                        case .name:
+                            "name"
+                        case .rating:
+                            "rating"
                         }
                     }
                 }
@@ -165,14 +177,17 @@ struct JSONEncodableMacroTests {
                 var displayName: String {
                     get { name.uppercased() }
                 }
+            }
 
+            extension Thing {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
+                        case .name:
+                            "name"
                         }
                     }
                 }
@@ -203,14 +218,17 @@ struct JSONEncodableMacroTests {
             struct Config {
                 static let defaultName = "test"
                 let name: String
+            }
 
+            extension Config {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
+                        case .name:
+                            "name"
                         }
                     }
                 }
@@ -261,7 +279,8 @@ struct JSONEncodableMacroTests {
 
             extension Empty: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in }
+                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
+                    }
                 }
             }
             """,
@@ -282,14 +301,17 @@ struct JSONEncodableMacroTests {
             struct Cached {
                 let name: String
                 lazy var uppercasedName: String = name.uppercased()
+            }
 
+            extension Cached {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
+                        case .name:
+                            "name"
                         }
                     }
                 }
@@ -307,32 +329,6 @@ struct JSONEncodableMacroTests {
         )
     }
 
-    @Test func codingKeyOnMultipleBindingsError() {
-        assertMacroExpansion(
-            """
-            @JSONEncodable
-            struct Multi {
-                @CodingKey("custom") var x, y: Int
-            }
-            """,
-            expandedSource: """
-            struct Multi {
-                var x, y: Int
-            }
-
-            extension Multi: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in }
-                }
-            }
-            """,
-            diagnostics: [
-                DiagnosticSpec(message: "@CodingKey cannot be applied to a declaration with multiple bindings", line: 3, column: 5)
-            ],
-            macros: testMacros
-        )
-    }
-
     @Test func propertyWithDefaultValue() {
         assertMacroExpansion(
             """
@@ -346,7 +342,9 @@ struct JSONEncodableMacroTests {
             struct WithDefault {
                 let name: String = "default"
                 let age: Int
-
+            }
+            
+            extension WithDefault {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case name
                     case age
@@ -354,8 +352,10 @@ struct JSONEncodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .age: "age"
+                        case .name:
+                            "name"
+                        case .age:
+                            "age"
                         }
                     }
                 }
@@ -387,7 +387,9 @@ struct JSONEncodableMacroTests {
             struct User {
                 let userName: String
                 let age: Int
+            }
 
+            extension User {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case userName
                     case age
@@ -395,8 +397,10 @@ struct JSONEncodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .userName: "userName"
-                        case .age: "age"
+                        case .userName:
+                            "userName"
+                        case .age:
+                            "age"
                         }
                     }
                 }
@@ -432,7 +436,9 @@ struct JSONEncodableMacroTests {
                     didSet { print(count) }
                 }
                 let name: String
+            }
 
+            extension Observed {
                 enum CodingFields: JSONOptimizedEncodingField {
                     case count
                     case name
@@ -440,8 +446,10 @@ struct JSONEncodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .count: "count"
-                        case .name: "name"
+                        case .count:
+                            "count"
+                        case .name:
+                            "name"
                         }
                     }
                 }

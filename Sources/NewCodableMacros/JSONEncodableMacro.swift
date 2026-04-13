@@ -17,41 +17,6 @@ import SwiftDiagnostics
 
 public struct JSONEncodableMacro { }
 
-enum JSONCodingFieldKind: CodingFieldExpansionKind {
-    case encodingOnly
-    case decodingOnly
-    case both
-    
-    var protocolName: String {
-        switch self {
-        case .encodingOnly:
-            return "JSONOptimizedEncodingField"
-        case .decodingOnly:
-            return "JSONOptimizedDecodingField"
-        case .both:
-            return "JSONOptimizedCodingField"
-        }
-    }
-}
-
-extension JSONEncodableMacro: MemberMacro {
-    public static func expansion(
-        of node: AttributeSyntax,
-        providingMembersOf declaration: some DeclGroupSyntax,
-        conformingTo protocols: [TypeSyntax],
-        in context: some MacroExpansionContext
-    ) throws -> [DeclSyntax] {
-        return memberMacroExpansion(
-            of: node,
-            providingMembersOf: declaration,
-            conformingTo: protocols,
-            in: context,
-            generateCodingFields: makeCodingFieldsDecl,
-            kind: JSONCodingFieldKind.encodingOnly
-        )
-    }
-}
-
 extension JSONEncodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -60,30 +25,43 @@ extension JSONEncodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        guard declaration.is(StructDeclSyntax.self) else {
+        guard validate(declaration: declaration, for: node, in: context) else {
             return []
         }
 
-        let properties = extractStoredProperties(from: declaration.memberBlock, in: context)
-
+        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
+            attachedTo: declaration,
+            for: node,
+            providingExtensionsOf: type,
+            in: context) else {
+            return []
+        }
+        
+        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.encodingOnly)
+        let impl = self.generateExtension(for: typeName, with: properties)
+        return [codingFields, impl].compactMap { $0 }
+    }
+    
+    static func generateExtension(for typeName: TokenSyntax, with properties: [DetailedStoredProperty]) -> ExtensionDeclSyntax? {
         let extensionDecl: DeclSyntax
         if properties.isEmpty {
             extensionDecl = """
-            extension \(type.trimmed): JSONEncodable {
+            extension \(typeName): JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in }
+                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
+                    }
                 }
             }
             """
         } else {
             let encodeStatements = properties.map {
                 "try structEncoder.encode(field: CodingFields.\($0.name), value: self.\($0.name))"
-            }.joined(separator: "\n            ")
+            }.joined(separator: "\n")
 
             let fieldCount = properties.count
 
             extensionDecl = """
-            extension \(type.trimmed): JSONEncodable {
+            extension \(typeName): JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: \(raw: fieldCount)) { structEncoder throws(CodingError.Encoding) in
                         \(raw: encodeStatements)
@@ -93,11 +71,7 @@ extension JSONEncodableMacro: ExtensionMacro {
             """
         }
 
-        guard let ext = extensionDecl.as(ExtensionDeclSyntax.self) else {
-            return []
-        }
-
-        return [ext]
+        return extensionDecl.as(ExtensionDeclSyntax.self)
     }
 }
 

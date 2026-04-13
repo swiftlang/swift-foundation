@@ -17,24 +17,6 @@ import SwiftDiagnostics
 
 public struct CommonEncodableMacro { }
 
-extension CommonEncodableMacro: MemberMacro {
-    public static func expansion(
-        of node: AttributeSyntax,
-        providingMembersOf declaration: some DeclGroupSyntax,
-        conformingTo protocols: [TypeSyntax],
-        in context: some MacroExpansionContext
-    ) throws -> [DeclSyntax] {
-        return memberMacroExpansion(
-            of: node,
-            providingMembersOf: declaration,
-            conformingTo: protocols,
-            in: context,
-            generateCodingFields: makeCodingFieldsDecl,
-            kind: CommonCodingFieldExpansionKind.encodingOnly
-        )
-    }
-}
-
 extension CommonEncodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -43,18 +25,31 @@ extension CommonEncodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        guard declaration.is(StructDeclSyntax.self) else {
+        guard validate(declaration: declaration, for: node, in: context) else {
             return []
         }
-
-        let properties = extractStoredProperties(from: declaration.memberBlock, in: context)
-
+        
+        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
+            attachedTo: declaration,
+            for: node,
+            providingExtensionsOf: type,
+            in: context) else {
+            return []
+        }
+        
+        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.encodingOnly)
+        let impl = self.generateExtension(for: typeName, with: properties)
+        return [codingFields, impl].compactMap { $0 }
+    }
+    
+    static func generateExtension(for typeName: TokenSyntax, with properties: [DetailedStoredProperty]) -> ExtensionDeclSyntax? {
         let extensionDecl: DeclSyntax
         if properties.isEmpty {
             extensionDecl = """
-            extension \(type.trimmed): CommonEncodable {
+            extension \(typeName): CommonEncodable {
                 func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in }
+                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
+                    }
                 }
             }
             """
@@ -66,7 +61,7 @@ extension CommonEncodableMacro: ExtensionMacro {
             let fieldCount = properties.count
 
             extensionDecl = """
-            extension \(type.trimmed): CommonEncodable {
+            extension \(typeName): CommonEncodable {
                 func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: \(raw: fieldCount)) { structEncoder throws(CodingError.Encoding) in
                         \(raw: encodeStatements)
@@ -76,10 +71,6 @@ extension CommonEncodableMacro: ExtensionMacro {
             """
         }
 
-        guard let ext = extensionDecl.as(ExtensionDeclSyntax.self) else {
-            return []
-        }
-
-        return [ext]
+        return extensionDecl.as(ExtensionDeclSyntax.self)
     }
 }

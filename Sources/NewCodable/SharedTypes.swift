@@ -476,7 +476,7 @@ public protocol StaticStringEncodingField: EncodingField, ~Escapable {
 
 public protocol StaticStringCodingField: StaticStringDecodingField, StaticStringEncodingField, ~Escapable { }
 
-public extension CodingField where Self: StaticStringCodingField & ~Escapable {
+public extension StaticStringCodingField where Self: ~Escapable {
     @_alwaysEmitIntoClient
     @inline(__always)
 //    var utf8Span: UTF8Span { @_lifetime(borrow self) get }

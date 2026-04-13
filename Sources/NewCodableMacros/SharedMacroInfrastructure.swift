@@ -149,6 +149,7 @@ func extractStoredProperties(
 
 func extractDetailedStoredProperties(
     from members: MemberBlockSyntax,
+    for node: AttributeSyntax,
     in context: some MacroExpansionContext
 ) -> [DetailedStoredProperty]? {
     var properties: [DetailedStoredProperty] = []
@@ -198,7 +199,7 @@ func extractDetailedStoredProperties(
             guard let typeAnnotation = binding.typeAnnotation else {
                 context.diagnose(.init(
                     node: Syntax(binding),
-                    message: SharedMacroDiagnostic.missingTypeAnnotation
+                    message: SharedMacroDiagnostic.missingTypeAnnotation(macroName: node.attributeName.trimmedDescription)
                 ))
                 return nil
             }
@@ -289,84 +290,115 @@ func defaultValueExpression(from attributes: AttributeListSyntax) -> String? {
 // MARK: - Coding Fields Generation
 
 /// Unified function for generating coding fields with any expansion kind
-func makeCodingFieldsDecl<T: CodingFieldExpansionKind>(
-    from properties: [StoredProperty], 
+func makeCodingFieldsExtension<T: CodingFieldExpansionKind>(
+    for typeName: TokenSyntax,
+    from properties: [DetailedStoredProperty],
     kind: T
-) -> DeclSyntax {
-    let cases = (properties.map { "case \($0.name)" } + (kind.includesUnknownCase ? ["case unknown"] : []))
-        .joined(separator: "\n        ")
+) -> ExtensionDeclSyntax? {
+    if properties.isEmpty {
+        return nil
+    }
+    
+    let casesList = properties.map { "case \($0.name)" } + (kind.includesUnknownCase ? ["case unknown"] : [])
+    let cases = casesList.joined(separator: "\n")
 
-    let switchCases = properties.map {
+    let switchCasesList = properties.map {
         "case .\($0.name): \"\($0.key)\""
     } + (kind.includesUnknownCase ? ["case .unknown: fatalError()"] : [])
-    let joinedSwitchCases = switchCases.joined(separator: "\n            ")
+    let joinedSwitchCases = switchCasesList.joined(separator: "\n")
 
+    let decl: DeclSyntax
     if kind.includesKeyLookup {
-        let fieldForKeyCases = properties.flatMap { prop -> [String] in
+        let fieldForKeyCasesList = properties.flatMap { prop -> [String] in
             var cases = ["case \"\(prop.key)\": .\(prop.name)"]
             for alias in prop.aliases {
                 cases.append("case \"\(alias)\": .\(prop.name)")
             }
             return cases
-        }.joined(separator: "\n            ")
+        }
+        let fieldForKeyCases = fieldForKeyCasesList.joined(separator: "\n")
 
         let defaultCase = kind.includesUnknownCase ? ".unknown" : "throw CodingError.unknownKey(key)"
 
-        return """
-        enum CodingFields: \(raw: kind.protocolName) {
-            \(raw: cases)
+        decl = """
+        extension \(typeName) {
+            enum CodingFields: \(raw: kind.protocolName) {
+                \(raw: cases)
 
-            @_transparent
-            var staticString: StaticString {
-                switch self {
-                \(raw: joinedSwitchCases)
+                @_transparent
+                var staticString: StaticString {
+                    switch self {
+                    \(raw: joinedSwitchCases)
+                    }
                 }
-            }
 
-            static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
-                switch UTF8SpanComparator(key) {
-                \(raw: fieldForKeyCases)
-                default: \(raw: defaultCase)
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    switch UTF8SpanComparator(key) {
+                    \(raw: fieldForKeyCases)
+                    default: \(raw: defaultCase)
+                    }
                 }
             }
         }
         """
     } else {
-        return """
-        enum CodingFields: \(raw: kind.protocolName) {
-            \(raw: cases)
-        
-            @_transparent
-            var staticString: StaticString {
-                switch self {
-                \(raw: joinedSwitchCases)
+        decl = """
+        extension \(typeName) {
+            enum CodingFields: \(raw: kind.protocolName) {
+                \(raw: cases)
+
+                @_transparent
+                var staticString: StaticString {
+                    switch self {
+                    \(raw: joinedSwitchCases)
+                    }
                 }
             }
         }
         """
     }
+    return decl.as(ExtensionDeclSyntax.self)
 }
 
 // MARK: - Shared Diagnostics
 
-enum SharedMacroDiagnostic: String, DiagnosticMessage {
-    case notAStruct
+func validate(declaration: some DeclGroupSyntax, for node: AttributeSyntax, in context: some MacroExpansionContext) -> Bool {
+    guard declaration.is(StructDeclSyntax.self) else {
+        context.diagnose(.init(
+            node: node,
+            message: SharedMacroDiagnostic.notAStruct(macroName: node.attributeName.trimmedDescription)
+        ))
+        return false
+    }
+    return true
+}
+
+enum SharedMacroDiagnostic: DiagnosticMessage {
+    case notAStruct(macroName: String)
     case codingKeyOnMultipleBindings
-    case missingTypeAnnotation
+    case missingTypeAnnotation(macroName: String)
 
     var message: String {
         switch self {
-        case .notAStruct:
-            return "This macro can only be applied to structs"
+        case .notAStruct(let macroName):
+            return "@\(macroName) can only be applied to structs"
         case .codingKeyOnMultipleBindings:
             return "@CodingKey cannot be applied to a declaration with multiple bindings"
-        case .missingTypeAnnotation:
-            return "All stored properties must have explicit type annotations"
+        case .missingTypeAnnotation(let macroName):
+            return "@\(macroName) requires all stored properties to have explicit type annotations"
+        }
+    }
+    
+    var id: String {
+        switch self {
+        case .notAStruct: "notAStruct"
+        case .codingKeyOnMultipleBindings: "codingKeyOnMultipleBindings"
+        case .missingTypeAnnotation: "missingTypeAnnotation"
         }
     }
 
     var diagnosticID: MessageID {
-        MessageID(domain: "NewCodableMacros", id: rawValue)
+        MessageID(domain: "NewCodableMacros", id: self.id)
     }
 
     var severity: DiagnosticSeverity { .error }
@@ -374,56 +406,14 @@ enum SharedMacroDiagnostic: String, DiagnosticMessage {
 
 // MARK: - Shared Macro Implementation Patterns
 
-/// Generic implementation for MemberMacro that generates coding fields
-func memberMacroExpansion<Field: CodingFieldExpansionKind>(
-    of node: AttributeSyntax,
-    providingMembersOf declaration: some DeclGroupSyntax,
-    conformingTo protocols: [TypeSyntax],
-    in context: some MacroExpansionContext,
-    generateCodingFields: ([StoredProperty], Field) -> DeclSyntax,
-    kind: Field
-) -> [DeclSyntax] {
-    guard declaration.is(StructDeclSyntax.self) else {
-        context.diagnose(.init(
-            node: node,
-            message: SharedMacroDiagnostic.notAStruct
-        ))
-        return []
-    }
-
-    guard let properties = extractDetailedStoredProperties(from: declaration.memberBlock, in: context) else {
-        return []
-    }
-
-    if properties.isEmpty {
-        return []
-    }
-
-    let codingFields = properties.map {
-        StoredProperty(name: $0.name, key: $0.key, aliases: $0.aliases)
-    }
-    return [generateCodingFields(codingFields, kind)]
-}
-
-/// Generic implementation for ExtensionMacro that generates decodable extensions
-func extensionMacroExpansion(
-    of node: AttributeSyntax,
+func extractTypeNameAndStoredProperties(
     attachedTo declaration: some DeclGroupSyntax,
+    for node: AttributeSyntax,
     providingExtensionsOf type: some TypeSyntaxProtocol,
-    conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext,
-    generateExtension: (TokenSyntax, [DetailedStoredProperty]) -> DeclSyntax
-) -> [ExtensionDeclSyntax] {
-    guard declaration.is(StructDeclSyntax.self) else {
-        context.diagnose(.init(
-            node: node,
-            message: SharedMacroDiagnostic.notAStruct
-        ))
-        return []
-    }
-
-    guard let properties = extractDetailedStoredProperties(from: declaration.memberBlock, in: context) else {
-        return []
+) -> (TokenSyntax, [DetailedStoredProperty])? {
+    guard let properties = extractDetailedStoredProperties(from: declaration.memberBlock, for: node, in: context) else {
+        return nil
     }
 
     // Extract the type name as a TokenSyntax
@@ -434,11 +424,5 @@ func extensionMacroExpansion(
         // For complex types, we'll use the trimmed description as the identifier
         typeName = TokenSyntax(.identifier(type.trimmedDescription), presence: .present)
     }
-    let extensionDecl = generateExtension(typeName, properties)
-
-    guard let ext = extensionDecl.as(ExtensionDeclSyntax.self) else {
-        return []
-    }
-
-    return [ext]
+    return (typeName, properties)
 }

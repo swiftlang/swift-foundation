@@ -17,24 +17,6 @@ import SwiftDiagnostics
 
 public struct CommonDecodableMacro { }
 
-extension CommonDecodableMacro: MemberMacro {
-    public static func expansion(
-        of node: AttributeSyntax,
-        providingMembersOf declaration: some DeclGroupSyntax,
-        conformingTo protocols: [TypeSyntax],
-        in context: some MacroExpansionContext
-    ) throws -> [DeclSyntax] {
-        return memberMacroExpansion(
-            of: node,
-            providingMembersOf: declaration,
-            conformingTo: protocols,
-            in: context,
-            generateCodingFields: makeCodingFieldsDecl,
-            kind: CommonCodingFieldExpansionKind.decodingOnly
-        )
-    }
-}
-
 extension CommonDecodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -43,128 +25,101 @@ extension CommonDecodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        return extensionMacroExpansion(
-            of: node,
+        guard validate(declaration: declaration, for: node, in: context) else {
+            return []
+        }
+        
+        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
             attachedTo: declaration,
+            for: node,
             providingExtensionsOf: type,
-            conformingTo: protocols,
-            in: context,
-            generateExtension: generateCommonDecodableExtension
-        )
-    }
-}
-
-enum CommonCodingFieldExpansionKind: CodingFieldExpansionKind {
-    case encodingOnly
-    case decodingOnly
-    case both
-
-    var protocolName: String {
-        switch self {
-        case .encodingOnly:
-            return "StaticStringEncodingField"
-        case .decodingOnly:
-            return "StaticStringDecodingField"
-        case .both:
-            return "StaticStringCodingField"
+            in: context) else {
+            return []
         }
-    }
-
-    var supportsEncoding: Bool {
-        switch self {
-        case .encodingOnly, .both:
-            return true
-        case .decodingOnly:
-            return false
-        }
+        
+        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.decodingOnly)
+        let impl = generateExtension(for: typeName, with: properties)
+        return [codingFields, impl].compactMap { $0 }
     }
     
-    var supportsDecoding: Bool {
-        switch self {
-        case .decodingOnly, .both:
-            return true
-        case .encodingOnly:
-            return false
-        }
-    }
-}
-
-func generateCommonDecodableExtension(
-    for typeName: TokenSyntax,
-    with properties: [DetailedStoredProperty]
-) -> DeclSyntax {
-    if properties.isEmpty {
-        return """
-        extension \(typeName): CommonDecodable {
-            static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
-                try decoder.decodeStruct { _ throws(CodingError.Decoding) in
-                    \(typeName)()
+    static func generateExtension(for typeName: TokenSyntax, with properties: [DetailedStoredProperty]) -> ExtensionDeclSyntax? {
+        let decl: DeclSyntax
+        if properties.isEmpty {
+            decl = """
+            extension \(typeName): CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
+                    try decoder.decodeStruct { _ throws(CodingError.Decoding) in
+                        \(typeName)()
+                    }
                 }
             }
-        }
-        """
-    } else {
-        let varDeclarations = properties.map {
-            "var \($0.name): \($0.typeName)?"
-        }.joined(separator: "\n            ")
-
-        let switchCases = properties.map { prop in
-            if prop.isOptional {
-                return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName)?.self)"
-            } else {
-                return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
-            }
-        }.joined(separator: "\n                            ")
-
-        let requiredProperties = properties.filter { $0.isRequired }
-
-        let guardAndReturn: String
-        if requiredProperties.isEmpty {
-            let args = properties.map { prop -> String in
-                if let defaultExpr = prop.defaultExpr {
-                    return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
-                }
-                return "\(prop.name): \(prop.name)"
-            }.joined(separator: ", ")
-            guardAndReturn = "return \(typeName)(\(args))"
+            """
         } else {
-            let requiredFieldGuards = requiredProperties.map {
-                """
-                guard let \($0.name) else {
-                            throw CodingError.dataCorrupted(debugDescription: "Missing required field '\($0.key)'")
-                        }
-                """
-            }.joined(separator: "\n                        ")
-            let args = properties.map { prop -> String in
-                if let defaultExpr = prop.defaultExpr {
-                    return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
+            let varDeclarations = properties.map {
+                "var \($0.name): \($0.typeName)?"
+            }.joined(separator: "\n")
+
+            let switchCases = properties.map { prop in
+                if prop.isOptional {
+                    return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName)?.self)"
+                } else {
+                    return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
                 }
-                return "\(prop.name): \(prop.name)"
-            }.joined(separator: ", ")
-            guardAndReturn = """
-            \(requiredFieldGuards)
-                    return \(typeName)(\(args))
+            }.joined(separator: "\n")
+
+            let requiredProperties = properties.filter { $0.isRequired }
+
+            let guardAndReturn: String
+            if requiredProperties.isEmpty {
+                let args = properties.map { prop -> String in
+                    if let defaultExpr = prop.defaultExpr {
+                        return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
+                    }
+                    return "\(prop.name): \(prop.name)"
+                }.joined(separator: ", ")
+                guardAndReturn = "return \(typeName)(\(args))"
+            } else {
+                let requiredFieldGuards = requiredProperties.map {
+                    """
+                    guard let \($0.name) else {
+                    throw CodingError.dataCorrupted(debugDescription: "Missing required field '\($0.key)'")
+                    }
+                    """
+                }.joined(separator: "\n")
+                let args = properties.map { prop -> String in
+                    if let defaultExpr = prop.defaultExpr {
+                        return "\(prop.name): \(prop.name) ?? \(defaultExpr)"
+                    }
+                    return "\(prop.name): \(prop.name)"
+                }.joined(separator: ", ")
+                guardAndReturn = """
+                \(requiredFieldGuards)
+                return \(typeName)(\(args))
+                """
+            }
+
+            decl = """
+            extension \(typeName): CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        \(raw: varDeclarations)
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            \(raw: switchCases)
+                            case .unknown: break
+                            }
+                        }
+                        \(raw: guardAndReturn)
+                    }
+                }
+            }
             """
         }
-
-        return """
-        extension \(typeName): CommonDecodable {
-            static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> \(typeName) {
-                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
-                    \(raw: varDeclarations)
-                    var _codingField: CodingFields?
-                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
-                    } andValue: { valueDecoder throws(CodingError.Decoding) in
-                        switch _codingField! {
-                        \(raw: switchCases)
-                        case .unknown: break
-                        }
-                    }
-                    \(raw: guardAndReturn)
-                }
-            }
-        }
-        """
+        
+        return decl.as(ExtensionDeclSyntax.self)
     }
+    
 }

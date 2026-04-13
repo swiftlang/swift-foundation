@@ -32,7 +32,9 @@ struct CommonDecodableMacroTests {
             struct Person {
                 let name: String
                 let age: Int
+            }
 
+            extension Person {
                 enum CodingFields: StaticStringDecodingField {
                     case name
                     case age
@@ -41,17 +43,23 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .age: "age"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .age:
+                            "age"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "age": .age
-                        default: .unknown
+                        case "name":
+                            .name
+                        case "age":
+                            .age
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -67,9 +75,12 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .age: age = try valueDecoder.decode(Int.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .age:
+                                age = try valueDecoder.decode(Int.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -100,7 +111,9 @@ struct CommonDecodableMacroTests {
             struct Item {
                 let name: String
                 let rating: Double?
+            }
 
+            extension Item {
                 enum CodingFields: StaticStringDecodingField {
                     case name
                     case rating
@@ -109,17 +122,23 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .rating: "rating"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .rating:
+                            "rating"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "rating": .rating
-                        default: .unknown
+                        case "name":
+                            .name
+                        case "rating":
+                            .rating
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -135,9 +154,12 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .rating: rating = try valueDecoder.decode(Double?.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .rating:
+                                rating = try valueDecoder.decode(Double?.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -165,7 +187,9 @@ struct CommonDecodableMacroTests {
             struct Preferences {
                 let theme: String?
                 let fontSize: Int?
+            }
 
+            extension Preferences {
                 enum CodingFields: StaticStringDecodingField {
                     case theme
                     case fontSize
@@ -174,17 +198,23 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .theme: "theme"
-                        case .fontSize: "fontSize"
-                        case .unknown: fatalError()
+                        case .theme:
+                            "theme"
+                        case .fontSize:
+                            "fontSize"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "theme": .theme
-                        case "fontSize": .fontSize
-                        default: .unknown
+                        case "theme":
+                            .theme
+                        case "fontSize":
+                            .fontSize
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -200,9 +230,12 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .theme: theme = try valueDecoder.decode(String?.self)
-                            case .fontSize: fontSize = try valueDecoder.decode(Int?.self)
-                            case .unknown: break
+                            case .theme:
+                                theme = try valueDecoder.decode(String?.self)
+                            case .fontSize:
+                                fontSize = try valueDecoder.decode(Int?.self)
+                            case .unknown:
+                                break
                             }
                         }
                         return Preferences(theme: theme, fontSize: fontSize)
@@ -227,7 +260,9 @@ struct CommonDecodableMacroTests {
             struct Post {
                 let publishDate: String
                 let title: String
+            }
 
+            extension Post {
                 enum CodingFields: StaticStringDecodingField {
                     case publishDate
                     case title
@@ -236,17 +271,23 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .publishDate: "date_published"
-                        case .title: "title"
-                        case .unknown: fatalError()
+                        case .publishDate:
+                            "date_published"
+                        case .title:
+                            "title"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "date_published": .publishDate
-                        case "title": .title
-                        default: .unknown
+                        case "date_published":
+                            .publishDate
+                        case "title":
+                            .title
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -262,9 +303,12 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .publishDate: publishDate = try valueDecoder.decode(String.self)
-                            case .title: title = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .publishDate:
+                                publishDate = try valueDecoder.decode(String.self)
+                            case .title:
+                                title = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let publishDate else {
@@ -299,7 +343,9 @@ struct CommonDecodableMacroTests {
                 var displayName: String {
                     get { name.uppercased() }
                 }
+            }
 
+            extension Thing {
                 enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
@@ -307,15 +353,19 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        default: .unknown
+                        case "name":
+                            .name
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -330,8 +380,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -359,7 +411,9 @@ struct CommonDecodableMacroTests {
             struct Config {
                 static let defaultName = "test"
                 let name: String
+            }
 
+            extension Config {
                 enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
@@ -367,15 +421,19 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        default: .unknown
+                        case "name":
+                            .name
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -390,8 +448,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -419,7 +479,9 @@ struct CommonDecodableMacroTests {
             struct Cached {
                 let name: String
                 lazy var uppercasedName: String = name.uppercased()
-
+            }
+            
+            extension Cached {
                 enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
@@ -427,15 +489,19 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        default: .unknown
+                        case "name":
+                            .name
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -450,8 +516,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -523,7 +591,7 @@ struct CommonDecodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@CommonDecodable requires all stored properties to have explicit type annotations", line: 3, column: 5)
+                DiagnosticSpec(message: "@CommonDecodable requires all stored properties to have explicit type annotations", line: 3, column: 9)
             ],
             macros: decodableTestMacros
         )
@@ -544,7 +612,9 @@ struct CommonDecodableMacroTests {
                 let name: String
                 let locale: String
                 let retryCount: Int
+            }
 
+            extension Config {
                 enum CodingFields: StaticStringDecodingField {
                     case name
                     case locale
@@ -554,19 +624,27 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .locale: "locale"
-                        case .retryCount: "retryCount"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .locale:
+                            "locale"
+                        case .retryCount:
+                            "retryCount"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "locale": .locale
-                        case "retryCount": .retryCount
-                        default: .unknown
+                        case "name":
+                            .name
+                        case "locale":
+                            .locale
+                        case "retryCount":
+                            .retryCount
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -583,10 +661,14 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .locale: locale = try valueDecoder.decode(String.self)
-                            case .retryCount: retryCount = try valueDecoder.decode(Int.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .locale:
+                                locale = try valueDecoder.decode(String.self)
+                            case .retryCount:
+                                retryCount = try valueDecoder.decode(Int.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -614,7 +696,9 @@ struct CommonDecodableMacroTests {
             struct Defaults {
                 let greeting: String
                 let verbose: Bool
+            }
 
+            extension Defaults {
                 enum CodingFields: StaticStringDecodingField {
                     case greeting
                     case verbose
@@ -623,17 +707,23 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .greeting: "greeting"
-                        case .verbose: "verbose"
-                        case .unknown: fatalError()
+                        case .greeting:
+                            "greeting"
+                        case .verbose:
+                            "verbose"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "greeting": .greeting
-                        case "verbose": .verbose
-                        default: .unknown
+                        case "greeting":
+                            .greeting
+                        case "verbose":
+                            .verbose
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -649,9 +739,12 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .greeting: greeting = try valueDecoder.decode(String.self)
-                            case .verbose: verbose = try valueDecoder.decode(Bool.self)
-                            case .unknown: break
+                            case .greeting:
+                                greeting = try valueDecoder.decode(String.self)
+                            case .verbose:
+                                verbose = try valueDecoder.decode(Bool.self)
+                            case .unknown:
+                                break
                             }
                         }
                         return Defaults(greeting: greeting ?? "hello", verbose: verbose ?? false)
@@ -674,7 +767,9 @@ struct CommonDecodableMacroTests {
             expandedSource: """
             struct Setting {
                 let maxRetries: Int
+            }
 
+            extension Setting {
                 enum CodingFields: StaticStringDecodingField {
                     case maxRetries
                     case unknown
@@ -682,15 +777,19 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .maxRetries: "max_retries"
-                        case .unknown: fatalError()
+                        case .maxRetries:
+                            "max_retries"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "max_retries": .maxRetries
-                        default: .unknown
+                        case "max_retries":
+                            .maxRetries
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -705,8 +804,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .maxRetries: maxRetries = try valueDecoder.decode(Int.self)
-                            case .unknown: break
+                            case .maxRetries:
+                                maxRetries = try valueDecoder.decode(Int.self)
+                            case .unknown:
+                                break
                             }
                         }
                         return Setting(maxRetries: maxRetries ?? 3)
@@ -729,7 +830,9 @@ struct CommonDecodableMacroTests {
             expandedSource: """
             struct Prefs {
                 let locale: String?
+            }
 
+            extension Prefs {
                 enum CodingFields: StaticStringDecodingField {
                     case locale
                     case unknown
@@ -737,15 +840,19 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .locale: "locale"
-                        case .unknown: fatalError()
+                        case .locale:
+                            "locale"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "locale": .locale
-                        default: .unknown
+                        case "locale":
+                            .locale
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -760,8 +867,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .locale: locale = try valueDecoder.decode(String?.self)
-                            case .unknown: break
+                            case .locale:
+                                locale = try valueDecoder.decode(String?.self)
+                            case .unknown:
+                                break
                             }
                         }
                         return Prefs(locale: locale ?? "en")
@@ -784,7 +893,9 @@ struct CommonDecodableMacroTests {
             expandedSource: """
             struct WithExpr {
                 let tags: [String]
+            }
 
+            extension WithExpr {
                 enum CodingFields: StaticStringDecodingField {
                     case tags
                     case unknown
@@ -792,15 +903,19 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .tags: "tags"
-                        case .unknown: fatalError()
+                        case .tags:
+                            "tags"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "tags": .tags
-                        default: .unknown
+                        case "tags":
+                            .tags
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -815,8 +930,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .tags: tags = try valueDecoder.decode([String].self)
-                            case .unknown: break
+                            case .tags:
+                                tags = try valueDecoder.decode([String].self)
+                            case .unknown:
+                                break
                             }
                         }
                         return WithExpr(tags: tags ?? [])
@@ -841,7 +958,9 @@ struct CommonDecodableMacroTests {
             struct User {
                 let userName: String
                 let age: Int
+            }
 
+            extension User {
                 enum CodingFields: StaticStringDecodingField {
                     case userName
                     case age
@@ -850,18 +969,25 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .userName: "userName"
-                        case .age: "age"
-                        case .unknown: fatalError()
+                        case .userName:
+                            "userName"
+                        case .age:
+                            "age"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "userName": .userName
-                        case "user_name": .userName
-                        case "age": .age
-                        default: .unknown
+                        case "userName":
+                            .userName
+                        case "user_name":
+                            .userName
+                        case "age":
+                            .age
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -877,9 +1003,12 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .userName: userName = try valueDecoder.decode(String.self)
-                            case .age: age = try valueDecoder.decode(Int.self)
-                            case .unknown: break
+                            case .userName:
+                                userName = try valueDecoder.decode(String.self)
+                            case .age:
+                                age = try valueDecoder.decode(Int.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let userName else {
@@ -908,7 +1037,9 @@ struct CommonDecodableMacroTests {
             expandedSource: """
             struct User {
                 let userName: String
+            }
 
+            extension User {
                 enum CodingFields: StaticStringDecodingField {
                     case userName
                     case unknown
@@ -916,16 +1047,21 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .userName: "user_name"
-                        case .unknown: fatalError()
+                        case .userName:
+                            "user_name"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "user_name": .userName
-                        case "username": .userName
-                        default: .unknown
+                        case "user_name":
+                            .userName
+                        case "username":
+                            .userName
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -940,8 +1076,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .userName: userName = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .userName:
+                                userName = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let userName else {
@@ -967,7 +1105,9 @@ struct CommonDecodableMacroTests {
             expandedSource: """
             struct User {
                 let name: String
+            }
 
+            extension User {
                 enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
@@ -975,18 +1115,25 @@ struct CommonDecodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "a": .name
-                        case "b": .name
-                        case "c": .name
-                        default: .unknown
+                        case "name":
+                            .name
+                        case "a":
+                            .name
+                        case "b":
+                            .name
+                        case "c":
+                            .name
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -1001,8 +1148,10 @@ struct CommonDecodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {

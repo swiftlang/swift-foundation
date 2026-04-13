@@ -16,24 +16,6 @@ import SwiftDiagnostics
 
 public struct CommonCodableMacro { }
 
-extension CommonCodableMacro: MemberMacro {
-    public static func expansion(
-        of node: AttributeSyntax,
-        providingMembersOf declaration: some DeclGroupSyntax,
-        conformingTo protocols: [TypeSyntax],
-        in context: some MacroExpansionContext
-    ) throws -> [DeclSyntax] {
-        return memberMacroExpansion(
-            of: node,
-            providingMembersOf: declaration,
-            conformingTo: protocols,
-            in: context,
-            generateCodingFields: makeCodingFieldsDecl,
-            kind: CommonCodingFieldExpansionKind.both
-        )
-    }
-}
-
 extension CommonCodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -42,20 +24,38 @@ extension CommonCodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        let encodableExtensions = try CommonEncodableMacro.expansion(
-            of: node,
+        guard validate(declaration: declaration, for: node, in: context) else {
+            return []
+        }
+        
+        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
             attachedTo: declaration,
+            for: node,
             providingExtensionsOf: type,
-            conformingTo: protocols,
-            in: context
-        )
-        let decodableExtensions = try CommonDecodableMacro.expansion(
-            of: node,
-            attachedTo: declaration,
-            providingExtensionsOf: type,
-            conformingTo: protocols,
-            in: context
-        )
-        return encodableExtensions + decodableExtensions
+            in: context) else {
+            return []
+        }
+        
+        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.both)
+        let encodingImpl = CommonEncodableMacro.generateExtension(for: typeName, with: properties)
+        let decodingImpl = CommonDecodableMacro.generateExtension(for: typeName, with: properties)
+        return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
+    }
+}
+
+enum CommonCodingFieldExpansionKind: CodingFieldExpansionKind {
+    case encodingOnly
+    case decodingOnly
+    case both
+
+    var protocolName: String {
+        switch self {
+        case .encodingOnly:
+            return "StaticStringEncodingField"
+        case .decodingOnly:
+            return "StaticStringDecodingField"
+        case .both:
+            return "StaticStringCodingField"
+        }
     }
 }

@@ -16,24 +16,6 @@ import SwiftDiagnostics
 
 public struct JSONCodableMacro { }
 
-extension JSONCodableMacro: MemberMacro {
-    public static func expansion(
-        of node: AttributeSyntax,
-        providingMembersOf declaration: some DeclGroupSyntax,
-        conformingTo protocols: [TypeSyntax],
-        in context: some MacroExpansionContext
-    ) throws -> [DeclSyntax] {
-        return memberMacroExpansion(
-            of: node,
-            providingMembersOf: declaration,
-            conformingTo: protocols,
-            in: context,
-            generateCodingFields: makeCodingFieldsDecl,
-            kind: JSONCodingFieldKind.both
-        )
-    }
-}
-
 extension JSONCodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -42,20 +24,38 @@ extension JSONCodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        let encodableExtensions = try JSONEncodableMacro.expansion(
-            of: node,
+        guard validate(declaration: declaration, for: node, in: context) else {
+            return []
+        }
+        
+        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
             attachedTo: declaration,
+            for: node,
             providingExtensionsOf: type,
-            conformingTo: protocols,
-            in: context
-        )
-        let decodableExtensions = try JSONDecodableMacro.expansion(
-            of: node,
-            attachedTo: declaration,
-            providingExtensionsOf: type,
-            conformingTo: protocols,
-            in: context
-        )
-        return encodableExtensions + decodableExtensions
+            in: context) else {
+            return []
+        }
+        
+        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.both)
+        let encodingImpl = JSONEncodableMacro.generateExtension(for: typeName, with: properties)
+        let decodingImpl = JSONDecodableMacro.generateExtension(for: typeName, with: properties)
+        return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
+    }
+}
+
+enum JSONCodingFieldKind: CodingFieldExpansionKind {
+    case encodingOnly
+    case decodingOnly
+    case both
+    
+    var protocolName: String {
+        switch self {
+        case .encodingOnly:
+            return "JSONOptimizedEncodingField"
+        case .decodingOnly:
+            return "JSONOptimizedDecodingField"
+        case .both:
+            return "JSONOptimizedCodingField"
+        }
     }
 }

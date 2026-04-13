@@ -32,7 +32,9 @@ struct JSONCodableMacroTests {
             struct Person {
                 let name: String
                 let age: Int
-
+            }
+            
+            extension Person {
                 enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case age
@@ -41,17 +43,23 @@ struct JSONCodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .age: "age"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .age:
+                            "age"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "age": .age
-                        default: .unknown
+                        case "name":
+                            .name
+                        case "age":
+                            .age
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -76,9 +84,12 @@ struct JSONCodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .age: age = try valueDecoder.decode(Int.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .age:
+                                age = try valueDecoder.decode(Int.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -109,7 +120,9 @@ struct JSONCodableMacroTests {
             struct Item {
                 let name: String
                 let rating: Double?
-
+            }
+            
+            extension Item {
                 enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case rating
@@ -118,17 +131,23 @@ struct JSONCodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .rating: "rating"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .rating:
+                            "rating"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "rating": .rating
-                        default: .unknown
+                        case "name":
+                            .name
+                        case "rating":
+                            .rating
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -153,9 +172,12 @@ struct JSONCodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .rating: rating = try valueDecoder.decode(Double?.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .rating:
+                                rating = try valueDecoder.decode(Double?.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -183,7 +205,9 @@ struct JSONCodableMacroTests {
             struct Post {
                 let publishDate: String
                 let title: String
-
+            }
+            
+            extension Post {
                 enum CodingFields: JSONOptimizedCodingField {
                     case publishDate
                     case title
@@ -192,17 +216,23 @@ struct JSONCodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .publishDate: "date_published"
-                        case .title: "title"
-                        case .unknown: fatalError()
+                        case .publishDate:
+                            "date_published"
+                        case .title:
+                            "title"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "date_published": .publishDate
-                        case "title": .title
-                        default: .unknown
+                        case "date_published":
+                            .publishDate
+                        case "title":
+                            .title
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -227,9 +257,12 @@ struct JSONCodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .publishDate: publishDate = try valueDecoder.decode(String.self)
-                            case .title: title = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .publishDate:
+                                publishDate = try valueDecoder.decode(String.self)
+                            case .title:
+                                title = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let publishDate else {
@@ -260,7 +293,8 @@ struct JSONCodableMacroTests {
 
             extension Empty: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in }
+                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
+                    }
                 }
             }
 
@@ -289,7 +323,9 @@ struct JSONCodableMacroTests {
             struct Config {
                 let name: String
                 let locale: String
-
+            }
+            
+            extension Config {
                 enum CodingFields: JSONOptimizedCodingField {
                     case name
                     case locale
@@ -298,17 +334,23 @@ struct JSONCodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .name: "name"
-                        case .locale: "locale"
-                        case .unknown: fatalError()
+                        case .name:
+                            "name"
+                        case .locale:
+                            "locale"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "name": .name
-                        case "locale": .locale
-                        default: .unknown
+                        case "name":
+                            .name
+                        case "locale":
+                            .locale
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -333,9 +375,12 @@ struct JSONCodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .name: name = try valueDecoder.decode(String.self)
-                            case .locale: locale = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .locale:
+                                locale = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let name else {
@@ -361,7 +406,9 @@ struct JSONCodableMacroTests {
             expandedSource: """
             struct User {
                 let userName: String
-
+            }
+            
+            extension User {
                 enum CodingFields: JSONOptimizedCodingField {
                     case userName
                     case unknown
@@ -369,16 +416,21 @@ struct JSONCodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .userName: "userName"
-                        case .unknown: fatalError()
+                        case .userName:
+                            "userName"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "userName": .userName
-                        case "user_name": .userName
-                        default: .unknown
+                        case "userName":
+                            .userName
+                        case "user_name":
+                            .userName
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -401,8 +453,10 @@ struct JSONCodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .userName: userName = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .userName:
+                                userName = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let userName else {
@@ -428,7 +482,9 @@ struct JSONCodableMacroTests {
             expandedSource: """
             struct User {
                 let userName: String
-
+            }
+            
+            extension User {
                 enum CodingFields: JSONOptimizedCodingField {
                     case userName
                     case unknown
@@ -436,16 +492,21 @@ struct JSONCodableMacroTests {
                     @_transparent
                     var staticString: StaticString {
                         switch self {
-                        case .userName: "user_name"
-                        case .unknown: fatalError()
+                        case .userName:
+                            "user_name"
+                        case .unknown:
+                            fatalError()
                         }
                     }
 
                     static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
                         switch UTF8SpanComparator(key) {
-                        case "user_name": .userName
-                        case "username": .userName
-                        default: .unknown
+                        case "user_name":
+                            .userName
+                        case "username":
+                            .userName
+                        default:
+                            .unknown
                         }
                     }
                 }
@@ -468,8 +529,10 @@ struct JSONCodableMacroTests {
                             _codingField = try fieldDecoder.decode(CodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
-                            case .userName: userName = try valueDecoder.decode(String.self)
-                            case .unknown: break
+                            case .userName:
+                                userName = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
                             }
                         }
                         guard let userName else {
@@ -498,8 +561,7 @@ struct JSONCodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@JSONEncodable can only be applied to structs", line: 1, column: 1),
-                DiagnosticSpec(message: "@JSONDecodable can only be applied to structs", line: 1, column: 1),
+                DiagnosticSpec(message: "@JSONCodable can only be applied to structs", line: 1, column: 1),
             ],
             macros: codableTestMacros
         )
