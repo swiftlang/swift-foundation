@@ -24,6 +24,8 @@ import ucrt
 @preconcurrency import WASILibc
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
+#elseif canImport(string_h)
+import string_h
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
