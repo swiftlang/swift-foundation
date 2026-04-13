@@ -38,39 +38,7 @@ extension CommonEncodableMacro: ExtensionMacro {
         }
         
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.encodingOnly)
-        let impl = self.generateExtension(for: typeName, with: properties)
+        let impl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind())
         return [codingFields, impl].compactMap { $0 }
-    }
-    
-    static func generateExtension(for typeName: TokenSyntax, with properties: [DetailedStoredProperty]) -> ExtensionDeclSyntax? {
-        let extensionDecl: DeclSyntax
-        if properties.isEmpty {
-            extensionDecl = """
-            extension \(typeName): CommonEncodable {
-                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
-                    }
-                }
-            }
-            """
-        } else {
-            let encodeStatements = properties.map {
-                "try structEncoder.encode(field: CodingFields.\($0.name), value: self.\($0.name))"
-            }.joined(separator: "\n            ")
-
-            let fieldCount = properties.count
-
-            extensionDecl = """
-            extension \(typeName): CommonEncodable {
-                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: \(raw: fieldCount)) { structEncoder throws(CodingError.Encoding) in
-                        \(raw: encodeStatements)
-                    }
-                }
-            }
-            """
-        }
-
-        return extensionDecl.as(ExtensionDeclSyntax.self)
     }
 }

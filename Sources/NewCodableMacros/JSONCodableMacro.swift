@@ -37,7 +37,7 @@ extension JSONCodableMacro: ExtensionMacro {
         }
         
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.both)
-        let encodingImpl = JSONEncodableMacro.generateExtension(for: typeName, with: properties)
+        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind())
         let decodingImpl = JSONDecodableMacro.generateExtension(for: typeName, with: properties)
         return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
     }
@@ -59,3 +59,9 @@ enum JSONCodingFieldKind: CodingFieldExpansionKind {
         }
     }
 }
+
+struct JSONEncodableExpansionKind: EncodableExpansionKind {
+    var protocolName: String { "JSONEncodable" }
+    var encoderType: String { "inout JSONDirectEncoder" }
+}
+

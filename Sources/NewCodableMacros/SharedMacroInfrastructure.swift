@@ -404,6 +404,53 @@ enum SharedMacroDiagnostic: DiagnosticMessage {
     var severity: DiagnosticSeverity { .error }
 }
 
+// MARK: - Encodable Extension Generation
+
+/// Abstracts over the differences between Common and JSON encodable macro expansions
+protocol EncodableExpansionKind {
+    /// The protocol the generated extension conforms to (e.g. "CommonEncodable", "JSONEncodable")
+    var protocolName: String { get }
+    
+    /// The encoder parameter type in the encode function signature
+    var encoderType: String { get }
+}
+
+func makeEncodableExtension(
+    for typeName: TokenSyntax,
+    with properties: [DetailedStoredProperty],
+    kind: some EncodableExpansionKind
+) -> ExtensionDeclSyntax? {
+    let extensionDecl: DeclSyntax
+    if properties.isEmpty {
+        extensionDecl = """
+        extension \(typeName): \(raw: kind.protocolName) {
+            func encode(to encoder: \(raw: kind.encoderType)) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
+                }
+            }
+        }
+        """
+    } else {
+        let encodeStatements = properties.map {
+            "try structEncoder.encode(field: CodingFields.\($0.name), value: self.\($0.name))"
+        }.joined(separator: "\n")
+
+        let fieldCount = properties.count
+
+        extensionDecl = """
+        extension \(typeName): \(raw: kind.protocolName) {
+            func encode(to encoder: \(raw: kind.encoderType)) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: \(raw: fieldCount)) { structEncoder throws(CodingError.Encoding) in
+                    \(raw: encodeStatements)
+                }
+            }
+        }
+        """
+    }
+
+    return extensionDecl.as(ExtensionDeclSyntax.self)
+}
+
 // MARK: - Shared Macro Implementation Patterns
 
 func extractTypeNameAndStoredProperties(

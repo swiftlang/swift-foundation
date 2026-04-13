@@ -38,56 +38,7 @@ extension JSONEncodableMacro: ExtensionMacro {
         }
         
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.encodingOnly)
-        let impl = self.generateExtension(for: typeName, with: properties)
+        let impl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind())
         return [codingFields, impl].compactMap { $0 }
     }
-    
-    static func generateExtension(for typeName: TokenSyntax, with properties: [DetailedStoredProperty]) -> ExtensionDeclSyntax? {
-        let extensionDecl: DeclSyntax
-        if properties.isEmpty {
-            extensionDecl = """
-            extension \(typeName): JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
-                    }
-                }
-            }
-            """
-        } else {
-            let encodeStatements = properties.map {
-                "try structEncoder.encode(field: CodingFields.\($0.name), value: self.\($0.name))"
-            }.joined(separator: "\n")
-
-            let fieldCount = properties.count
-
-            extensionDecl = """
-            extension \(typeName): JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-                    try encoder.encodeStructFields(count: \(raw: fieldCount)) { structEncoder throws(CodingError.Encoding) in
-                        \(raw: encodeStatements)
-                    }
-                }
-            }
-            """
-        }
-
-        return extensionDecl.as(ExtensionDeclSyntax.self)
-    }
-}
-
-enum JSONEncodableDiagnostic: String, DiagnosticMessage {
-    case notAStruct
-
-    var message: String {
-        switch self {
-        case .notAStruct:
-            return "@JSONEncodable can only be applied to structs"
-        }
-    }
-
-    var diagnosticID: MessageID {
-        MessageID(domain: "NewCodableMacros", id: rawValue)
-    }
-
-    var severity: DiagnosticSeverity { .error }
 }
