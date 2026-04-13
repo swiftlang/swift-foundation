@@ -124,18 +124,35 @@ internal final class SubprogressBridge: Sendable {
     internal let progressBridge: Progress
     internal let manager: ProgressManager
     
+    // A fixed denominator for the bridge Progress. Using a large constant ensures:
+    // 1. Intermediate fractions are representable as integers (e.g. 50% = 500000)
+    // 2. totalUnitCount never changes, avoiding NSProgress issues where decreasing
+    //    totalUnitCount while completedUnitCount is large corrupts the parent's math.
+    private static let progressScale = 1000000
+
     init(parent: Progress, portion: Int64, manager: ProgressManager) {
-        self.progressBridge = Progress(totalUnitCount: 1, parent: parent, pendingUnitCount: portion)
+        self.progressBridge = Progress(totalUnitCount: Int64(SubprogressBridge.progressScale), parent: parent, pendingUnitCount: portion)
         self.manager = manager
 
         manager.addObserver { [weak self] observerState in
             guard let self else {
                 return
             }
-            
-            // This needs to change totalUnitCount before completedUnitCount otherwise progressBridge will finish and mess up the math
-            self.progressBridge.totalUnitCount = Int64(observerState.totalCount)
-            self.progressBridge.completedUnitCount = Int64(observerState.completedCount)
+
+            let total = observerState.totalCount
+            let completed = observerState.completedCount
+            guard total > 0 else { return }
+
+            // Scale to a fixed denominator instead of passing values through directly.
+            // overallFraction's denominator changes when children finish — finished
+            // children are excluded from the sum and their assignedCount is collapsed
+            // into selfFraction (e.g. 50/100 becomes 1/1 instead of 100/100).
+            // Passing these changing denominators through corrupt NSProgress's parent accounting.
+            let fractionCompleted = Double(completed) / Double(total)
+            self.progressBridge.completedUnitCount = min(
+                Int64(SubprogressBridge.progressScale),
+                Int64((fractionCompleted * Double(SubprogressBridge.progressScale)).rounded())
+            )
         }
     }
 }

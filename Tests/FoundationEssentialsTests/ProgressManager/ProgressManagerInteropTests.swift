@@ -305,6 +305,31 @@ import Synchronization
         #expect(overallProgress2.totalUnitCount == 0)
     }
 
+    @Test func interopProgressParentProgressManagerChildAndGrandchildren() async throws {
+        // Caller's NSProgress
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        let subprogress = overall.subprogress(assigningCount: 10)
+        
+        // Receiver calls start(), then assigns work to sub-tasks via ProgressReporter
+        let child = subprogress.start(totalCount: 2)
+        let task1 = ProgressManager(totalCount: 100)
+        let task2 = ProgressManager(totalCount: 100)
+        child.assign(count: 1, to: task1.reporter)
+        child.assign(count: 1, to: task2.reporter)
+        
+        // Task 1 reports partial progress
+        task1.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.25, "Task 1 50% of half should be 25% overall: expected 0.25, got \(overall.fractionCompleted)")
+        
+        // Task 1 completes
+        task1.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.5, "Task 1 complete should be 50% overall: expected 0.5, got \(overall.fractionCompleted)")
+        
+        // Task 2 completes
+        task2.complete(count: 100)
+        #expect(overall.fractionCompleted == 1.0, "Both tasks complete should be 100%: expected 1.0, got \(overall.fractionCompleted)")
+    }
+
     #if FOUNDATION_EXIT_TESTS
     @Test func indirectParticipationOfProgressInAcyclicGraph() async throws {
         await #expect(processExitsWith: .failure) {
