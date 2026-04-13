@@ -69,9 +69,6 @@ public protocol CommonDecoder: ~Escapable {
     associatedtype ArrayDecoder: CommonArrayDecoder & ~Escapable
     associatedtype FieldDecoder: CommonFieldDecoder & ~Escapable
     
-    // TODO: This is an interesting idea in potentially allowing a decoder to provide a more optimized form of "Content" for things like alternative enum formats. It needs more thought though. In lieu of this, or maybe even with it, we may need a standard "Content" type for macro to use with `decodeAny()`.
-//    associatedtype CommonCodingPrimitive: ~Copyable = Never
-    
     // TODO: This overload is a workaround for the inability for decoder to dynamically cast particular Copyable types to T: CommonDecodable & ~Copyable. It has a default implementation that calls into the normal ~Copyable path.
     @_lifetime(self: copy self)
     mutating func decode<T: CommonDecodable>(_: T.Type) throws(CodingError.Decoding) -> T
@@ -167,10 +164,6 @@ public protocol CommonDecoder: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decodeAny<V: CommonDecodingVisitor>(_ visitor: V) throws(CodingError.Decoding) -> V.DecodedValue
-
-//    @_lifetime(self: copy self)
-//    mutating func decodePrimitive() throws(CodingError.Decoding) -> CommonCodingPrimitive
-
     
     /// Decode a value using a visitor, with a hint that a collection of bytes is expected in the encoded data.
     ///
@@ -180,6 +173,20 @@ public protocol CommonDecoder: ~Escapable {
     /// - throws: TBD. An error thrown by the `visitor`. Others?
     @_lifetime(self: copy self)
     mutating func decodeBytes<V: DecodingBytesVisitor>(visitor: V) throws(CodingError.Decoding) -> V.DecodedValue
+    
+    /// Decodes a value conforming to the standard `Decodable` protocol using `decodeAny` and an `AdaptorDecoder`.
+    ///
+    /// This method provides a bridge between the new `CommonDecoder` protocol and the existing `Decodable` protocol
+    /// by using `decodeAny` to capture the raw value and then wrapping it in an `AdaptorDecoder` for standard decoding.
+    ///
+    /// - parameter type: The type of value to decode.
+    /// - returns: The decoded value.
+    /// - throws: `CodingError.Decoding` if decoding fails.
+    @_disfavoredOverload
+    @_lifetime(self: copy self)
+    mutating func decode<D: Decodable>(_: D.Type) throws(CodingError.Decoding) -> D
+    
+    var codingPath: CodingPath { get }
 }
 
 extension CommonDecoder where Self: ~Escapable {
@@ -238,6 +245,7 @@ public protocol CommonStructDecoder: ~Escapable {
     mutating func decodeEachKeyAndValue(_ closure: (String, inout ValueDecoder) throws(CodingError.Decoding) -> Bool) throws(CodingError.Decoding)
     
     var sizeHint: Int? { get }
+    var codingPath: CodingPath { get }
 }
 
 public extension CommonStructDecoder where Self: ~Escapable {
@@ -269,6 +277,8 @@ public protocol CommonDictionaryDecoder: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decodeKey(_ keyDecodingClosure: (inout KeyDecoder) throws(CodingError.Decoding) -> Void, andValue valueDecoderClosure: (inout ValueDecoder) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding) -> Bool
+    
+    var codingPath: CodingPath { get }
 }
 
 public protocol CommonArrayDecoder: ~Escapable {
@@ -281,6 +291,7 @@ public protocol CommonArrayDecoder: ~Escapable {
     mutating func decodeEachElement(_ closure: (inout ElementDecoder) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding)
     
     var sizeHint: Int? { get }
+    var codingPath: CodingPath { get }
 }
 
 public extension CommonArrayDecoder where Self: ~Escapable {
@@ -307,6 +318,26 @@ public extension CommonArrayDecoder where Self: ~Escapable {
     @inline(__always)
     @_lifetime(self: copy self)
     mutating func decodeRequiredNext<T: CommonDecodable & ~Copyable>(_ t: T.Type) throws(CodingError.Decoding) -> T {
+        return try decodeRequiredNext { elementDecoder throws(CodingError.Decoding) in
+            try elementDecoder.decode(t)
+        }
+    }
+    
+    @_disfavoredOverload
+    @_alwaysEmitIntoClient
+    @inline(__always)
+    @_lifetime(self: copy self)
+    mutating func decodeNext<T: Decodable>(_ t: T.Type) throws(CodingError.Decoding) -> T? {
+        try self.decodeNext { elementDecoder throws(CodingError.Decoding) in
+            try elementDecoder.decode(t)
+        }
+    }
+    
+    @_disfavoredOverload
+    @_alwaysEmitIntoClient
+    @inline(__always)
+    @_lifetime(self: copy self)
+    mutating func decodeRequiredNext<T: Decodable>(_ t: T.Type) throws(CodingError.Decoding) -> T {
         return try decodeRequiredNext { elementDecoder throws(CodingError.Decoding) in
             try elementDecoder.decode(t)
         }
@@ -359,7 +390,7 @@ public extension CommonDecoder where Self: ~Escapable {
     mutating func decodeDictionary<T: ~Copyable>( _ closure: (inout DictionaryDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
         throw CodingError.unsupportedDecodingType("dictionary")
     }
-        
+    
     @_lifetime(self: copy self)
     mutating func decodeArray<T: ~Copyable>(_ closure: (inout ArrayDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T {
         throw CodingError.unsupportedDecodingType("array")
@@ -380,7 +411,7 @@ public extension CommonDecoder where Self: ~Escapable {
     ) throws(CodingError.Decoding) -> T {
         throw CodingError.unsupportedDecodingType("enum")
     }
-        
+    
     @_lifetime(self: copy self)
     mutating func decode(_: Bool.Type) throws(CodingError.Decoding) -> Bool { throw CodingError.unsupportedDecodingType("boolean") }
     
@@ -442,10 +473,10 @@ public extension CommonDecoder where Self: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decodeAny<V: CommonDecodingVisitor>(_ visitor: V) throws(CodingError.Decoding) -> V.DecodedValue  { throw CodingError.unsupportedDecodingType("any") }
-
-//    @_lifetime(self: copy self)
-//    mutating func decodePrimitive() throws(CodingError.Decoding) -> CommonCodingPrimitive { throw CodingError.unsupportedDecodingType("primitive") }
-
+    
+    //    @_lifetime(self: copy self)
+    //    mutating func decodePrimitive() throws(CodingError.Decoding) -> CommonCodingPrimitive { throw CodingError.unsupportedDecodingType("primitive") }
+    
     
     /// Decode a value using a visitor, with a hint that a collection of bytes is expected in the encoded data.
     ///
@@ -455,7 +486,6 @@ public extension CommonDecoder where Self: ~Escapable {
     /// - throws: TBD. An error thrown by the `visitor`. Others?
     @_lifetime(self: copy self)
     mutating func decodeBytes<V: DecodingBytesVisitor>(visitor: V) throws(CodingError.Decoding) -> V.DecodedValue  { throw CodingError.unsupportedDecodingType("bytes") }
-
 }
 
 public extension CommonDecodingVisitor where Self: ~Copyable & ~Escapable {
@@ -481,5 +511,29 @@ public extension CommonDecodingVisitor where Self: ~Copyable & ~Escapable {
     
     func visitBytes(_ array: [UInt8]) throws(CodingError.Decoding) -> DecodedValue {
         throw CodingError.unsupportedDecodingType("bytes")
+    }
+}
+
+public extension CommonDecoder where Self: ~Escapable {
+    /// Default implementation for decoding standard `Decodable` types using `decodeAny` and `AdaptorDecoder`.
+    ///
+    /// This implementation uses a visitor pattern to capture the raw value as `CommonCodablePrimitive` via `decodeAny`,
+    /// then wraps it in an `AdaptorDecoder` to provide the standard `Decoder` interface expected by `Decodable` types.
+    @_lifetime(self: copy self)
+    mutating func decode<D: Decodable>(_: D.Type) throws(CodingError.Decoding) -> D {
+        guard self.supportsDecodeAny else {
+            throw CodingError.unsupportedDecodingType("any")
+        }
+        
+        let visitor = CommonPrimitiveVisitor()
+        let element = try self.decodeAny(visitor)
+        let decoder = AdaptorDecoder(value: element, decoderContext: [:], codingPath: self.codingPath.toCodingKeys())
+        
+        do {
+            return try D(from: decoder)
+        } catch {
+            // TODO: Wrap error better.
+            throw CodingError.unsupportedDecodingType("Failed to decode \(D.self): \(error)")
+        }
     }
 }
