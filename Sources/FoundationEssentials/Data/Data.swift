@@ -81,6 +81,8 @@ internal func malloc_good_size(_ size: Int) -> Int {
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(string_h)
+import string_h
 #endif
 
 #if os(Windows)

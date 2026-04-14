@@ -23,6 +23,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 import WASILibc
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif
 
 #if !FOUNDATION_FRAMEWORK

@@ -22,6 +22,8 @@ import ucrt
 @preconcurrency import WASILibc
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif
 
 // Underlying storage representation for medium and large data.
