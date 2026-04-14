@@ -1,9 +1,9 @@
 # Subprocess 1.0 Update
 
-* Proposal: [SF-00XX](XXXX-subprocess-1.0.md)
+* Proposal: [SF-0037](0037-subprocess-1.0.md)
 * Authors: [Charles Hu](https://github.com/iCharlesHu)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Post Review Update**
+* Status: **Post Review Update. Review: 2026-04-13...2026-04-20**
 * Implementation: https://github.com/swiftlang/swift-subprocess
 
 ## Introduction
