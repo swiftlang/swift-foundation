@@ -1734,8 +1734,8 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
                             if subrange.lowerBound > 0 {
                                 inlineBuffer.baseAddress?.copyMemory(from: buffer.baseAddress!, byteCount: subrange.lowerBound)
                             }
-                            if subrange.upperBound < resultingUpper {
-                                inlineBuffer.baseAddress?.advanced(by: subrange.upperBound).copyMemory(from: buffer.baseAddress!.advanced(by: subrange.upperBound), byteCount: resultingUpper - subrange.upperBound)
+                            if subrange.upperBound < slice.endIndex {
+                                inlineBuffer.baseAddress?.advanced(by: subrange.lowerBound + cnt).copyMemory(from: buffer.baseAddress!.advanced(by: subrange.upperBound), byteCount: slice.endIndex - subrange.upperBound)
                             }
                         }
                     }
