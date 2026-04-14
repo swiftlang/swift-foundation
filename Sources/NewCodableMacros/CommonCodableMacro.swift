@@ -24,11 +24,7 @@ extension CommonCodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        guard validate(declaration: declaration, for: node, in: context) else {
-            return []
-        }
-        
-        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
+        guard let typeDecl = CodableTypeDeclaration(
             attachedTo: declaration,
             for: node,
             providingExtensionsOf: type,
@@ -36,27 +32,32 @@ extension CommonCodableMacro: ExtensionMacro {
             return []
         }
         
-        let access = accessLevel(of: declaration)
-        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.both)
-        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind(), accessLevel: access)
-        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: CommonDecodableExpansionKind(), accessLevel: access)
-        return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
+        let expansion = CommonCodableExpansion(type: .both, accessLevel: accessLevel(of: declaration))
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
+        let encodingImpl = typeDecl.makeEncodableExtension(expansion: expansion)
+        let decodingImpl = typeDecl.makeDecodableExtension(expansion: expansion)
+        return codingFields + encodingImpl + decodingImpl
     }
 }
 
-enum CommonCodingFieldExpansionKind: CodingFieldExpansionKind {
-    case encodingOnly
-    case decodingOnly
-    case both
-
-    var protocolName: String {
-        switch self {
-        case .encodingOnly:
-            return "StaticStringEncodingField"
-        case .decodingOnly:
-            return "StaticStringDecodingField"
-        case .both:
-            return "StaticStringCodingField"
+struct CommonCodableExpansion: CodableExpansion {
+    let type: CodableExpansionType
+    let accessLevel: CodableDeclarationAccessLevel
+    
+    var fieldProtocolName: String {
+        switch type {
+        case .encodingOnly: "StaticStringEncodingField"
+        case .decodingOnly: "StaticStringDecodingField"
+        case .both: "StaticStringCodingField"
         }
     }
+    
+    let encodableProtocolName = "CommonEncodable"
+    let decodableProtocolName = "CommonDecodable"
+    let combinedProtocolName = "CommonCodable"
+    
+    let decoderType = "some CommonDecoder & ~Escapable"
+    let structDecoderType = "some CommonStructDecoder & ~Escapable"
+    
+    let encoderType = "some CommonEncoder & ~Copyable & ~Escapable"
 }

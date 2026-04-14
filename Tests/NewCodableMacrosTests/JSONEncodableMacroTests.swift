@@ -260,7 +260,7 @@ struct JSONEncodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@JSONEncodable can only be applied to structs", line: 1, column: 1)
+                DiagnosticSpec(message: "@JSONEncodable can only be applied to structs or enums", line: 1, column: 1)
             ],
             macros: testMacros
         )
@@ -499,6 +499,335 @@ struct JSONEncodableMacroTests {
                 public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    // MARK: - Enum Tests
+
+    @Test func enumNoAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            enum Direction {
+                case north
+                case south
+                case east
+                case west
+            }
+            """,
+            expandedSource: """
+            enum Direction {
+                case north
+                case south
+                case east
+                case west
+            }
+
+            extension Direction {
+                enum CodingFields: JSONOptimizedEncodingField {
+                    case north
+                    case south
+                    case east
+                    case west
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .north:
+                            "north"
+                        case .south:
+                            "south"
+                        case .east:
+                            "east"
+                        case .west:
+                            "west"
+                        }
+                    }
+                }
+            }
+
+            extension Direction: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    switch self {
+                    case .north:
+                        try encoder.encodeEnumCase(CodingFields.north)
+                    case .south:
+                        try encoder.encodeEnumCase(CodingFields.south)
+                    case .east:
+                        try encoder.encodeEnumCase(CodingFields.east)
+                    case .west:
+                        try encoder.encodeEnumCase(CodingFields.west)
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test func enumWithLabeledAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            enum Shape {
+                case circle(radius: Double)
+                case rectangle(width: Int, height: Int)
+            }
+            """,
+            expandedSource: """
+            enum Shape {
+                case circle(radius: Double)
+                case rectangle(width: Int, height: Int)
+            }
+
+            extension Shape {
+                enum CodingFields: JSONOptimizedEncodingField {
+                    case circle
+                    case rectangle
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .circle:
+                            "circle"
+                        case .rectangle:
+                            "rectangle"
+                        }
+                    }
+
+                    enum CircleFields: JSONOptimizedEncodingField {
+                        case radius
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .radius:
+                                "radius"
+                            }
+                        }
+                    }
+
+                    enum RectangleFields: JSONOptimizedEncodingField {
+                        case width
+                        case height
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .width:
+                                "width"
+                            case .height:
+                                "height"
+                            }
+                        }
+                    }
+                }
+            }
+
+            extension Shape: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    switch self {
+                    case .circle(let radius):
+                        try encoder.encodeEnumCase(CodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.CircleFields.radius, value: radius)
+                        }
+                    case .rectangle(let width, let height):
+                        try encoder.encodeEnumCase(CodingFields.rectangle, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.RectangleFields.width, value: width)
+                            try valueEncoder.encode(field: CodingFields.RectangleFields.height, value: height)
+                        }
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test func enumMixedCases() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            enum Result {
+                case success(value: String)
+                case failure
+            }
+            """,
+            expandedSource: """
+            enum Result {
+                case success(value: String)
+                case failure
+            }
+
+            extension Result {
+                enum CodingFields: JSONOptimizedEncodingField {
+                    case success
+                    case failure
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .success:
+                            "success"
+                        case .failure:
+                            "failure"
+                        }
+                    }
+
+                    enum SuccessFields: JSONOptimizedEncodingField {
+                        case value
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .value:
+                                "value"
+                            }
+                        }
+                    }
+                }
+            }
+
+            extension Result: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    switch self {
+                    case .success(let value):
+                        try encoder.encodeEnumCase(CodingFields.success, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.SuccessFields.value, value: value)
+                        }
+                    case .failure:
+                        try encoder.encodeEnumCase(CodingFields.failure)
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test func enumWithUnlabeledAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+            """,
+            expandedSource: """
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+
+            extension Wrapper {
+                enum CodingFields: JSONOptimizedEncodingField {
+                    case single
+                    case pair
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .single:
+                            "single"
+                        case .pair:
+                            "pair"
+                        }
+                    }
+
+                    enum SingleFields: JSONOptimizedEncodingField {
+                        case _0
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            }
+                        }
+                    }
+
+                    enum PairFields: JSONOptimizedEncodingField {
+                        case _0
+                        case _1
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            case ._1:
+                                "_1"
+                            }
+                        }
+                    }
+                }
+            }
+
+            extension Wrapper: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    switch self {
+                    case .single(let _0):
+                        try encoder.encodeEnumCase(CodingFields.single, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.SingleFields._0, value: _0)
+                        }
+                    case .pair(let _0, let _1):
+                        try encoder.encodeEnumCase(CodingFields.pair, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.PairFields._0, value: _0)
+                            try valueEncoder.encode(field: CodingFields.PairFields._1, value: _1)
+                        }
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test func enumWithCustomCodingKey() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            enum Status {
+                @CodingKey("in_progress") case inProgress
+                case done
+            }
+            """,
+            expandedSource: """
+            enum Status {
+                case inProgress
+                case done
+            }
+
+            extension Status {
+                enum CodingFields: JSONOptimizedEncodingField {
+                    case inProgress
+                    case done
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .inProgress:
+                            "in_progress"
+                        case .done:
+                            "done"
+                        }
+                    }
+                }
+            }
+
+            extension Status: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    switch self {
+                    case .inProgress:
+                        try encoder.encodeEnumCase(CodingFields.inProgress)
+                    case .done:
+                        try encoder.encodeEnumCase(CodingFields.done)
                     }
                 }
             }

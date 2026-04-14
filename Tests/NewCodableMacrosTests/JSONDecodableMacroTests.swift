@@ -571,7 +571,7 @@ struct JSONDecodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@JSONDecodable can only be applied to structs", line: 1, column: 1)
+                DiagnosticSpec(message: "@JSONDecodable can only be applied to structs or enums", line: 1, column: 1)
             ],
             macros: decodableTestMacros
         )
@@ -1224,6 +1224,612 @@ struct JSONDecodableMacroTests {
                             throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
                         }
                         return Person(name: name)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    // MARK: - Enum Tests
+
+    @Test func enumNoAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            enum Direction {
+                case north
+                case south
+                case east
+                case west
+            }
+            """,
+            expandedSource: """
+            enum Direction {
+                case north
+                case south
+                case east
+                case west
+            }
+
+            extension Direction {
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case north
+                    case south
+                    case east
+                    case west
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .north:
+                            "north"
+                        case .south:
+                            "south"
+                        case .east:
+                            "east"
+                        case .west:
+                            "west"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "north":
+                            .north
+                        case "south":
+                            .south
+                        case "east":
+                            .east
+                        case "west":
+                            .west
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension Direction: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Direction {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .north:
+                            .north
+                        case .south:
+                            .south
+                        case .east:
+                            .east
+                        case .west:
+                            .west
+                        }
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func enumWithLabeledAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            enum Shape {
+                case circle(radius: Double)
+                case rectangle(width: Int, height: Int)
+            }
+            """,
+            expandedSource: """
+            enum Shape {
+                case circle(radius: Double)
+                case rectangle(width: Int, height: Int)
+            }
+
+            extension Shape {
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case circle
+                    case rectangle
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .circle:
+                            "circle"
+                        case .rectangle:
+                            "rectangle"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "circle":
+                            .circle
+                        case "rectangle":
+                            .rectangle
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+
+                    enum CircleFields: JSONOptimizedDecodingField {
+                        case radius
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .radius:
+                                "radius"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CircleFields {
+                            switch UTF8SpanComparator(key) {
+                            case "radius":
+                                .radius
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Shape {
+                            var radius: Double?
+                            var _field: CircleFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(CircleFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case .radius:
+                                    radius = try valueDecoder.decode(Double.self)
+                                }
+                            }
+                            guard let radius else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .circle(radius: radius)
+                        }
+                    }
+
+                    enum RectangleFields: JSONOptimizedDecodingField {
+                        case width
+                        case height
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .width:
+                                "width"
+                            case .height:
+                                "height"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> RectangleFields {
+                            switch UTF8SpanComparator(key) {
+                            case "width":
+                                .width
+                            case "height":
+                                .height
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Shape {
+                            var width: Int?
+                            var height: Int?
+                            var _field: RectangleFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(RectangleFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case .width:
+                                    width = try valueDecoder.decode(Int.self)
+                                case .height:
+                                    height = try valueDecoder.decode(Int.self)
+                                }
+                            }
+                            guard let width, let height else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .rectangle(width: width, height: height)
+                        }
+                    }
+                }
+            }
+
+            extension Shape: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Shape {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .circle:
+                            try CodingFields.CircleFields.decode(from: &valuesDecoder)
+                        case .rectangle:
+                            try CodingFields.RectangleFields.decode(from: &valuesDecoder)
+                        }
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func enumMixedCases() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            enum Result {
+                case success(value: String)
+                case failure
+            }
+            """,
+            expandedSource: """
+            enum Result {
+                case success(value: String)
+                case failure
+            }
+
+            extension Result {
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case success
+                    case failure
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .success:
+                            "success"
+                        case .failure:
+                            "failure"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "success":
+                            .success
+                        case "failure":
+                            .failure
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+
+                    enum SuccessFields: JSONOptimizedDecodingField {
+                        case value
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .value:
+                                "value"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> SuccessFields {
+                            switch UTF8SpanComparator(key) {
+                            case "value":
+                                .value
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Result {
+                            var value: String?
+                            var _field: SuccessFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(SuccessFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case .value:
+                                    value = try valueDecoder.decode(String.self)
+                                }
+                            }
+                            guard let value else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .success(value: value)
+                        }
+                    }
+                }
+            }
+
+            extension Result: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Result {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .success:
+                            try CodingFields.SuccessFields.decode(from: &valuesDecoder)
+                        case .failure:
+                            .failure
+                        }
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func enumWithUnlabeledAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+            """,
+            expandedSource: """
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+
+            extension Wrapper {
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case single
+                    case pair
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .single:
+                            "single"
+                        case .pair:
+                            "pair"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "single":
+                            .single
+                        case "pair":
+                            .pair
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+
+                    enum SingleFields: JSONOptimizedDecodingField {
+                        case _0
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> SingleFields {
+                            switch UTF8SpanComparator(key) {
+                            case "_0":
+                                ._0
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Wrapper {
+                            var _0: Int?
+                            var _field: SingleFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(SingleFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case ._0:
+                                    _0 = try valueDecoder.decode(Int.self)
+                                }
+                            }
+                            guard let _0 else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .single(_0)
+                        }
+                    }
+
+                    enum PairFields: JSONOptimizedDecodingField {
+                        case _0
+                        case _1
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            case ._1:
+                                "_1"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> PairFields {
+                            switch UTF8SpanComparator(key) {
+                            case "_0":
+                                ._0
+                            case "_1":
+                                ._1
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Wrapper {
+                            var _0: String?
+                            var _1: Int?
+                            var _field: PairFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(PairFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case ._0:
+                                    _0 = try valueDecoder.decode(String.self)
+                                case ._1:
+                                    _1 = try valueDecoder.decode(Int.self)
+                                }
+                            }
+                            guard let _0, let _1 else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .pair(_0, _1)
+                        }
+                    }
+                }
+            }
+
+            extension Wrapper: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Wrapper {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .single:
+                            try CodingFields.SingleFields.decode(from: &valuesDecoder)
+                        case .pair:
+                            try CodingFields.PairFields.decode(from: &valuesDecoder)
+                        }
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func enumWithCustomCodingKey() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            enum Status {
+                @CodingKey("in_progress") case inProgress
+                case done
+            }
+            """,
+            expandedSource: """
+            enum Status {
+                case inProgress
+                case done
+            }
+
+            extension Status {
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case inProgress
+                    case done
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .inProgress:
+                            "in_progress"
+                        case .done:
+                            "done"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "in_progress":
+                            .inProgress
+                        case "done":
+                            .done
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension Status: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Status {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .inProgress:
+                            .inProgress
+                        case .done:
+                            .done
+                        }
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
+
+    @Test func enumWithDecodableAlias() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            enum Status {
+                @DecodableAlias("in-progress") @CodingKey("in_progress") case inProgress
+                case done
+            }
+            """,
+            expandedSource: """
+            enum Status {
+                case inProgress
+                case done
+            }
+
+            extension Status {
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case inProgress
+                    case done
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .inProgress:
+                            "in_progress"
+                        case .done:
+                            "done"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "in_progress":
+                            .inProgress
+                        case "in-progress":
+                            .inProgress
+                        case "done":
+                            .done
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension Status: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Status {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .inProgress:
+                            .inProgress
+                        case .done:
+                            .done
+                        }
                     }
                 }
             }

@@ -260,7 +260,7 @@ struct CommonEncodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@CommonEncodable can only be applied to structs", line: 1, column: 1)
+                DiagnosticSpec(message: "@CommonEncodable can only be applied to structs or enums", line: 1, column: 1)
             ],
             macros: commonTestMacros
         )
@@ -499,6 +499,242 @@ struct CommonEncodableMacroTests {
                 public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
+                    }
+                }
+            }
+            """,
+            macros: commonTestMacros
+        )
+    }
+
+    // MARK: - Enum Tests
+
+    @Test func enumNoAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @CommonEncodable
+            enum Direction {
+                case north
+                case south
+            }
+            """,
+            expandedSource: """
+            enum Direction {
+                case north
+                case south
+            }
+
+            extension Direction {
+                enum CodingFields: StaticStringEncodingField {
+                    case north
+                    case south
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .north:
+                            "north"
+                        case .south:
+                            "south"
+                        }
+                    }
+                }
+            }
+
+            extension Direction: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .north:
+                        try encoder.encodeEnumCase(CodingFields.north)
+                    case .south:
+                        try encoder.encodeEnumCase(CodingFields.south)
+                    }
+                }
+            }
+            """,
+            macros: commonTestMacros
+        )
+    }
+
+    @Test func enumWithAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @CommonEncodable
+            enum Shape {
+                case circle(radius: Double)
+                case point
+            }
+            """,
+            expandedSource: """
+            enum Shape {
+                case circle(radius: Double)
+                case point
+            }
+
+            extension Shape {
+                enum CodingFields: StaticStringEncodingField {
+                    case circle
+                    case point
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .circle:
+                            "circle"
+                        case .point:
+                            "point"
+                        }
+                    }
+
+                    enum CircleFields: StaticStringEncodingField {
+                        case radius
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .radius:
+                                "radius"
+                            }
+                        }
+                    }
+                }
+            }
+
+            extension Shape: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .circle(let radius):
+                        try encoder.encodeEnumCase(CodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.CircleFields.radius, value: radius)
+                        }
+                    case .point:
+                        try encoder.encodeEnumCase(CodingFields.point)
+                    }
+                }
+            }
+            """,
+            macros: commonTestMacros
+        )
+    }
+
+    @Test func enumWithUnlabeledAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @CommonEncodable
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+            """,
+            expandedSource: """
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+
+            extension Wrapper {
+                enum CodingFields: StaticStringEncodingField {
+                    case single
+                    case pair
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .single:
+                            "single"
+                        case .pair:
+                            "pair"
+                        }
+                    }
+
+                    enum SingleFields: StaticStringEncodingField {
+                        case _0
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            }
+                        }
+                    }
+
+                    enum PairFields: StaticStringEncodingField {
+                        case _0
+                        case _1
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            case ._1:
+                                "_1"
+                            }
+                        }
+                    }
+                }
+            }
+
+            extension Wrapper: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .single(let _0):
+                        try encoder.encodeEnumCase(CodingFields.single, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.SingleFields._0, value: _0)
+                        }
+                    case .pair(let _0, let _1):
+                        try encoder.encodeEnumCase(CodingFields.pair, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.PairFields._0, value: _0)
+                            try valueEncoder.encode(field: CodingFields.PairFields._1, value: _1)
+                        }
+                    }
+                }
+            }
+            """,
+            macros: commonTestMacros
+        )
+    }
+
+    @Test func enumWithCustomCodingKey() {
+        assertMacroExpansion(
+            """
+            @CommonEncodable
+            enum Status {
+                @CodingKey("in_progress") case inProgress
+                case done
+            }
+            """,
+            expandedSource: """
+            enum Status {
+                case inProgress
+                case done
+            }
+
+            extension Status {
+                enum CodingFields: StaticStringEncodingField {
+                    case inProgress
+                    case done
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .inProgress:
+                            "in_progress"
+                        case .done:
+                            "done"
+                        }
+                    }
+                }
+            }
+
+            extension Status: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .inProgress:
+                        try encoder.encodeEnumCase(CodingFields.inProgress)
+                    case .done:
+                        try encoder.encodeEnumCase(CodingFields.done)
                     }
                 }
             }

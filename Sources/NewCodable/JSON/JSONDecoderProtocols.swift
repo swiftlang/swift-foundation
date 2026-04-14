@@ -169,17 +169,15 @@ public protocol JSONDecoderProtocol: ~Escapable {
     mutating func decodeArray<T: ~Copyable>(_ closure: (inout ArrayDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T
     
     // MARK: - Enum Decoding
-    
-    /// Decodes an enum case with no associated values from `{"caseName":{}}` format
+
+    /// Decodes an enum case from `{"caseName":{...}}` format using a two-phase callback pattern.
+    ///
+    /// The first closure decodes the case field/name. The second closure decodes the
+    /// associated values.
     @_lifetime(self: copy self)
     mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (inout FieldDecoder) throws(CodingError.Decoding) -> T
-    ) throws(CodingError.Decoding) -> T
-    
-    /// Decodes an enum case with associated values from `{"caseName":{"field1":value1,...}}` format
-    @_lifetime(self: copy self)
-    mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (_ caseName: inout FieldDecoder, _ associatedValues: inout StructDecoder) throws(CodingError.Decoding) -> T
+        _ caseDecoder: (inout FieldDecoder) throws(CodingError.Decoding) -> Void,
+        associatedValues valueDecoder: (inout StructDecoder) throws(CodingError.Decoding) -> T
     ) throws(CodingError.Decoding) -> T
     
     @_lifetime(self: copy self)

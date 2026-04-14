@@ -267,6 +267,36 @@ struct CommonDecodableMacroIntegrationTests {
     }
 }
 
+@CommonCodable
+enum CommonSimpleStatus: Equatable {
+    case active
+    case inactive
+}
+
+@CommonCodable
+enum CommonTaskStatus: Equatable {
+    @CodingKey("in_progress") case inProgress
+    case done
+}
+
+@CommonCodable
+enum CommonFlexibleStatus: Equatable {
+    @DecodableAlias("in-progress") @CodingKey("in_progress") case inProgress
+    case done
+}
+
+@CommonCodable
+enum CommonShape: Equatable {
+    case circle(radius: Double)
+    case point
+}
+
+@CommonCodable
+enum CommonWrapper: Equatable {
+    case single(Int)
+    case pair(String, Int)
+}
+
 @Suite("@CommonCodable Macro Integration")
 struct CommonCodableMacroIntegrationTests {
 
@@ -295,5 +325,68 @@ struct CommonCodableMacroIntegrationTests {
         let decoded = try NewJSONDecoder().decode(CommonCodablePost.self, from: data)
         #expect(decoded.title == "Test")
         #expect(decoded.rating == nil)
+    }
+
+    @Test func enumWithoutAssociatedValues() throws {
+        let original = CommonSimpleStatus.active
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"active\""))
+        let decoded = try NewJSONDecoder().decode(CommonSimpleStatus.self, from: data)
+        #expect(decoded == original)
+
+        let inactive = CommonSimpleStatus.inactive
+        let data2 = try NewJSONEncoder().encode(inactive)
+        let decoded2 = try NewJSONDecoder().decode(CommonSimpleStatus.self, from: data2)
+        #expect(decoded2 == inactive)
+    }
+
+    @Test func enumWithCodingKey() throws {
+        let original = CommonTaskStatus.inProgress
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"in_progress\""))
+        #expect(!json.contains("\"inProgress\""))
+        let decoded = try NewJSONDecoder().decode(CommonTaskStatus.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func enumWithDecodableAlias() throws {
+        let original = CommonFlexibleStatus.inProgress
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"in_progress\""))
+
+        // Decode using the alias key
+        let aliasJSON = Data(#"{"in-progress":{}}"#.utf8)
+        let decoded = try NewJSONDecoder().decode(CommonFlexibleStatus.self, from: aliasJSON)
+        #expect(decoded == .inProgress)
+    }
+
+    @Test func enumWithLabeledAssociatedValues() throws {
+        let circle = CommonShape.circle(radius: 3.14)
+        let data = try NewJSONEncoder().encode(circle)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"circle\""))
+        #expect(json.contains("\"radius\""))
+        let decoded = try NewJSONDecoder().decode(CommonShape.self, from: data)
+        #expect(decoded == circle)
+
+        let point = CommonShape.point
+        let data2 = try NewJSONEncoder().encode(point)
+        let decoded2 = try NewJSONDecoder().decode(CommonShape.self, from: data2)
+        #expect(decoded2 == point)
+    }
+
+    @Test func enumWithUnlabeledAssociatedValues() throws {
+        let single = CommonWrapper.single(42)
+        let data = try NewJSONEncoder().encode(single)
+        let decoded = try NewJSONDecoder().decode(CommonWrapper.self, from: data)
+        #expect(decoded == single)
+
+        let pair = CommonWrapper.pair("hello", 99)
+        let data2 = try NewJSONEncoder().encode(pair)
+        let decoded2 = try NewJSONDecoder().decode(CommonWrapper.self, from: data2)
+        #expect(decoded2 == pair)
     }
 }

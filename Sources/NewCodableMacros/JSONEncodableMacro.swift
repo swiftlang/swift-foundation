@@ -25,11 +25,7 @@ extension JSONEncodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        guard validate(declaration: declaration, for: node, in: context) else {
-            return []
-        }
-
-        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
+        guard let typeDecl = CodableTypeDeclaration(
             attachedTo: declaration,
             for: node,
             providingExtensionsOf: type,
@@ -37,14 +33,9 @@ extension JSONEncodableMacro: ExtensionMacro {
             return []
         }
         
-        let access = accessLevel(of: declaration)
-        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.encodingOnly)
-        let impl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind(), accessLevel: access)
-        return [codingFields, impl].compactMap { $0 }
+        let expansion = JSONCodableExpanion(type: .encodingOnly, accessLevel: accessLevel(of: declaration))
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
+        let impl = typeDecl.makeEncodableExtension(expansion: expansion)
+        return codingFields + impl
     }
-}
-
-struct JSONEncodableExpansionKind: EncodableExpansionKind {
-    var protocolName: String { "JSONEncodable" }
-    var encoderType: String { "inout JSONDirectEncoder" }
 }
