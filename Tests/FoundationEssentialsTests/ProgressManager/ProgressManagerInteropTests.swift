@@ -13,7 +13,6 @@ import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
-import Synchronization
 
 /// Unit tests for interop methods that support building Progress trees with both Progress and ProgressManager
 @Suite("Progress Manager Interop", .tags(.progressManager)) struct ProgressManagerInteropTests {
@@ -328,6 +327,110 @@ import Synchronization
         // Task 2 completes
         task2.complete(count: 100)
         #expect(overall.fractionCompleted == 1.0, "Both tasks complete should be 100%: expected 1.0, got \(overall.fractionCompleted)")
+    }
+
+    @Test func interopProgressParentProgressManagerGrandchildrenNonSequentialCompletion() async throws {
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        let subprogress = overall.subprogress(assigningCount: 10)
+
+        let child = subprogress.start(totalCount: 2)
+        let task1 = ProgressManager(totalCount: 100)
+        let task2 = ProgressManager(totalCount: 100)
+        child.assign(count: 1, to: task1.reporter)
+        child.assign(count: 1, to: task2.reporter)
+
+        // Task 2 reports partial progress first
+        task2.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.25, "Task 2 50% of half should be 25% overall: expected 0.25, got \(overall.fractionCompleted)")
+
+        // Task 2 completes before task 1
+        task2.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.5, "Task 2 complete should be 50% overall: expected 0.5, got \(overall.fractionCompleted)")
+
+        // Task 1 completes
+        task1.complete(count: 100)
+        #expect(overall.fractionCompleted == 1.0, "Both tasks complete should be 100%: expected 1.0, got \(overall.fractionCompleted)")
+    }
+
+    @Test func interopProgressParentProgressManagerManyGrandchildren() async throws {
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        let subprogress = overall.subprogress(assigningCount: 10)
+
+        let child = subprogress.start(totalCount: 5)
+        var tasks: [ProgressManager] = []
+        for _ in 0..<5 {
+            let task = ProgressManager(totalCount: 100)
+            child.assign(count: 1, to: task.reporter)
+            tasks.append(task)
+        }
+
+        // Complete each task one by one
+        for i in 0..<5 {
+            tasks[i].complete(count: 100)
+            let expected = Double(i + 1) / 5.0
+            #expect(overall.fractionCompleted == expected, "After \(i + 1) of 5 tasks complete: expected \(expected), got \(overall.fractionCompleted)")
+        }
+    }
+
+    @Test func interopProgressParentProgressManagerGrandchildrenPartialProgress() async throws {
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        let subprogress = overall.subprogress(assigningCount: 10)
+
+        let child = subprogress.start(totalCount: 2)
+        let task1 = ProgressManager(totalCount: 100)
+        let task2 = ProgressManager(totalCount: 100)
+        child.assign(count: 1, to: task1.reporter)
+        child.assign(count: 1, to: task2.reporter)
+
+        // Task 1 at 25%
+        task1.complete(count: 25)
+        #expect(overall.fractionCompleted == 0.125, "Task 1 25% of half: expected 0.125, got \(overall.fractionCompleted)")
+
+        // Task 1 at 50%
+        task1.complete(count: 25)
+        #expect(overall.fractionCompleted == 0.25, "Task 1 50% of half: expected 0.25, got \(overall.fractionCompleted)")
+
+        // Task 2 at 50%
+        task2.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.5, "Both at 50%: expected 0.5, got \(overall.fractionCompleted)")
+
+        // Task 1 completes
+        task1.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.75, "Task 1 done, task 2 at 50%: expected 0.75, got \(overall.fractionCompleted)")
+
+        // Task 2 completes
+        task2.complete(count: 50)
+        #expect(overall.fractionCompleted == 1.0, "Both complete: expected 1.0, got \(overall.fractionCompleted)")
+    }
+
+    @Test func interopProgressParentProgressManagerIndeterminateGrandchild() async throws {
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        let subprogress = overall.subprogress(assigningCount: 10)
+
+        let child = subprogress.start(totalCount: 2)
+        let task1 = ProgressManager(totalCount: nil) // indeterminate
+        let task2 = ProgressManager(totalCount: 100)
+        child.assign(count: 1, to: task1.reporter)
+        child.assign(count: 1, to: task2.reporter)
+
+        // Indeterminate task should not affect overall progress
+        #expect(overall.fractionCompleted == 0.0, "No progress yet: expected 0.0, got \(overall.fractionCompleted)")
+
+        // Determinate task reports progress
+        task2.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.25, "Task 2 50% of half: expected 0.25, got \(overall.fractionCompleted)")
+
+        // Indeterminate task becomes determinate
+        task1.setCounts { completed, total in
+            total = 100
+        }
+        task1.complete(count: 50)
+        #expect(overall.fractionCompleted == 0.5, "Both at 50%: expected 0.5, got \(overall.fractionCompleted)")
+
+        // Both complete
+        task1.complete(count: 50)
+        task2.complete(count: 50)
+        #expect(overall.fractionCompleted == 1.0, "Both complete: expected 1.0, got \(overall.fractionCompleted)")
     }
 
     #if FOUNDATION_EXIT_TESTS
