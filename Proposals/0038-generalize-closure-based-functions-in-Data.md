@@ -1,6 +1,6 @@
 # Generalize closure-based functions of `Data`
 
-* Proposal: [SF-0037](0037-generalize-closure-based-functions-in-Data.md)
+* Proposal: [SF-0038](0038-generalize-closure-based-functions-in-Data.md)
 * Authors: [Guillaume Lessard](https://github.com/glessard)
 * Review Manager: TBD
 * Status: **Awaiting implementation** or **Awaiting review**
