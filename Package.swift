@@ -253,7 +253,7 @@ let package = Package(
             swiftSettings: [
                 .enableExperimentalFeature("BuiltinModule"),
                 .enableExperimentalFeature("Lifetimes"),
-                .enableExperimentalFeature("SuppressedAssociatedTypes"),
+                .enableExperimentalFeature("SuppressedAssociatedTypesWithDefaults"),
                 .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
