@@ -282,7 +282,7 @@ extension _URLInfo {
                 isDirectory: isDirectory
             )
             let path = buffer.span.extracting(first: finalLength)
-            return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags)
+            return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: false)
         }
 
         let base = resolveBaseURL(base, updating: &flags)

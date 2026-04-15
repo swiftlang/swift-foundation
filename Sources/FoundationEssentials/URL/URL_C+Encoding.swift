@@ -228,4 +228,35 @@ extension NSURL {
     }
 }
 
+internal import Foundation_Private.NSString
+
+@objc
+extension NSString {
+    /// Returns `nil` if `self` contains unpaired UTF-16 surrogates
+    private var _validatedString: String? {
+        if let fastCharacters = _fastCharacterContents() {
+            let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: length)
+            return String(validating: charsBuffer, as: UTF16.self)
+        } else if fastestEncoding == NSUnicodeStringEncoding {
+            if length == 0 { return "" }
+            return withUnsafeTemporaryAllocation(of: UInt16.self, capacity: length) { charsBuffer in
+                getCharacters(charsBuffer.baseAddress!, range: NSRange(location: 0, length: charsBuffer.count))
+                return String(validating: charsBuffer, as: UTF16.self)
+            }
+        } else {
+            // If a custom NSString subclass lies about fastestEncoding and
+            // contains unpaired surrogates, they'll get U+FFFD replacement.
+            return String(self)
+        }
+    }
+
+    func __copySwiftStringByAddingPercentEncoding(withAllowedCharacters allowedCharacters: CharacterSet) -> String? {
+        _validatedString?.addingPercentEncoding(withAllowedCharacters: allowedCharacters)
+    }
+
+    func __copySwiftStringByRemovingPercentEncoding() -> String? {
+        _validatedString?.removingPercentEncoding
+    }
+}
+
 #endif

@@ -2244,6 +2244,36 @@ private final class DataTests {
         #expect(dataToEncode.count == offsets[1], "composing two dispatch_data should enumerate as structural data with the first offset as the location of the region")
     }
     #endif
+
+    @Test func emptyDataPointerAlignment() {
+        var d = Data()
+        d.withUnsafeBytes {
+            if let ptr = $0.baseAddress {
+                #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            }
+            #expect($0.isEmpty)
+        }
+        d.withUnsafeMutableBytes {
+            if let ptr = $0.baseAddress {
+                #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            }
+            #expect($0.isEmpty)
+        }
+    }
+
+    @Test func inlineDataPointerAlignment() throws {
+        var d = Data(count: 5)
+        try d.withUnsafeBytes {
+            let ptr = try #require($0.baseAddress)
+            #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            #expect($0.count == 5)
+        }
+        try d.withUnsafeMutableBytes {
+            let ptr = try #require($0.baseAddress)
+            #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            #expect($0.count == 5)
+        }
+    }
 }
 
 // MARK: - Base64 Encode/Decode Tests

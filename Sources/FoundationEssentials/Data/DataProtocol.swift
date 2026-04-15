@@ -20,6 +20,8 @@ import Darwin
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif
 
 //===--- DataProtocol -----------------------------------------------------===//

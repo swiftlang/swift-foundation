@@ -329,8 +329,8 @@ private struct URLTests {
 
         // Actual checks for valid ASCII characters
         #expect(schemeResults.lower == 0x07fffffe07fffffe03ff680000000000)
-        #expect(userResults.lower == 0x47fffffe87fffffe2fff7fd200000000)
-        #expect(passwordResults.lower == 0x47fffffe87fffffe2fff7fd200000000)
+        #expect(userResults.lower == 0x47fffffe87fffffe2bff7fd200000000)
+        #expect(passwordResults.lower == 0x47fffffe87fffffe2bff7fd200000000)
         #expect(hostResults.lower == 0x47fffffe87fffffe2bff7fd200000000)
         #expect(hostIPvFutureResults.lower == 0x47fffffe87fffffe2fff7fd200000000)
         #expect(hostZoneIDResults.lower == 0x47fffffe87fffffe03ff600000000000)
@@ -379,10 +379,12 @@ private struct URLTests {
             if isAllowed(component: .scheme) {
                 schemeResults.setAllowed(codeUnit)
             }
-            if isAllowed(component: .user) {
+            // URLComponentAllowedMask doesn't allow ":" in user or password,
+            // but CFURL does allow it unencoded in these components.
+            if isAllowed(component: .user) && codeUnit != UInt8(ascii: ":") {
                 userResults.setAllowed(codeUnit)
             }
-            if isAllowed(component: .password) {
+            if isAllowed(component: .password) && codeUnit != UInt8(ascii: ":") {
                 passwordResults.setAllowed(codeUnit)
             }
             if isAllowed(component: .host) {
@@ -412,13 +414,13 @@ private struct URLTests {
             if codeUnit == UInt8(ascii: "[") || codeUnit == UInt8(ascii: "]") {
                 continue
             }
-            if isAllowed(component: .path) {
+            if isAllowed(component: .laxPath) {
                 pathV2Results.setAllowed(codeUnit)
             }
-            if isAllowed(component: .query) {
+            if isAllowed(component: .laxQuery) {
                 queryV2Results.setAllowed(codeUnit)
             }
-            if isAllowed(component: .fragment) {
+            if isAllowed(component: .laxFragment) {
                 fragmentV2Results.setAllowed(codeUnit)
             }
         }
@@ -456,6 +458,26 @@ private struct URLTests {
         #expect(pathV2Results.lower == URLComponentAllowedMask.path.rawValue)
         #expect(queryV2Results.lower == URLComponentAllowedMask.query.rawValue)
         #expect(fragmentV2Results.lower == URLComponentAllowedMask.fragment.rawValue)
+    }
+
+    @Test func checkURLComponentsAPICompatibility() throws {
+        let string = "http://example.com/path[0]?query[1]#frag[2]"
+        var components = try #require(URLComponents(string: string))
+        let url = try #require(URL(string: string))
+        
+        #expect(url.relativeString == components.string)
+        #expect(url.path() == components.percentEncodedPath)
+        #expect(url.query() == components.percentEncodedQuery)
+        #expect(url.fragment() == components.percentEncodedFragment)
+
+        components.percentEncodedPath = url.path()
+        components.percentEncodedQuery = url.query()
+        components.percentEncodedFragment = url.fragment()
+
+        #expect(url.relativeString == components.string)
+        #expect(url.path() == components.percentEncodedPath)
+        #expect(url.query() == components.percentEncodedQuery)
+        #expect(url.fragment() == components.percentEncodedFragment)
     }
 
     
@@ -537,6 +559,22 @@ private struct URLTests {
         let urlAfterCreation = URL(filePath: "\(tempDirectory.path)/tmp-dir", directoryHint: .checkFileSystem)
         #expect(urlAfterCreation.hasDirectoryPath)
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
+    }
+
+    @Test func filePathAPIsWithSemicolon() throws {
+        // The NSURL and CFURL file path APIs encode ";" in file paths
+        // for compatibility. URL and other modern parsers do not.
+        var url = URL(filePath: "/path;to/file")
+        #expect(url.path == "/path;to/file")
+        #expect(url.relativeString == "file:///path;to/file")
+
+        url.append(path: "hello;world")
+        #expect(url.path == "/path;to/file/hello;world")
+        #expect(url.relativeString == "file:///path;to/file/hello;world")
+
+        url.appendPathExtension("some;ext")
+        #expect(url.path == "/path;to/file/hello;world.some;ext")
+        #expect(url.relativeString == "file:///path;to/file/hello;world.some;ext")
     }
 
     #if FOUNDATION_FRAMEWORK
@@ -2589,9 +2627,9 @@ private struct URLTests {
         let bracketSpan = "[]".utf8.span
 
         // Square brackets should be allowed in path, query, and fragment
-        let pathValid = validate(span: bracketSpan, component: .path)
-        let queryValid = validate(span: bracketSpan, component: .query)
-        let fragmentValid = validate(span: bracketSpan, component: .fragment)
+        let pathValid = validate(span: bracketSpan, component: .laxPath)
+        let queryValid = validate(span: bracketSpan, component: .laxQuery)
+        let fragmentValid = validate(span: bracketSpan, component: .laxFragment)
         let anyValid = validate(span: bracketSpan, component: .anyValid)
         #expect(pathValid)
         #expect(queryValid)

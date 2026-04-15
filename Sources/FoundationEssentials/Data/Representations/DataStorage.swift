@@ -22,6 +22,8 @@ import ucrt
 @preconcurrency import WASILibc
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif
 
 // Underlying storage representation for medium and large data.
@@ -175,7 +177,8 @@ internal final class __DataStorage : @unchecked Sendable {
         if let _bytes {
             return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
         } else {
-            return try Swift.withUnsafeBytes(of: 0) { buffer throws(E) in
+            var value: UInt64 = 0
+            return try Swift.withUnsafeBytes(of: &value) { buffer throws(E) in
                 return try apply(UnsafeRawBufferPointer(start: buffer.baseAddress!, count: 0))
             }
         }
@@ -183,9 +186,13 @@ internal final class __DataStorage : @unchecked Sendable {
 
 #if DATA_LEGACY_ABI
     @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
-    @_spi(FoundationLegacyABI)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @usableFromInline
-    func _legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
+    func __legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
         try withUnsafeBytes(in: range, apply: apply)
     }
 #endif // DATA_LEGACY_ABI
@@ -196,8 +203,8 @@ internal final class __DataStorage : @unchecked Sendable {
         if let _bytes {
             return try apply(UnsafeMutableRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
         } else {
-            var byte = 0
-            return try Swift.withUnsafeMutableBytes(of: &byte) { buffer throws(E) in
+            var value: UInt64 = 0
+            return try Swift.withUnsafeMutableBytes(of: &value) { buffer throws(E) in
                 return try apply(UnsafeMutableRawBufferPointer(start: buffer.baseAddress!, count: 0))
             }
         }
@@ -205,9 +212,13 @@ internal final class __DataStorage : @unchecked Sendable {
 
 #if DATA_LEGACY_ABI
     @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
-    @_spi(FoundationLegacyABI)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @usableFromInline
-    internal func _legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+    internal func __legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeMutableBytes(in: range, apply: apply)
     }
 #endif // DATA_LEGACY_ABI
