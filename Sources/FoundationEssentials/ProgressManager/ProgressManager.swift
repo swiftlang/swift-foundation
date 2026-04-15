@@ -403,26 +403,24 @@ internal import _FoundationCollections
             return (bridgeManager, state.pendingChildrenUpdates())
         }
 
-        guard let info else { return }
+        guard let info, let updates = info.updates else {
+            return
+        }
 
         // Phase 2: Resolve each dirty child's fraction
         var childrenUpdates: [PendingChildUpdate] = []
-        if let updates = info.updates {
-            for update in updates {
-                let updatedFraction = update.manager.updatedProgressFraction()
-                childrenUpdates.append(PendingChildUpdate(
-                    index: update.index,
-                    updatedFraction: updatedFraction,
-                    assignedCount: update.assignedCount
-                ))
-            }
+        for update in updates {
+            let updatedFraction = update.manager.updatedProgressFraction()
+            childrenUpdates.append(PendingChildUpdate(
+                index: update.index,
+                updatedFraction: updatedFraction,
+                assignedCount: update.assignedCount
+            ))
         }
 
         // Phase 3: Apply updates and compute fraction
         let observerState = state.withLock { state in
-            if !childrenUpdates.isEmpty {
-                state.updateChildrenProgressFraction(updates: childrenUpdates)
-            }
+            state.updateChildrenProgressFraction(updates: childrenUpdates)
             let fraction = state.overallFraction
             return ObserverState(totalCount: fraction.total ?? 0, completedCount: fraction.completed)
         }
