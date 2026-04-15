@@ -56,7 +56,8 @@ extension Predicate {
         
         if let guarded = iterator.next() {
             self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
-                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(guarded), repeat each input)
+                let condition: PredicateExpressions.Value<Self> = PredicateExpressions.build_Arg(guarded)
+                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
                 
                 while let next = iterator.next() {
                     pieces = Self.meet(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
@@ -74,7 +75,8 @@ extension Predicate {
         
         if let guarded = iterator.next() {
             self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
-                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(guarded), repeat each input)
+                let condition: PredicateExpressions.Value<Self> = PredicateExpressions.build_Arg(guarded)
+                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
                 
                 while let next = iterator.next() {
                     pieces = Self.join(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
