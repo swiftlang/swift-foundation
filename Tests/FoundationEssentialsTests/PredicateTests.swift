@@ -39,6 +39,36 @@ struct PredicateTestObject2 {
     var a: Bool
 }
 
+fileprivate class PredicateTestObject3 {
+    private let firstValue: Bool
+    private let secondValue: Bool
+    private let thirdValue: Bool
+    
+    private(set) var firstAccessed = false
+    private(set) var secondAccessed = false
+    private(set) var thirdAccessed = false
+    
+    var first: Bool {
+        firstAccessed = true
+        return firstValue
+    }
+    
+    var second: Bool {
+        secondAccessed = true
+        return secondValue
+    }
+    
+    var third: Bool {
+        thirdAccessed = true
+        return thirdValue
+    }
+    
+    init(first: Bool, second: Bool, third: Bool) {
+        self.firstValue = first
+        self.secondValue = second
+        self.thirdValue = third
+    }
+}
 
 fileprivate protocol PredicateProducer {
     var prop: Int { get }
@@ -563,6 +593,32 @@ private struct PredicateTests {
         #expect(try !Predicate(all: predicates).evaluate(input))
     }
     
+    @Test func allShortCircuitEvaluation() throws {
+        let predicates: [Predicate<PredicateTestObject3>] = [
+            #Predicate { $0.first },
+            #Predicate { $0.second },
+            #Predicate { $0.third }
+        ]
+        
+        let input1 = PredicateTestObject3(first: false, second: true, third: true)
+        #expect(try !Predicate(all: predicates).evaluate(input1))
+        #expect(input1.firstAccessed)
+        #expect(!input1.secondAccessed)
+        #expect(!input1.thirdAccessed)
+        
+        let input2 = PredicateTestObject3(first: true, second: false, third: true)
+        #expect(try !Predicate(all: predicates).evaluate(input2))
+        #expect(input2.firstAccessed)
+        #expect(input2.secondAccessed)
+        #expect(!input2.thirdAccessed)
+        
+        let input3 = PredicateTestObject3(first: true, second: true, third: true)
+        #expect(try Predicate(all: predicates).evaluate(input3))
+        #expect(input3.firstAccessed)
+        #expect(input3.secondAccessed)
+        #expect(input3.thirdAccessed)
+    }
+    
     @Test func any() throws {
         #expect(try !Predicate(any: []).evaluate(42))
         #expect(try Predicate(any: [Predicate.true, Predicate.false]).evaluate(42))
@@ -578,5 +634,31 @@ private struct PredicateTests {
         #expect(try Predicate(any: predicates.dropLast(2)).evaluate(input))
         #expect(try !Predicate(any: predicates.dropLast(3)).evaluate(input))
         #expect(try !Predicate(any: predicates.dropLast(4)).evaluate(input))
+    }
+    
+    @Test func anyShortCircuitEvaluation() throws {
+        let predicates: [Predicate<PredicateTestObject3>] = [
+            #Predicate { $0.first },
+            #Predicate { $0.second },
+            #Predicate { $0.third }
+        ]
+        
+        let input1 = PredicateTestObject3(first: true, second: false, third: false)
+        #expect(try Predicate(any: predicates).evaluate(input1))
+        #expect(input1.firstAccessed)
+        #expect(!input1.secondAccessed)
+        #expect(!input1.thirdAccessed)
+        
+        let input2 = PredicateTestObject3(first: false, second: true, third: false)
+        #expect(try Predicate(any: predicates).evaluate(input2))
+        #expect(input2.firstAccessed)
+        #expect(input2.secondAccessed)
+        #expect(!input2.thirdAccessed)
+        
+        let input3 = PredicateTestObject3(first: false, second: false, third: false)
+        #expect(try !Predicate(any: predicates).evaluate(input3))
+        #expect(input3.firstAccessed)
+        #expect(input3.secondAccessed)
+        #expect(input3.thirdAccessed)
     }
 }
