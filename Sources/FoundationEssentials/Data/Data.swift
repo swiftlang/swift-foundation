@@ -501,9 +501,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
 #if DATA_LEGACY_ABI
     @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
-    @_spi(FoundationLegacyABI)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @usableFromInline
-    internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+    internal func __legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeBytes(body)
     }
 #endif // DATA_LEGACY_ABI
@@ -567,9 +571,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
 #if DATA_LEGACY_ABI
     @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
-    @_spi(FoundationLegacyABI)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @usableFromInline
-    internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+    internal mutating func __legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeMutableBytes(body)
     }
 #endif // DATA_LEGACY_ABI
@@ -672,8 +680,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     #if FOUNDATION_FRAMEWORK
-    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @abi(mutating func append(contentsOf bytes: [UInt8]))
+    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
     internal mutating func __legacy_append(contentsOf bytes: [UInt8]) {
         self.append(contentsOf: bytes)
     }
@@ -786,8 +799,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - precondition: The bounds of `subrange` must be valid indices of the collection.
     /// - parameter subrange: The range in the data to replace. If `subrange.lowerBound == data.count && subrange.count == 0` then this operation is an append.
     /// - parameter data: The replacement data.
-    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @abi(mutating func replaceSubrange(_ subrange: Range<Index>, with data: Data))
+    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
     internal mutating func __legacy_replaceSubrange(_ subrange: Range<Index>, with data: Data) {
         self.replaceSubrange(subrange, with: data)
     }

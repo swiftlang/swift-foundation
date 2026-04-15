@@ -120,9 +120,14 @@ extension Data {
 
         #if FOUNDATION_FRAMEWORK
         // Legacy ABI entry point for clients built against an older @inlinable reserveCapacity
-        @usableFromInline
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
         @abi(mutating func reserveCapacity(_ minimumCapacity: Int))
-        mutating func __legacy_reserveCapacity(_ minimumCapacity: Int) {
+        @usableFromInline
+        internal mutating func __legacy_reserveCapacity(_ minimumCapacity: Int) {
             reserveCapacity(minimumCapacity)
         }
         #endif
@@ -169,9 +174,13 @@ extension Data {
         }
 
         @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
-        @_spi(FoundationLegacyABI)
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
         @usableFromInline
-        internal func _legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        internal func __legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
             try withUnsafeBytes(body)
         }
 
@@ -183,9 +192,13 @@ extension Data {
         }
 
         @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
-        @_spi(FoundationLegacyABI)
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
         @usableFromInline
-        internal mutating func _legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        internal mutating func __legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
             try withUnsafeMutableBytes(body)
         }
 
