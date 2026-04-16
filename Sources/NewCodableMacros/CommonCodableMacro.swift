@@ -12,12 +12,11 @@
 
 import SwiftSyntax
 import SwiftSyntaxMacros
-import SwiftSyntaxBuilder
 import SwiftDiagnostics
 
-public struct JSONEncodableMacro { }
+public struct CommonCodableMacro { }
 
-extension JSONEncodableMacro: ExtensionMacro {
+extension CommonCodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -28,7 +27,7 @@ extension JSONEncodableMacro: ExtensionMacro {
         guard validate(declaration: declaration, for: node, in: context) else {
             return []
         }
-
+        
         guard let (typeName, properties) = extractTypeNameAndStoredProperties(
             attachedTo: declaration,
             for: node,
@@ -37,13 +36,26 @@ extension JSONEncodableMacro: ExtensionMacro {
             return []
         }
         
-        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.encodingOnly)
-        let impl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind())
-        return [codingFields, impl].compactMap { $0 }
+        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.both)
+        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind())
+        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: CommonDecodableExpansionKind())
+        return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
     }
 }
 
-struct JSONEncodableExpansionKind: EncodableExpansionKind {
-    var protocolName: String { "JSONEncodable" }
-    var encoderType: String { "inout JSONDirectEncoder" }
+enum CommonCodingFieldExpansionKind: CodingFieldExpansionKind {
+    case encodingOnly
+    case decodingOnly
+    case both
+
+    var protocolName: String {
+        switch self {
+        case .encodingOnly:
+            return "StaticStringEncodingField"
+        case .decodingOnly:
+            return "StaticStringDecodingField"
+        case .both:
+            return "StaticStringCodingField"
+        }
+    }
 }

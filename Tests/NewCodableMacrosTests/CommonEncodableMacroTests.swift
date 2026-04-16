@@ -16,19 +16,19 @@ import SwiftSyntaxMacrosGenericTestSupport
 import Testing
 import NewCodableMacros
 
-let testMacros: [String: Macro.Type] = [
-    "JSONEncodable": JSONEncodableMacro.self,
+let commonTestMacros: [String: Macro.Type] = [
+    "CommonEncodable": CommonEncodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
     "DecodableAlias": DecodableAliasMacro.self,
 ]
 
-@Suite("@JSONEncodable Macro")
-struct JSONEncodableMacroTests {
+@Suite("@CommonEncodable Macro")
+struct CommonEncodableMacroTests {
 
     @Test func basicStruct() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Person {
                 let name: String
                 let age: Int
@@ -41,7 +41,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case name
                     case age
 
@@ -57,8 +57,8 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension Person: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Person: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
                         try structEncoder.encode(field: CodingFields.age, value: self.age)
@@ -66,14 +66,14 @@ struct JSONEncodableMacroTests {
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func customCodingKey() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Post {
                 @CodingKey("date_published") let publishDate: String
                 let title: String
@@ -86,7 +86,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Post {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case publishDate
                     case title
 
@@ -102,8 +102,8 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension Post: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Post: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.publishDate, value: self.publishDate)
                         try structEncoder.encode(field: CodingFields.title, value: self.title)
@@ -111,14 +111,14 @@ struct JSONEncodableMacroTests {
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func optionalProperty() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Item {
                 let name: String
                 let rating: Double?
@@ -131,7 +131,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Item {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case name
                     case rating
 
@@ -147,8 +147,8 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension Item: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Item: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
                         try structEncoder.encode(field: CodingFields.rating, value: self.rating)
@@ -156,14 +156,14 @@ struct JSONEncodableMacroTests {
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func computedPropertySkipped() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Thing {
                 let name: String
                 var displayName: String {
@@ -180,7 +180,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Thing {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case name
 
                     @_transparent
@@ -193,22 +193,22 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension Thing: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Thing: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
                     }
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func staticPropertySkipped() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Config {
                 static let defaultName = "test"
                 let name: String
@@ -221,7 +221,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Config {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case name
 
                     @_transparent
@@ -234,22 +234,22 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension Config: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Config: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
                     }
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func errorOnNonStruct() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             class NotAStruct {
                 let name: String = ""
             }
@@ -260,16 +260,16 @@ struct JSONEncodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@JSONEncodable can only be applied to structs", line: 1, column: 1)
+                DiagnosticSpec(message: "@CommonEncodable can only be applied to structs", line: 1, column: 1)
             ],
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func emptyStruct() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Empty {
             }
             """,
@@ -277,21 +277,21 @@ struct JSONEncodableMacroTests {
             struct Empty {
             }
 
-            extension Empty: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Empty: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
                     }
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func lazyVarSkipped() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Cached {
                 let name: String
                 lazy var uppercasedName: String = name.uppercased()
@@ -304,7 +304,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Cached {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case name
 
                     @_transparent
@@ -317,22 +317,22 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension Cached: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Cached: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
                     }
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func propertyWithDefaultValue() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct WithDefault {
                 let name: String = "default"
                 let age: Int
@@ -343,9 +343,9 @@ struct JSONEncodableMacroTests {
                 let name: String = "default"
                 let age: Int
             }
-            
+
             extension WithDefault {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case name
                     case age
 
@@ -361,8 +361,8 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension WithDefault: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension WithDefault: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
                         try structEncoder.encode(field: CodingFields.age, value: self.age)
@@ -370,14 +370,14 @@ struct JSONEncodableMacroTests {
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func decodableAliasIgnoredForEncodingOnly() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct User {
                 @DecodableAlias("user_name", "username") let userName: String
                 let age: Int
@@ -390,7 +390,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case userName
                     case age
 
@@ -406,8 +406,8 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension User: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension User: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.userName, value: self.userName)
                         try structEncoder.encode(field: CodingFields.age, value: self.age)
@@ -415,14 +415,14 @@ struct JSONEncodableMacroTests {
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 
     @Test func propertyWithObservers() {
         assertMacroExpansion(
             """
-            @JSONEncodable
+            @CommonEncodable
             struct Observed {
                 var count: Int {
                     didSet { print(count) }
@@ -439,7 +439,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Observed {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum CodingFields: StaticStringEncodingField {
                     case count
                     case name
 
@@ -455,8 +455,8 @@ struct JSONEncodableMacroTests {
                 }
             }
 
-            extension Observed: JSONEncodable {
-                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+            extension Observed: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
                         try structEncoder.encode(field: CodingFields.count, value: self.count)
                         try structEncoder.encode(field: CodingFields.name, value: self.name)
@@ -464,7 +464,7 @@ struct JSONEncodableMacroTests {
                 }
             }
             """,
-            macros: testMacros
+            macros: commonTestMacros
         )
     }
 }

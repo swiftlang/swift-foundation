@@ -15,9 +15,9 @@ import SwiftSyntaxMacros
 import SwiftSyntaxBuilder
 import SwiftDiagnostics
 
-public struct JSONEncodableMacro { }
+public struct CommonEncodableMacro { }
 
-extension JSONEncodableMacro: ExtensionMacro {
+extension CommonEncodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -28,7 +28,7 @@ extension JSONEncodableMacro: ExtensionMacro {
         guard validate(declaration: declaration, for: node, in: context) else {
             return []
         }
-
+        
         guard let (typeName, properties) = extractTypeNameAndStoredProperties(
             attachedTo: declaration,
             for: node,
@@ -37,13 +37,13 @@ extension JSONEncodableMacro: ExtensionMacro {
             return []
         }
         
-        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.encodingOnly)
-        let impl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind())
+        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.encodingOnly)
+        let impl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind())
         return [codingFields, impl].compactMap { $0 }
     }
 }
 
-struct JSONEncodableExpansionKind: EncodableExpansionKind {
-    var protocolName: String { "JSONEncodable" }
-    var encoderType: String { "inout JSONDirectEncoder" }
+struct CommonEncodableExpansionKind: EncodableExpansionKind {
+    var protocolName: String { "CommonEncodable" }
+    var encoderType: String { "inout some CommonEncoder & ~Copyable & ~Escapable" }
 }

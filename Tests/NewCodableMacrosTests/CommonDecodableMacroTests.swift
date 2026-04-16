@@ -16,13 +16,13 @@ import SwiftSyntaxMacrosGenericTestSupport
 import Testing
 import NewCodableMacros
 
-@Suite("@JSONDecodable Macro")
-struct JSONDecodableMacroTests {
+@Suite("@CommonDecodable Macro")
+struct CommonDecodableMacroTests {
 
     @Test func basicStruct() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Person {
                 let name: String
                 let age: Int
@@ -35,7 +35,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case name
                     case age
                     case unknown
@@ -65,8 +65,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Person: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
+            extension Person: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Person {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var age: Int?
@@ -101,7 +101,7 @@ struct JSONDecodableMacroTests {
     @Test func optionalProperty() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Item {
                 let name: String
                 let rating: Double?
@@ -114,7 +114,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Item {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case name
                     case rating
                     case unknown
@@ -144,8 +144,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Item: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Item {
+            extension Item: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Item {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var rating: Double?
@@ -177,7 +177,7 @@ struct JSONDecodableMacroTests {
     @Test func allOptionalProperties() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Preferences {
                 let theme: String?
                 let fontSize: Int?
@@ -190,7 +190,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Preferences {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case theme
                     case fontSize
                     case unknown
@@ -220,8 +220,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Preferences: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Preferences {
+            extension Preferences: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Preferences {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var theme: String?
                         var fontSize: Int?
@@ -250,7 +250,7 @@ struct JSONDecodableMacroTests {
     @Test func customCodingKey() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Post {
                 @CodingKey("date_published") let publishDate: String
                 let title: String
@@ -263,7 +263,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Post {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case publishDate
                     case title
                     case unknown
@@ -293,8 +293,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Post: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Post {
+            extension Post: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Post {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var publishDate: String?
                         var title: String?
@@ -329,7 +329,7 @@ struct JSONDecodableMacroTests {
     @Test func computedPropertySkipped() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Thing {
                 let name: String
                 var displayName: String {
@@ -346,7 +346,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Thing {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -371,8 +371,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Thing: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Thing {
+            extension Thing: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Thing {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var _codingField: CodingFields?
@@ -401,7 +401,7 @@ struct JSONDecodableMacroTests {
     @Test func staticPropertySkipped() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Config {
                 static let defaultName = "test"
                 let name: String
@@ -414,7 +414,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Config {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -439,8 +439,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Config: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Config {
+            extension Config: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Config {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var _codingField: CodingFields?
@@ -469,7 +469,7 @@ struct JSONDecodableMacroTests {
     @Test func lazyVarSkipped() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Cached {
                 let name: String
                 lazy var uppercasedName: String = name.uppercased()
@@ -482,7 +482,7 @@ struct JSONDecodableMacroTests {
             }
             
             extension Cached {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -507,8 +507,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Cached: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Cached {
+            extension Cached: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Cached {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var _codingField: CodingFields?
@@ -537,7 +537,7 @@ struct JSONDecodableMacroTests {
     @Test func emptyStruct() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Empty {
             }
             """,
@@ -545,8 +545,8 @@ struct JSONDecodableMacroTests {
             struct Empty {
             }
 
-            extension Empty: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Empty {
+            extension Empty: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Empty {
                     try decoder.decodeStruct { _ throws(CodingError.Decoding) in
                         Empty()
                     }
@@ -560,7 +560,7 @@ struct JSONDecodableMacroTests {
     @Test func errorOnNonStruct() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             class NotAStruct {
                 let name: String = ""
             }
@@ -571,7 +571,7 @@ struct JSONDecodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@JSONDecodable can only be applied to structs", line: 1, column: 1)
+                DiagnosticSpec(message: "@CommonDecodable can only be applied to structs", line: 1, column: 1)
             ],
             macros: decodableTestMacros
         )
@@ -580,7 +580,7 @@ struct JSONDecodableMacroTests {
     @Test func propertyWithoutTypeAnnotation() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Bad {
                 let name = "default"
             }
@@ -591,7 +591,7 @@ struct JSONDecodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@JSONDecodable requires all stored properties to have explicit type annotations", line: 3, column: 9)
+                DiagnosticSpec(message: "@CommonDecodable requires all stored properties to have explicit type annotations", line: 3, column: 9)
             ],
             macros: decodableTestMacros
         )
@@ -600,7 +600,7 @@ struct JSONDecodableMacroTests {
     @Test func defaultValue() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Config {
                 let name: String
                 @CodableDefault("en") let locale: String
@@ -615,7 +615,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Config {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case name
                     case locale
                     case retryCount
@@ -650,8 +650,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Config: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Config {
+            extension Config: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Config {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var locale: String?
@@ -686,7 +686,7 @@ struct JSONDecodableMacroTests {
     @Test func allDefaultValues() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Defaults {
                 @CodableDefault("hello") let greeting: String
                 @CodableDefault(false) let verbose: Bool
@@ -699,7 +699,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Defaults {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case greeting
                     case verbose
                     case unknown
@@ -729,8 +729,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Defaults: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Defaults {
+            extension Defaults: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Defaults {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var greeting: String?
                         var verbose: Bool?
@@ -759,7 +759,7 @@ struct JSONDecodableMacroTests {
     @Test func defaultWithCodingKey() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Setting {
                 @CodingKey("max_retries") @CodableDefault(3) let maxRetries: Int
             }
@@ -770,7 +770,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Setting {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case maxRetries
                     case unknown
 
@@ -795,8 +795,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Setting: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Setting {
+            extension Setting: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Setting {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var maxRetries: Int?
                         var _codingField: CodingFields?
@@ -822,7 +822,7 @@ struct JSONDecodableMacroTests {
     @Test func defaultOnOptionalProperty() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct Prefs {
                 @CodableDefault("en") let locale: String?
             }
@@ -833,7 +833,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension Prefs {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case locale
                     case unknown
 
@@ -858,8 +858,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension Prefs: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Prefs {
+            extension Prefs: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Prefs {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var locale: String?
                         var _codingField: CodingFields?
@@ -885,7 +885,7 @@ struct JSONDecodableMacroTests {
     @Test func defaultWithArbitraryExpression() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct WithExpr {
                 @CodableDefault([]) let tags: [String]
             }
@@ -896,7 +896,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension WithExpr {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case tags
                     case unknown
 
@@ -921,8 +921,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension WithExpr: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> WithExpr {
+            extension WithExpr: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> WithExpr {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var tags: [String]?
                         var _codingField: CodingFields?
@@ -948,7 +948,7 @@ struct JSONDecodableMacroTests {
     @Test func aliasBasic() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct User {
                 @DecodableAlias("user_name") let userName: String
                 let age: Int
@@ -961,7 +961,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case userName
                     case age
                     case unknown
@@ -993,8 +993,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension User: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
+            extension User: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
                         var age: Int?
@@ -1029,7 +1029,7 @@ struct JSONDecodableMacroTests {
     @Test func aliasCombinedWithCodingKey() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct User {
                 @CodingKey("user_name") @DecodableAlias("username") let userName: String
             }
@@ -1040,7 +1040,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case userName
                     case unknown
 
@@ -1067,8 +1067,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension User: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
+            extension User: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
                         var _codingField: CodingFields?
@@ -1097,7 +1097,7 @@ struct JSONDecodableMacroTests {
     @Test func aliasMultiple() {
         assertMacroExpansion(
             """
-            @JSONDecodable
+            @CommonDecodable
             struct User {
                 @DecodableAlias("a", "b", "c") let name: String
             }
@@ -1108,7 +1108,7 @@ struct JSONDecodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: JSONOptimizedDecodingField {
+                enum CodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -1139,8 +1139,8 @@ struct JSONDecodableMacroTests {
                 }
             }
 
-            extension User: JSONDecodable {
-                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
+            extension User: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var _codingField: CodingFields?
@@ -1168,7 +1168,7 @@ struct JSONDecodableMacroTests {
 }
 
 private let decodableTestMacros: [String: Macro.Type] = [
-    "JSONDecodable": JSONDecodableMacro.self,
+    "CommonDecodable": CommonDecodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
     "CodableDefault": CodableDefaultMacro.self,
     "DecodableAlias": DecodableAliasMacro.self,
