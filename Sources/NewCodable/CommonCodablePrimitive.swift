@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 /// An internal enum representing all the types that `CommonDecoder` supports.
 internal enum CommonCodablePrimitive {
     case bool(Bool)

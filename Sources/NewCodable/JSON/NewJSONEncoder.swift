@@ -10,67 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 // TODO: Sorting
 // TODO: Pretty
 
 public struct NewJSONEncoder {
     public struct Options {
-        
-        /// The strategy to use for encoding `Date` values.
-        public struct DateEncodingStrategy : Sendable {
-            internal enum _Storage: @unchecked Sendable {
-                case deferredToDate
-                case secondsSince1970
-                case millisecondsSince1970
-                case iso8601
-                case formatted(any FormatStyle<Date,String>)
-            }
-            internal let storage: _Storage
-            
-            // TODO: Change this to secondsSinceReferenceDate?
-            /// Defer to `Date` for encoding. This is the default strategy.
-            public static var deferredToDate: Self {
-                .init(storage: .deferredToDate)
-            }
-            
-            /// Encode the `Date` as a UNIX timestamp from a JSON number.
-            public static var secondsSince1970: Self {
-                .init(storage: .secondsSince1970)
-            }
-            
-            /// Encode the `Date` as UNIX millisecond timestamp from a JSON number.
-            public static var millisecondsSince1970: Self {
-                .init(storage: .millisecondsSince1970)
-            }
-            
-            /// Encode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
-            public static var iso8601: Self {
-                .init(storage: .iso8601)
-            }
-            
-            /// Encode the `Date` as a string formatted by the given format.
-            public static func formatted(_ style: some FormatStyle<Date,String> & Sendable) -> Self {
-                .init(storage: .formatted(style))
-            }
-        }
-        
-        /// The strategy to use for encoding `Data` values.
-        public enum DataEncodingStrategy : Sendable {
-            
-            /// Defer to `Data` for encoding.
-            case deferredToData
-            
-            /// Decode the `Data` from a Base64-encoded string. This is the default strategy.
-            case base64
-        }
-        
         /// The strategy to use for non-JSON-conforming floating-point values (IEEE 754 infinity and NaN).
         public enum NonConformingFloatEncodingStrategy : Sendable {
             /// Throw upon encountering non-conforming values. This is the default strategy.
@@ -123,22 +67,21 @@ public struct NewJSONEncoder {
         }
         
         var assumesTopLevelDictionary = false // TODO: Unimplemented
-        internal var dataEncodingStrategy: DataEncodingStrategy
-        internal var dateEncodingStrategy: DateEncodingStrategy
         internal var nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy
         internal var withoutEscapingSlashes: Bool
         internal var pretty: Bool
         
+        // WORKAROUND: Nontrivial (existential container) field to work around
+        // sil_movechecking_bug_missed_copy compiler bug.
+        // Remove once the compiler bug is fixed.
+        private let _compilerWorkaround: (any Sendable)? = nil
+        
         public init(assumesTopLevelDictionary: Bool = false,
-                    dataEncodingStrategy: DataEncodingStrategy = .base64,
-                    dateEncodingStrategy: DateEncodingStrategy = .deferredToDate,
                     nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy = .throw,
                     withoutEscapingSlashes: Bool = false,
                     pretty: Bool = false
         ) {
             self.assumesTopLevelDictionary = assumesTopLevelDictionary
-            self.dataEncodingStrategy = dataEncodingStrategy
-            self.dateEncodingStrategy = dateEncodingStrategy
             self.nonConformingFloatEncodingStrategy = nonConformingFloatEncodingStrategy
             self.withoutEscapingSlashes = withoutEscapingSlashes
             self.pretty = pretty
@@ -187,32 +130,6 @@ public struct NewJSONEncoder {
     public func encode<T: ~Copyable>(_ value: borrowing some CommonEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws -> T) throws -> T {
         let bytes: GrowableEncodingBytes = try self.encode(value)
         return try resultSpanClosure(bytes.span.bytes)
-    }
-}
-
-// TODO: Move to Foundation + JSON cross-module import.
-extension NewJSONEncoder {
-    public func encode(_ value: borrowing some JSONEncodable & ~Copyable) throws(CodingError.Encoding) -> Data {
-        let bytes: GrowableEncodingBytes = try self.encode(value)
-        
-        let (storage, count) = bytes.deconstruct()
-        guard let pointer = storage.baseAddress else { return Data() }
-        return Data(bytesNoCopy: pointer, count: count, deallocator: .custom({ptr, _ in ptr.deallocate() }))
-    }
-    
-    public func encode(_ value: borrowing some JSONEncodable & CommonEncodable & ~Copyable) throws(CodingError.Encoding) -> Data {
-        @_transparent func asJSON<TAsJSON: JSONEncodable & ~Copyable>(_ value: borrowing TAsJSON) throws(CodingError.Encoding) -> Data {
-            try self.encode(value)
-        }
-        return try asJSON(value)
-    }
-    
-    public func encode(_ value: borrowing some CommonEncodable & ~Copyable) throws(CodingError.Encoding) -> Data {
-        let bytes: GrowableEncodingBytes = try self.encode(value)
-        
-        let (storage, count) = bytes.deconstruct()
-        guard let pointer = storage.baseAddress else { return Data() }
-        return Data(bytesNoCopy: pointer, count: count, deallocator: .custom({ptr, _ in ptr.deallocate() }))
     }
 }
 
@@ -427,17 +344,9 @@ public struct JSONDirectEncoder: CommonEncoder, ~Copyable, ~Escapable {
     }
     
     @_lifetime(self: copy self)
-    internal mutating func encodeAsBase64String(_ span: RawSpan) throws(CodingError.Encoding) {
-        // Inefficient.
-        let str = Data(_copying: span).base64EncodedString()
-        try self.encode(str)
-    }
-    
-    @_lifetime(self: copy self)
     public mutating func encodeBytes(_ span: RawSpan) throws(CodingError.Encoding) {
-        if self.state.options.dataEncodingStrategy == .base64 {
-            return try encodeAsBase64String(span)
-        }
+        // TODO: Do we still need a "bytes encoding strategy"? TBH, this should probably be base64 by default? Would this be specified by a parameter, or globally on the encoder?
+        // musli encodes bytes as an array. There's no configuration option. It probably relies on an attribute to force a base64 string.
         
         do {
             try state.writer.prepareForArray(depth: state.depth)
@@ -626,51 +535,6 @@ public struct JSONDirectEncoder: CommonEncoder, ~Copyable, ~Escapable {
     }
 }
 
-// Special cases
-extension JSONDirectEncoder {
-    @_lifetime(self: copy self)
-    public mutating func encode(_ data: Data) throws(CodingError.Encoding) {
-        try encodeBytes(data.bytes)
-    }
-    
-    @_lifetime(self: copy self)
-    public mutating func encode(_ date: Date) throws(CodingError.Encoding) {
-        try state.options.dateEncodingStrategy.encode(date: date, to: &self)
-    }
-    
-    @_lifetime(self: copy self)
-    public mutating func encode(_ url: URL) throws(CodingError.Encoding) {
-        // Encode URLs as single strings.
-        try self.encode(url.absoluteString)
-    }
-    
-    @_lifetime(self: copy self)
-    public mutating func encode(_ decimal: Decimal) throws(CodingError.Encoding) {
-        // TODO: watchOS/32-bit
-        try self.encode(arbitraryPrecisionNumber: decimal.description.utf8Span)
-    }
-    
-    @_lifetime(self: copy self)
-    internal mutating func encodeGenericNonCopyable<T: CommonEncodable & ~Copyable>(_ value: borrowing T) throws(CodingError.Encoding) {
-        try value.encode(to: &self)
-    }
-    
-    @_lifetime(self: copy self)
-    internal mutating func encodeGeneric<T: CommonEncodable>(_ value: T) throws(CodingError.Encoding) {
-        if let date = value as? Date {
-            try self.encode(date)
-        } else if self.state.options.dataEncodingStrategy == .base64, let data = value as? Data {
-            try self.encode(data)
-        } else if let url = value as? URL {
-            try self.encode(url)
-        } else if let decimal = value as? Decimal {
-            try self.encode(decimal)
-        } else {
-            try self.encodeGenericNonCopyable(value)
-        }
-    }
-}
-    
 extension JSONDirectEncoder {
     struct State: ~Copyable, ~Escapable {
         let options: Options
@@ -980,7 +844,7 @@ extension JSONDirectEncoder {
     
     @_lifetime(self: copy self)
     public mutating func encode<T: CommonEncodable>(_ value: borrowing T) throws(CodingError.Encoding) {
-        try self.encodeGeneric(value)
+        try value.encode(to: &self)
     }
     
     /// Convenience: encode using an explicit context (inout version for stateful contexts).
@@ -1014,26 +878,6 @@ extension JSONDirectEncoder {
             try encodedValue.encode(to: &self)
         } catch {
             fatalError("TODO: Wrap/translate error")
-        }
-    }
-}
-
-extension NewJSONEncoder.Options.DateEncodingStrategy {
-    func encode(date: Date, to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-        switch self.storage {
-        case .millisecondsSince1970:
-            let value = 1000.0 * date.timeIntervalSince1970
-            try encoder.encode(value)
-        case .secondsSince1970:
-            try encoder.encode(date.timeIntervalSince1970)
-        case .iso8601:
-            let string = date.formatted(.iso8601)
-            try encoder.encode(string)
-        case .formatted(let style):
-            let string = date.formatted(style)
-            try encoder.encode(string)
-        case .deferredToDate:
-            try encoder.encode(date.timeIntervalSinceReferenceDate)
         }
     }
 }

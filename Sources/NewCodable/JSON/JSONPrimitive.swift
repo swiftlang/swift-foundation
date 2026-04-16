@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 public enum JSONPrimitive {
     case string(String)
     case number(Number)
@@ -937,19 +930,6 @@ extension JSONPrimitive: AdaptableDecodableValue {
     }
     
     public func decode<T>(_ type: T.Type, context: AdaptorDecodableValueContext<JSONPrimitive>) throws -> T where T : Decodable {
-        if context.decoderContext.options.dataDecodingStrategy == .base64, type is Data.Type {
-            let string = try decode(String.self, context: context)
-            guard let data = Data(base64Encoded: string) else {
-                fatalError("Bad Base64")
-            }
-            return data as! T
-        }
-        if type is Date.Type {
-            return try context.withDecoder(for: self) {
-                try context.decoderContext.options.dateDecodingStrategy.decode(from: $0)
-            } as! T
-        }
-        
         return try context.withDecoder(for: self) {
             try type.init(from: $0)
         }
@@ -1022,21 +1002,9 @@ extension JSONPrimitive: AdaptorEncodableValue {
     }
     
     public init<T: Encodable>(from value: T, context: AdaptorEncodableValueContext<Self>) throws {
-        if let date = value as? Date {
-            self = try context.encoderContext.options.dateEncodingStrategy.jsonValue(for: date, context: context)
-        } else if context.encoderContext.options.dataEncodingStrategy == .base64, let data = value as? Data {
-            // Respect Data encoding strategy
-            self = .string(data.base64EncodedString())
-        } else if let url = value as? URL {
-            // Encode URLs as single strings.
-            self = .init(url.absoluteString, context: context)
-        } else if let decimal = value as? Decimal {
-            self = .number(.init(extendedPrecisionRepresentation: decimal.description))
-        } else {
-            self = try context.withEncoder {
-                try value.encode(to: $0)
-                return $0.encodedValue
-            }
+        self = try context.withEncoder {
+            try value.encode(to: $0)
+            return $0.encodedValue
         }
     }
     
