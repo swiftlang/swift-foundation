@@ -392,10 +392,10 @@ internal import _FoundationCollections
         #endif
     }
 
+    #if FOUNDATION_FRAMEWORK
     /// Notifies interop bridge observers so that grandchild progress propagates
     /// through the SubprogressBridge to the parent NSProgress.
     private func notifyInteropObserversOfChildUpdate() {
-#if FOUNDATION_FRAMEWORK
         // Phase 1: Collect bridge manager and dirty children info
         let info: (bridgeManager: ProgressManager, updates: [PendingChildUpdateInfo]?)? = state.withLock { state in
             guard case .interopObservation(let observation) = state.interopType,
@@ -429,8 +429,8 @@ internal import _FoundationCollections
 
         // Notify bridge
         info.bridgeManager.notifyObservers(with: observerState)
-#endif
     }
+    #endif
     
     internal func updatedProgressFraction() -> ProgressFraction {
         // Get information about dirty children (Acquire and release self's lock)
