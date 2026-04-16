@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
@@ -1215,17 +1208,7 @@ extension JSONParserDecoder {
         }
         try closure(&self)
     }
-    
-    @_lifetime(self: copy self)
-    public mutating func decode(_ hint: Date.Type) throws(CodingError.Decoding) -> Date {
-        return try self.state.options[].dateDecodingStrategy.decodeDate(from: &self)
-    }
-    
-    @_lifetime(self: copy self)
-    public mutating func decode(_ hint: Data.Type) throws(CodingError.Decoding) -> Data {
-        return try self.state.options[].dataDecodingStrategy.decodeData(from: &self)
-    }
-    
+
     @_lifetime(self: copy self)
     public mutating func decodeAny<V: JSONDecodingVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing V) throws(CodingError.Decoding) -> V.DecodedValue {
         // TODO: Add coding path
@@ -1347,102 +1330,6 @@ extension JSONParserDecoder {
     }
 }
 
-// Data / Date visitors
-
-extension JSONParserDecoder {
-    internal struct Base64Visitor: DecodingStringVisitor {
-        public typealias DecodedValue = Data
-        public func visitString(_ string: String) throws(CodingError.Decoding) -> Data {
-            guard let result = Data(base64Encoded: string) else {
-                throw CodingError.dataCorrupted(debugDescription: "Invalid base64 encoded string")
-            }
-            return result
-        }
-        public func visitUTF8Bytes(_ buffer: UTF8Span) throws(CodingError.Decoding) -> Data {
-            // TODO: No-copy
-            guard let result = Data(base64Encoded: Data(_copying: buffer.span.bytes)) else {
-                throw CodingError.dataCorrupted(debugDescription: "Invalid base64 encoded string")
-            }
-            return result
-        }
-        public init() { }
-    }
-    
-    internal enum DateNumberVisitor: DecodingNumberVisitor {
-        typealias DecodedValue = Date
-        
-        case referenceDate
-        case secondsSince1970
-        case msSince1970
-        
-        func visit(_ integer: Int64) throws(CodingError.Decoding) -> Date {
-            switch self {
-            case .referenceDate:
-                Date(timeIntervalSinceReferenceDate: TimeInterval(integer))
-            case .secondsSince1970:
-                Date(timeIntervalSince1970: TimeInterval(integer))
-            case .msSince1970:
-                Date(timeIntervalSince1970: TimeInterval(integer) / 1000.0)
-            }
-        }
-        func visit(_ integer: UInt64) throws(CodingError.Decoding) -> Date {
-            switch self {
-            case .referenceDate:
-                Date(timeIntervalSinceReferenceDate: TimeInterval(integer))
-            case .secondsSince1970:
-                Date(timeIntervalSince1970: TimeInterval(integer))
-            case .msSince1970:
-                Date(timeIntervalSince1970: TimeInterval(integer) / 1000.0)
-            }
-        }
-        func visit(_ double: Double) throws(CodingError.Decoding) -> Date {
-            switch self {
-            case .referenceDate:
-                Date(timeIntervalSinceReferenceDate: TimeInterval(double))
-            case .secondsSince1970:
-                Date(timeIntervalSince1970: TimeInterval(double))
-            case .msSince1970:
-                Date(timeIntervalSince1970: TimeInterval(double) / 1000.0)
-            }
-        }
-    }
-    
-    internal enum DateStringVistior: DecodingStringVisitor {
-        typealias DecodedValue = Date
-        
-        case iso8601
-        case formatted(any ParseStrategy)
-        
-        // TODO: I'd probably prefer the default to be the other way in this case. Or maybe they both need defaults?
-        
-        func visitUTF8Bytes(_ buffer: UTF8Span) throws(CodingError.Decoding) -> Date {
-            // TODO: Inefficient.
-            return try visitString(String(copying: buffer))
-        }
-        
-        // TODO: opening the existential here unhappily, since ParseStrategy doesn't have primary associated types.
-        func useParseStrategy<S: ParseStrategy>(_ strategy: S, on input: String) throws(CodingError.Decoding) -> Date {
-            do {
-                return try strategy.parse(input as! S.ParseInput) as! Date
-            } catch {
-                fatalError("TODO: Convert/wrap error")
-            }
-        }
-        
-        func visitString(_ string: String) throws(CodingError.Decoding) -> Date {
-            switch self {
-            case .iso8601:
-                guard let date = try? Date.ISO8601FormatStyle().parse(string) else {
-                    throw CodingError.dataCorrupted(debugDescription: "IS08601 date parsing failed")
-                }
-                return date
-            case .formatted(let parseStrategy):
-                return try self.useParseStrategy(parseStrategy, on: string)
-            }
-        }
-    }
-}
-
 // CodingPathNode
 
 extension UnsafeMutablePointer<JSONParserDecoder.CodingPathNode> {
@@ -1536,29 +1423,6 @@ extension JSONParserDecoder {
 // CommonCodable
 
 extension JSONParserDecoder: CommonDecoder {
-    @inlinable
-    @_lifetime(self: copy self)
-    internal mutating func decodeGenericCommon<T: CommonDecodable>(_ type: T.Type) throws(CodingError.Decoding) -> T {
-        // Cover all the types that JSONDecoder supports specially that CommonDecodable does not.
-        if type == Date.self {
-            return _identityCast(try self.decode(Date.self), to: T.self)
-        }
-        if type == Data.self {
-            return _identityCast(try self.decode(Data.self), to: T.self)
-        }
-        if type == URL.self {
-            fatalError("TBD")
-            // TODO: Should this also be a primitive of JSON protocols?
-//            return try self.decode(URL.self) as! T
-        }
-        if type == Decimal.self {
-            fatalError("TBD")
-            // TODO: Should this also be a primitive of JSON protocols?
-//            return try self.decode(Decimal.self) as! T
-        }
-        return try T.decode(from: &self)
-    }
-    
     /// Convenience: decode a JSONDecodable & CommonDecodable type using the JSONDecodable implementation.
     @inline(__always)
     @_alwaysEmitIntoClient
@@ -1572,7 +1436,7 @@ extension JSONParserDecoder: CommonDecoder {
     
     @_lifetime(self: copy self)
     public mutating func decode<T: CommonDecodable>(_ t: T.Type) throws(CodingError.Decoding) -> T where T: Copyable {
-        try decodeGenericCommon(t)
+        try T.decode(from: &self)
     }
     
     @inlinable

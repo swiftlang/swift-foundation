@@ -760,45 +760,7 @@ struct JSONEncodingDecodingTests {
     //        decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: CodableTypeWithConfiguration.ConfigProviding.self), configuration: CodableTypeWithConfiguration.ConfigProviding.self)
     //        #expect(decoded == value)
     //    }
-    
-    // MARK: - Date Strategy Tests
-    
-    // TODO: Date support
-    //    @Test func encodingDateSecondsSince1970() {
-    //        // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
-    //        let seconds = 1000.0
-    //        let expectedJSON = "1000".data(using: .utf8)!
-    //
-    //        _testRoundTrip(of: Date(timeIntervalSince1970: seconds),
-    //                       expectedJSON: expectedJSON,
-    //                       encoderOptions: .init(dateEncodingStrategy: .secondsSince1970),
-    //                       decoderOptions: .init(dateEncodingStrategy: .secondsSince1970))
-    //
-    //        // Optional dates should encode the same way.
-    //        _testRoundTrip(of: Optional(Date(timeIntervalSince1970: seconds)),
-    //                       expectedJSON: expectedJSON,
-    //                       encoderOptions: .init(dateEncodingStrategy: .secondsSince1970),
-    //                       decoderOptions: .init(dateEncodingStrategy: .secondsSince1970))
-    //    }
-    //
-    //    @Test func encodingDateMillisecondsSince1970() {
-    //        // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
-    //        let seconds = 1000.0
-    //        let expectedJSON = "1000000".data(using: .utf8)!
-    //
-    //        _testRoundTrip(of: Date(timeIntervalSince1970: seconds),
-    //                       expectedJSON: expectedJSON,
-    //                       encoderOptions: .init(dateEncodingStrategy: .millisecondsSince1970),
-    //                       decoderOptions: .init(dateEncodingStrategy: .millisecondsSince1970))
-    //
-    //        // Optional dates should encode the same way.
-    //        _testRoundTrip(of: Optional(Date(timeIntervalSince1970: seconds)),
-    //                       expectedJSON: expectedJSON,
-    //                       encoderOptions: .init(dateEncodingStrategy: .millisecondsSince1970),
-    //                       decoderOptions: .init(dateEncodingStrategy: .millisecondsSince1970))
-    //
-    //    }
-    
+        
     // MARK: - Non-Conforming Floating Point Strategy Tests
     @Test func encodingNonConformingFloats() {
         _testEncodeFailure(of: Float.infinity)
@@ -1376,8 +1338,7 @@ struct JSONEncodingDecodingTests {
     @Test func trailingComma_dataByteArray() throws {
         let json = "[72, 101, 108, 108, 111,]"
         let data = Data(json.utf8)
-        let options = NewJSONDecoder.Options(dataDecodingStrategy: .deferredToData)
-        let decoder = NewJSONDecoder(options: options)
+        let decoder = NewJSONDecoder()
 
         let result = try decoder.decode(Data.self, from: data)
         #expect(result == Data([72, 101, 108, 108, 111]))
@@ -1835,29 +1796,7 @@ struct JSONEncodingDecodingTests {
         }
     }
     
-    // TODO: Date support?
-    //    @Test func infiniteDate() {
-    //        let date = Date(timeIntervalSince1970: .infinity)
-    //
-    //        let encoder = JSONEncoder()
-    //
-    //        encoder.dateEncodingStrategy = .deferredToDate
-    //        #expect(throws: (any Error).self) {
-    //            try encoder.encode([date])
-    //        }
-    //
-    //        encoder.dateEncodingStrategy = .secondsSince1970
-    //        #expect(throws: (any Error).self) {
-    //            try encoder.encode([date])
-    //        }
-    //
-    //        encoder.dateEncodingStrategy = .millisecondsSince1970
-    //        #expect(throws: (any Error).self) {
-    //            try encoder.encode([date])
-    //        }
-    //    }
-    
-    // TODO: This test does not exemplify desired client behavior and it differs from traditional JSONEncoder behacior. It's unclear whether we will want to tolerate this kind of behavior from clients, or what we should do to prevent it.
+    // TODO: This test does not exemplify desired client behavior and it differs from traditional JSONEncoder behavior. It's unclear whether we will want to tolerate this kind of behavior from clients, or what we should do to prevent it.
     @Test func typeEncodesNothing() {
         struct EncodesNothing : JSONEncodable {
             func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
@@ -2142,34 +2081,6 @@ struct JSONEncodingDecodingTests {
         _run_failTest(name: "fail40", type: JSONFail.Test40.self)
         _run_failTest(name: "fail41", type: JSONFail.Test41.self)
         
-    }
-    
-    // TODO: Date support?
-    //    @Test func encodingDateISO8601() {
-    //        let timestamp = Date(timeIntervalSince1970: 1000)
-    //        let expectedJSON = "\"\(timestamp.formatted(.iso8601))\"".data(using: .utf8)!
-    //
-    //        _testRoundTrip(of: timestamp,
-    //                       expectedJSON: expectedJSON,
-    //                       dateEncodingStrategy: .iso8601,
-    //                       dateDecodingStrategy: .iso8601)
-    //
-    //
-    //        // Optional dates should encode the same way.
-    //        _testRoundTrip(of: Optional(timestamp),
-    //                       expectedJSON: expectedJSON,
-    //                       dateEncodingStrategy: .iso8601,
-    //                       dateDecodingStrategy: .iso8601)
-    //    }
-    
-    @Test func encodingDataBase64() {
-        let data = Data([0xDE, 0xAD, 0xBE, 0xEF])
-        
-        let expectedJSON = #""3q2+7w==""#.data(using: .utf8)!
-        _testRoundTrip(of: data, expectedJSON: expectedJSON)
-        
-        // Optional data should encode the same way.
-        _testRoundTrip(of: Optional(data), expectedJSON: expectedJSON)
     }
 
     /// A simple type that only decodes the "name" field and skips all unknown keys.

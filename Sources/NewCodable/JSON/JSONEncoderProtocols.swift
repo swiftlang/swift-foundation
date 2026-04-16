@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 public protocol JSONEncodable: ~Copyable {
     func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding)
 }
@@ -194,23 +187,6 @@ extension Dictionary: JSONEncodable where Key: CodingStringKeyRepresentable, Val
         try encoder.encode(self)
     }
 }
-
-extension Data: JSONEncodable {
-    public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-        try encoder.encode(self)
-    }
-}
-
-extension Date: JSONEncodable {
-    public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
-        try encoder.encode(self)
-    }
-}
-
-// MARK: Foundation currency type adoptions
-
-// TODO: URL, UUID
-
 
 // MARK: RawRepresentable extension
 

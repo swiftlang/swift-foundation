@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 // MARK: - JSON Decoding Context Design
 
 /// Types that can be decoded from JSON.
@@ -243,6 +237,9 @@ public protocol JSONDecoderProtocol: ~Escapable {
     mutating func decodeString<V: DecodingStringVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing V) throws(CodingError.Decoding) -> V.DecodedValue
     
     @_lifetime(self: copy self)
+    mutating func decodeBytes<V: DecodingBytesVisitor>(visitor: V) throws(CodingError.Decoding) -> V.DecodedValue
+    
+    @_lifetime(self: copy self)
     mutating func decodeNumber() throws(CodingError.Decoding) -> JSONPrimitive.Number
     
     @_lifetime(self: copy self)
@@ -250,12 +247,6 @@ public protocol JSONDecoderProtocol: ~Escapable {
     
     @_lifetime(self: copy self)
     mutating func decodeOptional(_ closure: (inout Self) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding)
-    
-    @_lifetime(self: copy self)
-    mutating func decode(_ hint: Date.Type) throws(CodingError.Decoding) -> Date
-    
-    @_lifetime(self: copy self)
-    mutating func decode(_ hint: Data.Type) throws(CodingError.Decoding) -> Data
     
     @_lifetime(self: copy self)
     mutating func decodeAny<V: JSONDecodingVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing V) throws(CodingError.Decoding) -> V.DecodedValue
@@ -492,27 +483,6 @@ extension Dictionary: JSONDecodable where Key: CodingStringKeyRepresentable, Val
         return try decoder.decode(Self.self, sizeHint: 0)
     }
 }
-
-extension Data: JSONDecodable {
-    @inline(__always)
-    @_alwaysEmitIntoClient
-    public static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
-        return try decoder.decode(Self.self)
-    }
-}
-
-extension Date: JSONDecodable {
-    @inline(__always)
-    @_alwaysEmitIntoClient
-    public static func decode(from decoder: inout some (JSONDecoderProtocol & ~Escapable)) throws(CodingError.Decoding) -> Self {
-        return try decoder.decode(Self.self)
-    }
-}
-
-// MARK: Foundation currency type adoptions
-
-// TODO: URL, UUID
-
 
 // MARK: RawRepresentable extension
 

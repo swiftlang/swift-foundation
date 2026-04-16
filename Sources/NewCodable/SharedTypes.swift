@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
@@ -79,14 +72,6 @@ extension RawSpan {
     @inline(__always)
     internal func _loadByteUnchecked(_ offset: Int) -> UInt8 {
         unsafeLoadUnaligned(fromUncheckedByteOffset: offset, as: UInt8.self)
-    }
-}
-
-internal extension Data {
-    init(_copying span: RawSpan) {
-        self = span.withUnsafeBytes {
-            Data($0)
-        }
     }
 }
 
