@@ -198,11 +198,7 @@ extension NSLocale {
 
     @objc(_localeIdentifierByAddingLikelySubtags:)
     class func _localeIdentifierByAddingLikelySubtags(_ localeID: String) -> String {
-#if canImport(_FoundationICU)
-        Locale.localeIdentifierWithLikelySubtags(localeID)
-#else
-        ""
-#endif
+        LocaleCache.cache.localeIdentifierWithLikelySubtags(localeID, cacheResult: false)
     }
 
     @objc(_localeWithNewCalendarIdentifier:)

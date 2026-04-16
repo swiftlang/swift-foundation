@@ -513,6 +513,16 @@ let benchmarks = {
     Benchmark("range(of:)") { benchmark in
         longString.range(of: "cccc")
     }
+
+    Benchmark("runs") {benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(manyAttributesString.runs)
+        }
+    }
+
+    Benchmark("stringConversion") { benchmark in
+        blackHole(String(longString.characters))
+    }
 }
 
 

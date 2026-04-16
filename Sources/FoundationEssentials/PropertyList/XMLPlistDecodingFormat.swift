@@ -81,11 +81,11 @@ internal struct _XMLPlistDecodingFormat : PlistDecodingFormat {
         }
     }
     
-    static func unwrapFloatingPoint<T: BinaryFloatingPoint>(from mapValue: Map.Value, in map: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    static func unwrapFloatingPoint<T: BinaryFloatingPoint & Sendable>(from mapValue: Map.Value, in map: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         try mapValue.realValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
     
-    static func unwrapFixedWidthInteger<T: FixedWidthInteger>(from mapValue: Map.Value, in map: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    static func unwrapFixedWidthInteger<T: FixedWidthInteger & Sendable>(from mapValue: Map.Value, in map: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         try mapValue.integerValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
 }

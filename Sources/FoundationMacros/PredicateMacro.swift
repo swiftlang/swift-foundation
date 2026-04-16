@@ -29,27 +29,36 @@ private let _knownSupportedFunctions: Set<FunctionStructure> = [
     FunctionStructure("starts", arguments: ["with"]),
     FunctionStructure("min", arguments: []),
     FunctionStructure("max", arguments: []),
-    FunctionStructure("localizedStandardContains", arguments: [.unlabeled]),
-    FunctionStructure("localizedCompare", arguments: [.unlabeled]),
-    FunctionStructure("caseInsensitiveCompare", arguments: [.unlabeled])
 ]
 
 private var knownSupportedFunctions: Set<FunctionStructure> {
     #if FOUNDATION_FRAMEWORK
     var result = _knownSupportedFunctions
     result.insert(FunctionStructure("evaluate", arguments: [.pack(labeled: nil)]))
+    result.insert(FunctionStructure("localizedStandardContains", arguments: [.unlabeled]))
+    result.insert(FunctionStructure("localizedCompare", arguments: [.unlabeled]))
+    result.insert(FunctionStructure("caseInsensitiveCompare", arguments: [.unlabeled]))
     return result
     #else
     _knownSupportedFunctions
     #endif
 }
 
-private let supportedFunctionSuggestions: [FunctionStructure : FunctionStructure] = [
+private let _supportedFunctionSuggestions: [FunctionStructure : FunctionStructure] = [
     FunctionStructure("hasPrefix", arguments: [.unlabeled]) : FunctionStructure("starts", arguments: ["with"]),
-    FunctionStructure("localizedCaseInsensitiveContains", arguments: [.unlabeled]) : FunctionStructure("localizedStandardContains", arguments: [.unlabeled]),
-    FunctionStructure("localizedCaseInsensitiveCompare", arguments: [.unlabeled]) : FunctionStructure("localizedCompare", arguments: [.unlabeled]),
-    FunctionStructure("localizedStandardCompare", arguments: [.unlabeled]) : FunctionStructure("localizedCompare", arguments: [.unlabeled])
 ]
+
+private var supportedFunctionSuggestions: [FunctionStructure : FunctionStructure] {
+    #if FOUNDATION_FRAMEWORK
+    var result = _supportedFunctionSuggestions
+    result[FunctionStructure("localizedCaseInsensitiveContains", arguments: [.unlabeled])] = FunctionStructure("localizedStandardContains", arguments: [.unlabeled])
+    result[FunctionStructure("localizedCaseInsensitiveCompare", arguments: [.unlabeled])] = FunctionStructure("localizedCompare", arguments: [.unlabeled])
+    result[FunctionStructure("localizedStandardCompare", arguments: [.unlabeled])] = FunctionStructure("localizedCompare", arguments: [.unlabeled])
+    return result
+    #else
+    _supportedFunctionSuggestions
+    #endif
+}
 
 extension Array where Element == FunctionStructure.Argument {
     fileprivate func argumentsEqual(_ other: Self) -> Bool {
@@ -366,7 +375,7 @@ extension ClosureParameterListSyntax {
     fileprivate var withVariableWrappedTypes: Self {
         return Self(self.map {
             if let type = $0.type {
-                $0.with(\.type, "PredicateExpressions.Variable<\(type)>")
+                $0.with(\.type, "PredicateExpressions.\(raw: moduleName())::Variable<\(type)>")
             } else {
                 $0
             }
@@ -441,7 +450,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         var argument = shouldVisit ? visit(expression) : expression
         
         if shouldVisit && argument == expression {
-            argument = "PredicateExpressions.build_Arg(\(expression.with(\.leadingTrivia, []).with(\.trailingTrivia, [])))"
+            argument = "PredicateExpressions.\(raw: moduleName())::build_Arg(\(expression.with(\.leadingTrivia, []).with(\.trailingTrivia, [])))"
         }
         
         argument = argument.with(\.leadingTrivia, label == nil ? indent : .space)
@@ -456,7 +465,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "!":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Negation(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Negation(
                 \(makeArgument(label: nil, node.expression))
                 \(raw: indent))
                 """
@@ -465,7 +474,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "-":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_UnaryMinus(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_UnaryMinus(
                 \(makeArgument(label: nil, node.expression))
                 \(raw: indent))
                 """
@@ -499,7 +508,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "==":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Equal(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Equal(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -509,7 +518,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "!=":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_NotEqual(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_NotEqual(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -519,7 +528,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "<":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Comparison(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Comparison(
                 \(lhsArgument),
                 \(rhsArgument),
                 \(raw: indent + indentWidth)op: .lessThan
@@ -530,7 +539,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "<=":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Comparison(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Comparison(
                 \(lhsArgument),
                 \(rhsArgument),
                 \(raw: indent + indentWidth)op: .lessThanOrEqual
@@ -541,7 +550,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case ">":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Comparison(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Comparison(
                 \(lhsArgument),
                 \(rhsArgument),
                 \(raw: indent + indentWidth)op: .greaterThan
@@ -552,7 +561,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case ">=":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Comparison(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Comparison(
                 \(lhsArgument),
                 \(rhsArgument),
                 \(raw: indent + indentWidth)op: .greaterThanOrEqual
@@ -563,7 +572,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "||":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Disjunction(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Disjunction(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -573,7 +582,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "&&":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Conjunction(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Conjunction(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -583,7 +592,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "+":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Arithmetic(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Arithmetic(
                 \(lhsArgument),
                 \(rhsArgument),
                 \(raw: indent + indentWidth)op: .add
@@ -594,7 +603,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "-":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Arithmetic(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Arithmetic(
                 \(lhsArgument),
                 \(rhsArgument),
                 \(raw: indent + indentWidth)op: .subtract
@@ -605,7 +614,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "*":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Arithmetic(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Arithmetic(
                 \(lhsArgument),
                 \(rhsArgument),
                 \(raw: indent + indentWidth)op: .multiply
@@ -616,7 +625,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "/":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Division(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Division(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -626,7 +635,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "%":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Remainder(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Remainder(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -636,7 +645,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "??":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_NilCoalesce(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_NilCoalesce(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -647,7 +656,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "...":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_ClosedRange(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_ClosedRange(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -658,7 +667,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         case "..<":
             let syntax: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Range(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Range(
                 \(lhsArgument),
                 \(rhsArgument)
                 \(raw: indent))
@@ -679,14 +688,14 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     
     override func visit(_ node: ForceUnwrapExprSyntax) -> ExprSyntax {
         return """
-                \(raw: indent)PredicateExpressions.build_ForcedUnwrap(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_ForcedUnwrap(
                 \(makeArgument(label: nil, node.expression))
                 \(raw: indent))
                 """
     }
     
     override func visit(_ node: NilLiteralExprSyntax) -> ExprSyntax {
-        "PredicateExpressions.build_NilLiteral()"
+        "PredicateExpressions.\(raw: moduleName())::build_NilLiteral()"
     }
     
     override func visit(_ node: MemberAccessExprSyntax) -> ExprSyntax {
@@ -698,7 +707,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         let newPropertyComponent = KeyPathPropertyComponentSyntax(declName: node.declName)
         let keyPath = KeyPathExprSyntax(components: [.init(period: TokenSyntax.periodToken(), component: .property(newPropertyComponent))])
         return """
-                \(raw: indent)PredicateExpressions.build_KeyPath(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_KeyPath(
                 \(makeArgument(label: "root", base)),
                 \(makeArgument(label: "keyPath", .init(keyPath), shouldVisit: false).with(\.trailingTrivia, []))
                 \(raw: indent))
@@ -789,13 +798,13 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             // Don't indent, because closures already get indented
             let closureArg = makeArgument(label: nil, ExprSyntax(closure), shouldIndent: false)
             return """
-             \(raw: indent)PredicateExpressions.build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
+             \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
              \(LabeledExprListSyntax(arguments))
              \(raw: indent))\(raw: Trivia.space)\(closureArg.with(\.leadingTrivia, []).with(\.trailingTrivia, []))
              """
         } else {
             return """
-             \(raw: indent)PredicateExpressions.build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
+             \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
              \(LabeledExprListSyntax(arguments))
              \(raw: indent))
              """
@@ -824,7 +833,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         if success && body == statements {
             let wrapped: ExprSyntax =
                 """
-                \(raw: indent)PredicateExpressions.build_Arg(
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Arg(
                 \(raw: indent + indentWidth)\(body.with(\.leadingTrivia, []).with(\.trailingTrivia, []))
                 \(raw: indent))
                 """
@@ -876,7 +885,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         let secondChoice = node.elseExpression
         
         return """
-         \(raw: indent)PredicateExpressions.build_Conditional(
+         \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Conditional(
          \(makeArgument(label: nil, condition).with(\.trailingTrivia, [])),
          \(makeArgument(label: nil, firstChoice).with(\.trailingTrivia, [])),
          \(makeArgument(label: nil, secondChoice).with(\.trailingTrivia, []))
@@ -886,7 +895,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     
     override func visit(_ node: IsExprSyntax) -> ExprSyntax {
         return """
-         \(raw: indent)PredicateExpressions.TypeCheck<_, \(node.type)>(
+         \(raw: indent)PredicateExpressions.\(raw: moduleName())::TypeCheck<_, \(node.type)>(
          \(makeArgument(label: nil, node.expression).with(\.trailingTrivia, []))
          \(raw: indent))
          """
@@ -905,7 +914,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         }
         
         return """
-         \(raw: indent)PredicateExpressions.\(raw: castType)Cast<_, \(node.type)>(
+         \(raw: indent)PredicateExpressions.\(raw: moduleName())::\(raw: castType)Cast<_, \(node.type)>(
          \(makeArgument(label: nil, node.expression).with(\.trailingTrivia, []))
          \(raw: indent))
          """
@@ -926,7 +935,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         // Wrap constant return expressions in a build_Arg call
         let wrapped: ExprSyntax =
             """
-            PredicateExpressions.build_Arg(
+            PredicateExpressions.\(raw: moduleName())::build_Arg(
             \(visited.with(\.leadingTrivia, indent + indentWidth))
             \(raw: indent))
             """
@@ -982,7 +991,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             let initializer = binding.initializer?.value ?? ExprSyntax(DeclReferenceExprSyntax(baseName: identifier))
             
             prior = """
-             \(raw: indent)PredicateExpressions.build_flatMap(
+             \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_flatMap(
              \(makeArgument(label: nil, initializer).with(\.trailingTrivia, []))
              \(raw: indent)) { \(identifier.with(\.trailingTrivia, []).with(\.leadingTrivia, [])) in
              \(makeArgument(label: nil, prior, shouldVisit: false).with(\.trailingTrivia, []))
@@ -992,7 +1001,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         }
         
         return """
-         \(raw: indent)PredicateExpressions.build_NilCoalesce(
+         \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_NilCoalesce(
          \(makeArgument(label: "lhs", prior, shouldVisit: false)),
          \(makeArgument(label: "rhs", `else`, shouldVisit: false))
          \(raw: indent))
@@ -1061,7 +1070,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         }
 
         return """
-         \(raw: indent)PredicateExpressions.build_Conditional(
+         \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_Conditional(
          \(makeArgument(label: nil, ifExpression).with(\.trailingTrivia, [])),
          \(makeArgument(label: nil, bodyExpression, shouldVisit: false).with(\.trailingTrivia, [])),
          \(makeArgument(label: nil, elseExpression, shouldVisit: false).with(\.trailingTrivia, []))
@@ -1144,6 +1153,14 @@ private struct PredicateExpansionDiagnostic: DiagnosticMessage, FixItMessage, Ex
     }
 }
 
+private func moduleName(internationalization: Bool = false) -> String {
+    #if FOUNDATION_FRAMEWORK
+    "Foundation"
+    #else
+    internationalization ? "FoundationInternationalization" : "FoundationEssentials"
+    #endif
+}
+
 private enum ExpansionKind {
     case predicate
     case expression
@@ -1166,13 +1183,9 @@ private enum ExpansionKind {
     var macroKeyword: String {
         "#\(capitalizedKeyword)"
     }
-    
+
     var qualifiedExpansionType: String {
-        #if FOUNDATION_FRAMEWORK
-        "Foundation.\(capitalizedKeyword)"
-        #else
-        "FoundationEssentials.\(capitalizedKeyword)"
-        #endif
+        "\(moduleName()).\(capitalizedKeyword)"
     }
 }
 

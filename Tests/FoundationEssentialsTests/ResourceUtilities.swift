@@ -52,22 +52,24 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     return try? Data(contentsOf: essentialsURL)
 #else
     // swiftpm drops the resources next to the executable, at:
-    // ./swift-foundation_FoundationEssentialsTests.resources/Resources/
+    // ./swift-foundation_FoundationEssentialsTests.{resources|bundle}/Resources/
     // Hard-coding the path is unfortunate, but a temporary need until we have a better way to handle this
 
-    var toolsResourcesDir = URL(filePath: ProcessInfo.processInfo.arguments[0])
+    let execDir = URL(filePath: ProcessInfo.processInfo.arguments[0])
         .deletingLastPathComponent()
-        .appending(component: "swift-foundation_FoundationEssentialsTests-tool.resources", directoryHint: .isDirectory)
 
-    // On Linux the tests are built for the "host" because there are macro tests, on Windows
-    // the tests are only built for the "target" so we need to figure out whether `-tools`
-    // resources exist and if so, use them.
-    let resourcesDir = if FileManager.default.fileExists(atPath: toolsResourcesDir.path) {
-        toolsResourcesDir
-    } else {
-        URL(filePath: ProcessInfo.processInfo.arguments[0])
-            .deletingLastPathComponent()
-            .appending(component: "swift-foundation_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
+    // Check for -tool variants first (used when macros are present with --build-system native), then non-tool variants.
+    // Check both .resources (--build-system native) and .bundle (--build-system swiftbuild) extensions.
+    let candidates = [
+        "swift-foundation_FoundationEssentialsTests-tool.resources",
+        "swift-foundation_FoundationEssentialsTests.resources",
+        "swift-foundation_FoundationEssentialsTests.bundle",
+    ]
+
+    guard let resourcesDir = candidates
+        .map({ execDir.appending(component: $0, directoryHint: .isDirectory) })
+        .first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+        return nil
     }
 
     var path = resourcesDir.appending(component: "Resources", directoryHint: .isDirectory)

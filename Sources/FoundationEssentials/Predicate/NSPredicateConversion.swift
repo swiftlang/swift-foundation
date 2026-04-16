@@ -374,11 +374,11 @@ extension PredicateExpressions.RangeExpressionContains : ConvertibleExpression {
         } else if let rangeValue = (range as? _RangeValue)?._anyRange {
             // Otherwise, if the range is a captured value then convert it to appropriate comparison expressions based on the range type
             switch rangeValue {
-            case let .range(upper, lower):
+            case let .range(lower, upper):
                 let lowerBoundCondition = _comparison(elementExpr, try _expressionForBound(lower), type: .greaterThanOrEqualTo)
                 let upperBoundCondition = _comparison(elementExpr, try _expressionForBound(upper), type: .lessThan)
                 return .predicate(NSCompoundPredicate(andPredicateWithSubpredicates: [lowerBoundCondition, upperBoundCondition]))
-            case let .closed(upper, lower):
+            case let .closed(lower, upper):
                 let lowerValue = try _expressionCompatibleValue(for: lower)
                 let upperValue = try _expressionCompatibleValue(for: upper)
                 return .predicate(NSComparisonPredicate(

@@ -78,7 +78,7 @@ extension AttributedString.Guts {
         _ left: AttributedString.Guts,
         to right: AttributedString.Guts
     ) -> Bool {
-        characterwiseIsEqual(left, in: left.stringBounds, to: right, in: right.stringBounds)
+        _characterwiseIsEqual(AttributedString.Runs(left), to: AttributedString.Runs(right))
     }
 
     internal static func characterwiseIsEqual(
@@ -169,29 +169,41 @@ extension AttributedString.Guts {
         in range: Range<BigString.Index>,
         into hasher: inout Hasher
     ) {
+        Self.characterwiseHash(runs: AttributedString.Runs(self, in: range), into: &hasher)
+    }
+
+    internal static func characterwiseHash(
+        runs: AttributedString.Runs,
+        into hasher: inout Hasher
+    ) {
         // Note: This implementation must be precisely in sync with the `_characterwiseIsEqual`
         // implementation above.
-        let runs = AttributedString.Runs(self, in: range)
         hasher.combine(runs.count) // Hash discriminator
 
         for run in runs {
             hasher.combine(run._attributes)
             // FIXME: This doesn't handle sub-character runs correctly.
-            hasher.combine(string[run._range])
+            hasher.combine(runs._guts.string[run._range])
         }
     }
 }
 
 extension AttributedString.Guts {
+    internal func description() -> String {
+        Self._description(in: Runs(self))
+    }
     internal func description(in range: Range<BigString.Index>) -> String {
         self.description(in: RangeSet(range))
     }
     
-    internal func description(in range: RangeSet<BigString.Index>) -> String {
+    internal func description(in ranges: RangeSet<BigString.Index>) -> String {
+        Self._description(in: Runs(self, in: ranges))
+    }
+
+    internal static func _description(in runs: Runs) -> String {
         var result = ""
-        let runs = Runs(self, in: range)
         for run in runs {
-            let text = String(self.string.unicodeScalars[run.range._bstringRange])
+            let text = String(runs._guts.string.unicodeScalars[run.range._bstringRange])
             if !result.isEmpty { result += "\n" }
             result += "\(text) \(run._attributes)"
         }

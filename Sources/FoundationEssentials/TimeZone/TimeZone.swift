@@ -49,7 +49,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     /// Directly instantiates a time zone without causing infinite recursion by checking the cache.
-    internal init(inner: some _TimeZoneProtocol) {
+    package init(inner: some _TimeZoneProtocol) {
         _tz = inner
     }
 

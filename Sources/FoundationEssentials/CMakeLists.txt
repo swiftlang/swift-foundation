@@ -23,10 +23,11 @@ add_library(FoundationEssentials
     DateInterval.swift
     FoundationEssentials.swift
     IndexPath.swift
-    LockedState.swift
     Logging.swift
+    Mutex+ExtendedLifetime.swift
     OutputBuffer.swift
     Platform.swift
+    Progress+Stub.swift
     SortComparator.swift
     UUID_Wrappers.swift
     UUID.swift
@@ -45,6 +46,7 @@ add_subdirectory(Locale)
 add_subdirectory(NotificationCenter)
 add_subdirectory(Predicate)
 add_subdirectory(ProcessInfo)
+add_subdirectory(ProgressManager)
 add_subdirectory(PropertyList)
 add_subdirectory(String)
 add_subdirectory(TimeZone)
@@ -79,9 +81,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+    target_compile_options(FoundationEssentials PRIVATE
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-DDATA_LEGACY_ABI>")
+endif()
+
 target_compile_options(FoundationEssentials PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend VariadicGenerics>"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend LifetimeDependence>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend Lifetimes>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AddressableTypes>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend BuiltinModule>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"

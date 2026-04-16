@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import Synchronization
+
 //===----------------------------------------------------------------------===//
 // JSON Encoder
 //===----------------------------------------------------------------------===//
@@ -182,22 +184,22 @@ open class JSONEncoder {
     /// The output format to produce. Defaults to `[]`.
     open var outputFormatting: OutputFormatting {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.outputFormatting
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.outputFormatting
             defer {
                 options.outputFormatting = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.outputFormatting = newValue
         }
     }
@@ -205,22 +207,22 @@ open class JSONEncoder {
     /// The strategy to use in encoding dates. Defaults to `.deferredToDate`.
     open var dateEncodingStrategy: DateEncodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.dateEncodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.dateEncodingStrategy
             defer {
                 options.dateEncodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.dateEncodingStrategy = newValue
         }
     }
@@ -228,22 +230,22 @@ open class JSONEncoder {
     /// The strategy to use in encoding binary data. Defaults to `.base64`.
     open var dataEncodingStrategy: DataEncodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.dataEncodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.dataEncodingStrategy
             defer {
                 options.dataEncodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.dataEncodingStrategy = newValue
         }
     }
@@ -251,22 +253,22 @@ open class JSONEncoder {
     /// The strategy to use in encoding non-conforming numbers. Defaults to `.throw`.
     open var nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.nonConformingFloatEncodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.nonConformingFloatEncodingStrategy
             defer {
                 options.nonConformingFloatEncodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.nonConformingFloatEncodingStrategy = newValue
         }
     }
@@ -274,22 +276,22 @@ open class JSONEncoder {
     /// The strategy to use for encoding keys. Defaults to `.useDefaultKeys`.
     open var keyEncodingStrategy: KeyEncodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.keyEncodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.keyEncodingStrategy
             defer {
                 options.keyEncodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.keyEncodingStrategy = newValue
         }
     }
@@ -298,22 +300,22 @@ open class JSONEncoder {
     @preconcurrency
     open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.userInfo
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.userInfo
             defer {
                 options.userInfo = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.userInfo = newValue
         }
     }
@@ -330,7 +332,7 @@ open class JSONEncoder {
 
     /// The options set on the top-level encoder.
     fileprivate var options = _Options()
-    fileprivate let optionsLock = LockedState<Void>()
+    fileprivate let optionsLock = Mutex<Void>(())
 
     // MARK: - Constructing a JSON Encoder
 
@@ -1214,9 +1216,9 @@ private extension __JSONEncoder {
             return self.wrap(url.absoluteString)
         } else if let decimal = value as? Decimal {
             return .number(decimal.description)
-        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
-            return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
-        } else if let array = _asDirectArrayEncodable(value, for: additionalKey) {
+        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONCodingKeyRepresentableDictionaryEncodableMarker {
+            return try self.wrap(encodable._stringKeyedDictionary, for: additionalKey)
+        } else if let array = _asDirectArrayEncodable(value) {
             if options.outputFormatting.contains(.prettyPrinted) {
                 let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
                 return .directArray(bytes, lengths: lengths)
@@ -1246,36 +1248,36 @@ private extension __JSONEncoder {
         return encoder.takeValue()
     }
 
-    func _asDirectArrayEncodable<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) -> _JSONDirectArrayEncodable? {
-        return if let array = _specializingCast(array, to: [Int8].self) {
+    func _asDirectArrayEncodable<T: Encodable>(_ value: T) -> _JSONDirectArrayEncodable? {
+        return if let array = _specializingCast(value, to: [Int8].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int16].self) {
+        } else if let array = _specializingCast(value, to: [Int16].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int32].self) {
+        } else if let array = _specializingCast(value, to: [Int32].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int64].self) {
+        } else if let array = _specializingCast(value, to: [Int64].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int128].self) {
+        } else if let array = _specializingCast(value, to: [Int128].self) {
             array
-        } else if let array = _specializingCast(array, to: [Int].self) {
+        } else if let array = _specializingCast(value, to: [Int].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt8].self) {
+        } else if let array = _specializingCast(value, to: [UInt8].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt16].self) {
+        } else if let array = _specializingCast(value, to: [UInt16].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt32].self) {
+        } else if let array = _specializingCast(value, to: [UInt32].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt64].self) {
+        } else if let array = _specializingCast(value, to: [UInt64].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt128].self) {
+        } else if let array = _specializingCast(value, to: [UInt128].self) {
             array
-        } else if let array = _specializingCast(array, to: [UInt].self) {
+        } else if let array = _specializingCast(value, to: [UInt].self) {
             array
-        } else if let array = _specializingCast(array, to: [String].self) {
+        } else if let array = _specializingCast(value, to: [String].self) {
             array
-        } else if let array = _specializingCast(array, to: [Float].self) {
+        } else if let array = _specializingCast(value, to: [Float].self) {
             array
-        } else if let array = _specializingCast(array, to: [Double].self) {
+        } else if let array = _specializingCast(value, to: [Double].self) {
             array
         } else {
             nil
@@ -1301,7 +1303,10 @@ private extension __JSONEncoder {
     func returnEncoder(_ encoder: inout __JSONEncoder) {
         if encoder !== self, sharedSubEncoder == nil, isKnownUniquelyReferenced(&encoder) {
             encoder.codingKey = nil
-            encoder.ownerEncoder = nil // Prevent retain cycle.
+            encoder.ownerEncoder = nil
+            encoder.singleValue = nil
+            encoder.object = nil
+            encoder.array = nil
             sharedSubEncoder = encoder
         }
     }
@@ -1398,11 +1403,30 @@ extension JSONEncoder : @unchecked Sendable {}
 // Special-casing Support
 //===----------------------------------------------------------------------===//
 
-/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
+/// A marker protocol used to determine whether a value is a `CodingKeyRepresentable`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
-private protocol _JSONStringDictionaryEncodableMarker { }
+///
+/// The protocol provides `_stringKeyedDictionary` to convert keys using their `codingKey.stringValue`,
+/// allowing the encoder to use the optimized String-keyed encoding path.
+private protocol _JSONCodingKeyRepresentableDictionaryEncodableMarker {
+    var _stringKeyedDictionary: [String: Encodable] { get }
+}
 
-extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
+extension Dictionary: _JSONCodingKeyRepresentableDictionaryEncodableMarker where Key: CodingKeyRepresentable, Value: Encodable {
+    var _stringKeyedDictionary: [String: Encodable] {
+        // Fast path for String keys - return self without creating a new dictionary
+        if Key.self == String.self {
+            return self as! [String: Encodable]
+        }
+        // Convert other CodingKeyRepresentable keys to String
+        var result = [String: Encodable]()
+        result.reserveCapacity(count)
+        for (key, value) in self {
+            result[key.codingKey.stringValue] = value
+        }
+        return result
+    }
+}
 
 /// A protocol used to determine whether a value is an `Array` containing values that allow
 /// us to bypass UnkeyedEncodingContainer overhead by directly encoding the contents as

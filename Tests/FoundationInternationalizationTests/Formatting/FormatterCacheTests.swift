@@ -78,23 +78,27 @@ private struct FormatterCacheTests {
 
     @Test(.timeLimit(.minutes(1)))
     func synchronouslyClearingCache() async {
-        let cache = FormatterCache<Int, TestCacheItem>()
+        final class CacheRef : Sendable {
+            let cache = FormatterCache<Int, TestCacheItem>()
+        }
+
+        let cacheRef = CacheRef()
 
         await withDiscardingTaskGroup { group in
             for i in 0 ..< 5 {
                 group.addTask {
-                    let cached = cache.formatter(for: i) {
+                    let cached = cacheRef.cache.formatter(for: i) {
                         return .init(value: -i, deinitBlock: {
                             // Test that `removeAllObjects` beneath does not trigger `deinit` of the removed objects in the locked scope.
                             // If it does cause the deinitialization of this instance where this block is run, we would deadlock here because the subscript getter is performed in the same locked scope as the enclosing `formatter(for:creator:)`.
-                            _ = cache[i]
+                            _ = cacheRef.cache[i]
                         })
                     }
                     #expect(cached.value == -i)
                 }
                 
                 group.addTask {
-                    cache.removeAllObjects()
+                    cacheRef.cache.removeAllObjects()
                 }
             }
         }

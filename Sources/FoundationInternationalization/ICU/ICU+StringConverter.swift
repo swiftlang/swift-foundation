@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2025-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 internal import _FoundationICU
+internal import Synchronization
 
 private extension String.Encoding {
     var _icuConverterName: String? {
@@ -38,7 +39,7 @@ private extension String.Encoding {
 
 extension ICU {
     final class StringConverter: @unchecked Sendable {
-        private let _converter: LockedState<OpaquePointer> // UConverter*
+        private let _converter: Mutex<OpaquePointer> // UConverter*
 
         let encoding: String.Encoding
 
@@ -50,7 +51,7 @@ extension ICU {
             guard let converter = ucnv_open(convName, &status), status.isSuccess else {
                 return nil
             }
-            self._converter = LockedState(initialState: converter)
+            self._converter = Mutex(converter)
             self.encoding = encoding
         }
 
@@ -103,6 +104,12 @@ extension ICU.StringConverter {
                 byteCount: capacity,
                 alignment: MemoryLayout<CChar>.alignment
             )
+            var shouldFreeDest = true
+            defer {
+                if shouldFreeDest {
+                    dest.deallocate()
+                }
+            }
 
             var status: UErrorCode = U_ZERO_ERROR
             if lossy {
@@ -145,6 +152,8 @@ extension ICU.StringConverter {
                 &status
             )
             guard status.isSuccess else { return nil }
+
+            shouldFreeDest = false
             return Data(
                 bytesNoCopy: dest,
                 count: Int(actualLength),
@@ -155,7 +164,7 @@ extension ICU.StringConverter {
 }
 
 extension ICU.StringConverter {
-    private static let _converters: LockedState<[String.Encoding: ICU.StringConverter]> = .init(initialState: [:])
+    private static let _converters: Mutex<[String.Encoding: ICU.StringConverter]> = .init([:])
 
     static func converter(for encoding: String.Encoding) -> ICU.StringConverter? {
         return _converters.withLock {

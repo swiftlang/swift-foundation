@@ -9,7 +9,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !targetEnvironment(exclaveCore)
 internal import _FoundationCShims
+#endif
 
 #if canImport(Darwin)
 import Darwin
@@ -38,13 +40,17 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 @preconcurrency import Musl
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(C)
+#if canImport(C.unistd)
+import C.unistd
+#else
+import C
+#endif
 fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
 
 #if FOUNDATION_FRAMEWORK
 internal import CoreFoundation_Private
 #endif
-
 
 package struct Platform {
     static var pageSize: Int {
@@ -306,7 +312,7 @@ extension Platform {
           }
           return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
-#elseif os(WASI) // WASI does not have uname
+#elseif os(WASI) || targetEnvironment(exclaveCore) // WASI does not have uname
         return "localhost"
 #else
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
@@ -369,7 +375,9 @@ extension Platform {
         if let processPath = CommandLine.arguments.first {
             return processPath
         }
+        return nil
+#else
+        return nil
 #endif
-    return nil
     }
 }

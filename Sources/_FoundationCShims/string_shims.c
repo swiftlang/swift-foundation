@@ -91,7 +91,7 @@ float _stringshims_strtof_clocale(const char * _Nullable restrict nptr,
 #else
     // Use the C locale
     locale_t oldLocale = uselocale(FOUNDATION_C_LOCALE);
-    double result = strtof(nptr, endptr);
+    float result = strtof(nptr, endptr);
     // Restore locale
     uselocale(oldLocale);
     return result;

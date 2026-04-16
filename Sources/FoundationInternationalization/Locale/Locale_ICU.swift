@@ -22,6 +22,7 @@ internal import os
 #endif
 
 internal import _FoundationICU
+internal import Synchronization
 
 #if canImport(Glibc)
 @preconcurrency import Glibc
@@ -134,7 +135,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     let prefs: LocalePreferences?
     
-    private let lock: LockedState<State>
+    private let lock: Mutex<State>
 
     var debugDescription: String { "fixed \(identifier)" }
 
@@ -158,7 +159,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         self.prefs = prefs
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
-        lock = LockedState(initialState: State())
+        lock = Mutex(State())
     }
 
     required init(components: Locale.Components) {
@@ -180,7 +181,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         if let v = components.subdivision { state.subdivision = v }
         if let v = components.timeZone { state.timeZone = v }
         if let v = components.variant { state.variant = v }
-        lock = LockedState(initialState: state)
+        lock = Mutex(state)
     }
 
     /// Use to create a current-like Locale, with preferences.
@@ -283,7 +284,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         self.prefs = prefs
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
-        lock = LockedState(initialState: State())
+        lock = Mutex(State())
     }
     
     deinit {

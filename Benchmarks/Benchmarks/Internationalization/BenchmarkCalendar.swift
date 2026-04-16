@@ -33,12 +33,12 @@ func calendarBenchmarks() {
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .mallocCountTotal, .throughput]
-    
     let thanksgivingComponents = DateComponents(month: 11, weekday: 5, weekdayOrdinal: 4)
     let cal = Calendar(identifier: .gregorian)
     let currentCalendar = Calendar.current
     let thanksgivingStart = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
-    
+
+    // MARK: Enumeration
     Benchmark("nextThousandThursdaysInTheFourthWeekOfNovember") { benchmark in
         // This benchmark used to be nextThousandThanksgivings, but the name was deceiving since it does not compute the next thousand thanksgivings
         let components = DateComponents(month: 11, weekday: 5, weekOfMonth: 4)
@@ -133,6 +133,57 @@ func calendarBenchmarks() {
             if count == 0 {
                 stop = true
             }
+        }
+    }
+    let testDates = {
+        let date = Date(timeIntervalSince1970: 0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 3600), since: date))
+        }
+        return dates
+    }()
+
+    let testDatePairs = {
+        let date = Date(timeIntervalSince1970: 0)
+        var dates = [(Date, Date)]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            let d1 = Date(timeInterval: Double(i * 3600), since: date)
+            let d2 = Date(timeInterval: Double(i * -3657), since: d1)
+            dates.append((d1, d2))
+        }
+        return dates
+    }()
+
+    Benchmark("NextDatesMatchingOnHour") { _ in
+        for d in testDates {
+            let t = currentCalendar.nextDate(after: d, matching: DateComponents(minute: 0, second: 0), matchingPolicy: .nextTime)
+            blackHole(t)
+        }
+    }
+
+    // MARK: - TimeZone dependent, no dst
+    var calender_africa = Calendar(identifier: .gregorian)
+    let lagos = TimeZone(identifier: "Africa/Accra")
+    precondition(lagos != nil, "unexpected nil time zone")
+    calender_africa.timeZone = lagos!
+    Benchmark("next date matching - Non DST TimeZone") { _ in
+        for d in testDates {
+            let t = calender_africa.nextDate(after: d, matching: DateComponents(minute: 0, second: 0), matchingPolicy: .nextTime)
+            blackHole(t)
+        }
+    }
+
+    Benchmark("RecurrenceRuleDailyWithTimes - Non DST TimeZone") { benchmark in
+        var rule = Calendar.RecurrenceRule(calendar: calender_africa, frequency: .daily, end: .afterOccurrences(1000))
+        rule.hours = [9, 10]
+        rule.minutes = [0, 30]
+        rule.weekdays = [.every(.monday), .every(.tuesday), .every(.wednesday)]
+        rule.matchingPolicy = .nextTime
+        for date in rule.recurrences(of: thanksgivingStart) {
+            Benchmark.blackHole(date)
         }
     }
 
@@ -232,6 +283,259 @@ func calendarBenchmarks() {
             assert(id1.isEmpty == false)
             assert(id2.isEmpty == false)
             assert(id3.isEmpty == false)
+        }
+    }
+
+    // MARK: - GregorianCalendar
+
+    var gmtCalendr = Calendar(identifier: .gregorian)
+    guard let gmtTimeZone = TimeZone(secondsFromGMT: 0) else {
+        preconditionFailure("Unexpected nil TimeZone")
+    }
+    gmtCalendr.timeZone = gmtTimeZone // use gmt-based time zone so the result doesn't get overshadowed by TimeZone API
+
+    Benchmark("GregorianCalendar-dateComponents-yearMonthBasedComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-calendarDayComparison", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.year, .month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-timestamps", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-timeValidation", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.hour, .minute, .second], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-anniversary", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-year", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.year], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("GregorianCalendar-dateComponents-week-based", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let dc = gmtCalendr.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+            blackHole(dc)
+        }
+    }
+
+    // MARK: - Current calendar
+
+    let testDateComponents_ymd = {
+        var results = [DateComponents]()
+        for y in stride(from: 1650, to: 2080, by: 42) {
+            for m in 1...12 {
+                for d in stride(from: 1, to: 28, by: 6) {
+                    let dc = DateComponents(year: y, month: m, day: d)
+                    results.append(dc)
+                }
+            }
+        }
+        return results
+    }()
+
+    let testDateComponents_ymdhhmmss = {
+        var results = [DateComponents]()
+        for y in stride(from: 1650, to: 2080, by: 79) {
+            for m in stride(from: 1, to: 12, by: 3) {
+                for d in stride(from: 1, to: 28, by: 6) {
+                    for hh in stride(from: 0, to: 23, by: 7) {
+                        for mm in stride(from: 0, to: 60, by: 13) {
+                            for ss in stride(from: 0, to: 60, by: 18) {
+                                let dc = DateComponents(year: y, month: m, day: d, hour: hh, minute:mm, second: ss )
+                                results.append(dc)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return results
+    }()
+
+    Benchmark("CurrentCalendar-date-from-DateComponents-ymd") { benchmark in
+        for components in testDateComponents_ymd {
+            let date = currentCalendar.date(from: components)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("CurrentCalendar-date-from-DateComponents-ymdhhmmss") { benchmark in
+        for components in testDateComponents_ymdhhmmss {
+            let date = currentCalendar.date(from: components)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-yearMonthBasedComponents") { benchmark in
+        for date in testDates {
+            let dc = currentCalendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-calendarDayComparison") { benchmark in
+        for date in testDates {
+            let dc = currentCalendar.dateComponents([.year, .month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-timestamps") { benchmark in
+        for date in testDates {
+            let dc = currentCalendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-timeValidation") { benchmark in
+        for date in testDates {
+            let dc = currentCalendar.dateComponents([.hour, .minute, .second], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-anniversary") { benchmark in
+        for date in testDates {
+            let dc = currentCalendar.dateComponents([.month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-year") { benchmark in
+        for date in testDates {
+            let dc = currentCalendar.dateComponents([.year], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-week-based") { benchmark in
+        for date in testDates {
+            let dc = currentCalendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("CurrentCalendar-date-byAdding-day") { benchmark in
+        for date in testDates {
+            let nextDay = currentCalendar.date(byAdding: .day, value: 1, to: date)
+            blackHole(nextDay)
+            let previousDay = currentCalendar.date(byAdding: .day, value: 1, to: date)
+            blackHole(previousDay)
+        }
+    }
+
+    Benchmark("CurrentCalendar-date-byAdding-time") { benchmark in
+        for date in testDates {
+            let nextHour = currentCalendar.date(byAdding: .hour, value: 1, to: date)
+            blackHole(nextHour)
+
+            let nextHalfHour = currentCalendar.date(byAdding: .minute, value: 30, to: date)
+            blackHole(nextHalfHour)
+        }
+    }
+
+    Benchmark("CurrentCalendar-startOfDay") { benchmark in
+        for date in testDates {
+            let startOfDay = currentCalendar.startOfDay(for: date)
+            blackHole(startOfDay)
+        }
+    }
+
+    Benchmark("CurrentCalendar-isDateInToday") { benchmark in
+        for testDate in testDates {
+            let isInToday = currentCalendar.isDateInToday(testDate)
+            blackHole(isInToday)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-from-to-day") { benchmark in
+        for (startDate, endDate) in testDatePairs {
+            let difference = currentCalendar.dateComponents([.day], from: startDate, to: endDate)
+            blackHole(difference)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-from-to-time") { benchmark in
+        for (from, to) in testDatePairs {
+            let difference = currentCalendar.dateComponents([.hour, .minute], from: from, to: to)
+            blackHole(difference)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-from-to-datetime") { benchmark in
+        for (from, to) in testDatePairs {
+            let difference = currentCalendar.dateComponents([.year, .month, .day, .hour, .minute], from: from, to: to)
+            blackHole(difference)
+        }
+    }
+
+    Benchmark("CurrentCalendar-dateComponents-from-to-weekly") { benchmark in
+        for (from, to) in testDatePairs {
+            let difference = currentCalendar.dateComponents([.weekday, .hour, .minute, .second], from: from, to: to)
+            blackHole(difference)
+        }
+    }
+
+    Benchmark("CurrentCalendar-isDate-inSameDayAs-sameDay") { benchmark in
+        for (i, date) in testDates[0..<testDates.count - 1].enumerated() {
+            let nextDate = testDates[i]
+            let sameDayCheck = currentCalendar.isDate(date, inSameDayAs: nextDate)
+            blackHole(sameDayCheck)
+        }
+    }
+
+    Benchmark("CurrentCalendar-isDate-inSameDayAs-notSameDay") { benchmark in
+        for (date1, date2) in testDatePairs {
+            let sameDayCheck = currentCalendar.isDate(date1, inSameDayAs: date2)
+            blackHole(sameDayCheck)
+        }
+    }
+
+    Benchmark("CurrentCalendar-compare-to-toGranularity-day-sameDay") { benchmark in
+        for (i, date) in testDates[0..<testDates.count - 1].enumerated() {
+            let nextDate = testDates[i + 1]
+            let sameDayComparison = currentCalendar.compare(date, to: nextDate, toGranularity: .day)
+            blackHole(sameDayComparison)
+        }
+    }
+
+    Benchmark("CurrentCalendar-compare-to-toGranularity-day-notSameDay") { benchmark in
+        for (date1, date2) in testDatePairs {
+            let sameDayComparison = currentCalendar.compare(date1, to: date2, toGranularity: .day)
+            blackHole(sameDayComparison)
+        }
+    }
+
+    Benchmark("CurrentCalendar-compare-to-toGranularity-month") { benchmark in
+        for (i, date) in testDates[0..<testDates.count - 1].enumerated() {
+            let nextDate = testDates[i + 1]
+            let sameDayComparison = currentCalendar.compare(date, to: nextDate, toGranularity: .month)
+            blackHole(sameDayComparison)
         }
     }
 }

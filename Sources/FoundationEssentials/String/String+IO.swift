@@ -250,15 +250,15 @@ extension String {
 
     /// Produces a string created by reading data from the file at a given path and returns by reference the encoding used to interpret the file.
     public init(contentsOfFile path: __shared String, usedEncoding: inout Encoding) throws {
-        self = try String(contentsOfFileOrPath: .path(path), usedEncoding: &usedEncoding)
+        self = try String(contentsOfFileOrPath: path, usedEncoding: &usedEncoding)
     }
 
     /// Produces a string created by reading data from a given URL and returns by reference the encoding used to interpret the data.
     public init(contentsOf url: __shared URL, usedEncoding: inout Encoding) throws {
-        self = try String(contentsOfFileOrPath: .url(url), usedEncoding: &usedEncoding)
+        self = try String(contentsOfFileOrPath: url, usedEncoding: &usedEncoding)
     }
     
-    internal init(contentsOfFileOrPath path: PathOrURL, usedEncoding: inout Encoding) throws {
+    internal init(contentsOfFileOrPath path: borrowing some FileSystemRepresentable & ~Copyable, usedEncoding: inout Encoding) throws {
         var attrs: [String : Data] = [:]
         let data = try readDataFromFile(path: path, reportProgress: false, maxLength: nil, options: [], attributesToRead: [stringEncodingAttributeName], attributes: &attrs)
         if let encodingAttributeData = attrs[stringEncodingAttributeName], let extendedAttributeEncoding = encodingFromDataForExtendedAttribute(encodingAttributeData) {
@@ -456,7 +456,7 @@ extension StringProtocol {
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
 #endif
 
-        try writeToFile(path: .path(String(path)), data: data, options: options, attributes: attributes, reportProgress: false)
+        try writeToFile(path: String(path), buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
     }
 
     /// Writes the contents of the `String` to the URL specified by url using the specified encoding.
@@ -479,7 +479,7 @@ extension StringProtocol {
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
 #endif
 
-        try writeToFile(path: .url(url), data: data, options: options, attributes: attributes, reportProgress: false)
+        try writeToFile(path: url, buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
     }
 #endif
 }

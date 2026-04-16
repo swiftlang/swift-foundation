@@ -872,6 +872,23 @@ private struct PropertyListEncoderTests {
         }
     }
 
+    @Test func oldStylePlist_errors() {
+        let oldStyleWithErrors = "{ hello = there; }\r\nextra stuff at end"
+
+        let data = oldStyleWithErrors.data(using: .ascii)!
+
+        struct Thing : Decodable {
+            var hello: String
+        }
+        let plistDecoder = PropertyListDecoder()
+
+        #expect {
+            try plistDecoder.decode(Thing.self, from: data)
+        } throws: {
+            String(describing: $0).contains("Junk after plist at line 2")
+        }
+    }
+
     // <rdar://problem/34321354> Microsoft: Microsoft vso 1857102 : High Sierra regression that caused data loss : CFBundleCopyLocalizedString returns incorrect string
     // Escaped octal chars can be shorter than 3 chars long; i.e. \5 ≡ \05 ≡ \005.
     @Test func oldStylePlist_getSlashedChars_octal() throws {

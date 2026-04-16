@@ -177,6 +177,32 @@ private struct NSPredicateConversionTests {
         #expect(!converted.evaluate(with: ObjCObject()))
     }
     
+    @Test func rangesDistinctBounds() throws {
+        // Test that captured ranges have correct bounds order in NSPredicate conversion
+        // This tests the _RangeValue branch in RangeExpressionContains.convert
+        let lowerDate = Date(timeIntervalSinceReferenceDate: 100)
+        let upperDate = Date(timeIntervalSinceReferenceDate: 200)
+        let range = lowerDate ..< upperDate
+        
+        let predicate = #Predicate<ObjCObject> {
+            range.contains($0.i)
+        }
+        let converted = try #require(convert(predicate))
+        
+        // Verify the bounds are in the correct order (lower, upper)
+        #expect(converted == NSPredicate(format: "i >= %@ AND i < %@", lowerDate as NSDate, upperDate as NSDate))
+        
+        // Create an object with a date in the range
+        let objInRange = ObjCObject()
+        objInRange.i = Date(timeIntervalSinceReferenceDate: 150)
+        #expect(converted.evaluate(with: objInRange), "Date in range should match")
+        
+        // Create an object with a date outside the range
+        let objOutOfRange = ObjCObject()
+        objOutOfRange.i = Date(timeIntervalSinceReferenceDate: 250)
+        #expect(!converted.evaluate(with: objOutOfRange), "Date outside range should not match")
+    }
+    
     @Test func nonObjC() throws {
         let predicate = #Predicate<ObjCObject> {
             $0.nonObjCKeypath == 2

@@ -17,18 +17,46 @@ import Darwin
 #endif
 
 internal import _FoundationCShims
+internal import Synchronization
 
-/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
+/// A marker protocol used to determine whether a value is a `CodingKeyRepresentable`-keyed `Dictionary`
 /// containing `Decodable` values (in which case it should be exempt from key conversion strategies).
 ///
-/// The marker protocol also provides access to the type of the `Decodable` values,
-/// which is needed for the implementation of the key conversion strategy exemption.
-private protocol _JSONStringDictionaryDecodableMarker {
+/// The protocol provides `_fromStringKeyedDictionary` to convert a `[String: Any]` dictionary
+/// to the proper `[Key: Value]` type using `Key.init(codingKey:)`.
+private protocol _JSONCodingKeyRepresentableDictionaryDecodableMarker {
     static var elementType: Decodable.Type { get }
+    static func _fromStringKeyedDictionary(_ dict: [String: Any]) -> Self?
 }
 
-extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String, Value: Decodable {
+extension Dictionary : _JSONCodingKeyRepresentableDictionaryDecodableMarker where Key: CodingKeyRepresentable, Value: Decodable {
     static var elementType: Decodable.Type { return Value.self }
+
+    static func _fromStringKeyedDictionary(_ dict: [String: Any]) -> Self? {
+        // Fast path for String keys - no conversion needed
+        if Key.self == String.self {
+            return dict as? Self
+        }
+        // Convert keys for other CodingKeyRepresentable types
+        var result = Self()
+        result.reserveCapacity(dict.count)
+        for (stringKey, value) in dict {
+            guard let key = Key(codingKey: _DictionaryCodingKey(stringValue: stringKey)),
+                  let typedValue = value as? Value else {
+                return nil
+            }
+            result[key] = typedValue
+        }
+        return result
+    }
+}
+
+/// A simple CodingKey implementation for string-to-key conversion.
+private struct _DictionaryCodingKey: CodingKey {
+    var stringValue: String
+    var intValue: Int? { nil }
+    init(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { nil }
 }
 
 //===----------------------------------------------------------------------===//
@@ -167,22 +195,22 @@ open class JSONDecoder {
     /// The strategy to use in decoding dates. Defaults to `.deferredToDate`.
     open var dateDecodingStrategy: DateDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.dateDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.dateDecodingStrategy
             defer {
                 options.dateDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.dateDecodingStrategy = newValue
         }
     }
@@ -190,22 +218,22 @@ open class JSONDecoder {
     /// The strategy to use in decoding binary data. Defaults to `.base64`.
     open var dataDecodingStrategy: DataDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.dataDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.dataDecodingStrategy
             defer {
                 options.dataDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.dataDecodingStrategy = newValue
         }
     }
@@ -213,22 +241,22 @@ open class JSONDecoder {
     /// The strategy to use in decoding non-conforming numbers. Defaults to `.throw`.
     open var nonConformingFloatDecodingStrategy: NonConformingFloatDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.nonConformingFloatDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.nonConformingFloatDecodingStrategy
             defer {
                 options.nonConformingFloatDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.nonConformingFloatDecodingStrategy = newValue
         }
     }
@@ -236,22 +264,22 @@ open class JSONDecoder {
     /// The strategy to use for decoding keys. Defaults to `.useDefaultKeys`.
     open var keyDecodingStrategy: KeyDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.keyDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.keyDecodingStrategy
             defer {
                 options.keyDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.keyDecodingStrategy = newValue
         }
     }
@@ -260,22 +288,22 @@ open class JSONDecoder {
     @preconcurrency
     open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.userInfo
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.userInfo
             defer {
                 options.userInfo = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.userInfo = newValue
         }
     }
@@ -316,7 +344,7 @@ open class JSONDecoder {
 
     /// The options set on the top-level decoder.
     fileprivate var options = _Options()
-    fileprivate let optionsLock = LockedState<Void>()
+    fileprivate let optionsLock = Mutex<Void>(())
 
     // MARK: - Constructing a JSON Decoder
 
@@ -504,7 +532,7 @@ fileprivate class JSONDecoderImpl {
     }
 
     @inline(__always)
-    func withBuffer<T>(for region: JSONMap.Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T) rethrows -> T {
+    func withBuffer<T: ~Copyable, E>(for region: JSONMap.Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T) throws(E) -> sending T {
         try jsonMap.withBuffer(for: region, perform: closure)
     }
 
@@ -610,7 +638,7 @@ extension JSONDecoderImpl: Decoder {
         if type == Decimal.self {
             return try self.unwrapDecimal(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
-        if !options.keyDecodingStrategy.isDefault, T.self is _JSONStringDictionaryDecodableMarker.Type {
+        if !options.keyDecodingStrategy.isDefault, T.self is _JSONCodingKeyRepresentableDictionaryDecodableMarker.Type {
             return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
         }
 
@@ -769,8 +797,8 @@ extension JSONDecoderImpl: Decoder {
     private func unwrapDictionary<T: Decodable>(from mapValue: JSONMap.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
         try checkNotNull(mapValue, expectedType: [String:Any].self, for: codingPathNode, additionalKey)
 
-        guard let dictType = type as? (_JSONStringDictionaryDecodableMarker & Decodable).Type else {
-            preconditionFailure("Must only be called if T implements __JSONStringDictionaryDecodableMarker")
+        guard let dictType = type as? _JSONCodingKeyRepresentableDictionaryDecodableMarker.Type else {
+            preconditionFailure("Must only be called if T implements _JSONCodingKeyRepresentableDictionaryDecodableMarker")
         }
 
         guard case let .object(region) = mapValue else {
@@ -780,8 +808,8 @@ extension JSONDecoderImpl: Decoder {
             ))
         }
 
-        var result = [String: Any]()
-        result.reserveCapacity(region.count / 2)
+        var stringKeyedResult = [String: Any]()
+        stringKeyedResult.reserveCapacity(region.count / 2)
 
         let dictCodingPathNode = codingPathNode.appending(additionalKey)
 
@@ -790,10 +818,17 @@ extension JSONDecoderImpl: Decoder {
             // We know these values are keys, but UTF-8 decoding could still fail.
             let key = try self.unwrapString(from: keyValue, for: dictCodingPathNode, _CodingKey?.none)
             let value = try self.unwrap(value, as: dictType.elementType, for: dictCodingPathNode, _CodingKey(stringValue: key)!)
-            result[key]._setIfNil(to: value)
+            stringKeyedResult[key]._setIfNil(to: value)
         }
 
-        return result as! T
+        // Convert [String: Any] to [Key: Value] using the marker protocol
+        guard let result = dictType._fromStringKeyedDictionary(stringKeyedResult) as? T else {
+            throw DecodingError.dataCorrupted(DecodingError.Context(
+                codingPath: codingPathNode.path(byAppending: additionalKey),
+                debugDescription: "Failed to create dictionary with CodingKeyRepresentable keys"
+            ))
+        }
+        return result
     }
 
     private func unwrapString(from value: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> String {
@@ -861,7 +896,7 @@ extension JSONDecoderImpl: Decoder {
         return true
     }
 
-    private func unwrapFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>(
+    private func unwrapFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>(
         from value: JSONMap.Value,
         as type: T.Type,
         for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T
@@ -959,7 +994,7 @@ extension JSONDecoderImpl: Decoder {
         throw self.createTypeMismatchError(type: type, for: codingPathNode.path(byAppending: additionalKey), value: value)
     }
 
-    private func unwrapFixedWidthInteger<T: FixedWidthInteger>(
+    private func unwrapFixedWidthInteger<T: FixedWidthInteger & Sendable>(
         from value: JSONMap.Value,
         as type: T.Type,
         for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T
@@ -1178,11 +1213,11 @@ extension JSONDecoderImpl : SingleValueDecodingContainer {
         try self.unwrap(self.topValue, as: type, for: codingPathNode, _CodingKey?.none)
     }
 
-    @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>() throws -> T {
+    @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger & Sendable>() throws -> T {
         try self.unwrapFixedWidthInteger(from: self.topValue, as: T.self, for: codingPathNode, _CodingKey?.none)
     }
 
-    @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T {
+    @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>() throws -> T {
         try self.unwrapFloatingPoint(from: self.topValue, as: T.self, for: codingPathNode, _CodingKey?.none)
     }
 }
@@ -1468,17 +1503,17 @@ extension JSONDecoderImpl {
             ))
         }
 
-        @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>(key: Self.Key) throws -> T {
+        @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger & Sendable>(key: Self.Key) throws -> T {
             let value = try getValue(forKey: key)
             return try self.impl.unwrapFixedWidthInteger(from: value, as: T.self, for: codingPathNode, key)
         }
 
-        @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>(key: K) throws -> T {
+        @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>(key: K) throws -> T {
             let value = try getValue(forKey: key)
             return try self.impl.unwrapFloatingPoint(from: value, as: T.self, for: codingPathNode, key)
         }
 
-        @inline(__always) private func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger>(key: Self.Key) throws -> T? {
+        @inline(__always) private func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger & Sendable>(key: Self.Key) throws -> T? {
             guard let value = getValueIfPresent(forKey: key) else {
                 return nil
             }
@@ -1488,7 +1523,7 @@ extension JSONDecoderImpl {
             }
         }
 
-        @inline(__always) private func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>(key: K) throws -> T? {
+        @inline(__always) private func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>(key: K) throws -> T? {
             guard let value = getValueIfPresent(forKey: key) else {
                 return nil
             }
@@ -1785,7 +1820,7 @@ extension JSONDecoderImpl {
             return nextValue
         }
 
-        @inline(__always) private mutating func decodeFixedWidthInteger<T: FixedWidthInteger>() throws -> T {
+        @inline(__always) private mutating func decodeFixedWidthInteger<T: FixedWidthInteger & Sendable>() throws -> T {
             let value = try self.peekNextValue(ofType: T.self)
             let key = _CodingKey(index: self.currentIndex)
             let result = try self.impl.unwrapFixedWidthInteger(from: value, as: T.self, for: codingPathNode, key)
@@ -1793,7 +1828,7 @@ extension JSONDecoderImpl {
             return result
         }
 
-        @inline(__always) private mutating func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T {
+        @inline(__always) private mutating func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>() throws -> T {
             let value = try self.peekNextValue(ofType: T.self)
             let key = _CodingKey(index: self.currentIndex)
             let result = try self.impl.unwrapFloatingPoint(from: value, as: T.self, for: codingPathNode, key)
@@ -1801,7 +1836,7 @@ extension JSONDecoderImpl {
             return result
         }
 
-        @inline(__always) private mutating func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger>() throws -> T? {
+        @inline(__always) private mutating func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger & Sendable>() throws -> T? {
             let value = self.peekNextValueIfPresent(ofType: T.self)
             let result: T? = switch value {
             case nil, .null: nil
@@ -1811,7 +1846,7 @@ extension JSONDecoderImpl {
             return result
         }
 
-        @inline(__always) private mutating func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T? {
+        @inline(__always) private mutating func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>() throws -> T? {
             let value = self.peekNextValueIfPresent(ofType: T.self)
             let result: T? = switch value {
             case nil, .null: nil
