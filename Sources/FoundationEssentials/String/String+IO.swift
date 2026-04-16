@@ -53,7 +53,11 @@ extension String {
         switch encoding {
         case .ascii, .nonLossyASCII:
             func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
-                return String(_validating: buffer, as: Unicode.ASCII.self)
+                guard let span = try? UTF8Span(validating: buffer.span) else {
+                    return nil
+                }
+                guard span.isKnownASCII else { return nil }
+                return String(copying: span)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -90,11 +94,7 @@ extension String {
                 if buffer.starts(with: [0xEF, 0xBB, 0xBF]) {
                     buffer = UnsafeBufferPointer(rebasing: buffer.suffix(from: 3))
                 }
-                if let string = String._tryFromUTF8(buffer) {
-                    return string
-                }
-
-                return String(_validating: buffer, as: UTF8.self)
+                return String._tryFromUTF8(buffer)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -136,7 +136,7 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
+            } else if let result = String(validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
                 self = result
             } else {
                 return nil
@@ -163,7 +163,7 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
+            } else if let result = String(validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
                 self = result
             } else {
                 return nil
@@ -482,29 +482,4 @@ extension StringProtocol {
         try writeToFile(path: url, buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
     }
 #endif
-}
-
-// TODO: This is part of the stdlib as of 5.11. This is a copy to support building on previous Swift stdlib versions, but should be replaced with the stdlib one as soon as possible.
-extension String {
-    internal init?<Encoding: Unicode.Encoding>(_validating codeUnits: some Sequence<Encoding.CodeUnit>, as encoding: Encoding.Type) {
-        var transcoded: [UTF8.CodeUnit] = []
-        transcoded.reserveCapacity(codeUnits.underestimatedCount)
-        var isASCII = true
-        let error = transcode(
-            codeUnits.makeIterator(),
-            from: Encoding.self,
-            to: UTF8.self,
-            stoppingOnError: true,
-            into: {
-                uint8 in
-                transcoded.append(uint8)
-                if isASCII && (uint8 & 0x80) == 0x80 { isASCII = false }
-            }
-        )
-        if error { return nil }
-        let res = transcoded.withUnsafeBufferPointer{
-            String._tryFromUTF8($0)
-        }
-        if let res { self = res } else { return nil }
-    }
 }
