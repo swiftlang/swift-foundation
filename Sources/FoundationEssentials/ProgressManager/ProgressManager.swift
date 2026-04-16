@@ -387,7 +387,9 @@ internal import _FoundationCollections
             markSelfDirty(parents: parents)
         }
         self.withMutation(keyPath: \.completedCount) {}
+        #if FOUNDATION_FRAMEWORK
         notifyInteropObserversOfChildUpdate()
+        #endif
     }
 
     /// Notifies interop bridge observers so that grandchild progress propagates
