@@ -3266,6 +3266,22 @@ struct LargeDataTests {
             #expect(slice.count == 26)
         }
     }
+
+    @Test func downgradeLargeToInline() {
+        var large = Data(capacity: largeCount)
+        large.append(0xAA)
+        #expect(large.count == 1)
+        #expect(large[0] == 0xAA)
+
+        large = Data(count: largeCount)
+        large[large.count - 1] = 0xCC
+        large[0] = 0xAA
+        large.replaceSubrange(1 ..< large.count - 1, with: CollectionOfOne(0xBB))
+        #expect(large.count == 3)
+        #expect(large[0] == 0xAA)
+        #expect(large[1] == 0xBB)
+        #expect(large[2] == 0xCC)
+    }
 }
 
 private func expectLargeIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
