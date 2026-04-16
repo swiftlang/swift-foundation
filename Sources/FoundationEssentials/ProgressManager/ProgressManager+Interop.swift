@@ -303,6 +303,44 @@ extension ProgressManager {
         }
     }
     
+    /// Notifies interop bridge observers so that grandchild progress propagates
+    /// through the SubprogressBridge to the parent NSProgress.
+    internal func notifyInteropObserversOfChildUpdate() {
+        // Phase 1: Collect bridge manager and dirty children info
+        let info: (bridgeManager: ProgressManager, updates: [PendingChildUpdateInfo]?)? = state.withLock { state in
+            guard case .interopObservation(let observation) = state.interopType,
+                  let bridgeManager = observation.subprogressBridge?.manager else {
+                return nil
+            }
+            return (bridgeManager, state.pendingChildrenUpdates())
+        }
+
+        guard let info, let updates = info.updates else {
+            return
+        }
+
+        // Phase 2: Resolve each dirty child's fraction
+        var childrenUpdates: [PendingChildUpdate] = []
+        for update in updates {
+            let updatedFraction = update.manager.updatedProgressFraction()
+            childrenUpdates.append(PendingChildUpdate(
+                index: update.index,
+                updatedFraction: updatedFraction,
+                assignedCount: update.assignedCount
+            ))
+        }
+
+        // Phase 3: Apply updates and compute fraction
+        let observerState = state.withLock { state in
+            state.updateChildrenProgressFraction(updates: childrenUpdates)
+            let fraction = state.overallFraction
+            return ObserverState(totalCount: fraction.total ?? 0, completedCount: fraction.completed)
+        }
+
+        // Notify bridge
+        info.bridgeManager.notifyObservers(with: observerState)
+    }
+    
     internal func addBridge(reporterBridge: ProgressReporterBridge? = nil, nsProgressBridge: Foundation.Progress? = nil) {
         state.withLock { state in
             var interopObservation = InteropObservation(subprogressBridge: nil)
