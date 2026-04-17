@@ -9,70 +9,227 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import _FoundationCShims // uuid.h
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(WinSDK)
+import WinSDK
+#elseif os(WASI)
+@preconcurrency import WASILibc
+#endif
+
+internal import Synchronization
 
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
+extension RawSpan {
+    // Placeholder for SE-0525
+    internal subscript(index: Int) -> UInt8 {
+        unsafeLoad(fromByteOffset: index, as: UInt8.self)
+    }
+}
+
+extension MutableRawSpan {
+    // Placeholder for SE-0525
+    internal subscript(index: Int) -> UInt8 {
+        get {
+            unsafeLoad(fromByteOffset: index, as: UInt8.self)
+        }
+        set {
+            storeBytes(of: newValue, toByteOffset: index, as: UInt8.self)
+        }
+    }
+}
+
+extension Span {
+    // Placeholder for SE-0525
+    @_lifetime(borrow bytes)
+    fileprivate init(viewing bytes: RawSpan) where Element: BitwiseCopyable {
+        self.init(_bytes: bytes)
+    }
+}
+
+extension MutableSpan {
+    // Placeholder for SE-0525
+    @_lifetime(&mutableBytes)
+    fileprivate init(mutating mutableBytes: inout MutableRawSpan) where Element: BitwiseCopyable {
+        self = mutableBytes._unsafeMutableView(as: Element.self)
+    }
+}
+
+extension OutputSpan where Element: BitwiseCopyable {
+    // Placeholder for SE-0525
+//    @_lifetime(copy self)
+    mutating func append<E: Error>(
+        elements n: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) {
+        try self.withUnsafeMutableBufferPointer { buffer, initializedCount throws(E) in
+            let rawBuffer = UnsafeMutableRawBufferPointer(buffer)
+            var rawSpan = OutputRawSpan(buffer: rawBuffer, initializedCount: initializedCount)
+            defer {
+                initializedCount = rawSpan.finalize(for: rawBuffer) / MemoryLayout<Element>.stride
+                rawSpan = OutputRawSpan()
+            }
+            return try initializer(&rawSpan)
+        }
+    }
+}
+
+extension OutputRawSpan {
+    // Placeholder for SE-0525
+    mutating func append(copying other: RawSpan) {
+        for i in other.byteOffsets {
+            self.append(other[i])
+        }
+    }
+}
+
 /// Represents UUID strings, which can be used to uniquely identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
 public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
-    public private(set) var uuid: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    internal var _storage = InlineArray<2, UInt64>(repeating: 0)
 
-    /* Create a new UUID with RFC 4122 version 4 random bytes */
-    public init() {
-        withUnsafeMutablePointer(to: &uuid) {
-            $0.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<uuid_t>.size) {
-                _foundation_uuid_generate_random($0)
-            }
+    /// The UUID bytes as a `uuid_t` tuple.
+    public var uuid: uuid_t {
+        get {
+            return unsafeBitCast(_storage, to: uuid_t.self)
+        }
+        set {
+            _storage = unsafeBitCast(newValue, to: InlineArray<2, UInt64>.self)
         }
     }
 
-    @inline(__always)
-    internal func withUUIDBytes<R>(_ work: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R {
-        return try withExtendedLifetime(self) {
-            try withUnsafeBytes(of: uuid) { rawBuffer in
-                return try rawBuffer.withMemoryRebound(to: UInt8.self) { buffer in
-                    return try work(buffer)
-                }
-            }
-        }
+    /// Create a new UUID with RFC 4122 version 4 random bytes.
+    public init() {
+        var generator = SystemRandomNumberGenerator()
+        self = UUID.random(using: &generator)
     }
 
     /// Create a UUID from a string such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
     ///
     /// Returns nil for invalid strings.
     public init?(uuidString string: __shared String) {
-        let res = withUnsafeMutablePointer(to: &uuid) {
-            $0.withMemoryRebound(to: UInt8.self, capacity: 16) {
-                return _foundation_uuid_parse(string, $0)
-            }
-        }
-        if res != 0 {
+        let utf8 = string.utf8Span
+        guard utf8.count == 36 else {
             return nil
+        }
+        
+        var charIdx = 0
+        var byteIdx = 0
+        while charIdx < 36 {
+            switch charIdx {
+            case 8, 13, 18, 23:
+                guard utf8.span.bytes[charIdx] == UInt8(ascii: "-") else {
+                    return nil
+                }
+                charIdx += 1
+            default:
+                // from CodableUtilities.swift
+                guard let b1 = utf8.span.bytes[charIdx].hexDigitValue else {
+                    return nil
+                }
+                guard let b2 = utf8.span.bytes[charIdx + 1].hexDigitValue else {
+                    return nil
+                }
+                // Will be: _storage.mutableSpan.mutableBytes[byteIdx] = b1 << 4 | b2
+                var mutableSpan = _storage.mutableSpan
+                var mutableBytes = mutableSpan.mutableBytes
+                mutableBytes[byteIdx] = b1 << 4 | b2
+                byteIdx += 1
+                charIdx += 2
+            }
         }
     }
 
     /// Create a UUID from a `uuid_t`.
     public init(uuid: uuid_t) {
-        self.uuid = uuid
+        self._storage = unsafeBitCast(uuid, to: InlineArray<2, UInt64>.self)
+    }
+
+    /// Creates a UUID by copying exactly 16 bytes from a `Span<UInt8>`.
+    ///
+    /// - Precondition: `span.count` must be exactly 16.
+    @available(FoundationPreview 6.4, *)
+    public init(copying span: RawSpan) {
+        precondition(span.byteCount == 16, "UUID requires exactly 16 bytes, but \(span.byteCount) were provided")
+        // Is this safe? Probably not because we don't know the alignment of span
+        // let pieces = Span<UInt64>(viewing: span)
+        // _storage = [pieces[0], pieces[1]]
+        self.init { outputRawSpan in
+            outputRawSpan.append(copying: span)
+        }
+    }
+
+    /// Creates a UUID by filling its 16 bytes using a closure that writes into an `OutputSpan<UInt8>`.
+    ///
+    /// The closure must write exactly 16 bytes into the output span.
+    @available(FoundationPreview 6.4, *)
+    public init<E: Error>(
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> ()
+    ) throws(E) {
+        _storage = try InlineArray<2, UInt64>(initializingWith: { outputSpan throws(E) -> Void in
+            try outputSpan.append(elements: 2) { outputRawSpan throws(E) in
+                try initializer(&outputRawSpan)
+                let count = outputRawSpan.byteCount
+                precondition(count == 16, "UUID requires exactly 16 bytes, but \(count) were provided")
+            }
+        })
+    }
+
+    // Hex lookup tables for UUID string formatting. Each byte is converted to two hex characters via table lookup.
+    private static let _upperHex: StaticString = "0123456789ABCDEF"
+    private static let _lowerHex: StaticString = "0123456789abcdef"
+
+    /// Writes the UUID as a 36-character hex string into `buffer` using the given hex digit lookup table. Returns 36.
+    private func _unparse(
+        into buffer: UnsafeMutableBufferPointer<UInt8>,
+        hexTable: StaticString
+    ) -> Int {
+        hexTable.withUTF8Buffer { hex in
+            var o = 0
+            for i in 0..<16 {
+                // Insert '-' after bytes 4, 6, 8, 10
+                switch i {
+                case 4, 6, 8, 10:
+                    buffer[o] = UInt8(ascii: "-")
+                    o &+= 1
+                default:
+                    break
+                }
+                let byte = _storage.span.bytes[i]
+                buffer[o] = hex[Int(byte &>> 4)]
+                buffer[o &+ 1] = hex[Int(byte & 0xF)]
+                o &+= 2
+            }
+            assert(o == 36)
+        }
+        return 36
     }
 
     /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
     public var uuidString: String {
-        var bytes: uuid_string_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        return withUUIDBytes { valBuffer in
-            withUnsafeMutablePointer(to: &bytes) { strPtr in
-                strPtr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<uuid_string_t>.size) { str in
-                    _foundation_uuid_unparse_upper(valBuffer.baseAddress!, str)
-                    return String(cString: str)
-                }
-            }
+        String(unsafeUninitializedCapacity: 36) { buffer in
+            _unparse(into: buffer, hexTable: UUID._upperHex)
+        }
+    }
+
+    /// Returns a lowercase string created from the UUID, such as "e621e1f8-c36c-495a-93fc-0c247a3e6e5f"
+    @available(FoundationPreview 6.4, *)
+    public var lowercasedUUIDString: String {
+        String(unsafeUninitializedCapacity: 36) { buffer in
+            _unparse(into: buffer, hexTable: UUID._lowerHex)
         }
     }
 
     public func hash(into hasher: inout Hasher) {
-        withUnsafeBytes(of: uuid) { buffer in
+        withUnsafeBytes(of: _storage) { buffer in
             hasher.combine(bytes: buffer)
         }
     }
@@ -99,26 +256,8 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         secondBits &= 0b00111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111 // Clear the 2 most significant bits
         secondBits |= 0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 // Set the two MSB to '10'
 
-        let uuidBytes = (
-            UInt8(truncatingIfNeeded: firstBits >> 56),
-            UInt8(truncatingIfNeeded: firstBits >> 48),
-            UInt8(truncatingIfNeeded: firstBits >> 40),
-            UInt8(truncatingIfNeeded: firstBits >> 32),
-            UInt8(truncatingIfNeeded: firstBits >> 24),
-            UInt8(truncatingIfNeeded: firstBits >> 16),
-            UInt8(truncatingIfNeeded: firstBits >> 8),
-            UInt8(truncatingIfNeeded: firstBits),
-            UInt8(truncatingIfNeeded: secondBits >> 56),
-            UInt8(truncatingIfNeeded: secondBits >> 48),
-            UInt8(truncatingIfNeeded: secondBits >> 40),
-            UInt8(truncatingIfNeeded: secondBits >> 32),
-            UInt8(truncatingIfNeeded: secondBits >> 24),
-            UInt8(truncatingIfNeeded: secondBits >> 16),
-            UInt8(truncatingIfNeeded: secondBits >> 8),
-            UInt8(truncatingIfNeeded: secondBits)
-        )
-
-        return UUID(uuid: uuidBytes)
+        let inline: [2 of UInt64] = [firstBits.bigEndian, secondBits.bigEndian]
+        return UUID(copying: inline.span.bytes)
     }
 
     public var description: String {
@@ -130,13 +269,15 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 
     public static func ==(lhs: UUID, rhs: UUID) -> Bool {
-        withUnsafeBytes(of: lhs) { lhsPtr in
-            withUnsafeBytes(of: rhs) { rhsPtr in
-                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
-                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
-                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
-            }
-        }
+        // Implementation note: This operation is designed to avoid short-circuited early exits, so that comparison of any two UUID values is done in the same amount of time.
+//        withUnsafeBytes(of: lhs._storage) { lhsPtr in
+//            withUnsafeBytes(of: rhs._storage) { rhsPtr in
+//                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+//                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+//                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
+//            }
+//        }
+        return lhs._storage[0] ^ rhs._storage[0] | (lhs._storage[1] ^ rhs._storage[1]) == 0
     }
 }
 
@@ -169,17 +310,256 @@ extension UUID : Codable {
     }
 }
 
+// MARK: - Nil and Max UUIDs
+
+@available(FoundationPreview 6.4, *)
+extension UUID {
+    /// The `nil` (or minimum) UUID, where all bits are set to zero.
+    ///
+    /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.9), the nil UUID is a special form where all 128 bits are zero. It can be used to represent the absence of a UUID value.
+    public static let min = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+    /// The max UUID, where all bits are set to one.
+    ///
+    /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.10), the max UUID is a special form where all 128 bits are one. It can be used as a sentinel value, for example to represent "the largest possible UUID" in a sorted range.
+    public static let max = UUID(uuid: (0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF))
+}
+
+// MARK: - Span
+
+@available(FoundationPreview 6.4, *)
+extension UUID {
+    /// A `RawSpan` view of the UUID's 16 bytes.
+    public var bytes: RawSpan {
+        @_lifetime(borrow self)
+        borrowing get {
+            _storage.span.bytes
+        }
+    }
+
+    /// A `MutableRawSpan` view of the UUID's 16 bytes.
+    public var mutableBytes: MutableRawSpan {
+        @_lifetime(&self)
+        mutating get {
+            // Will be: _storage.mutableSpan.mutableBytes
+            var s = _overrideLifetime(_storage.mutableSpan, copying: ())
+            return _overrideLifetime(s.mutableBytes, mutating: &self)
+        }
+    }
+}
+
+// MARK: - UUID Version
+
+@available(FoundationPreview 6.4, *)
+extension UUID {
+    /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
+    public var version: Int {
+        get {
+            Int(_storage.span.bytes[6] >> 4)
+        }
+        set {
+            var s = _storage.mutableSpan
+            var b = s.mutableBytes
+            b[6] = (b[6] & 0x0F) | (UInt8(newValue & 0x0F) << 4)
+        }
+    }
+
+    /// The variant of a UUID, as defined by RFC 9562 Section 4.1.
+    public enum Variant: Sendable, Hashable {
+        /// NCS backward compatibility (variant bits `0xx`).
+        case ncs
+
+        /// The variant specified by RFC 9562 (variant bits `10x`).
+        case rfc9562
+
+        /// Microsoft backward compatibility (variant bits `110`).
+        case microsoft
+
+        /// Reserved for future use (variant bits `111`).
+        case reserved
+    }
+
+    /// The variant of this UUID, derived from the variant bits (bits 64–65) as defined by RFC 9562.
+    public var variant: Variant {
+        let byte = _storage.span.bytes[8]
+        if byte & 0x80 == 0 {
+            return .ncs
+        } else if byte & 0xC0 == 0x80 {
+            return .rfc9562
+        } else if byte & 0xE0 == 0xC0 {
+            return .microsoft
+        } else {
+            return .reserved
+        }
+    }
+
+    /// Creates a new UUID with RFC 9562 version 4 (random) layout. This is equivalent to calling `UUID()`.
+    @export(implementation)
+    public static func version4() -> UUID {
+        UUID()
+    }
+
+    /// Creates a new UUID with RFC 9562 version 7 layout: a Unix timestamp in milliseconds in the most significant 48 bits, followed by random bits. The variant and version fields are set per the RFC.
+    ///
+    /// Version 7 UUIDs sort in chronological order when compared using the standard `<` operator, making them well-suited as database primary keys. UUIDs generated within the same process are guaranteed to be monotonically increasing.
+    ///
+    /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
+    /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
+    public static func version7(at date: Date? = nil, offset: Duration = .zero) -> UUID {
+        var generator = SystemRandomNumberGenerator()
+        return version7(using: &generator, at: date, offset: offset)
+    }
+
+    /// Creates a new UUID with RFC 9562 version 7 layout using the specified random number generator for the random bits.
+    ///
+    /// When called without an `at` argument, the timestamp portion is guaranteed to be monotonically increasing within the current process.
+    ///
+    /// - Parameter generator: The random number generator to use when creating the random portions of the UUID.
+    /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
+    /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
+    /// - Returns: A version 7 UUID.
+    public static func version7(
+        using generator: inout some RandomNumberGenerator,
+        at date: Date? = nil,
+        offset: Duration = .zero
+    ) -> UUID {
+        // The most significant 48 bits contain a millisecond-precision Unix timestamp.
+        // The 12 bits following the version field (`rand_a`) encode sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3.
+        // The remaining 62 bits (`rand_b`, after the variant field) are filled using `generator`.
+        let combined: UInt64
+        if let date {
+            // Caller-provided date (plus offset): convert to Duration,
+            // no monotonic guard
+            let elapsed = Duration.seconds(date.timeIntervalSince1970) + offset
+            let (ms, subMS) = elapsed._uuidTimestampComponents
+            combined = ms << 12 | UInt64(subMS)
+        } else {
+            // Current time (plus offset) with monotonic guarantee
+            combined = _nextMonotonicTimestamp(offset: offset)
+        }
+
+        let ms = combined >> 12
+        let subMS = UInt16(combined & 0x0FFF)
+
+        var first: UInt64 = 0
+        // Bits 0–47: millisecond timestamp
+        first |= ms << 16
+        // Bits 48–51: version 7 (0111)
+        first |= 0x7000
+        // Bits 52–63: sub-millisecond precision (12 bits)
+        first |= UInt64(subMS)
+
+        // Bits 64–127: variant + random
+        var second = UInt64.random(in: .min ... .max, using: &generator)
+        // Set the variant to '10' in bits 64–65
+        second &= 0x3FFF_FFFF_FFFF_FFFF
+        second |= 0x8000_0000_0000_0000
+
+        let inline: [2 of UInt64] = [first.bigEndian, second.bigEndian]
+        return UUID(copying: inline.span.bytes)
+    }
+
+    /// For version 7 UUIDs, returns the `Date` encoded in the most significant 48 bits. Returns `nil` for all other versions.
+    ///
+    /// The returned date has millisecond precision, as specified by RFC 9562.
+    ///
+    /// - Note: Even though this implementation, or others, may choose to encode more precision into other bytes of the `UUID`, this method may only return the portion of the timestamp stored in the RFC-specified bytes.
+    public var date: Date? {
+        guard version == 7 else { return nil }
+        let ms: UInt64 = (_storage[0].bigEndian & 0xFFFFFFFFFFFF0000) >> 16
+        return Date(timeIntervalSince1970: Double(ms) / 1000.0)
+    }
+
+    // MARK: - Monotonic timestamp
+
+    /// Tracks the last combined timestamp value to ensure monotonically increasing v7 UUIDs within a process.
+    private static let _lastTimestamp = Atomic<UInt64>(0)
+
+    /// Returns a combined 60-bit timestamp, which is guaranteed to be strictly greater than any previously returned value. If the clock hasn't advanced since the last call, the previous value is incremented by 1.
+    private static func _nextMonotonicTimestamp(offset: Duration) -> UInt64 {
+        let elapsed = Duration.durationSince1970 + offset
+        let (ms, subMS) = elapsed._uuidTimestampComponents
+        
+        let current = ms << 12 | UInt64(subMS)
+        var old = _lastTimestamp.load(ordering: .relaxed)
+        
+        while true {
+            let next = Swift.max(current, old &+ 1)
+            let (exchanged, original) = _lastTimestamp.compareExchange(
+                expected: old,
+                desired: next,
+                ordering: .relaxed
+            )
+            if exchanged {
+                return next
+            }
+            old = original
+        }
+    }
+}
+
+extension Duration {
+    /// Attoseconds per millisecond (10^15).
+    private static let _attosPerMS: Int64 = 1_000_000_000_000_000
+
+    /// The current wall clock time as a `Duration` since the Unix epoch, using the highest precision time source available on the platform.
+    fileprivate static var durationSince1970: Duration {
+#if canImport(WinSDK)
+        // FILETIME is 100-nanosecond intervals since January 1, 1601 (UTC).
+        // Subtract the 1601-to-1970 offset to get Unix epoch time.
+        var ft = FILETIME()
+        GetSystemTimePreciseAsFileTime(&ft)
+        var li = ULARGE_INTEGER()
+        li.LowPart = ft.dwLowDateTime
+        li.HighPart = ft.dwHighDateTime
+        // 100-ns ticks from 1601 to 1970
+        let epochOffset: UInt64 = 116_444_736_000_000_000
+        let ticks = li.QuadPart - epochOffset
+        let seconds = Int64(ticks / 10_000_000)
+        // Each tick is 100ns = 100_000_000_000 attoseconds
+        let remainingTicks = Int64(ticks % 10_000_000)
+        return Duration.seconds(seconds) + Duration(secondsComponent: 0, attosecondsComponent: remainingTicks * 100_000_000_000)
+#else
+        var ts = timespec()
+        clock_gettime(CLOCK_REALTIME, &ts)
+        return Duration.seconds(ts.tv_sec) + Duration.nanoseconds(ts.tv_nsec)
+#endif
+    }
+
+    /// Extracts the 48-bit millisecond timestamp and 12-bit sub-millisecond fraction from this duration (interpreted as time since Unix epoch), using pure integer arithmetic.
+    ///
+    /// Returns `(ms, subMS)` where `ms` is clamped to 48 bits and `subMS` is 0–4095.
+    fileprivate var _uuidTimestampComponents: (ms: UInt64, subMS: UInt16) {
+        let (secs, attos) = self.components
+
+        // Total milliseconds = seconds * 1000 + attoseconds / attosPerMS
+        let totalMS = Int64(secs) * 1000 + attos / Self._attosPerMS
+
+        // Clamp to the 48-bit unsigned range (0 ... 0xFFFF_FFFF_FFFF)
+        let ms = UInt64(clamping: Swift.max(0, totalMS))
+            & 0xFFFF_FFFF_FFFF
+
+        // Sub-millisecond fraction: remaining attoseconds after
+        // removing whole milliseconds, scaled to 12 bits.
+        let remainingAttos = attos % Self._attosPerMS
+        let subMS = UInt16((remainingAttos * 4096) / Self._attosPerMS)
+
+        return (ms, subMS)
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension UUID : Comparable {
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public static func < (lhs: UUID, rhs: UUID) -> Bool {
-        var leftUUID = lhs.uuid
-        var rightUUID = rhs.uuid
+        // Implementation note: This operation is designed to avoid short-circuited early exits, so that comparison of any two UUID values is done in the same amount of time.
+        var leftStorage = lhs._storage
+        var rightStorage = rhs._storage
         var result: Int = 0
         var diff: Int = 0
-        withUnsafeBytes(of: &leftUUID) { leftPtr in
-            withUnsafeBytes(of: &rightUUID) { rightPtr in
-                for offset in (0 ..< MemoryLayout<uuid_t>.size).reversed() {
+        withUnsafeBytes(of: &leftStorage) { leftPtr in
+            withUnsafeBytes(of: &rightStorage) { rightPtr in
+                for offset in (0 ..< 16).reversed() {
                     diff = Int(leftPtr.load(fromByteOffset: offset, as: UInt8.self)) -
                         Int(rightPtr.load(fromByteOffset: offset, as: UInt8.self))
                     // Constant time, no branching equivalent of
