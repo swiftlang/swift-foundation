@@ -12,8 +12,7 @@
 
 //===--- ContiguousBytes --------------------------------------------------===//
 
-/// Indicates that the conforming type is a contiguous collection of raw bytes
-/// whose underlying storage is directly accessible by calling withBytes.
+/// A protocol that declares the type offers direct access to the underlying raw bytes in a contiguous manner.
 ///
 /// This protocol predates the introduction of the `RawSpan` type in the
 /// standard library. Types that conform to this protocol will generally provide

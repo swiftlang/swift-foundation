@@ -123,18 +123,29 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
     body(buffer)
 }
 
+/// A byte buffer in memory.
+///
+/// The `Data` value type allows simple byte buffers to take on the behavior of Foundation objects.
+/// You can create empty or pre-populated buffers from a variety of sources and later add or remove bytes.
+/// You can filter and sort the content, or compare against other buffers. You can manipulate subranges
+/// of bytes and iterate over some or all of them.
+///
+/// `Data` bridges to the `NSData` class and its mutable subclass, `NSMutableData`. You can use these
+/// interchangeably in code that interacts with Objective-C APIs.
 @frozen
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 #if compiler(>=6.2)
 @_addressableForDependencies
 #endif
 public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceableCollection, Sendable, Hashable {
+    /// A type used to indicate a position in a data's buffer.
     public typealias Index = Int
+    /// A type used to indicate a range of positions in a data's buffer.
     public typealias Indices = Range<Int>
 
     @usableFromInline internal var _representation: _Representation
 
-    // A standard or custom deallocator for `Data`.
+    /// A deallocator you use to customize how the backing store is deallocated for data created with the no-copy initializer.
     ///
     /// When creating a `Data` with the no-copy initializer, you may specify a `Data.Deallocator` to customize the behavior of how the backing store is deallocated.
     public enum Deallocator {
@@ -176,7 +187,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // MARK: -
     // MARK: Init methods
 
-    /// Initialize a `Data` with copied memory content.
+    /// Creates data with copied memory content.
     ///
     /// - parameter bytes: A pointer to the memory. It will be copied.
     /// - parameter count: The number of bytes to copy.
@@ -185,7 +196,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(UnsafeRawBufferPointer(start: bytes, count: count))
     }
 
-    /// Initialize a `Data` with copied memory content.
+    /// Creates a data buffer with copied memory content using a buffer pointer.
     ///
     /// - parameter buffer: A buffer pointer to copy. The size is calculated from `SourceType` and `buffer.count`.
     @inlinable // This is @inlinable as a trivial, generic initializer.
@@ -193,7 +204,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(UnsafeRawBufferPointer(buffer))
     }
 
-    /// Initialize a `Data` with copied memory content.
+    /// Creates a data buffer with copied memory content using a mutable buffer pointer.
     ///
     /// - parameter buffer: A buffer pointer to copy. The size is calculated from `SourceType` and `buffer.count`.
     @inlinable // This is @inlinable as a trivial, generic initializer.
@@ -213,7 +224,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    /// Initialize a `Data` with the specified size.
+    /// Creates an empty data buffer of a specified size.
     ///
     /// This initializer doesn't necessarily allocate the requested memory right away. `Data` allocates additional memory as needed, so `capacity` simply establishes the initial capacity. When it does allocate the initial memory, though, it allocates the specified amount.
     ///
@@ -227,7 +238,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(capacity: capacity)
     }
 
-    /// Initialize a `Data` with the specified count of zeroed bytes.
+    /// Creates a new data buffer with the specified count of zeroed bytes.
     ///
     /// - parameter count: The number of bytes the data initially contains.
     @inlinable // This is @inlinable as a trivial initializer.
@@ -235,7 +246,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(count: count)
     }
 
-    /// Initialize an empty `Data`.
+    /// Creates an empty data buffer.
     @inlinable // This is @inlinable as a trivial initializer.
     public init() {
         _representation = .empty
@@ -304,7 +315,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    /// Initialize a `Data` without copying the bytes.
+    /// Creates a data buffer with memory content without copying the bytes.
     ///
     /// If the result is mutated and is not a unique reference, then the `Data` will still follow copy-on-write semantics. In this case, the copy will use its own deallocator. Therefore, it is usually best to only use this initializer when you either enforce immutability with `let` or ensure that no other references to the underlying data are formed.
     /// - parameter bytes: A pointer to the bytes.
@@ -472,6 +483,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // -----------------------------------
     // MARK: - Properties and Functions
 
+    /// Prepares the collection to store the specified number of elements, when doing so is appropriate for the underlying type.
     @inlinable // This is @inlinable as trivially forwarding.
     public mutating func reserveCapacity(_ minimumCapacity: Int) {
         _representation.reserveCapacity(minimumCapacity)
@@ -590,12 +602,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
     }
 
+    /// Appends the specified bytes from memory to the end of the data.
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public mutating func append(_ bytes: UnsafePointer<UInt8>, count: Int) {
         if count == 0 { return }
         _append(UnsafeBufferPointer(start: bytes, count: count))
     }
 
+    /// Appends the specified data to the end of this data.
     public mutating func append(_ other: Data) {
         guard !other.isEmpty else { return }
         other.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
@@ -692,6 +706,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
     #endif
 
+    /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
     @_alwaysEmitIntoClient
     public mutating func append(contentsOf elements: some Sequence<UInt8> & ContiguousBytes) {
@@ -702,6 +717,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
     @_alwaysEmitIntoClient
     @abi(mutating func append(fastContentsof elements: some Sequence<UInt8>))
@@ -779,7 +795,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     // MARK: -
 
-    /// Set a region of the data to `0`.
+    /// Sets a region of the data buffer to 0.
     ///
     /// If `range` exceeds the bounds of the data, then the data is resized to fit.
     /// - parameter range: The range in the data to set to `0`.
@@ -811,7 +827,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
     #endif
 
-    /// Replace a region of bytes in the data with new bytes from a buffer.
+    /// Replaces a region of bytes in the data with new bytes from a buffer.
     ///
     /// This will resize the data if required, to fit the entire contents of `buffer`.
     ///
@@ -823,6 +839,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         replaceSubrange(subrange, with: UnsafeRawBufferPointer(buffer))
     }
 
+    /// Replaces a region of bytes in the data with new bytes from a collection.
+    ///
+    /// This will resize the data if required, to fit the entire contents of `newElements`.
+    ///
+    /// - Precondition: The bounds of `subrange` must be valid indices of the collection.
+    /// - Parameters:
+    ///   - subrange: The range in the data to replace.
+    ///   - newElements: The replacement bytes.
     @inline(__always)
     @_alwaysEmitIntoClient
     public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8> & ContiguousBytes) {
@@ -831,6 +855,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Replaces a region of bytes in the data with new bytes from a collection.
+    ///
+    /// This will resize the data if required, to fit the entire contents of `newElements`.
+    ///
+    /// - Precondition: The bounds of `subrange` must be valid indices of the collection.
+    /// - Parameters:
+    ///   - subrange: The range in the data to replace.
+    ///   - newElements: The replacement bytes.
     @inline(__always)
     @_alwaysEmitIntoClient
     @abi(mutating func repalceSubrangeFast(_ subrange: Range<Index>, with newElements: some Collection<UInt8>))
@@ -879,12 +911,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Replaces a region of bytes in the data with bytes from memory.
     @inlinable // This is @inlinable as trivially forwarding.
     public mutating func replaceSubrange(_ subrange: Range<Index>, with bytes: UnsafeRawPointer, count cnt: Int) {
         _representation.replaceSubrange(subrange, with: bytes, count: cnt)
     }
 
-    /// Return a new copy of the data in a specified range.
+    /// Returns a new copy of the data in a specified range.
     ///
     /// - parameter range: The range to copy.
     public func subdata(in range: Range<Index>) -> Data {
@@ -901,6 +934,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // MARK: -
     //
 
+    /// Returns a new data buffer created by removing the given number of bytes from the front of the original data.
     public func advanced(by amount: Int) -> Data {
         precondition(amount >= 0)
         let start = self.index(self.startIndex, offsetBy: amount)
@@ -911,7 +945,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // MARK: -
     // MARK: Index and Subscript
 
-    /// Sets or returns the byte at the specified index.
+    /// Accesses the byte at the specified index.
     @inlinable // This is @inlinable as trivially forwarding.
     public subscript(index: Index) -> UInt8 {
         get {
@@ -922,6 +956,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Accesses the bytes at the specified range of indexes.
     @inlinable // This is @inlinable as trivially forwarding.
     public subscript(bounds: Range<Index>) -> Data {
         get {
@@ -956,7 +991,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     }
 
-    /// The start `Index` in the data.
+    /// The beginning index into the data.
     @inlinable // This is @inlinable as trivially forwarding.
     public var startIndex: Index {
         get {
@@ -974,11 +1009,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Returns the index that immediately precedes the specified index.
     @inlinable // This is @inlinable as trivially computable.
     public func index(before i: Index) -> Index {
         return i - 1
     }
 
+    /// Returns the index that immediately follows the specified index.
     @inlinable // This is @inlinable as trivially computable.
     public func index(after i: Index) -> Index {
         return i + 1

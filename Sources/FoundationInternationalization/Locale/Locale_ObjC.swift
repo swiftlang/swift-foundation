@@ -579,7 +579,7 @@ extension NSLocale : _HasCustomAnyHashableRepresentation {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Locale {
-    /// Returns a list of available `Locale` language codes.
+    /// A list of available language codes.
     @available(macOS, deprecated: 13, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     @available(iOS, deprecated: 16, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     @available(tvOS, deprecated: 16, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
@@ -606,7 +606,7 @@ extension Locale {
         }
     }
 
-    /// Returns a list of available `Locale` region codes.
+    /// A list of available region codes.
     @available(macOS, deprecated: 13, message: "Use `Locale.Region.isoRegions` instead")
     @available(iOS, deprecated: 16, message: "Use `Locale.Region.isoRegions` instead")
     @available(tvOS, deprecated: 16, message: "Use `Locale.Region.isoRegions` instead")
@@ -620,7 +620,7 @@ extension Locale {
 #endif
     }
 
-    /// Returns a list of available `Locale` currency codes.
+    /// A list of available currency codes.
     @available(macOS, deprecated: 13, message: "Use `Locale.Currency.isoCurrencies` instead")
     @available(iOS, deprecated: 16, message: "Use `Locale.Currency.isoCurrencies` instead")
     @available(tvOS, deprecated: 16, message: "Use `Locale.Currency.isoCurrencies` instead")

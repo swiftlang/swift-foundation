@@ -20,16 +20,63 @@ internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
-    /// Converts `self` to its textual representation that contains both the date and time parts. The exact format depends on the user's preferences.
+    /// Generates a locale-aware string representation of a date using specified date and time format styles.
+    ///
+    /// When displaying a date to a user, use the convenient `formatted(date:time:)` instance method to customize the string representation of the date. Set the date and time styles of the date format style separately, according to your particular needs.
+    ///
+    /// For example, to create a string with a full date and no time representation, set the date style to `complete` and the time style to `omitted`. Conversely, to create a string representing only the time, set the date style to `omitted` and the time style to `complete`.
+    ///
+    /// ```swift
+    /// let birthday = Date()
+    ///
+    /// birthday.formatted(date: .complete, time: .omitted) // Sunday, January 17, 2021
+    /// birthday.formatted(date: .omitted, time: .complete) // 4:03:12 PM CST
+    /// ```
+    ///
+    /// You can create string representations of a `Date` instance with several levels of brevity using a variety of preset date and time styles. This example shows date styles of `long`, `abbreviated`, and `numeric`, and time styles of `shortened`, `standard`, and `complete`.
+    ///
+    /// ```swift
+    /// let birthday = Date()
+    ///
+    /// birthday.formatted(date: .long, time: .shortened) // January 17, 2021, 4:03 PM
+    /// birthday.formatted(date: .abbreviated, time: .standard) // Jan 17, 2021, 4:03:12 PM
+    /// birthday.formatted(date: .numeric, time: .complete) // 1/17/2021, 4:03:12 PM CST
+    ///
+    /// birthday.formatted() // Jan 17, 2021, 4:03 PM
+    /// ```
+    ///
+    /// The default date style is `abbreviated` and the default time style is `shortened`.
+    ///
+    /// For the default date formatting, use the `formatted()` method. To customize the formatted measurement string, use the `formatted(_:)` method and include a `Date.FormatStyle`.
+    ///
+    /// For more information about formatting dates, see ``Date/FormatStyle``.
+    ///
     /// - Parameters:
     ///   - date: The style for describing the date part.
     ///   - time: The style for describing the time part.
-    /// - Returns: A `String` describing `self`.
+    /// - Returns: A string, formatted according to the specified date and time styles.
     public func formatted(date: FormatStyle.DateStyle, time: FormatStyle.TimeStyle) -> String {
         let f = FormatStyle(date: date, time: time)
         return f.format(self)
     }
 
+    /// Generates a locale-aware string representation of a date using the default date format style.
+    ///
+    /// Use the `formatted()` method to apply the default format style to a date, as in the following example:
+    ///
+    /// ```swift
+    /// let birthday = Date()
+    /// print(birthday.formatted())
+    /// // 6/4/2021, 2:24 PM
+    /// ```
+    ///
+    /// The default date format style uses the `numeric` date style and the `shortened` time style.
+    ///
+    /// To customize the formatted measurement string, use either the ``Date/formatted(_:)`` method and include a `Measurement.FormatStyle` or the ``Date/formatted(date:time:)`` and include a date and time style.
+    ///
+    /// For more information about formatting dates, see ``Date/FormatStyle``.
+    ///
+    /// - Returns: A string, formatted according to the default style.
     public func formatted() -> String {
         self.formatted(Date.FormatStyle(date: .numeric, time: .shortened))
     }
@@ -214,7 +261,191 @@ extension Date.FormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
-    /// Strategies for formatting a `Date`.
+    /// A structure that creates a locale-appropriate string representation of a date instance and converts strings of dates and times into date instances.
+    ///
+    /// A date format style shares the date and time formatting pattern preferred by the user's locale for formatting and parsing.
+    ///
+    /// When you want to apply a specific formatting style to a single ``Date`` instance, use ``Date/FormatStyle``. For other instances, use the following:
+    ///
+    /// - When working with date representations in ISO 8601 format, use ``Date/ISO8601FormatStyle``.
+    /// - To represent an interval between two date instances, use ``Date/RelativeFormatStyle``.
+    /// - To represent two dates as a pair, for example to get output that looks like `10/21/1985 1:45 PM - 9/13/2015 6:33 PM`, use ``Date/IntervalFormatStyle``.
+    ///
+    /// ### Formatting String Representations of Dates and Times
+    ///
+    /// ``Date/FormatStyle`` provides a variety of localized presets and configuration options to create user-visible representations of dates and times from instances of ``Date``.
+    ///
+    /// When displaying a date to a user, use the ``Date/formatted(date:time:)`` instance method. Set the date and time styles of the date format style separately, according to your particular needs.
+    ///
+    /// For example, to create a string with a full date and no time representation, set the ``DateStyle`` to ``DateStyle/complete`` and the ``TimeStyle`` to ``TimeStyle/omitted``. Conversely, to create a string representing only the time for the current locale and time zone, set the date style to ``DateStyle/omitted`` and the time style to ``TimeStyle/complete``, as the following code illustrates:
+    ///
+    /// ```swift
+    /// let birthday = Date()
+    ///
+    /// birthday.formatted(date: .complete, time: .omitted) // Sunday, January 17, 2021
+    /// birthday.formatted(date: .omitted, time: .complete) // 4:03:12 p.m. CST
+    /// ```
+    ///
+    ///
+    /// The results shown are for locale set to `en_US` and time zone set to `CST`.
+    ///
+    /// You can create string representations of a ``Date`` instance with various levels of brevity using preset date and time styles. The following example shows date styles of ``DateStyle/long``, ``DateStyle/abbreviated``, and ``DateStyle/numeric``, and time styles of ``TimeStyle/shortened``, ``TimeStyle/standard``, and ``TimeStyle/complete``:
+    ///
+    /// ```swift
+    /// let birthday = Date()
+    ///
+    /// birthday.formatted(date: .long, time: .shortened) // January 17, 2021, 4:03 PM
+    /// birthday.formatted(date: .abbreviated, time: .standard) // Jan 17, 2021, 4:03:12 PM
+    /// birthday.formatted(date: .numeric, time: .complete) // 1/17/2021, 4:03:12 PM CST
+    ///
+    /// birthday.formatted() // Jan 17, 2021, 4:03 PM
+    /// ```
+    ///
+    ///
+    /// The default date style is ``DateStyle/abbreviated`` and the default time style is ``TimeStyle/shortened``.
+    ///
+    /// For full customization of the string representation of a date, use the ``Date/formatted(_:)`` instance method of ``Date`` and provide a ``Date/FormatStyle`` instance.
+    ///
+    /// You can apply more customization of the date and time components and their representation in your app by appying a series of convenience modifiers to your format style. The following example applies a series of modifiers to the format style to precisely define the formatting of the year, month, day, hour, minute, and timezone components of the resulting string. The ordering of the date and time modifiers has no impact on the string produced.
+    ///
+    /// ```swift
+    /// // Call the .formatted method on an instance of Date passing in an instance of Date.FormatStyle.
+    ///
+    /// let birthday = Date()
+    ///
+    /// birthday.formatted(
+    /// Date.FormatStyle()
+    /// .year(.defaultDigits)
+    /// .month(.abbreviated)
+    /// .day(.twoDigits)
+    /// .hour(.defaultDigits(amPM: .abbreviated))
+    /// .minute(.twoDigits)
+    /// .timeZone(.identifier(.long))
+    /// .era(.wide)
+    /// .dayOfYear(.defaultDigits)
+    /// .weekday(.abbreviated)
+    /// .week(.defaultDigits)
+    /// )
+    /// // Sun, Jan 17, 2021 Anno Domini (week: 4), 11:18 AM America/Chicago
+    /// ```
+    ///
+    ///
+    /// ``Date/FormatStyle`` provides a convenient factory variable, ``FormatStyle/dateTime``, used to shorten the syntax when applying date and time modifiers to customize the format, as in the following example:
+    ///
+    /// ```swift
+    /// let localeArray = ["en_US", "sv_SE", "en_GB", "th_TH", "fr_BE"]
+    /// for localeID in localeArray {
+    /// print(meetingDate.formatted(.dateTime
+    /// .day(.twoDigits)
+    /// .month(.wide)
+    /// .weekday(.short)
+    /// .hour(.conversationalTwoDigits(amPM: .wide))
+    /// .locale(Locale(identifier: localeID))))
+    /// }
+    ///
+    /// // Th, November 12, 7 PM
+    /// // to 12 november 19
+    /// // Th 12 November, 19
+    /// // พฤ. 12 พฤศจิกายน 19
+    /// // je 12 novembre, 19 h
+    /// ```
+    ///
+    ///
+    /// ### Parsing Dates and Times
+    ///
+    /// To parse a ``Date`` instance from an input string, use a date parse strategy. For example:
+    ///
+    /// ```swift
+    /// let inputString = "Archive for month 8, archived on day 23 - complete."
+    /// let strategy = Date.ParseStrategy(format: "Archive for month \(month: .defaultDigits), archived on day \(day: .twoDigits) - complete.", locale: Locale(identifier: "en_US"), timeZone: TimeZone(abbreviation: "CDT")!)
+    /// if let date = try? Date(inputString, strategy: strategy) {
+    /// print(date.formatted()) // "Aug 23, 2000 at 12:00 AM"
+    /// }
+    /// ```
+    ///
+    ///
+    /// The time defaults to midnight local time unless explicitly defined.
+    ///
+    /// The parse instance method attempts to parse a provided string into an instance of date using the source date format style. The function throws an error if it can't parse the input string into a date instance.
+    ///
+    /// You can use ``Date/FormatStyle`` for round-trip formatting and parsing in a locale-aware manner. This date format style guides parsing the date instance from an input string, as the following code demonstrates:
+    ///
+    /// ```swift
+    /// let birthdayFormatStyle = Date.FormatStyle()
+    /// .year(.defaultDigits)
+    /// .month(.abbreviated)
+    /// .day(.twoDigits)
+    /// .hour(.defaultDigits(amPM: .abbreviated))
+    /// .minute(.twoDigits)
+    /// .timeZone(.identifier(.long))
+    /// .era(.abbreviated)
+    /// .weekday(.abbreviated)
+    ///
+    /// let yourBirthdayString = "Mon, Feb 17, 1997 AD, 1:27 AM America/Chicago"
+    ///
+    /// // Create a date instance from a string representation of a date.
+    /// let yourBirthday = try? birthdayFormatStyle.parse(yourBirthdayString)
+    /// // Feb 17, 1997 at 1:27 AM
+    ///
+    /// ```
+    ///
+    ///
+    /// The following round-trip date formatting example uses a date format style to create a locale-aware string representation of a date instance. Then, the date format style guides parsing the newly created string into a new date instance.
+    ///
+    /// ```swift
+    /// let myFormat = Date.FormatStyle()
+    /// .year()
+    /// .day()
+    /// .month()
+    /// .locale(Locale(identifier: "en_US"))
+    ///
+    /// let dateString = Date().formatted(myFormat)
+    /// // "Feb 17, 2021" for the "en_US" locale
+    ///
+    /// print(dateString) // Feb 17, 2021
+    ///
+    /// if let anniversary = try? Date(dateString, strategy: myFormat) {
+    /// print(anniversary.formatted(myFormat)) // Feb 17, 2021
+    /// print(anniversary.formatted()) // 2/17/2021, 12:00 AM
+    /// } else {
+    /// print("Can't parse string into date with this format.")
+    /// }
+    /// ```
+    ///
+    ///
+    /// After this code executes, `anniversary` contains a ``Date`` instance parsed from `dateString`.
+    ///
+    /// ### Applying Format Styles Repeatedly
+    ///
+    /// Once you create a date format style, you can use it to format dates multiple times.
+    ///
+    /// You can use a format style to parse a set of date instances from a set of string representations of dates. Then, use another format style, applied repeatedly, to produce more detailed string representations of those dates for a different locale. For example:
+    ///
+    /// ```swift
+    /// func formatIntroDates() {
+    /// let inputFormat = Date.FormatStyle()
+    /// .locale(Locale(identifier: "en_GB"))
+    /// .year()
+    /// .month()
+    /// .day()
+    /// // Parse string inputs into date instances.
+    /// guard let productIntroDate = try? Date("9 Jan 2007", strategy: inputFormat) else { return }
+    /// guard let anotherIntroDate = try? Date("27 Jan 2010", strategy: inputFormat) else { return }
+    /// guard let conferenceDate = try? Date("7 Jun 2021", strategy: inputFormat) else { return }
+    ///
+    /// let outputFormat = Date.FormatStyle() // Define format style for string output.
+    /// .locale(Locale(identifier: "en_US"))
+    /// .year()
+    /// .month(.wide)
+    /// .day(.twoDigits)
+    /// .weekday(.abbreviated)
+    ///
+    /// // Apply the output format on the three dates below.
+    /// print(outputFormat.format(conferenceDate)) // Mon, June 07, 2021
+    /// print(outputFormat.format(anotherIntroDate)) // Wed, January 27, 2010
+    /// print(outputFormat.format(productIntroDate)) // Tue, January 09, 2007
+    /// }
+    /// ```
     public struct FormatStyle : Sendable {
 
         var _symbols: DateFieldCollection?
@@ -229,6 +460,9 @@ extension Date {
         var _dateStyle: DateStyle? // For accessing locale pref's custom date format
 
         /// The locale to use when formatting date and time values.
+        ///
+        /// The default value is `autoupdatingCurrent`. If you set this property
+        /// to `nil`, the formatter resets to using `autoupdatingCurrent`.
         public var locale: Locale
 
         /// The time zone with which to specify date and time values.
@@ -240,7 +474,34 @@ extension Date {
         /// The capitalization formatting context used when formatting date and time values.
         public var capitalizationContext: FormatStyleCapitalizationContext
 
-        /// Returns a type erased attributed variant of this style.
+        /// A type-erased attributed variant of this style.
+        ///
+        /// Use a ``Date/FormatStyle`` instance to customize the lexical
+        /// representation of a date as a string. Use the format style's
+        /// `attributed` property to customize the visual representation of the
+        /// date as a string. Attributed strings can represent the subcomponent
+        /// characters, words, and phrases of a string with a custom combination
+        /// of font size, weight, and color.
+        ///
+        /// For example, the function below uses a date format style to create a
+        /// custom lexical representation of a date, then retrieves an attributed
+        /// string representation of the same date and applies a visual emphasis
+        /// to the year component of the date.
+        ///
+        /// ```swift
+        /// private func makeAttributedString() -> AttributedString {
+        ///     let date = Date()
+        ///     let formatStyle = Date.FormatStyle(date: .abbreviated, time: .standard)
+        ///     var attributedString = formatStyle.attributed.format(date)
+        ///     for run in attributedString.runs {
+        ///         if let dateFieldAttribute = run.attributes.foundation.dateField,
+        ///            dateFieldAttribute == .year {
+        ///             attributedString[run.range].inlinePresentationIntent = [.emphasized, .stronglyEmphasized]
+        ///         }
+        ///     }
+        ///     return attributedString
+        /// }
+        /// ```
         @available(macOS, deprecated: 15, introduced: 12, message: "Use attributedStyle instead")
         @available(iOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
         @available(tvOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
@@ -288,6 +549,9 @@ extension Date {
 
     // MARK: Type-Erased AttributedStyle
 
+    /// A structure that creates a locale-appropriate attributed string representation of a date instance.
+    ///
+    /// Use a ``Date/FormatStyle`` instance to customize the lexical representation of a date as a string. Use the format style's ``Date/FormatStyle/attributed`` property to customize the visual representation of the date as a string. Attributed strings can represent the subcomponent characters, words, and phrases of a string with a custom combination of font size, weight, and color.
     @available(macOS, deprecated: 15, introduced: 12, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     @available(iOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     @available(tvOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
@@ -308,7 +572,12 @@ extension Date {
             self.innerStyle = style
         }
 
-        /// Returns an attributed string with `AttributeScopes.FoundationAttributes.DateFieldAttribute`
+        /// Creates a locale-aware attributed string representation from a date value.
+        ///
+        /// Once you create a style, you can use it to format dates multiple times.
+        ///
+        /// - Parameter value: The date to format.
+        /// - Returns: An attributed string representation of the date.
         public func format(_ value: Date) -> AttributedString {
             let fm: ICUDateFormatter?
             switch innerStyle {
@@ -325,6 +594,10 @@ extension Date {
             return str._attributedStringFromPositions(attributes)
         }
 
+        /// Modifies the date attributed style to use the specified locale.
+        ///
+        /// - Parameter locale: The locale to use when formatting a date.
+        /// - Returns: A date attributed style with the provided locale.
         public func locale(_ locale: Locale) -> Self {
             var newInnerStyle: InnerStyle
 
@@ -376,6 +649,10 @@ extension Date.FormatStyle {
             self.base = style
         }
 
+        /// Creates a locale-aware attributed string representation from a date value.
+        ///
+        /// - Parameter value: The date to format.
+        /// - Returns: An attributed string representation of the date.
         public func format(_ value: Date) -> AttributedString {
             guard let fm = ICUDateFormatter.cachedFormatter(for: base), let (str, attributes) = fm.attributedFormat(value) else {
                 return AttributedString("")
@@ -383,6 +660,10 @@ extension Date.FormatStyle {
             return str._attributedStringFromPositions(attributes)
         }
 
+        /// Modifies the date attributed style to use the specified locale.
+        ///
+        /// - Parameter locale: The locale to use when formatting a date.
+        /// - Returns: A date attributed style with the provided locale.
         public func locale(_ locale: Locale) -> Self {
             var new = self
             new.base = base.locale(locale)
@@ -685,6 +966,45 @@ extension Date.FormatStyle.Attributed {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : FormatStyle {
+    /// Creates a locale-aware string representation from a date value.
+    ///
+    /// Once you create a style, you can use it to format dates multiple times.
+    ///
+    /// The following example creates a format style to guide parsing a set of
+    /// string representations of dates. It also creates a second format style,
+    /// applying it repeatedly to produce more detailed string representations of
+    /// those dates for a different locale.
+    ///
+    /// ```swift
+    /// let inputFormat = Date.FormatStyle()
+    ///     .locale(Locale(identifier: "en_GB"))
+    ///     .year()
+    ///     .month()
+    ///     .day()
+    ///
+    /// let iphoneIntroductionDate = try! Date("9 Jan 2007", strategy: inputFormat)
+    /// let ipadIntroductionDate = try! Date("27 Jan 2010", strategy: inputFormat)
+    /// let wwdc2021Date = try! Date("7 Jun 2021", strategy: inputFormat)
+    ///
+    /// let outputFormat = Date.FormatStyle()
+    ///     .locale(Locale(identifier: "en_US"))
+    ///     .year()
+    ///     .month(.wide)
+    ///     .day(.twoDigits)
+    ///     .weekday(.abbreviated)
+    ///
+    /// print(outputFormat.format(wwdc2021Date))
+    /// // Mon, June 07, 2021
+    ///
+    /// print(outputFormat.format(ipadIntroductionDate))
+    /// // Wed, January 27, 2010
+    ///
+    /// print(outputFormat.format(iphoneIntroductionDate))
+    /// // Tue, January 09, 2007
+    /// ```
+    ///
+    /// - Parameter value: The date to format.
+    /// - Returns: A string representation of the date.
     public func format(_ value: Date) -> String {
         guard let fm = ICUDateFormatter.cachedFormatter(for: self), let result = fm.format(value) else {
             return ""
@@ -692,6 +1012,10 @@ extension Date.FormatStyle : FormatStyle {
         return result
     }
 
+    /// Modifies the date format style to use the specified locale.
+    ///
+    /// - Parameter locale: The locale to use when formatting a date.
+    /// - Returns: A date format style with the provided locale.
     public func locale(_ locale: Locale) -> Self {
         var new = self
         new.locale = locale
@@ -703,6 +1027,29 @@ extension Date.FormatStyle : FormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : ParseStrategy {
+    /// Parses a string into a date.
+    ///
+    /// The date format style guides parsing the date instance from an input
+    /// string, as the example below illustrates.
+    ///
+    /// ```swift
+    /// let birthdayFormatStyle = Date.FormatStyle()
+    ///     .year(.defaultDigits)
+    ///     .month(.abbreviated)
+    ///     .day(.twoDigits)
+    ///     .hour(.defaultDigits(amPM: .abbreviated))
+    ///     .minute(.twoDigits)
+    ///     .timeZone(.identifier(.long))
+    ///     .era(.abbreviated)
+    ///     .weekday(.abbreviated)
+    ///
+    /// let yourBirthdayString = "Mon, Feb 17, 1997 AD, 1:27 AM America/Chicago"
+    /// let yourBirthday = try? birthdayFormatStyle.parse(yourBirthdayString)
+    /// // Feb 17, 1997 at 1:27 AM
+    /// ```
+    ///
+    /// - Parameter value: The string to parse.
+    /// - Returns: An instance of `Date` parsed from the input string.
     public func parse(_ value: String) throws -> Date {
         guard let fm = ICUDateFormatter.cachedFormatter(for: self) else {
             throw CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: "Error creating icu date formatter" ])
@@ -756,7 +1103,35 @@ extension Date.FormatStyle : Codable, Hashable {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
-    /// Predefined date styles varied in lengths or the components included. The exact format depends on the locale.
+    /// Type that defines date styles varied in length or components included.
+    ///
+    /// The exact format depends on the locale. Possible values of date style include ``omitted``, ``numeric``, ``abbreviated``, ``long``, and ``complete``.
+    ///
+    /// The following code sample shows a variety of date style format results using the `en_US` locale.
+    ///
+    /// ```swift
+    /// let meetingDate = Date()
+    /// meetingDate.formatted(date: .omitted, time: .standard)
+    /// // 9:42:14 AM
+    ///
+    /// meetingDate.formatted(date: .numeric, time: .omitted)
+    /// // 10/17/2020
+    ///
+    /// meetingDate.formatted(date: .abbreviated, time: .omitted)
+    /// // Oct 17, 2020
+    ///
+    /// meetingDate.formatted(date: .long, time: .omitted)
+    /// // October 17, 2020
+    ///
+    /// meetingDate.formatted(date: .complete, time: .omitted)
+    /// // Saturday, October 17, 2020
+    ///
+    /// meetingDate.formatted()
+    /// // 10/17/2020, 9:42 AM
+    /// ```
+    ///
+    ///
+    /// The default date style is `numeric`.
     public struct DateStyle : Codable, Hashable, Sendable {
 
         /// Excludes the date part.
@@ -777,7 +1152,33 @@ extension Date.FormatStyle {
         let rawValue : UInt
     }
 
-    /// Predefined time styles varied in lengths or the components included. The exact format depends on the locale.
+    /// Type that defines time styles varied in length or components included.
+    ///
+    /// The exact format depends on the locale. Possible time styles include ``omitted``, ``shortened``, ``standard``, and ``complete``.
+    ///
+    /// The following code sample shows a variety of time style format results using the `en_US` locale.
+    ///
+    /// ```swift
+    /// let meetingDate = Date()
+    /// meetingDate.formatted(date: .numeric, time: .omitted)
+    /// // 10/17/2020
+    ///
+    /// meetingDate.formatted(date: .numeric, time: .shortened)
+    /// // 10/17/2020, 9:54 PM
+    ///
+    /// meetingDate.formatted(date: .numeric, time: .standard)
+    /// // 10/17/2020, 9:54:29 PM
+    ///
+    /// meetingDate.formatted(date: .numeric, time: .complete)
+    /// // 10/17/2020, 9:54:29 PM CDT
+    ///
+    /// meetingDate.formatted()
+    /// // 10/17/2020, 9:54 PM
+    ///
+    /// ```
+    ///
+    ///
+    /// The default time style is ``shortened``.
     public struct TimeStyle : Codable, Hashable, Sendable {
 
         /// Excludes the time part.
@@ -798,6 +1199,7 @@ extension Date.FormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle: ParseableFormatStyle {
+    /// The strategy used to parse a string into a date.
     public var parseStrategy: Date.FormatStyle {
         return self
     }
@@ -805,6 +1207,34 @@ extension Date.FormatStyle: ParseableFormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension FormatStyle where Self == Date.FormatStyle {
+    /// A style for formatting a date and time.
+    ///
+    /// Use this type property when the call point allows the use of ``Date/FormatStyle``.
+    /// You typically do this when calling the ``Date/formatted(_:)`` method of ``Date``.
+    ///
+    /// Customize the date format style using modifier syntax to apply specific date and time
+    /// formats. For example:
+    ///
+    /// ```swift
+    /// let meetingDate = Date()
+    /// let localeArray = ["en_US", "sv_SE", "en_GB", "th_TH", "fr_BE"]
+    /// let formattedDates = localeArray.map { localeID in
+    ///     meetingDate.formatted(.dateTime
+    ///                           .day(.twoDigits)
+    ///                           .month(.wide)
+    ///                           .weekday(.short)
+    ///                           .hour(.conversationalTwoDigits(amPM: .wide))
+    ///                           .locale(Locale(identifier: localeID)))
+    ///         } // ["Mo, July 31 at 05 PM", "må 31 juli 17", "Mo, 31 July at 17", "จ. 31 กรกฎาคม เวลา 17", "lu 31 juillet à 17 h"]
+    /// ```
+    ///
+    /// The default format styles provided are ``Date/FormatStyle/DateStyle/numeric`` date format
+    /// and ``Date/FormatStyle/TimeStyle/shortened`` time format. For example:
+    ///
+    /// ```swift
+    /// let meetingDate = Date()
+    /// let formatted = meetingDate.formatted(.dateTime) // "7/31/2023, 5:15 PM"
+    /// ```
     static var dateTime: Self { .init() }
 }
 
@@ -815,6 +1245,41 @@ public extension ParseableFormatStyle where Self == Date.FormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension ParseStrategy where Self == Date.FormatStyle {
+    /// A default format style for formatting dates.
+    ///
+    /// Use this type property when the call point allows the use of ``Date/FormatStyle``; in other
+    /// words, when the value type is ``Date``. Typically, you use this with the ``Date/formatted(_:)``
+    /// method of ``Date``.
+    ///
+    /// Customize the date format style using modifier syntax to apply specific date and time formats.
+    /// For example:
+    ///
+    /// ```swift
+    /// let meetingDate = Date()
+    /// let localeArray = ["en_US", "sv_SE", "en_GB", "th_TH", "fr_BE"]
+    /// for localeID in localeArray {
+    ///     print(meetingDate.formatted(.dateTime
+    ///                                 .day(.twoDigits)
+    ///                                 .month(.wide)
+    ///                                 .weekday(.short)
+    ///                                 .hour(.conversationalTwoDigits(amPM: .wide))
+    ///                                 .locale(Locale(identifier: localeID))))
+    /// }
+    ///
+    /// // Tu, October 27, 5 PM
+    /// // ti 27 oktober 17
+    /// // Tu 27 October, 17
+    /// // อ. 27 ตุลาคม 17
+    /// // ma 27 octobre à 17 h
+    /// ```
+    ///
+    /// The default format styles provided are ``Date/FormatStyle/DateStyle/numeric`` date format and
+    /// ``Date/FormatStyle/TimeStyle/shortened`` time format. For example:
+    ///
+    /// ```swift
+    /// let meetingDate = Date()
+    /// meetingDate.formatted(.dateTime)) // 10/28/2020, 12:13 AM
+    /// ```
     @_disfavoredOverload
     static var dateTime: Self { .init() }
 }
@@ -1088,7 +1553,18 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.FormatStyle : CustomConsumingRegexComponent {
+    /// The type returned when capturing matching substrings with this strategy.
     public typealias RegexOutput = Date
+    /// Processes the input string within the specified bounds, beginning at the given index, and returns the end position of the match and the produced output.
+    ///
+    /// Don't call this method directly. Regular expression matching and capture
+    /// calls it automatically when matching substrings.
+    ///
+    /// - Parameters:
+    ///   - input: An input string to match against.
+    ///   - index: The index within `input` at which to begin searching.
+    ///   - bounds: The bounds within `input` in which to search.
+    /// - Returns: The upper bound where the match terminates and a matched instance, or `nil` if there isn't a match.
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         guard index < bounds.upperBound else {
             return nil

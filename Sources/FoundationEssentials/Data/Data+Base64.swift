@@ -62,7 +62,9 @@ extension Data {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
     // These types are typealiased to the `NSData` options for framework builds only.
+    /// Options to use when encoding data.
     public typealias Base64EncodingOptions = NSData.Base64EncodingOptions
+    /// Options to use when decoding data.
     public typealias Base64DecodingOptions = NSData.Base64DecodingOptions
 }
 #endif //!FOUNDATION_FRAMEWORK
@@ -117,7 +119,7 @@ extension Data {
         Base64.encodeToString(bytes: self, options: options)
     }
 
-    /// Returns a Base-64 encoded `Data`.
+    /// Returns Base-64 encoded data.
     ///
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded data.

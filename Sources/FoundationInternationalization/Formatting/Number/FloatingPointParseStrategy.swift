@@ -14,9 +14,12 @@
 import FoundationEssentials
 #endif
 
+/// A parse strategy for creating floating-point values from formatted strings.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct FloatingPointParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryFloatingPoint {
+    /// The format style this strategy uses when parsing strings.
     public var formatStyle: Format
+    /// A Boolean value that indicates whether parsing allows any discrepencies in the expected format.
     public var lenient: Bool
 }
 
@@ -25,6 +28,7 @@ extension FloatingPointParseStrategy : Sendable where Format : Sendable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointParseStrategy: ParseStrategy {
+    /// Parses a floating-point string in accordance with this strategy and returns the parsed value.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     public func parse(_ value: String) throws -> Format.FormatInput {
         let trimmedString = value._trimmingWhitespace()
@@ -78,6 +82,7 @@ extension FloatingPointParseStrategy: ParseStrategy {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension FloatingPointParseStrategy {
+    /// Creates a parse strategy instance using the specified floating-point format style.
     init<Value>(format: Format, lenient: Bool = true) where Format == FloatingPointFormatStyle<Value> {
         self.formatStyle = format
         self.lenient = lenient
@@ -86,6 +91,7 @@ public extension FloatingPointParseStrategy {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension FloatingPointParseStrategy {
+    /// Creates a parse strategy instance using the specified floating-point currency format style.
     init<Value>(format: Format, lenient: Bool = true) where Format == FloatingPointFormatStyle<Value>.Currency {
         self.formatStyle = format
         self.lenient = lenient
@@ -94,6 +100,7 @@ public extension FloatingPointParseStrategy {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension FloatingPointParseStrategy {
+    /// Creates a parse strategy instance using the specified floating-point percentage format style.
     init<Value>(format: Format, lenient: Bool = true) where Format == FloatingPointFormatStyle<Value>.Percent {
         self.formatStyle = format
         self.lenient = lenient

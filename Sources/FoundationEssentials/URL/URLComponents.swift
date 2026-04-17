@@ -14,9 +14,9 @@
 internal import _ForSwiftFoundation
 #endif
 
-/// A structure designed to parse URLs based on RFC 3986 and to construct URLs from their constituent parts.
+/// A structure that parses URLs into and constructs URLs from their constituent parts.
 ///
-/// You can easily obtain a `URL` based on the contents of a `URLComponents` or vice versa.
+/// This structure parses and constructs URLs according to [RFC 3986](http://www.ietf.org/rfc/rfc3986.txt). Its behavior differs subtly from that of the ``URL`` structure, which conforms to older RFCs. However, you can easily obtain a ``URL`` value based on the contents of a ``URLComponents`` value or vice versa.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URLComponents: Hashable, Equatable, Sendable {
     var components: _URLComponents
@@ -693,12 +693,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-    /// Initialize with all components undefined.
+    /// Initializes empty URLComponents.
     public init() {
         self.components = _URLComponents()
     }
 
-    /// Initialize with the components of a URL.
+    /// Initializes URLComponents from a URL, optionally resolving against its base URL.
     ///
     /// If resolvingAgainstBaseURL is `true` and url is a relative URL, the components of url.absoluteURL are used. If the url string from the URL is malformed, nil is returned.
     public init?(url: __shared URL, resolvingAgainstBaseURL resolve: Bool) {
@@ -714,9 +714,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         self.components = components
     }
 
-    /// Initialize with a URL string.
+    /// Initializes URLComponents from a URL string.
     ///
-    /// If the URLString is malformed, nil is returned.
+    /// Returns nil if the URL string is malformed.
     public init?(string: __shared String) {
         guard let components = _URLComponents(string: string) else {
             return nil
@@ -724,7 +724,8 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         self.components = components
     }
 
-    /// Initialize with a URL string and the option to add (or skip) IDNA- and percent-encoding of invalid characters.
+    /// Initializes URLComponents from a URL string, with option to encode invalid characters.
+    ///
     /// If `encodingInvalidCharacters` is false, and the URL string is invalid according to RFC 3986, `nil` is returned.
     /// If `encodingInvalidCharacters` is true, `URLComponents` will try to encode the string to create a valid URL.
     /// If the URL string is still invalid after encoding, `nil` is returned.
@@ -759,7 +760,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     }
     #endif
 
-    /// Returns a URL created from the URLComponents.
+    /// A URL created from the components.
     ///
     /// If the URLComponents has an authority component (user, password, host or port) and a path component, then the path must either begin with "/" or be an empty string. If the NSURLComponents does not have an authority component (user, password, host or port) and has a path component, the path component must not start with "//". If those requirements are not met, nil is returned.
     public var url: URL? {
@@ -772,7 +773,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         return URL(stringOrEmpty: string, relativeTo: nil)
     }
 
-    /// Returns a URL created from the URLComponents relative to a base URL.
+    /// Returns a URL based on the components relative to a base URL.
     ///
     /// If the URLComponents has an authority component (user, password, host or port) and a path component, then the path must either begin with "/" or be an empty string. If the URLComponents does not have an authority component (user, password, host or port) and has a path component, the path component must not start with "//". If those requirements are not met, nil is returned.
     public func url(relativeTo base: URL?) -> URL? {
@@ -786,7 +787,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         return URL(stringOrEmpty: string, relativeTo: base)
     }
 
-    /// Returns a URL string created from the URLComponents.
+    /// A URL string derived from the components.
     ///
     /// If the URLComponents has an authority component (user, password, host or port) and a path component, then the path must either begin with "/" or be an empty string. If the URLComponents does not have an authority component (user, password, host or port) and has a path component, the path component must not start with "//". If those requirements are not met, nil is returned.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -800,7 +801,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components._uncheckedString(original: original)
     }
 
-    /// The scheme subcomponent of the URL.
+    /// The scheme subcomponent.
     ///
     /// The getter for this property removes any percent encoding this component may have (if the component allows percent encoding). Setting this property assumes the subcomponent or component string is not percent encoded and will add percent encoding (if the component allows percent encoding).
     /// Attempting to set the scheme with an invalid scheme string will cause an exception.
@@ -827,7 +828,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     }
 #endif
 
-    /// The user subcomponent of the URL.
+    /// The user subcomponent.
     ///
     /// The getter for this property removes any percent encoding this component may have (if the component allows percent encoding). Setting this property assumes the subcomponent or component string is not percent encoded and will add percent encoding (if the component allows percent encoding).
     ///
@@ -837,7 +838,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         set { components.user = newValue }
     }
 
-    /// The password subcomponent of the URL.
+    /// The password subcomponent.
     ///
     /// The getter for this property removes any percent encoding this component may have (if the component allows percent encoding). Setting this property assumes the subcomponent or component string is not percent encoded and will add percent encoding (if the component allows percent encoding).
     ///
@@ -904,7 +905,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
     /// The user subcomponent, percent-encoded.
     ///
-    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`. Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlUserAllowed`).
+    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`.
+    ///
+    /// Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlUserAllowed`).
     public var percentEncodedUser: String? {
         get { components.percentEncodedUser }
         set {
@@ -925,7 +928,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
     /// The password subcomponent, percent-encoded.
     ///
-    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`. Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlPasswordAllowed`).
+    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`.
+    ///
+    /// Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlPasswordAllowed`).
     public var percentEncodedPassword: String? {
         get { components.percentEncodedPassword }
         set {
@@ -946,7 +951,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
     /// The host subcomponent, percent-encoded.
     ///
-    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`. Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlHostAllowed`).
+    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`.
+    ///
+    /// Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlHostAllowed`).
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use encodedHost instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use encodedHost instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use encodedHost instead")
@@ -970,6 +977,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     }
 #endif
 
+    /// The host subcomponent, percent-encoded.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public var encodedHost: String? {
         get { components.encodedHost }
@@ -991,7 +999,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
     /// The path subcomponent, percent-encoded.
     ///
-    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`. Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlPathAllowed`).
+    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`.
+    ///
+    /// Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlPathAllowed`).
     public var percentEncodedPath: String {
         get { components.percentEncodedPath }
         set {
@@ -1012,7 +1022,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
     /// The query subcomponent, percent-encoded.
     ///
-    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`. Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlQueryAllowed`).
+    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`.
+    ///
+    /// Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlQueryAllowed`).
     public var percentEncodedQuery: String? {
         get { components.percentEncodedQuery }
         set {
@@ -1033,7 +1045,9 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
     /// The fragment subcomponent, percent-encoded.
     ///
-    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`. Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlFragmentAllowed`).
+    /// The getter for this property retains any percent encoding this component may have. Setting this properties assumes the component string is already correctly percent encoded. Attempting to set an incorrectly percent encoded string will cause a `fatalError`.
+    ///
+    /// Although ';' is a legal path character, it is recommended that it be percent-encoded for best compatibility with `URL` (`String.addingPercentEncoding(withAllowedCharacters:)` will percent-encode any ';' characters if you pass `CharacterSet.urlFragmentAllowed`).
     public var percentEncodedFragment: String? {
         get { components.percentEncodedFragment }
         set {
@@ -1052,7 +1066,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     }
 #endif
 
-    /// Returns the character range of the scheme in the string returned by `var string`.
+    /// The character range of the scheme in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1061,7 +1075,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.scheme)
     }
 
-    /// Returns the character range of the user in the string returned by `var string`.
+    /// The character range of the user in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1070,7 +1084,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.user)
     }
 
-    /// Returns the character range of the password in the string returned by `var string`.
+    /// The character range of the password in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1079,7 +1093,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.password)
     }
 
-    /// Returns the character range of the host in the string returned by `var string`.
+    /// The character range of the host in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1088,7 +1102,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.host)
     }
 
-    /// Returns the character range of the port in the string returned by `var string`.
+    /// The character range of the port in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1097,7 +1111,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.port)
     }
 
-    /// Returns the character range of the path in the string returned by `var string`.
+    /// The character range of the path in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1106,7 +1120,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.path)
     }
 
-    /// Returns the character range of the query in the string returned by `var string`.
+    /// The character range of the query in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1115,7 +1129,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.query)
     }
 
-    /// Returns the character range of the fragment in the string returned by `var string`.
+    /// The character range of the fragment in the ``string`` property.
     ///
     /// If the component does not exist, nil is returned.
     /// - note: Zero length components are legal. For example, the URL string "scheme://:@/?#" has a zero length user, password, host, query and fragment; the URL strings "scheme:" and "" both have a zero length path.
@@ -1124,7 +1138,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         components.rangeOf(.fragment)
     }
 
-    /// Returns an array of query items for this `URLComponents`, in the order in which they appear in the original query string.
+    /// The query subcomponent as an array of URLQueryItems.
     ///
     /// Each `URLQueryItem` represents a single key-value pair,
     ///
@@ -1139,7 +1153,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         set { components.setQueryItems(newValue) }
     }
 
-    /// Returns an array of query items for this `URLComponents`, in the order in which they appear in the original query string. Any percent-encoding in a query item name or value is retained
+    /// The query subcomponent as an array of percent-encoded URLQueryItems.
     ///
     /// The setter combines an array containing any number of `URLQueryItem`s, each of which represents a single key-value pair, into a query string and sets the `URLComponents` query property. This property assumes the query item names and values are already correctly percent-encoded, and that the query item names do not contain the query item delimiter characters '&' and '='. Attempting to set an incorrectly percent-encoded query item or a query item name with the query item delimiter characters '&' and '=' will cause a `fatalError`.
     @available(macOS 10.13, iOS 11.0, tvOS 11.0, watchOS 4.0, *)
@@ -1282,13 +1296,20 @@ extension NSURLComponents: _HasCustomAnyHashableRepresentation {
 #endif // FOUNDATION_FRAMEWORK
 
 
-/// A single name-value pair, for use with `URLComponents`.
+/// A single name-value pair from the query portion of a URL.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URLQueryItem: Hashable, Equatable, Sendable {
 
+    /// The name of the query item.
     public var name: String
+    /// The value for the query item.
     public var value: String?
 
+    /// Creates a new query item with the name and value you specify.
+    ///
+    /// - Parameters:
+    ///   - name: The name for the query item.
+    ///   - value: The value for the query item.
     public init(name: __shared String, value: __shared String?) {
         self.name = name
         self.value = value

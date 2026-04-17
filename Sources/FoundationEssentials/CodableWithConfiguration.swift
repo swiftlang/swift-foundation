@@ -10,30 +10,49 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// A protocol whose conformers provide a configuration instance to help encode types that don't support encoding by themselves.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol EncodingConfigurationProviding {
     associatedtype EncodingConfiguration
+    /// The configuration instance that assists in encoding another type.
     static var encodingConfiguration: EncodingConfiguration { get }
 }
 
+/// A protocol for types that support encoding when supplied with an additional configuration type.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol EncodableWithConfiguration {
+    /// The type of the encoding configuration.
     associatedtype EncodingConfiguration
+    /// Encodes the value into the specified encoder with help from the provided configuration.
+    ///
+    /// - Parameters:
+    ///   - encoder: The encoder to write data to.
+    ///   - configuration: An encoding configuration instance that provides additional information necessary for encoding.
     func encode(to encoder: Encoder, configuration: EncodingConfiguration) throws
 }
 
+/// A protocol whose conformers provide a configuration instance to help decode types that don't support encoding by themselves.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol DecodingConfigurationProviding {
     associatedtype DecodingConfiguration
+    /// The configuration instance that assists in decoding another type.
     static var decodingConfiguration: DecodingConfiguration { get }
 }
 
+/// A protocol for types that support decoding when supplied with an additional configuration type.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol DecodableWithConfiguration {
+    /// The configuration type that assists in decoding.
     associatedtype DecodingConfiguration
+    /// Creates a new instance by retrieving the instance's data from the specified decoder with help from the provided configuration.
+    ///
+    /// - Parameters:
+    ///   - decoder: The decoder to read data from.
+    ///   - configuration: A decoding configuration instance that provides additional information necessary for decoding.
     init(from decoder: Decoder, configuration: DecodingConfiguration) throws
 }
 
+/// A type that can convert itself into and out of an external representation with the help of a configuration that handles encoding contained types.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public typealias CodableWithConfiguration = EncodableWithConfiguration & DecodableWithConfiguration
 
@@ -171,6 +190,21 @@ public extension UnkeyedDecodingContainer {
 
 }
 
+/// A property wrapper that makes a type codable, by supplying a configuration that provides additional information for serialization.
+///
+/// ``CodableConfiguration`` allows you to create <doc://com.apple.documentation/documentation/swift/codable> types whose members don't all conform to <doc://com.apple.documentation/documentation/swift/codable>. For types that can't support encoding and decoding by themselves but could become encodable and decodable with some statically-defined information, use the `@CodableConfiguration` wrapper. This lets you assign a configuration provider — a type that conforms to both ``EncodingConfigurationProviding`` and ``DecodingConfigurationProviding`` — to supply this data.
+///
+/// Limiting the ``CodableConfiguration`` to statically-defined information protects clients from loading unexpected data, similar to the protection provided by ``NSSecureCoding``.
+///
+/// In the following example, the `Message` type uses `@CodableConfiguration` for an ``AttributedString`` property called `content`. While ``AttributedString`` does conform to <doc://com.apple.documentation/documentation/swift/codable>, it can only encode its known attributes — those declared by the platform SDK — as part of this conformance. By adding a ``CodableConfiguration`` for the custom `MyAttributes` type, `Message` uses ``EncodableWithConfiguration/encode(to:configuration:)`` when encoding `content`, which preserves the custom attributes.
+///
+/// ```swift
+/// struct Message: Codable {
+/// let date: Date
+/// let sender: Person
+/// @CodableConfiguration(from: MyAttributes.self) var content = AttributedString()
+/// }
+/// ```
 @propertyWrapper
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct CodableConfiguration<T, ConfigurationProvider> : Codable
@@ -179,12 +213,30 @@ where T: CodableWithConfiguration,
       ConfigurationProvider.EncodingConfiguration == T.EncodingConfiguration,
       ConfigurationProvider.DecodingConfiguration == T.DecodingConfiguration
 {
+    /// The underlying value to make codable, using data from the configuration provider.
     public var wrappedValue: T
 
+    /// Creates a codable configuration wrapper for the given value.
+    ///
+    /// This initializer doesn't take a `ConfigurationProvider.Type` parameter.
+    /// As a result, it won't compile unless the compiler can imply the provider
+    /// type through other means, such as a generic expression like
+    /// `@CodableConfiguration<AttributedString, FoundationAttributes>`.
+    ///
+    /// For clarity, use this type's other initializers, which take the
+    /// configuration provider type as an explicit parameter.
+    ///
+    /// - Parameters:
+    ///   - wrappedValue: The underlying value to make codable.
     public init(wrappedValue: T) {
         self.wrappedValue = wrappedValue
     }
 
+    /// Creates a codable configuration wrapper for the given value, using the given configuration provider type.
+    ///
+    /// - Parameters:
+    ///   - wrappedValue: The underlying value to make codable, using data from the configuration provider.
+    ///   - configurationProvider: The type of the configuration provider, which provides additional information to encode `wrappedValue`.
     public init(wrappedValue: T, from configurationProvider: ConfigurationProvider.Type) {
         self.wrappedValue = wrappedValue
     }

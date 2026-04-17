@@ -16,6 +16,7 @@ import FoundationEssentials
 
 internal import _FoundationICU
 
+/// The capitalization formatting context used when formatting dates and times.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
 
@@ -88,6 +89,9 @@ public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
     }
 }
 
+/// Configuration settings for formatting numbers of different types.
+///
+/// This type is effectively a namespace to collect types that configure parts of a formatted number, such as grouping, precision, and separator and sign characters.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum NumberFormatStyleConfiguration {
     internal struct Collection : Codable, Hashable, Sendable {
@@ -101,10 +105,14 @@ public enum NumberFormatStyleConfiguration {
         var notation: Notation?
     }
 
+    /// The type used for rounding rule values.
+    ///
+    /// ``NumberFormatStyleConfiguration`` uses the `FloatingPointRoundingRule` enumeration for rounding rule values.
     public typealias RoundingRule = FloatingPointRoundingRule
 
     typealias Scale = Double
 
+    /// A structure that an integer format style uses to configure grouping.
     public struct Grouping : Codable, Hashable, CustomStringConvertible, Sendable {
         enum Option : Int, Codable, Hashable {
             case automatic
@@ -117,7 +125,9 @@ public enum NumberFormatStyleConfiguration {
         }
         var option: Option
 
+        /// A grouping behavior that automatically applies locale-appropriate grouping.
         public static var automatic: Self { .init(option: .automatic) }
+        /// A grouping behavior that never groups digits.
         public static var never: Self { .init(option: .hidden) }
 
         public var description: String {
@@ -130,6 +140,7 @@ public enum NumberFormatStyleConfiguration {
         }
     }
 
+    /// A structure that an integer format style uses to configure precision.
     public struct Precision : Codable, Hashable, Sendable {
 
         enum Option: Hashable {
@@ -149,11 +160,35 @@ public enum NumberFormatStyleConfiguration {
         // min 2, max 4: 1.23004 -> 1.23
         // ^ Trailing zero digits to the right of the decimal separator are suppressed after the minimum number of significant digits have been shown
 
+        /// Returns a precision that constrains formatted values to a range of significant digits.
+        ///
+        /// When using this precision, the formatter rounds values that have more significant digits than the maximum of the range, as seen in the following example:
+        ///
+        /// ```swift
+        /// let myNum = 123456.formatted(.number
+        ///     .precision(.significantDigits(2...4))
+        ///     .rounded(rule: .down)) // "123,400"
+        /// ```
+        ///
+        /// - Parameter limits: A range from the minimum to the maximum number of significant digits to use when formatting values.
+        /// - Returns: A precision that constrains formatted values to a range of significant digits.
         public static func significantDigits<R: RangeExpression>(_ limits: R) -> Self where R.Bound == Int {
             let (lower, upper) = limits.clampedLowerAndUpperBounds(validSignificantDigits)
             return Precision(option: .significantDigits(min: lower ?? validSignificantDigits.lowerBound, max: upper))
         }
 
+        /// Returns a precision that constrains formatted values to a given number of significant digits.
+        ///
+        /// When using this precision, the formatter rounds values that have more significant digits than the maximum of the range, as seen in the following example:
+        ///
+        /// ```swift
+        /// let myNum = 123456.formatted(.number
+        ///     .precision(.significantDigits(4))
+        ///     .rounded(rule: .down)) // "123,400"
+        /// ```
+        ///
+        /// - Parameter digits: The maximum number of significant digits to use when formatting values.
+        /// - Returns: A precision that constrains formatted values to a given number of significant digits.
         public static func significantDigits(_ digits: Int) -> Self {
             return Precision(option: .significantDigits(min: digits, max: digits))
         }
@@ -162,6 +197,21 @@ public enum NumberFormatStyleConfiguration {
         // minInt 5: 1997 -> 01997
         // maxFrac 2: 0.125 -> 0.12
         // minFrac 4: 0.125 -> 0.1250
+        /// Returns a precision that constrains formatted values to ranges of allowed digits in the integer and fraction parts.
+        ///
+        /// When using this precision, the formatter rounds values that have more digits than the maximum of the range, as seen in the following example:
+        ///
+        /// ```swift
+        /// let myNum = 12345.6789.formatted(.number
+        ///     .precision(.integerAndFractionLength(integerLimits: 2...,
+        ///                                          fractionLimits: 2...3))
+        ///     .rounded(rule: .down)) // "12,345.678"
+        /// ```
+        ///
+        /// - Parameters:
+        ///   - integerLimits: A range from the minimum to the maximum number of digits to use when formatting the integer part of a number.
+        ///   - fractionLimits: A range from the minimum to the maximum number of digits to use when formatting the fraction part of a number.
+        /// - Returns: A precision that constrains formatted values to ranges of digits in the integer and fraction parts.
         public static func integerAndFractionLength<R1: RangeExpression, R2: RangeExpression>(integerLimits: R1, fractionLimits: R2) -> Self where R1.Bound == Int, R2.Bound == Int {
             let (minInt, maxInt) =  integerLimits.clampedLowerAndUpperBounds(validPartLength)
             let (minFrac, maxFrac) = fractionLimits.clampedLowerAndUpperBounds(validPartLength)
@@ -169,29 +219,61 @@ public enum NumberFormatStyleConfiguration {
             return Precision(option: .integerAndFractionalLength(minInt: minInt, maxInt: maxInt, minFraction: minFrac, maxFraction: maxFrac))
         }
 
+        /// Returns a precision that constrains formatted values a given number of allowed digits in the integer and fraction parts.
+        ///
+        /// When using this precision, the formatter pads values with fewer digits than the specified digits for the integer or fraction parts. Similarly, it rounds values that have more digits than specified. The following example shows this behavior, padding the integer part while rounding the fraction:
+        ///
+        /// ```swift
+        /// let myNum = 12345.6789.formatted(.number
+        ///     .precision(.integerAndFractionLength(integer: 6,
+        ///                                          fraction: 3))
+        ///     .rounded(rule: .down)) // "012,345.678"
+        /// ```
+        ///
+        /// - Parameters:
+        ///   - integer: The number of digits to use when formatting the integer part of a number.
+        ///   - fraction: The number of digits to use when formatting the fraction part of a number.
+        /// - Returns: A precision that constrains formatted values a given number of digits in the integer and fraction parts.
         public static func integerAndFractionLength(integer: Int, fraction: Int) -> Self {
             return Precision(option: .integerAndFractionalLength(minInt: integer, maxInt: integer, minFraction: fraction, maxFraction: fraction))
         }
 
+        /// Returns a precision that constrains formatted values to a range of allowed digits in the integer part.
+        ///
+        /// - Parameter limits: A range from the minimum to the maximum number of digits to use when formatting the integer part of a number.
+        /// - Returns: A precision that constrains formatted values to ranges of digits in the integer part.
         public static func integerLength<R: RangeExpression>(_ limits: R) -> Self {
             let (minInt, maxInt) = limits.clampedLowerAndUpperBounds(validPartLength)
             return Precision(option: .integerAndFractionalLength(minInt: minInt, maxInt: maxInt, minFraction: nil, maxFraction: nil))
         }
 
+        /// Returns a precision that constrains formatted values to a given number of allowed digits in the integer part.
+        ///
+        /// - Parameter length: The number of digits to use when formatting the integer part of a number.
+        /// - Returns: A precision that constrains formatted values to a given number of allowed digits in the integer part.
         public static func integerLength(_ length: Int) -> Self {
             return Precision(option: .integerAndFractionalLength(minInt: length, maxInt: length, minFraction: nil, maxFraction: nil))
         }
 
+        /// Returns a precision that constrains formatted values to a range of allowed digits in the fraction part.
+        ///
+        /// - Parameter limits: A range from the minimum to the maximum number of digits to use when formatting the fraction part of a number.
+        /// - Returns: A precision that constrains formatted values to a range of allowed digits in the fraction part.
         public static func fractionLength<R: RangeExpression>(_ limits: R) -> Self where R.Bound == Int {
             let (minFrac, maxFrac) = limits.clampedLowerAndUpperBounds(validPartLength)
             return Precision(option: .integerAndFractionalLength(minInt: nil, maxInt: nil, minFraction: minFrac, maxFraction: maxFrac))
         }
 
+        /// Returns a precision that constrains formatted values to a given number of allowed digits in the fraction part.
+        ///
+        /// - Parameter length: The number of digits to use when formatting the fraction part of a number.
+        /// - Returns: A precision that constrains formatted values to a given number of allowed digits in the fraction part.
         public static func fractionLength(_ length: Int) -> Self {
             return Precision(option: .integerAndFractionalLength(minInt: nil, maxInt: nil, minFraction: length, maxFraction: length))
         }
     }
 
+    /// A structure that an integer format style uses to configure a decimal separator display strategy.
     public struct DecimalSeparatorDisplayStrategy : Codable, Hashable, CustomStringConvertible, Sendable {
         enum Option : Int, Codable, Hashable {
             case automatic
@@ -199,11 +281,13 @@ public enum NumberFormatStyleConfiguration {
         }
         var option: Option
 
+        /// A strategy to automatically configure locale-appropriate decimal separator display behavior.
         // "1.1", "1"
         public static var automatic: Self {
             .init(option: .automatic)
         }
 
+        /// A strategy that always displays decimal separators.
         // "1.1", "1."
         public static var always : Self { .init(option: .always) }
 
@@ -217,6 +301,7 @@ public enum NumberFormatStyleConfiguration {
         }
     }
 
+    /// A structure that an integer format style uses to configure a sign display strategy.
     public struct SignDisplayStrategy : Codable, Hashable, CustomStringConvertible, Sendable {
         enum Option : Int, Hashable, Codable {
             case always
@@ -227,15 +312,21 @@ public enum NumberFormatStyleConfiguration {
         var negative: Option
         var zero: Option
 
+        /// A strategy to automatically configure locale-appropriate sign display behavior.
         // Show the minus sign on negative numbers, and do not show the sign on positive numbers or zero
         public static var automatic: Self {
             SignDisplayStrategy(positive: .hidden, negative: .always, zero: .hidden)
         }
 
+        /// A strategy to never display sign symbols.
         public static var never: Self {
             SignDisplayStrategy(positive: .hidden, negative: .hidden, zero: .hidden)
         }
 
+        /// A strategy to always display sign symbols.
+        ///
+        /// - Parameter includingZero: A Boolean value that determines whether the format style should apply sign characters to zero values. Defaults to `true`.
+        /// - Returns: A strategy to always display sign symbols, with the given behavior for zero values.
         // Show the minus sign on negative numbers and the plus sign on positive numbers, and zero if specified
         public static func always(includingZero: Bool = true) -> Self {
             SignDisplayStrategy(positive: .always, negative: .always, zero: includingZero ? .always : .hidden)
@@ -261,6 +352,7 @@ public enum NumberFormatStyleConfiguration {
         }
     }
 
+    /// A structure that an integer format style uses to configure notation.
     public struct Notation : Codable, Hashable, CustomStringConvertible, Sendable {
         enum Option : Int, Codable, Hashable {
             case automatic
@@ -269,11 +361,28 @@ public enum NumberFormatStyleConfiguration {
         }
         var option: Option
 
+        /// A notation constant that formats values with scientific notation.
+        ///
+        /// The following example shows the effect of using scientific notation with a format style:
+        ///
+        /// ```swift
+        /// let scientific = 12345.formatted(.number
+        ///     .notation(.scientific)) // 1.2345E4"
+        /// ```
         public static var scientific: Self { .init(option: .scientific) }
+        /// A notation that automatically provides locale-appropriate behavior.
         public static var automatic: Self { .init(option: .automatic) }
 
-        /// Formats the number with localized prefixes or suffixes corresponding to powers of ten. Rounds to integer while showing at least two significant digits by default.
-        /// For example, "42.3K" for 42300 for the "en_US" locale.
+        /// A locale-appropriate compact name notation.
+        ///
+        /// A compact name notation, when available in the format style's locale, that uses prefixes or suffixes corresponding to powers of ten. The following example shows a compact name notation in the `fr_FR` locale:
+        ///
+        /// ```swift
+        /// let compactNameFormatted = 1234.formatted(.number
+        ///     .locale(Locale(identifier: "fr_FR"))
+        ///     .notation(.compactName)) // "1,2 k"
+        /// ```
+        ///
         /// - note: We do not support parsing a number string containing localized prefixes or suffixes.
         public static var compactName: Self { .init(option: .compactName) }
 
@@ -311,11 +420,16 @@ public enum NumberFormatStyleConfiguration {
 @available(*, unavailable)
 extension NumberFormatStyleConfiguration : Sendable {}
 
+/// Configuration settings for formatting currency values.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum CurrencyFormatStyleConfiguration {
+    /// The type used to configure grouping for currency format styles.
     public typealias Grouping = NumberFormatStyleConfiguration.Grouping
+    /// The type used to configure precision for currency format styles.
     public typealias Precision = NumberFormatStyleConfiguration.Precision
+    /// The type used to configure decimal separator display strategies for currency format styles.
     public typealias DecimalSeparatorDisplayStrategy = NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy
+    /// The type used to configure rounding rules for currency format styles.
     public typealias RoundingRule = NumberFormatStyleConfiguration.RoundingRule
     /// The type used to configure notation for currency format styles.
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
@@ -334,6 +448,7 @@ public enum CurrencyFormatStyleConfiguration {
         var notation: Notation?
     }
 
+    /// A structure used to configure sign display strategies for currency format styles.
     public struct SignDisplayStrategy: Codable, Hashable, Sendable {
         enum Option : Int, Hashable, Codable {
             case always
@@ -344,28 +459,42 @@ public enum CurrencyFormatStyleConfiguration {
         var zero: Option
         var accounting: Bool = false
 
+        /// A strategy to automatically configure sign display.
         public static var automatic: Self {
             SignDisplayStrategy(positive: .hidden, negative: .always, zero: .hidden)
         }
 
+        /// A strategy to never show the sign.
         public static var never: Self {
             SignDisplayStrategy(positive: .hidden, negative: .hidden, zero: .hidden)
         }
 
+        /// A sign display strategy to always show the sign, with a configurable behavior for handling zero values.
+        ///
+        /// - Parameter showZero: A Boolean value that indicates whether to show the sign symbol on zero values. Defaults to `true`.
+        /// - Returns: A sign display strategy that always displays the sign, and uses the specified handling of zero values.
         // Show the minus sign on negative numbers and the plus sign on positive numbers, and zero if specified
         public static func always(showZero: Bool = true) -> Self {
             SignDisplayStrategy(positive: .always, negative: .always, zero: showZero ? .always : .hidden)
         }
 
+        /// A sign display strategy to use accounting principles.
+        ///
+        /// This strategy always shows the currency symbol, and shows negative values in parenthesis. Examples of this strategy include `$123`, `$0`, and `($123)`.
         public static var accounting: Self {
             SignDisplayStrategy(positive: .hidden, negative: .always, zero: .hidden, accounting: true)
         }
 
+        /// A sign display strategy to use accounting principles, with a configurable behavior for handling zero values.
+        ///
+        /// - Parameter showZero: A Boolean value that indicates whether to show the sign symbol on zero values. Defaults to `false`.
+        /// - Returns: A strategy that uses accounting principles, and the specified handling of zero values.
         public static func accountingAlways(showZero: Bool = false) -> Self {
             SignDisplayStrategy(positive: .always, negative: .always, zero: showZero ? .always : .hidden, accounting: true)
         }
     }
 
+    /// A structure used to configure the presentation of currency format styles.
     public struct Presentation: Codable, Hashable, Sendable {
         enum Option : Int, Codable, Hashable {
             case narrow
@@ -375,9 +504,21 @@ public enum CurrencyFormatStyleConfiguration {
         }
         internal var option: Option
 
+        /// A presentation that shows a condensed expression of the currency.
+        ///
+        /// This presentation produces output like `$123.00`.
         public static var narrow: Self { Presentation(option: .narrow) }
+        /// A presentation that shows a standard expression of the currency.
+        ///
+        /// This presentation produces output like `US$ 123.00`.
         public static var standard: Self { Presentation(option: .standard) }
+        /// A presentation that shows the ISO code of the currency.
+        ///
+        /// This presentation produces output like `USD 123.00`.
         public static var isoCode: Self { Presentation(option: .isoCode) }
+        /// A presentation that shows the full name of the currency.
+        ///
+        /// This presentation produces output like `123.00 US dollars`.
         public static var fullName: Self { Presentation(option: .fullName) }
     }
 }

@@ -91,6 +91,13 @@ extension Date.ParseStrategy : ParseStrategy {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension ParseStrategy {
+    /// A fixed-format date parse strategy.
+    ///
+    /// - Parameters:
+    ///   - format: The string describing the parsing format.
+    ///   - timeZone: The ``TimeZone`` used to create the string representation of the date.
+    ///   - locale: The ``Locale`` used to create the string representation of the date.
+    /// - Returns: A strategy for parsing a date.
     static func fixed(format: Date.FormatString, timeZone: TimeZone, locale: Locale? = nil) -> Self where Self == Date.ParseStrategy {
         Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone)
     }
@@ -100,7 +107,18 @@ public extension ParseStrategy {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.ParseStrategy : CustomConsumingRegexComponent {
+    /// The type returned when capturing matching substrings with this strategy.
     public typealias RegexOutput = Date
+    /// Processes the input string within the specified bounds, beginning at the given index, and returns the end position of the match and the produced output.
+    ///
+    /// Don't call this method directly. Regular expression matching and capture
+    /// calls it automatically when matching substrings.
+    ///
+    /// - Parameters:
+    ///   - input: An input string to match against.
+    ///   - index: The index within `input` at which to begin searching.
+    ///   - bounds: The bounds within `input` in which to search.
+    /// - Returns: The upper bound where the match terminates and a matched instance, or `nil` if there isn't a match.
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         guard index < bounds.upperBound else {
             return nil

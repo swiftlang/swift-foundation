@@ -94,9 +94,37 @@ extension AttributedString {
 }
 
 // Developers define new attributes by implementing AttributeKey.
+/// A type that defines an attribute's name and type.
+///
+/// You don't instantiate types that conform to this protocol. Rather, dynamic member lookup uses this type as the basis for looking up key paths on ``AttributedString`` subtypes when using an ``AttributeScope`` type parameter. When it also conforms to ``CodableAttributedStringKey``, (or ``DecodableAttributedStringKey``/``EncodableAttributedStringKey`` if the type isn't fully codable), the ``AttributedStringKey`` describes which attributes of an ``AttributedString`` support encoding or decoding.
+///
+/// Attribute owners — typically frameworks — declare a key like the following:
+///
+/// ```swift
+/// enum OutlineColorAttribute : AttributedStringKey {
+/// typealias Value = Color
+/// static let name = "OutlineColor"
+/// }
+/// ```
+///
+///
+/// Callers can use these types to get attribute values from attributed strings, but typically you want to reference them by name. Attribute owners enable this by creating one or more structures that conform to ``AttributeScope``, in which they provide short names for their attributes that map to the ``AttributedStringKey`` type. The following example shows how to do this:
+///
+/// ```swift
+/// struct MyTextStyleAttributes : AttributeScope {
+/// let outlineColor : OutlineColorAttribute // OutlineColorAttribute.Value == Color
+/// let shadowColor : ShadowColorAttribute // ShadowColorAttribute.Value == Color
+/// // etc.
+/// }
+/// ```
+///
+///
+/// After you extend ``AttributeScope`` like this, extend ``AttributeDynamicLookup`` to allow callers to use dynamic member lookup syntax, like `myAttributedString.outlineColor = .red`.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributedStringKey : SendableMetatype {
+    /// The type of the key's value.
     associatedtype Value : Hashable
+    /// The name of the key.
     static var name : String { get }
     
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
@@ -125,9 +153,23 @@ extension AttributedStringKey {
 
 // MARK: Attribute Scopes
 
+/// A type to support dynamic member lookup of attributes and containers.
+///
+/// This type allows attribute owners to add extensions that enable dynamic member lookup access to attributes. Supporting types — including ``AttributedString``, ``AttributedSubstring``, and ``AttributeContainer`` — gain dynamic lookup support by extending this type.
+///
+/// You can enable dynamic member lookup for your own ``AttributedStringKey`` attributes by defining them as implementations, collecting them into an ``AttributeScope`` and extending ``AttributeDynamicLookup``, like in the following example:
+///
+/// ```swift
+/// public extension AttributeDynamicLookup {
+/// subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.MyFrameworkAttributes, T>) -> T {
+/// return self[T.self]
+/// }
+/// }
+/// ```
 @dynamicMemberLookup @frozen
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public enum AttributeDynamicLookup {
+    /// Returns an attributed string key that corresponds to a specified type.
     public subscript<T: AttributedStringKey>(_: T.Type) -> T {
         get { fatalError("Called outside of a dynamicMemberLookup subscript overload") }
     }
@@ -140,6 +182,9 @@ public enum AttributeDynamicLookup {
 @available(*, unavailable)
 extension AttributeDynamicLookup : Sendable {}
 
+/// An attribute container that allows dynamic member lookup of its contents within the specified attribute scope.
+///
+/// Use a ``ScopedAttributeContainer`` when you need to disambiguate between attributes that exist in several attribute scopes that your app uses.
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
@@ -149,6 +194,7 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
     // Note: if ScopedAttributeContainer ever adds a mutating function that can mutate multiple attributes, this will need to record multiple removed keys
     internal var removedKey : String?
 
+    /// Returns the value of the attribute that the specified key path indicates.
     @preconcurrency
     public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<S, T>) -> T.Value? where T.Value : Sendable {
         get { storage[T.self] }

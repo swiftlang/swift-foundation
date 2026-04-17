@@ -716,10 +716,12 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 #if FOUNDATION_FRAMEWORK
+    /// Options to control the writing of data to a URL.
     public typealias WritingOptions = NSData.WritingOptions
 #else
     
     // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
+    /// Options to control the writing of data to a URL.
     public struct WritingOptions : OptionSet, Sendable {
         public let rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
@@ -750,7 +752,7 @@ extension Data {
     }
 #endif
     
-    /// Write the contents of the `Data` to a location.
+    /// Writes the contents of the data buffer to a location.
     ///
     /// - parameter url: The location to write the data into.
     /// - parameter options: Options for writing the data. Default value is `[]`.

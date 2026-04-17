@@ -184,8 +184,7 @@ extension CocoaError {
 #endif
 }
 
-/// Describes an error that provides localized messages describing why
-/// an error occurred and provides more information about the error.
+/// A specialized error that provides localized messages describing the error and why it occurred.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public protocol LocalizedError : Error {
     /// A localized message describing what error occurred.
@@ -211,8 +210,7 @@ public extension LocalizedError {
 
 #if FOUNDATION_FRAMEWORK
 
-/// Describes an error type that specifically provides a domain, code,
-/// and user-info dictionary.
+/// A specialized error that provides a domain, error code, and user-info dictionary.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public protocol CustomNSError : Error {
     /// The domain of the error.

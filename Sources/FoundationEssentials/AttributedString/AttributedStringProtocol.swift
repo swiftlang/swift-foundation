@@ -20,8 +20,11 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// A type that defines the behavior when merging attributes.
     public enum AttributeMergePolicy : Sendable {
+        /// The new value for this attribute takes precedence.
         case keepNew
+        /// The existing value for this attribute takes precedence.
         case keepCurrent
         
         internal var combinerClosure: (_AttributeValue, _AttributeValue) -> _AttributeValue {
@@ -33,23 +36,52 @@ extension AttributedString {
     }
 }
 
+/// A protocol that defines in-place mutations for attributes in an attributed string.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributedStringAttributeMutation {
+    /// Sets the attributed string's attributes to those in a specified attribute container.
+    ///
+    /// - Parameters:
+    ///   - attributes: The attribute container with the attributes to apply.
     mutating func setAttributes(_ attributes: AttributeContainer)
+    /// Merges the attributed string's attributes with those in a specified attribute container.
+    ///
+    /// - Parameters:
+    ///   - attributes: The attribute container with the attributes to merge.
+    ///   - mergePolicy: A policy to use when resolving conflicts between this string's attributes and those in `attributes`.
     mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy)
+    /// Replaces the attributed string's attributes with those in a specified attribute container.
+    ///
+    /// - Parameters:
+    ///   - attributes: The existing attributes to replace.
+    ///   - others: The new attributes to apply.
     mutating func replaceAttributes(_ attributes: AttributeContainer, with others: AttributeContainer)
 }
 
+/// A protocol that provides common functionality to attributed strings and attributed substrings.
+///
+/// Don't declare new conformances to ``AttributedStringProtocol``. Only the ``AttributedString`` and ``AttributedSubstring`` types in the standard library are valid conforming types.
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributedStringProtocol
     : AttributedStringAttributeMutation, Hashable, CustomStringConvertible, Sendable
 {
+    /// The position of the first character in a nonempty attributed string.
     var startIndex : AttributedString.Index { get }
+    /// A string's past-the-end position — the position one greater than the last valid subscript argument.
     var endIndex : AttributedString.Index { get }
 
+    /// The attributed runs of the attributed string, as a view into the underlying string.
+    ///
+    /// Runs begin and end when the attributes for the characters change. Use this property to iterate over the runs with `for`-`in` syntax.
     var runs : AttributedString.Runs { get }
+    /// The characters of the attributed string, as a view into the underlying string.
+    ///
+    /// Use the ``AttributedStringProtocol/characters`` view when you want to look for specific string content. You can then use the resulting ranges to set attributes for specific parts of the ``AttributedString`` or ``AttributedSubstring``.
     var characters : AttributedString.CharacterView { get }
+    /// The Unicode scalars of the attributed string, as a view into the underlying string.
+    ///
+    /// Use this property when you want to split the attributed string by Unicode scalar instead of grapheme cluster. This is useful when you need to carefully control insertion points or render the content.
     var unicodeScalars : AttributedString.UnicodeScalarView { get }
     
     @available(FoundationPreview 6.2, *)
@@ -58,10 +90,20 @@ public protocol AttributedStringProtocol
     @available(FoundationPreview 6.2, *)
     var utf16 : AttributedString.UTF16View { get }
 
+    /// Returns an attribute value that corresponds to an attributed string key.
+    ///
+    /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire attributed string or substring. To find portions of an attributed string with consistent attributes, use the ``AttributedString/runs`` property.
     @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable { get set }
+    /// Returns an attribute value that a key path indicates.
+    ///
+    /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire attributed string or substring. To find portions of an attributed string with consistent attributes, use the ``AttributedStringProtocol/runs`` property.
     @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable { get set }
+    /// Returns a scoped attribute container that a key path indicates.
+    ///
+    /// Use this subscript when you need to work with an explicit attribute scope. For example, the SwiftUI ``AttributeScopes/SwiftUIAttributes/foregroundColor`` attribute overrides the attribute in the AppKit and UIKit scopes with the same name. If you work with both the SwiftUI and UIKit scopes, you can use the syntax `myAttributedString.uiKit.foregroundColor` to disambiguate and explicitly use the UIKit attribute.
     subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> { get set }
 
+    /// Returns a substring of the attributed string using a range to indicate the substring bounds.
     subscript<R: RangeExpression>(bounds: R) -> AttributedSubstring where R.Bound == AttributedString.Index { get }
 }
 
@@ -79,12 +121,21 @@ extension AttributedStringProtocol {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
+    /// Returns an attributed string by setting the attributed string's attributes to those in a specified attribute container.
+    ///
+    /// - Parameter attributes: The attribute container with the attributes to apply.
+    /// - Returns: An attributed string from setting the attributed string's attributes to those in a specified attribute container.
     public func settingAttributes(_ attributes: AttributeContainer) -> AttributedString {
         var new = AttributedString(self)
         new.setAttributes(attributes)
         return new
     }
 
+    /// Returns an attributed string by merging the attributed string's attributes with those in a specified attribute container.
+    ///
+    /// - Parameters:
+    ///   - attributes: The attribute container with the attributes to merge.
+    ///   - mergePolicy: A policy to use when resolving conflicts between this string's attributes and those in `attributes`.
     public func mergingAttributes(
         _ attributes: AttributeContainer,
         mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew
@@ -94,6 +145,11 @@ extension AttributedStringProtocol {
         return new
     }
 
+    /// Returns an attributed string by replacing occurrences of attributes in one attribute container with those in another attribute container.
+    ///
+    /// - Parameters:
+    ///   - attributes: The existing attributes to replace.
+    ///   - others: The new attributes to apply.
     public func replacingAttributes(
         _ attributes: AttributeContainer, with others: AttributeContainer
     ) -> AttributedString {
@@ -186,26 +242,56 @@ extension AttributedStringProtocol { // Equatable, Hashable
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
+    /// Returns the position of the character immediately after another charcter indicated by an index.
+    ///
+    /// - Parameter i: The index of a character in the attributed string.
+    /// - Returns: The position of the character immediately after the character at index `i`.
     public func index(afterCharacter i: AttributedString.Index) -> AttributedString.Index {
         self.characters.index(after: i)
     }
+    /// Returns the position of the character immediately before another charcter indicated by an index.
+    ///
+    /// - Parameter i: The index of a character in the attributed string.
+    /// - Returns: The position of the character immediately before the character at index `i`.
     public func index(beforeCharacter i: AttributedString.Index) -> AttributedString.Index {
         self.characters.index(before: i)
     }
+    /// Returns the position of the character offset a given distance, measured in characters, from a given string index.
+    ///
+    /// - Parameters:
+    ///   - i: The index of a position in the string.
+    ///   - distance: The number of charcters to advance by.
     public func index(_ i: AttributedString.Index, offsetByCharacters distance: Int) -> AttributedString.Index {
         self.characters.index(i, offsetBy: distance)
     }
 
+    /// Returns the position of the Unicode scalar immediately after a Unicode scalar indicated by an index.
+    ///
+    /// - Parameter i: The index of a Unicode scalar in the attributed string.
+    /// - Returns: The position of the Unicode scalar immediately after the Unicode scalar at index `i`.
     public func index(afterUnicodeScalar i: AttributedString.Index) -> AttributedString.Index {
         self.unicodeScalars.index(after: i)
     }
+    /// Returns the position of the Unicode scalar immediately before a Unicode scalar indicated by an index.
+    ///
+    /// - Parameter i: The index of a Unicode scalar in the attributed string.
+    /// - Returns: The position of the Unicode scalar immediately before the Unicode scalar at index `i`.
     public func index(beforeUnicodeScalar i: AttributedString.Index) -> AttributedString.Index {
         self.unicodeScalars.index(before: i)
     }
+    /// Returns the position of the Unicode scalar offset a given distance, measured in Unicode scalars, from a given string index.
+    ///
+    /// - Parameters:
+    ///   - i: The index of a position in the string.
+    ///   - distance: The number of Unicode scalars to advance by.
     public func index(_ i: AttributedString.Index, offsetByUnicodeScalars distance: Int) -> AttributedString.Index {
         self.unicodeScalars.index(i, offsetBy: distance)
     }
 
+    /// Returns the position of the run immediately after a run indicated by an index.
+    ///
+    /// - Parameter i: The index of a run in the attributed string.
+    /// - Returns: The position of first run immediately after the end of `i`-th run.
     public func index(afterRun i: AttributedString.Index) -> AttributedString.Index {
         // Expected semantics: Result is the end of the run that contains `i`.
         let guts = self.__guts
@@ -217,6 +303,10 @@ extension AttributedStringProtocol {
         return AttributedString.Index(Swift.min(next, bounds.upperBound), version: guts.version)
     }
 
+    /// Returns the position of the run immediately before a run indicated by an index.
+    ///
+    /// - Parameter i: The index of a run in the attributed string.
+    /// - Returns: The position of the first run immediately before the beginning of the `i`-th run.
     public func index(beforeRun i: AttributedString.Index) -> AttributedString.Index {
         // Expected semantics: result is the start of the run preceding the one that contains `i`.
         // (I.e., `i` needs to get implicitly rounded down to the nearest run boundary before we
@@ -230,6 +320,11 @@ extension AttributedStringProtocol {
         return AttributedString.Index(Swift.max(prev, bounds.lowerBound), version: guts.version)
     }
 
+    /// Returns the position of the run offset a given number of runs from a given string index.
+    ///
+    /// - Parameters:
+    ///   - i: The index of a position in the string.
+    ///   - distance: The number of runs to advance by.
     public func index(_ i: AttributedString.Index, offsetByRuns distance: Int) -> AttributedString.Index {
         let guts = self.__guts
         let bounds = self._stringBounds
@@ -276,6 +371,12 @@ extension AttributedStringProtocol {
         return self._utf8Index(at: startOffset) ..< self._utf8Index(at: endOffset) // O(log(n))
     }
 
+    /// Returns the range of a substring in the attributed string, if it exists.
+    ///
+    /// - Parameters:
+    ///   - stringToFind: The string to find.
+    ///   - options: Options that affect the search behavior, such as case-insensivity, search direction, and regular expression matching.
+    ///   - locale: The locale to use when searching, or `nil` to use the current locale. The default is `nil`.
     public func range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = [], locale: Locale? = nil) -> Range<AttributedString.Index>? {
         if locale == nil {
             return _range(of: stringToFind, options: options)

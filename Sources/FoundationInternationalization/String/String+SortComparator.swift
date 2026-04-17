@@ -270,17 +270,14 @@ extension SortComparator where Self == String.Comparator {
 #if FOUNDATION_FRAMEWORK
     // https://github.com/apple/swift-foundation/issues/284
     
-    /// Compares `String`s as compared by the Finder.
-    ///
-    /// Uses a localized, numeric comparison in the current locale.
-    ///
-    /// The default `String.Comparator` used in `String` comparisons.
+    /// A comparator that compares a string using a localized, numeric
+    /// comparison in the current locale.
     public static var localizedStandard: String.Comparator {
         String.Comparator(.localizedStandard)
     }
 
-    /// Compares `String`s using a localized comparison in the current
-    /// locale.
+    /// A comparator that compares a string using a localized comparison in
+    /// the current locale.
     public static var localized: String.Comparator {
         String.Comparator(.localized)
     }

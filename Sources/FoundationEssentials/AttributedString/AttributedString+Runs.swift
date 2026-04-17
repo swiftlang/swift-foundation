@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// An iterable view into segments of the attributed string, each of which indicates where a run of identical attributes begins or ends.
     public struct Runs: Sendable {
         internal typealias _InternalRun = AttributedString._InternalRun
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
@@ -103,6 +104,10 @@ extension AttributedString {
         }
     }
 
+    /// The attributed runs of the attributed string, as a view into the underlying string.
+    ///
+    /// Runs begin and end when the attributes for the characters change. Use this property to
+    /// iterate over the runs with `for`-`in` syntax.
     public var runs: Runs {
         Runs(_guts)
     }

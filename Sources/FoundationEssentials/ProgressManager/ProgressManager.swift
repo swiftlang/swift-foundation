@@ -278,7 +278,7 @@ internal import _FoundationCollections
     /// If the `Subprogress` is not converted into a `ProgressManager` (for example, due to an error or early return),
     /// then the assigned count is marked as completed in the parent `ProgressManager`.
     ///
-    /// - Parameter count: The portion of `totalCount` to be delegated to the `Subprogress`.
+    /// - Parameter portionOfParentTotal: The portion of `totalCount` to be delegated to the `Subprogress`.
     /// - Returns: A `Subprogress` instance.
     public func subprogress(assigningCount portionOfParentTotal: Int) -> Subprogress {
         precondition(portionOfParentTotal > 0, "Giving out zero units is not a valid operation.")

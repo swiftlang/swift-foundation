@@ -28,6 +28,7 @@ public struct URLResourceValues {
     var _values: [URLResourceKey: Any]
     var _keys: Set<URLResourceKey>
 
+    /// Initializes a new resource values structure.
     public init() {
         _values = [:]
         _keys = []
@@ -633,11 +634,25 @@ internal func foundation_swift_url_v2_enabled() -> Bool {
 internal import os
 #endif
 
-/// A URL is a type that can potentially contain the location of a resource on a remote server, the path of a local file on disk, or even an arbitrary piece of encoded data.
+/// A value that identifies the location of a resource, such as an item on a remote server or the path to a local file.
 ///
-/// You can construct URLs and access their parts. For URLs that represent local files, you can also manipulate properties of those files directly, such as changing the file's last modification date. Finally, you can pass URLs to other APIs to retrieve the contents of those URLs. For example, you can use the URLSession classes to access the contents of remote resources, as described in URL Session Programming Guide.
+/// You can construct URLs and access their parts. For URLs that represent local
+/// files, you can also manipulate properties of those files directly, such as
+/// changing the file's last modification date. Finally, you can pass URLs to
+/// other APIs to retrieve the contents of those URLs. For example, you can use
+/// ``URLSession`` and its related classes to access the contents of remote
+/// resources.
 ///
-/// URLs are the preferred way to refer to local files. Most objects that read data from or write data to a file have methods that accept a URL instead of a pathname as the file reference. For example, you can get the contents of a local file URL as `String` by calling `func init(contentsOf:encoding:) throws`, or as a `Data` by calling `func init(contentsOf:options:) throws`.
+/// URLs are the preferred way to refer to local files. Most objects that read
+/// data from or write data to a file have methods that accept a URL instead of
+/// a pathname as the file reference. For example, you can get the contents of a
+/// local file URL as `String` by calling `init(contentsOf:encoding:)`, or as a
+/// ``Data`` by calling ``Data/init(contentsOf:options:)``.
+///
+/// As a convenience, you can use Swift's `async`-`await` syntax to
+/// asynchronously access the contents of a ``URL`` through the
+/// ``resourceBytes`` and ``lines`` properties. These properties use the shared
+/// ``URLSession`` instance to load the resource.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {
 
@@ -684,7 +699,9 @@ public struct URL: Equatable, Sendable, Hashable {
 #endif
 
 #if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
+    /// An alias for the bookmark resolution options type.
     public typealias BookmarkResolutionOptions = NSURL.BookmarkResolutionOptions
+    /// An alias for bookmark creation options.
     public typealias BookmarkCreationOptions = NSURL.BookmarkCreationOptions
 #endif
 
@@ -700,36 +717,79 @@ public struct URL: Equatable, Sendable, Hashable {
         _url = inner.convertingFileReference()
     }
 
-    /// Initialize with string.
+    /// Creates a URL instance from the provided string.
     ///
-    /// Returns `nil` if a `URL` cannot be formed with the string (for example, if the string contains characters that are illegal in a URL, or is an empty string).
+    /// - Parameter string: A URL location.
+    ///
+    /// > Important: For apps linked on or after iOS 17 and aligned OS versions,
+    /// > ``URL`` parsing has updated from the obsolete RFC 1738/1808 parsing to
+    /// > the same [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt) parsing as
+    /// > ``URLComponents``. This unifies the parsing behaviors of the `URL` and
+    /// > `URLComponents` APIs. Now, `URL` automatically percent- and
+    /// > IDNA-encodes invalid characters to help create a valid URL.
+    ///
+    /// This initializer returns `nil` if the string doesn't represent a valid
+    /// URL even after encoding invalid characters. To check if a URL string is
+    /// strictly valid according to the RFC, use the new
+    /// ``URL/init(string:encodingInvalidCharacters:)`` initializer and pass
+    /// `encodingInvalidCharacters: false`. This leaves all characters as they
+    /// are and returns `nil` if the URL string is explicitly invalid.
     public init?(string: __shared String) {
         guard let inner = URL._type.init(string: string) else { return nil }
         _url = inner.convertingFileReference()
     }
 
-    /// Initialize with string, relative to another URL.
+    /// Creates a URL instance from the provided string, relative to another URL.
     ///
-    /// Returns `nil` if a `URL` cannot be formed with the string (for example, if the string contains characters that are illegal in a URL, or is an empty string).
+    /// - Parameters:
+    ///   - string: A relative URL location.
+    ///   - url: A URL that provides a base location that the string extends.
+    ///
+    /// > Important: For apps linked on or after iOS 17 and aligned OS versions,
+    /// > ``URL`` parsing has updated from the obsolete RFC 1738/1808 parsing to
+    /// > the same [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt) parsing as
+    /// > ``URLComponents``. This unifies the parsing behaviors of the `URL` and
+    /// > `URLComponents` APIs. Now, `URL` automatically percent- and
+    /// > IDNA-encodes invalid characters to help create a valid URL.
+    ///
+    /// This initializer returns `nil` if the string doesn't represent a valid
+    /// URL even after encoding invalid characters. To check if a URL string is
+    /// strictly valid according to the RFC, use the new
+    /// ``URL/init(string:encodingInvalidCharacters:)`` initializer and pass
+    /// `encodingInvalidCharacters: false`. This leaves all characters as they
+    /// are and returns `nil` if the URL string is explicitly invalid.
     public init?(string: __shared String, relativeTo url: __shared URL?) {
         guard let inner = URL._type.init(string: string, relativeTo: url) else { return nil }
         _url = inner.convertingFileReference()
     }
 
-    /// Initialize with a URL string and the option to add (or skip) IDNA- and percent-encoding of invalid characters.
+    /// Creates a URL instance from the provided string, optionally IDNA- and percent-encoding any invalid characters.
     ///
-    /// If `encodingInvalidCharacters` is false, and the URL string is invalid according to RFC 3986, `nil` is returned.
-    /// If `encodingInvalidCharacters` is true, `URL` will try to encode the string to create a valid URL.
-    /// If the URL string is still invalid after encoding, `nil` is returned.
+    /// - Parameters:
+    ///   - string: A URL location.
+    ///   - encodingInvalidCharacters: A Boolean value that indicates whether the
+    ///     initializer attempts to encode any invalid characters in `string`.
+    ///
+    /// If `encodingInvalidCharacters` is `true`, this initializer tries to
+    /// encode the string to create a valid URL. If the URL string is still
+    /// invalid after encoding, the initializer returns `nil`.
+    ///
+    /// If `encodingInvalidCharacters` is `false`, and the URL string is invalid
+    /// according to RFC 3986, `nil` is returned.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public init?(string: __shared String, encodingInvalidCharacters: Bool) {
         guard let inner = URL._type.init(string: string, encodingInvalidCharacters: encodingInvalidCharacters) else { return nil }
         _url = inner.convertingFileReference()
     }
 
-    /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
+    /// Creates a file URL that references the local file or directory at the given path, relative to a base URL.
     ///
-    /// If an empty string is used for the path, then the path is assumed to be ".".
+    /// - Parameters:
+    ///   - path: The location in the file system.
+    ///   - isDirectory: A Boolean value that indicates whether the path references a directory.
+    ///   - base: A base URL to resolve the path against.
+    ///
+    /// If an empty string is used for the path, the system interprets it as ".".
     /// - Note: This function avoids an extra file system access to check if the file URL is a directory. You should use it if you know the answer already.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
@@ -740,9 +800,13 @@ public struct URL: Equatable, Sendable, Hashable {
         _url = URL._type.init(fileURLWithPath: path, isDirectory: isDirectory, relativeTo: base).convertingFileReference()
     }
 
-    /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
+    /// Creates a file URL that references the local file or directory at the given path, relative to a base URL.
     ///
-    /// If an empty string is used for the path, then the path is assumed to be ".".
+    /// - Parameters:
+    ///   - path: The location in the file system.
+    ///   - base: A base URL to resolve the path against.
+    ///
+    /// If an empty string is used for the path, the system interprets it as ".".
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
@@ -752,10 +816,14 @@ public struct URL: Equatable, Sendable, Hashable {
         _url = URL._type.init(fileURLWithPath: path, relativeTo: base).convertingFileReference()
     }
 
-    /// Initializes a newly created file URL referencing the local file or directory at path.
+    /// Creates a file URL that references the local file or directory at the given path.
     ///
-    /// If an empty string is used for the path, then the path is assumed to be ".".
-    /// - note: This function avoids an extra file system access to check if the file URL is a directory. You should use it if you know the answer already.
+    /// - Parameters:
+    ///   - path: The location in the file system.
+    ///   - isDirectory: A Boolean value that indicates whether the path references a directory.
+    ///
+    /// If an empty string is used for the path, the system interprets it as ".".
+    /// - Note: This function avoids an extra file system access to check if the file URL is a directory. You should use it if you know the answer already.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
@@ -765,9 +833,11 @@ public struct URL: Equatable, Sendable, Hashable {
         _url = URL._type.init(fileURLWithPath: path, isDirectory: isDirectory).convertingFileReference()
     }
 
-    /// Initializes a newly created file URL referencing the local file or directory at path.
+    /// Creates a file URL that references the local file or directory at the given path.
     ///
-    /// If an empty string is used for the path, then the path is assumed to be ".".
+    /// - Parameter path: The location in the file system.
+    ///
+    /// If an empty string is used for the path, the system interprets it as ".".
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
@@ -796,7 +866,9 @@ public struct URL: Equatable, Sendable, Hashable {
 
     /// Initializes a newly created URL using the contents of the given data, relative to a base URL.
     ///
-    /// If the data representation is not a legal URL string as ASCII bytes, the URL object may not behave as expected. If the URL cannot be formed then this will return nil.
+    /// If the data representation isn't a legal URL string as ASCII bytes, the
+    /// URL object may not behave as expected. This initializer returns `nil` if
+    /// it can't form a valid URL from the provided data.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public init?(dataRepresentation: __shared Data, relativeTo base: __shared URL?, isAbsolute: Bool = false) {
         guard let inner = URL._type.init(dataRepresentation: dataRepresentation, relativeTo: base, isAbsolute: isAbsolute) else { return nil }
@@ -811,7 +883,15 @@ public struct URL: Equatable, Sendable, Hashable {
         try self.init(resolvingBookmarkData: data, options: options, relativeTo: url, bookmarkDataIsStale: &bookmarkDataIsStale)
     }
 
-    /// Initializes a URL that refers to a location specified by resolving bookmark data.
+    /// Creates a URL that refers to a location specified by resolving bookmark data.
+    ///
+    /// - Parameters:
+    ///   - data: The bookmark data used to construct a URL.
+    ///   - options: Options taken into account when resolving the bookmark data.
+    ///   - url: The base URL that the bookmark data is relative to.
+    ///   - bookmarkDataIsStale: On return, if `true`, the bookmark data is
+    ///     stale. Your app should create a new bookmark using the returned URL
+    ///     and use it in place of any stored copies of the existing bookmark.
     @available(swift, introduced: 4.2)
     public init(resolvingBookmarkData data: __shared Data, options: BookmarkResolutionOptions = [], relativeTo url: __shared URL? = nil, bookmarkDataIsStale: inout Bool) throws {
         var stale: ObjCBool = false
@@ -820,7 +900,18 @@ public struct URL: Equatable, Sendable, Hashable {
         self.init(reference: nsURL)
     }
 
-    /// Creates and initializes a URL that refers to the location specified by resolving the alias file at `url`. If the `url` argument does not refer to an alias file as defined by the `.isAliasFileKey` property, the URL returned is the same as the `url` argument. This method fails and returns `nil` if the `url` argument is unreachable, or if the original file or directory could not be located or is not reachable, or if the original file or directory is on a volume that could not be located or mounted. The `URLBookmarkResolutionWithSecurityScope` option is not supported by this method.
+    /// Creates a URL that refers to the location specified by resolving an alias file.
+    ///
+    /// If the `url` argument doesn't refer to an alias file (as defined by the
+    /// ``URLResourceKey/isAliasFileKey`` property), the returned URL is the
+    /// same as the `url` argument.
+    ///
+    /// This method throws an error if the url argument is unreachable, the
+    /// original file or directory is unknown or unreachable, or the original
+    /// file or directory is on a volume that the system can't locate or mount.
+    ///
+    /// This method doesn't support the
+    /// ``NSURL/BookmarkResolutionOptions/withSecurityScope`` option.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public init(resolvingAliasFileAt url: __shared URL, options: BookmarkResolutionOptions = []) throws {
         self.init(reference: try NSURL(resolvingAliasFileAt: url, options: options))
@@ -828,51 +919,59 @@ public struct URL: Equatable, Sendable, Hashable {
 
 #endif // !NO_FILESYSTEM && FOUNDATION_FRAMEWORK
 
-    /// Initializes a newly created URL referencing the local file or directory at the file system representation of the path. File system representation is a null-terminated C string with canonical UTF-8 encoding.
+    /// Initializes a newly created URL referencing the local file or directory at the file system representation of the path.
+    ///
+    /// File system representation is a null-terminated C string with canonical
+    /// UTF-8 encoding.
     public init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo base: __shared URL?) {
         _url = URL._type.init(fileURLWithFileSystemRepresentation: path, isDirectory: isDirectory, relativeTo: base).convertingFileReference()
     }
 
-    /// Returns the data representation of the URL's relativeString.
+    /// The data representation of the URL's relativeString.
     ///
-    /// If the URL was initialized with `init?(dataRepresentation:relativeTo:isAbsolute:)`, the data representation returned are the same bytes as those used at initialization; otherwise, the data representation returned are the bytes of the `relativeString` encoded with UTF8 string encoding.
+    /// If the URL was initialized with
+    /// `init?(dataRepresentation:relativeTo:isAbsolute:)`, the data
+    /// representation returned are the same bytes as those used at
+    /// initialization; otherwise, the data representation returned are the
+    /// bytes of the `relativeString` encoded with UTF8 string encoding.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var dataRepresentation: Data {
         return _url.dataRepresentation
     }
 
-    /// Returns the absolute string for the URL.
+    /// The absolute string for the URL.
     public var absoluteString: String {
         return _url.absoluteString
     }
 
-    /// Returns the relative portion of a URL.
+    /// The relative portion of a URL.
     ///
-    /// If `baseURL` is nil, or if the receiver is itself absolute, this is the same as `absoluteString`.
+    /// If `baseURL` is nil, or if the receiver is itself absolute, this is the
+    /// same as `absoluteString`.
     public var relativeString: String {
         return _url.relativeString
     }
 
-    /// Returns the base URL.
+    /// The base URL.
     ///
-    /// If the URL is itself absolute, then this value is nil.
+    /// If the URL is itself absolute, then this value is `nil`.
     public var baseURL: URL? {
         return _url.baseURL
     }
 
-    /// Returns the absolute URL.
+    /// The absolute URL.
     ///
-    /// If the URL is itself absolute, this will return self.
+    /// If the URL is itself absolute, this returns `self`.
     public var absoluteURL: URL {
         return _url.absoluteURL ?? self
     }
 
-    /// Returns the scheme of the URL.
+    /// The scheme of the URL.
     public var scheme: String? {
         return _url.scheme
     }
 
-    /// Returns true if the scheme is `file:`.
+    /// A Boolean that is true if the scheme is `file:`.
     public var isFileURL: Bool {
         return _url.isFileURL
     }
@@ -881,9 +980,12 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.hasAuthority
     }
 
-    /// Returns the host component of the URL if present, otherwise returns `nil`.
+    /// The host component of a URL if the URL conforms to RFC 3986; otherwise, nil.
     ///
-    /// - note: This function will resolve against the base `URL`.
+    /// > Note: This function resolves against the base `URL`.
+    ///
+    /// New code should use ``URL/host(percentEncoded:)`` instead of this
+    /// property.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
@@ -893,26 +995,38 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.host
     }
 
-    /// Returns the host component of the URL if present, otherwise returns `nil`.
+    /// Returns the host component of the URL, optionally removing any percent-encoding.
+    ///
+    /// The system doesn't allow certain characters in the URL host component,
+    /// so ``URL`` percent-encodes those characters to create a valid URL.
+    /// Calling this function with `percentEncoded = false` removes any
+    /// percent-encoding and returns the unencoded host.
+    ///
+    /// If the URL doesn't contain a host component according to
+    /// [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt), this function
+    /// returns `nil`.
     ///
     /// - Parameter percentEncoded: Whether the host should be percent encoded,
     ///   defaults to `true`.
-    /// - Returns: The host component of the URL
+    /// - Returns: The host component of the URL.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func host(percentEncoded: Bool = true) -> String? {
         return _url.host(percentEncoded: percentEncoded)
     }
 
-    /// Returns the port component of the URL if present, otherwise returns `nil`.
+    /// The port component of the URL if the URL conforms to RFC 3986; otherwise, nil.
     ///
-    /// - note: This function will resolve against the base `URL`.
+    /// > Note: This function resolves against the base `URL`.
     public var port: Int? {
         return _url.port
     }
 
-    /// Returns the user component of the URL if present, otherwise returns `nil`.
+    /// The user component of the URL if the URL conforms to RFC 3986; otherwise, nil.
     ///
-    /// - note: This function will resolve against the base `URL`.
+    /// > Note: This function resolves against the base `URL`.
+    ///
+    /// New code should use ``URL/user(percentEncoded:)`` instead of this
+    /// property.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
@@ -922,7 +1036,17 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.user
     }
 
-    /// Returns the user component of the URL if present, otherwise returns `nil`.
+    /// Returns the user component of the URL, optionally removing any percent-encoding.
+    ///
+    /// The system doesn't allow certain characters in the URL user component,
+    /// so ``URL`` percent-encodes those characters to create a valid URL.
+    /// Calling this function with `percentEncoded = false` removes any
+    /// percent-encoding and returns the unencoded user.
+    ///
+    /// If the URL doesn't contain a user component according to
+    /// [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt), this function
+    /// returns `nil`.
+    ///
     /// - Parameter percentEncoded: Whether the user should be percent encoded,
     ///   defaults to `true`.
     /// - Returns: The user component of the URL.
@@ -931,9 +1055,12 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.user(percentEncoded: percentEncoded)
     }
 
-    /// Returns the password component of the URL if present, otherwise returns `nil`.
+    /// The password component of the URL if the URL conforms to RFC 3986; otherwise, nil.
     ///
-    /// - note: This function will resolve against the base `URL`.
+    /// > Note: This function resolves against the base `URL`.
+    ///
+    /// New code should use ``URL/password(percentEncoded:)`` instead of this
+    /// property.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
@@ -943,7 +1070,17 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.password
     }
 
-    /// Returns the password component of the URL if present, otherwise returns `nil`.
+    /// Returns the password component of the URL, optionally removing any percent-encoding.
+    ///
+    /// The system doesn't allow certain characters in the URL password
+    /// component, so ``URL`` percent-encodes those characters to create a valid
+    /// URL. Calling this function with `percentEncoded = false` removes any
+    /// percent-encoding and returns the unencoded password.
+    ///
+    /// If the URL doesn't contain a password component according to
+    /// [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt), this function
+    /// returns `nil`.
+    ///
     /// - Parameter percentEncoded: Whether the password should be percent encoded,
     ///   defaults to `true`.
     /// - Returns: The password component of the URL.
@@ -956,10 +1093,14 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.absolutePath(percentEncoded: percentEncoded)
     }
 
-    /// Returns the path component of the URL if present, otherwise returns an empty string.
+    /// The path component of the URL if the URL conforms to RFC 3986; otherwise, an empty string.
     ///
-    /// - note: This function will resolve against the base `URL`.
-    /// - returns: The path, or an empty string if the URL has an empty path.
+    /// > Note: This function resolves against the base `URL`.
+    ///
+    /// New code should use ``URL/path(percentEncoded:)`` instead of this
+    /// property.
+    ///
+    /// - Returns: The path, or an empty string if the URL has an empty path.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
@@ -969,8 +1110,17 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.path
     }
 
-    /// Returns the path component of the URL if present, otherwise returns an empty string.
-    /// - note: This function will resolve against the base `URL`.
+    /// Returns the path component of the URL, optionally removing any percent-encoding.
+    ///
+    /// The system doesn't allow certain characters in the URL path component,
+    /// so ``URL`` percent-encodes those characters to create a valid URL.
+    /// Calling this function with `percentEncoded = false` removes any
+    /// percent-encoding and returns the unencoded path.
+    ///
+    /// If the URL's path component is empty, this method returns an empty
+    /// string.
+    ///
+    /// - Note: This function resolves against the base `URL`.
     /// - Parameter percentEncoded: Whether the path should be percent encoded,
     ///   defaults to `true`.
     /// - Returns: The path component of the URL.
@@ -979,9 +1129,11 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.path(percentEncoded: percentEncoded)
     }
 
-    /// Returns the relative path of the URL if present, otherwise returns an empty string. This is the same as `path` if `baseURL` is `nil`.
+    /// The relative path of the URL if the URL conforms to RFC 3986, otherwise nil.
     ///
-    /// - returns: The relative path, or an empty string if the URL has an empty path.
+    /// This is the same as `path` if `baseURL` is `nil`.
+    ///
+    /// - Returns: The relative path, or an empty string if the URL has an empty path.
     public var relativePath: String {
         return _url.relativePath
     }
@@ -990,9 +1142,12 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.relativePath(percentEncoded: percentEncoded)
     }
 
-    /// Returns the query component of the URL if present, otherwise returns `nil`.
+    /// The query of the URL if the URL conforms to RFC 3986; otherwise, nil.
     ///
-    /// - note: This function will resolve against the base `URL`.
+    /// > Note: This function resolves against the base `URL`.
+    ///
+    /// New code should use ``URL/query(percentEncoded:)`` instead of this
+    /// property.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
@@ -1002,7 +1157,17 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.query
     }
 
-    /// Returns the password component of the URL if present, otherwise returns `nil`.
+    /// Returns the query component of the URL, optionally removing any percent-encoding.
+    ///
+    /// The system doesn't allow certain characters in the URL query component,
+    /// so ``URL`` percent-encodes those characters to create a valid URL.
+    /// Calling this function with `percentEncoded = false` removes any
+    /// percent-encoding and returns the unencoded query.
+    ///
+    /// If the URL doesn't contain a query component according to
+    /// [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt), this function
+    /// returns `nil`.
+    ///
     /// - Parameter percentEncoded: Whether the query should be percent encoded,
     ///   defaults to `true`.
     /// - Returns: The query component of the URL.
@@ -1011,9 +1176,12 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.query(percentEncoded: percentEncoded)
     }
 
-    /// Returns the fragment component of the URL if present, otherwise returns `nil`.
+    /// The fragment component of the URL if the URL conforms to RFC 3986; otherwise, nil.
     ///
-    /// - note: This function will resolve against the base `URL`.
+    /// > Note: This function resolves against the base `URL`.
+    ///
+    /// New code should use ``URL/fragment(percentEncoded:)`` instead of this
+    /// property.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
@@ -1023,7 +1191,17 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.fragment
     }
 
-    /// Returns the password component of the URL if present, otherwise returns `nil`.
+    /// Returns the fragment component of the URL, optionally removing any percent-encoding.
+    ///
+    /// The system doesn't allow certain characters in the URL fragment
+    /// component, so ``URL`` percent-encodes those characters to create a valid
+    /// URL. Calling this function with `percentEncoded = false` removes any
+    /// percent-encoding and returns the unencoded fragment.
+    ///
+    /// If the URL doesn't contain a fragment component according to
+    /// [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt), this function
+    /// returns `nil`.
+    ///
     /// - Parameter percentEncoded: Whether the fragment should be percent encoded,
     ///   defaults to `true`.
     /// - Returns: The fragment component of the URL.
@@ -1042,23 +1220,23 @@ public struct URL: Equatable, Sendable, Hashable {
     }
 
     // MARK: - Path manipulation
-    /// Returns true if the URL path represents a directory.
+    /// A Boolean that is true if the URL path represents a directory.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var hasDirectoryPath: Bool {
         return _url.hasDirectoryPath
     }
 
-    /// Returns the path components of the URL, or an empty array if the path is an empty string.
+    /// The path components of the URL, or an empty array if the path is an empty string.
     public var pathComponents: [String] {
         return _url.pathComponents
     }
 
-    /// Returns the last path component of the URL, or an empty string if the path is an empty string.
+    /// The last path component of the URL, or an empty string if the path is an empty string.
     public var lastPathComponent: String {
         return _url.lastPathComponent
     }
 
-    /// Returns the path extension of the URL, or an empty string if the path is an empty string.
+    /// The path extension of the URL, or an empty string if the path is an empty string.
     public var pathExtension: String {
         return _url.pathExtension
     }
@@ -1078,8 +1256,15 @@ public struct URL: Equatable, Sendable, Hashable {
 
     /// Returns a URL constructed by appending the given path component to self.
     ///
-    /// - note: This function performs a file system operation to determine if the path component is a directory. If so, it will append a trailing `/`. If you know in advance that the path component is a directory or not, then use `func appendingPathComponent(_:isDirectory:)`.
-    /// - parameter pathComponent: The path component to add.
+    /// > Note: This function performs a file system operation to determine if
+    /// > the path component is a directory. If so, it will append a trailing
+    /// > `/`. If you know in advance that the path component is a directory or
+    /// > not, then use `func appendingPathComponent(_:isDirectory:)`.
+    ///
+    /// New code should use ``URL/appending(path:directoryHint:)`` instead of
+    /// this method.
+    ///
+    /// - Parameter pathComponent: The path component to add.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
@@ -1131,8 +1316,15 @@ public struct URL: Equatable, Sendable, Hashable {
 
     /// Appends a path component to the URL.
     ///
-    /// - note: This function performs a file system operation to determine if the path component is a directory. If so, it will append a trailing `/`. If you know in advance that the path component is a directory or not, then use `func appendingPathComponent(_:isDirectory:)`.
-    /// - parameter pathComponent: The path component to add.
+    /// > Note: This function performs a file system operation to determine if
+    /// > the path component is a directory. If so, it will append a trailing
+    /// > `/`. If you know in advance that the path component is a directory or
+    /// > not, then use `func appendingPathComponent(_:isDirectory:)`.
+    ///
+    /// New code should use ``URL/append(path:directoryHint:)`` instead of this
+    /// method.
+    ///
+    /// - Parameter pathComponent: The path component to add.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
@@ -1167,23 +1359,23 @@ public struct URL: Equatable, Sendable, Hashable {
         self = deletingPathExtension()
     }
 
-    /// Returns a `URL` with any instances of ".." or "." removed from its path.
-    /// - note: This method does not consult the file system.
+    /// A version of the URL with any instances of ".." or "." resolved in its path.
     public var standardized: URL {
         return _url.standardized ?? self
     }
 
-    /// Standardizes the path of a file URL by removing dot segments.
+    /// Standardizes the path of a file URL.
+    ///
+    /// If the `isFileURL` is false, this method does nothing.
     public mutating func standardize() {
         self = self.standardized
     }
 
 #if !NO_FILESYSTEM
 
-    /// Standardizes the path of a file URL.
+    /// A standardized version of the path of a file URL.
     ///
     /// If the `isFileURL` is false, this method returns `self`.
-    /// - note: This method consults the file system.
     public var standardizedFileURL: URL {
         return _url.standardizedFileURL ?? self
     }
@@ -1208,7 +1400,15 @@ public struct URL: Equatable, Sendable, Hashable {
 
     /// Returns whether the URL's resource exists and is reachable.
     ///
-    /// This method synchronously checks if the resource's backing store is reachable. Checking reachability is appropriate when making decisions that do not require other immediate operations on the resource, e.g. periodic maintenance of UI state that depends on the existence of a specific document. When performing operations such as opening a file or copying resource properties, it is more efficient to simply try the operation and handle failures. This method is currently applicable only to URLs for file system resources. For other URL types, `false` is returned.
+    /// This method synchronously checks if the resource's backing store is
+    /// reachable. Checking reachability is appropriate when making decisions
+    /// that do not require other immediate operations on the resource, e.g.
+    /// periodic maintenance of UI state that depends on the existence of a
+    /// specific document. When performing operations such as opening a file or
+    /// copying resource properties, it is more efficient to simply try the
+    /// operation and handle failures. This method is currently applicable only
+    /// to URLs for file system resources. For other URL types, `false` is
+    /// returned.
     public func checkResourceIsReachable() throws -> Bool {
         var error: NSError?
         let result = ns.checkResourceIsReachableAndReturnError(&error)
@@ -1458,9 +1658,17 @@ extension URL {
         return filePath.utf8.first == ._slash
     }
 
-    /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
+    /// Creates a file URL that references a path you specify as a string.
     ///
-    /// If an empty string is used for the path, then the path is assumed to be ".".
+    /// - Parameters:
+    ///   - path: The location in the file system, as a string.
+    ///   - directoryHint: A hint to the initializer to indicate whether the
+    ///     path is a directory, or to instruct the initializer to make this
+    ///     determination.
+    ///   - base: A URL that provides a file system location that the path
+    ///     extends.
+    ///
+    /// If an empty string is used for the path, the system interprets it as ".".
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public init(filePath path: String, directoryHint: DirectoryHint = .inferFromPath, relativeTo base: URL? = nil) {
         let inner = URL._type.init(filePath: path, directoryHint: directoryHint, relativeTo: base)
@@ -1468,18 +1676,29 @@ extension URL {
     }
 
     /// Returns a URL constructed by appending the given path to self.
+    ///
+    /// This method doesn't percent-encode any path separators (`/`) in the
+    /// path component before appending the component to the path. If you want
+    /// this encoding, use ``URL/appending(component:directoryHint:)`` instead.
+    ///
     /// - Parameters:
-    ///   - path: The path to add
-    ///   - directoryHint: A hint to whether this URL will point to a directory
+    ///   - path: The path to add.
+    ///   - directoryHint: A hint to whether this URL will point to a directory.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func appending<S: StringProtocol>(path: S, directoryHint: DirectoryHint = .inferFromPath) -> URL {
         return _url.appending(path: path, directoryHint: directoryHint) ?? self
     }
 
-    /// Appends a path to the receiver.
+    /// Appends a path to the URL, with a hint for handling directory awareness.
     ///
-    /// - parameter path: The path to add.
-    /// - parameter directoryHint: A hint to whether this URL will point to a directory
+    /// This method doesn't percent-encode any path separators (`/`) in the
+    /// path component before appending the component to the path. If you want
+    /// this encoding, use ``URL/append(component:directoryHint:)`` instead.
+    ///
+    /// - Parameters:
+    ///   - path: The path to add.
+    ///   - directoryHint: A hint to whether this URL will point to a directory.
+    ///     Defaults to ``URL/DirectoryHint/inferFromPath``.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public mutating func append<S: StringProtocol>(path: S, directoryHint: DirectoryHint = .inferFromPath) {
         self = appending(path: path, directoryHint: directoryHint)
@@ -1565,7 +1784,10 @@ extension URL {
         return URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
     }
 
-    /// The home directory for the current user (~/).
+    /// The home directory for the current user.
+    ///
+    /// This URL is the equivalent of the shell value `~/`.
+    ///
     /// Complexity: O(1)
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var homeDirectory: URL {
@@ -1602,7 +1824,8 @@ extension URL {
         #endif
     }
 
-    /// The temporary directory for the current user.
+    /// The standard directory for temporary files.
+    ///
     /// Complexity: O(1)
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var temporaryDirectory: URL {
@@ -1615,82 +1838,79 @@ extension URL {
     }
 
 #if FOUNDATION_FRAMEWORK
-    /// Discardable cache files directory for the
-    /// current user. (~/Library/Caches).
+    /// The standard directory for discardable cache files.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var cachesDirectory: URL { url(for: .cachesDirectory, in: .userDomainMask) }
 
-    /// Supported applications (/Applications).
+    /// The standard directory for apps.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var applicationDirectory: URL { url(for: .applicationDirectory, in: .localDomainMask) }
 
-    /// Various user-visible documentation, support, and configuration
-    /// files for the current user (~/Library).
+    /// The library directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var libraryDirectory: URL { url(for: .libraryDirectory, in: .userDomainMask) }
 
-    /// User home directories (/Users).
+    /// The user home directories directory.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var userDirectory: URL { url(for: .userDirectory, in: .localDomainMask) }
 
-    /// Documents directory for the current user (~/Documents)
+    /// The standard directory for document files.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var documentsDirectory: URL { url(for: .documentDirectory, in: .userDomainMask) }
 
-    /// Desktop directory for the current user (~/Desktop)
+    /// The desktop directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var desktopDirectory: URL { url(for: .desktopDirectory, in: .userDomainMask) }
 
-    /// Application support files for the current
-    /// user (~/Library/Application Support)
+    /// The application support directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var applicationSupportDirectory: URL { url(for: .applicationSupportDirectory, in: .userDomainMask) }
 
-    /// Downloads directory for the current user (~/Downloads)
+    /// The downloads directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var downloadsDirectory: URL { url(for: .downloadsDirectory, in: .userDomainMask) }
 
-    /// Movies directory for the current user (~/Movies)
+    /// The movies directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var moviesDirectory: URL { url(for: .moviesDirectory, in: .userDomainMask) }
 
-    /// Music directory for the current user (~/Music)
+    /// The music directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var musicDirectory: URL { url(for: .musicDirectory, in: .userDomainMask) }
 
-    /// Pictures directory for the current user (~/Pictures)
+    /// The pictures directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var picturesDirectory: URL { url(for: .picturesDirectory, in: .userDomainMask) }
 
-    /// The user’s Public sharing directory (~/Public)
+    /// The user’s public sharing directory.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public static var sharedPublicDirectory: URL { url(for: .sharedPublicDirectory, in: .userDomainMask) }
 
-    /// Trash directory for the current user (~/.Trash)
+    /// The trash directory for the current user.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
     @available(macOS 13.0, iOS 16.0, *)
@@ -1698,6 +1918,16 @@ extension URL {
     @available(watchOS, unavailable)
     public static var trashDirectory: URL { url(for: .trashDirectory, in: .userDomainMask) }
 
+    /// Creates a file URL for a common directory in a domain.
+    ///
+    /// - Parameters:
+    ///   - directory: The search path for the commonly used directory.
+    ///   - domain: The file system domain to search. Specify only one domain
+    ///     for this parameter.
+    ///   - url: The file URL for determining the location of the returned URL.
+    ///     Only the volume of this parameter is relevant.
+    ///   - shouldCreate: A Boolean value that indicates whether the initializer
+    ///     creates the directory if it doesn't already exist.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public init(
         for directory: FileManager.SearchPathDirectory,
@@ -1731,15 +1961,16 @@ extension URL {
 #endif // !NO_FILESYSTEM
 
 extension URL {
+    /// A hint to URL file APIs for handling paths that may reference directories.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public enum DirectoryHint: Sendable {
-        /// Specifies that the `URL` does reference a directory
+        /// A hint that specifies that a given path is a directory.
         case isDirectory
-        /// Specifies that the `URL` does **not** reference a directory
+        /// A hint that specifies that a given path isn't a directory.
         case notDirectory
-        /// Specifies that `URL` should check with the file system to determine whether it references a directory
+        /// A hint that directs a URL call to consult the file system to determine whether the path references a directory.
         case checkFileSystem
-        /// Specifies that `URL` should infer whether it references a directory based on whether it has a trailing slash
+        /// A hint that directs a URL call to infer whether a path references a directory based on whether it has a trailing slash.
         case inferFromPath
     }
 }
@@ -1812,6 +2043,7 @@ extension NSURL: _HasCustomAnyHashableRepresentation {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URL: _CustomPlaygroundQuickLookable {
+    /// A playground quicklook for the URL.
     @available(*, deprecated, message: "URL.customPlaygroundQuickLook will be removed in a future Swift version")
     public var customPlaygroundQuickLook: PlaygroundQuickLook {
         return .url(absoluteString)
@@ -1854,6 +2086,9 @@ extension URL: Codable {
 //===----------------------------------------------------------------------===//
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URL: _ExpressibleByFileReferenceLiteral {
+    /// Creates a URL from a playground file literal.
+    ///
+    /// - Parameter name: The playground file literal name, as a string.
     public init(fileReferenceLiteralResourceName name: String) {
         self = Bundle.main.url(forResource: name, withExtension: nil)!
     }

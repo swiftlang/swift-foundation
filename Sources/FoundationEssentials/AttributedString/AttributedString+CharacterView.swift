@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// A view into the underlying storage of the attributed string, as Unicode characters.
     public struct CharacterView : Sendable {
         /// The guts of the base attributed string.
         internal var _guts: Guts
@@ -55,6 +56,15 @@ extension AttributedString {
         }
     }
 
+    /// The characters of the attributed string, as a view into the underlying string.
+    ///
+    /// Use the ``AttributedString/characters`` view when you want to look for specific string
+    /// content. You can then use the resulting ranges to set attributes for specific parts of
+    /// the ``AttributedString``.
+    ///
+    /// You can also use this property to mutate the attributed string, using
+    /// `RangeReplaceableCollection` methods, such as `insert(_:at:)` and `append(_:)`.
+    /// Inserted characters inherit any attributes present at the insertion point.
     public var characters: CharacterView {
         get {
             return CharacterView(_guts)
@@ -113,6 +123,14 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         .init(_range.upperBound, version: _guts.version)
     }
 
+    /// The number of characters in the collection.
+    ///
+    /// To check whether a collection is empty, use its `isEmpty` property
+    /// instead of comparing `count` to zero. Unless the collection guarantees
+    /// random-access performance, calculating `count` can be an O(*n*)
+    /// operation.
+    ///
+    /// - Complexity: O(*n*)
     @_alwaysEmitIntoClient
     public var count: Int {
     #if FOUNDATION_FRAMEWORK

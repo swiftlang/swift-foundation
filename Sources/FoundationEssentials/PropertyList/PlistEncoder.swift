@@ -16,11 +16,12 @@ internal import Synchronization
 // Plist Encoder
 //===----------------------------------------------------------------------===//
 
-/// `PropertyListEncoder` facilitates the encoding of `Encodable` values into property lists.
 // NOTE: older overlays had Foundation.PropertyListEncoder as the ObjC
 // name. The two must coexist, so it was renamed. The old name must not
 // be used in the new runtime. _TtC10Foundation20_PropertyListEncoder
 // is the mangled name for Foundation._PropertyListEncoder.
+
+/// An object that encodes instances of data types to a property list.
 #if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation20_PropertyListEncoder)
 #endif
@@ -29,7 +30,8 @@ open class PropertyListEncoder {
 
     // MARK: - Options
 
-    /// The output format to write the property list data in. Defaults to `.binary`.
+    /// A value that determines which property list format is used during
+    /// encoding.
     open var outputFormat: PropertyListDecoder.PropertyListFormat {
         get {
             optionsLock._unsafeLock()
@@ -52,7 +54,8 @@ open class PropertyListEncoder {
         }
     }
 
-    /// Contextual user-provided information for use during encoding.
+    /// A dictionary you use to customize the encoding process by providing
+    /// contextual information.
     @preconcurrency
     open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
@@ -88,12 +91,14 @@ open class PropertyListEncoder {
 
     // MARK: - Constructing a Property List Encoder
 
-    /// Initializes `self` with default strategies.
+    /// Creates a new, reusable property list encoder with the default
+    /// formatting settings.
     public init() {}
 
     // MARK: - Encoding Values
 
-    /// Encodes the given top-level value and returns its property list representation.
+    /// Returns a property list that represents an encoded version of the value
+    /// you supply.
     ///
     /// - parameter value: The value to encode.
     /// - returns: A new `Data` value containing the encoded property list data.
