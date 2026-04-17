@@ -119,13 +119,6 @@ internal final class __DataStorage : @unchecked Sendable {
     // The properties below use @exclusivity(unchecked) in release mode to avoid dynamic exclusivity checking. Exclusivity is guaranteed by the copy-on-write implementation of Data itself.
     // Dynamic exclusivity checks are still enabled in debug builds to catch issues with the copy-on-write implementation at-desk and in unit tests.
 
-    /// The size of the prior slice's prefix if the allocation was copied from a slice (to maintain
-    /// stable indexing)
-    #if !DEBUG
-    @exclusivity(unchecked)
-    #endif
-    @usableFromInline var _offset: Int
-    
     /// A pointer to the start of the referenced byte allocation
     #if !DEBUG
     @exclusivity(unchecked)
@@ -143,6 +136,13 @@ internal final class __DataStorage : @unchecked Sendable {
     @exclusivity(unchecked)
     #endif
     @usableFromInline var _capacity: Int
+
+    /// The size of the prior slice's prefix if the allocation was copied from a slice (to maintain
+    /// stable indexing)
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
+    @usableFromInline var _offset: Int
 
     /// The deallocator to use when discarding the byte allocation
     #if !DEBUG
