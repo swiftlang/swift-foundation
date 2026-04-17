@@ -572,6 +572,7 @@ private struct PredicateTests {
         }
     }
     
+    #if FOUNDATION_FRAMEWORK
     @Test func all() throws {
         #expect(try Predicate(all: []).evaluate(42))
         #expect(try !Predicate(all: [Predicate.true, Predicate.false]).evaluate(42))
@@ -661,4 +662,5 @@ private struct PredicateTests {
         #expect(input3.secondAccessed)
         #expect(input3.thirdAccessed)
     }
+    #endif
 }

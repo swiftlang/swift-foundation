@@ -49,6 +49,7 @@ extension Predicate {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
 @available(FoundationPreview 6.4, *)
 extension Predicate {
     public init(all subpredicates: some BidirectionalCollection<Self>) {
@@ -97,6 +98,7 @@ extension Predicate {
         PredicateExpressions.build_Disjunction(lhs: lhs, rhs: rhs)
     }
 }
+#endif
 
 // Namespace for operator expressions
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
