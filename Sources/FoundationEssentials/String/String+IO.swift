@@ -483,28 +483,3 @@ extension StringProtocol {
     }
 #endif
 }
-
-// TODO: This is part of the stdlib as of 5.11. This is a copy to support building on previous Swift stdlib versions, but should be replaced with the stdlib one as soon as possible.
-extension String {
-    internal init?<Encoding: Unicode.Encoding>(_validating codeUnits: some Sequence<Encoding.CodeUnit>, as encoding: Encoding.Type) {
-        var transcoded: [UTF8.CodeUnit] = []
-        transcoded.reserveCapacity(codeUnits.underestimatedCount)
-        var isASCII = true
-        let error = transcode(
-            codeUnits.makeIterator(),
-            from: Encoding.self,
-            to: UTF8.self,
-            stoppingOnError: true,
-            into: {
-                uint8 in
-                transcoded.append(uint8)
-                if isASCII && (uint8 & 0x80) == 0x80 { isASCII = false }
-            }
-        )
-        if error { return nil }
-        let res = transcoded.withUnsafeBufferPointer{
-            String._tryFromUTF8($0)
-        }
-        if let res { self = res } else { return nil }
-    }
-}
