@@ -1341,18 +1341,12 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.bridgeToNSURL()
     }
 
-#endif // FOUNDATION_FRAMEWORK
-
-#if FOUNDATION_FRAMEWORK
     internal var _swiftURL: _SwiftURL? {
-        #if FOUNDATION_FRAMEWORK
         if let swift = _url as? _SwiftURL { return swift }
         return _SwiftURL(stringOrEmpty: _url.relativeString, relativeTo: _url.baseURL)
-        #else
-        return _url
-        #endif
     }
-#endif
+
+#endif // FOUNDATION_FRAMEWORK
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(relativeString)
