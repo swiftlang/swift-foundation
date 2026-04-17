@@ -172,6 +172,28 @@ func extractDetailedStoredProperties(
     return properties
 }
 
+// MARK: - Access Level
+
+/// Returns the access-level modifier (with trailing space) that should be applied to
+/// members generated inside an extension of `declaration`, or `""` when no modifier is needed.
+///
+/// Mirrors Swift's synthesized Codable behavior: when the attached type is `public` or `open`,
+/// generated members must be `public` to satisfy protocol requirements; `package` types
+/// need `package`; `internal`/`fileprivate`/`private` can use the default (empty string).
+func accessLevel(of declaration: some DeclGroupSyntax) -> String {
+    for modifier in declaration.modifiers {
+        switch modifier.name.tokenKind {
+        case .keyword(.public), .keyword(.open):
+            return "public "
+        case .keyword(.package):
+            return "package "
+        default:
+            continue
+        }
+    }
+    return ""
+}
+
 // MARK: - Attribute Parsing Utilities
 
 func customCodingKey(from attributes: AttributeListSyntax) -> String? {
@@ -225,7 +247,13 @@ func defaultValueExpression(from attributes: AttributeListSyntax) -> String? {
 
 // MARK: - Coding Fields Generation
 
-/// Unified function for generating coding fields with any expansion kind
+/// Unified function for generating coding fields with any expansion kind.
+///
+/// The generated `CodingFields` enum and its members are intentionally kept at the
+/// default access level — they are only referenced inside the bodies of the
+/// synthesized `encode(to:)` / `decode(from:)` methods in a sibling extension, so an
+/// internal conformance to a public protocol is sufficient (matching Swift's
+/// synthesized `CodingKeys` behavior for `Codable`).
 func makeCodingFieldsExtension<T: CodingFieldExpansionKind>(
     for typeName: TokenSyntax,
     from properties: [DetailedStoredProperty],
@@ -354,13 +382,14 @@ protocol EncodableExpansionKind {
 func makeEncodableExtension(
     for typeName: TokenSyntax,
     with properties: [DetailedStoredProperty],
-    kind: some EncodableExpansionKind
+    kind: some EncodableExpansionKind,
+    accessLevel: String = ""
 ) -> ExtensionDeclSyntax? {
     let extensionDecl: DeclSyntax
     if properties.isEmpty {
         extensionDecl = """
         extension \(typeName): \(raw: kind.protocolName) {
-            func encode(to encoder: \(raw: kind.encoderType)) throws(CodingError.Encoding) {
+            \(raw: accessLevel)func encode(to encoder: \(raw: kind.encoderType)) throws(CodingError.Encoding) {
                 try encoder.encodeStructFields(count: 0) { _ throws(CodingError.Encoding) in
                 }
             }
@@ -375,7 +404,7 @@ func makeEncodableExtension(
 
         extensionDecl = """
         extension \(typeName): \(raw: kind.protocolName) {
-            func encode(to encoder: \(raw: kind.encoderType)) throws(CodingError.Encoding) {
+            \(raw: accessLevel)func encode(to encoder: \(raw: kind.encoderType)) throws(CodingError.Encoding) {
                 try encoder.encodeStructFields(count: \(raw: fieldCount)) { structEncoder throws(CodingError.Encoding) in
                     \(raw: encodeStatements)
                 }
@@ -401,13 +430,14 @@ protocol DecodableExpansionKind {
 func makeDecodableExtension(
     for typeName: TokenSyntax,
     with properties: [DetailedStoredProperty],
-    kind: some DecodableExpansionKind
+    kind: some DecodableExpansionKind,
+    accessLevel: String = ""
 ) -> ExtensionDeclSyntax? {
     let decl: DeclSyntax
     if properties.isEmpty {
         decl = """
         extension \(typeName): \(raw: kind.protocolName) {
-            static func decode(from decoder: \(raw: kind.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
+            \(raw: accessLevel)static func decode(from decoder: \(raw: kind.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
                 try decoder.decodeStruct { _ throws(CodingError.Decoding) in
                     \(typeName)()
                 }
@@ -460,7 +490,7 @@ func makeDecodableExtension(
 
         decl = """
         extension \(typeName): \(raw: kind.protocolName) {
-            static func decode(from decoder: \(raw: kind.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
+            \(raw: accessLevel)static func decode(from decoder: \(raw: kind.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     \(raw: varDeclarations)
                     var _codingField: CodingFields?

@@ -1165,6 +1165,72 @@ struct JSONDecodableMacroTests {
             macros: decodableTestMacros
         )
     }
+
+    @Test func publicStructEmitsPublicMembers() {
+        assertMacroExpansion(
+            """
+            @JSONDecodable
+            public struct Person {
+                public let name: String
+            }
+            """,
+            expandedSource: """
+            public struct Person {
+                public let name: String
+            }
+
+            extension Person {
+                enum CodingFields: JSONOptimizedDecodingField {
+                    case name
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name:
+                            "name"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name":
+                            .name
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension Person: JSONDecodable {
+                public static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var name: String?
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        return Person(name: name)
+                    }
+                }
+            }
+            """,
+            macros: decodableTestMacros
+        )
+    }
 }
 
 private let decodableTestMacros: [String: Macro.Type] = [

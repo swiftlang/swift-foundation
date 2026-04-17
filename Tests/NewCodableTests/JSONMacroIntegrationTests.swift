@@ -87,6 +87,39 @@ struct CodableStructWithAliasedProperty {
     let bar: String
 }
 
+// Public types exercise access-level propagation in the generated extensions.
+// Without correct `public` modifiers on the synthesized members, these would
+// fail to compile with "method must be declared public because it matches a
+// requirement in public protocol".
+
+@JSONEncodable
+public struct PublicEncodablePerson {
+    public var name: String
+    public var age: Int
+
+    public init(name: String, age: Int) {
+        self.name = name
+        self.age = age
+    }
+}
+
+@JSONDecodable
+public struct PublicDecodablePerson {
+    public var name: String
+    public var age: Int
+}
+
+@JSONCodable
+public struct PublicCodablePerson {
+    public var name: String
+    public var age: Int
+
+    public init(name: String, age: Int) {
+        self.name = name
+        self.age = age
+    }
+}
+
 @Suite("@JSONEncodable Macro Integration")
 struct JSONEncodableMacroIntegrationTests {
 
@@ -208,5 +241,13 @@ struct JSONCodableMacroIntegrationTests {
         let decoded = try NewJSONDecoder().decode(CodablePost.self, from: data)
         #expect(decoded.title == "Test")
         #expect(decoded.rating == nil)
+    }
+
+    @Test func publicTypeRoundTrip() throws {
+        let original = PublicCodablePerson(name: "Alice", age: 30)
+        let data = try NewJSONEncoder().encode(original)
+        let decoded = try NewJSONDecoder().decode(PublicCodablePerson.self, from: data)
+        #expect(decoded.name == "Alice")
+        #expect(decoded.age == 30)
     }
 }

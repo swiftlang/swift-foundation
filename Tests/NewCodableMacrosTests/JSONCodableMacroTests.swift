@@ -547,6 +547,168 @@ struct JSONCodableMacroTests {
         )
     }
 
+    @Test func publicStructEmitsPublicMembers() {
+        assertMacroExpansion(
+            """
+            @JSONCodable
+            public struct Person {
+                public let name: String
+                public let age: Int
+            }
+            """,
+            expandedSource: """
+            public struct Person {
+                public let name: String
+                public let age: Int
+            }
+
+            extension Person {
+                enum CodingFields: JSONOptimizedCodingField {
+                    case name
+                    case age
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name:
+                            "name"
+                        case .age:
+                            "age"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name":
+                            .name
+                        case "age":
+                            .age
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension Person: JSONEncodable {
+                public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: CodingFields.age, value: self.age)
+                    }
+                }
+            }
+
+            extension Person: JSONDecodable {
+                public static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var name: String?
+                        var age: Int?
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .age:
+                                age = try valueDecoder.decode(Int.self)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        guard let age else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'age'")
+                        }
+                        return Person(name: name, age: age)
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
+    @Test func packageStructEmitsPackageMembers() {
+        assertMacroExpansion(
+            """
+            @JSONCodable
+            package struct Person {
+                package let name: String
+            }
+            """,
+            expandedSource: """
+            package struct Person {
+                package let name: String
+            }
+
+            extension Person {
+                enum CodingFields: JSONOptimizedCodingField {
+                    case name
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name:
+                            "name"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name":
+                            .name
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension Person: JSONEncodable {
+                package func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                    }
+                }
+            }
+
+            extension Person: JSONDecodable {
+                package static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var name: String?
+                        var _codingField: CodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        return Person(name: name)
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
     @Test func errorOnNonStruct() {
         assertMacroExpansion(
             """

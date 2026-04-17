@@ -467,4 +467,43 @@ struct JSONEncodableMacroTests {
             macros: testMacros
         )
     }
+
+    @Test func publicStructEmitsPublicMembers() {
+        assertMacroExpansion(
+            """
+            @JSONEncodable
+            public struct Person {
+                public let name: String
+            }
+            """,
+            expandedSource: """
+            public struct Person {
+                public let name: String
+            }
+
+            extension Person {
+                enum CodingFields: JSONOptimizedEncodingField {
+                    case name
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name:
+                            "name"
+                        }
+                    }
+                }
+            }
+
+            extension Person: JSONEncodable {
+                public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
 }

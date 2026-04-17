@@ -81,6 +81,31 @@ struct CommonCodableStructWithDefaultedProperty {
     let bar: String
 }
 
+// Public types exercise access-level propagation in the generated extensions.
+
+@CommonEncodable
+public struct PublicCommonEncodablePerson {
+    public var name: String
+
+    public init(name: String) {
+        self.name = name
+    }
+}
+
+@CommonDecodable
+public struct PublicCommonDecodablePerson {
+    public var name: String
+}
+
+@CommonCodable
+public struct PublicCommonCodablePerson {
+    public var name: String
+
+    public init(name: String) {
+        self.name = name
+    }
+}
+
 
 struct CommonCodableStructWithAliasedProperty {
     @DecodableAlias("baz", "qux")
