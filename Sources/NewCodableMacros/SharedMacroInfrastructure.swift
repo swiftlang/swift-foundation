@@ -248,12 +248,6 @@ func defaultValueExpression(from attributes: AttributeListSyntax) -> String? {
 // MARK: - Coding Fields Generation
 
 /// Unified function for generating coding fields with any expansion kind.
-///
-/// The generated `CodingFields` enum and its members are intentionally kept at the
-/// default access level — they are only referenced inside the bodies of the
-/// synthesized `encode(to:)` / `decode(from:)` methods in a sibling extension, so an
-/// internal conformance to a public protocol is sufficient (matching Swift's
-/// synthesized `CodingKeys` behavior for `Codable`).
 func makeCodingFieldsExtension<T: CodingFieldExpansionKind>(
     for typeName: TokenSyntax,
     from properties: [DetailedStoredProperty],
