@@ -18,12 +18,40 @@ internal import Synchronization
 //     var foregroundColor : ForegroundColor
 // }
 // An AttributeScope can contain other scopes as well.
+
+/// A type that organizes attributes into a grouping, and supports dynamic member lookup and serialization of attribute keys.
+///
+/// Attribute owners — typically frameworks — define attributes with ``AttributedStringKey`` types. To allow access to attributes with dynamic member lookup, owners create one or more structures that conform to ``AttributeScope``. The scopes provide short names for their attributes that map to the ``AttributedStringKey`` type. The following example shows how to do this:
+///
+/// ```swift
+/// struct TextStyleAttributes : AttributeScope {
+/// let foregroundColor : ForegroundColorAttribute // ForegroundColorAttribute.Value == Color
+/// let backgroundColor : BackgroundColorAttribute // BackgroundColorAttribute.Value == Color
+/// let underlineStyle : UnderlineStyleAttribute // UnderlineStyleAttribute.Value == UnderlineStyle
+/// // etc.
+/// }
+/// ```
+///
+///
+/// This allows callers to use a syntax like `myAttributedString.foregroundColor = .red`.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding, SendableMetatype {
+    /// The configuration for decoding the attribute scope.
     static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
+    /// The configuration for encoding the attribute scope.
     static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
 }
 
+/// Collections of attributes that system frameworks define.
+///
+/// Attribute scopes define groups of attributes appropriate for use with attributed strings in a certain domain. Attribute definitions contain a name, value type, and encode/decode methods to support serialization.
+///
+/// For example, the ``FoundationAttributes`` scope provides an attribute type for a link to a URL, ``FoundationAttributes/LinkAttribute``, along with a property to access this type, ``FoundationAttributes/link``. Because ``FoundationAttributes`` implements ``AttributeDynamicLookup``, you can access the link attribute by name, as this example shows:
+///
+/// ```swift
+/// var attrStr = AttributedString("Example site")
+/// attrStr.link = URL(string: "http://example.com")
+/// ```
 @frozen
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public enum AttributeScopes { }

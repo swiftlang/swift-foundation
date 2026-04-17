@@ -12,7 +12,10 @@
 
 #if !FOUNDATION_FRAMEWORK
 
-/// Used to indicate how items in a request are ordered, from the first one given in a method invocation or function call to the last (that is, left to right in code).
+/// Constants that indicate sort order.
+///
+/// These constants are used to indicate how items in a request are ordered, from the first one given in a method invocation or function call to the last (that is, left to right in code).
+///
 /// Given the function:
 /// ```
 /// func f(a: Int, b: Int) -> ComparisonResult
@@ -23,8 +26,11 @@
 ///   `a == b`  then return `.orderedSame`. The operands are equal.
 @frozen @available(macOS 10.0, iOS 2.0, tvOS 9.0, watchOS 2.0, *)
 public enum ComparisonResult : Int, Sendable {
+    /// The left operand is smaller than the right operand.
     case orderedAscending   = -1
+    /// The two operands are equal.
     case orderedSame        = 0
+    /// The left operand is greater than the right operand.
     case orderedDescending  = 1
 }
 

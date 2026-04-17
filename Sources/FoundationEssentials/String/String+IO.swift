@@ -53,7 +53,11 @@ extension String {
         switch encoding {
         case .ascii, .nonLossyASCII:
             func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
-                return String(_validating: buffer, as: Unicode.ASCII.self)
+                guard let span = try? UTF8Span(validating: buffer.span) else {
+                    return nil
+                }
+                guard span.isKnownASCII else { return nil }
+                return String(copying: span)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -90,11 +94,7 @@ extension String {
                 if buffer.starts(with: [0xEF, 0xBB, 0xBF]) {
                     buffer = UnsafeBufferPointer(rebasing: buffer.suffix(from: 3))
                 }
-                if let string = String._tryFromUTF8(buffer) {
-                    return string
-                }
-
-                return String(_validating: buffer, as: UTF8.self)
+                return String._tryFromUTF8(buffer)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -136,7 +136,7 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
+            } else if let result = String(validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
                 self = result
             } else {
                 return nil
@@ -163,7 +163,7 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
+            } else if let result = String(validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
                 self = result
             } else {
                 return nil

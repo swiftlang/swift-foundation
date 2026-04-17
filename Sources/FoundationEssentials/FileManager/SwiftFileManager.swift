@@ -14,73 +14,127 @@
 
 internal import Synchronization
 
+    /// Values representing a file's type attribute.
+    ///
+    /// ## Discussion
+    ///
+    /// These strings are the possible values for the ``FileAttributeKey/type`` attribute key contained in the dictionary object returned by ``FileManager/attributesOfItem(atPath:)``.
 public struct FileAttributeType : Hashable, RawRepresentable, Sendable {
     public let rawValue: String
+    /// Creates a file attribute type value.
     public init(rawValue: String) {
         self.rawValue = rawValue
     }
-    
+
     public init(_ rawValue: String) {
         self.rawValue = rawValue
     }
-    
+
+    /// A block special file.
     public static let typeBlockSpecial: Self = Self("NSFileTypeBlockSpecial")
+    /// A character special file.
     public static let typeCharacterSpecial: Self = Self("NSFileTypeCharacterSpecial")
+    /// A directory.
     public static let typeDirectory: Self = Self("NSFileTypeDirectory")
+    /// A regular file.
     public static let typeRegular: Self = Self("NSFileTypeRegular")
+    /// A socket.
     public static let typeSocket: Self = Self("NSFileTypeSocket")
+    /// A symbolic link.
     public static let typeSymbolicLink: Self = Self("NSFileTypeSymbolicLink")
+    /// A file whose type is unknown.
     public static let typeUnknown: Self = Self("NSFileTypeUnknown")
 }
 
+/// Keys in dictionaries used to get and set file attributes.
+///
+/// ## Discussion
+///
+/// These keys are used with the methods listed in the Getting and Setting Attributes topic of ``FileManager``.
 public struct FileAttributeKey: Hashable, RawRepresentable, Sendable {
     public typealias RawValue = String
     public let rawValue: String
-    
+
+    /// Creates a file attribute key.
     public init(rawValue: String) {
         self.rawValue = rawValue
     }
-    
+
+    /// Creates a file attribute key.
     public init(_ rawValue: String) {
         self.rawValue = rawValue
     }
-    
+
+    /// The key in a file attribute dictionary whose value indicates the file's type.
     public static let type = Self(rawValue: "NSFileType")
+    /// The key in a file attribute dictionary whose value indicates the file's size in bytes.
     public static let size = Self(rawValue: "NSFileSize")
+    /// The key in a file attribute dictionary whose value indicates the file's last modified date.
     public static let modificationDate = Self(rawValue: "NSFileModificationDate")
+    /// The key in a file attribute dictionary whose value indicates the file's reference count.
     public static let referenceCount = Self(rawValue: "NSFileCount")
+    /// The key in a file attribute dictionary whose value indicates the identifier for the device on which the file resides.
     public static let deviceIdentifier = Self(rawValue: "NSFileDeviceIdentifier")
+    /// The key in a file attribute dictionary whose value indicates the name of the file's owner.
     public static let ownerAccountName = Self(rawValue: "NSFileOwnerAccountName")
+    /// The key in a file attribute dictionary whose value indicates the group name of the file's owner.
     public static let groupOwnerAccountName = Self(rawValue: "NSFileGroupOwnerAccountName")
+    /// The key in a file attribute dictionary whose value indicates the file's Posix permissions.
     public static let posixPermissions = Self(rawValue: "NSFilePosixPermissions")
+    /// The key in a file attribute dictionary whose value indicates the filesystem number of the file system.
     public static let systemNumber = Self(rawValue: "NSFileSystemNumber")
+    /// The key in a file attribute dictionary whose value indicates the file's filesystem file number.
     public static let systemFileNumber = Self(rawValue: "NSFileSystemFileNumber")
+    /// The key in a file attribute dictionary whose value indicates whether the file's extension is hidden.
     public static let extensionHidden = Self(rawValue: "NSFileExtensionHidden")
+    /// The key in a file attribute dictionary whose value indicates the file's HFS creator code.
     public static let hfsCreatorCode = Self(rawValue: "NSFileHFSCreatorCode")
+    /// The key in a file attribute dictionary whose value indicates the file's HFS type code.
     public static let hfsTypeCode = Self(rawValue: "NSFileHFSTypeCode")
+    /// The key in a file attribute dictionary whose value indicates whether the file is mutable.
     public static let immutable = Self(rawValue: "NSFileImmutable")
+    /// The key in a file attribute dictionary whose value indicates whether the file is read-only.
     public static let appendOnly = Self(rawValue: "NSFileAppendOnly")
+    /// The key in a file attribute dictionary whose value indicates the file's creation date.
     public static let creationDate = Self(rawValue: "NSFileCreationDate")
+    /// The key in a file attribute dictionary whose value indicates the file's owner's account ID.
     public static let ownerAccountID = Self(rawValue: "NSFileOwnerAccountID")
+    /// The key in a file attribute dictionary whose value indicates the file's group ID.
     public static let groupOwnerAccountID = Self(rawValue: "NSFileGroupOwnerAccountID")
+    /// The key in a file attribute dictionary whose value indicates whether the file is busy.
     public static let busy = Self(rawValue: "NSFileBusy")
+    /// The key in a file attribute dictionary whose value identifies the protection level for this file.
     public static let protectionKey = Self(rawValue: "NSFileProtectionKey")
+    /// The key in a file attribute dictionary whose value indicates the size of the file system.
     public static let systemSize = Self(rawValue: "NSFileSystemSize")
+    /// The key in a file attribute dictionary whose value indicates the amount of free space on the file system.
     public static let systemFreeSize = Self(rawValue: "NSFileSystemFreeSize")
+    /// The key in a file attribute dictionary whose value indicates the number of nodes in the file system.
     public static let systemNodes = Self(rawValue: "NSFileSystemNodes")
+    /// The key in a file attribute dictionary whose value indicates the number of free nodes in the file system.
     public static let systemFreeNodes = Self(rawValue: "NSFileSystemFreeNodes")
 }
 
+/// Protection level values that can be associated with a file attribute key.
+///
+/// These values are associated with the ``FileAttributeKey/protectionKey`` key.
 public struct FileProtectionType : RawRepresentable, Sendable {
     public let rawValue: String
-    
+
+    /// Creates a file protection type value.
     public init(rawValue: String) {
         self.rawValue = rawValue
     }
-    
+
+    /// The file has no special protections associated with it.
     public static let none = Self(rawValue: "NSFileProtectionNone")
+    /// The file is stored in an encrypted format on disk and cannot be read
+    /// from or written to while the device is locked or booting.
     public static let complete = Self(rawValue: "NSFileProtectionComplete")
+    /// The file is stored in an encrypted format on disk after it is closed.
     public static let completeUnlessOpen = Self(rawValue: "NSFileProtectionCompleteUnlessOpen")
+    /// The file is stored in an encrypted format on disk and cannot be
+    /// accessed until after the device has booted.
     public static let completeUntilFirstUserAuthentication = Self(rawValue: "NSFileProtectionCompleteUntilFirstUserAuthentication")
     public static let inactive = Self(rawValue: "NSFileProtectionCompleteWhenUserInactive")
 }

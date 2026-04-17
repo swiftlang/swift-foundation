@@ -16,7 +16,7 @@
 
 extension Locale {
 
-    /// Represents locale-related attributes. You can use `Locale.Components` to create a `Locale` with specific overrides.
+    /// A type that represents the components of a locale, for use when creating a locale with specific overrides.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Components : Hashable, Codable, Sendable {
 
@@ -59,9 +59,13 @@ extension Locale {
         /// Corresponds to the "ms" key of the Unicode BCP 47 extension
         public var measurementSystem: Locale.MeasurementSystem?
 
-        /// Set this to override the region for region-related preferences, such as measuring system, calendar, and first day of the week. If unset, the region of the language component is used
+        /// The region used by the locale.
         ///
-        /// Corresponds to the "rg" key of the Unicode BCP 47 extension
+        /// Set this property to override the region for region-related preferences,
+        /// such as measuring system, calendar, and first day of the week. If unset,
+        /// the locale uses the region of the language component.
+        ///
+        /// This property corresponds to the `rg` key of the Unicode BCP 47 extension.
         public var region: Locale.Region?
 
         /// Set this to override the regional subdivision of `region`
@@ -153,13 +157,17 @@ extension Locale.MeasurementSystem : CustomDebugStringConvertible { }
 
 extension Locale {
 
+    /// An alphabetical code associated with a language.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct LanguageCode : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+        /// Creates a language code from an identifier as a string literal.
+        ///
+        /// - Parameter value: A two-letter ISO 639-1 or three-letter ISO 639-2 code, such as `en` for English. You can also use a code of your own choice for a custom language.
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        /// Creates a `LanguageCode` type
+        /// Creates a `LanguageCode` type.
         /// - Parameter identifier: A two-letter or three-letter ISO 639 code, or a language code of your choice if using a custom language, such as "en" for English. Case-insensitive.
         public init(_ identifier: String) {
             _identifier = identifier
@@ -238,8 +246,10 @@ extension Locale {
         }
     }
 
+    /// The written script used with a given language.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Script : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+        /// Creates a script from a BCP 47 identifier as a string literal.
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -303,12 +313,16 @@ extension Locale {
         }
     }
 
+    /// A type that represents a geographic region, for use in specifying a locale or language.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Region : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("rg")
         package static let legacyKeywordKey = ICULegacyKey("rg")
 
+        /// Creates a region from a BCP 47 identifier as a string literal.
+        ///
+        /// - Parameter value: A BCP 47 identifier, such as `US` for the United States. This parameter is case-insensitive.
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -321,6 +335,7 @@ extension Locale {
             _normalizedIdentifier
         }
 
+        /// The BCP 47 identifier of the region.
         public var identifier: String {
             get {
                 _identifier
@@ -331,14 +346,14 @@ extension Locale {
             }
         }
 
-        /// Creates a `Region` with the specified region code
+        /// Creates a region from a BCP 47 identifier.
         /// - Parameter identifier: A two-letter BCP 47 region subtag such as "US" for the United States. Case-insensitive.
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.uppercased()
         }
 
-        /// Represents an unknown or invalid region
+        /// A pre-defined unknown or invalid region.
         public static let unknown = Region("ZZ")
 
         public func hash(into hasher: inout Hasher) {
@@ -373,18 +388,23 @@ extension Locale {
         }
     }
 
+    /// A type that represents the string sort order used by the locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Collation : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("co")
         package static let legacyKeywordKey = ICULegacyKey("collation")
 
+        /// Creates a collation from a BCP 47 identifier as a string literal.
+        ///
+        /// - Parameter value: The BCP 47 collation identifier, like `standard` for a language's standard ordering, or `phonetic` for phonetic ordering.
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
         package var _identifier: String
         package var _normalizedIdentifier: String
+        /// The collation's BCP 47 identifier.
         public var identifier: String {
             get {
                 _identifier
@@ -400,15 +420,21 @@ extension Locale {
             _normalizedIdentifier
         }
 
-        /// The complete list of collation identifiers can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/collation.xml), under the key named "co"
+        /// Creates a collation from a BCP 47 identifier.
+        ///
+        /// - Parameter identifier: The BCP 47 collation identifier, like `standard` for a language's standard ordering, or `phonetic` for phonetic ordering. The complete list of collation identifiers can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/collation.xml), under the key named "co".
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.lowercased()
         }
 
-        /// Dedicated for string search. This is only appropriate for determining whether two strings should be considered equivalent. Using this may ignore or modify the string for searching purpose. For example, the contractions in Thai and Lao are suppressed. It should not be used to determine the relative order of the two strings.
+        /// A collation used for string search.
+        ///
+        /// Use this collation only for determining whether to consider two strings as equivalent. Using this collation may modify the string for search purposes. For example, this collation suppresses the contractions in Thai and Lao.
+        ///
+        /// Don't use this collation to determine the relative order of two strings.
         public static let searchRules = Collation("search")
-        /// The default ordering for each language
+        /// A collation that provides the default ordering for each language.
         public static let standard = Collation("standard")
 
         public func hash(into hasher: inout Hasher) {
@@ -443,13 +469,17 @@ extension Locale {
         }
     }
 
+    /// A type that represents the currency system used by a locale, like dollars or euros.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    /// The complete list of currency codes can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/currency.xml), under the key with the name "cu"
     public struct Currency : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
-
+        // The complete list of currency codes can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/currency.xml), under the key with the name "cu"
+        
         package static let cldrKeywordKey = ICUCLDRKey("cu")
         package static let legacyKeywordKey = ICULegacyKey("currency")
 
+        /// Creates a currency instance from a BCP 47 identifier as a string literal.
+        ///
+        /// - Parameter value: The currency's BCP 47 identifier, like `usd` for US dollars, or `jpy` for Japanese yen.
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -457,6 +487,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
+        /// The currency's identifier.
         public var identifier: String {
             get {
                 _identifier
@@ -472,6 +503,9 @@ extension Locale {
             _normalizedIdentifier
         }
 
+        /// Creates a currency instance from a BCP 47 identifier.
+        ///
+        /// - Parameter identifier: The currency's BCP 47 identifier, like `usd` for US dollars, or `jpy` for Japanese yen.
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.lowercased()
@@ -509,13 +543,14 @@ extension Locale {
         }
     }
 
+    /// A type that represents the numbering system used in a locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    /// Defines representations for numeric values. Also known as numeral system
     public struct NumberingSystem : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("nu")
         package static let legacyKeywordKey = ICULegacyKey("numbers")
 
+        /// Creates a numbering system instance from a BCP 47 identifier as a string literal.
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -523,6 +558,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
+        /// The numbering system's identifier.
         public var identifier: String {
             get {
                 _identifier
@@ -538,7 +574,9 @@ extension Locale {
             _normalizedIdentifier
         }
 
-        /// The complete list of valid numbering systems can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/number.xml), under the key with the name "nu"
+        /// Creates a numbering system from a BCP 47 identifier.
+        ///
+        /// The complete list of valid numbering systems can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/number.xml), under the key with the name "nu".
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.lowercased()
@@ -578,14 +616,22 @@ extension Locale {
         }
     }
 
+    /// A type that represents weekdays, used for indicating a locale's first day of the week.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public enum Weekday: String, Codable, Hashable, Sendable {
+        /// The weekday enumeration value for Sunday.
         case sunday = "sun"
+        /// The weekday enumeration value for Monday.
         case monday = "mon"
+        /// The weekday enumeration value for Tuesday.
         case tuesday = "tue"
+        /// The weekday enumeration value for Wednesday.
         case wednesday = "wed"
+        /// The weekday enumeration value for Thursday.
         case thursday = "thu"
+        /// The weekday enumeration value for Friday.
         case friday = "fri"
+        /// The weekday enumeration value for Saturday.
         case saturday = "sat"
 
         package static let cldrKeywordKey = ICUCLDRKey("fw")
@@ -614,6 +660,7 @@ extension Locale {
         }
     }
 
+    /// A type that represents the hour cycle used in a locale, like one-to-twelve or zero-to-twenty-three.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public enum HourCycle : String, Codable, Hashable, Sendable {
         /// 12-hour clock. Hour ranges from 0 to 11
@@ -632,12 +679,16 @@ extension Locale {
         package static let legacyKeywordKey = ICULegacyKey("hours")
     }
 
+    /// A type that represents the measurement system used by a locale, like metric or the US system.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct MeasurementSystem: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("ms")
         package static let legacyKeywordKey = ICULegacyKey("measure")
 
+        /// Creates a measurement system instance from a BCP 47 identifier as a string literal.
+        ///
+        /// - Parameter value: The measurement system's BCP 47 identifier, like `metric` or `ussystem`.
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -645,6 +696,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
+        /// The measurement system's identifier.
         public var identifier: String {
             get {
                 _identifier
@@ -660,20 +712,22 @@ extension Locale {
             _normalizedIdentifier
         }
 
-        /// The complete list of valid measurement systems can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/measure.xml), under the key with the name "ms"
+        /// Creates a measurement system from a BCP 47 identifier.
+        ///
+        /// The complete list of valid measurement systems can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/measure.xml), under the key with the name "ms".
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.lowercased()
         }
 
-        /// Metric system
+        /// The metric system.
         public static let metric = MeasurementSystem("metric")
-        /// US System of measurement: feet, pints, etc.; pints are 16oz
+        /// The US system of measurement: feet, pints, etc.; pints are 16oz.
         public static let us = MeasurementSystem("ussystem")
-        /// UK System of measurement: feet, pints, etc.; pints are 20oz
+        /// The UK system of measurement: feet, pints, etc.; pints are 20oz.
         public static let uk = MeasurementSystem("uksystem")
 
-        /// Returns a list of measurement systems
+        /// An array containing all available measurement systems.
         public static var measurementSystems: [MeasurementSystem] {
             [ metric, us, uk ]
         }
@@ -710,13 +764,16 @@ extension Locale {
         }
     }
 
+    /// A type that represents a subdivision of a region, such as a state in the US or a province in Canada.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    /// A subdivision of a country or region, such as a state in the United States, or a province in Canada.
     public struct Subdivision : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("sd")
         package static let legacyKeywordKey = ICULegacyKey("sd")
 
+        /// Creates a subdivision from a Unicode identifier as a string literal.
+        ///
+        /// - Parameter value: The subdivision's identifier.
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -724,6 +781,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
+        /// The subdivision's identifier.
         public var identifier: String {
             get {
                 _identifier
@@ -739,14 +797,16 @@ extension Locale {
             _normalizedIdentifier
         }
 
-        /// Creates a subdivision with the given identifier
-        /// - Parameter identifier: A unicode subdivision identifier, such as "usca" for California, US. Case-insensitive. The complete list of subdivision identifier can be found [here](https://github.com/unicode-org/cldr/blob/maint/maint-40/common/validity/subdivision.xml), under the "subdivision" type
+        /// Creates a subdivision with the given identifier.
+        /// - Parameter identifier: A unicode subdivision identifier, such as "usca" for California, US. Case-insensitive. The complete list of subdivision identifiers can be found [here](https://github.com/unicode-org/cldr/blob/maint/maint-40/common/validity/subdivision.xml), under the "subdivision" type.
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.lowercased()
         }
 
-        /// Returns the subdivision representing the given region as a whole. For example, returns a subdivision with the "uszzzz" identifier for the entire US region
+        /// Returns the subdivision representing the given region as a whole.
+        ///
+        /// For example, returns a subdivision with the "uszzzz" identifier for the entire US region.
         public static func subdivision(for region: Region) -> Subdivision {
             return .init(region.identifier + "zzzz")
         }
@@ -783,12 +843,16 @@ extension Locale {
         }
     }
 
+    /// A type that represents a locale's language variant.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Variant: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("va")
         package static let legacyKeywordKey = ICULegacyKey("va")
 
+        /// Creates a variant from a BCP 47 identifier as a string literal.
+        ///
+        /// - Parameter value: The variant's BCP 47 identifier.
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -796,6 +860,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
+        /// The variant's identifier.
         public var identifier: String {
             get {
                 _identifier
@@ -811,7 +876,9 @@ extension Locale {
             _normalizedIdentifier
         }
 
-        /// The complete list of valid variants can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/variant.xml), under the key named "va"
+        /// Creates a variant from a BCP 47 identifier.
+        ///
+        /// The complete list of valid variants can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/variant.xml), under the key named "va".
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.lowercased()

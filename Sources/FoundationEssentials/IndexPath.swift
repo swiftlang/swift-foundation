@@ -14,15 +14,16 @@
 internal import _ForSwiftFoundation
 #endif
 
-/**
- `IndexPath` represents the path to a specific node in a tree of nested array collections.
- 
- Each index in an index path represents the index into an array of children from one node in the tree to another, deeper, node.
- */
+/// A list of indexes that together represent the path to a specific location in a tree of nested arrays.
+///
+/// Each index in an index path represents the index into an array of children from one node in the tree to another, deeper, node.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCollection, Comparable, ExpressibleByArrayLiteral, Sendable {
+    /// A type that represents one node of an index path.
     public typealias Element = Int
+    /// A type that points to a particular node in an index path, similar to an array index.
     public typealias Index = Array<Int>.Index
+    /// A type that represents a group of nodes in an index path.
     public typealias Indices = DefaultIndices<IndexPath>
     
     fileprivate enum Storage : ExpressibleByArrayLiteral {
@@ -458,23 +459,23 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
     
     fileprivate var _indexes : Storage
     
-    /// Initialize an empty index path.
+    /// Creates an empty index path.
     public init() {
         _indexes = []
     }
     
-    /// Initialize with a sequence of integers.
+    /// Creates an index path from a sequence of integers.
     public init<ElementSequence : Sequence>(indexes: ElementSequence)
         where ElementSequence.Iterator.Element == Element {
             _indexes = Storage(indexes.map { $0 })
     }
     
-    /// Initialize with an array literal.
+    /// Creates an index path from an array literal.
     public init(arrayLiteral indexes: Element...) {
         _indexes = Storage(indexes)
     }
     
-    /// Initialize with an array of elements.
+    /// Creates an index path from an array of elements.
     public init(indexes: Array<Element>) {
         _indexes = Storage(indexes)
     }
@@ -483,48 +484,49 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
         _indexes = storage
     }
     
-    /// Initialize with a single element.
+    /// Creates an index path with a single element.
     public init(index: Element) {
         _indexes = [index]
     }
     
-    /// Return a new `IndexPath` containing all but the last element.
+    /// Returns a new index path containing all but the last element.
     public func dropLast() -> IndexPath {
         return IndexPath(storage: _indexes.dropLast())
     }
     
-    /// Append an `IndexPath` to `self`.
+    /// Appends the nodes of another index path to this one.
     public mutating func append(_ other: IndexPath) {
         _indexes.append(contentsOf: other._indexes)
     }
     
-    /// Append a single element to `self`.
+    /// Appends a single element to this index path as a new node.
     public mutating func append(_ other: Element) {
         _indexes.append(other)
     }
     
-    /// Append an array of elements to `self`.
+    /// Appends an array of elements to this index path as additional nodes.
     public mutating func append(_ other: Array<Element>) {
         _indexes.append(contentsOf: other)
     }
     
-    /// Return a new `IndexPath` containing the elements in self and the elements in `other`.
+    /// Returns a new index path containing the elements of this one plus the given element.
     public func appending(_ other: Element) -> IndexPath {
         var result = _indexes
         result.append(other)
         return IndexPath(storage: result)
     }
     
-    /// Return a new `IndexPath` containing the elements in self and the elements in `other`.
+    /// Returns a new index path containing the elements of this one plus those of another index path.
     public func appending(_ other: IndexPath) -> IndexPath {
         return IndexPath(storage: _indexes + other._indexes)
     }
     
-    /// Return a new `IndexPath` containing the elements in self and the elements in `other`.
+    /// Returns a new index path containing the elements of this one plus an array of additional elements.
     public func appending(_ other: Array<Element>) -> IndexPath {
         return IndexPath(storage: _indexes + other)
     }
     
+    /// Accesses one of the index path's nodes.
     public subscript(index: Index) -> Element {
         get {
             return _indexes[index]
@@ -534,6 +536,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
         }
     }
     
+    /// Accesses a contiguous subrange of the index path's nodes.
     public subscript(range: Range<Index>) -> IndexPath {
         get {
             return IndexPath(storage: _indexes[range])
@@ -543,6 +546,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
         }
     }
     
+    /// Returns an iterator over the nodes of the index path.
     public func makeIterator() -> IndexingIterator<IndexPath> {
         return IndexingIterator(_elements: self)
     }
@@ -551,23 +555,27 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
         return _indexes.count
     }
     
+    /// The index of the first node in the index path.
     public var startIndex: Index {
         return _indexes.startIndex
     }
     
+    /// One past the index of the last node in the index path.
     public var endIndex: Index {
         return _indexes.endIndex
     }
     
+    /// Returns the index that precedes the given index.
     public func index(before i: Index) -> Index {
         return _indexes.index(before: i)
     }
     
+    /// Returns the index that follows the given index.
     public func index(after i: Index) -> Index {
         return _indexes.index(after: i)
     }
     
-    /// Sorting an array of `IndexPath` using this comparison results in an array representing nodes in depth-first traversal order.
+    /// Compares this index path to another in depth-first traversal order.
     public func compare(_ other: IndexPath) -> ComparisonResult  {
         let thisLength = count
         let otherLength = other.count
@@ -618,10 +626,12 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
         return lhs._indexes == rhs._indexes
     }
     
+    /// Combines the elements of two index paths into a single index path.
     public static func +(lhs: IndexPath, rhs: IndexPath) -> IndexPath {
         return lhs.appending(rhs)
     }
     
+    /// Appends the elements of another index path to this index path.
     public static func +=(lhs: inout IndexPath, rhs: IndexPath) {
         lhs.append(rhs)
     }

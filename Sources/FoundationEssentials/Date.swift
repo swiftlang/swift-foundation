@@ -25,14 +25,17 @@ import WinSDK
 #endif
 
 #if !FOUNDATION_FRAMEWORK
+/// A number of seconds.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public typealias TimeInterval = Double
 #endif // !FOUNDATION_FRAMEWORK
-/**
- `Date` represents a single point in time.
-
- A `Date` is independent of a particular calendar or time zone. To represent a `Date` to a user, you must interpret it in the context of a `Calendar`.
-*/
+/// A specific point in time, independent of any calendar or time zone.
+///
+/// A `Date` value encapsulates a single point in time, independent of any particular calendrical system or time zone. Date values represent a time interval relative to an absolute reference date.
+///
+/// The `Date` structure provides methods for comparing dates, calculating the time interval between two dates, and creating a new date from a time interval relative to another date. Use date values in conjunction with `DateFormatter` instances to create localized representations of dates and times and with `Calendar` instances to perform calendar arithmetic.
+///
+/// `Date` bridges to the `NSDate` class. You can use these interchangeably in code that interacts with Objective-C APIs.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Date : Comparable, Hashable, Equatable, Sendable {
 
@@ -49,82 +52,73 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
         return Self.getCurrentAbsoluteTime()
     }
 
-    /// Returns a `Date` initialized to the current date and time.
+    /// Creates a date value initialized to the current date and time.
     public init() {
         _time = Self.getCurrentAbsoluteTime()
     }
 
-    /// Returns a `Date` initialized relative to the current date and time by a given number of seconds.
+    /// Creates a date value initialized relative to the current date and time by a given number of seconds.
     public init(timeIntervalSinceNow: TimeInterval) {
         self.init(timeIntervalSinceReferenceDate: timeIntervalSinceNow + Self.getCurrentAbsoluteTime())
     }
 
-    /// Returns a `Date` initialized relative to 00:00:00 UTC on 1 January 1970 by a given number of seconds.
+    /// Creates a date value initialized relative to 00:00:00 UTC on 1 January 1970 by a given number of seconds.
     public init(timeIntervalSince1970: TimeInterval) {
         self.init(timeIntervalSinceReferenceDate: timeIntervalSince1970 - Date.timeIntervalBetween1970AndReferenceDate)
     }
 
-    /**
-    Returns a `Date` initialized relative to another given date by a given number of seconds.
-
-    - Parameter timeInterval: The number of seconds to add to `date`. A negative value means the receiver will be earlier than `date`.
-    - Parameter date: The reference date.
-    */
+    /// Creates a date value initialized relative to another given date by a given number of seconds.
+    ///
+    /// - Parameters:
+    ///   - timeInterval: The number of seconds to add to `date`. A negative value means the receiver will be earlier than `date`.
+    ///   - date: The reference date.
     public init(timeInterval: TimeInterval, since date: Date) {
         self.init(timeIntervalSinceReferenceDate: date.timeIntervalSinceReferenceDate + timeInterval)
     }
 
-    /// Returns a `Date` initialized relative to 00:00:00 UTC on 1 January 2001 by a given number of seconds.
+    /// Creates a date value initialized relative to 00:00:00 UTC on 1 January 2001 by a given number of seconds.
     public init(timeIntervalSinceReferenceDate ti: TimeInterval) {
         _time = ti
     }
 
-    /**
-    Returns the interval between the date object and 00:00:00 UTC on 1 January 2001.
-
-    This property's value is negative if the date object is earlier than the system's absolute reference date (00:00:00 UTC on 1 January 2001).
-    */
+    /// The interval between the date value and 00:00:00 UTC on 1 January 2001.
+    ///
+    /// This property's value is negative if the date object is earlier than the system's absolute reference date (00:00:00 UTC on 1 January 2001).
     public var timeIntervalSinceReferenceDate: TimeInterval {
         return _time
     }
 
-    /**
-    Returns the interval between the receiver and another given date.
-
-    - Parameter another: The date with which to compare the receiver.
-
-    - Returns: The interval between the receiver and the `another` parameter. If the receiver is earlier than `anotherDate`, the return value is negative. If `anotherDate` is `nil`, the results are undefined.
-
-    - SeeAlso: `timeIntervalSince1970`
-    - SeeAlso: `timeIntervalSinceNow`
-    - SeeAlso: `timeIntervalSinceReferenceDate`
-    */
+    /// Returns the interval between this date and another given date.
+    ///
+    /// - Parameter date: The date with which to compare this one.
+    ///
+    /// - Returns: The interval between the receiver and the `another` parameter. If the receiver is earlier than `anotherDate`, the return value is negative. If `anotherDate` is `nil`, the results are undefined.
+    ///
+    /// - SeeAlso: `timeIntervalSince1970`
+    /// - SeeAlso: `timeIntervalSinceNow`
+    /// - SeeAlso: `timeIntervalSinceReferenceDate`
     public func timeIntervalSince(_ date: Date) -> TimeInterval {
         return self.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate
     }
 
-    /**
-    The time interval between the date and the current date and time.
-
-    If the date is earlier than the current date and time, this property's value is negative.
-
-    - SeeAlso: `timeIntervalSince(_:)`
-    - SeeAlso: `timeIntervalSince1970`
-    - SeeAlso: `timeIntervalSinceReferenceDate`
-    */
+    /// The time interval between the date value and the current date and time.
+    ///
+    /// If the date is earlier than the current date and time, this property's value is negative.
+    ///
+    /// - SeeAlso: `timeIntervalSince(_:)`
+    /// - SeeAlso: `timeIntervalSince1970`
+    /// - SeeAlso: `timeIntervalSinceReferenceDate`
     public var timeIntervalSinceNow: TimeInterval {
         return self.timeIntervalSinceReferenceDate - Self.getCurrentAbsoluteTime()
     }
 
-    /**
-    The interval between the date object and 00:00:00 UTC on 1 January 1970.
-
-    This property's value is negative if the date object is earlier than 00:00:00 UTC on 1 January 1970.
-
-    - SeeAlso: `timeIntervalSince(_:)`
-    - SeeAlso: `timeIntervalSinceNow`
-    - SeeAlso: `timeIntervalSinceReferenceDate`
-    */
+    /// The interval between the date value and 00:00:00 UTC on 1 January 1970.
+    ///
+    /// This property's value is negative if the date object is earlier than 00:00:00 UTC on 1 January 1970.
+    ///
+    /// - SeeAlso: `timeIntervalSince(_:)`
+    /// - SeeAlso: `timeIntervalSinceNow`
+    /// - SeeAlso: `timeIntervalSinceReferenceDate`
     public var timeIntervalSince1970: TimeInterval {
         return self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1970AndReferenceDate
     }
@@ -133,37 +127,40 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
         return self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1601AndReferenceDate
     }
 
-    /// Return a new `Date` by adding a `TimeInterval` to this `Date`.
+    /// Creates a new date value by adding a time interval to this date.
     ///
-    /// - parameter timeInterval: The value to add, in seconds.
-    /// - warning: This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. That will take into account complexities like daylight saving time, months with different numbers of days, and more.
+    /// - Parameter timeInterval: The value to add, in seconds.
+    /// - Returns: A new date value calculated by adding a time interval to this date.
+    ///
+    /// > Warning:
+    /// > This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. That will take into account complexities like daylight saving time, months with different numbers of days, and more.
     public func addingTimeInterval(_ timeInterval: TimeInterval) -> Date {
         return self + timeInterval
     }
 
-    /// Add a `TimeInterval` to this `Date`.
+    /// Adds a time interval to this date.
     ///
-    /// - parameter timeInterval: The value to add, in seconds.
-    /// - warning: This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. That will take into account complexities like daylight saving time, months with different numbers of days, and more.
+    /// - Parameter timeInterval: The value to add, in seconds.
+    ///
+    /// > Warning:
+    /// > This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. That will take into account complexities like daylight saving time, months with different numbers of days, and more.
     public mutating func addTimeInterval(_ timeInterval: TimeInterval) {
         self += timeInterval
     }
 
-    /**
-    Creates and returns a Date value representing a date in the distant future.
-
-    The distant future is in terms of centuries.
-    */
+    /// A date value representing a date in the distant future.
+    ///
+    /// The distant future is in terms of centuries.
     public static let distantFuture = Date(timeIntervalSinceReferenceDate: 63113904000.0)
 
-    /**
-    Creates and returns a Date value representing a date in the distant past.
-
-    The distant past is in terms of centuries.
-    */
+    /// A date value representing a date in the distant past.
+    ///
+    /// The distant past is in terms of centuries.
     public static let distantPast = Date(timeIntervalSinceReferenceDate: -63114076800.0)
 
-    /// Returns a `Date` initialized to the current date and time.
+    /// Returns a date instance that represents the current date and time, at the moment of access.
+    ///
+    /// This property is equivalent to calling ``Date/init()``. If you assign this value to a variable or property, the assigned value doesn't automatically update as time passes.
     @backDeployed(before: macOS 12, iOS 15, tvOS 15, watchOS 8)
     public static var now : Date { Date() }
 
@@ -171,7 +168,9 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
         hasher.combine(_time)
     }
 
-    /// Compare two `Date` values.
+    /// Compares another date to this one.
+    ///
+    /// - Parameter other: Another date.
     public func compare(_ other: Date) -> ComparisonResult {
         if _time < other.timeIntervalSinceReferenceDate {
             return .orderedAscending
@@ -197,7 +196,12 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
         return lhs.timeIntervalSinceReferenceDate > rhs.timeIntervalSinceReferenceDate
     }
 
-    /// Returns a `Date` with a specified amount of time added to it.
+    /// Returns a date with a specified amount of time added to it.
+    ///
+    /// - Parameters:
+    ///   - lhs: A date.
+    ///   - rhs: A ``TimeInterval`` to add to the date.
+    /// - Returns: A date with a specified amount of time added to it.
     public static func +(lhs: Date, rhs: TimeInterval) -> Date {
         return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate + rhs)
     }
@@ -207,9 +211,14 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
         return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate - rhs)
     }
 
-    /// Add a `TimeInterval` to a `Date`.
+    /// Adds a time interval to a date.
     ///
-    /// - warning: This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. That will take into account complexities like daylight saving time, months with different numbers of days, and more.
+    /// - Parameters:
+    ///   - lhs: A date.
+    ///   - rhs: A ``TimeInterval`` to add to the date.
+    ///
+    /// > Warning:
+    /// > This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. This takes into account complexities like daylight saving time, months with different numbers of days, and more.
     public static func +=(lhs: inout Date, rhs: TimeInterval) {
         lhs = lhs + rhs
     }
@@ -404,12 +413,23 @@ extension Date {
 
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 extension Date {
+    /// A type alias to define the stride of a date.
+    ///
+    /// The stride of a Date is a ``TimeInterval``.
     public typealias Stride = TimeInterval
-    
+
+    /// Returns the distance from this date to another date, specified as a time interval.
+    ///
+    /// - Parameter other: Another date.
+    /// - Returns: The distance from this date to the other date, as a ``TimeInterval``.
     public func distance(to other: Date) -> TimeInterval {
         return other.timeIntervalSinceReferenceDate - self.timeIntervalSinceReferenceDate
     }
     
+    /// Returns a date offset the specified time interval from this date.
+    ///
+    /// - Parameter n: The time interval offset.
+    /// - Returns: A date offset the specified time interval from this date.
     public func advanced(by n: TimeInterval) -> Date {
         return self + n
     }

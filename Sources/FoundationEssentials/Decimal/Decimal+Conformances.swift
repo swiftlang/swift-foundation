@@ -16,6 +16,11 @@ internal import _ForSwiftFoundation
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : CustomStringConvertible {
+    /// Creates and initializes a decimal by parsing a string according to the provided locale's conventions.
+    ///
+    /// - Parameters:
+    ///   - string: A string containing a formatted decimal value.
+    ///   - locale: A locale that indicates the formatting conventions used by `string`.
     public init?(string: __shared String, locale: __shared Locale? = nil) {
         let decimalSeparator = locale?.decimalSeparator ?? "."
         guard case let .success(value, _) = Decimal._decimal(
@@ -37,6 +42,7 @@ extension Decimal : CustomStringConvertible {
 // FloatingPoint, even if we can't conform directly.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal /* : FloatingPoint */ {
+    /// The decimal that contains the smallest possible non-infinite magnitude for the underlying representation.
     public static let leastFiniteMagnitude = Decimal(
         _exponent: 127,
         _length: 8,
@@ -46,6 +52,7 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa: (0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff)
     )
 
+    /// The decimal that contains the largest possible non-infinite magnitude for the underlying representation.
     public static let greatestFiniteMagnitude = Decimal(
         _exponent: 127,
         _length: 8,
@@ -55,6 +62,7 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa: (0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff)
     )
 
+    /// The decimal value that represents the smallest possible normal magnitude for the underlying representation.
     public static let leastNormalMagnitude = Decimal(
         _exponent: -127,
         _length: 1,
@@ -64,6 +72,7 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
     )
 
+    /// The decimal value that represents the smallest possible non-zero value for the underlying representation.
     public static let leastNonzeroMagnitude = Decimal(
         _exponent: -127,
         _length: 1,
@@ -73,6 +82,7 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
     )
 
+    /// The mathematical constant pi.
     public static let pi = Decimal(
         _exponent: -38,
         _length: 8,
@@ -88,40 +98,50 @@ extension Decimal /* : FloatingPoint */ {
     @available(*, unavailable, message: "Decimal does not yet fully adopt FloatingPoint.")
     public static var signalingNaN: Decimal { fatalError("Decimal does not yet fully adopt FloatingPoint") }
 
+    /// A quiet representation of not-a-number.
     public static var quietNaN: Decimal {
         return Decimal(
             _exponent: 0, _length: 0, _isNegative: 1, _isCompact: 0,
             _reserved: 0, _mantissa: (0, 0, 0, 0, 0, 0, 0, 0))
     }
 
+    /// The value that represents "not a number."
     public static var nan: Decimal { quietNaN }
 
+    /// The radix used by decimal numbers.
     public static var radix: Int { 10 }
 
+    /// Creates and initializes a decimal with the provided unsigned integer value.
     public init(_ value: UInt8) {
         self.init(UInt64(value))
     }
 
+    /// Creates and initializes a decimal with the provided integer value.
     public init(_ value: Int8) {
         self.init(Int64(value))
     }
 
+    /// Creates and initializes a decimal with the provided unsigned integer value.
     public init(_ value: UInt16) {
         self.init(UInt64(value))
     }
 
+    /// Creates and initializes a decimal with the provided integer value.
     public init(_ value: Int16) {
         self.init(Int64(value))
     }
 
+    /// Creates and initializes a decimal with the provided unsigned integer value.
     public init(_ value: UInt32) {
         self.init(UInt64(value))
     }
 
+    /// Creates and initializes a decimal with the provided integer value.
     public init(_ value: Int32) {
         self.init(Int64(value))
     }
 
+    /// Creates and initializes a decimal with the provided unsigned integer value.
     public init(_ value: UInt64) {
         self = Decimal()
         if value == 0 {
@@ -145,6 +165,7 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa.3 = UInt16(truncatingIfNeeded: compactValue >> 48)
     }
 
+    /// Creates and initializes a decimal with the provided integer value.
     public init(_ value: Int64) {
         self = .init(value.magnitude)
         if value < 0 {
@@ -152,14 +173,17 @@ extension Decimal /* : FloatingPoint */ {
         }
     }
 
+    /// Creates and initializes a decimal with the provided unsigned integer value.
     public init(_ value: UInt) {
         self.init(UInt64(value))
     }
 
+    /// Creates and initializes a decimal with the provided integer value.
     public init(_ value: Int) {
         self.init(Int64(value))
     }
 
+    /// Creates and initializes a decimal with the provided floating point value.
     public init(_ value: Double) {
         precondition(!value.isInfinite, "Decimal does not yet fully adopt FloatingPoint")
         if value.isNaN {
@@ -235,6 +259,7 @@ extension Decimal /* : FloatingPoint */ {
         }
     }
 
+    /// Creates a decimal initialized with the given sign, exponent, and significand.
     public init(sign: FloatingPointSign, exponent: Int, significand: Decimal) {
 #if FOUNDATION_FRAMEWORK
         // Compatibility path
@@ -271,6 +296,11 @@ extension Decimal /* : FloatingPoint */ {
         }
     }
 
+    /// Creates and initializes a decimal with the sign and magnitude of the given decimals.
+    ///
+    /// - Parameters:
+    ///   - signOf: A `Decimal` to use for the sign of the newly-created `Decimal`.
+    ///   - magnitude: A `Decimal` to use for the magnitude of the newly-created `Decimal`.
     public init(signOf: Decimal, magnitudeOf magnitude: Decimal) {
         self.init(
             _exponent: magnitude._exponent,
@@ -281,20 +311,24 @@ extension Decimal /* : FloatingPoint */ {
             _mantissa: magnitude._mantissa)
     }
 
+    /// The exponent of the decimal.
     public var exponent: Int {
         return Int(_exponent)
     }
 
+    /// The significand of the decimal.
     public var significand: Decimal {
         return Decimal(
             _exponent: 0, _length: _length, _isNegative: 0, _isCompact: _isCompact,
             _reserved: 0, _mantissa: _mantissa)
     }
 
+    /// The sign of the decimal.
     public var sign: FloatingPointSign {
         return _isNegative == 0 ? FloatingPointSign.plus : FloatingPointSign.minus
     }
 
+    /// The unit in the last place of the decimal.
     public var ulp: Decimal {
         guard isFinite else { return .nan }
 
@@ -313,7 +347,7 @@ extension Decimal /* : FloatingPoint */ {
             _reserved: 0, _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000))
     }
 
-    /// The IEEE 754 "class" of this type.
+    /// The IEEE 754 class of this type.
     public var floatingPointClass: FloatingPointClassification {
         if _length == 0 && _isNegative == 1 {
             return .quietNaN
@@ -330,40 +364,44 @@ extension Decimal /* : FloatingPoint */ {
         }
     }
 
+    /// A Boolean value indicating whether the representation of this decimal is canonical.
     public var isCanonical: Bool { true }
 
-    /// `true` if `self` is negative, `false` otherwise.
+    /// A Boolean value indicating whether this decimal has a negative sign.
+    ///
+    /// This property is `true` when the value is negative or `-0.0`; otherwise, `false`.
     public var isSignMinus: Bool { _isNegative != 0 }
 
-    /// `true` if `self` is +0.0 or -0.0, `false` otherwise.
+    /// A Boolean value indicating whether this value is zero.
+    ///
+    /// This property is `true` for `-0.0` and `+0.0` and `false` for all other values.
     public var isZero: Bool { _length == 0 && _isNegative == 0 }
 
-    /// `true` if `self` is subnormal, `false` otherwise.
+    /// A Boolean value indicating whether this decimal is subnormal.
     public var isSubnormal: Bool { false }
 
-    /// `true` if `self` is normal (not zero, subnormal, infinity, or NaN),
-    /// `false` otherwise.
+    /// A Boolean value indicating whether this decimal is normal (not zero, subnormal, infinity, or NaN).
     public var isNormal: Bool { !isZero && !isInfinite && !isNaN }
 
-    /// `true` if `self` is zero, subnormal, or normal (not infinity or NaN),
-    /// `false` otherwise.
+    /// A Boolean value indicating whether this decimal is zero, subnormal, or normal (not infinity or NaN).
     public var isFinite: Bool { !isNaN }
 
-    /// `true` if `self` is infinity, `false` otherwise.
+    /// A Boolean value indicating whether this decimal is infinity.
     public var isInfinite: Bool { false }
 
-    /// `true` if `self` is NaN, `false` otherwise.
+    /// A Boolean value indicating whether this decimal is NaN.
     public var isNaN: Bool { _length == 0 && _isNegative == 1 }
 
-    /// `true` if `self` is a signaling NaN, `false` otherwise.
+    /// A Boolean value indicating whether this decimal is a signaling NaN.
     public var isSignaling: Bool { false }
 
-    /// `true` if `self` is a signaling NaN, `false` otherwise.
+    /// A Boolean value indicating whether this decimal is a signaling NaN.
     public var isSignalingNaN: Bool { false }
 
     @available(*, unavailable, message: "Decimal does not yet fully adopt FloatingPoint.")
     public mutating func formTruncatingRemainder(dividingBy other: Decimal) { fatalError("Decimal does not yet fully adopt FloatingPoint") }
 
+    /// The least representable value that is greater than this decimal.
     public var nextUp: Decimal {
         if _isNegative == 1 {
             if _exponent > -128 &&
@@ -395,23 +433,28 @@ extension Decimal /* : FloatingPoint */ {
         return self + ulp
     }
 
+    /// The greatest representable value that is less than this decimal.
     public var nextDown: Decimal {
         return -(-self).nextUp
     }
 
+    /// Indicates whether this decimal is equal to the specified one.
     public func isEqual(to other: Decimal) -> Bool {
         return self == other
     }
 
+    /// Indicates whether this decimal is less than the specified one.
     public func isLess(than other: Decimal) -> Bool {
         return Decimal._compare(lhs: self, rhs: other) == .orderedAscending
     }
 
+    /// Indicates whether this decimal is less than or equal to the specified one.
     public func isLessThanOrEqualTo(_ other: Decimal) -> Bool {
         let order = Decimal._compare(lhs: self, rhs: other)
         return order == .orderedAscending || order == .orderedSame
     }
 
+    /// Returns a Boolean value indicating whether this instance should precede the given value in an ascending sort.
     public func isTotallyOrdered(belowOrEqualTo other: Decimal) -> Bool {
         // Note: Decimal does not have -0 or infinities to worry about
         if self.isNaN {
@@ -430,6 +473,7 @@ extension Decimal /* : FloatingPoint */ {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : ExpressibleByFloatLiteral {
+    /// Creates and initializes a decimal with the provided floating point value.
     public init(floatLiteral value: Double) {
         self.init(value)
     }
@@ -437,6 +481,7 @@ extension Decimal : ExpressibleByFloatLiteral {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : ExpressibleByIntegerLiteral {
+    /// Creates and initializes a decimal with the provided integer value.
     public init(integerLiteral value: Int) {
         self.init(value)
     }
@@ -587,6 +632,7 @@ extension Decimal : Codable {
 // MARK: - SignedNumeric
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : SignedNumeric {
+    /// The magnitude of this decimal.
     public var magnitude: Decimal {
         guard _length != 0 else { return self }
         return Decimal(
@@ -595,6 +641,11 @@ extension Decimal : SignedNumeric {
             _reserved: 0, _mantissa: self._mantissa)
     }
 
+    /// Creates a new decimal value exactly representing the provided integer.
+    ///
+    /// If `source` isn't representable as a `Decimal` instance, the result is `nil`.
+    ///
+    /// - Parameter source: The integer to convert.
     public init?<T : BinaryInteger>(exactly source: T) {
         let zero = 0 as T
 
@@ -650,6 +701,16 @@ extension Decimal : SignedNumeric {
     }
 #endif
 
+    /// Adds two decimal numbers, storing the result in the first number.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalAdd(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: A value to add.
+    ///   - rhs: Another value to add.
     public static func +=(lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._add(rhs: rhs, roundingMode: .plain)
@@ -659,6 +720,16 @@ extension Decimal : SignedNumeric {
         }
     }
 
+    /// Subtracts one decimal number from another, storing the result in the first number.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalSubtract(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: The value to subtract from.
+    ///   - rhs: The value to subtract.
     public static func -=(lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._subtract(rhs: rhs, roundingMode: .plain)
@@ -668,6 +739,16 @@ extension Decimal : SignedNumeric {
         }
     }
 
+    /// Multiplies two decimal numbers, storing the result in the first number.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalMultiply(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: A value to multiply.
+    ///   - rhs: Another value to multiply.
     public static func *=(lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._multiply(by: rhs, roundingMode: .plain)
@@ -677,6 +758,16 @@ extension Decimal : SignedNumeric {
         }
     }
 
+    /// Divides one decimal number by another, storing the result in the first number.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalDivide(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: The value to divide.
+    ///   - rhs: The value to divide `lhs` by.
     public static func /=(lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._divide(by: rhs, roundingMode: .plain)
@@ -686,30 +777,75 @@ extension Decimal : SignedNumeric {
         }
     }
 
+    /// Adds two decimal numbers.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalAdd(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: A value to add.
+    ///   - rhs: Another value to add.
+    /// - Returns: The result of adding `lhs` and `rhs`.
     public static func +(lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer += rhs
         return answer
     }
 
+    /// Subtracts one decimal number from another.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalSubtract(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: The value to subtract from.
+    ///   - rhs: The value to subtract.
+    /// - Returns: The result of subtracting `rhs` from `lhs`.
     public static func -(lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer -= rhs
         return answer
     }
 
+    /// Multiplies two decimal numbers.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalMultiply(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: A value to multiply.
+    ///   - rhs: Another value to multiply.
+    /// - Returns: The result of multiplying `lhs` by `rhs`.
     public static func *(lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer *= rhs
         return answer
     }
 
+    /// Divides one decimal number by another.
+    ///
+    /// If the result of this operation requires more precision than the `Decimal`
+    /// type can provide, the result is rounded using the
+    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
+    /// rounding mode, use the ``NSDecimalDivide(_:_:_:_:)`` function instead.
+    ///
+    /// - Parameters:
+    ///   - lhs: The value to divide.
+    ///   - rhs: The value to divide `lhs` by.
+    /// - Returns: The result of dividing `lhs` by `rhs`.
     public static func /(lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer /= rhs
         return answer
     }
 
+    /// Negates this decimal.
     public mutating func negate() {
         guard self._length != 0 else { return }
         self._isNegative = self._isNegative == 0 ? 1 : 0
@@ -718,10 +854,12 @@ extension Decimal : SignedNumeric {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : Strideable {
+    /// Returns the distance from this value to the specified value.
     public func distance(to other: Decimal) -> Decimal {
         return other - self
     }
 
+    /// Returns a new value advanced by the given distance.
     public func advanced(by n: Decimal) -> Decimal {
         return self + n
     }

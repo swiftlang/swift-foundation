@@ -18,20 +18,30 @@ internal import Foundation_Private.NSAttributedString
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes {
+    /// A property for accessing the attribute scopes that Foundation defines.
     public var foundation: FoundationAttributes.Type { FoundationAttributes.self }
     
+    /// Attribute scopes that Foundation defines.
     public struct FoundationAttributes : AttributeScope {
+        /// A property for accessing the link attribute.
         public let link: LinkAttribute
+        /// A property for accessing a language identifier attribute.
         public let languageIdentifier: LanguageIdentifierAttribute
+        /// A property for accessing a person name component attribute.
         public let personNameComponent: PersonNameComponentAttribute
+        /// A property for accessing a number format attribute.
         public let numberFormat: NumberFormatAttributes
+        /// A property for accessing a date field attribute.
         public let dateField: DateFieldAttribute
+        /// A property for accessing an alternative presentation attribute.
         public let alternateDescription: AlternateDescriptionAttribute
+        /// A property for accessing an image URL attribute.
         public let imageURL: ImageURLAttribute
+        /// A property for accessing a replacement index attribute.
         public let replacementIndex : ReplacementIndexAttribute
         public let measurement: MeasurementAttribute
         public let byteCount: ByteCountAttribute
-        
+
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let durationField: DurationFieldAttribute
 
@@ -40,28 +50,53 @@ extension AttributeScopes {
         public let writingDirection: WritingDirectionAttribute
 
 #if FOUNDATION_FRAMEWORK
+        /// A scope for accessing an agreement concept attribute.
         @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public let agreementConcept: AgreementConceptAttribute
+        /// A scope for accessing an agreement argument attribute.
         @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public let agreementArgument: AgreementArgumentAttribute
+        /// A scope for accessing a referent concept attribute.
         @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public let referentConcept: ReferentConceptAttribute
         @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public let localizedNumberFormat: LocalizedNumberFormatAttribute
-        
+
         // TODO: Support AttributedString markdown in FoundationPreview: https://github.com/apple/swift-foundation/issues/44
+        /// A property for accessing an inline presentation intent attribute.
         public let inlinePresentationIntent: InlinePresentationIntentAttribute
+        /// A property for accessing a presentation intent attribute.
         public let presentationIntent: PresentationIntentAttribute
+        /// A property for accessing a Markdown source position attribute.
+        ///
+        /// This attribute indicates the position in the Markdown source where a run
+        /// of attributed text begins and ends, omitting markup characters in the source.
+        /// For example, after parsing the source string `"This is *emphasized*."`, the
+        /// text `emphasized` has a Markdown source position that starts at column `10`.
+        /// This index is the `"e"` character, not the `"*"` formatting character.
+        ///
+        /// > Tip: ``AttributedString/MarkdownSourcePosition`` uses `1`-based counting for
+        /// > its row and column properties. For columns, the value represents a UTF-8 index.
+        /// > With multi-byte characters, the column is therefore the first byte of the character.
+        ///
+        /// An attributed string parsed from Markdown text includes this attribute only if
+        /// the ``AttributedString/MarkdownParsingOptions/appliesSourcePositionAttributes``
+        /// value in the ``AttributedString/MarkdownParsingOptions`` provided to the
+        /// ``AttributedString`` initializer is `true`.
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let markdownSourcePosition: MarkdownSourcePositionAttribute
         @available(FoundationPreview 6.2, *)
         public let listItemDelimiter: ListItemDelimiterAttribute
-        
+
+        /// A property for accessing a localized string argument attribute.
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let localizedStringArgumentAttributes: LocalizedStringArgumentAttributes
-        
+
+        /// A scope for accessing an inflection alternative attribute.
         public let inflectionAlternative: InflectionAlternativeAttribute
+        /// A scope for accessing a morphology attribute.
         public let morphology: MorphologyAttribute
+        /// A scope for accessing an inflection rule attribute.
         public let inflect: InflectionRuleAttribute
         @_spi(AutomaticGrammaticalAgreement)
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
@@ -80,10 +115,13 @@ extension AttributeScopes.FoundationAttributes : Sendable {}
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeDynamicLookup {
+    /// Returns the attributed string key for a specified Foundation key path.
     public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes, T>) -> T {
         return self[T.self]
     }
 
+    /// Returns the attributed string key for a specified Foundation number
+    /// format key path.
     public subscript<T: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes.NumberFormatAttributes, T>
     ) -> T {
@@ -104,11 +142,14 @@ extension AttributeDynamicLookup {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes.FoundationAttributes {
+    /// A type for using a link as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum LinkAttribute : CodableAttributedStringKey {
+        /// The type of the link attribute's value.
         public typealias Value = URL
         
+        /// The name of the link attribute.
         public static var name: String {
             // Used to be: public static var name = "NSLink", but changed for Sendability and ABI compatibility
             get { "NSLink" }
@@ -118,6 +159,13 @@ extension AttributeScopes.FoundationAttributes {
     
 #if FOUNDATION_FRAMEWORK
     
+    /// An attribute that specifies a grammatical agreement concept for substituting pronouns in localized text.
+    ///
+    /// Use the ``AttributeScopes/FoundationAttributes/referentConcept`` formatting
+    /// attribute for cases where you need to refer to a person using their preferred
+    /// pronoun in a string.
+    ///
+    /// For an example of how to use a `referentConcept`, see ``TermOfAddress``.
     @frozen
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public enum ReferentConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
@@ -126,6 +174,14 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "referentConcept"
     }
 
+    /// An attribute that represents grammatical agreement for objects that aren't part of the inflected text.
+    ///
+    /// Use this formatting attribute for cases where you need to inflect text based
+    /// on a term of address or phrase that isn't part of the inflected text. For
+    /// example, you can use an ``InflectionConcept/termsOfAddress(_:)`` concept to
+    /// make a word agree with a person's preferred term of address, or a
+    /// ``InflectionConcept/localizedPhrase(_:)`` concept to agree with a noun that
+    /// doesn't appear in the sentence.
     @frozen
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public enum AgreementConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
@@ -134,6 +190,22 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "agreeWithConcept"
     }
     
+    /// An attribute that represents grammatical agreement with an argument in a localized string.
+    ///
+    /// Many languages require grammatical agreement in their sentences. In Spanish,
+    /// for example, adjectives and verbs need to agree with the gender of the subject
+    /// they refer to. Use the `agreeWithArgument` attribute to make a word at one
+    /// position in a sentence inflect to agree with a word at another position,
+    /// eliminating the need to include multiple gendered forms in localization files.
+    ///
+    /// In a localization file, wrap the word needing inflection in an
+    /// `agreeWithArgument` attribute and point it to the replacement index of the
+    /// word it needs to agree with:
+    ///
+    /// ```
+    /// // In the Spanish localization file:
+    /// "Your %1@ %2@ is ready." = "Tu ^[%2$@ %1$@](inflect: true) está ^[listo](agreeWithArgument: 2)."
+    /// ```
     @frozen
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public enum AgreementArgumentAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
@@ -142,6 +214,7 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "agreeWithArgument"
     }
     
+    /// A type for using a morphology as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum MorphologyAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
@@ -150,6 +223,21 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "morphology"
     }
     
+    /// A rule that affects how an attributed string performs automatic grammatical agreement.
+    ///
+    /// Most apps can rely on loading localized strings to perform automatic grammar agreement. Typically, strings in your app's strings files use the Markdown extension syntax to indicate portions of the string that may require inflection to agree grammatically. This transformation occurs when you load the attributed string with methods like `init(localized:options:table:bundle:locale:comment:)`.
+    ///
+    /// However, if the system lacks information about the words in the string, you may need to apply an inflection rule programmatically. For example, a social networking app may have gender information about other users that you want to apply at runtime. When performing manual inflection at runtime, you use an inflection rule to indicate to the system what portions of a string should be automatically edited, and what to match. Apply the ``AttributeScopes/FoundationAttributes/inflect`` attribute to set an ``InflectionRule`` on an ``AttributedString``, then call ``AttributedString/inflected()`` to perform the grammar agreement and produce an edited string.
+    ///
+    /// ```swift
+    /// var string = AttributedString(localized: "They liked your post.")
+    /// // The user who liked the post uses feminine pronouns.
+    /// var morphology = Morphology()
+    /// morphology.grammaticalGender = .feminine
+    /// string.inflect = InflectionRule(morphology: morphology)
+    /// let result = string.inflected()
+    /// // result == "She liked your post."
+    /// ```
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum InflectionRuleAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
@@ -201,6 +289,7 @@ extension AttributeScopes.FoundationAttributes {
 
 #endif // FOUNDATION_FRAMEWORK
     
+    /// A type for using a language identifier as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum LanguageIdentifierAttribute : CodableAttributedStringKey {
@@ -208,6 +297,7 @@ extension AttributeScopes.FoundationAttributes {
         public static let name = "NSLanguage"
     }
     
+    /// A type for using a person name component as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum PersonNameComponentAttribute : CodableAttributedStringKey {
@@ -219,6 +309,7 @@ extension AttributeScopes.FoundationAttributes {
         }
     }
     
+    /// A type for using a number format as an attribute.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public struct NumberFormatAttributes: AttributeScope {
         public let numberSymbol: SymbolAttribute
@@ -250,6 +341,10 @@ extension AttributeScopes.FoundationAttributes {
         }
     }
     
+    /// A type for using a date field as an attribute.
+    ///
+    /// A date field indicates a portion of a formatted date, such as its year,
+    /// month, day, hour, or minute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum DateFieldAttribute : CodableAttributedStringKey {
@@ -382,6 +477,19 @@ extension AttributeScopes.FoundationAttributes {
     
 #if FOUNDATION_FRAMEWORK
     
+    /// An attribute that provides an alternative inflection phrase when the system can't achieve grammatical agreement.
+    ///
+    /// Use this attribute to provide an alternative phrase for cases where the system
+    /// can't achieve unambiguous grammatical agreement. For example, when inflecting
+    /// a gendered word without knowing the person's preferred terms of address, you
+    /// can set an `inflectionAlternative` to supply a gender-neutral fallback:
+    ///
+    /// ```swift
+    /// let resource = LocalizedStringResource(
+    ///     "^[Bienvenido](inflect: true, inflectionAlternative: 'Te damos la bienvenida').")
+    /// let result = AttributedString(localized: resource)
+    /// // result == "Te damos la bienvenida."
+    /// ```
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum InflectionAlternativeAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
@@ -409,7 +517,11 @@ extension AttributeScopes.FoundationAttributes {
         }
     }
     
-	@frozen
+    /// A type for using an inline presentation intent as an attribute.
+    ///
+    /// An inline presentation intent applies to a run of characters inside a larger
+    /// block, and covers traits like emphasis, strikethrough, and code voice.
+    @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum InlinePresentationIntentAttribute : CodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
         public typealias Value = InlinePresentationIntent
@@ -425,6 +537,10 @@ extension AttributeScopes.FoundationAttributes {
         }
     }
     
+    /// A type for using a presentation intent as an attribute.
+    ///
+    /// A presentation intent applies to a block of characters, and covers traits
+    /// like list, block quote, or table presentation.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum PresentationIntentAttribute : CodableAttributedStringKey {
@@ -432,10 +548,13 @@ extension AttributeScopes.FoundationAttributes {
         public static let name = NSAttributedString.Key.presentationIntentAttributeName.rawValue
     }
     
+    /// A type for using a markdown source position as an attribute.
     @frozen
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public enum MarkdownSourcePositionAttribute: CodableAttributedStringKey {
+        /// The name of the attribute, for use in encoding and decoding.
         public static let name = NSAttributedString.Key.markdownSourcePosition.rawValue
+        /// The value type of a Markdown source position attribute.
         public typealias Value = AttributedString.MarkdownSourcePosition
     }
     
@@ -479,6 +598,7 @@ extension AttributeScopes.FoundationAttributes {
     
 #endif // FOUNDATION_FRAMEWORK
     
+    /// A type for using an alternative description as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum AlternateDescriptionAttribute : CodableAttributedStringKey {
@@ -486,13 +606,22 @@ extension AttributeScopes.FoundationAttributes {
         public static let name = "NSAlternateDescription"
     }
     
+    /// A type for using an image URL as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum ImageURLAttribute : CodableAttributedStringKey {
+        /// The type of the image URL attribute.
         public typealias Value = URL
+        /// The name of the image URL attribute.
         public static let name = "NSImageURL"
     }
     
+    /// A type for using a replacement index as an attribute.
+    ///
+    /// When you use the ``AttributedString/FormattingOptions/applyReplacementIndexAttribute``
+    /// formatting option, the resulting formatted string uses this attribute to mark
+    /// the location of replacement strings. This allows you to relate ranges to
+    /// replacements even if localizers change the word order in format strings.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum ReplacementIndexAttribute : CodableAttributedStringKey {
@@ -579,24 +708,47 @@ extension AttributeScopes.FoundationAttributes {
     }
 
 #if FOUNDATION_FRAMEWORK
+    /// A type for using a localized string argument as an attribute.
+    ///
+    /// You use the this scope's attributes when creating an attributed string from a ``LocalizedStringResource``. The process creating the attributed string may not have access to the original arguments passed to the interpolation. Instead, the attributed string marks formatted runs with this type, allowing you to retrieve the original values.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct LocalizedStringArgumentAttributes {
-    
-        // Represents all numeric arguments (i.e. those that use format specifiers such as %d, %f, etc.)
+
+        /// The value of a numeric argument used to format the run with this attribute.
         public let localizedNumericArgument: LocalizedNumericArgumentAttribute
-        
+
+        /// The date value used to format the run with this attribute.
         public let localizedDateArgument: LocalizedDateArgumentAttribute
+        /// The date interval value used to format the run with this attribute.
         public let localizedDateIntervalArgument: LocalizedDateIntervalArgumentAttribute
+        /// The URL value used to format the run with this attribute.
         public let localizedURLArgument: LocalizedURLArgumentAttribute
         
+        /// A type for a numeric argument used to format the run with this attribute.
         @frozen
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedNumericArgumentAttribute : CodableAttributedStringKey {
+            /// The name of the attribute.
             public static let name = "Foundation.LocalizedNumericArgumentAttribute"
+            /// The value type represented by this attribute.
+            ///
+            /// Each case of this enumeration provides the value type and the value itself, as an associated value.
             public enum Value : Hashable, Codable, Sendable {
+                /// An unsigned integer value.
+                ///
+                /// - Parameter uint: The attribute value, as a `UInt64`.
                 case uint(UInt64)
+                /// A signed integer value.
+                ///
+                /// - Parameter int: The attribute value, as an `Int64`.
                 case int(Int64)
+                /// A double-precision floating point value.
+                ///
+                /// - Parameter double: The attribute value, as a `Double`.
                 case double(Double)
+                /// A decimal value.
+                ///
+                /// - Parameter decimal: The attribute value, as a `Decimal`.
                 case decimal(Decimal)
                 
                 private typealias UintCodingKeys = DefaultAssociatedValueCodingKeys1
@@ -606,24 +758,30 @@ extension AttributeScopes.FoundationAttributes {
             }
         }
         
+        /// A type for a date argument used to format the run with this attribute.
         @frozen
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedDateArgumentAttribute : CodableAttributedStringKey {
             public typealias Value = Date
+            /// The name of the attribute.
             public static let name = "Foundation.LocalizedDateArgumentAttribute"
         }
         
+        /// A type for a date interval argument used to format the run with this attribute.
         @frozen
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedDateIntervalArgumentAttribute : CodableAttributedStringKey {
             public typealias Value = Range<Date>
+            /// The name of the attribute.
             public static let name = "Foundation.LocalizedDateIntervalArgumentAttribute"
         }
         
+        /// A type for a URL argument used to format the run with this attribute.
         @frozen
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedURLArgumentAttribute : CodableAttributedStringKey {
             public typealias Value = URL
+            /// The name of the attribute.
             public static let name = "Foundation.LocalizedURLArgumentAttribute"
         }
     }
@@ -842,12 +1000,21 @@ extension AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes.FoundationAttributes.LinkAttribute : ObjectiveCConvertibleAttributedStringKey {
+    /// The type of the link attribute's value when calling it from Objective-C.
     public typealias ObjectiveCValue = NSObject // NSURL or NSString
     
+    /// Returns an object for a specified URL value.
+    ///
+    /// - Parameter value: A URL to produce an `NSObject` from.
+    /// - Returns: The object for the specified URL.
     public static func objectiveCValue(for value: URL) throws -> NSObject {
         value as NSURL
     }
-    
+
+    /// Returns the URL value of the specified object.
+    ///
+    /// - Parameter object: An `NSObject` to retrieve a URL value from.
+    /// - Returns: A URL value.
     public static func value(for object: NSObject) throws -> URL {
         if let object = object as? NSURL {
             return object as URL

@@ -16,16 +16,26 @@ internal import Foundation_Private
 
 extension Locale {
 
+    /// A type that represents a language, as used in a locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Language : Hashable, Codable, Sendable {
 
+        /// A type that identifies a language by its various components.
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-        /// Represents a language identifier
         public struct Components : Hashable, Codable, Sendable {
+            /// The language code that identifies this language.
             public var languageCode: Locale.LanguageCode?
+            /// The written script used by this language.
             public var script: Locale.Script?
+            /// The region used with this language.
             public var region: Locale.Region?
 
+            /// Creates a language components instance from a given language code, script, and region.
+            ///
+            /// - Parameters:
+            ///   - languageCode: The language code to use for the new components instance.
+            ///   - script: The script to use for the new components instance.
+            ///   - region: The region to use for the new components instance.
             public init(languageCode: Locale.LanguageCode? = nil, script: Locale.Script? = nil, region: Locale.Region? = nil) {
                 self.languageCode = languageCode
                 self.script = script
@@ -63,15 +73,26 @@ extension Locale {
         }
 #endif
         
+        /// Creates a language from its component values.
+        ///
+        /// - Parameter components: A `Language.Components` instance that provides a custom language code, region, and script for the new `Language` instance.
         public init(components: Language.Components) {
             self.components = components
         }
 
+        /// Creates a language from a given language code, script, and region.
+        ///
+        /// - Parameters:
+        ///   - languageCode: A language code, typically created from a two- or three-letter language code specified by ISO 639.
+        ///   - script: The script to use for the new locale components instance.
+        ///   - region: The region to use for the new components instance.
         public init(languageCode: Locale.LanguageCode? = nil, script: Locale.Script? = nil, region: Locale.Region? = nil) {
             self.components = Components(languageCode: languageCode, script: script, region: region)
         }
 
-        /// Returns a list of system languages, includes the languages of all product localization for the current platform
+        /// An array of the system's supported languages.
+        ///
+        /// The returned array includes the languages of all product localizations for the current platform.
         public static var systemLanguages: [Language] {
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
             NSLocale.systemLanguages().map {

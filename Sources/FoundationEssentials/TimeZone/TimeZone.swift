@@ -18,15 +18,20 @@ import Darwin
 
 internal import _FoundationCShims
 
-/**
- `TimeZone` defines the behavior of a time zone. Time zone values represent geopolitical regions. Consequently, these values have names for these regions. Time zone values also represent a temporal offset, either plus or minus, from Greenwich Mean Time (GMT) and an abbreviation (such as PST for Pacific Standard Time).
-
- `TimeZone` provides two static functions to get time zone values: `current` and `autoupdatingCurrent`. The `autoupdatingCurrent` time zone automatically tracks updates made by the user.
-
- Note that time zone database entries such as "America/Los_Angeles" are IDs, not names. An example of a time zone name is "Pacific Daylight Time". Although many `TimeZone` functions include the word "name", they refer to IDs.
-
- Cocoa does not provide any API to change the time zone of the computer, or of other applications.
- */
+/// Information about standard time conventions associated with a specific geopolitical region.
+///
+/// `TimeZone` defines the behavior of a time zone. Time zone values represent geopolitical regions. Consequently,
+/// these values have names for these regions. Time zone values also represent a temporal offset, either plus or
+/// minus, from Greenwich Mean Time (GMT) and an abbreviation (such as PST for Pacific Standard Time).
+///
+/// `TimeZone` provides two static functions to get time zone values: `current` and `autoupdatingCurrent`. The
+/// `autoupdatingCurrent` time zone automatically tracks updates made by the user.
+///
+/// Note that time zone database entries such as "America/Los_Angeles" are IDs, not names. An example of a time
+/// zone name is "Pacific Daylight Time". Although many `TimeZone` functions include the word "name", they refer
+/// to IDs.
+///
+/// Cocoa does not provide any API to change the time zone of the computer, or of other applications.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct TimeZone : Hashable, Equatable, Sendable {
     private var _tz: _TimeZoneProtocol
@@ -216,7 +221,10 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Returns the date of the next (after the current instant) daylight saving time transition for the time zone. Depending on the time zone, the value of this property may represent a change of the time zone's offset from GMT. Returns `nil` if the time zone does not currently observe daylight saving time.
+    /// The date of the next (after the current instant) daylight saving time transition for the time zone.
+    ///
+    /// Depending on the time zone, the value of this property may represent a change of the time zone's offset
+    /// from GMT. The value is `nil` if the time zone does not currently observe daylight saving time.
     public var nextDaylightSavingTimeTransition: Date? {
         _tz.nextDaylightSavingTimeTransition(after: Date.now)
     }

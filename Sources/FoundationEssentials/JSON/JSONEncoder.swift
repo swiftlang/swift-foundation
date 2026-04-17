@@ -16,11 +16,38 @@ internal import Synchronization
 // JSON Encoder
 //===----------------------------------------------------------------------===//
 
-/// `JSONEncoder` facilitates the encoding of `Encodable` values into JSON.
 // NOTE: older overlays had Foundation.JSONEncoder as the ObjC name.
 // The two must coexist, so it was renamed. The old name must not be
 // used in the new runtime. _TtC10Foundation13__JSONEncoder is the
 // mangled name for Foundation.__JSONEncoder.
+
+/// An object that encodes instances of a data type as JSON objects.
+///
+/// The example below shows how to encode an instance of a simple `GroceryProduct` type from a JSON object. The type adopts <doc://com.apple.documentation/documentation/swift/codable> so that it's encodable as JSON using a ``JSONEncoder`` instance.
+///
+/// ```swift
+/// struct GroceryProduct: Codable {
+/// var name: String
+/// var points: Int
+/// var description: String?
+/// }
+///
+/// let pear = GroceryProduct(name: "Pear", points: 250, description: "A ripe pear.")
+///
+/// let encoder = JSONEncoder()
+/// encoder.outputFormatting = .prettyPrinted
+///
+/// let data = try encoder.encode(pear)
+/// print(String(data: data, encoding: .utf8)!)
+///
+/// /* Prints:
+/// {
+/// "name" : "Pear",
+/// "points" : 250,
+/// "description" : "A ripe pear."
+/// }
+/// */
+/// ```
 #if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation13__JSONEncoder)
 #endif
@@ -28,7 +55,7 @@ internal import Synchronization
 open class JSONEncoder {
     // MARK: Options
 
-    /// The formatting of the output JSON data.
+    /// The output formatting options that determine the readability, size, and element order of an encoded JSON object.
     public struct OutputFormatting : OptionSet, Sendable {
         /// The format's default value.
         public let rawValue: UInt
@@ -38,14 +65,16 @@ open class JSONEncoder {
             self.rawValue = rawValue
         }
 
-        /// Produce human-readable JSON with indented output.
+        /// The output formatting option that uses ample white space and indentation to make output easy to read.
         public static let prettyPrinted = OutputFormatting(rawValue: 1 << 0)
 
-        /// Produce JSON with dictionary keys sorted in lexicographic order.
+        /// The output formatting option that sorts keys in lexicographic order.
         @available(macOS 10.13, iOS 11.0, watchOS 4.0, tvOS 11.0, *)
         public static let sortedKeys    = OutputFormatting(rawValue: 1 << 1)
 
-        /// By default slashes get escaped ("/" → "\/", "http://apple.com/" → "http:\/\/apple.com\/")
+        /// The output formatting option specifies that the output doesn't prefix slash characters with escape characters.
+        ///
+        /// By default slashes get escaped ("/" -> "\/", "http://apple.com/" -> "http:\/\/apple.com\/")
         /// for security reasons, allowing outputted JSON to be safely embedded within HTML/XML.
         /// In contexts where this escaping is unnecessary, the JSON is known to not be embedded,
         /// or is intended only for display, this option avoids this escaping.
@@ -53,58 +82,63 @@ open class JSONEncoder {
         public static let withoutEscapingSlashes = OutputFormatting(rawValue: 1 << 3)
     }
 
-    /// The strategy to use for encoding `Date` values.
+    /// The formatting strategies available for formatting dates when encoding a date as JSON.
     public enum DateEncodingStrategy : Sendable {
-        /// Defer to `Date` for choosing an encoding. This is the default strategy.
+        /// The strategy that uses formatting from the Date structure.
         case deferredToDate
 
-        /// Encode the `Date` as a UNIX timestamp (as a JSON number).
+        /// The strategy that encodes dates in terms of seconds since midnight UTC on January 1, 1970.
         case secondsSince1970
 
-        /// Encode the `Date` as UNIX millisecond timestamp (as a JSON number).
+        /// The strategy that encodes dates in terms of milliseconds since midnight UTC on January 1, 1970.
         case millisecondsSince1970
 
-        /// Encode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
+        /// The strategy that formats dates according to the ISO 8601 and RFC 3339 standards.
         @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
         case iso8601
 
 #if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
-        /// Encode the `Date` as a string formatted by the given formatter.
+        /// The strategy that defers formatting settings to a supplied date formatter.
         case formatted(DateFormatter)
 #endif // FOUNDATION_FRAMEWORK
-        
-        /// Encode the `Date` as a custom value encoded by the given closure.
+
+        /// The strategy that formats custom dates by calling a user-defined function.
         ///
         /// If the closure fails to encode a value into the given encoder, the encoder will encode an empty automatic container in its place.
         @preconcurrency
         case custom(@Sendable (Date, Encoder) throws -> Void)
     }
     
-    /// The strategy to use for encoding `Data` values.
+    /// The strategies for encoding raw data.
     public enum DataEncodingStrategy : Sendable {
-        /// Defer to `Data` for choosing an encoding.
+        /// The strategy that encodes data using the encoding specified by the data instance itself.
         case deferredToData
 
-        /// Encoded the `Data` as a Base64-encoded string. This is the default strategy.
+        /// The strategy that encodes data using Base 64 encoding. This is the default strategy.
         case base64
 
-        /// Encode the `Data` as a custom value encoded by the given closure.
+        /// The strategy that encodes data using a user-defined function.
         ///
         /// If the closure fails to encode a value into the given encoder, the encoder will encode an empty automatic container in its place.
         @preconcurrency
         case custom(@Sendable (Data, Encoder) throws -> Void)
     }
 
-    /// The strategy to use for non-JSON-conforming floating-point values (IEEE 754 infinity and NaN).
+    /// The strategies for encoding nonconforming floating-point numbers, also known as IEEE 754 exceptional values.
+    ///
+    /// The IEEE 754 floating-point specification defines exceptional values, which include <doc://com.apple.documentation/documentation/swift/floatingpoint/infinity> and <doc://com.apple.documentation/documentation/swift/floatingpoint/nan>.
     public enum NonConformingFloatEncodingStrategy : Sendable {
-        /// Throw upon encountering non-conforming values. This is the default strategy.
+        /// The strategy that throws an error upon encoding an exceptional floating-point value. This is the default strategy.
         case `throw`
 
-        /// Encode the values using the given representation strings.
+        /// The strategy that encodes exceptional floating-point values from a specified string representation.
         case convertToString(positiveInfinity: String, negativeInfinity: String, nan: String)
     }
 
-    /// The strategy to use for automatically changing the value of keys before encoding.
+    /// The values that determine how to encode a type's coding keys as JSON keys.
+    ///
+    /// > Note:
+    /// > Key encoding strategies other than ``useDefaultKeys`` may have a noticeable performance cost because those strategies may inspect and transform each key.
     public enum KeyEncodingStrategy : Sendable {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
@@ -181,7 +215,9 @@ open class JSONEncoder {
         }
     }
 
-    /// The output format to produce. Defaults to `[]`.
+    /// A value that determines the readability, size, and element order of the encoded JSON object.
+    ///
+    /// Defaults to `[]`.
     open var outputFormatting: OutputFormatting {
         get {
             optionsLock._unsafeLock()
@@ -204,7 +240,9 @@ open class JSONEncoder {
         }
     }
 
-    /// The strategy to use in encoding dates. Defaults to `.deferredToDate`.
+    /// The strategy used when encoding dates as part of a JSON object.
+    ///
+    /// Defaults to `.deferredToDate`.
     open var dateEncodingStrategy: DateEncodingStrategy {
         get {
             optionsLock._unsafeLock()
@@ -227,7 +265,9 @@ open class JSONEncoder {
         }
     }
 
-    /// The strategy to use in encoding binary data. Defaults to `.base64`.
+    /// The strategy that an encoder uses to encode raw data.
+    ///
+    /// Defaults to `.base64`.
     open var dataEncodingStrategy: DataEncodingStrategy {
         get {
             optionsLock._unsafeLock()
@@ -250,7 +290,9 @@ open class JSONEncoder {
         }
     }
 
-    /// The strategy to use in encoding non-conforming numbers. Defaults to `.throw`.
+    /// The strategy used by an encoder when it encounters exceptional floating-point values.
+    ///
+    /// Defaults to `.throw`.
     open var nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy {
         get {
             optionsLock._unsafeLock()
@@ -273,7 +315,9 @@ open class JSONEncoder {
         }
     }
 
-    /// The strategy to use for encoding keys. Defaults to `.useDefaultKeys`.
+    /// A value that determines how to encode a type's coding keys as JSON keys.
+    ///
+    /// Defaults to `.useDefaultKeys`.
     open var keyEncodingStrategy: KeyEncodingStrategy {
         get {
             optionsLock._unsafeLock()
@@ -296,7 +340,7 @@ open class JSONEncoder {
         }
     }
 
-    /// Contextual user-provided information for use during encoding.
+    /// A dictionary you use to customize the encoding process by providing contextual information.
     @preconcurrency
     open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
@@ -336,13 +380,13 @@ open class JSONEncoder {
 
     // MARK: - Constructing a JSON Encoder
 
-    /// Initializes `self` with default strategies.
+    /// Creates a new, reusable JSON encoder with the default formatting settings and encoding strategies.
     public init() {}
 
 
     // MARK: - Encoding Values
 
-    /// Encodes the given top-level value and returns its JSON representation.
+    /// Returns a JSON-encoded representation of the value you supply.
     ///
     /// - parameter value: The value to encode.
     /// - returns: A new `Data` value containing the encoded JSON data.

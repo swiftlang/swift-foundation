@@ -519,8 +519,10 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: borrowing some FileS
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 #if FOUNDATION_FRAMEWORK
+    /// Options to control the reading of data from a URL.
     public typealias ReadingOptions = NSData.ReadingOptions
 #else
+    /// Options to control the reading of data from a URL.
     public struct ReadingOptions : OptionSet, Sendable {
         public let rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
@@ -539,7 +541,7 @@ extension Data {
     }
 #endif
     
-    /// Initialize a `Data` with the contents of a `URL`.
+    /// Creates data by reading from the specified URL.
     ///
     /// - parameter url: The `URL` to read.
     /// - parameter options: Options for the read operation. Default value is `[]`.

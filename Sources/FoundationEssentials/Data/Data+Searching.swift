@@ -13,9 +13,10 @@
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 #if FOUNDATION_FRAMEWORK
+    /// Options that control a data search operation.
     public typealias SearchOptions = NSData.SearchOptions
     
-    /// Find the given `Data` in the content of this `Data`.
+    /// Finds the range of the specified data as a subsequence of this data, if it exists.
     ///
     /// - parameter dataToFind: The data to be searched for.
     /// - parameter options: Options for the search. Default value is `[]`.
@@ -40,6 +41,7 @@ extension Data {
 #else
     // TODO: Implement range(of:options:in:) for Foundation package.
     
+    /// Options that control a data search operation.
     public struct SearchOptions : OptionSet, Sendable {
         public let rawValue: UInt
         

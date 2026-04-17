@@ -1510,7 +1510,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Locale {
-    /// Returns the `Locale` identifier from a given Windows locale code, or nil if it could not be converted.
+    /// Returns the locale identifier from a given Windows locale code, or `nil` if it could not be converted.
     public static func identifier(fromWindowsLocaleCode code: Int) -> String? {
         guard let unsigned = UInt32(exactly: code) else {
             return nil
@@ -1523,7 +1523,7 @@ extension Locale {
         return result
     }
 
-    /// Returns the Windows locale code from a given identifier, or nil if it could not be converted.
+    /// Returns the Windows locale code from a given identifier, or `nil` if it could not be converted.
     public static func windowsLocaleCode(fromIdentifier identifier: String) -> Int? {
         let result = uloc_getLCID(identifier)
         if result == 0 {
@@ -1534,12 +1534,17 @@ extension Locale {
     }
     
     /// Returns the identifier conforming to the specified standard for the specified string.
+    ///
+    /// - Parameters:
+    ///   - type: The identifier type used by `string`, such as ``Locale/IdentifierType/icu`` or ``Locale/IdentifierType/bcp47``.
+    ///   - string: An identifier string that complies with the standard indicated by `type`.
+    /// - Returns: A locale identifier.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static func identifier(_ type: IdentifierType, from string: String) -> String {
         Locale(identifier: string).identifier(type)
     }
 
-    /// Returns a list of available `Locale` identifiers.
+    /// A list of available identifiers.
     public static var availableIdentifiers: [String] {
         var working = Set<String>()
         let localeCount = uloc_countAvailable()
@@ -1551,7 +1556,7 @@ extension Locale {
         return Array(working)
     }
 
-    /// Returns a list of common `Locale` currency codes.
+    /// A list of common currency codes.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static var commonISOCurrencyCodes: [String] {
         Locale.Currency.commonISOCurrencies

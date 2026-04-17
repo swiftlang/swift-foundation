@@ -29,29 +29,42 @@ import CRT
 internal import _ForSwiftFoundation
 #endif
 
-/**
- `Calendar` encapsulates information about systems of reckoning time in which the beginning, length, and divisions of a year are defined. It provides information about the calendar and support for calendrical computations such as determining the range of a given calendrical unit and adding units to a given absolute time.
-*/
+/// A definition of the relationships between calendar units and absolute points in time, providing features for calculation and comparison of dates.
+///
+/// `Calendar` encapsulates information about systems of reckoning time in which the beginning, length, and divisions of a year are defined. It provides information about the calendar and support for calendrical computations such as determining the range of a given calendrical unit and adding units to a given absolute time.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Calendar : Hashable, Equatable, Sendable {
     private var _calendar: any _CalendarProtocol & AnyObject
 
-    /// Calendar supports many different kinds of calendars. Each is identified by an identifier here.
+    /// An enumeration for the available calendars.
     public enum Identifier : Sendable, CustomDebugStringConvertible {
         /// The common calendar in Europe, the Western Hemisphere, and elsewhere.
         case gregorian
+        /// Identifier for the Buddhist calendar.
         case buddhist
+        /// Identifier for the Chinese calendar.
         case chinese
+        /// Identifier for the Coptic calendar.
         case coptic
+        /// Identifier for the Ethiopic (Amete Mihret) calendar.
         case ethiopicAmeteMihret
+        /// Identifier for the Ethiopic (Amete Alem) calendar.
         case ethiopicAmeteAlem
+        /// Identifier for the Hebrew calendar.
         case hebrew
+        /// Identifier for the ISO8601 calendar.
         case iso8601
+        /// Identifier for the Indian calendar.
         case indian
+        /// Identifier for the Islamic calendar.
         case islamic
+        /// Identifier for the Islamic civil calendar.
         case islamicCivil
+        /// Identifier for the Japanese calendar.
         case japanese
+        /// Identifier for the Persian calendar.
         case persian
+        /// Identifier for the Republic of China calendar.
         case republicOfChina
 
         /// A simple tabular Islamic calendar using the astronomical/Thursday epoch of CE 622 July 15
@@ -342,21 +355,37 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - seealso: `DateComponents`
     public enum Component : Sendable {
+        /// Identifier for the era unit.
         case era
+        /// Identifier for the year unit.
         case year
+        /// Identifier for the month unit.
         case month
+        /// Identifier for the day unit.
         case day
+        /// Identifier for the hour unit.
         case hour
+        /// Identifier for the minute unit.
         case minute
+        /// Identifier for the second unit.
         case second
+        /// Identifier for the weekday unit.
         case weekday
+        /// Identifier for the weekday ordinal unit.
         case weekdayOrdinal
+        /// Identifier for the quarter of the calendar.
         case quarter
+        /// Identifier for the week of the month calendar unit.
         case weekOfMonth
+        /// Identifier for the week of the year unit.
         case weekOfYear
+        /// Identifier for the week-counting year unit.
         case yearForWeekOfYear
+        /// Identifier for the nanosecond unit.
         case nanosecond
+        /// Identifier for the calendar unit.
         case calendar
+        /// Identifier for the time zone unit.
         case timeZone
         @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         case isLeapMonth
@@ -414,14 +443,14 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Returns the user's current calendar.
+    /// The user's current calendar.
     ///
     /// This calendar does not track changes that the user makes to their preferences.
     public static var current : Calendar {
         Calendar(inner: CalendarCache.cache.current)
     }
 
-    /// A Calendar that tracks changes to user's preferred calendar.
+    /// A calendar that tracks changes to user's preferred calendar.
     ///
     /// If mutated, this calendar will no longer track the user's preferred calendar.
     ///
@@ -507,7 +536,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         isKnownUniquelyReferenced(&x)
     }
     
-    /// The first weekday of the calendar.
+    /// The first day of the week for the calendar.
     public var firstWeekday : Int {
         get {
             _calendar.firstWeekday
@@ -542,7 +571,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
-    /// Returns the minimum range limits of the values that a given component can take on in the receiver.
+    /// Returns the minimum range limits of the values that a given component can take on.
     ///
     /// As an example, in the Gregorian calendar the minimum range of values for the Day component is 1-28.
     /// - parameter component: A component to calculate a range for.
@@ -551,7 +580,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar.minimumRange(of: component)
     }
 
-    /// The maximum range limits of the values that a given component can take on in the receive
+    /// The maximum range limits of the values that a given component can take on.
     ///
     /// As an example, in the Gregorian calendar the maximum range of values for the Day component is 1-31.
     /// - parameter component: A component to calculate a range for.
@@ -616,7 +645,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
     // MARK: - Addition
     
-    /// Returns a new `Date` representing the date calculated by adding components to a given date.
+    /// Returns a new Date representing the date calculated by adding components to a given date.
     ///
     /// - parameter components: A set of values to add to the date.
     /// - parameter date: The starting date.
@@ -626,7 +655,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar.date(byAdding: components, to: date.capped, wrappingComponents: wrappingComponents)
     }
 
-    /// Returns a new `Date` representing the date calculated by adding an amount of a specific component to a given date.
+    /// Returns a new Date representing the date calculated by adding an amount of a specific component to a given date.
     ///
     /// - parameter component: A single component to add.
     /// - parameter value: The value of the specified component to add.
@@ -836,7 +865,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
         return interval.start
     }
 
-    /// Compares the given dates down to the given component, reporting them `orderedSame` if they are the same in the given component and all larger components, otherwise either `orderedAscending` or `orderedDescending`.
+    /// Compares two dates down to the specified component.
+    ///
+    /// The result is `orderedSame` if they are the same in the given component and all larger components. Otherwise, the result is either `orderedAscending` or `orderedDescending`.
     ///
     /// - parameter date1: A date to compare.
     /// - parameter date2: A date to compare.
@@ -989,7 +1020,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         return .orderedSame
     }
 
-    /// Compares the given dates down to the given component, reporting them equal if they are the same in the given component and all larger components.
+    /// Returns a Boolean value indicating whether two dates are equal in the given component and all larger components.
     ///
     /// - parameter date1: A date to compare.
     /// - parameter date2: A date to compare.
@@ -1001,7 +1032,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
 
-    /// Returns `true` if the given date is within the same day as another date, as defined by the calendar and calendar's locale.
+    /// Returns a Boolean value indicating whether a date is within the same day as another date, as defined by the calendar and calendar's locale.
     ///
     /// - parameter date1: A date to check for containment.
     /// - parameter date2: A date to check for containment.
@@ -1012,7 +1043,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
 
-    /// Returns `true` if the given date is within today, as defined by the calendar and calendar's locale.
+    /// Returns a Boolean value indicating whether the given date is within today, as defined by the calendar and calendar's locale.
     ///
     /// - parameter date: The specified date.
     /// - returns: `true` if the given date is within today.
@@ -1022,7 +1053,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
 
-    /// Returns `true` if the given date is within yesterday, as defined by the calendar and calendar's locale.
+    /// Returns a Boolean value indicating whether the given date is within yesterday, as defined by the calendar and calendar's locale.
     ///
     /// - parameter date: The specified date.
     /// - returns: `true` if the given date is within yesterday.
@@ -1037,7 +1068,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
 
-    /// Returns `true` if the given date is within tomorrow, as defined by the calendar and calendar's locale.
+    /// Returns a Boolean value indicating whether the given date is within tomorrow, as defined by the calendar and calendar's locale.
     ///
     /// - parameter date: The specified date.
     /// - returns: `true` if the given date is within tomorrow.
@@ -1052,7 +1083,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
 
-    /// Returns `true` if the given date is within a weekend period, as defined by the calendar and calendar's locale.
+    /// Returns a Boolean value indicating whether the given date is within a weekend period, as defined by the calendar and calendar's locale.
     ///
     /// - parameter date: The specified date.
     /// - returns: `true` if the given date is within a weekend.
@@ -1061,7 +1092,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar.isDateInWeekend(date.capped)
     }
 
-    /// Finds the range of the weekend around the given date, and returns the starting date and duration of the weekend via two inout parameters.
+    /// Find the range of the weekend around the given date, returned via two by-reference parameters.
     ///
     /// Note that a given entire day within a calendar is not necessarily all in a weekend or not; weekends can start in the middle of a day in some calendars and locales.
     /// - seealso: `dateIntervalOfWeekend(containing:)`
@@ -1080,7 +1111,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         return true
     }
 
-    /// Returns a `DateInterval` of the weekend contained by the given date, or nil if the date is not in a weekend.
+    /// Returns a DateInterval of the weekend contained by the given date, or nil if the date is not in a weekend.
     ///
     /// - parameter date: The date contained in the weekend.
     /// - returns: A `DateInterval`, or nil if the date is not in a weekend.
@@ -1129,7 +1160,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         return true
     }
 
-    /// Returns a `DateInterval` of the next weekend, which starts strictly after the given date.
+    /// Returns a DateInterval of the next weekend, which starts strictly after the given date.
     ///
     /// If `direction` is `.backward`, then finds the previous weekend range strictly before the given date.
     ///
@@ -1297,7 +1328,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         DatesByMatching(calendar: self, start: start, range: range, matchingComponents: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction)
     }
                 
-    /// Computes the next date which matches (or most closely matches) a given set of components.
+    /// Computes the next date which matches (or most closely match) a given set of components.
     ///
     /// The general semantics follow those of the `enumerateDates` function.
     /// To compute a sequence of results, use the `enumerateDates` function, rather than looping and calling this method with the previous loop iteration's result.
@@ -1320,7 +1351,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
-    /// Returns a new `Date` representing the date calculated by setting a specific component to a given time, and trying to keep lower components the same.  If the component already has that value, this may result in a date which is the same as the given date.
+    /// Returns a new Date representing the date calculated by setting a specific component to a given time, and trying to keep lower components the same.
+    ///
+    /// If the component already has the value, the result may be a date equal to the given date.
     ///
     /// Changing a component's value often will require higher or coupled components to change as well.  For example, setting the Weekday to Thursday usually will require the Day component to change its value, and possibly the Month and Year as well.
     /// If no such time exists, the next available time is returned (which could, for example, be in a different day, week, month, ... than the nominal target date).  Setting a component to something which would be inconsistent forces other components to change; for example, setting the Weekday to Thursday probably shifts the Day and possibly Month and Year.
@@ -1344,7 +1377,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         return result
     }
 
-    /// Returns a new `Date` representing the date calculated by setting hour, minute, and second to a given time on a specified `Date`.
+    /// Returns a new Date representing the date calculated by setting hour, minute, and second to a given time on a specified Date.
     ///
     /// If no such time exists, the next available time is returned (which could, for example, be in a different day than the nominal target date).
     /// The intent is to return a date on the same day as the original date argument.  This may result in a date which is backward than the given date, of course.
@@ -1383,7 +1416,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Determine if the `Date` has all of the specified `DateComponents`.
+    /// Determines if the date has all of the specified date components.
     ///
     /// It may be useful to test the return value of `nextDate(after:matching:matchingPolicy:behavior:direction:)` to find out if the components were obeyed or if the method had to fudge the result value due to missing time (for example, a daylight saving time transition).
     ///
