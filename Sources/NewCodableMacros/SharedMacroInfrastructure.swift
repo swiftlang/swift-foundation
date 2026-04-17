@@ -176,10 +176,6 @@ func extractDetailedStoredProperties(
 
 /// Returns the access-level modifier (with trailing space) that should be applied to
 /// members generated inside an extension of `declaration`, or `""` when no modifier is needed.
-///
-/// Mirrors Swift's synthesized Codable behavior: when the attached type is `public` or `open`,
-/// generated members must be `public` to satisfy protocol requirements; `package` types
-/// need `package`; `internal`/`fileprivate`/`private` can use the default (empty string).
 func accessLevel(of declaration: some DeclGroupSyntax) -> String {
     for modifier in declaration.modifiers {
         switch modifier.name.tokenKind {
