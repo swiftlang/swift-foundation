@@ -846,4 +846,32 @@ extension Tag {
         #expect(root.fractionCompleted == 1.0)
         #expect(root.isFinished)
     }
+    
+    @Test func isFinishedObservationNotConsumedByAddChild() async throws {
+        let parent = ProgressManager(totalCount: 1)
+        let subprogress = parent.subprogress(assigningCount: 1)
+
+        // Track how many times onChange fires and what isFinished value it sees
+        let onChangeCount = Mutex(0)
+        let observedIsFinished = Mutex(false)
+        withObservationTracking {
+            _ = parent.isFinished
+        } onChange: {
+            onChangeCount.withLock { $0 += 1 }
+            observedIsFinished.withLock { $0 = parent.isFinished }
+        }
+
+        // start() calls addChild — addChild should NOT consume the observation
+        let child = subprogress.start(totalCount: 10)
+
+        // Verify addChild did not fire the observation
+        #expect(onChangeCount.withLock { $0 } == 0, "addChild should not fire observation — onChange count was \(onChangeCount.withLock { $0 })")
+
+        // Complete the child — this should fire the observation with isFinished == true
+        child.complete(count: 10)
+
+        #expect(parent.isFinished, "Parent should be finished after child completes")
+        #expect(onChangeCount.withLock { $0 } == 1, "onChange should fire exactly once (on child completion) — count was \(onChangeCount.withLock { $0 })")
+        #expect(observedIsFinished.withLock { $0 }, "isFinished observation should fire with true when child completes, not be consumed earlier by addChild")
+    }
 }
