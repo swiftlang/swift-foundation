@@ -2214,7 +2214,7 @@ struct NewCodableTests {
         #expect(result.items.count == 3)
         
         // Verify each item has the correct coding path with array indices
-        Testing.__checkBinaryOperation(result.items[0].capturedCodingPath.count,{ $0 == $1() },2,expression: .__fromBinaryOperation(.__fromSyntaxNode("result.items[0].capturedCodingPath.count"),"==",.__fromSyntaxNode("2")),comments: [.__line("// Verify each item has the correct coding path with array indices")],isRequired: false,sourceLocation: Testing.SourceLocation.__here()).__expected()
+        #expect(result.items[0].capturedCodingPath.count == 2)
         #expect(result.items[0].capturedCodingPath[0].stringValue == "items")
         #expect(result.items[0].capturedCodingPath[1].intValue == 0)
         #expect(result.items[0].id == 100)
