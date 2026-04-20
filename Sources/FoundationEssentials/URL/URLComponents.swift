@@ -239,8 +239,18 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             _port = newValue
         }
 
+        private var isFileURL: Bool {
+            guard var scheme, scheme.utf8.count == 4 else { return false }
+            return scheme.withUTF8 {
+                ($0[0] | 0x20) == UInt8(ascii: "f") &&
+                ($0[1] | 0x20) == UInt8(ascii: "i") &&
+                ($0[2] | 0x20) == UInt8(ascii: "l") &&
+                ($0[3] | 0x20) == UInt8(ascii: "e")
+            }
+        }
+
         var path: String {
-            get { Parser.percentDecode(percentEncodedPath) ?? "" }
+            get { Parser.percentDecode(percentEncodedPath, excluding: isFileURL ? [0, ._slash] : []) ?? "" }
             set {
                 reset(.path)
                 _path = Parser.percentEncode(newValue, component: .path) ?? ""
