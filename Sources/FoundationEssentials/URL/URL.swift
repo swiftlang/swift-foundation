@@ -621,13 +621,7 @@ internal func foundation_swift_url_v2_enabled() -> Bool {
 }
 #else
 internal func foundation_swift_url_enabled() -> Bool { return true }
-internal func foundation_swift_url_v2_enabled() -> Bool {
-    #if FOUNDATION_SWIFT_URL_V2
-    return true
-    #else
-    return false
-    #endif
-}
+internal func foundation_swift_url_v2_enabled() -> Bool { return true }
 #endif
 
 #if canImport(os)
@@ -677,12 +671,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
     }
 #else
-    #if FOUNDATION_SWIFT_URL_V2
     internal typealias _Impl = _URL
-    #else
-    internal typealias _Impl = _SwiftURL
-    #endif
-
     private static let _type = _Impl.self
 #endif
 
@@ -1552,18 +1541,12 @@ public struct URL: Equatable, Sendable, Hashable {
         return _url.bridgeToNSURL()
     }
 
-#endif // FOUNDATION_FRAMEWORK
-
-#if FOUNDATION_FRAMEWORK || !FOUNDATION_SWIFT_URL_V2
     internal var _swiftURL: _SwiftURL? {
-        #if FOUNDATION_FRAMEWORK
         if let swift = _url as? _SwiftURL { return swift }
         return _SwiftURL(stringOrEmpty: _url.relativeString, relativeTo: _url.baseURL)
-        #else
-        return _url
-        #endif
     }
-#endif
+
+#endif // FOUNDATION_FRAMEWORK
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(relativeString)
