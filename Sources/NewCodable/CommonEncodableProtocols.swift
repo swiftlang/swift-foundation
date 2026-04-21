@@ -340,9 +340,7 @@ public extension CommonEncoder where Self: ~Copyable & ~Escapable {
     @inline(__always)
     @_lifetime(self: copy self)
     mutating func encodeEnumCase(_ field: some EncodingField) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encodeEnumCase(span)
-        }
+        try self.encodeEnumCase(field.utf8Span)
     }
     
     @_disfavoredOverload
@@ -375,9 +373,7 @@ public extension CommonEncoder where Self: ~Copyable & ~Escapable {
     @inline(__always)
     @_lifetime(self: copy self)
     mutating func encodeEnumCase(_ field: some EncodingField, associatedValueCount: Int, _ associatedValueClosure: (inout StructEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encodeEnumCase(span, associatedValueCount: associatedValueCount, associatedValueClosure)
-        }
+        try self.encodeEnumCase(field.utf8Span, associatedValueCount: associatedValueCount, associatedValueClosure)
     }
     
     @_disfavoredOverload
@@ -536,18 +532,14 @@ public extension CommonStructEncoder where Self: ~Copyable & ~Escapable {
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
     mutating func encode(field: some EncodingField, valueEncoder: (inout ValueEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encode(key: span, valueEncoder: valueEncoder)
-        }
+        try self.encode(key: field.utf8Span, valueEncoder: valueEncoder)
     }
 
     @inline(__always)
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
     mutating func encode(field: some EncodingField, value: borrowing some CommonEncodable & ~Copyable) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encode(key: span) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
-        }
+        try self.encode(key: field.utf8Span) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
     @inline(__always)
@@ -569,9 +561,7 @@ public extension CommonStructEncoder where Self: ~Copyable & ~Escapable {
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
     mutating func encode(field: some EncodingField, value: some Encodable) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encode(key: span) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
-        }
+        try self.encode(key: field.utf8Span) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
     @_disfavoredOverload
@@ -611,9 +601,7 @@ public extension CommonStructEncoder where Self: CommonDictionaryEncoder & ~Copy
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
     mutating func encode(field: some EncodingField, value: some Encodable) throws(CodingError.Encoding) {
-        try field.withUTF8Span { span throws(CodingError.Encoding) in
-            try self.encode(key: span) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
-        }
+        try self.encode(key: field.utf8Span) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
     @_disfavoredOverload

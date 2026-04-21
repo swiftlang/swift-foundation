@@ -48,8 +48,11 @@ public protocol JSONOptimizedCodingField: JSONOptimizedDecodingField, JSONOptimi
 public extension JSONOptimizedCodingField where Self: ~Escapable {
     @_alwaysEmitIntoClient
     @inline(__always)
-    func withUTF8Span<T: ~Copyable, E>(_ closure: (UTF8Span) throws(E) -> T) throws(E) -> T {
-        try self.staticString.withUTF8SpanForCodable(closure)
+    var utf8Span: UTF8Span {
+        @_lifetime(borrow self)
+        yielding borrow {
+            yield self.staticString._utf8SpanForCodingField
+        }
     }
 }
 

@@ -390,9 +390,7 @@ public protocol DecodingField: ~Escapable {
     
     @_alwaysEmitIntoClient
     @inline(__always)
-    // TODO: This doesn't work in the unfortunate case where a StaticString is not a pointer representation.
-//    var utf8Span: UTF8Span { @_lifetime(borrow self) get }
-    func withUTF8Span<T: ~Copyable, E>(_ closure: (UTF8Span) throws(E) -> T) throws(E) -> T
+    var utf8Span: UTF8Span { @_lifetime(borrow self) yielding borrow }
 }
 
 public extension DecodingField where Self: ~Escapable {
@@ -405,10 +403,8 @@ public extension DecodingField where Self: ~Escapable {
     
     @_alwaysEmitIntoClient
     func matches(_ key: UTF8Span) -> Bool {
-        return self.withUTF8Span { thisSpan in
-            let comparator = UTF8SpanComparator(thisSpan)
-            return comparator.matchesSpan(key)
-        }
+        let comparator = UTF8SpanComparator(self.utf8Span)
+        return comparator.matchesSpan(key)
     }
     
     @_alwaysEmitIntoClient
@@ -439,16 +435,22 @@ public extension DecodingField where Self: ~Escapable, Self: StaticStringDecodin
     
     @_alwaysEmitIntoClient
     @inline(__always)
-    func withUTF8Span<T: ~Copyable, E>(_ closure: (UTF8Span) throws(E) -> T) throws(E) -> T {
-        try self.staticString.withUTF8SpanForCodable(closure)
+    var utf8Span: UTF8Span {
+        @_lifetime(borrow self)
+        yielding borrow {
+            yield self.staticString._utf8SpanForCodingField
+        }
     }
 }
 
 public extension EncodingField where Self: ~Escapable, Self: StaticStringEncodingField {
     @_alwaysEmitIntoClient
     @inline(__always)
-    func withUTF8Span<T: ~Copyable, E>(_ closure: (UTF8Span) throws(E) -> T) throws(E) -> T {
-        try self.staticString.withUTF8SpanForCodable(closure)
+    var utf8Span: UTF8Span {
+        @_lifetime(borrow self)
+        yielding borrow {
+            yield self.staticString._utf8SpanForCodingField
+        }
     }
 }
 
@@ -460,13 +462,9 @@ public extension RawByteEquivalenceDecodingField where Self: ~Escapable & Static
 }
 
 public protocol EncodingField: ~Escapable {
-    
     @_alwaysEmitIntoClient
     @inline(__always)
-    // TODO: This doesn't work in the unfortunate case where a StaticString is not a pointer representation.
-//    var utf8Span: UTF8Span { @_lifetime(borrow self) get }
-    func withUTF8Span<T: ~Copyable, E>(_ closure: (UTF8Span) throws(E) -> T) throws(E) -> T
-
+    var utf8Span: UTF8Span { @_lifetime(borrow self) yielding borrow }
 }
 
 public protocol StaticStringEncodingField: EncodingField, ~Escapable {
@@ -479,9 +477,11 @@ public protocol StaticStringCodingField: StaticStringDecodingField, StaticString
 public extension StaticStringCodingField where Self: ~Escapable {
     @_alwaysEmitIntoClient
     @inline(__always)
-//    var utf8Span: UTF8Span { @_lifetime(borrow self) get }
-    func withUTF8Span<T: ~Copyable, E>(_ closure: (UTF8Span) throws(E) -> T) throws(E) -> T {
-        try self.staticString.withUTF8SpanForCodable(closure)
+    var utf8Span: UTF8Span {
+        @_lifetime(borrow self)
+        yielding borrow {
+            yield self.staticString._utf8SpanForCodingField
+        }
     }
 }
 
@@ -489,17 +489,23 @@ public extension StaticStringCodingField where Self: ~Escapable {
 extension StaticString {
     @_alwaysEmitIntoClient
     @inline(__always)
-    internal func withUTF8SpanForCodable<T: ~Copyable, E>(_ closure: (UTF8Span) throws(E) -> T) throws(E) -> T {
-        if self.hasPointerRepresentation {
-            let utf8Span = UTF8Span(unchecked: .init(_unsafeStart: self.utf8Start, count: self.utf8CodeUnitCount), isKnownASCII: isASCII)
-            return try closure(utf8Span)
-        } else {
+    internal var _utf8SpanForCodingField: UTF8Span {
+        @_lifetime(borrow self)
+        yielding borrow {
+            if self.hasPointerRepresentation {
+                yield UTF8Span(unchecked: .init(
+                    _unsafeStart: self.utf8Start,
+                    count: self.utf8CodeUnitCount
+                ), isKnownASCII: self.isASCII)
+            } else {
 #if $Embedded
             fatalError("non-pointer representation not supported in embedded Swift")
 #else
-            // TODO: More efficient without allocations.
-            return try closure(String(self.unicodeScalar).utf8Span)
+                let str = String(self.unicodeScalar)
+                yield str.utf8Span
+                extendLifetime(str)
 #endif
+            }
         }
     }
 }
