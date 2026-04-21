@@ -36,9 +36,10 @@ extension JSONCodableMacro: ExtensionMacro {
             return []
         }
         
+        let access = accessLevel(of: declaration)
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.both)
-        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind())
-        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: JSONDecodableExpansionKind())
+        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind(), accessLevel: access)
+        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: JSONDecodableExpansionKind(), accessLevel: access)
         return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
     }
 }

@@ -36,9 +36,10 @@ extension CommonCodableMacro: ExtensionMacro {
             return []
         }
         
+        let access = accessLevel(of: declaration)
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.both)
-        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind())
-        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: CommonDecodableExpansionKind())
+        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind(), accessLevel: access)
+        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: CommonDecodableExpansionKind(), accessLevel: access)
         return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
     }
 }

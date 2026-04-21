@@ -37,8 +37,9 @@ extension CommonEncodableMacro: ExtensionMacro {
             return []
         }
         
+        let access = accessLevel(of: declaration)
         let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.encodingOnly)
-        let impl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind())
+        let impl = makeEncodableExtension(for: typeName, with: properties, kind: CommonEncodableExpansionKind(), accessLevel: access)
         return [codingFields, impl].compactMap { $0 }
     }
 }

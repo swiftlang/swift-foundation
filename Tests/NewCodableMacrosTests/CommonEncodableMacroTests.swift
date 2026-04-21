@@ -467,4 +467,43 @@ struct CommonEncodableMacroTests {
             macros: commonTestMacros
         )
     }
+
+    @Test func publicStructEmitsPublicMembers() {
+        assertMacroExpansion(
+            """
+            @CommonEncodable
+            public struct Person {
+                public let name: String
+            }
+            """,
+            expandedSource: """
+            public struct Person {
+                public let name: String
+            }
+
+            extension Person {
+                enum CodingFields: StaticStringEncodingField {
+                    case name
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name:
+                            "name"
+                        }
+                    }
+                }
+            }
+
+            extension Person: CommonEncodable {
+                public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                    }
+                }
+            }
+            """,
+            macros: commonTestMacros
+        )
+    }
 }
