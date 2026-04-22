@@ -333,7 +333,7 @@ internal struct BuiltInUnicodeScalarSet {
     // CFUniCharGetBitmapForPlane
     internal func bitmap(forPlane plane: Int, isInverted: Bool) -> (BitmapResult, Data) {
         
-        var bitmap = _CharacterSet.allZeros
+        var bitmap = Data(repeating: 0, count: _CharacterSet.__kCFBitmapSize)
         var bitmapMutableSpan = bitmap.mutableSpan
         
         if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
