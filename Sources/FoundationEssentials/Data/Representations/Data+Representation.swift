@@ -110,7 +110,7 @@ extension Data {
         var count: Int {
             @inline(__always)
             get {
-                _slice.count
+                _assumeNonNegative(_slice.upperBound &- _slice.lowerBound)
             }
             set(newValue) {
                 guard newValue != 0 else {
@@ -235,12 +235,12 @@ extension Data {
         
         @_alwaysEmitIntoClient @inline(__always)
         var startIndex: Int {
-            _slice.lowerBound
+            _assumeNonNegative(_slice.lowerBound)
         }
         
         @_alwaysEmitIntoClient @inline(__always)
         var endIndex: Int {
-            _slice.upperBound
+            _assumeNonNegative(_slice.upperBound)
         }
         
         @_alwaysEmitIntoClient
