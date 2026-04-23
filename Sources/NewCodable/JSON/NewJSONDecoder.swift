@@ -31,6 +31,8 @@ import ucrt
 import WASILibc
 #endif
 
+internal import _FoundationCShims
+
 public struct NewJSONDecoder {
     @usableFromInline
     internal var options: Options
@@ -220,21 +222,12 @@ extension Double : PrevalidatedJSONNumberBufferConvertible {
     @usableFromInline
     init?(prevalidatedBuffer buffer: borrowing RawSpan) {
         let decodedValue = buffer.withUnsafeBytes { buff -> Double? in
-            // TODO: Trying to diagnose why floating point parsing is failing w
-//            if let str = String._tryFromUTF8(buff.bindMemory(to: UInt8.self)) {
-//                print("Parsing: \(str) from baseAddress \(buff.baseAddress!)")
-//            }
-            
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            // TODO: strtoX_l everywhere.
-            let decodedValue = strtod(buff.baseAddress!, &endPtr)
+            let decodedValue = _stringshims_strtod_clocale(buff.baseAddress!, &endPtr)
             if let endPtr {
                 if buff.baseAddress!.advanced(by: buff.count) == endPtr {
                     return decodedValue
                 }
-//                else {
-//                    print("Got value: \(decodedValue) but failing prevalidatedBuffer because of bad pointer. Expected \(buff.baseAddress!.advanced(by: buff.count)) vs \(endPtr)")
-//                }
                 return nil
             } else {
                 return nil
@@ -250,7 +243,7 @@ extension Float : PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: RawSpan) {
         let decodedValue = buffer.withUnsafeBytes { buff -> Float? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = strtof(buff.baseAddress!, &endPtr)
+            let decodedValue = _stringshims_strtof_clocale(buff.baseAddress!, &endPtr)
             if let endPtr, buff.baseAddress!.advanced(by: buff.count) == endPtr {
                 return decodedValue
             } else {
