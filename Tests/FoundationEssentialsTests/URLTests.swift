@@ -791,6 +791,16 @@ private struct URLTests {
     }
     #endif
 
+    @Test func percentEncodedBackslashInFileURLPath() throws {
+        // URL(string:) percent-encodes "\" to "%5C", and clients expect file
+        // path APIs to return it decoded (matches prior _SwiftURL behavior).
+        let url = URL(string: #"file:///C:\hello\world"#)!
+        #expect(url.absoluteString == "file:///C:%5Chello%5Cworld")
+        #expect(url.lastPathComponent == #"C:\hello\world"#)
+        #expect(url.fileSystemPath(style: .windows) == #"/C:\hello\world"#)
+        #expect(url.fileSystemPath(style: .posix) == #"/C:\hello\world"#)
+    }
+
     @Test func relativeDotDotResolution() throws {
         let baseURL = URL(filePath: "/docs/src/")
         var result = URL(filePath: "../images/foo.png", relativeTo: baseURL)
