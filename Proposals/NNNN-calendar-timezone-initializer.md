@@ -123,6 +123,74 @@ Developers can continue setting properties on calendar objects, one after the ot
 
 Alternatively, developers could provide the expressiveness for themselves by extending `Calendar` with an initializer that sets the properties on the calendar, one by one. This alternative fails to address the minor efficiency value of the proposal. Also, in smaller codebases this could be acceptable, but across larger codebases developers would have to either add it to a "Foundation additions" themed dependency, or re-implement it multiple times. Neither is a particularly convenient developer experience.
 
+### Initializing a `Calendar` with a `Calendar.Configuration` value
+
+To avoid the implications described above, an alternative design introduces a nested `Calendar.Configuration` value type that describes a calendar's configuration, along with a single new initializer `Calendar.init(_ configuration: Configuration)`. Configurations are composed via chained methods that return a modified copy:
+
+```swift
+public struct Calendar {
+    public struct Configuration: Hashable, Sendable {
+        public static func identifier(_ identifier: Identifier) -> Self
+        public static var iso8601: Self { get }
+        public static var current: Self { get }
+        public static var autoupdatingCurrent: Self { get }
+
+        public func identifier(_ identifier: Identifier) -> Self
+        public func locale(_ locale: Locale?) -> Self
+        public func timeZone(_ timeZone: TimeZone?) -> Self
+        public func firstWeekday(_ firstWeekday: Int?) -> Self
+        public func minimumDaysInFirstWeek(_ minimumDaysInFirstWeek: Int?) -> Self
+    }
+
+    public init(_ configuration: Configuration)
+}
+```
+
+The motivating example becomes:
+
+```swift
+let calendar = Calendar(
+    .identifier(.gregorian)
+    .timeZone(TimeZone(identifier: "Australia/Sydney"))
+    .locale(Locale(identifier: "en_AU"))
+    .firstWeekday(2)
+)
+```
+
+It also unlocks a unified, extensible and expressive means for developers to initialize a calendar:
+
+```swift
+let current = Calendar(.current)
+let autoupdatingCurrent = Calendar(.autoupdatingCurrent)
+let gregorian = Calendar(.identifier(.gregorian))
+
+extension Calendar.Configuration {
+    static var sydneyAustralia: Self {
+        Self.identifier(.gregorian)
+            .locale(Locale(identifier: "en_AU"))
+            .timeZone(TimeZone(identifier: "Australia/Sydney"))
+    }
+}
+
+let sydney = Calendar(.sydneyAustralia)
+```
+
+We find this design to be appealing:
+
+- It is open to extension: adding a new property affecting calendrical computations only requires adding one method on `Configuration`, rather than introducing a new initializer overload. This avoids the implicit presumption or complexity reshaping the initializer API, as described above.
+- It unifies creation of fixed-identifier, `.current`, `.autoupdatingCurrent`, and specifically configured calendars behind a single initializer.
+- The "Fluent" / "values in chains" style is increasingly familiar, resembling concrete `FormatStyle` types in Foundation.
+- A `Configuration` value is independently useful for developers that want to describe a calendar without instantiating one, or use the configuration as a key for a cache.
+
+We are very open to pursuing this alternate direction.
+
+This design has also some mild disadvantages:
+
+- It invites duplication of existing API surface area (e.g.: there would be two ways of accessing the current calendar).
+- As a means of initializing an object, "values in chains" are less idiomatic or coventional Swift than labelled arguments.
+- The extensibility benefit is modest in practice. As noted above, `Calendar`'s configuration surface has changed little over many years; the weight of the design for a form of extension that is unlikely may not be sufficiently compelling.
+- The solution is heavier: one new type, four static and five instance methods, and one initializer, to solve the same problem that a single initializer arguably addresses.
+
 ## Acknowledgments
 
-Thanks to those who participated in the discussion and code review for such a small change.
+Thanks to those who participated in the discussion and code review. In particular, [tera](https://forums.swift.org/t/expressively-initialising-calendars-for-specific-time-zones/86139/9) for thoughtful comments and suggesting the "values in chains" alternative.
