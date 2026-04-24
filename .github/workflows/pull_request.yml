@@ -26,12 +26,6 @@ jobs:
       enable_android_sdk_build: true
       android_sdk_versions: '["nightly-main"]'
 
-      # Temporarily use native build system on Android due to https://github.com/swiftlang/swift/issues/88282
-      android_sdk_build_command: 'swift build --build-system native'
-
-      # Temporarily use native build system on Android due to https://github.com/swiftlang/swift/issues/88283
-      wasm_sdk_build_command: 'swift build --build-system native'
-
   cmake_build:
     name: Build (CMake)
     runs-on: ubuntu-latest
