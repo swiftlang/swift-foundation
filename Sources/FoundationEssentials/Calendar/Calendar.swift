@@ -469,15 +469,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar = CalendarCache.cache.fixed(identifier)
     }
 
-    /// Returns a new Calendar using a specific time zone and optional, non-default values.
+    /// Returns a new Calendar using optional, non-default values.
     ///
     /// - parameter identifier: The kind of calendar to use.
-    /// - parameter timeZone: The `TimeZone` to use.
+    /// - parameter timeZone: A `TimeZone` to use, instead of the default.
     /// - parameter locale: A `Locale` to use, instead of the default.
     /// - parameter firstWeekday: A first day of the week to use, instead of the default.
     /// - parameter minimumDaysInFirstWeek: A number of minimum days in the first week to use, instead of the default.
-    public init(identifier: __shared Identifier, timeZone: TimeZone, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) {
+    public init(identifier: __shared Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) {
         self.init(identifier: identifier)
+        guard timeZone != nil || locale != nil || firstWeekday != nil || minimumDaysInFirstWeek != nil else {
+            return
+        }
         _calendar = _calendar.copy(changingLocale: locale, changingTimeZone: timeZone, changingFirstWeekday: firstWeekday, changingMinimumDaysInFirstWeek: minimumDaysInFirstWeek)
     }
 
