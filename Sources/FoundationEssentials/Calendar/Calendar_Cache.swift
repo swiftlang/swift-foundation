@@ -30,6 +30,8 @@ dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
     if identifier == .gregorian || identifier == .iso8601 {
         return _CalendarGregorian.self
+    } else if identifier == .hebrew {
+        return _CalendarHebrew.self
     } else {
         return _calendarICUClass()
     }
