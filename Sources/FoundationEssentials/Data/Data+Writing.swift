@@ -449,14 +449,17 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
 
                 if !SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) {
                     let dwError = GetLastError()
-                    guard dwError == ERROR_NOT_SAME_DEVICE else {
+                    guard dwError == ERROR_NOT_SAME_DEVICE
+                        || dwError == ERROR_NOT_SUPPORTED
+                        || dwError == ERROR_FILE_SYSTEM_LIMITATION
+                        || dwError == ERROR_INVALID_PARAMETER else {
                         throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
                     }
 
                     _ = CloseHandle(hFile)
                     hFile = INVALID_HANDLE_VALUE
 
-                    // The move is across volumes.
+                    // The move is across volumes or on Volumes that don't support FILE_RENAME_FLAG_POSIX_SEMANTICS, like exFat.
                     guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) else {
                         throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
                     }
