@@ -19,7 +19,7 @@ extension Data {
     /// Options that control a data search operation.
     public struct SearchOptions : OptionSet, Sendable {
         public let rawValue: UInt
-        
+
         public init(rawValue: UInt) {
             self.rawValue = rawValue
         }
@@ -38,20 +38,53 @@ extension Data {
     /// - returns: A `Range` specifying the location of the found data, or nil if a match could not be found.
     /// - precondition: `range` must be in the bounds of the Data.
     public func range(of dataToFind: Data, options: Data.SearchOptions = [], in range: Range<Index>? = nil) -> Range<Index>? {
-        let searchRange = range ?? startIndex..<endIndex
+        let needleLength = dataToFind.count
+        guard needleLength > 0, count > 0 else {
+            return nil
+        }
+
+        var searchRange = range ?? startIndex..<endIndex
+
+        precondition(searchRange.lowerBound >= startIndex && searchRange.upperBound <= endIndex, "Range out of bounds")
+
+        let searchRangeLength = searchRange.count
+
+        guard searchRangeLength >= needleLength else {
+            return nil
+        }
+
         let searchBackwards = options.contains(.backwards)
         let isAnchored = options.contains(.anchored)
 
-        let foundRange = searchBackwards
-            ? lastRange(of: dataToFind, in: searchRange)
-            : firstRange(of: dataToFind, in: searchRange)
-
-        return foundRange.flatMap { found in
-            guard isAnchored else { return found }
+        if isAnchored, searchRangeLength > needleLength {
             if searchBackwards {
-                return found.upperBound == searchRange.upperBound ? found : nil
+                searchRange = (searchRange.upperBound - needleLength)..<searchRange.upperBound
+            } else {
+                searchRange = searchRange.lowerBound..<(searchRange.lowerBound + needleLength)
             }
-            return found.lowerBound == searchRange.lowerBound ? found : nil
         }
+
+        if searchRange.count == needleLength {
+            return span.extracting(_rangeRelativeToStartIndex(searchRange)).elementsEqual(dataToFind.span) ? searchRange : nil
+        }
+
+        if needleLength == 1 {
+            return _searchSingleByte(dataToFind[0], in: searchRange, backwards: searchBackwards)
+        }
+
+        return _searchBoyerMoore(dataToFind.span, in: searchRange, backwards: searchBackwards)
+    }
+
+    private func _searchSingleByte(_ byte: UInt8, in searchRange: Range<Index>, backwards: Bool) -> Range<Index>? {
+        let haystack = span.extracting(_rangeRelativeToStartIndex(searchRange))
+        let offset = backwards ? haystack.lastIndex(of: byte) : haystack.firstIndex(of: byte)
+        return offset.map { offset in
+            let lowerBound = searchRange.lowerBound + offset
+            return lowerBound..<(lowerBound + 1)
+        }
+    }
+
+    func _rangeRelativeToStartIndex(_ range: Range<Index>) -> Range<Int> {
+        (range.lowerBound - startIndex)..<(range.upperBound - startIndex)
     }
 }

@@ -29,6 +29,7 @@ target_sources(FoundationEssentials PRIVATE
     Data+Iterator.swift
     Data+Reading.swift
     Data+Searching.swift
+    Data+Searching+BoyerMoore.swift
     Data+Writing.swift
     Data+WritingOptions.swift
     DataProtocol.swift
