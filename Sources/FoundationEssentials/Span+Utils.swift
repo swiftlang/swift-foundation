@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 extension Span<UInt8> {
-    @inline(__always)
     func firstIndex(of byte: UInt8) -> Int? {
         guard !isEmpty else {
             return nil
@@ -28,12 +27,10 @@ extension Span<UInt8> {
         return nil
     }
 
-    @inline(__always)
     func lastIndex(of byte: UInt8) -> Int? {
         lastIndex { $0 == byte }
     }
 
-    @inline(__always)
     func lastIndex(where predicate: (UInt8) throws -> Bool) rethrows -> Int? {
         guard !isEmpty else {
             return nil
@@ -50,7 +47,6 @@ extension Span<UInt8> {
         return nil
     }
 
-    @inline(__always)
     func elementsEqual(_ other: Span<UInt8>) -> Bool {
         guard count == other.count else {
             return false
@@ -83,7 +79,6 @@ extension Span<UInt8> {
         return self[count - 1]
     }
 
-    @inline(__always)
     func contains(_ byte: UInt8) -> Bool {
         for i in indices {
             if self[i] == byte {
