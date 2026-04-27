@@ -19,44 +19,17 @@ import Darwin
 internal import _FoundationCShims
 internal import Synchronization
 
-/// A marker protocol used to determine whether a value is a `CodingKeyRepresentable`-keyed `Dictionary`
+/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Decodable` values (in which case it should be exempt from key conversion strategies).
 ///
-/// The protocol provides `_fromStringKeyedDictionary` to convert a `[String: Any]` dictionary
-/// to the proper `[Key: Value]` type using `Key.init(codingKey:)`.
-private protocol _JSONCodingKeyRepresentableDictionaryDecodableMarker {
+/// The marker protocol also provides access to the type of the `Decodable` values,
+/// which is needed for the implementation of the key conversion strategy exemption.
+private protocol _JSONStringDictionaryDecodableMarker {
     static var elementType: Decodable.Type { get }
-    static func _fromStringKeyedDictionary(_ dict: [String: Any]) -> Self?
 }
 
-extension Dictionary : _JSONCodingKeyRepresentableDictionaryDecodableMarker where Key: CodingKeyRepresentable, Value: Decodable {
+extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String, Value: Decodable {
     static var elementType: Decodable.Type { return Value.self }
-
-    static func _fromStringKeyedDictionary(_ dict: [String: Any]) -> Self? {
-        // Fast path for String keys - no conversion needed
-        if Key.self == String.self {
-            return dict as? Self
-        }
-        // Convert keys for other CodingKeyRepresentable types
-        var result = Self()
-        result.reserveCapacity(dict.count)
-        for (stringKey, value) in dict {
-            guard let key = Key(codingKey: _DictionaryCodingKey(stringValue: stringKey)),
-                  let typedValue = value as? Value else {
-                return nil
-            }
-            result[key] = typedValue
-        }
-        return result
-    }
-}
-
-/// A simple CodingKey implementation for string-to-key conversion.
-private struct _DictionaryCodingKey: CodingKey {
-    var stringValue: String
-    var intValue: Int? { nil }
-    init(stringValue: String) { self.stringValue = stringValue }
-    init?(intValue: Int) { nil }
 }
 
 //===----------------------------------------------------------------------===//
@@ -677,7 +650,7 @@ extension JSONDecoderImpl: Decoder {
         if type == Decimal.self {
             return try self.unwrapDecimal(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
-        if !options.keyDecodingStrategy.isDefault, T.self is _JSONCodingKeyRepresentableDictionaryDecodableMarker.Type {
+        if !options.keyDecodingStrategy.isDefault, T.self is _JSONStringDictionaryDecodableMarker.Type {
             return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
         }
 
@@ -836,8 +809,8 @@ extension JSONDecoderImpl: Decoder {
     private func unwrapDictionary<T: Decodable>(from mapValue: JSONMap.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
         try checkNotNull(mapValue, expectedType: [String:Any].self, for: codingPathNode, additionalKey)
 
-        guard let dictType = type as? _JSONCodingKeyRepresentableDictionaryDecodableMarker.Type else {
-            preconditionFailure("Must only be called if T implements _JSONCodingKeyRepresentableDictionaryDecodableMarker")
+        guard let dictType = type as? (_JSONStringDictionaryDecodableMarker & Decodable).Type else {
+            preconditionFailure("Must only be called if T implements __JSONStringDictionaryDecodableMarker")
         }
 
         guard case let .object(region) = mapValue else {
@@ -847,8 +820,8 @@ extension JSONDecoderImpl: Decoder {
             ))
         }
 
-        var stringKeyedResult = [String: Any]()
-        stringKeyedResult.reserveCapacity(region.count / 2)
+        var result = [String: Any]()
+        result.reserveCapacity(region.count / 2)
 
         let dictCodingPathNode = codingPathNode.appending(additionalKey)
 
@@ -857,17 +830,10 @@ extension JSONDecoderImpl: Decoder {
             // We know these values are keys, but UTF-8 decoding could still fail.
             let key = try self.unwrapString(from: keyValue, for: dictCodingPathNode, _CodingKey?.none)
             let value = try self.unwrap(value, as: dictType.elementType, for: dictCodingPathNode, _CodingKey(stringValue: key)!)
-            stringKeyedResult[key]._setIfNil(to: value)
+            result[key]._setIfNil(to: value)
         }
 
-        // Convert [String: Any] to [Key: Value] using the marker protocol
-        guard let result = dictType._fromStringKeyedDictionary(stringKeyedResult) as? T else {
-            throw DecodingError.dataCorrupted(DecodingError.Context(
-                codingPath: codingPathNode.path(byAppending: additionalKey),
-                debugDescription: "Failed to create dictionary with CodingKeyRepresentable keys"
-            ))
-        }
-        return result
+        return result as! T
     }
 
     private func unwrapString(from value: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> String {
