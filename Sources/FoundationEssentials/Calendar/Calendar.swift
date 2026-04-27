@@ -348,6 +348,85 @@ public struct Calendar : Hashable, Equatable, Sendable {
             !self.contains(.era) && !self.contains(.year) && !self.contains(.dayOfYear) && !self.contains(.quarter) && !self.contains(.month) && !self.contains(.day) && !self.contains(.weekday) && !self.contains(.weekdayOrdinal) && !self.contains(.weekOfMonth) && !self.contains(.weekOfYear) && !self.contains(.yearForWeekOfYear) && !self.contains(.isLeapMonth) && !self.contains(.isRepeatedDay)
         }
     }
+    
+    /// A description of a `Calendar`'s configuration.
+    public struct Configuration: Hashable, Sendable {
+        package var base: Base
+        package var locale: Locale?
+        package var timeZone: TimeZone?
+        package var firstWeekday: Int?
+        package var minimumDaysInFirstWeek: Int?
+        
+        /// The base describes what kind of calendar the configuration is based on.
+        package enum Base: Hashable, Sendable {
+            case current
+            case autoupdatingCurrent
+            case identifier(Identifier)
+        }
+        
+        package var isOnlyBaseSet: Bool {
+            Self.init(base: base, locale: nil, timeZone: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil) == self
+        }
+        
+        /// A specific kind of calendar.
+        public static func identifier(_ identifier: Identifier) -> Self {
+            Self.init(base: .identifier(identifier))
+        }
+        
+        /// The ISO8601 calendar.
+        public static var iso8601: Self {
+            Self.init(base: .identifier(.iso8601))
+        }
+        
+        /// The user's current calendar.
+        ///
+        /// This calendar does not track changes that the user makes to their preferences.
+        public static var current: Self {
+            Self.init(base: .current)
+        }
+        
+        /// A calendar that tracks changes to user's preferred calendar.
+        ///
+        /// If mutated, this calendar will no longer track the user's preferred calendar.
+        public static var autoupdatingCurrent: Self {
+            Self.init(base: .autoupdatingCurrent)
+        }
+        
+        /// A specific kind of calendar.
+        public func identifier(_ identifier: Identifier) -> Self {
+            var copy = self
+            copy.base = .identifier(identifier)
+            return copy
+        }
+        
+        /// The locale of the calendar.
+        public func locale(_ locale: Locale?) -> Self {
+            var copy = self
+            copy.locale = locale
+            return copy
+        }
+        
+        /// The time zone of the calendar.
+        public func timeZone(_ timeZone: TimeZone?) -> Self {
+            var copy = self
+            copy.timeZone = timeZone
+            return copy
+        }
+        
+        /// The first day of the week for the calendar.
+        public func firstWeekday(_ firstWeekday: Int?) -> Self {
+            var copy = self
+            copy.firstWeekday = firstWeekday
+            return copy
+        }
+        
+        /// The number of minimum days in the first week.
+        public func minimumDaysInFirstWeek(_ minimumDaysInFirstWeek: Int?) -> Self {
+            var copy = self
+            copy.minimumDaysInFirstWeek = minimumDaysInFirstWeek
+            return copy
+        }
+    }
 
     /// An enumeration for the various components of a calendar date.
     ///
@@ -467,6 +546,40 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter identifier: The kind of calendar to use.
     public init(identifier: __shared Identifier) {
         _calendar = CalendarCache.cache.fixed(identifier)
+    }
+    
+    /// Returns a new Calendar using the values of the configuration object.
+    ///
+    /// - parameter configuration: A value describing the configuration of the calendar.
+    public init(_ configuration: Configuration) {
+        let base = switch configuration.base {
+        case .current:
+            CalendarCache.cache.current
+        case .autoupdatingCurrent:
+            CalendarCache.autoupdatingCurrent
+        case .identifier(let identifier):
+            CalendarCache.cache.fixed(identifier)
+        }
+        guard !configuration.isOnlyBaseSet else {
+            _calendar = base
+            return
+        }
+        _calendar = base.copy(changingLocale: configuration.locale, changingTimeZone: configuration.timeZone, changingFirstWeekday: configuration.firstWeekday, changingMinimumDaysInFirstWeek: configuration.minimumDaysInFirstWeek)
+    }
+
+    /// Returns a new Calendar using optional, non-default values.
+    ///
+    /// - parameter identifier: The kind of calendar to use.
+    /// - parameter timeZone: A `TimeZone` to use, instead of the default.
+    /// - parameter locale: A `Locale` to use, instead of the default.
+    /// - parameter firstWeekday: A first day of the week to use, instead of the default.
+    /// - parameter minimumDaysInFirstWeek: A number of minimum days in the first week to use, instead of the default.
+    public init(identifier: __shared Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) {
+        self.init(identifier: identifier)
+        guard timeZone != nil || locale != nil || firstWeekday != nil || minimumDaysInFirstWeek != nil else {
+            return
+        }
+        _calendar = _calendar.copy(changingLocale: locale, changingTimeZone: timeZone, changingFirstWeekday: firstWeekday, changingMinimumDaysInFirstWeek: minimumDaysInFirstWeek)
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
