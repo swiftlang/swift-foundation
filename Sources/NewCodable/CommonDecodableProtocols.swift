@@ -83,17 +83,15 @@ public protocol CommonDecoder: ~Escapable {
     mutating func decodeArray<T: ~Copyable>(_ closure: (inout ArrayDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T
     
     // MARK: - Enum Decoding
-    
-    /// Decodes an enum case with no associated values
+
+    /// Decodes an enum case using a two-phase callback pattern.
+    ///
+    /// The first closure decodes the case field/name. The second closure decodes the
+    /// associated values.
     @_lifetime(self: copy self)
     mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (inout FieldDecoder) throws(CodingError.Decoding) -> T
-    ) throws(CodingError.Decoding) -> T
-    
-    /// Decodes an enum case with associated values
-    @_lifetime(self: copy self)
-    mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (_ caseName: inout FieldDecoder, _ associatedValues: inout StructDecoder) throws(CodingError.Decoding) -> T
+        _ caseDecoder: (inout FieldDecoder) throws(CodingError.Decoding) -> Void,
+        associatedValues valueDecoder: (inout StructDecoder) throws(CodingError.Decoding) -> T
     ) throws(CodingError.Decoding) -> T
     
     @_lifetime(self: copy self)
@@ -397,17 +395,11 @@ public extension CommonDecoder where Self: ~Escapable {
     }
     
     // MARK: - Enum Decoding
-    
+
     @_lifetime(self: copy self)
     mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (inout FieldDecoder) throws(CodingError.Decoding) -> T
-    ) throws(CodingError.Decoding) -> T {
-        throw CodingError.unsupportedDecodingType("enum")
-    }
-    
-    @_lifetime(self: copy self)
-    mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (_ caseName: inout FieldDecoder, _ associatedValues: inout StructDecoder) throws(CodingError.Decoding) -> T
+        _ caseDecoder: (inout FieldDecoder) throws(CodingError.Decoding) -> Void,
+        associatedValues valueDecoder: (inout StructDecoder) throws(CodingError.Decoding) -> T
     ) throws(CodingError.Decoding) -> T {
         throw CodingError.unsupportedDecodingType("enum")
     }

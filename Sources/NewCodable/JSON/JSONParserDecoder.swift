@@ -530,105 +530,22 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
     }
     
     // MARK: - Enum Decoding
-    
-    /// Decodes an enum case with no associated values from `{"caseName":{}}` format
+
+    /// Decodes an enum case from `{"caseName":{...}}` format using a two-phase callback pattern.
+    ///
+    /// Phase 1: Parses the outer `{`, reads the case name key, and calls `caseDecoder`.
+    /// Phase 2: Parses the `:`, then calls `valueDecoder` with a struct decoder for the
+    /// associated values (which may be empty `{}`).
     @_lifetime(self: copy self)
     public mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (inout FieldDecoder) throws(CodingError.Decoding) -> T
+        _ caseDecoder: (inout FieldDecoder) throws(CodingError.Decoding) -> Void,
+        associatedValues valueDecoder: (inout StructDecoder) throws(CodingError.Decoding) -> T
     ) throws(CodingError.Decoding) -> T {
         // Check depth limit before creating container
         guard state.depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries(location: state.reader.sourceLocation).at(self.codingPath)
         }
-        
-        // Set up coding path node for the enum wrapper dictionary
-        var dictionaryNode: InlineArray = [
-            CodingPathNode.newDictionaryNode(withParent: state.currentTopCodingPathNode)
-        ]
-        var nodeSpan = dictionaryNode.mutableSpan
-        state.currentTopCodingPathNode = nodeSpan.withUnsafeMutableBufferPointer {
-            $0.baseAddress!
-        }
-        defer {
-            withExtendedLifetime(nodeSpan) {
-                state.currentTopCodingPathNode.unwindToParent()
-            }
-        }
-        
-        state.depth += 1
-        defer { state.depth -= 1 }
-        
-        do throws(_JSONDecodingError) {
-            // Parse opening brace
-            let openBrace = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
-            guard openBrace == ._openbrace else {
-                throw .json(JSONError.unexpectedCharacter(context: "expecting enum object", ascii: openBrace, location: state.reader.sourceLocation))
-            }
-            state.reader.moveReaderIndex(forwardBy: 1)
-            
-            // Parse the case name (key)
-            let openQuote = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
-            guard openQuote == ._quote else {
-                throw .json(JSONError.unexpectedCharacter(context: "expecting enum case name", ascii: openQuote, location: state.reader.sourceLocation))
-            }
-            state.reader.moveReaderIndex(forwardBy: 1)
-            
-            let caseName = try state.reader.parsedStringContentAndTrailingQuote()
-            
-            // Update coding path
-            state.currentTopCodingPathNode.pointee.setDictionaryKey(caseName.buffer)
-            
-            var fieldDecoder = FieldDecoder(string: caseName)
-            let result = try closure(&fieldDecoder) ^^ .decodingError
-            
-            // Parse colon
-            let colon = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
-            guard colon == ._colon else {
-                throw .json(JSONError.unexpectedCharacter(context: "after enum case name", ascii: colon, location: state.reader.sourceLocation))
-            }
-            state.reader.moveReaderIndex(forwardBy: 1)
-            
-            // Verify empty object value: {}
-            let valueOpenBrace = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
-            guard valueOpenBrace == ._openbrace else {
-                throw .json(JSONError.unexpectedCharacter(context: "expecting empty object for value-less enum", ascii: valueOpenBrace, location: state.reader.sourceLocation))
-            }
-            state.reader.moveReaderIndex(forwardBy: 1)
-            
-            let closeBrace = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
-            guard closeBrace == ._closebrace else {
-                throw .json(JSONError.unexpectedCharacter(context: "expecting empty object for value-less enum", ascii: closeBrace, location: state.reader.sourceLocation))
-            }
-            state.reader.moveReaderIndex(forwardBy: 1)
-            
-            // Parse closing brace of outer object
-            let outerCloseBrace = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
-            guard outerCloseBrace == ._closebrace else {
-                throw .json(JSONError.unexpectedCharacter(context: "after enum value", ascii: outerCloseBrace, location: state.reader.sourceLocation))
-            }
-            state.reader.moveReaderIndex(forwardBy: 1)
-            
-            return result
-        } catch {
-            switch error {
-            case .json(let error):
-                throw error.at(self.codingPath)
-            case .decoding(let error):
-                throw error
-            }
-        }
-    }
-    
-    /// Decodes an enum case with associated values from `{"caseName":{"field1":value1,...}}` format
-    @_lifetime(self: copy self)
-    public mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (_ caseName: inout FieldDecoder, _ associatedValues: inout StructDecoder) throws(CodingError.Decoding) -> T
-    ) throws(CodingError.Decoding) -> T {
-        // Check depth limit before creating container
-        guard state.depth < Self.maximumRecursionDepth else {
-            throw JSONError.tooManyNestedArraysOrDictionaries(location: state.reader.sourceLocation).at(self.codingPath)
-        }
-        
+
         // Set up coding path node for the enum wrapper dictionary
         var outerDictionaryNode: InlineArray = [
             CodingPathNode.newDictionaryNode(withParent: state.currentTopCodingPathNode)
@@ -642,10 +559,10 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
                 state.currentTopCodingPathNode.unwindToParent()
             }
         }
-        
+
         state.depth += 1
         defer { state.depth -= 1 }
-        
+
         do throws(_JSONDecodingError) {
             // Parse opening brace
             let openBrace = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
@@ -653,43 +570,38 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
                 throw .json(JSONError.unexpectedCharacter(context: "expecting enum object", ascii: openBrace, location: state.reader.sourceLocation))
             }
             state.reader.moveReaderIndex(forwardBy: 1)
-            
+
             // Parse the case name (key)
             let openQuote = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
             guard openQuote == ._quote else {
                 throw .json(JSONError.unexpectedCharacter(context: "expecting enum case name", ascii: openQuote, location: state.reader.sourceLocation))
             }
             state.reader.moveReaderIndex(forwardBy: 1)
-            
+
             let caseName = try state.reader.parsedStringContentAndTrailingQuote()
-            
+
             // Update coding path with case name
             state.currentTopCodingPathNode.pointee.setDictionaryKey(caseName.buffer)
-            
+
+            // Phase 1: decode the case field
             var fieldDecoder = FieldDecoder(string: caseName)
-            
+            try caseDecoder(&fieldDecoder) ^^ .decodingError
+
             // Parse colon
             let colon = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
             guard colon == ._colon else {
                 throw .json(JSONError.unexpectedCharacter(context: "after enum case name", ascii: colon, location: state.reader.sourceLocation))
             }
             state.reader.moveReaderIndex(forwardBy: 1)
-            
-            // Parse associated values dictionary - use midContainer: false so it handles the braces
-            let preValueOffset = state.reader.readOffset
-            var valueDecoder: StructDecoder
-            do throws(JSONError) { valueDecoder = try StructDecoder(parserState: state, midContainer: false) } catch { throw .json(error) }
-            let result = try closure(&fieldDecoder, &valueDecoder) ^^ .decodingError
-            
-            // Skip if not consumed, and finish the struct (consume closing brace)
-            if valueDecoder.parserState.reader.readOffset == preValueOffset {
-                try valueDecoder.parserState.skipValue() ^^ .decodingError
-            } else {
-                try valueDecoder._finish() ^^ .decodingError
-            }
-            
-            state.copyRelevantState(from: valueDecoder.parserState)
-            
+
+            // Phase 2: decode associated values via struct decoder
+            var innerDecoder: StructDecoder
+            do throws(JSONError) { innerDecoder = try StructDecoder(parserState: state, midContainer: false) } catch { throw .json(error) }
+            let result = try valueDecoder(&innerDecoder) ^^ .decodingError
+            try innerDecoder._finish() ^^ .decodingError
+
+            state.copyRelevantState(from: innerDecoder.parserState)
+
             // Parse closing brace of outer object
             let next = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
             let foundCloseBrace: Bool
@@ -702,12 +614,12 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
             default:
                 foundCloseBrace = false
             }
-            
+
             guard foundCloseBrace else {
                 throw .json(JSONError.unexpectedCharacter(context: "after enum object", ascii: next, location: state.reader.sourceLocation))
             }
             state.reader.moveReaderIndex(forwardBy: 1)
-            
+
             return result
         } catch {
             switch error {

@@ -25,11 +25,7 @@ extension JSONDecodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        guard validate(declaration: declaration, for: node, in: context) else {
-            return []
-        }
-        
-        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
+        guard let typeDecl = CodableTypeDeclaration(
             attachedTo: declaration,
             for: node,
             providingExtensionsOf: type,
@@ -37,15 +33,9 @@ extension JSONDecodableMacro: ExtensionMacro {
             return []
         }
         
-        let access = accessLevel(of: declaration)
-        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.decodingOnly)
-        let impl = makeDecodableExtension(for: typeName, with: properties, kind: JSONDecodableExpansionKind(), accessLevel: access)
-        return [codingFields, impl].compactMap { $0 }
+        let expansion = JSONCodableExpanion(type: .decodingOnly, accessLevel: accessLevel(of: declaration))
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
+        let impl = typeDecl.makeDecodableExtension(expansion: expansion)
+        return codingFields + impl
     }
 }
-
-struct JSONDecodableExpansionKind: DecodableExpansionKind {
-    var protocolName: String { "JSONDecodable" }
-    var decoderType: String { "inout some JSONDecoderProtocol & ~Escapable" }
-}
-

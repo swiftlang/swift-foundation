@@ -25,11 +25,7 @@ extension CommonDecodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        guard validate(declaration: declaration, for: node, in: context) else {
-            return []
-        }
-        
-        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
+        guard let typeDecl = CodableTypeDeclaration(
             attachedTo: declaration,
             for: node,
             providingExtensionsOf: type,
@@ -37,14 +33,9 @@ extension CommonDecodableMacro: ExtensionMacro {
             return []
         }
         
-        let access = accessLevel(of: declaration)
-        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: CommonCodingFieldExpansionKind.decodingOnly)
-        let impl = makeDecodableExtension(for: typeName, with: properties, kind: CommonDecodableExpansionKind(), accessLevel: access)
-        return [codingFields, impl].compactMap { $0 }
+        let expansion = CommonCodableExpansion(type: .decodingOnly, accessLevel: accessLevel(of: declaration))
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
+        let impl = typeDecl.makeDecodableExtension(expansion: expansion)
+        return codingFields + impl
     }
-}
-
-struct CommonDecodableExpansionKind: DecodableExpansionKind {
-    var protocolName: String { "CommonDecodable" }
-    var decoderType: String { "inout some CommonDecoder & ~Escapable" }
 }

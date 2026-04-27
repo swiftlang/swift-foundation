@@ -649,8 +649,511 @@ struct CommonCodableMacroTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@CommonCodable can only be applied to structs", line: 1, column: 1),
+                DiagnosticSpec(message: "@CommonCodable can only be applied to structs or enums", line: 1, column: 1),
             ],
+            macros: codableTestMacros
+        )
+    }
+
+    // MARK: - Enum Tests
+
+    @Test func enumNoAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @CommonCodable
+            enum Direction {
+                case north
+                case south
+            }
+            """,
+            expandedSource: """
+            enum Direction {
+                case north
+                case south
+            }
+
+            extension Direction {
+                enum CodingFields: StaticStringCodingField {
+                    case north
+                    case south
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .north:
+                            "north"
+                        case .south:
+                            "south"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "north":
+                            .north
+                        case "south":
+                            .south
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension Direction: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .north:
+                        try encoder.encodeEnumCase(CodingFields.north)
+                    case .south:
+                        try encoder.encodeEnumCase(CodingFields.south)
+                    }
+                }
+            }
+
+            extension Direction: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Direction {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .north:
+                            .north
+                        case .south:
+                            .south
+                        }
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
+    @Test func enumWithAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @CommonCodable
+            enum Shape {
+                case circle(radius: Double)
+                case point
+            }
+            """,
+            expandedSource: """
+            enum Shape {
+                case circle(radius: Double)
+                case point
+            }
+
+            extension Shape {
+                enum CodingFields: StaticStringCodingField {
+                    case circle
+                    case point
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .circle:
+                            "circle"
+                        case .point:
+                            "point"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "circle":
+                            .circle
+                        case "point":
+                            .point
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+
+                    enum CircleFields: StaticStringCodingField {
+                        case radius
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .radius:
+                                "radius"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CircleFields {
+                            switch UTF8SpanComparator(key) {
+                            case "radius":
+                                .radius
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some CommonStructDecoder & ~Escapable) throws(CodingError.Decoding) -> Shape {
+                            var radius: Double?
+                            var _field: CircleFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(CircleFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case .radius:
+                                    radius = try valueDecoder.decode(Double.self)
+                                }
+                            }
+                            guard let radius else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .circle(radius: radius)
+                        }
+                    }
+                }
+            }
+
+            extension Shape: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .circle(let radius):
+                        try encoder.encodeEnumCase(CodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.CircleFields.radius, value: radius)
+                        }
+                    case .point:
+                        try encoder.encodeEnumCase(CodingFields.point)
+                    }
+                }
+            }
+
+            extension Shape: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Shape {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .circle:
+                            try CodingFields.CircleFields.decode(from: &valuesDecoder)
+                        case .point:
+                            .point
+                        }
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
+    @Test func enumWithUnlabeledAssociatedValues() {
+        assertMacroExpansion(
+            """
+            @CommonCodable
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+            """,
+            expandedSource: """
+            enum Wrapper {
+                case single(Int)
+                case pair(String, Int)
+            }
+
+            extension Wrapper {
+                enum CodingFields: StaticStringCodingField {
+                    case single
+                    case pair
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .single:
+                            "single"
+                        case .pair:
+                            "pair"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "single":
+                            .single
+                        case "pair":
+                            .pair
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+
+                    enum SingleFields: StaticStringCodingField {
+                        case _0
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> SingleFields {
+                            switch UTF8SpanComparator(key) {
+                            case "_0":
+                                ._0
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some CommonStructDecoder & ~Escapable) throws(CodingError.Decoding) -> Wrapper {
+                            var _0: Int?
+                            var _field: SingleFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(SingleFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case ._0:
+                                    _0 = try valueDecoder.decode(Int.self)
+                                }
+                            }
+                            guard let _0 else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .single(_0)
+                        }
+                    }
+
+                    enum PairFields: StaticStringCodingField {
+                        case _0
+                        case _1
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case ._0:
+                                "_0"
+                            case ._1:
+                                "_1"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> PairFields {
+                            switch UTF8SpanComparator(key) {
+                            case "_0":
+                                ._0
+                            case "_1":
+                                ._1
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some CommonStructDecoder & ~Escapable) throws(CodingError.Decoding) -> Wrapper {
+                            var _0: String?
+                            var _1: Int?
+                            var _field: PairFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(PairFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case ._0:
+                                    _0 = try valueDecoder.decode(String.self)
+                                case ._1:
+                                    _1 = try valueDecoder.decode(Int.self)
+                                }
+                            }
+                            guard let _0, let _1 else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .pair(_0, _1)
+                        }
+                    }
+                }
+            }
+
+            extension Wrapper: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .single(let _0):
+                        try encoder.encodeEnumCase(CodingFields.single, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.SingleFields._0, value: _0)
+                        }
+                    case .pair(let _0, let _1):
+                        try encoder.encodeEnumCase(CodingFields.pair, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: CodingFields.PairFields._0, value: _0)
+                            try valueEncoder.encode(field: CodingFields.PairFields._1, value: _1)
+                        }
+                    }
+                }
+            }
+
+            extension Wrapper: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Wrapper {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .single:
+                            try CodingFields.SingleFields.decode(from: &valuesDecoder)
+                        case .pair:
+                            try CodingFields.PairFields.decode(from: &valuesDecoder)
+                        }
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
+    @Test func enumWithCustomCodingKey() {
+        assertMacroExpansion(
+            """
+            @CommonCodable
+            enum Status {
+                @CodingKey("in_progress") case inProgress
+                case done
+            }
+            """,
+            expandedSource: """
+            enum Status {
+                case inProgress
+                case done
+            }
+
+            extension Status {
+                enum CodingFields: StaticStringCodingField {
+                    case inProgress
+                    case done
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .inProgress:
+                            "in_progress"
+                        case .done:
+                            "done"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "in_progress":
+                            .inProgress
+                        case "done":
+                            .done
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension Status: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .inProgress:
+                        try encoder.encodeEnumCase(CodingFields.inProgress)
+                    case .done:
+                        try encoder.encodeEnumCase(CodingFields.done)
+                    }
+                }
+            }
+
+            extension Status: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Status {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .inProgress:
+                            .inProgress
+                        case .done:
+                            .done
+                        }
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
+    @Test func enumWithDecodableAlias() {
+        assertMacroExpansion(
+            """
+            @CommonCodable
+            enum Status {
+                @DecodableAlias("in-progress") @CodingKey("in_progress") case inProgress
+                case done
+            }
+            """,
+            expandedSource: """
+            enum Status {
+                case inProgress
+                case done
+            }
+
+            extension Status {
+                enum CodingFields: StaticStringCodingField {
+                    case inProgress
+                    case done
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .inProgress:
+                            "in_progress"
+                        case .done:
+                            "done"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "in_progress":
+                            .inProgress
+                        case "in-progress":
+                            .inProgress
+                        case "done":
+                            .done
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+                }
+            }
+
+            extension Status: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    switch self {
+                    case .inProgress:
+                        try encoder.encodeEnumCase(CodingFields.inProgress)
+                    case .done:
+                        try encoder.encodeEnumCase(CodingFields.done)
+                    }
+                }
+            }
+
+            extension Status: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Status {
+                    var _codingField: CodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .inProgress:
+                            .inProgress
+                        case .done:
+                            .done
+                        }
+                    }
+                }
+            }
+            """,
             macros: codableTestMacros
         )
     }

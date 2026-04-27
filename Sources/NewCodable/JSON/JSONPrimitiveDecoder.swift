@@ -297,53 +297,33 @@ public struct JSONPrimitiveDecoder: JSONDecoderProtocol {
     }
     
     // MARK: - Enum Decoding
-    
-    /// Decodes an enum case with no associated values from `{"caseName":{}}` format
+
+    /// Decodes an enum case from `{"caseName":{...}}` format using a two-phase callback pattern.
     public mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (inout FieldDecoder) throws(CodingError.Decoding) -> T
+        _ caseDecoder: (inout FieldDecoder) throws(CodingError.Decoding) -> Void,
+        associatedValues valueDecoder: (inout StructDecoder) throws(CodingError.Decoding) -> T
     ) throws(CodingError.Decoding) -> T {
         guard case let .dictionary(elements) = value else {
             throw value.typeMismatchError(expectedTypeDescription: "dictionary", at: self.codingPath)
         }
-        
+
         guard elements.count == 1 else {
             throw CodingError.dataCorrupted(at: self.codingPath, debugDescription: "Expected exactly one key-value pair for enum case, has \(elements.count)")
         }
-        
+
         let (caseName, caseValue) = elements.first!
+
+        // Phase 1: decode the case field
         var fieldDecoder = FieldDecoder(string: caseName)
-        let result = try closure(&fieldDecoder)
-        
-        // Verify the value is an empty dictionary
-        guard case let .dictionary(innerElements) = caseValue, innerElements.isEmpty else {
-            throw CodingError.dataCorrupted(at: self.codingPath, debugDescription: "Expected empty dictionary for value-less enum case")
-        }
-        
-        return result
-    }
-    
-    /// Decodes an enum case with associated values from `{"caseName":{"field1":value1,...}}` format
-    public mutating func decodeEnumCase<T: ~Copyable>(
-        _ closure: (_ caseName: inout FieldDecoder, _ associatedValues: inout StructDecoder) throws(CodingError.Decoding) -> T
-    ) throws(CodingError.Decoding) -> T {
-        guard case let .dictionary(elements) = value else {
-            throw value.typeMismatchError(expectedTypeDescription: "dictionary", at: self.codingPath)
-        }
-        
-        guard elements.count == 1 else {
-            throw CodingError.dataCorrupted(at: self.codingPath, debugDescription: "Expected exactly one key-value pair for enum case, has \(elements.count)")
-        }
-        
-        let (caseName, caseValue) = elements.first!
-        var fieldDecoder = FieldDecoder(string: caseName)
-        
-        // The value should be a dictionary containing the associated values
+        try caseDecoder(&fieldDecoder)
+
+        // Phase 2: decode associated values via struct decoder
         guard case let .dictionary(associatedElements) = caseValue else {
             throw value.typeMismatchError(expectedTypeDescription: "dictionary", at: self.codingPath)
         }
-        
+
         var structDecoder = try StructDecoder(elements: associatedElements, options: self.options, codingPath: self.codingPath.appending(caseName), depth: self.depth)
-        return try closure(&fieldDecoder, &structDecoder)
+        return try valueDecoder(&structDecoder)
     }
         
     // TODO: See below on [Element] decoder for relevant comments.

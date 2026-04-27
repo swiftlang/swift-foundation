@@ -594,9 +594,11 @@ struct NewCodableTests {
             }
             
             static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Tests {
-                return try decoder.decodeEnumCase { fieldDecoder, valuesDecoder throws(CodingError.Decoding) in
-                    let field = try fieldDecoder.decode(CodingFields.self)
-                    return switch field {
+                var _codingField: CodingFields?
+                return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                    _codingField = try fieldDecoder.decode(CodingFields.self)
+                } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                    return switch _codingField! {
                     case .allUntagged: try decodeAllUntagged(from: &valuesDecoder)
                     case .someTagged: try decodeSomeTagged(from: &valuesDecoder)
                     case .allTagged: try decodeAllTagged(from: &valuesDecoder)
@@ -654,9 +656,11 @@ struct NewCodableTests {
             }
             
             static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> NoAssociatedType {
-                try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                    let field = try fieldDecoder.decode(CodingFields.self)
-                    return switch field {
+                var _codingField: CodingFields?
+                return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                    _codingField = try fieldDecoder.decode(CodingFields.self)
+                } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                    return switch _codingField! {
                     case .one: .one
                     case .two: .two
                     case .three: .three
@@ -798,19 +802,19 @@ struct NewCodableTests {
         let result = try decoder.decode(CodableStructWithAliasedProperty.self, from: qux)
         #expect(result.bar == "hello")
     }
-
+    
     @JSONCodable
     struct Person: Equatable {
-        let name: String
-        let address: Address
-        
-        struct Address: Codable, Equatable {
-            let city: String
-            let state: String
-            let zip: Int
+            let name: String
+            let address: Address
+            
+            struct Address: Codable, Equatable {
+                let city: String
+                let state: String
+                let zip: Int
+            }
         }
-    }
-    
+        
     @Test func testEmbeddedEncodableForJSON() throws {
         let testValue = Person(
             name: "John",
@@ -2210,7 +2214,7 @@ struct NewCodableTests {
         #expect(result.items.count == 3)
         
         // Verify each item has the correct coding path with array indices
-        Testing.__checkBinaryOperation(result.items[0].capturedCodingPath.count,{ $0 == $1() },2,expression: .__fromBinaryOperation(.__fromSyntaxNode("result.items[0].capturedCodingPath.count"),"==",.__fromSyntaxNode("2")),comments: [.__line("// Verify each item has the correct coding path with array indices")],isRequired: false,sourceLocation: Testing.SourceLocation.__here()).__expected()
+        #expect(result.items[0].capturedCodingPath.count == 2)
         #expect(result.items[0].capturedCodingPath[0].stringValue == "items")
         #expect(result.items[0].capturedCodingPath[1].intValue == 0)
         #expect(result.items[0].id == 100)

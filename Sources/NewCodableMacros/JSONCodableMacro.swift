@@ -24,11 +24,7 @@ extension JSONCodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        guard validate(declaration: declaration, for: node, in: context) else {
-            return []
-        }
-        
-        guard let (typeName, properties) = extractTypeNameAndStoredProperties(
+        guard let typeDecl = CodableTypeDeclaration(
             attachedTo: declaration,
             for: node,
             providingExtensionsOf: type,
@@ -36,27 +32,32 @@ extension JSONCodableMacro: ExtensionMacro {
             return []
         }
         
-        let access = accessLevel(of: declaration)
-        let codingFields = makeCodingFieldsExtension(for: typeName, from: properties, kind: JSONCodingFieldKind.both)
-        let encodingImpl = makeEncodableExtension(for: typeName, with: properties, kind: JSONEncodableExpansionKind(), accessLevel: access)
-        let decodingImpl = makeDecodableExtension(for: typeName, with: properties, kind: JSONDecodableExpansionKind(), accessLevel: access)
-        return [codingFields, encodingImpl, decodingImpl].compactMap { $0 }
+        let expansion = JSONCodableExpanion(type: .both, accessLevel: accessLevel(of: declaration))
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
+        let encodingImpl = typeDecl.makeEncodableExtension(expansion: expansion)
+        let decodingImpl = typeDecl.makeDecodableExtension(expansion: expansion)
+        return codingFields + encodingImpl + decodingImpl
     }
 }
 
-enum JSONCodingFieldKind: CodingFieldExpansionKind {
-    case encodingOnly
-    case decodingOnly
-    case both
+struct JSONCodableExpanion: CodableExpansion {
+    let type: CodableExpansionType
+    let accessLevel: CodableDeclarationAccessLevel
     
-    var protocolName: String {
-        switch self {
-        case .encodingOnly:
-            return "JSONOptimizedEncodingField"
-        case .decodingOnly:
-            return "JSONOptimizedDecodingField"
-        case .both:
-            return "JSONOptimizedCodingField"
+    var fieldProtocolName: String {
+        switch type {
+        case .encodingOnly: "JSONOptimizedEncodingField"
+        case .decodingOnly: "JSONOptimizedDecodingField"
+        case .both: "JSONOptimizedCodingField"
         }
     }
+    
+    let encodableProtocolName = "JSONEncodable"
+    let decodableProtocolName = "JSONDecodable"
+    let combinedProtocolName = "JSONCodable"
+
+    let decoderType = "some JSONDecoderProtocol & ~Escapable"
+    let structDecoderType = "some JSONDictionaryDecoder & ~Escapable"
+    
+    let encoderType = "JSONDirectEncoder"
 }

@@ -127,25 +127,21 @@ struct JSONEncodableMacroIntegrationTests {
         let post = SimplePost(title: "Hello", body: "World")
         let data = try NewJSONEncoder().encode(post)
         let json = String(data: data, encoding: .utf8)!
-        #expect(json.contains("\"title\":\"Hello\""))
-        #expect(json.contains("\"body\":\"World\""))
+        #expect(json == #"{"title":"Hello","body":"World"}"#)
     }
 
     @Test func customCodingKey() throws {
         let post = BlogPost(title: "Test", publishDate: "2026-01-01", tags: ["swift"], rating: 4.5)
         let data = try NewJSONEncoder().encode(post)
         let json = String(data: data, encoding: .utf8)!
-        #expect(json.contains("\"date_published\":\"2026-01-01\""))
-        #expect(json.contains("\"title\":\"Test\""))
-        #expect(json.contains("\"tags\":[\"swift\"]"))
-        #expect(json.contains("\"rating\":4.5"))
+        #expect(json == #"{"title":"Test","date_published":"2026-01-01","tags":["swift"],"rating":4.5}"#)
     }
 
     @Test func optionalNilValue() throws {
         let post = BlogPost(title: "Test", publishDate: "2026-01-01", tags: [], rating: nil)
         let data = try NewJSONEncoder().encode(post)
         let json = String(data: data, encoding: .utf8)!
-        #expect(json.contains("\"rating\":null"))
+        #expect(json == #"{"title":"Test","date_published":"2026-01-01","tags":[],"rating":null}"#)
     }
 
     @Test func emptyStruct() throws {
@@ -162,6 +158,8 @@ struct JSONDecodableMacroIntegrationTests {
     @Test func roundTripBasic() throws {
         let original = RoundTripPerson(name: "Alice", age: 30)
         let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"name":"Alice","age":30}"#)
         let decoded = try NewJSONDecoder().decode(RoundTripPerson.self, from: data)
         #expect(decoded.name == "Alice")
         #expect(decoded.age == 30)
@@ -171,7 +169,7 @@ struct JSONDecodableMacroIntegrationTests {
         let original = RoundTripPost(title: "Hello", publishDate: "2026-01-01", rating: 4.5)
         let data = try NewJSONEncoder().encode(original)
         let json = String(data: data, encoding: .utf8)!
-        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        #expect(json == #"{"title":"Hello","date_published":"2026-01-01","rating":4.5}"#)
         let decoded = try NewJSONDecoder().decode(RoundTripPost.self, from: data)
         #expect(decoded.title == "Hello")
         #expect(decoded.publishDate == "2026-01-01")
@@ -213,12 +211,44 @@ struct JSONDecodableMacroIntegrationTests {
     }
 }
 
+@JSONCodable
+enum SimpleStatus: Equatable {
+    case active
+    case inactive
+}
+
+@JSONCodable
+enum TaskStatus: Equatable {
+    @CodingKey("in_progress") case inProgress
+    case done
+}
+
+@JSONCodable
+enum FlexibleStatus: Equatable {
+    @DecodableAlias("in-progress") @CodingKey("in_progress") case inProgress
+    case done
+}
+
+@JSONCodable
+enum Shape: Equatable {
+    case circle(radius: Double)
+    case point
+}
+
+@JSONCodable
+enum Wrapper: Equatable {
+    case single(Int)
+    case pair(String, Int)
+}
+
 @Suite("@JSONCodable Macro Integration")
 struct JSONCodableMacroIntegrationTests {
 
     @Test func roundTrip() throws {
         let original = CodablePerson(name: "Alice", age: 30)
         let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"name":"Alice","age":30}"#)
         let decoded = try NewJSONDecoder().decode(CodablePerson.self, from: data)
         #expect(decoded.name == "Alice")
         #expect(decoded.age == 30)
@@ -228,7 +258,7 @@ struct JSONCodableMacroIntegrationTests {
         let original = CodablePost(title: "Hello", publishDate: "2026-01-01", rating: 4.5)
         let data = try NewJSONEncoder().encode(original)
         let json = String(data: data, encoding: .utf8)!
-        #expect(json.contains("\"date_published\":\"2026-01-01\""))
+        #expect(json == #"{"title":"Hello","date_published":"2026-01-01","rating":4.5}"#)
         let decoded = try NewJSONDecoder().decode(CodablePost.self, from: data)
         #expect(decoded.title == "Hello")
         #expect(decoded.publishDate == "2026-01-01")
@@ -249,5 +279,74 @@ struct JSONCodableMacroIntegrationTests {
         let decoded = try NewJSONDecoder().decode(PublicCodablePerson.self, from: data)
         #expect(decoded.name == "Alice")
         #expect(decoded.age == 30)
+    }
+
+    @Test func enumWithoutAssociatedValues() throws {
+        let original = SimpleStatus.active
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"active":{}}"#)
+        let decoded = try NewJSONDecoder().decode(SimpleStatus.self, from: data)
+        #expect(decoded == original)
+
+        let inactive = SimpleStatus.inactive
+        let data2 = try NewJSONEncoder().encode(inactive)
+        let json2 = String(data: data2, encoding: .utf8)!
+        #expect(json2 == #"{"inactive":{}}"#)
+        let decoded2 = try NewJSONDecoder().decode(SimpleStatus.self, from: data2)
+        #expect(decoded2 == inactive)
+    }
+
+    @Test func enumWithCodingKey() throws {
+        let original = TaskStatus.inProgress
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"in_progress":{}}"#)
+        let decoded = try NewJSONDecoder().decode(TaskStatus.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func enumWithDecodableAlias() throws {
+        let original = FlexibleStatus.inProgress
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"in_progress":{}}"#)
+
+        // Decode using the alias key
+        let aliasJSON = Data(#"{"in-progress":{}}"#.utf8)
+        let decoded = try NewJSONDecoder().decode(FlexibleStatus.self, from: aliasJSON)
+        #expect(decoded == .inProgress)
+    }
+
+    @Test func enumWithLabeledAssociatedValues() throws {
+        let circle = Shape.circle(radius: 3.14)
+        let data = try NewJSONEncoder().encode(circle)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"circle":{"radius":3.14}}"#)
+        let decoded = try NewJSONDecoder().decode(Shape.self, from: data)
+        #expect(decoded == circle)
+
+        let point = Shape.point
+        let data2 = try NewJSONEncoder().encode(point)
+        let json2 = String(data: data2, encoding: .utf8)!
+        #expect(json2 == #"{"point":{}}"#)
+        let decoded2 = try NewJSONDecoder().decode(Shape.self, from: data2)
+        #expect(decoded2 == point)
+    }
+
+    @Test func enumWithUnlabeledAssociatedValues() throws {
+        let single = Wrapper.single(42)
+        let data = try NewJSONEncoder().encode(single)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"single":{"_0":42}}"#)
+        let decoded = try NewJSONDecoder().decode(Wrapper.self, from: data)
+        #expect(decoded == single)
+
+        let pair = Wrapper.pair("hello", 99)
+        let data2 = try NewJSONEncoder().encode(pair)
+        let json2 = String(data: data2, encoding: .utf8)!
+        #expect(json2 == #"{"pair":{"_0":"hello","_1":99}}"#)
+        let decoded2 = try NewJSONDecoder().decode(Wrapper.self, from: data2)
+        #expect(decoded2 == pair)
     }
 }
