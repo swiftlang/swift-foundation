@@ -714,43 +714,33 @@ extension JSONParserDecoder {
             @inline(__always)
             @_lifetime(self: copy self)
             mutating func matchExpectedString(_ str: StaticString) throws(JSONError) -> Bool {
-                do {
-                    let cmp = try bytes.extracting(unchecked: readOffset..<endOffset).withUnsafeBytes { buff in
-                        if buff.count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
-                        return memcmp(buff.baseAddress!, str.utf8Start, str.utf8CodeUnitCount)
-                    }
-                    guard cmp == 0 else {
-                        return false
-                    }
-                    
-                    // If all looks good, advance past the string.
-                    self.moveReaderIndex(forwardBy: str.utf8CodeUnitCount)
-                    return true
-                } catch {
-                    // TODO: Remove unsavory workaroud
-                    throw error as! JSONError
+                let cmp = try bytes.extracting(unchecked: readOffset..<endOffset).withUnsafeBytes { buff throws(JSONError) in
+                    if buff.count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
+                    return memcmp(buff.baseAddress!, str.utf8Start, str.utf8CodeUnitCount)
                 }
+                guard cmp == 0 else {
+                    return false
+                }
+                
+                // If all looks good, advance past the string.
+                self.moveReaderIndex(forwardBy: str.utf8CodeUnitCount)
+                return true
             }
 
             @inlinable
             @inline(__always)
             @_lifetime(self: copy self)
             mutating func readExpectedString(_ str: StaticString, typeDescriptor: String) throws(JSONError) {
-                do {
-                    let cmp = try bytes.extracting(unchecked: readOffset..<endOffset).withUnsafeBytes { buff in
-                        if buff.count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
-                        return memcmp(buff.baseAddress!, str.utf8Start, str.utf8CodeUnitCount)
-                    }
-                    guard cmp == 0 else {
-                        throw errorForUnmatchedCharacter(in: str, typeDescriptor: typeDescriptor)
-                    }
-                    
-                    // If all looks good, advance past the string.
-                    self.moveReaderIndex(forwardBy: str.utf8CodeUnitCount)
-                } catch {
-                    // TODO: Remove unsavory workaroud
-                    throw error as! JSONError
+                let cmp = try bytes.extracting(unchecked: readOffset..<endOffset).withUnsafeBytes { buff throws(JSONError) in
+                    if buff.count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
+                    return memcmp(buff.baseAddress!, str.utf8Start, str.utf8CodeUnitCount)
                 }
+                guard cmp == 0 else {
+                    throw errorForUnmatchedCharacter(in: str, typeDescriptor: typeDescriptor)
+                }
+                
+                // If all looks good, advance past the string.
+                self.moveReaderIndex(forwardBy: str.utf8CodeUnitCount)
             }
 
             @inlinable
