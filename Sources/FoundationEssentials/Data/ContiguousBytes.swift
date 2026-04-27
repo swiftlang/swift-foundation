@@ -137,9 +137,20 @@ extension Data : ContiguousBytes { }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeRawBufferPointer : ContiguousBytes {
-    // TODO: Generalize for typed throws
-    @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    // TODO: This should be limited to DATA_LEGACY_ABI once clients are rebuilt
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    @abi(func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    func __legacy_withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R {
+        return try withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         return try body(self)
     }
 
@@ -152,9 +163,20 @@ extension UnsafeRawBufferPointer : ContiguousBytes {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeMutableRawBufferPointer : ContiguousBytes {
-    // TODO: Generalize for typed throws
-    @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    // TODO: This should be limited to DATA_LEGACY_ABI once clients are rebuilt
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    @abi(func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    func __legacy_withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R {
+        return try withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
 
@@ -168,9 +190,20 @@ extension UnsafeMutableRawBufferPointer : ContiguousBytes {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
-    // TODO: Generalize for typed throws
-    @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    // TODO: This should be limited to DATA_LEGACY_ABI once clients are rebuilt
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    @abi(func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    func __legacy_withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R {
+        return try withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
 
@@ -184,9 +217,20 @@ extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
-    // TODO: Generalize for typed throws
-    @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    // TODO: This should be limited to DATA_LEGACY_ABI once clients are rebuilt
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    @abi(func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    func __legacy_withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R {
+        return try withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
 
@@ -200,9 +244,20 @@ extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension EmptyCollection : ContiguousBytes where Element == UInt8 {
-    // TODO: Generalize for typed throws
-    @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    // TODO: This should be limited to DATA_LEGACY_ABI once clients are rebuilt
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    @abi(func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    func __legacy_withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R {
+        return try withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         return try body(UnsafeRawBufferPointer(start: nil, count: 0))
     }
 
@@ -216,11 +271,22 @@ extension EmptyCollection : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
-    // TODO: Generalize for typed throws
-    @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    // TODO: This should be limited to DATA_LEGACY_ABI once clients are rebuilt
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    @abi(func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    func __legacy_withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R {
+        return try withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         let element = self.first!
-        return try Swift.withUnsafeBytes(of: element) { (buffer) in
+        return try Swift.withUnsafeBytes(of: element) { (buffer) throws(E) in
             return try body(buffer)
         }
     }
@@ -240,15 +306,39 @@ extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Slice : ContiguousBytes where Base : ContiguousBytes {
-    // TODO: Generalize for typed throws
-    @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    // TODO: This should be limited to DATA_LEGACY_ABI once clients are rebuilt
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    @abi(func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    func __legacy_withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) throws -> R {
+        return try withUnsafeBytes(body)
+    }
+
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
         let offset = base.distance(from: base.startIndex, to: self.startIndex)
-        return try base.withUnsafeBytes { ptr in
+        #if !hasFeature(Embedded)
+        do {
+            return try base.withUnsafeBytes { (ptr) in
+                let slicePtr = ptr.baseAddress?.advanced(by: offset)
+                let sliceBuffer = UnsafeRawBufferPointer(start: slicePtr, count: self.count)
+                return try body(sliceBuffer)
+            }
+        } catch let error {
+            // Note: withUnsafeBytes is rethrowing, so we have an "any Error" here that needs casting.
+            throw error as! E
+        }
+        #else
+        return try base.withUnsafeBytes { (ptr) throws(E) in
             let slicePtr = ptr.baseAddress?.advanced(by: offset)
             let sliceBuffer = UnsafeRawBufferPointer(start: slicePtr, count: self.count)
             return try body(sliceBuffer)
         }
+        #endif
     }
 }
 
