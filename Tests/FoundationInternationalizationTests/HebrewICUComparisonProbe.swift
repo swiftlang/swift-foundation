@@ -29,6 +29,145 @@ private struct HebrewICUComparisonProbe {
         s + String(repeating: " ", count: max(0, width - s.count))
     }
 
+    // MARK: - Helpers (used by topic-specific tests below)
+
+    private static func makePair() -> (icu: _CalendarICU, ours: _CalendarHebrew) {
+        let icu = _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
+        )
+        let ours = _CalendarHebrew(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
+        )
+        return (icu, ours)
+    }
+
+    /// Construct a Date from Gregorian y/m/d/h/m/s at GMT.
+    private static func g(_ y: Int, _ m: Int, _ d: Int, hour: Int = 12, minute: Int = 0, second: Int = 0) -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .gmt
+        var dc = DateComponents()
+        dc.year = y; dc.month = m; dc.day = d
+        dc.hour = hour; dc.minute = minute; dc.second = second
+        dc.timeZone = .gmt
+        return cal.date(from: dc)!
+    }
+
+    /// Construct a Date from Hebrew y/m/d (civil month ordering, noon GMT) using ICU.
+    /// Returns nil if the date isn't representable (e.g., Adar I 30 in a common year).
+    private static func h(_ y: Int, _ m: Int, _ d: Int, icu: _CalendarICU) -> Date? {
+        let cal = Calendar(inner: icu)
+        var dc = DateComponents()
+        dc.year = y; dc.month = m; dc.day = d; dc.hour = 12
+        dc.timeZone = .gmt
+        guard let date = cal.date(from: dc) else { return nil }
+        let check = cal.dateComponents([.year, .month, .day], from: date)
+        return (check.year == y && check.month == m && check.day == d) ? date : nil
+    }
+
+    /// Hebrew year length in days, via ICU.
+    private static func hebrewYearLength(_ year: Int, icu: _CalendarICU) -> Int? {
+        guard let s = h(year, 1, 1, icu: icu),
+              let e = h(year + 1, 1, 1, icu: icu) else { return nil }
+        return Int((e.timeIntervalSince(s) / 86400.0).rounded())
+    }
+
+    /// Run every protocol-level surface check for one date; append divergences.
+    private static func compareAt(
+        label: String, date: Date,
+        icu: _CalendarICU, ours: _CalendarHebrew,
+        divergences: inout [String]
+    ) {
+        func cmp(_ field: String, _ a: Any?, _ b: Any?) {
+            let aa = "\(a ?? "nil")"
+            let bb = "\(b ?? "nil")"
+            if aa != bb {
+                divergences.append("[\(label)] \(field): ICU=\(aa) ours=\(bb)")
+            }
+        }
+
+        let fields: Calendar.ComponentSet = [
+            .era, .year, .month, .day, .hour, .minute, .second,
+            .weekday, .weekdayOrdinal, .quarter,
+            .weekOfMonth, .weekOfYear, .yearForWeekOfYear,
+            .dayOfYear, .isLeapMonth
+        ]
+        let ic = icu.dateComponents(fields, from: date, in: .gmt)
+        let oc = ours.dateComponents(fields, from: date, in: .gmt)
+        cmp("dc.era",               ic.era,               oc.era)
+        cmp("dc.year",              ic.year,              oc.year)
+        cmp("dc.month",             ic.month,             oc.month)
+        cmp("dc.day",               ic.day,               oc.day)
+        cmp("dc.hour",              ic.hour,              oc.hour)
+        cmp("dc.minute",            ic.minute,            oc.minute)
+        cmp("dc.second",            ic.second,            oc.second)
+        cmp("dc.weekday",           ic.weekday,           oc.weekday)
+        cmp("dc.weekdayOrdinal",    ic.weekdayOrdinal,    oc.weekdayOrdinal)
+        cmp("dc.quarter",           ic.quarter,           oc.quarter)
+        cmp("dc.weekOfMonth",       ic.weekOfMonth,       oc.weekOfMonth)
+        cmp("dc.weekOfYear",        ic.weekOfYear,        oc.weekOfYear)
+        cmp("dc.yearForWeekOfYear", ic.yearForWeekOfYear, oc.yearForWeekOfYear)
+        cmp("dc.dayOfYear",         ic.dayOfYear,         oc.dayOfYear)
+        cmp("dc.isLeapMonth",       ic.isLeapMonth,       oc.isLeapMonth)
+
+        for c in [Calendar.Component.era, .year, .month, .day, .hour, .quarter,
+                  .weekOfYear, .weekOfMonth, .yearForWeekOfYear] {
+            let iv = icu.dateInterval(of: c, for: date)
+            let ov = ours.dateInterval(of: c, for: date)
+            cmp("dateInterval(\(c)).duration",
+                iv.map { Int($0.duration) },
+                ov.map { Int($0.duration) })
+        }
+
+        let ordPairs: [(Calendar.Component, Calendar.Component)] = [
+            (.day, .year), (.day, .month), (.month, .year), (.hour, .day),
+            (.month, .quarter), (.weekOfYear, .year), (.weekOfMonth, .month),
+            (.weekday, .year), (.weekday, .month), (.weekday, .weekOfYear),
+            (.weekdayOrdinal, .month), (.quarter, .year)
+        ]
+        for (s, l) in ordPairs {
+            cmp("ordinality(\(s),\(l))",
+                icu.ordinality(of: s, in: l, for: date),
+                ours.ordinality(of: s, in: l, for: date))
+        }
+
+        let rangePairs: [(Calendar.Component, Calendar.Component)] = [
+            (.day, .year), (.day, .month), (.month, .year),
+            (.weekOfYear, .year), (.weekOfMonth, .month)
+        ]
+        for (s, l) in rangePairs {
+            cmp("range(\(s),\(l))",
+                icu.range(of: s, in: l, for: date).map { "\($0.lowerBound)..<\($0.upperBound)" },
+                ours.range(of: s, in: l, for: date).map { "\($0.lowerBound)..<\($0.upperBound)" })
+        }
+
+        for c in [Calendar.Component.day, .weekOfYear, .weekOfMonth, .weekdayOrdinal,
+                  .month, .year, .quarter, .yearForWeekOfYear, .hour] {
+            var dc = DateComponents()
+            dc.setValue(1, for: c)
+            cmp("date(byAdding:.\(c))",
+                icu.date(byAdding: dc, to: date, wrappingComponents: false).map { "\($0)" },
+                ours.date(byAdding: dc, to: date, wrappingComponents: false).map { "\($0)" })
+        }
+
+        cmp("isDateInWeekend", icu.isDateInWeekend(date), ours.isDateInWeekend(date))
+    }
+
+    private static func reportAndAssert(_ topic: String, _ divergences: [String], dateCount: Int) {
+        print("\n=== \(topic): \(dateCount) dates ===")
+        if divergences.isEmpty {
+            print("  ✓ zero divergences")
+        } else {
+            print("  ✘ \(divergences.count) divergences:")
+            for d in divergences.prefix(50) { print("    \(d)") }
+            if divergences.count > 50 {
+                print("    … (truncated at 50; total \(divergences.count))")
+            }
+        }
+        #expect(divergences.isEmpty, "[\(topic)] \(divergences.count) divergences")
+    }
+
     @Test func compareFieldsSideBySide() {
         let icu = _CalendarICU(
             identifier: .hebrew, timeZone: .gmt, locale: nil,
@@ -187,130 +326,343 @@ private struct HebrewICUComparisonProbe {
     // Sweep across multiple dates covering every tricky Hebrew edge case.
     // Compares ICU vs ours on every date-dependent surface; reports only divergences.
     @Test func sweepMultipleDates() {
-        let icu = _CalendarICU(
-            identifier: .hebrew, timeZone: .gmt, locale: nil,
-            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
-        )
-        let ours = _CalendarHebrew(
-            identifier: .hebrew, timeZone: .gmt, locale: nil,
-            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
-        )
-
-        var gregCal = Calendar(identifier: .gregorian)
-        gregCal.timeZone = .gmt
-        func makeDate(_ y: Int, _ m: Int, _ d: Int, hour: Int = 12) -> Date {
-            var dc = DateComponents()
-            dc.year = y; dc.month = m; dc.day = d; dc.hour = hour
-            dc.timeZone = .gmt
-            return gregCal.date(from: dc)!
-        }
+        let (icu, ours) = Self.makePair()
 
         // Edge-case probe dates.
         // 5776 = leap year, 385 days. Rosh Hashanah 5776 = 2015-09-14.
         // 5785 = common year, 355 days. Rosh Hashanah 5785 = 2024-10-03.
         // 5786 = common year. Rosh Hashanah 5786 = 2025-09-23.
         let probeDates: [(label: String, date: Date)] = [
-            ("leap-year mid (Elul 20, 5776)",       makeDate(2016, 9, 23)),
-            ("common-year mid (Adar 1, 5785)",      makeDate(2025, 3, 1)),
-            ("leap year first day (Tishri 1, 5776)", makeDate(2015, 9, 14)),
-            ("common year first day (Tishri 1, 5786)", makeDate(2025, 9, 23)),
-            ("leap year Adar I (Adar I 1, 5776)",   makeDate(2016, 2, 10)),
-            ("leap year Adar II (Adar II 1, 5776)", makeDate(2016, 3, 11)),
-            ("Cheshvan 30, 5776 (long Marheshvan)", makeDate(2015, 11, 12)),
-            ("Kislev 25, 5777 (Hanukkah common year)", makeDate(2016, 12, 25)),
-            ("Passover 15 Nisan 5776",              makeDate(2016, 4, 23)),
-            ("mid-5778 common year",                makeDate(2017, 12, 15)),
+            ("leap-year mid (Elul 20, 5776)",       Self.g(2016, 9, 23)),
+            ("common-year mid (Adar 1, 5785)",      Self.g(2025, 3, 1)),
+            ("leap year first day (Tishri 1, 5776)", Self.g(2015, 9, 14)),
+            ("common year first day (Tishri 1, 5786)", Self.g(2025, 9, 23)),
+            ("leap year Adar I (Adar I 1, 5776)",   Self.g(2016, 2, 10)),
+            ("leap year Adar II (Adar II 1, 5776)", Self.g(2016, 3, 11)),
+            ("Cheshvan 30, 5776 (long Marheshvan)", Self.g(2015, 11, 12)),
+            ("Kislev 25, 5777 (Hanukkah common year)", Self.g(2016, 12, 25)),
+            ("Passover 15 Nisan 5776",              Self.g(2016, 4, 23)),
+            ("mid-5778 common year",                Self.g(2017, 12, 15)),
         ]
 
         var divergences: [String] = []
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Multi-date sweep (10 hand-picked edge cases)", divergences, dateCount: probeDates.count)
+    }
 
-        func compare(_ label: String, _ date: Date, _ field: String, _ icuVal: Any?, _ ourVal: Any?) {
-            let icuStr = "\(icuVal ?? "nil")"
-            let ourStr = "\(ourVal ?? "nil")"
-            if icuStr != ourStr {
-                divergences.append("[\(label)] \(field): ICU=\(icuStr) ours=\(ourStr)")
+    // MARK: - Topic-specific edge-case probes
+
+    /// Topic 1: All 6 Hebrew year-length regimes
+    /// (common deficient/regular/complete = 353/354/355; leap = 383/384/385).
+    @Test func yearLengthVariants_allSixRegimes() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        var found: [Int: Int] = [:]
+        for y in 5750...5810 {
+            guard let len = Self.hebrewYearLength(y, icu: icu) else { continue }
+            if found[len] == nil { found[len] = y }
+            if found.count >= 6 { break }
+        }
+
+        var probeDates: [(String, Date)] = []
+        for (length, year) in found.sorted(by: { $0.key < $1.key }) {
+            for (offset, where_) in [(1, "day-2"), (length / 2, "mid"), (length - 2, "near-end")] {
+                if let yearStart = Self.h(year, 1, 1, icu: icu) {
+                    let date = yearStart.addingTimeInterval(86400.0 * Double(offset))
+                    probeDates.append(("\(year) (\(length)d) \(where_)", date))
+                }
             }
         }
 
         for (label, d) in probeDates {
-            // dateComponents (all fields)
-            let fields: Calendar.ComponentSet = [
-                .era, .year, .month, .day, .hour, .minute, .second,
-                .weekday, .weekdayOrdinal, .quarter,
-                .weekOfMonth, .weekOfYear, .yearForWeekOfYear,
-                .dayOfYear, .isLeapMonth
-            ]
-            let ic = icu.dateComponents(fields, from: d, in: .gmt)
-            let oc = ours.dateComponents(fields, from: d, in: .gmt)
-            compare(label, d, "dateComponents.era",               ic.era,               oc.era)
-            compare(label, d, "dateComponents.year",              ic.year,              oc.year)
-            compare(label, d, "dateComponents.month",             ic.month,             oc.month)
-            compare(label, d, "dateComponents.day",               ic.day,               oc.day)
-            compare(label, d, "dateComponents.weekday",           ic.weekday,           oc.weekday)
-            compare(label, d, "dateComponents.weekdayOrdinal",    ic.weekdayOrdinal,    oc.weekdayOrdinal)
-            compare(label, d, "dateComponents.quarter",           ic.quarter,           oc.quarter)
-            compare(label, d, "dateComponents.weekOfMonth",       ic.weekOfMonth,       oc.weekOfMonth)
-            compare(label, d, "dateComponents.weekOfYear",        ic.weekOfYear,        oc.weekOfYear)
-            compare(label, d, "dateComponents.yearForWeekOfYear", ic.yearForWeekOfYear, oc.yearForWeekOfYear)
-            compare(label, d, "dateComponents.dayOfYear",         ic.dayOfYear,         oc.dayOfYear)
-            compare(label, d, "dateComponents.isLeapMonth",       ic.isLeapMonth,       oc.isLeapMonth)
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 1: yearLengthVariants (6 regimes × 3 sample points)",
+                             divergences, dateCount: probeDates.count)
+    }
 
-            // dateInterval (durations; starts not compared — different behavior on the hour
-            // may drift by DST but duration reveals the bug scope).
-            for comp in [Calendar.Component.era, .year, .month, .day, .hour, .quarter,
-                         .weekOfYear, .weekOfMonth, .yearForWeekOfYear] {
-                let iv = icu.dateInterval(of: comp, for: d)
-                let ov = ours.dateInterval(of: comp, for: d)
-                compare(label, d, "dateInterval(\(comp)).duration",
-                        iv.map { Int($0.duration) }, ov.map { Int($0.duration) })
-            }
+    /// Topic 2: Cheshvan and Kislev length boundaries.
+    /// Cheshvan = 30 only in complete years; Kislev = 30 in regular/complete.
+    @Test func cheshvanKislev_lengthBoundaries() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
 
-            // ordinality pairs
-            let ordPairs: [(Calendar.Component, Calendar.Component)] = [
-                (.day, .year), (.day, .month), (.month, .year), (.hour, .day),
-                (.month, .quarter), (.weekOfYear, .year), (.weekOfMonth, .month),
-                (.weekday, .year), (.weekday, .month), (.weekday, .weekOfYear),
-                (.weekdayOrdinal, .month), (.quarter, .year)
-            ]
-            for (s, l) in ordPairs {
-                compare(label, d, "ordinality(\(s), \(l))",
-                        icu.ordinality(of: s, in: l, for: d),
-                        ours.ordinality(of: s, in: l, for: d))
-            }
+        var found: [Int: Int] = [:]
+        for y in 5750...5810 {
+            guard let len = Self.hebrewYearLength(y, icu: icu) else { continue }
+            if found[len] == nil { found[len] = y }
+            if found.count >= 6 { break }
+        }
 
-            // range pairs
-            let rangePairs: [(Calendar.Component, Calendar.Component)] = [
-                (.day, .year), (.day, .month), (.month, .year),
-                (.weekOfYear, .year), (.weekOfMonth, .month)
-            ]
-            for (s, l) in rangePairs {
-                compare(label, d, "range(\(s), \(l))",
-                        icu.range(of: s, in: l, for: d).map { "\($0.lowerBound)..<\($0.upperBound)" },
-                        ours.range(of: s, in: l, for: d).map { "\($0.lowerBound)..<\($0.upperBound)" })
-            }
-
-            // date(byAdding:)
-            for comp in [Calendar.Component.day, .weekOfYear, .weekOfMonth, .weekdayOrdinal,
-                         .month, .year, .quarter, .yearForWeekOfYear, .hour] {
-                var dc = DateComponents()
-                dc.setValue(1, for: comp)
-                let iv = icu.date(byAdding: dc, to: d, wrappingComponents: false)
-                let ov = ours.date(byAdding: dc, to: d, wrappingComponents: false)
-                compare(label, d, "date(byAdding: .\(comp))",
-                        iv.map { "\($0)" }, ov.map { "\($0)" })
+        var probeDates: [(String, Date)] = []
+        for (length, year) in found.sorted(by: { $0.key < $1.key }) {
+            for (m, d, name) in [
+                (2, 29, "Cheshvan29"), (2, 30, "Cheshvan30"),
+                (3, 1,  "Kislev1"),   (3, 29, "Kislev29"),
+                (3, 30, "Kislev30"),  (4, 1,  "Tevet1"),
+            ] {
+                if let date = Self.h(year, m, d, icu: icu) {
+                    probeDates.append(("\(year)(\(length)d) \(name)", date))
+                }
             }
         }
 
-        print("\n=== Multi-date sweep: \(probeDates.count) dates × ~50 observations each ===")
-        if divergences.isEmpty {
-            print("  ✓ zero divergences")
-        } else {
-            print("  ✘ \(divergences.count) divergences:")
-            for d in divergences.prefix(50) { print("    \(d)") }
-            if divergences.count > 50 {
-                print("    … (truncated at 50; total \(divergences.count))")
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 2: cheshvanKislev_lengthBoundaries",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 3: A complete 19-year Metonic cycle (Hebrew years 5763–5781).
+    @Test func metonicCycle_nineteenYears() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        var probeDates: [(String, Date)] = []
+        for year in 5763...5781 {
+            if let rh = Self.h(year, 1, 1, icu: icu) {
+                probeDates.append(("\(year) RH", rh))
             }
         }
-        #expect(divergences.isEmpty, "\(divergences.count) ICU parity divergences across \(probeDates.count) probe dates")
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 3: metonicCycle (19 consecutive years)",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 4: Rosh Hashanah postponement (dehiyot) — RH may only fall on Mon/Tue/Thu/Sat.
+    /// Find one year landing RH on each allowed weekday, probe RH and the boundary days.
+    @Test func roshHashanahPostponement_allFourAllowedDays() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+        let cal = Calendar(inner: icu)
+
+        var found: [Int: Int] = [:]
+        for y in 5750...5800 {
+            guard let rh = Self.h(y, 1, 1, icu: icu) else { continue }
+            let wd = cal.component(.weekday, from: rh)
+            if found[wd] == nil { found[wd] = y }
+            if found.count == 4 { break }
+        }
+
+        var probeDates: [(String, Date)] = []
+        for (wd, year) in found.sorted(by: { $0.key < $1.key }) {
+            guard let rh = Self.h(year, 1, 1, icu: icu) else { continue }
+            probeDates.append(("\(year) RH (wd=\(wd))", rh))
+            probeDates.append(("\(year-1) day before RH", rh.addingTimeInterval(-86400)))
+            probeDates.append(("\(year) Tishrei 2", rh.addingTimeInterval(86400)))
+        }
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 4: roshHashanahPostponement (4 weekdays × 3 boundary days)",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 5: Adar I → Adar II mid-leap-year transition.
+    /// Adar I (m=6) is 30 days, Adar II (m=7) is 29 days. Common years skip Adar I.
+    @Test func adarTransition_leapYearMidYearBoundary() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        let leapYears = [5779, 5782, 5784]
+        var probeDates: [(String, Date)] = []
+        for year in leapYears {
+            for (m, d, name) in [
+                (6, 1,  "AdarI 1"),
+                (6, 15, "AdarI 15"),
+                (6, 30, "AdarI 30 (last)"),
+                (7, 1,  "AdarII 1"),
+                (7, 14, "AdarII 14 (Purim)"),
+                (7, 29, "AdarII 29 (last)"),
+                (8, 1,  "Nisan 1"),
+            ] {
+                if let date = Self.h(year, m, d, icu: icu) {
+                    probeDates.append(("\(year) \(name)", date))
+                }
+            }
+        }
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 5: adarTransition (3 leap years × 7 boundary days)",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 6: Year boundaries — last days of Elul + first 2 days of next year.
+    /// Mix of common-year-end and leap-year-end transitions.
+    @Test func yearBoundaries_commonAndLeap() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        var probeDates: [(String, Date)] = []
+        for year in [5777, 5778, 5779, 5780, 5781, 5782, 5783, 5784, 5785, 5786] {
+            guard let nextRh = Self.h(year + 1, 1, 1, icu: icu) else { continue }
+            let elulLast = nextRh.addingTimeInterval(-86400)
+            let elulPenultimate = nextRh.addingTimeInterval(-2 * 86400)
+            let tishreiTwo = nextRh.addingTimeInterval(86400)
+            probeDates.append(("\(year)→\(year+1) Elul-1", elulPenultimate))
+            probeDates.append(("\(year)→\(year+1) Elul last", elulLast))
+            probeDates.append(("\(year+1) Tishrei 1", nextRh))
+            probeDates.append(("\(year+1) Tishrei 2", tishreiTwo))
+        }
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 6: yearBoundaries (10 transitions × 4 days)",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 7: Last day of every valid month (29 or 30) across mixed years.
+    @Test func monthBoundaries_unusualLengths() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        var probeDates: [(String, Date)] = []
+        for year in [5778, 5779, 5780, 5781] {
+            for m in 1...13 {
+                for d in [29, 30] {
+                    if let date = Self.h(year, m, d, icu: icu) {
+                        probeDates.append(("\(year) M\(m) D\(d)", date))
+                    }
+                }
+            }
+        }
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 7: monthBoundaries (4 years × valid 29/30 days)",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 8: Major Jewish holidays in both common and leap years.
+    @Test func majorHolidays_commonAndLeap() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        // (m, d, name) — civil month ordering
+        let common: [(Int, Int, String)] = [
+            (1, 1,  "RoshHashanah"),  (1, 10, "YomKippur"),
+            (1, 15, "Sukkot"),        (1, 22, "SheminiAtzeret"),
+            (3, 25, "Hanukkah"),
+            (6, 14, "Purim (Adar 14)"), (6, 15, "ShushanPurim"),
+            (7, 15, "Passover (Nisan 15)"),
+            (9, 6,  "Shavuot (Sivan 6)"),
+        ]
+        let leap: [(Int, Int, String)] = [
+            (1, 1,  "RoshHashanah"),  (1, 10, "YomKippur"),
+            (1, 15, "Sukkot"),        (1, 22, "SheminiAtzeret"),
+            (3, 25, "Hanukkah"),
+            (7, 14, "Purim (AdarII 14)"), (7, 15, "ShushanPurim"),
+            (8, 15, "Passover (Nisan 15)"),
+            (10, 6, "Shavuot (Sivan 6)"),
+        ]
+
+        var probeDates: [(String, Date)] = []
+        for year in [5778, 5780, 5781] {
+            for (m, d, name) in common {
+                if let date = Self.h(year, m, d, icu: icu) {
+                    probeDates.append(("\(year) \(name)", date))
+                }
+            }
+        }
+        for year in [5779, 5782, 5784] {
+            for (m, d, name) in leap {
+                if let date = Self.h(year, m, d, icu: icu) {
+                    probeDates.append(("\(year) \(name)", date))
+                }
+            }
+        }
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 8: majorHolidays (3 common + 3 leap × ~9 holidays)",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 9: Time-of-day edge cases (midnight, noon, end-of-day, sub-second).
+    @Test func timeOfDay_edgeCases() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        let baseDay = Self.g(2024, 6, 15, hour: 0)
+        let probeDates: [(String, Date)] = [
+            ("00:00:00.000",            baseDay),
+            ("00:00:00.001",            baseDay.addingTimeInterval(0.001)),
+            ("00:00:01.000",            baseDay.addingTimeInterval(1)),
+            ("06:00:00",                baseDay.addingTimeInterval(6 * 3600)),
+            ("11:59:59",                baseDay.addingTimeInterval(11 * 3600 + 59 * 60 + 59)),
+            ("12:00:00 (ICU noon)",     baseDay.addingTimeInterval(12 * 3600)),
+            ("12:00:00.001",            baseDay.addingTimeInterval(12 * 3600 + 0.001)),
+            ("18:00:00",                baseDay.addingTimeInterval(18 * 3600)),
+            ("23:59:58",                baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 58)),
+            ("23:59:59",                baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 59)),
+            ("23:59:59.500",            baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 59.5)),
+            ("23:59:59.999",            baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 59.999)),
+            ("next-day 00:00:00",       baseDay.addingTimeInterval(86400)),
+        ]
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 9: timeOfDay_edgeCases",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 11: Far past and far future Gregorian dates.
+    /// Spans roughly 600 CE → 2300 CE, well beyond Hebcal regression (1900–2100).
+    @Test func farPastAndFarFuture() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        let probeDates: [(String, Date)] = [
+            ("0600-06-15", Self.g(600, 6, 15)),
+            ("0900-06-15", Self.g(900, 6, 15)),
+            ("1200-06-15", Self.g(1200, 6, 15)),
+            ("1500-06-15", Self.g(1500, 6, 15)),
+            ("1700-06-15", Self.g(1700, 6, 15)),
+            ("1850-06-15", Self.g(1850, 6, 15)),
+            ("2150-06-15", Self.g(2150, 6, 15)),
+            ("2200-06-15", Self.g(2200, 6, 15)),
+            ("2300-06-15", Self.g(2300, 6, 15)),
+        ]
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 11: farPastAndFarFuture",
+                             divergences, dateCount: probeDates.count)
+    }
+
+    /// Topic 13: Week-of-year edge cases at year wrap (15 days centered on RH).
+    @Test func weekOfYear_yearWrap() {
+        let (icu, ours) = Self.makePair()
+        var divergences: [String] = []
+
+        var probeDates: [(String, Date)] = []
+        for year in [5777, 5778, 5779, 5780, 5781, 5782] {
+            guard let nextRh = Self.h(year + 1, 1, 1, icu: icu) else { continue }
+            for off in -7...7 {
+                let date = nextRh.addingTimeInterval(86400.0 * Double(off))
+                probeDates.append(("\(year)→\(year+1) day\(off >= 0 ? "+" : "")\(off)", date))
+            }
+        }
+
+        for (label, d) in probeDates {
+            Self.compareAt(label: label, date: d, icu: icu, ours: ours, divergences: &divergences)
+        }
+        Self.reportAndAssert("Topic 13: weekOfYear_yearWrap (6 transitions × 15 days)",
+                             divergences, dateCount: probeDates.count)
     }
 }

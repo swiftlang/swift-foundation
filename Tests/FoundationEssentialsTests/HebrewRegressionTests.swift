@@ -77,6 +77,20 @@ private struct HebrewCalendarRegressionTests {
         var failures: [String] = []
         let maxReportedFailures = 20
 
+        // Known ICU/Hebcal divergence: at Hebrew year 5806 (= Gregorian 2045-09-22 through
+        // 2046-09-21), swift-foundation-icu's `hebrwcal.cpp` applies Lo ADU + Betutakpat
+        // *chained* (separate `if` after Lo ADU), making 5806 = 385d (complete leap).
+        // Hebcal follows standard R&D where the dehiyot are mutually exclusive, making
+        // 5806 = 384d (regular leap). The 1-day shift propagates from 2045-11-10 through
+        // 2046-11-29 (385 days), then both calendars realign at Hebcal's Kislev 1 of 5807.
+        // Our `_CalendarHebrew` deliberately matches swift-foundation-icu (PARITY mandate),
+        // so these days are skipped from the Hebcal comparison.
+        func gregorianInICUHebcalDivergenceWindow(_ year: Int, _ month: Int, _ day: Int) -> Bool {
+            // 2045-11-10 ≤ d ≤ 2046-11-29
+            let val = year * 10000 + month * 100 + day
+            return val >= 2045_11_10 && val <= 2046_11_29
+        }
+
         for i in 1..<lines.count {   // skip header
             let line = lines[i]
             if line.isEmpty { continue }
@@ -120,6 +134,10 @@ private struct HebrewCalendarRegressionTests {
             }
 
             if gotYear != hy || gotMonth != expectedMonth || gotDay != hd {
+                // Skip the documented ICU/Hebcal disagreement window in Hebrew year 5806.
+                if gregorianInICUHebcalDivergenceWindow(gy, gm, gd) {
+                    continue
+                }
                 if failures.count < maxReportedFailures {
                     failures.append("\(gy)-\(gm)-\(gd): got heb \(gotYear)/\(gotMonth)/\(gotDay), expected \(hy)/\(expectedMonth)/\(hd) (\(monthName))")
                 } else if failures.count == maxReportedFailures {

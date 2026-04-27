@@ -321,7 +321,11 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             // "Nth Monday/Tuesday/etc. of month."
             return (day - 1) / 7 + 1
         case (.weekday, .weekOfYear):
-            return comps.weekday
+            // Position within the firstWeekday-anchored week (1..7). When
+            // firstWeekday=1 (Sun), this equals the raw weekday; otherwise
+            // it rotates so that the first weekday is 1.
+            guard let weekday = comps.weekday else { return nil }
+            return ((weekday - firstWeekday + 7) % 7) + 1
         case (.weekdayOrdinal, .month):
             // Same as (.weekday, .month): "Nth occurrence of this weekday in month."
             return (day - 1) / 7 + 1
@@ -434,10 +438,17 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             }
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .yearForWeekOfYear:
+            // Use the date's yearForWeekOfYear, NOT its Hebrew calendar year — these
+            // differ near RH because weekOfYear can wrap into the previous or next
+            // calendar year (e.g. last days of Elul belonging to next year's week 1,
+            // or Tishrei 1–6 belonging to prior year's last week).
+            let weekYearComps = dateComponents([.yearForWeekOfYear], from: date, in: tz)
+            guard let weekYearInt = weekYearComps.yearForWeekOfYear else { return nil }
+            let weekYear = Int32(weekYearInt)
             // Start = first day of week 1 of this yearForWeekOfYear.
             // Duration = (weeks in this year) × 7 days (in local seconds, DST-aware).
-            let rdStart = firstDayOfWeekYear(year)
-            let rdEnd = firstDayOfWeekYear(year + 1)
+            let rdStart = firstDayOfWeekYear(weekYear)
+            let rdEnd = firstDayOfWeekYear(weekYear + 1)
             let daysSinceRefStart = rdStart - Self.rataDieAtDateReference
             let daysSinceRefEnd = rdEnd - Self.rataDieAtDateReference
             let utcStart = Date(timeIntervalSinceReferenceDate: Double(daysSinceRefStart) * 86400)
@@ -529,38 +540,23 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             guard let end = localMidnight(year: ny, civilMonth: nm, day: nd, in: tz) else { return nil }
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .hour:
-            var startComps = DateComponents()
-            startComps.era = 0
-            startComps.timeZone = tz
-            startComps.year = yearInt
-            startComps.month = civilMonthInt
-            startComps.day = dayInt
-            startComps.hour = comps.hour ?? 0
-            guard let start = self.date(from: startComps) else { return nil }
-            return DateInterval(start: start, duration: 3600)
+            // Local-floor to hour boundary, then back to UTC. Avoids the .former-policy
+            // ambiguity hazard at DST repeats: re-constructing via date(from:) with
+            // ymd+hour can land in the wrong UTC half of a repeated wall-clock window.
+            // Mirrors _CalendarGregorian.dateInterval(of: .hour).
+            let ti = Double(tz.secondsFromGMT(for: date))
+            let time = date.timeIntervalSinceReferenceDate
+            var fixedTime = time + ti
+            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = fixedTime - ti
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: fixedTime), duration: 3600.0)
         case .minute:
-            var startComps = DateComponents()
-            startComps.era = 0
-            startComps.timeZone = tz
-            startComps.year = yearInt
-            startComps.month = civilMonthInt
-            startComps.day = dayInt
-            startComps.hour = comps.hour ?? 0
-            startComps.minute = comps.minute ?? 0
-            guard let start = self.date(from: startComps) else { return nil }
-            return DateInterval(start: start, duration: 60)
+            // Minute and second don't depend on TZ — float floor on UTC seconds is fine.
+            let time = date.timeIntervalSinceReferenceDate
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0), duration: 60.0)
         case .second:
-            var startComps = DateComponents()
-            startComps.era = 0
-            startComps.timeZone = tz
-            startComps.year = yearInt
-            startComps.month = civilMonthInt
-            startComps.day = dayInt
-            startComps.hour = comps.hour ?? 0
-            startComps.minute = comps.minute ?? 0
-            startComps.second = comps.second ?? 0
-            guard let start = self.date(from: startComps) else { return nil }
-            return DateInterval(start: start, duration: 1)
+            let time = date.timeIntervalSinceReferenceDate
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time)), duration: 1.0)
         case .nanosecond:
             return DateInterval(start: date, duration: 1e-9)
         case .isLeapMonth, .isRepeatedDay, .calendar, .timeZone:
@@ -618,7 +614,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     // MARK: - Date ↔ DateComponents
 
     /// Rata Die day number of Date's reference instant (midnight UTC, Jan 1 2001).
-    private static let rataDieAtDateReference: Int64 = 730_486
+    internal static let rataDieAtDateReference: Int64 = 730_486
 
     /// Convert a local-seconds-since-reference value to (RD, seconds-in-day).
     private static func rataDieAndSecondsInDay(localSeconds: Double) -> (rd: Int64, secondsInDay: Double) {
@@ -630,14 +626,22 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     /// Given a fixed-day RD + local-seconds-within-day, build a UTC Date after
     /// subtracting the TimeZone offset at that local instant.
-    private func utcDate(fromRataDie rd: Int64, secondsInDay: Double, in timeZone: TimeZone,
+    /// Internal (not private) so tests can verify policy parity against `_CalendarGregorian`.
+    ///
+    /// Note: `skippedTimePolicy` is accepted for API compatibility but **not passed
+    /// through** to `TimeZone.rawAndDaylightSavingTimeOffset` — this exactly matches
+    /// `_CalendarGregorian.date(from:inTimeZone:dstRepeatedTimePolicy:dstSkippedTimePolicy:)`,
+    /// which also drops the skipped policy at the TZ-offset query boundary.
+    /// Verified by `utcDate_allPolicyCombinations_matchGregorian`.
+    internal func utcDate(fromRataDie rd: Int64, secondsInDay: Double, in timeZone: TimeZone,
                         repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy,
                         skippedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> Date {
+        _ = skippedTimePolicy   // silenced — see doc comment
         let daysSinceRef = rd &- Self.rataDieAtDateReference
         let secondsAsIfUTC = Double(daysSinceRef) * 86400 + secondsInDay
         let tmpDate = Date(timeIntervalSinceReferenceDate: secondsAsIfUTC)
         let (tzOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(
-            for: tmpDate, repeatedTimePolicy: repeatedTimePolicy, skippedTimePolicy: skippedTimePolicy)
+            for: tmpDate, repeatedTimePolicy: repeatedTimePolicy)
         return tmpDate - Double(tzOffset) - dstOffset
     }
 
@@ -680,10 +684,12 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
-        // Shift to local time by adding the TZ offset, then floor to a day number.
-        let (tzOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(
-            for: date, repeatedTimePolicy: .former, skippedTimePolicy: .former)
-        let localSeconds = date.timeIntervalSinceReferenceDate + Double(tzOffset) + dstOffset
+        // For UTC→local extraction the offset at a given Date is unique — match
+        // _CalendarGregorian by using `secondsFromGMT(for:)` instead of the
+        // policy-parameterized rawAndDaylightSavingTimeOffset (which can resolve
+        // ambiguously at DST transitions when using .former/.latter).
+        let totalOffset = timeZone.secondsFromGMT(for: date)
+        let localSeconds = date.timeIntervalSinceReferenceDate + Double(totalOffset)
         let (rd, secondsInDay) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
 
         let (year, biblicalMonth, day) = HebrewArithmetic.hebrewFromFixed(rd)
@@ -920,19 +926,17 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                 year: newYear, civilMonth: UInt8(newCivilMonth)))
             let clampedDay = min(d, monthLength)
 
-            var newDC = DateComponents()
-            newDC.era = 0
-            newDC.year = Int(newYear)
-            newDC.month = Int(newCivilMonth)
-            newDC.day = clampedDay
-            newDC.hour = currentComps.hour ?? 0
-            newDC.minute = currentComps.minute ?? 0
-            newDC.second = currentComps.second ?? 0
-            newDC.nanosecond = currentComps.nanosecond ?? 0
-            newDC.timeZone = tz
-
-            guard let repackaged = self.date(from: newDC) else { return nil }
-            result = repackaged
+            // Build the UTC Date directly via utcDate using .latter for repeated-time
+            // policy — matches _CalendarGregorian's year/month/yearForWeekOfYear add.
+            guard let biblicalNew = HebrewArithmetic.civilToBiblical(year: newYear, civilMonth: UInt8(newCivilMonth)) else { return nil }
+            let rdNew = HebrewArithmetic.fixedFromHebrew(year: newYear, month: biblicalNew, day: UInt8(clampedDay))
+            var secondsInDay: Double = 0
+            if let h = currentComps.hour    { secondsInDay += Double(h) * 3600 }
+            if let m = currentComps.minute  { secondsInDay += Double(m) * 60 }
+            if let s = currentComps.second  { secondsInDay += Double(s) }
+            if let n = currentComps.nanosecond { secondsInDay += Double(n) / 1e9 }
+            result = utcDate(fromRataDie: rdNew, secondsInDay: secondsInDay, in: tz,
+                            repeatedTimePolicy: .former, skippedTimePolicy: .former)
         }
 
         // Step 3: day-level additions (day, week units, weekday etc.) collapse into a single
@@ -966,15 +970,12 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
         if daysToAdd != 0 {
             // DST-aware offset-delta path: keep same local time across DST boundaries.
+            // Use secondsFromGMT (single offset at a UTC instant) to match _CalendarGregorian.
             let tz = self.timeZone
-            let (offset1, dst1) = tz.rawAndDaylightSavingTimeOffset(
-                for: result, repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let totalOffset1 = Double(offset1) + dst1
+            let totalOffset1 = tz.secondsFromGMT(for: result)
             let candidate = result + Double(daysToAdd) * 86400
-            let (offset2, dst2) = tz.rawAndDaylightSavingTimeOffset(
-                for: candidate, repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let totalOffset2 = Double(offset2) + dst2
-            result = candidate - (totalOffset2 - totalOffset1)
+            let totalOffset2 = tz.secondsFromGMT(for: candidate)
+            result = candidate - Double(totalOffset2 - totalOffset1)
         }
 
         // Step 4: time-of-day additions (plain TimeInterval — no DST adjustment).
@@ -1058,7 +1059,12 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             break
         }
 
-        // Calendar-level components: iteratively add/subtract until one more step overshoots.
+        // Calendar-level components: bisect-style search using cumulative add from `start`.
+        // IMPORTANT: each trial is `start + n * component`, not iterative `current + 1`.
+        // The cumulative form avoids day-clamp accumulation across month boundaries.
+        // Example: from AdarI-30, iterative +1 month → AdarII-29 (clamped) → Nisan-29 (preserved-from-clamp).
+        // Cumulative +2 months → Nisan-30 (clamps from original day=30 to Nisan's max=30, fits).
+        // Matches ICU's diff iteration; the iterative form was producing 1-day drift across DST/leap edges.
         let forward = end > start
         let step = forward ? 1 : -1
         var diff = 0
@@ -1066,9 +1072,10 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         var safety = 0
 
         while true {
+            let trial = diff + step
             var dc = DateComponents()
-            dc.setValue(step, for: component)
-            guard let nextStep = date(byAdding: dc, to: current, wrappingComponents: false) else {
+            dc.setValue(trial, for: component)
+            guard let nextStep = date(byAdding: dc, to: start, wrappingComponents: false) else {
                 break
             }
             if nextStep == current {
@@ -1078,7 +1085,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             let overshoot = forward ? (nextStep > end) : (nextStep < end)
             if overshoot { break }
             current = nextStep
-            diff += step
+            diff = trial
 
             // Safety bound in case of pathological inputs.
             safety += 1
@@ -1165,37 +1172,53 @@ internal enum HebrewArithmetic {
 
     // MARK: Elapsed Days (Molad Arithmetic)
 
-    /// Days elapsed from the Sunday noon before the epoch to the molad of Tishri.
+    /// Days elapsed from the Sunday noon before the epoch to the start of the
+    /// given Hebrew year, with **all four dehiyot** applied inline:
+    ///   - **Lo ADU Rosh** — RH may not fall on Sun/Wed/Fri.
+    ///   - **Molad Zaken** — molad at noon or later → +1 (subsumed by Lo ADU's wd shift).
+    ///   - **Gatarad** — common year, molad on Tue at/after 9h+204p AM → +2 (prevents 356d).
+    ///   - **Betutakpat** — year after a leap, molad on Mon at/after 15h+589p AM → +1 (prevents 382d).
     ///
-    /// Returns `Int64`: at year ≈ ±5.88 M this value crosses ±2.15 × 10^9, which
-    /// would overflow Int32. Uses `floorDiv` on both internal divisions.
+    /// Matches `swift-foundation-icu/icuSources/i18n/hebrwcal.cpp` `startOfYear`.
+    /// IMPORTANT: that file diverges from upstream icu4c — the Gatarad/Betutakpat
+    /// checks are a separate `if` block AFTER Lo ADU (not else-if), so Lo ADU's
+    /// wd shift can chain into Betutakpat. e.g. Hebrew year 5462 raw wd=Sun → Lo
+    /// ADU shifts to Mon → Betutakpat (since 5461 was leap and frac > threshold)
+    /// shifts to Tue. RH 5462 = 1701-10-04 (Tue) instead of 1701-10-03 (Mon).
+    /// The previous R&D post-hoc `yearLengthCorrection` couldn't model this chain.
     static func calendarElapsedDays(_ year: Int32) -> Int64 {
         let monthsElapsed = floorDiv(235 &* Int64(year) &- 234, 19)
         let partsElapsed = 12084 &+ 13753 &* monthsElapsed
-        let days = 29 &* monthsElapsed &+ floorDiv(partsElapsed, 25920)
+        var days = 29 &* monthsElapsed &+ floorDiv(partsElapsed, 25920)
+        var frac = partsElapsed % 25920
+        if frac < 0 { frac &+= 25920 }
 
-        var r = (3 &* (days &+ 1)) % 7
-        if r < 0 { r += 7 }
-        if r < 3 {
-            return days &+ 1
-        } else {
-            return days
+        // wd numbering matches ICU: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun.
+        var wd = days % 7
+        if wd < 0 { wd &+= 7 }
+
+        if wd == 2 || wd == 4 || wd == 6 {
+            // Lo ADU Rosh: postpone Sun/Wed/Fri RH by 1 day.
+            days &+= 1
+            wd = days % 7
+            if wd < 0 { wd &+= 7 }
         }
-    }
-
-    /// Dehiyyot correction keeping year lengths in {353,354,355,383,384,385}.
-    static func yearLengthCorrection(_ year: Int32) -> UInt8 {
-        let ny0 = calendarElapsedDays(year - 1)
-        let ny1 = calendarElapsedDays(year)
-        let ny2 = calendarElapsedDays(year + 1)
-        if (ny2 - ny1) == 356 { return 2 }
-        else if (ny1 - ny0) == 382 { return 1 }
-        else { return 0 }
+        // NOTE: separate `if` (not else-if) — matches swift-foundation-icu, not
+        // upstream icu4c. After Lo ADU shifts a Sunday RH to Monday, Betutakpat
+        // can still fire.
+        if wd == 1 && frac > 15 &* 1080 &+ 204 && !isLeapYear(year) {
+            // Gatarad: common year, molad after 9:11:20.6 AM Tuesday → prevent 356-day year.
+            days &+= 2
+        } else if wd == 0 && frac > 21 &* 1080 &+ 589 && isLeapYear(year &- 1) {
+            // Betutakpat: year after leap, molad after 15:32:43.6 AM Monday → prevent 382-day year.
+            days &+= 1
+        }
+        return days
     }
 
     /// Fixed date of Tishri 1 (Hebrew New Year) for the given year.
     static func newYear(_ year: Int32) -> Int64 {
-        return epoch &+ calendarElapsedDays(year) &+ Int64(yearLengthCorrection(year))
+        return epoch &+ calendarElapsedDays(year)
     }
 
     // MARK: YearData (cached per conversion)
@@ -1214,24 +1237,12 @@ internal enum HebrewArithmetic {
 
         init(year: Int32) {
             self.year = year
-            let ny0 = HebrewArithmetic.calendarElapsedDays(year - 1)
+            // calendarElapsedDays now applies all four dehiyot inline (matching
+            // ICU's startOfYear), so no post-hoc correction is needed here.
             let ny1 = HebrewArithmetic.calendarElapsedDays(year)
             let ny2 = HebrewArithmetic.calendarElapsedDays(year + 1)
-            let corr0: UInt8
-            if (ny2 - ny1) == 356 { corr0 = 2 }
-            else if (ny1 - ny0) == 382 { corr0 = 1 }
-            else { corr0 = 0 }
-            let nyThis = HebrewArithmetic.epoch &+ ny1 &+ Int64(corr0)
-            self.newYear = nyThis
-
-            // Compute next year's length directly to get this year's length.
-            let ny3 = HebrewArithmetic.calendarElapsedDays(year + 2)
-            let corr1: UInt8
-            if (ny3 - ny2) == 356 { corr1 = 2 }
-            else if (ny2 - ny1) == 382 { corr1 = 1 }
-            else { corr1 = 0 }
-            let nyNext = HebrewArithmetic.epoch &+ ny2 &+ Int64(corr1)
-            self.yearLen = Int32(nyNext &- nyThis)
+            self.newYear = HebrewArithmetic.epoch &+ ny1
+            self.yearLen = Int32(ny2 &- ny1)
 
             self.isLeap = HebrewArithmetic.isLeapYear(year)
             self.longMarheshvan = self.yearLen == 355 || self.yearLen == 385
