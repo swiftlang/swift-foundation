@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 internal struct JSONWriter: ~Copyable, ~Escapable {
     
     // Structures with container nesting deeper than this limit are not valid.
