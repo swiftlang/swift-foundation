@@ -65,14 +65,24 @@ protocol CodableExpansion: Equatable {
     /// The access level that the macro should use for codable protocol conformances
     var accessLevel: CodableDeclarationAccessLevel { get }
 
-    /// The name of the field protocol, which will differ depending on whether we're adding just encodable, just decodable, or both.
-    var fieldProtocolName: String { get }
-    
     /// The encodable/decodable/combined protocol names.
     var encodableProtocolName: String { get }
     var decodableProtocolName: String { get }
     var combinedProtocolName: String { get }
+
+    /// The name of the field protocol, which will differ depending on whether we're adding just encodable, just decodable, or both.
+    var fieldProtocolName: String { get }
     
+    /// The name of the generated CodingFields enum type. Each format uses a distinct name
+    /// so that multiple codable macros can be stacked on the same type without conflicts.
+    var fieldTypeName: String { get }
+
+    /// Whether the generated field enum should include key lookup functionality
+    var fieldTypeIncludesKeyLookup: Bool { get }
+    
+    /// Whether the generated field enum should include an "unknown" case
+    var fieldTypeIncludesUnknownCase: Bool { get }
+        
     /// The decoder parameter type in the decode function signature (without `inout`)
     var decoderType: String { get }
     
@@ -81,12 +91,6 @@ protocol CodableExpansion: Equatable {
     
     /// The encoder parameter type in the encode function signature (without `inout`)
     var encoderType: String { get }
-    
-    /// Whether the generated field enum should include key lookup functionality
-    var fieldTypeIncludesKeyLookup: Bool { get }
-    
-    /// Whether the generated field enum should include an "unknown" case
-    var fieldTypeIncludesUnknownCase: Bool { get }
 }
 
 extension CodableExpansion {
@@ -429,7 +433,7 @@ func makeCodingFieldsExtension (
 
         decl = """
         extension \(typeName) {
-            enum CodingFields: \(raw: expansion.fieldProtocolName) {
+            enum \(raw: expansion.fieldTypeName): \(raw: expansion.fieldProtocolName) {
                 \(raw: cases)
 
                 @_transparent
@@ -439,7 +443,7 @@ func makeCodingFieldsExtension (
                     }
                 }
 
-                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> \(raw: expansion.fieldTypeName) {
                     switch UTF8SpanComparator(key) {
                     \(raw: fieldForKeyCases)
                     default:
@@ -452,7 +456,7 @@ func makeCodingFieldsExtension (
     } else {
         decl = """
         extension \(typeName) {
-            enum CodingFields: \(raw: expansion.fieldProtocolName) {
+            enum \(raw: expansion.fieldTypeName): \(raw: expansion.fieldProtocolName) {
                 \(raw: cases)
 
                 @_transparent
@@ -520,8 +524,9 @@ func makeEncodableExtension(
         }
         """
     } else {
+        let fieldType = expansion.fieldTypeName
         let encodeStatements = properties.map {
-            "try structEncoder.encode(field: CodingFields.\($0.name), value: self.\($0.name))"
+            "try structEncoder.encode(field: \(fieldType).\($0.name), value: self.\($0.name))"
         }.joined(separator: "\n")
 
         let fieldCount = properties.count
@@ -608,9 +613,9 @@ func makeDecodableExtension(
             \(raw: accessLevelPrefix)static func decode(from decoder: inout \(raw: expansion.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
                 try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                     \(raw: varDeclarations)
-                    var _codingField: CodingFields?
+                    var _codingField: \(raw: expansion.fieldTypeName)?
                     try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(\(raw: expansion.fieldTypeName).self)
                     } andValue: { valueDecoder throws(CodingError.Decoding) in
                         switch _codingField! {
                         \(raw: switchCases)
@@ -756,7 +761,7 @@ func makeEnumCodingFieldsExtension(
 
         decl = """
         extension \(typeName) {
-        enum CodingFields: \(raw: expansion.fieldProtocolName) {
+        enum \(raw: expansion.fieldTypeName): \(raw: expansion.fieldProtocolName) {
         \(raw: joinedCases)
 
         @_transparent
@@ -766,7 +771,7 @@ func makeEnumCodingFieldsExtension(
             }
         }
 
-        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> \(raw: expansion.fieldTypeName) {
             switch UTF8SpanComparator(key) {
             \(raw: fieldForKeyCases)
             default:
@@ -779,7 +784,7 @@ func makeEnumCodingFieldsExtension(
     } else {
         decl = """
         extension \(typeName) {
-        enum CodingFields: \(raw: expansion.fieldProtocolName) {
+        enum \(raw: expansion.fieldTypeName): \(raw: expansion.fieldProtocolName) {
         \(raw: joinedCases)
 
         @_transparent
@@ -815,10 +820,10 @@ func makeEnumEncodableExtension(
     } else {
         switchCases = cases.map { enumCase -> String in
             if enumCase.associatedValues.isEmpty {
-                return "case .\(enumCase.name):\ntry encoder.encodeEnumCase(CodingFields.\(enumCase.name))"
+                return "case .\(enumCase.name):\ntry encoder.encodeEnumCase(\(expansion.fieldTypeName).\(enumCase.name))"
             } else {
                 let bindings = enumCase.associatedValues.map { "let \($0.encodedName)" }.joined(separator: ", ")
-                let fieldsEnumName = "CodingFields.\(capitalizedCaseName(enumCase.name))Fields"
+                let fieldsEnumName = "\(expansion.fieldTypeName).\(capitalizedCaseName(enumCase.name))Fields"
 
                 let encodeStatements = enumCase.associatedValues.map {
                     "try valueEncoder.encode(field: \(fieldsEnumName).\($0.encodedName), value: \($0.encodedName))"
@@ -826,7 +831,7 @@ func makeEnumEncodableExtension(
 
                 return """
                 case .\(enumCase.name)(\(bindings)):
-                try encoder.encodeEnumCase(CodingFields.\(enumCase.name), associatedValueCount: \(enumCase.associatedValues.count)) { valueEncoder throws(CodingError.Encoding) in
+                try encoder.encodeEnumCase(\(expansion.fieldTypeName).\(enumCase.name), associatedValueCount: \(enumCase.associatedValues.count)) { valueEncoder throws(CodingError.Encoding) in
                 \(encodeStatements)
                 }
                 """
@@ -878,7 +883,7 @@ func makeEnumDecodableExtension(
         // Cases without associated values just return the case directly.
         let caseDecodeStatements = cases.map { enumCase -> String in
             if enumCase.hasAssociatedValues {
-                let fieldsEnumName = "CodingFields.\(capitalizedCaseName(enumCase.name))Fields"
+                let fieldsEnumName = "\(expansion.fieldTypeName).\(capitalizedCaseName(enumCase.name))Fields"
                 return "case .\(enumCase.name): try \(fieldsEnumName).decode(from: &valuesDecoder)"
             } else {
                 return "case .\(enumCase.name): .\(enumCase.name)"
@@ -888,9 +893,9 @@ func makeEnumDecodableExtension(
         mainDecl = """
         extension \(typeName): \(raw: expansion.decodableProtocolName) {
             static func decode(from decoder: inout \(raw: expansion.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
-                var _codingField: CodingFields?
+                var _codingField: \(raw: expansion.fieldTypeName)?
                 return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                    _codingField = try fieldDecoder.decode(CodingFields.self)
+                    _codingField = try fieldDecoder.decode(\(raw: expansion.fieldTypeName).self)
                 } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                     return switch _codingField! {
                     \(raw: caseDecodeStatements)

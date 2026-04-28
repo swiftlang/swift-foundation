@@ -52,6 +52,7 @@ struct JSONCodableExpanion: CodableExpansion {
         }
     }
     
+    let fieldTypeName = "JSONCodingFields"
     let encodableProtocolName = "JSONEncodable"
     let decodableProtocolName = "JSONDecodable"
     let combinedProtocolName = "JSONCodable"

@@ -41,7 +41,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case name
                     case age
 
@@ -60,8 +60,8 @@ struct JSONEncodableMacroTests {
             extension Person: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
-                        try structEncoder.encode(field: CodingFields.age, value: self.age)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.age, value: self.age)
                     }
                 }
             }
@@ -86,7 +86,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Post {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case publishDate
                     case title
 
@@ -105,8 +105,8 @@ struct JSONEncodableMacroTests {
             extension Post: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.publishDate, value: self.publishDate)
-                        try structEncoder.encode(field: CodingFields.title, value: self.title)
+                        try structEncoder.encode(field: JSONCodingFields.publishDate, value: self.publishDate)
+                        try structEncoder.encode(field: JSONCodingFields.title, value: self.title)
                     }
                 }
             }
@@ -131,7 +131,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Item {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case name
                     case rating
 
@@ -150,8 +150,8 @@ struct JSONEncodableMacroTests {
             extension Item: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
-                        try structEncoder.encode(field: CodingFields.rating, value: self.rating)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.rating, value: self.rating)
                     }
                 }
             }
@@ -180,7 +180,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Thing {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
@@ -196,7 +196,7 @@ struct JSONEncodableMacroTests {
             extension Thing: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
                     }
                 }
             }
@@ -221,7 +221,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Config {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
@@ -237,7 +237,7 @@ struct JSONEncodableMacroTests {
             extension Config: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
                     }
                 }
             }
@@ -304,7 +304,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Cached {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
@@ -320,7 +320,7 @@ struct JSONEncodableMacroTests {
             extension Cached: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
                     }
                 }
             }
@@ -345,7 +345,7 @@ struct JSONEncodableMacroTests {
             }
             
             extension WithDefault {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case name
                     case age
 
@@ -364,8 +364,8 @@ struct JSONEncodableMacroTests {
             extension WithDefault: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
-                        try structEncoder.encode(field: CodingFields.age, value: self.age)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.age, value: self.age)
                     }
                 }
             }
@@ -390,7 +390,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case userName
                     case age
 
@@ -409,8 +409,8 @@ struct JSONEncodableMacroTests {
             extension User: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.userName, value: self.userName)
-                        try structEncoder.encode(field: CodingFields.age, value: self.age)
+                        try structEncoder.encode(field: JSONCodingFields.userName, value: self.userName)
+                        try structEncoder.encode(field: JSONCodingFields.age, value: self.age)
                     }
                 }
             }
@@ -439,7 +439,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Observed {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case count
                     case name
 
@@ -458,8 +458,8 @@ struct JSONEncodableMacroTests {
             extension Observed: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.count, value: self.count)
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.count, value: self.count)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
                     }
                 }
             }
@@ -482,7 +482,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case name
 
                     @_transparent
@@ -498,7 +498,7 @@ struct JSONEncodableMacroTests {
             extension Person: JSONEncodable {
                 public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
                     }
                 }
             }
@@ -529,7 +529,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Direction {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case north
                     case south
                     case east
@@ -555,13 +555,13 @@ struct JSONEncodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .north:
-                        try encoder.encodeEnumCase(CodingFields.north)
+                        try encoder.encodeEnumCase(JSONCodingFields.north)
                     case .south:
-                        try encoder.encodeEnumCase(CodingFields.south)
+                        try encoder.encodeEnumCase(JSONCodingFields.south)
                     case .east:
-                        try encoder.encodeEnumCase(CodingFields.east)
+                        try encoder.encodeEnumCase(JSONCodingFields.east)
                     case .west:
-                        try encoder.encodeEnumCase(CodingFields.west)
+                        try encoder.encodeEnumCase(JSONCodingFields.west)
                     }
                 }
             }
@@ -586,7 +586,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Shape {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case circle
                     case rectangle
 
@@ -633,13 +633,13 @@ struct JSONEncodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .circle(let radius):
-                        try encoder.encodeEnumCase(CodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
-                            try valueEncoder.encode(field: CodingFields.CircleFields.radius, value: radius)
+                        try encoder.encodeEnumCase(JSONCodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: JSONCodingFields.CircleFields.radius, value: radius)
                         }
                     case .rectangle(let width, let height):
-                        try encoder.encodeEnumCase(CodingFields.rectangle, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
-                            try valueEncoder.encode(field: CodingFields.RectangleFields.width, value: width)
-                            try valueEncoder.encode(field: CodingFields.RectangleFields.height, value: height)
+                        try encoder.encodeEnumCase(JSONCodingFields.rectangle, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: JSONCodingFields.RectangleFields.width, value: width)
+                            try valueEncoder.encode(field: JSONCodingFields.RectangleFields.height, value: height)
                         }
                     }
                 }
@@ -665,7 +665,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Result {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case success
                     case failure
 
@@ -697,11 +697,11 @@ struct JSONEncodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .success(let value):
-                        try encoder.encodeEnumCase(CodingFields.success, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
-                            try valueEncoder.encode(field: CodingFields.SuccessFields.value, value: value)
+                        try encoder.encodeEnumCase(JSONCodingFields.success, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: JSONCodingFields.SuccessFields.value, value: value)
                         }
                     case .failure:
-                        try encoder.encodeEnumCase(CodingFields.failure)
+                        try encoder.encodeEnumCase(JSONCodingFields.failure)
                     }
                 }
             }
@@ -726,7 +726,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Wrapper {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case single
                     case pair
 
@@ -773,13 +773,13 @@ struct JSONEncodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .single(let _0):
-                        try encoder.encodeEnumCase(CodingFields.single, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
-                            try valueEncoder.encode(field: CodingFields.SingleFields._0, value: _0)
+                        try encoder.encodeEnumCase(JSONCodingFields.single, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: JSONCodingFields.SingleFields._0, value: _0)
                         }
                     case .pair(let _0, let _1):
-                        try encoder.encodeEnumCase(CodingFields.pair, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
-                            try valueEncoder.encode(field: CodingFields.PairFields._0, value: _0)
-                            try valueEncoder.encode(field: CodingFields.PairFields._1, value: _1)
+                        try encoder.encodeEnumCase(JSONCodingFields.pair, associatedValueCount: 2) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: JSONCodingFields.PairFields._0, value: _0)
+                            try valueEncoder.encode(field: JSONCodingFields.PairFields._1, value: _1)
                         }
                     }
                 }
@@ -805,7 +805,7 @@ struct JSONEncodableMacroTests {
             }
 
             extension Status {
-                enum CodingFields: JSONOptimizedEncodingField {
+                enum JSONCodingFields: JSONOptimizedEncodingField {
                     case inProgress
                     case done
 
@@ -825,9 +825,9 @@ struct JSONEncodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .inProgress:
-                        try encoder.encodeEnumCase(CodingFields.inProgress)
+                        try encoder.encodeEnumCase(JSONCodingFields.inProgress)
                     case .done:
-                        try encoder.encodeEnumCase(CodingFields.done)
+                        try encoder.encodeEnumCase(JSONCodingFields.done)
                     }
                 }
             }

@@ -35,7 +35,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case age
                     case unknown
@@ -52,7 +52,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -70,9 +70,9 @@ struct CommonDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var age: Int?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -114,7 +114,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Item {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case rating
                     case unknown
@@ -131,7 +131,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -149,9 +149,9 @@ struct CommonDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var rating: Double?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -190,7 +190,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Preferences {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case theme
                     case fontSize
                     case unknown
@@ -207,7 +207,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "theme":
                             .theme
@@ -225,9 +225,9 @@ struct CommonDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var theme: String?
                         var fontSize: Int?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .theme:
@@ -263,7 +263,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Post {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case publishDate
                     case title
                     case unknown
@@ -280,7 +280,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "date_published":
                             .publishDate
@@ -298,9 +298,9 @@ struct CommonDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var publishDate: String?
                         var title: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .publishDate:
@@ -346,7 +346,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Thing {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -360,7 +360,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -375,9 +375,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Thing {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -414,7 +414,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Config {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -428,7 +428,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -443,9 +443,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Config {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -482,7 +482,7 @@ struct CommonDecodableMacroTests {
             }
             
             extension Cached {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -496,7 +496,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -511,9 +511,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Cached {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -615,7 +615,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Config {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case locale
                     case retryCount
@@ -635,7 +635,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -656,9 +656,9 @@ struct CommonDecodableMacroTests {
                         var name: String?
                         var locale: String?
                         var retryCount: Int?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -699,7 +699,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Defaults {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case greeting
                     case verbose
                     case unknown
@@ -716,7 +716,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "greeting":
                             .greeting
@@ -734,9 +734,9 @@ struct CommonDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var greeting: String?
                         var verbose: Bool?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .greeting:
@@ -770,7 +770,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Setting {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case maxRetries
                     case unknown
 
@@ -784,7 +784,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "max_retries":
                             .maxRetries
@@ -799,9 +799,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Setting {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var maxRetries: Int?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .maxRetries:
@@ -833,7 +833,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Prefs {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case locale
                     case unknown
 
@@ -847,7 +847,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "locale":
                             .locale
@@ -862,9 +862,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Prefs {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var locale: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .locale:
@@ -896,7 +896,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension WithExpr {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case tags
                     case unknown
 
@@ -910,7 +910,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "tags":
                             .tags
@@ -925,9 +925,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> WithExpr {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var tags: [String]?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .tags:
@@ -961,7 +961,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case userName
                     case age
                     case unknown
@@ -978,7 +978,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "userName":
                             .userName
@@ -998,9 +998,9 @@ struct CommonDecodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
                         var age: Int?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .userName:
@@ -1040,7 +1040,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case userName
                     case unknown
 
@@ -1054,7 +1054,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "user_name":
                             .userName
@@ -1071,9 +1071,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .userName:
@@ -1108,7 +1108,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension User {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -1122,7 +1122,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -1143,9 +1143,9 @@ struct CommonDecodableMacroTests {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -1180,7 +1180,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case name
                     case unknown
 
@@ -1194,7 +1194,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -1209,9 +1209,9 @@ struct CommonDecodableMacroTests {
                 public static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Person {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
-                        var _codingField: CodingFields?
+                        var _codingField: CommonCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -1250,7 +1250,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Direction {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case north
                     case south
 
@@ -1264,7 +1264,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "north":
                             .north
@@ -1279,9 +1279,9 @@ struct CommonDecodableMacroTests {
 
             extension Direction: CommonDecodable {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Direction {
-                    var _codingField: CodingFields?
+                    var _codingField: CommonCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .north:
@@ -1313,7 +1313,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Shape {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case circle
                     case point
 
@@ -1327,7 +1327,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "circle":
                             .circle
@@ -1380,13 +1380,13 @@ struct CommonDecodableMacroTests {
 
             extension Shape: CommonDecodable {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Shape {
-                    var _codingField: CodingFields?
+                    var _codingField: CommonCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .circle:
-                            try CodingFields.CircleFields.decode(from: &valuesDecoder)
+                            try CommonCodingFields.CircleFields.decode(from: &valuesDecoder)
                         case .point:
                             .point
                         }
@@ -1414,7 +1414,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Wrapper {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case single
                     case pair
 
@@ -1428,7 +1428,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "single":
                             .single
@@ -1527,15 +1527,15 @@ struct CommonDecodableMacroTests {
 
             extension Wrapper: CommonDecodable {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Wrapper {
-                    var _codingField: CodingFields?
+                    var _codingField: CommonCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .single:
-                            try CodingFields.SingleFields.decode(from: &valuesDecoder)
+                            try CommonCodingFields.SingleFields.decode(from: &valuesDecoder)
                         case .pair:
-                            try CodingFields.PairFields.decode(from: &valuesDecoder)
+                            try CommonCodingFields.PairFields.decode(from: &valuesDecoder)
                         }
                     }
                 }
@@ -1561,7 +1561,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Status {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case inProgress
                     case done
 
@@ -1575,7 +1575,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "in_progress":
                             .inProgress
@@ -1590,9 +1590,9 @@ struct CommonDecodableMacroTests {
 
             extension Status: CommonDecodable {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Status {
-                    var _codingField: CodingFields?
+                    var _codingField: CommonCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .inProgress:
@@ -1624,7 +1624,7 @@ struct CommonDecodableMacroTests {
             }
 
             extension Status {
-                enum CodingFields: StaticStringDecodingField {
+                enum CommonCodingFields: StaticStringDecodingField {
                     case inProgress
                     case done
 
@@ -1638,7 +1638,7 @@ struct CommonDecodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "in_progress":
                             .inProgress
@@ -1655,9 +1655,9 @@ struct CommonDecodableMacroTests {
 
             extension Status: CommonDecodable {
                 static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Status {
-                    var _codingField: CodingFields?
+                    var _codingField: CommonCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(CommonCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .inProgress:

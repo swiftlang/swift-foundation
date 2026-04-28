@@ -52,6 +52,7 @@ struct CommonCodableExpansion: CodableExpansion {
         }
     }
     
+    let fieldTypeName = "CommonCodingFields"
     let encodableProtocolName = "CommonEncodable"
     let decodableProtocolName = "CommonDecodable"
     let combinedProtocolName = "CommonCodable"
