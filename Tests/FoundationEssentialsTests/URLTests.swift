@@ -2623,6 +2623,25 @@ private struct URLTests {
         }
     }
 
+    @Test func hashIncludesBaseURL() throws {
+        let base1 = try #require(URL(string: "https://example.com"))
+        let base2 = try #require(URL(string: "https://other.com"))
+        let relative1 = try #require(URL(string: "/path", relativeTo: base1))
+        let relative2 = try #require(URL(string: "/path", relativeTo: base2))
+
+        // These URLs have the same relativeString but different baseURLs
+        #expect(relative1.relativeString == relative2.relativeString)
+        #expect(relative1 != relative2)
+
+        // Their hashes should (very probably) differ
+        #expect(relative1.hashValue != relative2.hashValue)
+
+        // Verify equal URLs hash equally
+        let relative1Copy = try #require(URL(string: "/path", relativeTo: base1))
+        #expect(relative1 == relative1Copy)
+        #expect(relative1.hashValue == relative1Copy.hashValue)
+    }
+
     @Test func squareBracketsAllowedInPathQueryFragment() {
         let bracketSpan = "[]".utf8.span
 
