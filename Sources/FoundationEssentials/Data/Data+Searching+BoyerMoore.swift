@@ -42,13 +42,18 @@ extension Data {
                     var scanHaystack = haystack.count - needleLength
 
                     while scanHaystack >= 0, scanNeedle < needleLength {
-                        if haystack[scanHaystack] == needle[scanNeedle] {
+                        // Use unchecked accesses in this descending search loop to avoid bounds checks that are not
+                        // currently eliminated. scanNeedle is guarded by the loop condition. scanHaystack starts at
+                        // the last possible match position; matches advance it in lockstep with scanNeedle, and
+                        // mismatches are revalidated by the loop condition.
+                        let haystackByte = haystack[unchecked: scanHaystack]
+                        if haystackByte == needle[unchecked: scanNeedle] {
                             scanHaystack += 1
                             scanNeedle += 1
                         } else {
                             let shift = Swift.max(
-                                badCharacterShift[Int(haystack[scanHaystack])],
-                                goodSubstringShift[scanNeedle]
+                                badCharacterShift[Int(haystackByte)],
+                                goodSubstringShiftSpan[unchecked: scanNeedle]
                             )
                             scanHaystack -= shift
                             scanNeedle = 0
@@ -97,8 +102,11 @@ extension Data {
         into badCharacterShift: inout MutableSpan<Int>
     ) {
         if backwards {
-            for i in (0..<needle.count).reversed() {
-                badCharacterShift[Int(needle[i])] = i
+            var i = needle.count
+            while i > 0 {
+                i -= 1
+                // i is decremented from needle.count before indexing, so it is always in 0..<needle.count.
+                badCharacterShift[Int(needle[unchecked: i])] = i
             }
         } else {
             for i in 0..<needle.count {
@@ -120,7 +128,8 @@ extension Data {
             // table, and then reverse the result.
             withUnsafeTemporaryAllocation(of: UInt8.self, capacity: needle.count) { reversedNeedle in
                 for offset in 0..<needle.count {
-                    reversedNeedle.initializeElement(at: offset, to: needle[needle.count - 1 - offset])
+                    // offset is in 0..<needle.count, so the mirrored index is in the same range.
+                    reversedNeedle.initializeElement(at: offset, to: needle[unchecked: needle.count - 1 - offset])
                 }
 
                 Self._computeGoodSubstringShift(
@@ -154,30 +163,41 @@ extension Data {
         var matchBound = needleLength - 1
         suffixLengths[needleLength - 1] = needleLength
 
-        for candidateEnd in (0..<(needleLength - 1)).reversed() {
+        var candidateEnd = needleLength - 1
+        while candidateEnd > 0 {
+            candidateEnd -= 1
+            // candidateEnd walks down through 0..<(needleLength - 1). The Boyer-Moore suffix invariants keep
+            // matchEnd in candidateEnd..<needleLength, so the derived suffix index is in 0..<needleLength.
             if candidateEnd > matchBound,
-               suffixLengths[candidateEnd + needleLength - 1 - matchEnd] < candidateEnd - matchBound {
-                suffixLengths[candidateEnd] = suffixLengths[candidateEnd + needleLength - 1 - matchEnd]
+               suffixLengths[unchecked: candidateEnd + needleLength - 1 - matchEnd] < candidateEnd - matchBound {
+                suffixLengths[unchecked: candidateEnd] = suffixLengths[unchecked: candidateEnd + needleLength - 1 - matchEnd]
             } else {
                 if candidateEnd < matchBound {
                     matchBound = candidateEnd
                 }
                 matchEnd = candidateEnd
-                while matchBound >= 0, needle[matchBound] == needle[matchBound + needleLength - 1 - matchEnd] {
+                // matchBound is checked before indexing and then only decreases. The paired suffix index is bounded
+                // by matchEnd, keeping both needle indices in 0..<needleLength while the loop runs.
+                while matchBound >= 0, needle[unchecked: matchBound] == needle[unchecked: matchBound + needleLength - 1 - matchEnd] {
                     matchBound -= 1
                 }
-                suffixLengths[candidateEnd] = matchEnd - matchBound
+                // candidateEnd is produced by the descending loop above, so it is in bounds.
+                suffixLengths[unchecked: candidateEnd] = matchEnd - matchBound
             }
         }
 
         // Compute shift table
 
         var shiftIndex = 0
-        for i in (0..<needleLength).reversed() {
-            if suffixLengths[i] == i + 1 {
+        var i = needleLength
+        while i > 0 {
+            i -= 1
+            // i is decremented from needleLength before indexing, so it is always in 0..<needleLength.
+            if suffixLengths[unchecked: i] == i + 1 {
                 while shiftIndex < needleLength - 1 - i {
-                    if shift[shiftIndex] == needleLength {
-                        shift[shiftIndex] = needleLength - 1 - i
+                    // shiftIndex is strictly less than needleLength - 1 - i, which is at most needleLength - 1.
+                    if shift[unchecked: shiftIndex] == needleLength {
+                        shift[unchecked: shiftIndex] = needleLength - 1 - i
                     }
                     shiftIndex += 1
                 }
@@ -203,9 +223,11 @@ extension Data {
         var upperBound = span.count - 1
 
         while lowerBound < upperBound {
-            let tmp = span[lowerBound]
-            span[lowerBound] = span[upperBound]
-            span[upperBound] = tmp
+            // lowerBound and upperBound move toward each other from valid endpoints, and the loop stops before
+            // they cross.
+            let tmp = span[unchecked: lowerBound]
+            span[unchecked: lowerBound] = span[unchecked: upperBound]
+            span[unchecked: upperBound] = tmp
             lowerBound += 1
             upperBound -= 1
         }
