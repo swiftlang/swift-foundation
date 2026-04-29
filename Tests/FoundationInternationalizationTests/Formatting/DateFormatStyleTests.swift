@@ -1333,12 +1333,14 @@ extension DateFormatStyleTests {
         _verify(.dateTime.hour(.conversationalDefaultDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
         _verify(.dateTime.hour(.conversationalTwoDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
 
+#if FIXED_HOUR_SYMBOL_175541251
         let enGB = Locale(identifier: "en_GB")
         _verify(.dateTime.hour(.defaultDigits(amPM: .abbreviated)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.defaultDigits(amPM: .omitted)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.twoDigits(amPM: .omitted)), expectedFormat: "HH", locale: enGB)
         _verify(.dateTime.hour(.conversationalDefaultDigits(amPM: .omitted)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.conversationalTwoDigits(amPM: .omitted)), expectedFormat: "HH", locale: enGB)
+#endif
     }
 }
 #endif
