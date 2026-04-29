@@ -161,9 +161,7 @@ extension Data {
         var matchBound = needleLength - 1
         suffixLengths[needleLength - 1] = needleLength
 
-        var candidateEnd = needleLength - 1
-        while candidateEnd > 0 {
-            candidateEnd -= 1
+        for candidateEnd in (0..<(needleLength - 1)).reversed() {
             // candidateEnd walks down through 0..<(needleLength - 1). The Boyer-Moore suffix invariants keep
             // matchEnd in candidateEnd..<needleLength, so the derived suffix index is in 0..<needleLength.
             if candidateEnd > matchBound,
@@ -187,10 +185,8 @@ extension Data {
         // Compute shift table
 
         var shiftIndex = 0
-        var i = needleLength
-        while i > 0 {
-            i -= 1
-            // i is decremented from needleLength before indexing, so it is always in 0..<needleLength.
+        for i in (0..<needleLength).reversed() {
+            // i stays within 0..<needleLength, so safe to use the unchecked subscript.
             if suffixLengths[unchecked: i] == i + 1 {
                 while shiftIndex < needleLength - 1 - i {
                     // shiftIndex is strictly less than needleLength - 1 - i, which is at most needleLength - 1.
