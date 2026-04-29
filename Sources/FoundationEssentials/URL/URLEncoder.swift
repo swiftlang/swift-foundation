@@ -759,17 +759,17 @@ extension StringProtocol {
         #endif
 
         let string = _specializingCast(self, to: String.self) ?? String(self)
-        if allowedCharacters.hasIdenticalStorage(to: .urlPathAllowed) {
+        if allowedCharacters.hasIdenticalSwiftStorage(to: .urlPathAllowed) {
             return URLEncoder.percentEncode(path: string)
-        } else if allowedCharacters.hasIdenticalStorage(to: .urlHostAllowed) {
+        } else if allowedCharacters.hasIdenticalSwiftStorage(to: .urlHostAllowed) {
             return URLEncoder.percentEncode(host: string)
-        } else if allowedCharacters.hasIdenticalStorage(to: .urlQueryAllowed) {
+        } else if allowedCharacters.hasIdenticalSwiftStorage(to: .urlQueryAllowed) {
             return URLEncoder.percentEncode(string: string, component: .query, skipAlreadyEncoded: false)
-        } else if allowedCharacters.hasIdenticalStorage(to: .urlFragmentAllowed) {
+        } else if allowedCharacters.hasIdenticalSwiftStorage(to: .urlFragmentAllowed) {
             return URLEncoder.percentEncode(string: string, component: .fragment, skipAlreadyEncoded: false)
-        } else if allowedCharacters.hasIdenticalStorage(to: .urlUserAllowed) {
+        } else if allowedCharacters.hasIdenticalSwiftStorage(to: .urlUserAllowed) {
             return URLEncoder.percentEncode(string: string, component: .user, skipAlreadyEncoded: false)
-        } else if allowedCharacters.hasIdenticalStorage(to: .urlPasswordAllowed) {
+        } else if allowedCharacters.hasIdenticalSwiftStorage(to: .urlPasswordAllowed) {
             return URLEncoder.percentEncode(string: string, component: .password, skipAlreadyEncoded: false)
         }
 
