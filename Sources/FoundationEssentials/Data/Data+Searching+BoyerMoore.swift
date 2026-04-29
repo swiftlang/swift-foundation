@@ -102,10 +102,8 @@ extension Data {
         into badCharacterShift: inout MutableSpan<Int>
     ) {
         if backwards {
-            var i = needle.count
-            while i > 0 {
-                i -= 1
-                // i is decremented from needle.count before indexing, so it is always in 0..<needle.count.
+            for i in (0..<needle.count).reversed() {
+                // i stays within 0..<needle.count, so safe to use the unchecked subscript.
                 badCharacterShift[Int(needle[unchecked: i])] = i
             }
         } else {
