@@ -218,26 +218,6 @@ extension Span<UInt8> {
         return lastDot
     }
 
-    func lastIndex(of byte: UInt8) -> Int? {
-        lastIndex { $0 == byte }
-    }
-
-    func lastIndex(where predicate: (UInt8) throws -> Bool) rethrows -> Int? {
-        guard !isEmpty else {
-            return nil
-        }
-
-        var i = count - 1
-        while i >= 0 {
-            if try predicate(self[i]) {
-                return i
-            }
-            i -= 1
-        }
-
-        return nil
-    }
-
     @inline(__always)
     func starts(with prefix: StaticString) -> Bool {
         let prefixLength = prefix.utf8CodeUnitCount
@@ -248,26 +228,4 @@ extension Span<UInt8> {
             memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
         }
     }
-
-    @inline(__always)
-    var first: UInt8? {
-        guard count > 0 else { return nil }
-        return self[0]
-    }
-
-    @inline(__always)
-    var last: UInt8? {
-        guard count > 0 else { return nil }
-        return self[count - 1]
-    }
-
-    func contains(_ byte: UInt8) -> Bool {
-        for i in indices {
-            if self[i] == byte {
-                return true
-            }
-        }
-        return false
-    }
-
 }

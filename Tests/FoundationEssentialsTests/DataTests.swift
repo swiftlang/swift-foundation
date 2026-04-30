@@ -2919,7 +2919,6 @@ extension DataTests {
     }
 }
 
-#if FOUNDATION_FRAMEWORK // FIXME: Re-enable tests once range(of:) is implemented
 extension DataTests {
     @Test func range() {
         let helloWorld = dataFrom("Hello World")
@@ -2940,6 +2939,43 @@ extension DataTests {
             let found = helloWorld.range(of: hello, in: 7..<helloWorld.count)
             #expect(found == nil)
         }
+    }
+
+    @Test func rangeBoyerMoore() {
+        let haystack = dataFrom("abcxxxabcxxxxabc")
+        let needle = dataFrom("abc")
+
+        #expect(haystack.range(of: needle) == 0..<3)
+        #expect(haystack.range(of: needle, options: .backwards) == 13..<16)
+        #expect(haystack.range(of: needle, in: 1..<haystack.count) == 6..<9)
+        #expect(haystack.range(of: needle, options: .backwards, in: 0..<12) == 6..<9)
+    }
+
+    @Test func rangeBoyerMooreOverlaps() {
+        let repeated = dataFrom("aaaaa")
+        let tripleA = dataFrom("aaa")
+        let prefix = dataFrom("aab")
+        let suffix = dataFrom("baa")
+        let doubleA = dataFrom("aa")
+
+        #expect(repeated.range(of: tripleA) == 0..<3)
+        #expect(repeated.range(of: tripleA, options: .backwards) == 2..<5)
+
+        #expect(prefix.range(of: doubleA) == 0..<2)
+        #expect(prefix.range(of: doubleA, options: .backwards) == 0..<2)
+
+        #expect(suffix.range(of: doubleA) == 1..<3)
+        #expect(suffix.range(of: doubleA, options: .backwards) == 1..<3)
+    }
+
+    @Test func rangeAnchored() {
+        let haystack = dataFrom("xxabcxxabc")
+        let needle = dataFrom("abc")
+
+        #expect(haystack.range(of: needle, options: .anchored) == nil)
+        #expect(haystack.range(of: needle, options: [.anchored], in: 2..<haystack.count) == 2..<5)
+        #expect(haystack.range(of: needle, options: [.backwards, .anchored]) == 7..<10)
+        #expect(haystack.range(of: needle, options: [.backwards, .anchored], in: 0..<5) == 2..<5)
     }
 
     @Test func replaceSubrange2() {
@@ -2965,7 +3001,6 @@ extension DataTests {
         #expect(range == 4..<5 as Range<Data.Index>)
     }
 }
-#endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK // Bridging is not available in the FoundationPreview package
 extension DataTests {
