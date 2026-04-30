@@ -641,11 +641,14 @@ extension _URL {
                     fromSpan: urlPath.extracting(inputStart...)
                 )
             } else {
-                // Percent-decode, excluding "%00", "%2F", and "%5C"
+                // Percent-decode, excluding "%00", "%2F"
                 guard let decodedLength = URLEncoder.percentDecodeUnchecked(
                     input: urlPath.extracting(inputStart...),
                     output: .init(rebasing: outBuffer[rootLength...]),
-                    excludingASCII: .windowsPath
+                    // Using .posixPath (not .windowsPath) because URL(string:)
+                    // percent-encodes "\" to "%5C", and clients may expect it
+                    // to return decoded.
+                    excludingASCII: .posixPath
                 ) else {
                     return 0
                 }
@@ -751,11 +754,10 @@ extension _URL {
                 return "/"
             }
             let component = path.extracting(componentRange)
-            #if os(Windows)
-            let mask: PercentDecodingASCIIExclusionMask = isFileURL ? .windowsPath : .none
-            #else
+            // Note: .windowsPath is not used for Windows here because "\"
+            // is percent-encoded in URL(string:) initializers, so clients
+            // may expect it to return decoded.
             let mask: PercentDecodingASCIIExclusionMask = isFileURL ? .posixPath : .none
-            #endif
             return String(unsafeUninitializedCapacity: component.count) { buffer in
                 URLEncoder.percentDecodeUnchecked(
                     input: component,
