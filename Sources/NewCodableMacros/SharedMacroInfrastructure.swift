@@ -267,9 +267,9 @@ enum CodableTypeDeclaration {
         let ext: ExtensionDeclSyntax?
         switch self {
         case .structDecl(let typeName, let properties):
-            ext = NewCodableMacros.makeEncodableExtension(for: typeName, with: properties, expansion: expansion, hasPeer: peers.multiFormat)
+            ext = NewCodableMacros.makeEncodableExtension(for: typeName, with: properties, expansion: expansion, peerInfo: peers)
         case .enumDecl(let typeName, let cases):
-            ext = makeEnumEncodableExtension(for: typeName, with: cases, expansion: expansion, hasPeer: peers.multiFormat)
+            ext = makeEnumEncodableExtension(for: typeName, with: cases, expansion: expansion, peerInfo: peers)
         }
         return [ext].compactMap { $0 }
     }
@@ -277,12 +277,12 @@ enum CodableTypeDeclaration {
     func makeDecodableExtension(expansion: some CodableExpansion, peers: PeerMacroInfo) -> [ExtensionDeclSyntax] {
         switch self {
         case .structDecl(let typeName, let properties):
-            if let ext = NewCodableMacros.makeDecodableExtension(for: typeName, with: properties, expansion: expansion, hasPeer: peers.multiFormat) {
+            if let ext = NewCodableMacros.makeDecodableExtension(for: typeName, with: properties, expansion: expansion, peerInfo: peers) {
                 return [ext]
             }
             return []
         case .enumDecl(let typeName, let cases):
-            return makeEnumDecodableExtension(for: typeName, with: cases, expansion: expansion, hasPeer: peers.multiFormat)
+            return makeEnumDecodableExtension(for: typeName, with: cases, expansion: expansion, peerInfo: peers)
         }
     }
 }
@@ -756,7 +756,7 @@ func makeEncodableExtension(
     for typeName: TokenSyntax,
     with properties: [DetailedStoredProperty],
     expansion: some CodableExpansion,
-    hasPeer: Bool
+    peerInfo: PeerMacroInfo
 ) -> ExtensionDeclSyntax? {
     let accessLevelPrefix = expansion.accessLevel.inlineDeclPrefix
     let extensionDecl: DeclSyntax
@@ -772,7 +772,7 @@ func makeEncodableExtension(
     } else {
         let fieldType = expansion.fieldTypeName
         let encodeStatements: String
-        if hasPeer {
+        if peerInfo.multiFormat {
             encodeStatements = properties.map {
                 "try structEncoder.encode(field: \(fieldType)(.\($0.name)), value: self.\($0.name))"
             }.joined(separator: "\n")
@@ -804,7 +804,7 @@ func makeDecodableExtension(
     for typeName: TokenSyntax,
     with properties: [DetailedStoredProperty],
     expansion: some CodableExpansion,
-    hasPeer: Bool
+    peerInfo: PeerMacroInfo
 ) -> ExtensionDeclSyntax? {
     let accessLevelPrefix = expansion.accessLevel.inlineDeclPrefix
     let decl: DeclSyntax
@@ -862,7 +862,7 @@ func makeDecodableExtension(
             """
         }
 
-        let switchExpr = hasPeer ? "_codingField!.base" : "_codingField!"
+        let switchExpr = peerInfo.multiFormat ? "_codingField!.base" : "_codingField!"
 
         decl = """
         extension \(typeName): \(raw: expansion.decodableProtocolName) {
@@ -1367,7 +1367,7 @@ func makeEnumEncodableExtension(
     for typeName: TokenSyntax,
     with cases: [EnumCaseInfo],
     expansion: some CodableExpansion,
-    hasPeer: Bool
+    peerInfo: PeerMacroInfo
 ) -> ExtensionDeclSyntax? {
     let switchCases: String
     if cases.isEmpty {
@@ -1376,7 +1376,7 @@ func makeEnumEncodableExtension(
     } else {
         switchCases = cases.map { enumCase -> String in
             if enumCase.associatedValues.isEmpty {
-                let fieldRef = hasPeer
+                let fieldRef = peerInfo.multiFormat
                     ? "\(expansion.fieldTypeName)(.\(enumCase.name))"
                     : "\(expansion.fieldTypeName).\(enumCase.name)"
                 return """
@@ -1386,12 +1386,12 @@ func makeEnumEncodableExtension(
             } else {
                 let bindings = enumCase.associatedValues.map { "let \($0.encodedName)" }.joined(separator: ", ")
                 let fieldsEnumName = "\(expansion.fieldTypeName).\(capitalizedCaseName(enumCase.name))Fields"
-                let fieldRef = hasPeer
+                let fieldRef = peerInfo.multiFormat
                     ? "\(expansion.fieldTypeName)(.\(enumCase.name))"
                     : "\(expansion.fieldTypeName).\(enumCase.name)"
 
                 let encodeStatements = enumCase.associatedValues.map {
-                    if hasPeer {
+                    if peerInfo.multiFormat {
                         return "try valueEncoder.encode(field: \(fieldsEnumName)(.\($0.encodedName)), value: \($0.encodedName))"
                     } else {
                         return "try valueEncoder.encode(field: \(fieldsEnumName).\($0.encodedName), value: \($0.encodedName))"
@@ -1436,7 +1436,7 @@ func makeEnumDecodableExtension(
     for typeName: TokenSyntax,
     with cases: [EnumCaseInfo],
     expansion: some CodableExpansion,
-    hasPeer: Bool
+    peerInfo: PeerMacroInfo
 ) -> [ExtensionDeclSyntax] {
     // Generate the main decode method
     let mainDecl: DeclSyntax
@@ -1449,7 +1449,7 @@ func makeEnumDecodableExtension(
         }
         """
     } else {
-        let switchExpr = hasPeer ? "_codingField!.base" : "_codingField!"
+        let switchExpr = peerInfo.multiFormat ? "_codingField!.base" : "_codingField!"
 
         // Cases with associated values delegate to per-case decode methods on nested field enums.
         // Cases without associated values just return the case directly.
