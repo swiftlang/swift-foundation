@@ -26,7 +26,7 @@ let commonTestMacros: [String: Macro.Type] = [
 struct CommonEncodableMacroTests {
 
     @Test func basicStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Person {
@@ -71,7 +71,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func customCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Post {
@@ -116,7 +116,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func optionalProperty() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Item {
@@ -161,7 +161,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func computedPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Thing {
@@ -206,7 +206,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func staticPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Config {
@@ -247,7 +247,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func errorOnNonStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             class NotAStruct {
@@ -267,7 +267,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func emptyStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Empty {
@@ -289,7 +289,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func lazyVarSkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Cached {
@@ -330,7 +330,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func propertyWithDefaultValue() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct WithDefault {
@@ -375,7 +375,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func decodableAliasIgnoredForEncodingOnly() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct User {
@@ -420,7 +420,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func propertyWithObservers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             struct Observed {
@@ -469,7 +469,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func publicStructEmitsPublicMembers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             public struct Person {
@@ -510,7 +510,7 @@ struct CommonEncodableMacroTests {
     // MARK: - Enum Tests
 
     @Test func enumNoAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             enum Direction {
@@ -557,7 +557,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func enumWithAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             enum Shape {
@@ -618,7 +618,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func enumWithUnlabeledAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             enum Wrapper {
@@ -697,7 +697,7 @@ struct CommonEncodableMacroTests {
     }
 
     @Test func enumWithCustomCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonEncodable
             enum Status {

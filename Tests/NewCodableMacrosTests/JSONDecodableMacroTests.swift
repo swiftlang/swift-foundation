@@ -20,7 +20,7 @@ import NewCodableMacros
 struct JSONDecodableMacroTests {
 
     @Test func basicStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Person {
@@ -99,7 +99,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func optionalProperty() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Item {
@@ -175,7 +175,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func allOptionalProperties() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Preferences {
@@ -248,7 +248,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func customCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Post {
@@ -327,7 +327,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func computedPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Thing {
@@ -399,7 +399,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func staticPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Config {
@@ -467,7 +467,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func lazyVarSkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Cached {
@@ -535,7 +535,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func emptyStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Empty {
@@ -558,7 +558,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func errorOnNonStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             class NotAStruct {
@@ -578,7 +578,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func propertyWithoutTypeAnnotation() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Bad {
@@ -598,7 +598,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func defaultValue() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Config {
@@ -684,7 +684,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func allDefaultValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Defaults {
@@ -757,7 +757,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func defaultWithCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Setting {
@@ -820,7 +820,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func defaultOnOptionalProperty() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct Prefs {
@@ -883,7 +883,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func defaultWithArbitraryExpression() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct WithExpr {
@@ -946,7 +946,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func aliasBasic() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct User {
@@ -1027,7 +1027,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func aliasCombinedWithCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct User {
@@ -1095,7 +1095,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func aliasMultiple() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             struct User {
@@ -1167,7 +1167,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func publicStructEmitsPublicMembers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             public struct Person {
@@ -1235,7 +1235,7 @@ struct JSONDecodableMacroTests {
     // MARK: - Enum Tests
 
     @Test func enumNoAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             enum Direction {
@@ -1316,7 +1316,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func enumWithLabeledAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             enum Shape {
@@ -1463,7 +1463,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func enumMixedCases() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             enum Result {
@@ -1564,7 +1564,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func enumWithUnlabeledAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             enum Wrapper {
@@ -1711,7 +1711,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func enumWithCustomCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             enum Status {
@@ -1774,7 +1774,7 @@ struct JSONDecodableMacroTests {
     }
 
     @Test func enumWithDecodableAlias() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONDecodable
             enum Status {

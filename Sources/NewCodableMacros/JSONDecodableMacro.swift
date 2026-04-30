@@ -34,8 +34,9 @@ extension JSONDecodableMacro: ExtensionMacro {
         }
         
         let expansion = JSONCodableExpanion(type: .decodingOnly, accessLevel: accessLevel(of: declaration))
-        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
-        let impl = typeDecl.makeDecodableExtension(expansion: expansion)
+        let peers = detectPeerMacros(node: node, declaration: declaration, expansion: expansion)
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion, peers: peers)
+        let impl = typeDecl.makeDecodableExtension(expansion: expansion, peers: peers)
         return codingFields + impl
     }
 }

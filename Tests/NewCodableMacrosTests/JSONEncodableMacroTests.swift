@@ -26,7 +26,7 @@ let testMacros: [String: Macro.Type] = [
 struct JSONEncodableMacroTests {
 
     @Test func basicStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Person {
@@ -71,7 +71,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func customCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Post {
@@ -116,7 +116,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func optionalProperty() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Item {
@@ -161,7 +161,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func computedPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Thing {
@@ -206,7 +206,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func staticPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Config {
@@ -247,7 +247,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func errorOnNonStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             class NotAStruct {
@@ -267,7 +267,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func emptyStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Empty {
@@ -289,7 +289,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func lazyVarSkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Cached {
@@ -330,7 +330,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func propertyWithDefaultValue() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct WithDefault {
@@ -375,7 +375,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func decodableAliasIgnoredForEncodingOnly() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct User {
@@ -420,7 +420,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func propertyWithObservers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             struct Observed {
@@ -469,7 +469,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func publicStructEmitsPublicMembers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             public struct Person {
@@ -510,7 +510,7 @@ struct JSONEncodableMacroTests {
     // MARK: - Enum Tests
 
     @Test func enumNoAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             enum Direction {
@@ -571,7 +571,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func enumWithLabeledAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             enum Shape {
@@ -650,7 +650,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func enumMixedCases() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             enum Result {
@@ -711,7 +711,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func enumWithUnlabeledAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             enum Wrapper {
@@ -790,7 +790,7 @@ struct JSONEncodableMacroTests {
     }
 
     @Test func enumWithCustomCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONEncodable
             enum Status {

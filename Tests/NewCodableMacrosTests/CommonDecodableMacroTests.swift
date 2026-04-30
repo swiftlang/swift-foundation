@@ -20,7 +20,7 @@ import NewCodableMacros
 struct CommonDecodableMacroTests {
 
     @Test func basicStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Person {
@@ -99,7 +99,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func optionalProperty() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Item {
@@ -175,7 +175,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func allOptionalProperties() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Preferences {
@@ -248,7 +248,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func customCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Post {
@@ -327,7 +327,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func computedPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Thing {
@@ -399,7 +399,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func staticPropertySkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Config {
@@ -467,7 +467,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func lazyVarSkipped() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Cached {
@@ -535,7 +535,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func emptyStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Empty {
@@ -558,7 +558,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func errorOnNonStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             class NotAStruct {
@@ -578,7 +578,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func propertyWithoutTypeAnnotation() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Bad {
@@ -598,7 +598,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func defaultValue() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Config {
@@ -684,7 +684,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func allDefaultValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Defaults {
@@ -757,7 +757,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func defaultWithCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Setting {
@@ -820,7 +820,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func defaultOnOptionalProperty() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct Prefs {
@@ -883,7 +883,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func defaultWithArbitraryExpression() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct WithExpr {
@@ -946,7 +946,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func aliasBasic() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct User {
@@ -1027,7 +1027,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func aliasCombinedWithCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct User {
@@ -1095,7 +1095,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func aliasMultiple() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             struct User {
@@ -1167,7 +1167,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func publicStructEmitsPublicMembers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             public struct Person {
@@ -1235,7 +1235,7 @@ struct CommonDecodableMacroTests {
     // MARK: - Enum Tests
 
     @Test func enumNoAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             enum Direction {
@@ -1298,7 +1298,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func enumWithAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             enum Shape {
@@ -1399,7 +1399,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func enumWithUnlabeledAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             enum Wrapper {
@@ -1546,7 +1546,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func enumWithCustomCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             enum Status {
@@ -1609,7 +1609,7 @@ struct CommonDecodableMacroTests {
     }
 
     @Test func enumWithDecodableAlias() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @CommonDecodable
             enum Status {
