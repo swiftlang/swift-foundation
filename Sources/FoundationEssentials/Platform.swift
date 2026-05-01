@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !targetEnvironment(exclaveCore)
+#if !NO_CSHIMS
 internal import _FoundationCShims
 #endif
 
@@ -46,6 +46,8 @@ import C.unistd
 import C
 #endif
 fileprivate let _pageSize: Int = Int(getpagesize())
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif // canImport(Darwin)
 
 #if FOUNDATION_FRAMEWORK
@@ -281,7 +283,7 @@ extension Platform {
 extension Platform {
     @discardableResult
     package static func copyCString(dst: UnsafeMutablePointer<CChar>, src: UnsafePointer<CChar>, size: Int) -> Int {
-        #if canImport(Darwin) || canImport(Android)
+        #if canImport(Darwin) || canImport(Android) || canImport(string_h)
         return strlcpy(dst, src, size)
         #else
         // Glibc doesn't support strlcpy
