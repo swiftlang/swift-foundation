@@ -1875,8 +1875,7 @@ private struct URLTests {
         #expect(comp.path == "/my\u{0}path")
     }
 
-    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
-    func standardizedDotSegments() throws {
+    @Test func standardizedDotSegments() throws {
         var standardized = try #require(URL(string: "../../../")).standardized
         // URL should not remove leading dot segments until it's actually
         // resolved against a base (longstanding CFURL behavior, too).
@@ -1912,32 +1911,30 @@ private struct URLTests {
         url = try #require(URL(string: "https://example.com/a/b/.."))
         #expect(url.standardized.path() == "/a/")
 
-        if foundation_swift_url_v2_enabled() {
-            // Preserve leading dot segments until resolution (RFC 1808)
-            url = try #require(URL(string: "https://example.com/../../a"))
-            #expect(url.standardized.path() == "/../../a")
+        // Preserve leading dot segments until resolution (RFC 1808)
+        url = try #require(URL(string: "https://example.com/../../a"))
+        #expect(url.standardized.path() == "/../../a")
 
-            url = try #require(URL(string: "../../a/b"))
-            #expect(url.standardized.path() == "../../a/b")
+        url = try #require(URL(string: "../../a/b"))
+        #expect(url.standardized.path() == "../../a/b")
 
-            url = try #require(URL(string: "../../.."))
-            #expect(url.relativeString == "../../..")
-            #expect(url.hasDirectoryPath)
+        url = try #require(URL(string: "../../.."))
+        #expect(url.relativeString == "../../..")
+        #expect(url.hasDirectoryPath)
 
-            // URL should maintain directory path status for "../../.."
-            // even though the path doesn't end in an explicit "/"
-            url.standardize()
-            #expect(url.relativeString == "../../..")
-            #expect(url.hasDirectoryPath)
+        // URL should maintain directory path status for "../../.."
+        // even though the path doesn't end in an explicit "/"
+        url.standardize()
+        #expect(url.relativeString == "../../..")
+        #expect(url.hasDirectoryPath)
 
-            url = try #require(URL(string: ".."))
-            #expect(url.relativeString == "..")
-            #expect(url.hasDirectoryPath)
+        url = try #require(URL(string: ".."))
+        #expect(url.relativeString == "..")
+        #expect(url.hasDirectoryPath)
 
-            url.standardize()
-            #expect(url.relativeString == "..")
-            #expect(url.hasDirectoryPath)
-        }
+        url.standardize()
+        #expect(url.relativeString == "..")
+        #expect(url.hasDirectoryPath)
 
         #if FOUNDATION_FRAMEWORK
         // Non-decomposable URL returns self

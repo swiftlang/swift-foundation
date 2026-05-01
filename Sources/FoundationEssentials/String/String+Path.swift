@@ -258,118 +258,29 @@ extension String {
     }
 
     internal var removingDotSegments: String {
-        _convertingSlashesIfNeeded()._removingDotSegments
+        removingDotSegments()
     }
-    
-    private var _removingDotSegments: String {
-        guard !isEmpty else {
-            return ""
-        }
 
-        enum RemovingDotState {
-            case initial
-            case dot
-            case dotDot
-            case slash
-            case slashDot
-            case slashDotDot
-            case appendUntilSlash
-        }
+    internal func removingDotSegments(useRFC1808: Bool = false) -> String {
+        _convertingSlashesIfNeeded()._removingDotSegments(useRFC1808: useRFC1808)
+    }
 
-        return String(unsafeUninitializedCapacity: utf8.count) { buffer in
-
-            // State machine for remove_dot_segments() from RFC 3986
-            //
-            // First, remove all "./" and "../" prefixes by moving through
-            // the .initial, .dot, and .dotDot states (without appending).
-            //
-            // Then, move through the remaining states/components, first
-            // checking if the component is special ("/./" or "/../") so
-            // that we only append when necessary.
-
-            var state = RemovingDotState.initial
-            var i = 0
-            for v in utf8 {
-                switch state {
-                case .initial:
-                    if v == ._dot {
-                        state = .dot
-                    } else if v == ._slash {
-                        state = .slash
-                    } else {
-                        buffer[i] = v
-                        i += 1
-                        state = .appendUntilSlash
-                    }
-                case .dot:
-                    if v == ._dot {
-                        state = .dotDot
-                    } else if v == ._slash {
-                        state = .initial
-                    } else {
-                        i = buffer[i...i+1].initialize(fromContentsOf: [._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .dotDot:
-                    if v == ._slash {
-                        state = .initial
-                    } else {
-                        i = buffer[i...i+2].initialize(fromContentsOf: [._dot, ._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .slash:
-                    if v == ._dot {
-                        state = .slashDot
-                    } else if v == ._slash {
-                        buffer[i] = ._slash
-                        i += 1
-                    } else {
-                        i = buffer[i...i+1].initialize(fromContentsOf: [._slash, v])
-                        state = .appendUntilSlash
-                    }
-                case .slashDot:
-                    if v == ._dot {
-                        state = .slashDotDot
-                    } else if v == ._slash {
-                        state = .slash
-                    } else {
-                        i = buffer[i...i+2].initialize(fromContentsOf: [._slash, ._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .slashDotDot:
-                    if v == ._slash {
-                        // Cheaply remove the previous component by moving i to its start
-                        i = buffer[..<i].lastIndex(of: ._slash) ?? 0
-                        state = .slash
-                    } else {
-                        i = buffer[i...i+3].initialize(fromContentsOf: [._slash, ._dot, ._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .appendUntilSlash:
-                    if v == ._slash {
-                        state = .slash
-                    } else {
-                        buffer[i] = v
-                        i += 1
-                    }
+    private func _removingDotSegments(useRFC1808: Bool = false) -> String {
+        guard !isEmpty else { return "" }
+        var mut = self
+        return mut.withUTF8 { buffer in
+            String(unsafeUninitializedCapacity: buffer.count) { resolvedBuffer in
+                _ = resolvedBuffer.initialize(fromContentsOf: buffer)
+                let length = resolveDotSegmentsInPlace(buffer: resolvedBuffer, useRFC1808: useRFC1808)
+                if !useRFC1808 && length == 1 && resolvedBuffer[0] == ._dot {
+                    // resolveDotSegmentsInPlace returns "." instead of "" for
+                    // compatibility with CFURL behavior. This Swift function
+                    // has historically returned "" instead, so maintain that
+                    // behavior here.
+                    return 0
                 }
+                return length
             }
-
-            switch state {
-            case .slash: fallthrough
-            case .slashDot:
-                buffer[i] = ._slash
-                i += 1
-            case .slashDotDot:
-                // Note: "/.." is not yet appended to the buffer
-                i = buffer[..<i].lastIndex(of: ._slash) ?? 0
-                buffer[i] = ._slash
-                i += 1
-            default:
-                break
-            }
-
-            return i
         }
     }
 
@@ -649,7 +560,7 @@ extension String {
             result = resolved
         }
 
-        result = result._removingDotSegments
+        result = result._removingDotSegments()
 
         // Automounted paths need to be stripped for various flavors of paths
         for prefix in String._automountPrefixes {
