@@ -1013,61 +1013,217 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Fast enumerate path
 
-    internal func nextDate(after date: Date, matching components: DateComponents,
-                           direction: Calendar.SearchDirection = .forward) -> Date? {
-        guard let targetMonth = components.month,
-              let targetDay = components.day,
-              targetMonth >= 1, targetMonth <= 13,
-              targetDay >= 1,
-              components.era == nil,
-              components.year == nil,
-              components.hour == nil,
-              components.minute == nil,
-              components.second == nil,
-              components.nanosecond == nil,
-              components.weekday == nil,
-              components.weekdayOrdinal == nil,
-              components.weekOfMonth == nil,
-              components.weekOfYear == nil,
-              components.yearForWeekOfYear == nil,
-              components.dayOfYear == nil
-        else { return nil }
+    /// Compile the time-of-day (in local seconds) from any hour/minute/second/nanosecond
+    /// components present. Defaults to 0 (midnight) when none are set.
+    private static func secondsInDay(from c: DateComponents) -> Double {
+        var s: Double = 0
+        if let h  = c.hour       { s += Double(h) * 3600 }
+        if let m  = c.minute     { s += Double(m) * 60 }
+        if let sc = c.second     { s += Double(sc) }
+        if let ns = c.nanosecond { s += Double(ns) / 1e9 }
+        return s
+    }
+
+    /// Return the next civil month after `civilMonth` in the given year, accounting for
+    /// the civil-6 (Adar I) skip in common years. Returns the new (year, civilMonth).
+    private static func nextCivilMonthForward(year: Int32, civilMonth: UInt8) -> (Int32, UInt8) {
+        var nm = civilMonth + 1
+        var ny = year
+        if nm > 13 {
+            nm = 1
+            ny += 1
+        } else if nm == 6 && !HebrewArithmetic.isLeapYear(ny) {
+            nm = 7
+        }
+        return (ny, nm)
+    }
+
+    private static func prevCivilMonthBackward(year: Int32, civilMonth: UInt8) -> (Int32, UInt8) {
+        var pm = Int(civilMonth) - 1
+        var py = year
+        if pm < 1 {
+            pm = 13
+            py -= 1
+        } else if pm == 6 && !HebrewArithmetic.isLeapYear(py) {
+            pm = 5
+        }
+        return (py, UInt8(pm))
+    }
+
+    package func nextDate(after date: Date, matching components: DateComponents,
+                          direction: Calendar.SearchDirection) -> Date? {
+        // Reject anything that requires the generic enumerate framework.
+        // Time-of-day fields (hour/minute/second/nanosecond) ARE allowed and preserved.
+        if components.era != nil || components.year != nil ||
+           components.weekdayOrdinal != nil ||
+           components.weekOfMonth != nil || components.weekOfYear != nil ||
+           components.yearForWeekOfYear != nil ||
+           components.dayOfYear != nil {
+            return nil
+        }
+
+        let hasMonth = components.month != nil
+        let hasDay = components.day != nil
+        let hasWeekday = components.weekday != nil
+
+        // Combinations we don't fast-path.
+        if hasWeekday && (hasMonth || hasDay) { return nil }
+        if !hasMonth && !hasDay && !hasWeekday { return nil }
 
         let tz = self.timeZone
         let totalOffset = tz.secondsFromGMT(for: date)
         let localSeconds = date.timeIntervalSinceReferenceDate + Double(totalOffset)
-        let (rd, _) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
+        let (rd, currentSecsInDay) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
         let (year, biblicalMonth, day) = HebrewArithmetic.hebrewFromFixed(rd)
         let civilMonth = HebrewArithmetic.biblicalToCivil(year: year, biblicalMonth: biblicalMonth)
-
+        let secsInDay = Self.secondsInDay(from: components)
         let forward = direction == .forward
 
-        var targetYear = year
-        let isPastTarget: Bool
-        if Int(civilMonth) == targetMonth {
-            isPastTarget = forward ? Int(day) >= targetDay : Int(day) <= targetDay
-        } else {
-            isPastTarget = forward ? Int(civilMonth) > targetMonth : Int(civilMonth) < targetMonth
+        if hasWeekday {
+            return nextWeekdayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
+                                    targetWeekday: components.weekday!,
+                                    targetSecsInDay: secsInDay, forward: forward, tz: tz)
         }
-        if isPastTarget { targetYear += forward ? 1 : -1 }
 
-        if targetMonth == 6 {
-            if forward {
-                while !HebrewArithmetic.isLeapYear(targetYear) { targetYear += 1 }
-            } else {
-                while !HebrewArithmetic.isLeapYear(targetYear) { targetYear -= 1 }
+        return nextMonthDayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
+                                 currentYear: year, currentCivilMonth: civilMonth, currentDay: day,
+                                 targetMonth: components.month, targetDay: components.day,
+                                 targetSecsInDay: secsInDay, forward: forward, tz: tz)
+    }
+
+    /// Fast path for `{month?, day?, h?, m?, s?, ns?}` — annual recurrence at month/day.
+    /// Either month or day (or both) must be set; missing month iterates months in the
+    /// year, missing day defaults to 1.
+    private func nextMonthDayMatch(rd: Int64, currentSecsInDay: Double,
+                                   currentYear: Int32, currentCivilMonth: UInt8, currentDay: UInt8,
+                                   targetMonth: Int?, targetDay: Int?,
+                                   targetSecsInDay: Double, forward: Bool,
+                                   tz: TimeZone) -> Date? {
+        // Build a candidate (year, civilMonth, day) from the request.
+        // Returns nil if the candidate is invalid in this year (e.g., civil-6 in common year).
+        func candidateRD(_ y: Int32, _ cm: UInt8, _ d: UInt8) -> Int64? {
+            guard cm >= 1, cm <= 13 else { return nil }
+            guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
+            let dim = HebrewArithmetic.lastDayOfMonth(y, month: bib)
+            let clamped = min(d, dim)
+            return HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: clamped)
+        }
+
+        // Helper: produce a Date from RD + secsInDay, also checking strict-after-input.
+        func makeDate(_ targetRd: Int64) -> Date {
+            return utcDate(fromRataDie: targetRd, secondsInDay: targetSecsInDay, in: tz,
+                          repeatedTimePolicy: .former, skippedTimePolicy: .former)
+        }
+
+        if let tm = targetMonth {
+            // {month, day?, …} — annual; advance year on each non-match.
+            guard tm >= 1, tm <= 13 else { return nil }
+            let dayInTarget = UInt8(targetDay ?? 1)
+            var targetYear = currentYear
+
+            // Compare current Date to candidate-this-year. If forward and candidate <= input,
+            // bump year; same idea backward.
+            for _ in 0..<3 {   // at most ~3 iterations: this year, next, then leap-year skip
+                if tm == 6 {
+                    // Adar I — only exists in leap years.
+                    while !HebrewArithmetic.isLeapYear(targetYear) {
+                        targetYear += forward ? 1 : -1
+                    }
+                }
+                guard let cRd = candidateRD(targetYear, UInt8(tm), dayInTarget) else { return nil }
+                if forward {
+                    if cRd > rd || (cRd == rd && targetSecsInDay > currentSecsInDay) {
+                        return makeDate(cRd)
+                    }
+                    targetYear += 1
+                } else {
+                    if cRd < rd || (cRd == rd && targetSecsInDay < currentSecsInDay) {
+                        return makeDate(cRd)
+                    }
+                    targetYear -= 1
+                }
             }
-        }
-
-        guard let biblical = HebrewArithmetic.civilToBiblical(year: targetYear, civilMonth: UInt8(targetMonth)) else {
             return nil
         }
 
-        let daysInMonth = Int(HebrewArithmetic.lastDayOfMonth(targetYear, month: biblical))
-        let clampedDay = min(targetDay, daysInMonth)
+        // {day, …} — no month → walk to next/prev civil month boundary.
+        let dayInTarget = UInt8(targetDay!)   // hasDay guaranteed by caller (we checked above)
+        if dayInTarget < 1 { return nil }
 
-        let targetRd = HebrewArithmetic.fixedFromHebrew(year: targetYear, month: biblical, day: UInt8(clampedDay))
-        return utcDate(fromRataDie: targetRd, secondsInDay: 0, in: tz,
+        if forward {
+            // Try this month first if day strictly later (or same day with later time-of-day).
+            if Int(dayInTarget) > Int(currentDay)
+                || (Int(dayInTarget) == Int(currentDay) && targetSecsInDay > currentSecsInDay) {
+                if let cRd = candidateRD(currentYear, currentCivilMonth, dayInTarget) {
+                    return makeDate(cRd)
+                }
+            }
+            // Else walk forward by months, take first that contains the day.
+            var (y, m) = Self.nextCivilMonthForward(year: currentYear, civilMonth: currentCivilMonth)
+            for _ in 0..<14 {   // bounded — Hebrew has at most 13 months/year
+                if let cRd = candidateRD(y, m, dayInTarget) {
+                    // Only accept if dayInTarget actually exists (no clamping on day-only walk).
+                    guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: m) else { return nil }
+                    if dayInTarget <= HebrewArithmetic.lastDayOfMonth(y, month: bib) {
+                        return makeDate(cRd)
+                    }
+                }
+                (y, m) = Self.nextCivilMonthForward(year: y, civilMonth: m)
+            }
+        } else {
+            if Int(dayInTarget) < Int(currentDay)
+                || (Int(dayInTarget) == Int(currentDay) && targetSecsInDay < currentSecsInDay) {
+                if let cRd = candidateRD(currentYear, currentCivilMonth, dayInTarget) {
+                    return makeDate(cRd)
+                }
+            }
+            var (y, m) = Self.prevCivilMonthBackward(year: currentYear, civilMonth: currentCivilMonth)
+            for _ in 0..<14 {
+                if let cRd = candidateRD(y, m, dayInTarget) {
+                    guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: m) else { return nil }
+                    if dayInTarget <= HebrewArithmetic.lastDayOfMonth(y, month: bib) {
+                        return makeDate(cRd)
+                    }
+                }
+                (y, m) = Self.prevCivilMonthBackward(year: y, civilMonth: m)
+            }
+        }
+        return nil
+    }
+
+    /// Fast path for `{weekday, h?, m?, s?, ns?}` — find the next/prev RD whose
+    /// weekday matches (Sun=1..Sat=7, ICU convention). Pure modular RD arithmetic.
+    private func nextWeekdayMatch(rd: Int64, currentSecsInDay: Double,
+                                  targetWeekday: Int,
+                                  targetSecsInDay: Double, forward: Bool,
+                                  tz: TimeZone) -> Date? {
+        guard targetWeekday >= 1, targetWeekday <= 7 else { return nil }
+
+        // RD 1 = Monday. weekday(rd) where Sun=1..Sat=7:
+        //   wday = ((rd % 7) + 7) % 7 gives 0..6 with 0=Sunday (since (RD 0 = Sun)).
+        // To map to Sun=1..Sat=7: weekday = wday + 1.
+        var wday = rd % 7
+        if wday < 0 { wday += 7 }
+        let currentWeekday = Int(wday) + 1     // 1..7
+
+        let delta: Int64
+        if currentWeekday == targetWeekday {
+            // Same weekday: always advance by a full week. We deliberately don't
+            // try to match same-day-with-later-time-of-day — ICU's behavior at
+            // that boundary varies by call site (e.g., `nextWeekend(direction:.backward)`
+            // post-processes to find the prior weekend, not today midnight).
+            // Stepping a full week is the safe, ICU-matching choice.
+            delta = forward ? 7 : -7
+        } else if forward {
+            let raw = (targetWeekday - currentWeekday + 7) % 7   // 1..6
+            delta = Int64(raw)
+        } else {
+            let raw = (currentWeekday - targetWeekday + 7) % 7   // 1..6
+            delta = Int64(-raw)
+        }
+
+        let targetRd = rd + delta
+        return utcDate(fromRataDie: targetRd, secondsInDay: targetSecsInDay, in: tz,
                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
