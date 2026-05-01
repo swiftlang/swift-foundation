@@ -162,9 +162,9 @@ extension AttributedStringProtocol {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
     internal var __guts: AttributedString.Guts {
-        if let s = _specializingCast(self, to: AttributedString.self) {
+        if let s = _specialize(self, for: AttributedString.self) {
             return s._guts
-        } else if let s = _specializingCast(self, to: AttributedSubstring.self) {
+        } else if let s = _specialize(self, for: AttributedSubstring.self) {
             return s._guts
         } else {
             return self.characters._guts
