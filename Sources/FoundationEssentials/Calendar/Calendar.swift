@@ -367,65 +367,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
         package var isOnlyBaseSet: Bool {
             Self.init(base: base, locale: nil, timeZone: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil) == self
         }
-        
-        /// A specific kind of calendar.
-        public static func identifier(_ identifier: Identifier) -> Self {
-            Self.init(base: .identifier(identifier))
-        }
-        
-        /// The ISO8601 calendar.
-        public static var iso8601: Self {
-            Self.init(base: .identifier(.iso8601))
-        }
-        
-        /// The user's current calendar.
-        ///
-        /// This calendar does not track changes that the user makes to their preferences.
-        public static var current: Self {
-            Self.init(base: .current)
-        }
-        
-        /// A calendar that tracks changes to user's preferred calendar.
-        ///
-        /// If mutated, this calendar will no longer track the user's preferred calendar.
-        public static var autoupdatingCurrent: Self {
-            Self.init(base: .autoupdatingCurrent)
-        }
-        
-        /// A specific kind of calendar.
-        public func identifier(_ identifier: Identifier) -> Self {
-            var copy = self
-            copy.base = .identifier(identifier)
-            return copy
-        }
-        
-        /// The locale of the calendar.
-        public func locale(_ locale: Locale?) -> Self {
-            var copy = self
-            copy.locale = locale
-            return copy
-        }
-        
-        /// The time zone of the calendar.
-        public func timeZone(_ timeZone: TimeZone?) -> Self {
-            var copy = self
-            copy.timeZone = timeZone
-            return copy
-        }
-        
-        /// The first day of the week for the calendar.
-        public func firstWeekday(_ firstWeekday: Int?) -> Self {
-            var copy = self
-            copy.firstWeekday = firstWeekday
-            return copy
-        }
-        
-        /// The number of minimum days in the first week.
-        public func minimumDaysInFirstWeek(_ minimumDaysInFirstWeek: Int?) -> Self {
-            var copy = self
-            copy.minimumDaysInFirstWeek = minimumDaysInFirstWeek
-            return copy
-        }
     }
 
     /// An enumeration for the various components of a calendar date.
@@ -1884,6 +1825,68 @@ extension Calendar.RepeatedTimePolicy: Codable {
         case .last:
             try container.encode(1)
         }
+    }
+}
+
+extension Calendar.Configuration {
+
+    /// A specific kind of calendar.
+    public static func identifier(_ identifier: Calendar.Identifier) -> Self {
+        Self.init(base: .identifier(identifier))
+    }
+    
+    /// The ISO8601 calendar.
+    public static var iso8601: Self {
+        Self.init(base: .identifier(.iso8601))
+    }
+    
+    /// The user's current calendar.
+    ///
+    /// This calendar does not track changes that the user makes to their preferences.
+    public static var current: Self {
+        Self.init(base: .current)
+    }
+    
+    /// A calendar that tracks changes to user's preferred calendar.
+    ///
+    /// If mutated, this calendar will no longer track the user's preferred calendar.
+    public static var autoupdatingCurrent: Self {
+        Self.init(base: .autoupdatingCurrent)
+    }
+    
+    /// A specific kind of calendar.
+    public func identifier(_ identifier: Calendar.Identifier) -> Self {
+        var copy = self
+        copy.base = .identifier(identifier)
+        return copy
+    }
+    
+    /// The locale of the calendar.
+    public func locale(_ locale: Locale?) -> Self {
+        var copy = self
+        copy.locale = locale
+        return copy
+    }
+    
+    /// The time zone of the calendar.
+    public func timeZone(_ timeZone: TimeZone?) -> Self {
+        var copy = self
+        copy.timeZone = timeZone
+        return copy
+    }
+    
+    /// The first day of the week for the calendar.
+    public func firstWeekday(_ firstWeekday: Int?) -> Self {
+        var copy = self
+        copy.firstWeekday = firstWeekday
+        return copy
+    }
+    
+    /// The number of minimum days in the first week.
+    public func minimumDaysInFirstWeek(_ minimumDaysInFirstWeek: Int?) -> Self {
+        var copy = self
+        copy.minimumDaysInFirstWeek = minimumDaysInFirstWeek
+        return copy
     }
 }
 
