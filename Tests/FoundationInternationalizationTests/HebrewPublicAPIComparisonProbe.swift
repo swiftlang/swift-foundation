@@ -361,6 +361,33 @@ private struct HebrewPublicAPIComparisonProbe {
         #expect(div.list.isEmpty, "[\(topic)] \(div.list.count) divergences")
     }
 
+    // MARK: - Gregorian/Hebrew date construction helpers (mirrors Suite A)
+
+    private static func g(_ y: Int, _ m: Int, _ d: Int, hour: Int = 12, minute: Int = 0, second: Int = 0) -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .gmt
+        var dc = DateComponents()
+        dc.year = y; dc.month = m; dc.day = d
+        dc.hour = hour; dc.minute = minute; dc.second = second
+        dc.timeZone = .gmt
+        return cal.date(from: dc)!
+    }
+
+    private static func h(_ y: Int, _ m: Int, _ d: Int, icu: Calendar) -> Date? {
+        var dc = DateComponents()
+        dc.year = y; dc.month = m; dc.day = d; dc.hour = 12
+        dc.timeZone = .gmt
+        guard let date = icu.date(from: dc) else { return nil }
+        let check = icu.dateComponents([.year, .month, .day], from: date)
+        return (check.year == y && check.month == m && check.day == d) ? date : nil
+    }
+
+    private static func hebrewYearLength(_ year: Int, icu: Calendar) -> Int? {
+        guard let s = h(year, 1, 1, icu: icu),
+              let e = h(year + 1, 1, 1, icu: icu) else { return nil }
+        return Int((e.timeIntervalSince(s) / 86400.0).rounded())
+    }
+
     // MARK: - The probes
 
     @Test func publicAPI_sweepAllMethods() {
@@ -454,5 +481,289 @@ private struct HebrewPublicAPIComparisonProbe {
 
         Self.reportAndAssert("Topic 12: localeVariations (\(configs.count) configs × \(dates.count) dates)",
                              div, dateCount: configs.count * dates.count)
+    }
+
+    // MARK: - Expanded topic-specific probes (mirrors Suite A date sets through public API)
+
+    @Test func yearLengthVariants_allSixRegimes() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var found: [Int: Int] = [:]
+        for y in 5750...5810 {
+            guard let len = Self.hebrewYearLength(y, icu: icuCal) else { continue }
+            if found[len] == nil { found[len] = y }
+            if found.count >= 6 { break }
+        }
+
+        var dates: [(String, Date)] = []
+        for (length, year) in found.sorted(by: { $0.key < $1.key }) {
+            for (offset, where_) in [(1, "day-2"), (length / 2, "mid"), (length - 2, "near-end")] {
+                if let yearStart = Self.h(year, 1, 1, icu: icuCal) {
+                    dates.append(("\(year) (\(length)d) \(where_)", yearStart.addingTimeInterval(86400.0 * Double(offset))))
+                }
+            }
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 1: yearLengthVariants (6 regimes)", div, dateCount: dates.count)
+    }
+
+    @Test func cheshvanKislev_lengthBoundaries() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var found: [Int: Int] = [:]
+        for y in 5750...5810 {
+            guard let len = Self.hebrewYearLength(y, icu: icuCal) else { continue }
+            if found[len] == nil { found[len] = y }
+            if found.count >= 6 { break }
+        }
+
+        var dates: [(String, Date)] = []
+        for (length, year) in found.sorted(by: { $0.key < $1.key }) {
+            for (m, d, name) in [(2,29,"Cheshvan29"),(2,30,"Cheshvan30"),(3,1,"Kislev1"),(3,29,"Kislev29"),(3,30,"Kislev30"),(4,1,"Tevet1")] {
+                if let date = Self.h(year, m, d, icu: icuCal) {
+                    dates.append(("\(year)(\(length)d) \(name)", date))
+                }
+            }
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 2: cheshvanKislev_lengthBoundaries", div, dateCount: dates.count)
+    }
+
+    @Test func metonicCycle_nineteenYears() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var dates: [(String, Date)] = []
+        for year in 5763...5781 {
+            if let rh = Self.h(year, 1, 1, icu: icuCal) {
+                dates.append(("\(year) RH", rh))
+            }
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 3: metonicCycle (19 years)", div, dateCount: dates.count)
+    }
+
+    @Test func roshHashanahPostponement_allFourAllowedDays() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var found: [Int: Int] = [:]
+        for y in 5750...5800 {
+            guard let rh = Self.h(y, 1, 1, icu: icuCal) else { continue }
+            let wd = icuCal.component(.weekday, from: rh)
+            if found[wd] == nil { found[wd] = y }
+            if found.count == 4 { break }
+        }
+
+        var dates: [(String, Date)] = []
+        for (wd, year) in found.sorted(by: { $0.key < $1.key }) {
+            guard let rh = Self.h(year, 1, 1, icu: icuCal) else { continue }
+            dates.append(("\(year) RH (wd=\(wd))", rh))
+            dates.append(("\(year-1) day before RH", rh.addingTimeInterval(-86400)))
+            dates.append(("\(year) Tishrei 2", rh.addingTimeInterval(86400)))
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 4: roshHashanahPostponement", div, dateCount: dates.count)
+    }
+
+    @Test func adarTransition_leapYearMidYearBoundary() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var dates: [(String, Date)] = []
+        for year in [5779, 5782, 5784] {
+            for (m, d, name) in [(6,1,"AdarI 1"),(6,15,"AdarI 15"),(6,30,"AdarI 30"),(7,1,"AdarII 1"),(7,14,"AdarII 14"),(7,29,"AdarII 29"),(8,1,"Nisan 1")] {
+                if let date = Self.h(year, m, d, icu: icuCal) {
+                    dates.append(("\(year) \(name)", date))
+                }
+            }
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 5: adarTransition", div, dateCount: dates.count)
+    }
+
+    @Test func yearBoundaries_commonAndLeap() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var dates: [(String, Date)] = []
+        for year in [5777, 5778, 5779, 5780, 5781, 5782, 5783, 5784, 5785, 5786] {
+            guard let nextRh = Self.h(year + 1, 1, 1, icu: icuCal) else { continue }
+            dates.append(("\(year)→\(year+1) Elul-1", nextRh.addingTimeInterval(-2 * 86400)))
+            dates.append(("\(year)→\(year+1) Elul last", nextRh.addingTimeInterval(-86400)))
+            dates.append(("\(year+1) Tishrei 1", nextRh))
+            dates.append(("\(year+1) Tishrei 2", nextRh.addingTimeInterval(86400)))
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 6: yearBoundaries", div, dateCount: dates.count)
+    }
+
+    @Test func monthBoundaries_unusualLengths() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var dates: [(String, Date)] = []
+        for year in [5778, 5779, 5780, 5781] {
+            for m in 1...13 {
+                for d in [29, 30] {
+                    if let date = Self.h(year, m, d, icu: icuCal) {
+                        dates.append(("\(year) M\(m) D\(d)", date))
+                    }
+                }
+            }
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 7: monthBoundaries", div, dateCount: dates.count)
+    }
+
+    @Test func majorHolidays_commonAndLeap() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        let common: [(Int, Int, String)] = [
+            (1,1,"RH"),(1,10,"YK"),(1,15,"Sukkot"),(1,22,"SheminiAtzeret"),
+            (3,25,"Hanukkah"),(6,14,"Purim"),(6,15,"ShushanPurim"),
+            (7,15,"Passover"),(9,6,"Shavuot"),
+        ]
+        let leap: [(Int, Int, String)] = [
+            (1,1,"RH"),(1,10,"YK"),(1,15,"Sukkot"),(1,22,"SheminiAtzeret"),
+            (3,25,"Hanukkah"),(7,14,"Purim"),(7,15,"ShushanPurim"),
+            (8,15,"Passover"),(10,6,"Shavuot"),
+        ]
+
+        var dates: [(String, Date)] = []
+        for year in [5778, 5780, 5781] {
+            for (m, d, name) in common {
+                if let date = Self.h(year, m, d, icu: icuCal) { dates.append(("\(year) \(name)", date)) }
+            }
+        }
+        for year in [5779, 5782, 5784] {
+            for (m, d, name) in leap {
+                if let date = Self.h(year, m, d, icu: icuCal) { dates.append(("\(year) \(name)", date)) }
+            }
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 8: majorHolidays", div, dateCount: dates.count)
+    }
+
+    @Test func timeOfDay_edgeCases() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+
+        let baseDay = Self.g(2024, 6, 15, hour: 0)
+        let dates: [(String, Date)] = [
+            ("00:00:00.000", baseDay),
+            ("00:00:00.001", baseDay.addingTimeInterval(0.001)),
+            ("00:00:01.000", baseDay.addingTimeInterval(1)),
+            ("06:00:00",     baseDay.addingTimeInterval(6 * 3600)),
+            ("11:59:59",     baseDay.addingTimeInterval(11 * 3600 + 59 * 60 + 59)),
+            ("12:00:00",     baseDay.addingTimeInterval(12 * 3600)),
+            ("12:00:00.001", baseDay.addingTimeInterval(12 * 3600 + 0.001)),
+            ("18:00:00",     baseDay.addingTimeInterval(18 * 3600)),
+            ("23:59:58",     baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 58)),
+            ("23:59:59",     baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 59)),
+            ("23:59:59.500", baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 59.5)),
+            ("23:59:59.999", baseDay.addingTimeInterval(23 * 3600 + 59 * 60 + 59.999)),
+            ("next-day",     baseDay.addingTimeInterval(86400)),
+        ]
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 9: timeOfDay_edgeCases", div, dateCount: dates.count)
+    }
+
+    @Test func farPastAndFarFuture() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+
+        let dates: [(String, Date)] = [
+            ("0600-06-15", Self.g(600, 6, 15)),
+            ("0900-06-15", Self.g(900, 6, 15)),
+            ("1200-06-15", Self.g(1200, 6, 15)),
+            ("1500-06-15", Self.g(1500, 6, 15)),
+            ("1700-06-15", Self.g(1700, 6, 15)),
+            ("1850-06-15", Self.g(1850, 6, 15)),
+            ("2150-06-15", Self.g(2150, 6, 15)),
+            ("2200-06-15", Self.g(2200, 6, 15)),
+            ("2300-06-15", Self.g(2300, 6, 15)),
+        ]
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 11: farPastAndFarFuture", div, dateCount: dates.count)
+    }
+
+    @Test func weekOfYear_yearWrap() {
+        let (icu, ours) = Self.makePair()
+        let div = Divergences()
+        let icuCal = Calendar(inner: _CalendarICU(
+            identifier: .hebrew, timeZone: .gmt, locale: nil,
+            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+
+        var dates: [(String, Date)] = []
+        for year in [5777, 5778, 5779, 5780, 5781, 5782] {
+            guard let nextRh = Self.h(year + 1, 1, 1, icu: icuCal) else { continue }
+            for off in -7...7 {
+                dates.append(("\(year)→\(year+1) day\(off >= 0 ? "+" : "")\(off)",
+                              nextRh.addingTimeInterval(86400.0 * Double(off))))
+            }
+        }
+
+        for (label, d) in dates {
+            Self.compareSurfaces(label: label, date: d, icu: icu, ours: ours, div: div)
+        }
+        Self.reportAndAssert("Suite B Topic 13: weekOfYear_yearWrap", div, dateCount: dates.count)
     }
 }

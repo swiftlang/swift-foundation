@@ -716,8 +716,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             let m = Int(remAfterH / 60)
             let remAfterM = remAfterH - Double(m) * 60
             let s = Int(remAfterM)
-            let fractional = remAfterM - Double(s)
-            let ns = Int((fractional * 1e9).rounded())
+            let ns = Int((localSeconds - localSeconds.rounded(.down)) * 1_000_000_000)
             if components.contains(.hour) { result.hour = h }
             if components.contains(.minute) { result.minute = m }
             if components.contains(.second) { result.second = s }
@@ -873,12 +872,48 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             return self.date(from: newDC)
         }
 
-        // Step 1+2: year/month adjustments (must happen BEFORE day-level additions to match
-        // ICU's ordering — e.g., Adar I + 1 year + N days treats year first, demoting
-        // Adar I → Adar in common year before days are counted).
+        // Step 1+2: year then month, as separate sequential operations (matching
+        // _CalendarGregorian's pattern where each field gets its own decompose →
+        // adjust → clamp → reconstruct cycle). Batching year+month into one step
+        // would skip the day-clamping between them — e.g. Kislev 30 in a complete
+        // year + 1 year landing in a deficient year (Kislev 29) must clamp to 29
+        // before the month add runs.
         let yearsToAdd = components.year ?? 0
         let monthsToAdd = components.month ?? 0
-        if yearsToAdd != 0 || monthsToAdd != 0 {
+
+        if yearsToAdd != 0 {
+            let tz = self.timeZone
+            let currentComps = dateComponents(
+                [.year, .month, .day, .hour, .minute, .second, .nanosecond],
+                from: result, in: tz
+            )
+            guard let y = currentComps.year,
+                  let m = currentComps.month,
+                  let d = currentComps.day else { return nil }
+
+            var newYear = Int32(y) + Int32(yearsToAdd)
+            var newCivilMonth = Int32(m)
+
+            if newCivilMonth == 6 && !HebrewArithmetic.isLeapYear(newYear) {
+                newCivilMonth = 7
+            }
+
+            let monthLength = Int(HebrewArithmetic.daysInCivilMonth(
+                year: newYear, civilMonth: UInt8(newCivilMonth)))
+            let clampedDay = min(d, monthLength)
+
+            guard let biblicalNew = HebrewArithmetic.civilToBiblical(year: newYear, civilMonth: UInt8(newCivilMonth)) else { return nil }
+            let rdNew = HebrewArithmetic.fixedFromHebrew(year: newYear, month: biblicalNew, day: UInt8(clampedDay))
+            var secondsInDay: Double = 0
+            if let h = currentComps.hour    { secondsInDay += Double(h) * 3600 }
+            if let m = currentComps.minute  { secondsInDay += Double(m) * 60 }
+            if let s = currentComps.second  { secondsInDay += Double(s) }
+            if let n = currentComps.nanosecond { secondsInDay += Double(n) / 1e9 }
+            result = utcDate(fromRataDie: rdNew, secondsInDay: secondsInDay, in: tz,
+                            repeatedTimePolicy: .former, skippedTimePolicy: .former)
+        }
+
+        if monthsToAdd != 0 {
             let tz = self.timeZone
             let currentComps = dateComponents(
                 [.year, .month, .day, .hour, .minute, .second, .nanosecond],
@@ -891,14 +926,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             var newYear = Int32(y)
             var newCivilMonth = Int32(m)
 
-            // Apply years FIRST (ICU ordering), demoting Adar I to Adar if leap→common.
-            newYear += Int32(yearsToAdd)
-            if newCivilMonth == 6 && !HebrewArithmetic.isLeapYear(newYear) {
-                newCivilMonth = 7
-            }
-
-            // Then month addition: iterate one step at a time, respecting the skip at civil-6
-            // in common years and wrapping across year boundaries.
             var remaining = monthsToAdd
             while remaining > 0 {
                 newCivilMonth += 1
@@ -921,13 +948,10 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                 remaining += 1
             }
 
-            // Clamp the day to the target month's length.
             let monthLength = Int(HebrewArithmetic.daysInCivilMonth(
                 year: newYear, civilMonth: UInt8(newCivilMonth)))
             let clampedDay = min(d, monthLength)
 
-            // Build the UTC Date directly via utcDate using .latter for repeated-time
-            // policy — matches _CalendarGregorian's year/month/yearForWeekOfYear add.
             guard let biblicalNew = HebrewArithmetic.civilToBiblical(year: newYear, civilMonth: UInt8(newCivilMonth)) else { return nil }
             let rdNew = HebrewArithmetic.fixedFromHebrew(year: newYear, month: biblicalNew, day: UInt8(clampedDay))
             var secondsInDay: Double = 0
@@ -985,6 +1009,66 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         if let ns = components.nanosecond, ns != 0 { result += Double(ns) / 1_000_000_000 }
 
         return result
+    }
+
+    // MARK: - Fast enumerate path
+
+    internal func nextDate(after date: Date, matching components: DateComponents,
+                           direction: Calendar.SearchDirection = .forward) -> Date? {
+        guard let targetMonth = components.month,
+              let targetDay = components.day,
+              targetMonth >= 1, targetMonth <= 13,
+              targetDay >= 1,
+              components.era == nil,
+              components.year == nil,
+              components.hour == nil,
+              components.minute == nil,
+              components.second == nil,
+              components.nanosecond == nil,
+              components.weekday == nil,
+              components.weekdayOrdinal == nil,
+              components.weekOfMonth == nil,
+              components.weekOfYear == nil,
+              components.yearForWeekOfYear == nil,
+              components.dayOfYear == nil
+        else { return nil }
+
+        let tz = self.timeZone
+        let totalOffset = tz.secondsFromGMT(for: date)
+        let localSeconds = date.timeIntervalSinceReferenceDate + Double(totalOffset)
+        let (rd, _) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
+        let (year, biblicalMonth, day) = HebrewArithmetic.hebrewFromFixed(rd)
+        let civilMonth = HebrewArithmetic.biblicalToCivil(year: year, biblicalMonth: biblicalMonth)
+
+        let forward = direction == .forward
+
+        var targetYear = year
+        let isPastTarget: Bool
+        if Int(civilMonth) == targetMonth {
+            isPastTarget = forward ? Int(day) >= targetDay : Int(day) <= targetDay
+        } else {
+            isPastTarget = forward ? Int(civilMonth) > targetMonth : Int(civilMonth) < targetMonth
+        }
+        if isPastTarget { targetYear += forward ? 1 : -1 }
+
+        if targetMonth == 6 {
+            if forward {
+                while !HebrewArithmetic.isLeapYear(targetYear) { targetYear += 1 }
+            } else {
+                while !HebrewArithmetic.isLeapYear(targetYear) { targetYear -= 1 }
+            }
+        }
+
+        guard let biblical = HebrewArithmetic.civilToBiblical(year: targetYear, civilMonth: UInt8(targetMonth)) else {
+            return nil
+        }
+
+        let daysInMonth = Int(HebrewArithmetic.lastDayOfMonth(targetYear, month: biblical))
+        let clampedDay = min(targetDay, daysInMonth)
+
+        let targetRd = HebrewArithmetic.fixedFromHebrew(year: targetYear, month: biblical, day: UInt8(clampedDay))
+        return utcDate(fromRataDie: targetRd, secondsInDay: 0, in: tz,
+                      repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
