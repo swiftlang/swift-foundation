@@ -1293,35 +1293,35 @@ private extension __JSONEncoder {
     }
 
     func _asDirectArrayEncodable<T: Encodable>(_ value: T) -> _JSONDirectArrayEncodable? {
-        return if let array = _specializingCast(value, to: [Int8].self) {
+        return if let array = _specialize(value, for: [Int8].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int16].self) {
+        } else if let array = _specialize(value, for: [Int16].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int32].self) {
+        } else if let array = _specialize(value, for: [Int32].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int64].self) {
+        } else if let array = _specialize(value, for: [Int64].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int128].self) {
+        } else if let array = _specialize(value, for: [Int128].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int].self) {
+        } else if let array = _specialize(value, for: [Int].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt8].self) {
+        } else if let array = _specialize(value, for: [UInt8].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt16].self) {
+        } else if let array = _specialize(value, for: [UInt16].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt32].self) {
+        } else if let array = _specialize(value, for: [UInt32].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt64].self) {
+        } else if let array = _specialize(value, for: [UInt64].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt128].self) {
+        } else if let array = _specialize(value, for: [UInt128].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt].self) {
+        } else if let array = _specialize(value, for: [UInt].self) {
             array
-        } else if let array = _specializingCast(value, to: [String].self) {
+        } else if let array = _specialize(value, for: [String].self) {
             array
-        } else if let array = _specializingCast(value, to: [Float].self) {
+        } else if let array = _specialize(value, for: [Float].self) {
             array
-        } else if let array = _specializingCast(value, to: [Double].self) {
+        } else if let array = _specialize(value, for: [Double].self) {
             array
         } else {
             nil

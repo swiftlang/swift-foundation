@@ -758,7 +758,7 @@ extension StringProtocol {
         }
         #endif
 
-        let string = _specializingCast(self, to: String.self) ?? String(self)
+        let string = _specialize(self, for: String.self) ?? String(self)
         if allowedCharacters.hasIdenticalSwiftStorage(to: .urlPathAllowed) {
             return URLEncoder.percentEncode(path: string)
         } else if allowedCharacters.hasIdenticalSwiftStorage(to: .urlHostAllowed) {
@@ -788,7 +788,7 @@ extension StringProtocol {
         }
         #endif
         return URLEncoder.percentDecode(
-            string: _specializingCast(self, to: String.self) ?? String(self)
+            string: _specialize(self, for: String.self) ?? String(self)
         )
     }
 }

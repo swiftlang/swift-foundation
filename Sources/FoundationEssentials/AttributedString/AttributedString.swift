@@ -143,9 +143,9 @@ extension AttributedString {
     }
 
     internal init(_ s: some AttributedStringProtocol) {
-        if let s = _specializingCast(s, to: AttributedString.self) {
+        if let s = _specialize(s, for: AttributedString.self) {
             self = s
-        } else if let s = _specializingCast(s, to: AttributedSubstring.self) {
+        } else if let s = _specialize(s, for: AttributedSubstring.self) {
             self = AttributedString(s)
         } else {
             // !!!: We don't expect or want this to happen.
@@ -251,17 +251,17 @@ extension AttributedString {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal static func _bstring<S: Sequence<Character>>(from elements: S) -> BigString {
-        if let elements = _specializingCast(elements, to: String.self) {
+        if let elements = _specialize(elements, for: String.self) {
             return BigString(elements)
         }
-        if let elements = _specializingCast(elements, to: Substring.self) {
+        if let elements = _specialize(elements, for: Substring.self) {
             return BigString(elements)
         }
-        if let elements = _specializingCast(elements, to: AttributedString.CharacterView.self) {
+        if let elements = _specialize(elements, for: AttributedString.CharacterView.self) {
             return BigString(elements._characters)
         }
-        if let elements = _specializingCast(
-            elements, to: Slice<AttributedString.CharacterView>.self
+        if let elements = _specialize(
+            elements, for: Slice<AttributedString.CharacterView>.self
         ) {
             return BigString(elements._characters)
         }
