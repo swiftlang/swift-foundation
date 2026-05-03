@@ -1055,7 +1055,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         // Reject anything that requires the generic enumerate framework.
         // Time-of-day fields (hour/minute/second/nanosecond) ARE allowed and preserved.
         if components.era != nil || components.year != nil ||
-           components.weekdayOrdinal != nil ||
            components.weekOfMonth != nil || components.weekOfYear != nil ||
            components.yearForWeekOfYear != nil ||
            components.dayOfYear != nil {
@@ -1065,9 +1064,15 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let hasMonth = components.month != nil
         let hasDay = components.day != nil
         let hasWeekday = components.weekday != nil
+        let hasWdOrd = components.weekdayOrdinal != nil
 
-        // Combinations we don't fast-path.
-        if hasWeekday && (hasMonth || hasDay) { return nil }
+        // weekdayOrdinal is only fast-pathed for {month, weekday, weekdayOrdinal}
+        // (e.g. "4th Thursday of November" / "last Friday of Adar"). Any other shape
+        // falls through to the generic enumerate framework.
+        if hasWdOrd && !(hasMonth && hasWeekday && !hasDay) { return nil }
+        // {weekday, day} and {weekday, month} (without wdOrd) aren't fast-pathed.
+        if hasWeekday && hasDay { return nil }
+        if hasWeekday && hasMonth && !hasWdOrd { return nil }
         if !hasMonth && !hasDay && !hasWeekday { return nil }
 
         let tz = self.timeZone
@@ -1078,6 +1083,15 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let civilMonth = HebrewArithmetic.biblicalToCivil(year: year, biblicalMonth: biblicalMonth)
         let secsInDay = Self.secondsInDay(from: components)
         let forward = direction == .forward
+
+        if hasWdOrd {
+            return nextMonthWeekdayOrdinalMatch(
+                rd: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
+                targetMonth: components.month!,
+                targetWeekday: components.weekday!,
+                targetWdOrd: components.weekdayOrdinal!,
+                targetSecsInDay: secsInDay, forward: forward, tz: tz)
+        }
 
         if hasWeekday {
             return nextWeekdayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
@@ -1225,6 +1239,63 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let targetRd = rd + delta
         return utcDate(fromRataDie: targetRd, secondsInDay: targetSecsInDay, in: tz,
                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
+    }
+
+    /// Fast path for `{month, weekday, weekdayOrdinal, h?, m?, s?, ns?}` —
+    /// "Nth weekday of month" (e.g. 4th Thursday of November / last Friday of Adar).
+    /// Pure O(1) Hebrew arithmetic per candidate year, with year iteration to honor
+    /// the strict-after-input requirement, leap-only Adar I, and out-of-range ordinals.
+    private func nextMonthWeekdayOrdinalMatch(
+        rd: Int64, currentSecsInDay: Double, currentYear: Int32,
+        targetMonth: Int, targetWeekday: Int, targetWdOrd: Int,
+        targetSecsInDay: Double, forward: Bool, tz: TimeZone
+    ) -> Date? {
+        guard targetMonth >= 1, targetMonth <= 13 else { return nil }
+        guard targetWeekday >= 1, targetWeekday <= 7 else { return nil }
+        // Negative ordinals (e.g. "last Thursday") aren't supported by ICU's
+        // enumerateDates matching contract — fall through to the generic framework
+        // so behavior matches `_CalendarICU`.
+        guard targetWdOrd >= 1 else { return nil }
+        let cm = UInt8(targetMonth)
+
+        // Compute the target day-of-month for the requested ordinal in (year, civilMonth).
+        // Returns nil if the month doesn't exist this year (Adar I in common years) or
+        // the ordinal is out of range (e.g. 5th Thursday in a 4-Thursday month).
+        func dayForOrdinal(in y: Int32) -> (bib: UInt8, day: UInt8)? {
+            if cm == 6 && !HebrewArithmetic.isLeapYear(y) { return nil }
+            guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
+            let firstRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: 1)
+            var firstWd = firstRd % 7
+            if firstWd < 0 { firstWd += 7 }
+            let firstWeekday = Int(firstWd) + 1                              // 1..7
+            let firstOcc = 1 + ((targetWeekday - firstWeekday + 7) % 7)      // 1..7
+            let dim = Int(HebrewArithmetic.lastDayOfMonth(y, month: bib))
+            let day = firstOcc + (targetWdOrd - 1) * 7
+            guard day >= 1, day <= dim else { return nil }
+            return (bib, UInt8(day))
+        }
+
+        // Bounded year iteration. Hebrew leap-cycle gap is at most 3 years, so 6
+        // iterations always reach a leap year for Adar I requests.
+        var y = currentYear
+        for _ in 0..<6 {
+            if let (bib, d) = dayForOrdinal(in: y) {
+                let cRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: d)
+                if forward {
+                    if cRd > rd || (cRd == rd && targetSecsInDay > currentSecsInDay) {
+                        return utcDate(fromRataDie: cRd, secondsInDay: targetSecsInDay, in: tz,
+                                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
+                    }
+                } else {
+                    if cRd < rd || (cRd == rd && targetSecsInDay < currentSecsInDay) {
+                        return utcDate(fromRataDie: cRd, secondsInDay: targetSecsInDay, in: tz,
+                                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
+                    }
+                }
+            }
+            y += forward ? 1 : -1
+        }
+        return nil
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
@@ -1463,6 +1534,30 @@ internal enum HebrewArithmetic {
 
     // MARK: YearData (cached per conversion)
 
+    /// Single-slot YearData cache. Hit rate is high in tight loops over the
+    /// same year — primitives like `dateInterval(of:)`, `dateComponents`, and
+    /// `date(byAdding:)` typically touch only one or two Hebrew years per
+    /// invocation, and downstream `lastDayOfMonth` / `daysInCivilMonth` calls
+    /// reuse the same year. Save 2× `calendarElapsedDays` per cache hit.
+    ///
+    /// Deliberately NOT consulted inside the year-approximation loop in
+    /// `hebrewFromFixed` — that loop probes year+1, year+2 for ~1–2 iterations
+    /// and would thrash a single-slot cache. We populate the cache only at
+    /// the END of `hebrewFromFixed` (and at the start of `fixedFromHebrew`),
+    /// which captures the steady-state year for downstream calls to reuse.
+    private static let _yearDataCache = LockedState<YearData?>(initialState: nil)
+
+    /// Cached `YearData(year:)`. Use for any call site that would otherwise
+    /// build `YearData` from scratch in a hot path.
+    internal static func yearData(_ year: Int32) -> YearData {
+        if let yd = _yearDataCache.withLock({ $0 }), yd.year == year {
+            return yd
+        }
+        let fresh = YearData(year: year)
+        _yearDataCache.withLock { $0 = fresh }
+        return fresh
+    }
+
     /// Year-level precomputed metadata. Computing this once per `fromRataDie` /
     /// `toRataDie` call avoids the redundant `newYear` / `calendarElapsedDays`
     /// invocations that a naive implementation would incur inside month-walk loops.
@@ -1516,25 +1611,25 @@ internal enum HebrewArithmetic {
     // MARK: Year / Month Queries
 
     static func daysInYear(_ year: Int32) -> UInt16 {
-        UInt16(YearData(year: year).yearLen)
+        UInt16(yearData(year).yearLen)
     }
 
     static func isLongMarheshvan(_ year: Int32) -> Bool {
-        YearData(year: year).longMarheshvan
+        yearData(year).longMarheshvan
     }
 
     static func isShortKislev(_ year: Int32) -> Bool {
-        YearData(year: year).shortKislev
+        yearData(year).shortKislev
     }
 
     static func lastDayOfMonth(_ year: Int32, month: UInt8) -> UInt8 {
-        YearData(year: year).lastDayOfMonth(month)
+        yearData(year).lastDayOfMonth(month)
     }
 
     // MARK: Fixed ↔ Hebrew Conversion (biblical month ordering)
 
     static func fixedFromHebrew(year: Int32, month: UInt8, day: UInt8) -> Int64 {
-        let yd = YearData(year: year)
+        let yd = yearData(year)
         return fixedFromHebrew(yearData: yd, month: month, day: day)
     }
 
@@ -1578,7 +1673,7 @@ internal enum HebrewArithmetic {
             year += 1
         }
 
-        let yd = YearData(year: year)
+        let yd = yearData(year)
         var rem = Int(date &- yd.newYear)
 
         // Civil month order for biblical months:
@@ -1683,7 +1778,7 @@ internal enum HebrewArithmetic {
     /// Days preceding a civil-ordered month in its year (for day-of-year).
     /// Skips civil-6 in common years (where it doesn't exist).
     static func daysPrecedingCivilMonth(year: Int32, civilMonth: UInt8) -> UInt16 {
-        let yd = YearData(year: year)
+        let yd = yearData(year)
         var total: UInt16 = 0
         for m: UInt8 in 1..<civilMonth {
             if let biblical = civilToBiblical(year: year, civilMonth: m) {
