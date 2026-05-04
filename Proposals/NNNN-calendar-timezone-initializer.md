@@ -62,7 +62,7 @@ The new initializer is defined as:
 
 ```swift
 public init(
-    identifier: __shared Identifier,
+    identifier: Identifier,
     timeZone: TimeZone? = nil,
     locale: Locale? = nil,
     firstWeekday: Int? = nil,
@@ -113,7 +113,7 @@ public var observerSite: Calendar.ObserverSite // .earth, .lunar
 
 Clearly, this new property affects calendrical computations. We propose there would exist an intuition or presumption that a value for `observerSite` could be accepted when initializing a `Calendar` for specifically computing moments on a non-default site, like the moon:
 ```swift
-public init(identifier: __shared Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil, observerSite: ObserverSite? = nil)
+public init(identifier: Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil, observerSite: ObserverSite? = nil)
 ```
 
 It would be an ABI-breaking change to add this new property to the existing initializer, so to support that intuition, Foundation could offer a whole new initializer.
