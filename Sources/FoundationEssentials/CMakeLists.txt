@@ -76,7 +76,7 @@ else()
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-load-plugin-executable ${MacroExecutable}>")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android)
+if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android OR CMAKE_SYSTEM_NAME STREQUAL WASI)
     target_compile_options(FoundationEssentials PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -Xcc -Xfrontend -D_GNU_SOURCE>")
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
