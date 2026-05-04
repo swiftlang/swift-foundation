@@ -424,7 +424,7 @@ extension Platform {
 
     public static func strtof_clocale(_ nptr: UnsafePointer<UInt8>, _ endptr: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> Float {
         #if os(Windows)
-        return _strtod_l(nptr, endptr, Self.cLocale)
+        return _strtof_l(nptr, endptr, Self.cLocale)
         #elseif NO_LOCALIZATION
         return strtof(nptr, endptr);
         #else
