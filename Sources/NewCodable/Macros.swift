@@ -15,27 +15,27 @@
 /// The macro spellings in this file are provisional and may evolve with the
 /// macro-based Codable design. The per-property marker macros below are
 /// especially likely to change as the feature set is refined.
-@attached(extension, conformances: JSONEncodable, names: named(CodingFields), named(encode))
+@attached(extension, conformances: JSONEncodable, names: named(CodingFields), named(JSONCodingFields), named(encode))
 public macro JSONEncodable() = #externalMacro(module: "NewCodableMacros", type: "JSONEncodableMacro")
 
 /// Experimental macro that synthesizes `JSONDecodable` conformance.
-@attached(extension, conformances: JSONDecodable, names: named(CodingFields), named(decode))
+@attached(extension, conformances: JSONDecodable, names: named(CodingFields), named(JSONCodingFields), named(decode))
 public macro JSONDecodable() = #externalMacro(module: "NewCodableMacros", type: "JSONDecodableMacro")
 
 /// Experimental macro that synthesizes both `JSONEncodable` and `JSONDecodable`.
-@attached(extension, conformances: JSONEncodable, JSONDecodable, names: named(CodingFields), named(encode), named(decode))
+@attached(extension, conformances: JSONEncodable, JSONDecodable, names: named(CodingFields), named(JSONCodingFields), named(encode), named(decode))
 public macro JSONCodable() = #externalMacro(module: "NewCodableMacros", type: "JSONCodableMacro")
 
 /// Experimental macro that synthesizes `CommonEncodable` conformance.
-@attached(extension, conformances: CommonEncodable, names: named(CodingFields), named(encode))
+@attached(extension, conformances: CommonEncodable, names: named(CodingFields), named(CommonCodingFields), named(encode))
 public macro CommonEncodable() = #externalMacro(module: "NewCodableMacros", type: "CommonEncodableMacro")
 
 /// Experimental macro that synthesizes `CommonDecodable` conformance.
-@attached(extension, conformances: CommonDecodable, names: named(CodingFields), named(decode))
+@attached(extension, conformances: CommonDecodable, names: named(CodingFields), named(CommonCodingFields), named(decode))
 public macro CommonDecodable() = #externalMacro(module: "NewCodableMacros", type: "CommonDecodableMacro")
 
 /// Experimental macro that synthesizes both `CommonEncodable` and `CommonDecodable`.
-@attached(extension, conformances: CommonEncodable, CommonDecodable, names: named(CodingFields), named(encode), named(decode))
+@attached(extension, conformances: CommonEncodable, CommonDecodable, names: named(CodingFields), named(CommonCodingFields), named(encode), named(decode))
 public macro CommonCodable() = #externalMacro(module: "NewCodableMacros", type: "CommonCodableMacro")
 
 /// Experimental per-property marker macro for overriding the serialized key.

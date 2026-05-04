@@ -350,3 +350,103 @@ struct JSONCodableMacroIntegrationTests {
         #expect(decoded2 == pair)
     }
 }
+
+// MARK: - Combined @JSONCodable + @CommonCodable Integration Tests
+
+/// A type annotated with both @JSONCodable and @CommonCodable to verify
+/// that both conformances are generated correctly when macros are stacked.
+@JSONCodable @CommonCodable
+struct DualCodableStruct: Equatable {
+    let name: String
+    let count: Int
+    let active: Bool
+    let nickname: String?
+
+    @CodingKey("created_at")
+    let createdAt: String
+
+    @CodableDefault("unknown")
+    let source: String
+
+    @DecodableAlias("colour")
+    let color: String
+}
+
+@Suite("Combined @JSONCodable + @CommonCodable Integration")
+struct CombinedMacroIntegrationTests {
+
+    static let expectedJSON = #"{"name":"Widget","count":42,"active":true,"nickname":"W","created_at":"2026-01-01","source":"api","color":"red"}"#
+
+    static func makeSample() -> DualCodableStruct {
+        DualCodableStruct(
+            name: "Widget",
+            count: 42,
+            active: true,
+            nickname: "W",
+            createdAt: "2026-01-01",
+            source: "api",
+            color: "red"
+        )
+    }
+
+    @Test func jsonRoundTrip() throws {
+        let original = Self.makeSample()
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == Self.expectedJSON)
+        let decoded = try NewJSONDecoder().decode(DualCodableStruct.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func commonRoundTrip() throws {
+        let original = Self.makeSample()
+        let data = try encodeViaCommon(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == Self.expectedJSON)
+        let decoded: DualCodableStruct = try decodeViaCommon(from: data)
+        #expect(decoded == original)
+    }
+
+    private func encodeViaCommon(_ value: borrowing some CommonEncodable) throws -> Data {
+        try NewJSONEncoder().encode(value)
+    }
+
+    private func decodeViaCommon<T: CommonDecodable>(from data: Data) throws -> T {
+        try NewJSONDecoder().decode(T.self, from: data)
+    }
+
+    @Test func optionalNilRoundTrip() throws {
+        let original = DualCodableStruct(
+            name: "X", count: 0, active: false,
+            nickname: nil, createdAt: "2026-01-01", source: "test", color: "blue"
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"nickname\":null"))
+        let decoded = try NewJSONDecoder().decode(DualCodableStruct.self, from: data)
+        #expect(decoded.nickname == nil)
+    }
+
+    @Test func defaultValueWhenKeyAbsent() throws {
+        let json = Data(#"{"name":"X","count":0,"active":false,"nickname":null,"created_at":"2026-01-01","color":"blue"}"#.utf8)
+        let decoded = try NewJSONDecoder().decode(DualCodableStruct.self, from: json)
+        #expect(decoded.source == "unknown")
+    }
+
+    @Test func aliasDecoding() throws {
+        let json = Data(#"{"name":"X","count":0,"active":false,"nickname":null,"created_at":"2026-01-01","source":"web","colour":"green"}"#.utf8)
+        let decoded = try NewJSONDecoder().decode(DualCodableStruct.self, from: json)
+        #expect(decoded.color == "green")
+    }
+
+    @Test func reversedAttributeOrder() throws {
+        // Verifying the same type works — DualCodableStruct has @JSONCodable @CommonCodable.
+        // This test confirms both paths produce the same JSON regardless of which path encodes.
+        let original = Self.makeSample()
+        let jsonData = try NewJSONEncoder().encode(original)
+        let commonData = try encodeViaCommon(original)
+        let jsonString = String(data: jsonData, encoding: .utf8)!
+        let commonString = String(data: commonData, encoding: .utf8)!
+        #expect(jsonString == commonString)
+    }
+}

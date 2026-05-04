@@ -20,7 +20,7 @@ import NewCodableMacros
 struct JSONCodableMacroTests {
 
     @Test func basicStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             struct Person {
@@ -35,7 +35,7 @@ struct JSONCodableMacroTests {
             }
             
             extension Person {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case name
                     case age
                     case unknown
@@ -52,7 +52,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -68,8 +68,8 @@ struct JSONCodableMacroTests {
             extension Person: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
-                        try structEncoder.encode(field: CodingFields.age, value: self.age)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.age, value: self.age)
                     }
                 }
             }
@@ -79,9 +79,9 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var age: Int?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -108,7 +108,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func optionalProperty() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             struct Item {
@@ -123,7 +123,7 @@ struct JSONCodableMacroTests {
             }
             
             extension Item {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case name
                     case rating
                     case unknown
@@ -140,7 +140,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -156,8 +156,8 @@ struct JSONCodableMacroTests {
             extension Item: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
-                        try structEncoder.encode(field: CodingFields.rating, value: self.rating)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.rating, value: self.rating)
                     }
                 }
             }
@@ -167,9 +167,9 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var rating: Double?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -193,7 +193,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func customCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             struct Post {
@@ -208,7 +208,7 @@ struct JSONCodableMacroTests {
             }
             
             extension Post {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case publishDate
                     case title
                     case unknown
@@ -225,7 +225,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "date_published":
                             .publishDate
@@ -241,8 +241,8 @@ struct JSONCodableMacroTests {
             extension Post: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.publishDate, value: self.publishDate)
-                        try structEncoder.encode(field: CodingFields.title, value: self.title)
+                        try structEncoder.encode(field: JSONCodingFields.publishDate, value: self.publishDate)
+                        try structEncoder.encode(field: JSONCodingFields.title, value: self.title)
                     }
                 }
             }
@@ -252,9 +252,9 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var publishDate: String?
                         var title: String?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .publishDate:
@@ -281,7 +281,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func emptyStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             struct Empty {
@@ -311,7 +311,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func defaultValue() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             struct Config {
@@ -326,7 +326,7 @@ struct JSONCodableMacroTests {
             }
             
             extension Config {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case name
                     case locale
                     case unknown
@@ -343,7 +343,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -359,8 +359,8 @@ struct JSONCodableMacroTests {
             extension Config: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
-                        try structEncoder.encode(field: CodingFields.locale, value: self.locale)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.locale, value: self.locale)
                     }
                 }
             }
@@ -370,9 +370,9 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var locale: String?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -396,7 +396,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func aliasFullRoundtrip() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             struct User {
@@ -409,7 +409,7 @@ struct JSONCodableMacroTests {
             }
             
             extension User {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case userName
                     case unknown
 
@@ -423,7 +423,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "userName":
                             .userName
@@ -439,7 +439,7 @@ struct JSONCodableMacroTests {
             extension User: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.userName, value: self.userName)
+                        try structEncoder.encode(field: JSONCodingFields.userName, value: self.userName)
                     }
                 }
             }
@@ -448,9 +448,9 @@ struct JSONCodableMacroTests {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .userName:
@@ -472,7 +472,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func aliasCombinedWithCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             struct User {
@@ -485,7 +485,7 @@ struct JSONCodableMacroTests {
             }
             
             extension User {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case userName
                     case unknown
 
@@ -499,7 +499,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "user_name":
                             .userName
@@ -515,7 +515,7 @@ struct JSONCodableMacroTests {
             extension User: JSONEncodable {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.userName, value: self.userName)
+                        try structEncoder.encode(field: JSONCodingFields.userName, value: self.userName)
                     }
                 }
             }
@@ -524,9 +524,9 @@ struct JSONCodableMacroTests {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> User {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var userName: String?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .userName:
@@ -548,7 +548,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func publicStructEmitsPublicMembers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             public struct Person {
@@ -563,7 +563,7 @@ struct JSONCodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case name
                     case age
                     case unknown
@@ -580,7 +580,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -596,8 +596,8 @@ struct JSONCodableMacroTests {
             extension Person: JSONEncodable {
                 public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
-                        try structEncoder.encode(field: CodingFields.age, value: self.age)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.age, value: self.age)
                     }
                 }
             }
@@ -607,9 +607,9 @@ struct JSONCodableMacroTests {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
                         var age: Int?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -636,7 +636,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func packageStructEmitsPackageMembers() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             package struct Person {
@@ -649,7 +649,7 @@ struct JSONCodableMacroTests {
             }
 
             extension Person {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case name
                     case unknown
 
@@ -663,7 +663,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "name":
                             .name
@@ -677,7 +677,7 @@ struct JSONCodableMacroTests {
             extension Person: JSONEncodable {
                 package func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
-                        try structEncoder.encode(field: CodingFields.name, value: self.name)
+                        try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
                     }
                 }
             }
@@ -686,9 +686,9 @@ struct JSONCodableMacroTests {
                 package static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Person {
                     try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
                         var name: String?
-                        var _codingField: CodingFields?
+                        var _codingField: JSONCodingFields?
                         try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
-                            _codingField = try fieldDecoder.decode(CodingFields.self)
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                         } andValue: { valueDecoder throws(CodingError.Decoding) in
                             switch _codingField! {
                             case .name:
@@ -710,7 +710,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func errorOnNonStruct() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             class NotAStruct {
@@ -732,7 +732,7 @@ struct JSONCodableMacroTests {
     // MARK: - Enum Tests
 
     @Test func enumNoAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             enum Direction {
@@ -747,7 +747,7 @@ struct JSONCodableMacroTests {
             }
 
             extension Direction {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case north
                     case south
 
@@ -761,7 +761,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "north":
                             .north
@@ -778,18 +778,18 @@ struct JSONCodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .north:
-                        try encoder.encodeEnumCase(CodingFields.north)
+                        try encoder.encodeEnumCase(JSONCodingFields.north)
                     case .south:
-                        try encoder.encodeEnumCase(CodingFields.south)
+                        try encoder.encodeEnumCase(JSONCodingFields.south)
                     }
                 }
             }
 
             extension Direction: JSONDecodable {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Direction {
-                    var _codingField: CodingFields?
+                    var _codingField: JSONCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .north:
@@ -806,7 +806,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func enumWithAssociatedValues() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             enum Shape {
@@ -821,7 +821,7 @@ struct JSONCodableMacroTests {
             }
 
             extension Shape {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case circle
                     case point
 
@@ -835,7 +835,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "circle":
                             .circle
@@ -890,24 +890,24 @@ struct JSONCodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .circle(let radius):
-                        try encoder.encodeEnumCase(CodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
-                            try valueEncoder.encode(field: CodingFields.CircleFields.radius, value: radius)
+                        try encoder.encodeEnumCase(JSONCodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: JSONCodingFields.CircleFields.radius, value: radius)
                         }
                     case .point:
-                        try encoder.encodeEnumCase(CodingFields.point)
+                        try encoder.encodeEnumCase(JSONCodingFields.point)
                     }
                 }
             }
 
             extension Shape: JSONDecodable {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Shape {
-                    var _codingField: CodingFields?
+                    var _codingField: JSONCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .circle:
-                            try CodingFields.CircleFields.decode(from: &valuesDecoder)
+                            try JSONCodingFields.CircleFields.decode(from: &valuesDecoder)
                         case .point:
                             .point
                         }
@@ -920,7 +920,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func enumWithCustomCodingKey() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             enum Status {
@@ -935,7 +935,7 @@ struct JSONCodableMacroTests {
             }
 
             extension Status {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case inProgress
                     case done
 
@@ -949,7 +949,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "in_progress":
                             .inProgress
@@ -966,18 +966,18 @@ struct JSONCodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .inProgress:
-                        try encoder.encodeEnumCase(CodingFields.inProgress)
+                        try encoder.encodeEnumCase(JSONCodingFields.inProgress)
                     case .done:
-                        try encoder.encodeEnumCase(CodingFields.done)
+                        try encoder.encodeEnumCase(JSONCodingFields.done)
                     }
                 }
             }
 
             extension Status: JSONDecodable {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Status {
-                    var _codingField: CodingFields?
+                    var _codingField: JSONCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .inProgress:
@@ -994,7 +994,7 @@ struct JSONCodableMacroTests {
     }
 
     @Test func enumWithDecodableAlias() {
-        assertMacroExpansion(
+        AssertMacroExpansion(
             """
             @JSONCodable
             enum Status {
@@ -1009,7 +1009,7 @@ struct JSONCodableMacroTests {
             }
 
             extension Status {
-                enum CodingFields: JSONOptimizedCodingField {
+                enum JSONCodingFields: JSONOptimizedCodingField {
                     case inProgress
                     case done
 
@@ -1023,7 +1023,7 @@ struct JSONCodableMacroTests {
                         }
                     }
 
-                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CodingFields {
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
                         switch UTF8SpanComparator(key) {
                         case "in_progress":
                             .inProgress
@@ -1042,18 +1042,18 @@ struct JSONCodableMacroTests {
                 func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
                     switch self {
                     case .inProgress:
-                        try encoder.encodeEnumCase(CodingFields.inProgress)
+                        try encoder.encodeEnumCase(JSONCodingFields.inProgress)
                     case .done:
-                        try encoder.encodeEnumCase(CodingFields.done)
+                        try encoder.encodeEnumCase(JSONCodingFields.done)
                     }
                 }
             }
 
             extension Status: JSONDecodable {
                 static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Status {
-                    var _codingField: CodingFields?
+                    var _codingField: JSONCodingFields?
                     return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
-                        _codingField = try fieldDecoder.decode(CodingFields.self)
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
                     } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
                         return switch _codingField! {
                         case .inProgress:

@@ -34,8 +34,9 @@ extension CommonEncodableMacro: ExtensionMacro {
         }
         
         let expansion = CommonCodableExpansion(type: .encodingOnly, accessLevel: accessLevel(of: declaration))
-        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
-        let impl = typeDecl.makeEncodableExtension(expansion: expansion)
+        let peers = detectPeerMacros(node: node, declaration: declaration, expansion: expansion)
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion, peers: peers)
+        let impl = typeDecl.makeEncodableExtension(expansion: expansion, peers: peers)
         return codingFields + impl
     }
 }

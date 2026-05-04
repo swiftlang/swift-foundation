@@ -31,11 +31,12 @@ extension JSONCodableMacro: ExtensionMacro {
             in: context) else {
             return []
         }
-        
+
         let expansion = JSONCodableExpanion(type: .both, accessLevel: accessLevel(of: declaration))
-        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion)
-        let encodingImpl = typeDecl.makeEncodableExtension(expansion: expansion)
-        let decodingImpl = typeDecl.makeDecodableExtension(expansion: expansion)
+        let peers = detectPeerMacros(node: node, declaration: declaration, expansion: expansion)
+        let codingFields = typeDecl.makeCodingFieldsExtension(expansion: expansion, peers: peers)
+        let encodingImpl = typeDecl.makeEncodableExtension(expansion: expansion, peers: peers)
+        let decodingImpl = typeDecl.makeDecodableExtension(expansion: expansion, peers: peers)
         return codingFields + encodingImpl + decodingImpl
     }
 }
@@ -43,21 +44,18 @@ extension JSONCodableMacro: ExtensionMacro {
 struct JSONCodableExpanion: CodableExpansion {
     let type: CodableExpansionType
     let accessLevel: CodableDeclarationAccessLevel
-    
-    var fieldProtocolName: String {
-        switch type {
-        case .encodingOnly: "JSONOptimizedEncodingField"
-        case .decodingOnly: "JSONOptimizedDecodingField"
-        case .both: "JSONOptimizedCodingField"
-        }
-    }
-    
+
+    let fieldTypeName = "JSONCodingFields"
     let encodableProtocolName = "JSONEncodable"
     let decodableProtocolName = "JSONDecodable"
     let combinedProtocolName = "JSONCodable"
 
+    let encodableFieldProtocolName = "JSONOptimizedEncodingField"
+    let decodableFieldProtocolName = "JSONOptimizedDecodingField"
+    let combinedFieldProtocolName = "JSONOptimizedCodingField"
+
     let decoderType = "some JSONDecoderProtocol & ~Escapable"
     let structDecoderType = "some JSONDictionaryDecoder & ~Escapable"
-    
+
     let encoderType = "JSONDirectEncoder"
 }
