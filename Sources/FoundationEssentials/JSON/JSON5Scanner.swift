@@ -14,9 +14,9 @@
 import Darwin
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
+#elseif canImport(string_h)
+import string_h
 #endif
-
-internal import _FoundationCShims
 
 internal struct JSON5Scanner {
     let options: Options
