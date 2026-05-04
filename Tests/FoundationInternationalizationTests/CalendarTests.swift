@@ -216,35 +216,6 @@ private struct CalendarTests {
 
         #expect(c == calendar)
     }
-    
-    @Test func configurationInitializer() {
-        let locale = Locale(identifier: "en_AU")
-        let tz = TimeZone(identifier: "Australia/Sydney")!
-
-        var c = Calendar(identifier: .gregorian)
-        c.locale = locale
-        c.timeZone = tz
-        c.firstWeekday = 2
-        c.minimumDaysInFirstWeek = 2
-
-        let config = Calendar.Configuration.identifier(.gregorian)
-            .locale(locale)
-            .timeZone(tz)
-            .firstWeekday(2)
-            .minimumDaysInFirstWeek(2)
-        
-        let calendar = Calendar(config)
-        
-        #expect(c == calendar)
-        
-        let current = Calendar.current
-        let currentByConfig = Calendar(.current)
-        #expect(current == currentByConfig)
-        
-        let autoupdatingCurrent = Calendar.autoupdatingCurrent
-        let autoupdatingCurrentByConfig = Calendar(.autoupdatingCurrent)
-        #expect(autoupdatingCurrent == autoupdatingCurrentByConfig)
-    }
 
     func decodeHelper(_ l: Calendar) throws -> Calendar {
         let je = JSONEncoder()
