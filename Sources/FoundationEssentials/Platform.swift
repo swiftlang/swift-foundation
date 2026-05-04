@@ -396,7 +396,7 @@ extension Platform {
     // No C locale
     #else
     private static var cLocale: locale_t = {
-        newlocale(_stringshims_LC_ALL_MASK(), "C", locale_t(bitPattern: 0));
+        newlocale(_stringshims_LC_ALL_MASK(), "C", locale_t(bitPattern: 0))!
     }()
     #endif
 
