@@ -162,9 +162,13 @@ public class AdaptorDecoder<Value: AdaptableDecodableValue>: Decoder {
             result.append(codingKey)
         }
 
-        while let ownerDecoder = decoder.ownerDecoder,
-              let key = ownerDecoder.codingKey {
-            result.append(key)
+        while let ownerDecoder = decoder.ownerDecoder {
+            if let key = ownerDecoder.codingKey {
+                result.append(key)
+            }
+            if let codingPath = ownerDecoder.rootCodingPath {
+                result.append(contentsOf: codingPath)
+            }
             decoder = ownerDecoder
         }
         

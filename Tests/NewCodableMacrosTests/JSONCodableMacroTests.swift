@@ -1068,11 +1068,565 @@ struct JSONCodableMacroTests {
             macros: codableTestMacros
         )
     }
+
+
+    // MARK: - CodableBy tests
+
+    @Test func codableBy() {
+        AssertMacroExpansion(
+        """
+        @JSONCodable
+        struct MyType {
+            @CodableBy(.dateFormat(.iso8601))
+            let foo: Date
+        }
+        """,
+        expandedSource:
+        """
+        struct MyType {
+            let foo: Date
+        }
+
+        extension MyType {
+            enum JSONCodingFields: JSONOptimizedCodingField {
+                case foo
+                case unknown
+
+                @_transparent
+                var staticString: StaticString {
+                    switch self {
+                    case .foo:
+                        "foo"
+                    case .unknown:
+                        fatalError()
+                    }
+                }
+
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                    switch UTF8SpanComparator(key) {
+                    case "foo":
+                        .foo
+                    default:
+                        .unknown
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONEncodable {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(field: JSONCodingFields.foo) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.foo, using: .dateFormat(.iso8601))
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONDecodable {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> MyType {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var foo: Date?
+                    var _codingField: JSONCodingFields?
+                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                    } andValue: { valueDecoder throws(CodingError.Decoding) in
+                        switch _codingField! {
+                        case .foo:
+                            foo = try valueDecoder.decode(using: .dateFormat(.iso8601))
+                        case .unknown:
+                            break
+                        }
+                    }
+                    guard let foo else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'foo'")
+                    }
+                    return MyType(foo: foo)
+                }
+            }
+        }
+        """,
+        macros: codableTestMacros)
+    }
+
+    @Test func codableByISO8601WithOptions() {
+        AssertMacroExpansion(
+        """
+        @JSONCodable
+        struct MyType {
+            @CodableBy(.dateFormat(.iso8601(.init(includingFractionalSeconds: true))))
+            let timestamp: Date
+        }
+        """,
+        expandedSource:
+        """
+        struct MyType {
+            let timestamp: Date
+        }
+
+        extension MyType {
+            enum JSONCodingFields: JSONOptimizedCodingField {
+                case timestamp
+                case unknown
+
+                @_transparent
+                var staticString: StaticString {
+                    switch self {
+                    case .timestamp:
+                        "timestamp"
+                    case .unknown:
+                        fatalError()
+                    }
+                }
+
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                    switch UTF8SpanComparator(key) {
+                    case "timestamp":
+                        .timestamp
+                    default:
+                        .unknown
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONEncodable {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(field: JSONCodingFields.timestamp) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.timestamp, using: .dateFormat(.iso8601(.init(includingFractionalSeconds: true))))
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONDecodable {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> MyType {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var timestamp: Date?
+                    var _codingField: JSONCodingFields?
+                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                    } andValue: { valueDecoder throws(CodingError.Decoding) in
+                        switch _codingField! {
+                        case .timestamp:
+                            timestamp = try valueDecoder.decode(using: .dateFormat(.iso8601(.init(includingFractionalSeconds: true))))
+                        case .unknown:
+                            break
+                        }
+                    }
+                    guard let timestamp else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'timestamp'")
+                    }
+                    return MyType(timestamp: timestamp)
+                }
+            }
+        }
+        """,
+        macros: codableTestMacros)
+    }
+
+    @Test func codableByBase64() {
+        AssertMacroExpansion(
+        """
+        @JSONCodable
+        struct MyType {
+            @CodableBy(.base64)
+            let payload: Data
+        }
+        """,
+        expandedSource:
+        """
+        struct MyType {
+            let payload: Data
+        }
+
+        extension MyType {
+            enum JSONCodingFields: JSONOptimizedCodingField {
+                case payload
+                case unknown
+
+                @_transparent
+                var staticString: StaticString {
+                    switch self {
+                    case .payload:
+                        "payload"
+                    case .unknown:
+                        fatalError()
+                    }
+                }
+
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                    switch UTF8SpanComparator(key) {
+                    case "payload":
+                        .payload
+                    default:
+                        .unknown
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONEncodable {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(field: JSONCodingFields.payload) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.payload, using: .base64)
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONDecodable {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> MyType {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var payload: Data?
+                    var _codingField: JSONCodingFields?
+                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                    } andValue: { valueDecoder throws(CodingError.Decoding) in
+                        switch _codingField! {
+                        case .payload:
+                            payload = try valueDecoder.decode(using: .base64)
+                        case .unknown:
+                            break
+                        }
+                    }
+                    guard let payload else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'payload'")
+                    }
+                    return MyType(payload: payload)
+                }
+            }
+        }
+        """,
+        macros: codableTestMacros)
+    }
+
+    @Test func codableByMultipleFields() {
+        AssertMacroExpansion(
+        """
+        @JSONCodable
+        struct MyType {
+            @CodableBy(.dateFormat(.iso8601))
+            let createdAt: Date
+            let name: String
+            @CodableBy(.base64)
+            let data: Data
+        }
+        """,
+        expandedSource:
+        """
+        struct MyType {
+            let createdAt: Date
+            let name: String
+            let data: Data
+        }
+
+        extension MyType {
+            enum JSONCodingFields: JSONOptimizedCodingField {
+                case createdAt
+                case name
+                case data
+                case unknown
+
+                @_transparent
+                var staticString: StaticString {
+                    switch self {
+                    case .createdAt:
+                        "createdAt"
+                    case .name:
+                        "name"
+                    case .data:
+                        "data"
+                    case .unknown:
+                        fatalError()
+                    }
+                }
+
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                    switch UTF8SpanComparator(key) {
+                    case "createdAt":
+                        .createdAt
+                    case "name":
+                        .name
+                    case "data":
+                        .data
+                    default:
+                        .unknown
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONEncodable {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: 3) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(field: JSONCodingFields.createdAt) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.createdAt, using: .dateFormat(.iso8601))
+                    }
+                    try structEncoder.encode(field: JSONCodingFields.name, value: self.name)
+                    try structEncoder.encode(field: JSONCodingFields.data) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.data, using: .base64)
+                    }
+                }
+            }
+        }
+
+        extension MyType: JSONDecodable {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> MyType {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var createdAt: Date?
+                    var name: String?
+                    var data: Data?
+                    var _codingField: JSONCodingFields?
+                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                    } andValue: { valueDecoder throws(CodingError.Decoding) in
+                        switch _codingField! {
+                        case .createdAt:
+                            createdAt = try valueDecoder.decode(using: .dateFormat(.iso8601))
+                        case .name:
+                            name = try valueDecoder.decode(String.self)
+                        case .data:
+                            data = try valueDecoder.decode(using: .base64)
+                        case .unknown:
+                            break
+                        }
+                    }
+                    guard let createdAt else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'createdAt'")
+                    }
+                    guard let name else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                    }
+                    guard let data else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'data'")
+                    }
+                    return MyType(createdAt: createdAt, name: name, data: data)
+                }
+            }
+        }
+        """,
+        macros: codableTestMacros)
+    }
+    
+    @Test func codableByComplex() {
+        AssertMacroExpansion("""
+            @JSONCodable
+            struct CodableByDictionaryWithLosslessKeyAndArrayValue {
+                @CodableBy([.pass : [.dateFormat(.iso8601)]])
+                let schedule: [UInt8: [Date]]
+            }
+            """,
+            expandedSource: """
+            struct CodableByDictionaryWithLosslessKeyAndArrayValue {
+                let schedule: [UInt8: [Date]]
+            }
+
+            extension CodableByDictionaryWithLosslessKeyAndArrayValue {
+                enum JSONCodingFields: JSONOptimizedCodingField {
+                    case schedule
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .schedule:
+                            "schedule"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "schedule":
+                            .schedule
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension CodableByDictionaryWithLosslessKeyAndArrayValue: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: JSONCodingFields.schedule) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.schedule, using: .dictionary(key: .passthrough(), value: .array(.dateFormat(.iso8601))))
+                        }
+                    }
+                }
+            }
+
+            extension CodableByDictionaryWithLosslessKeyAndArrayValue: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> CodableByDictionaryWithLosslessKeyAndArrayValue {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var schedule: [UInt8: [Date]]?
+                        var _codingField: JSONCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .schedule:
+                                schedule = try valueDecoder.decode(using: .dictionary(key: .passthrough(), value: .array(.dateFormat(.iso8601))))
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let schedule else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'schedule'")
+                        }
+                        return CodableByDictionaryWithLosslessKeyAndArrayValue(schedule: schedule)
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros)
+    }
+
+    // MARK: - CodableBy diagnostic tests
+
+    @Test func codableByInvalidCollectionLiterals() {
+        AssertMacroExpansion(
+        """
+        @JSONCodable
+        struct BadStrategies {
+            @CodableBy([.losslessStringConversion, .pass])
+            let tooManyArray: [Int]
+            @CodableBy([])
+            let emptyArray: [Int]
+            @CodableBy([:])
+            let emptyDict: [Int:String]
+            @CodableBy([.losslessStringConversion : .pass, .pass : .losslessStringConversion])
+            let tooManyDict: [Int:String]
+        }
+        """,
+        expandedSource:
+        """
+        struct BadStrategies {
+            let tooManyArray: [Int]
+            let emptyArray: [Int]
+            let emptyDict: [Int:String]
+            let tooManyDict: [Int:String]
+        }
+
+        extension BadStrategies {
+            enum JSONCodingFields: JSONOptimizedCodingField {
+                case tooManyArray
+                case emptyArray
+                case emptyDict
+                case tooManyDict
+                case unknown
+
+                @_transparent
+                var staticString: StaticString {
+                    switch self {
+                    case .tooManyArray:
+                        "tooManyArray"
+                    case .emptyArray:
+                        "emptyArray"
+                    case .emptyDict:
+                        "emptyDict"
+                    case .tooManyDict:
+                        "tooManyDict"
+                    case .unknown:
+                        fatalError()
+                    }
+                }
+
+                static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                    switch UTF8SpanComparator(key) {
+                    case "tooManyArray":
+                        .tooManyArray
+                    case "emptyArray":
+                        .emptyArray
+                    case "emptyDict":
+                        .emptyDict
+                    case "tooManyDict":
+                        .tooManyDict
+                    default:
+                        .unknown
+                    }
+                }
+            }
+        }
+
+        extension BadStrategies: JSONEncodable {
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: 4) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(field: JSONCodingFields.tooManyArray) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.tooManyArray, using: [.losslessStringConversion, .pass])
+                    }
+                    try structEncoder.encode(field: JSONCodingFields.emptyArray) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.emptyArray, using: [])
+                    }
+                    try structEncoder.encode(field: JSONCodingFields.emptyDict) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.emptyDict, using: [:])
+                    }
+                    try structEncoder.encode(field: JSONCodingFields.tooManyDict) { valueEncoder throws(CodingError.Encoding) in
+                        try valueEncoder.encode(self.tooManyDict, using: [.losslessStringConversion : .pass, .pass : .losslessStringConversion])
+                    }
+                }
+            }
+        }
+
+        extension BadStrategies: JSONDecodable {
+            static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> BadStrategies {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var tooManyArray: [Int]?
+                    var emptyArray: [Int]?
+                    var emptyDict: [Int: String]?
+                    var tooManyDict: [Int: String]?
+                    var _codingField: JSONCodingFields?
+                    try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                    } andValue: { valueDecoder throws(CodingError.Decoding) in
+                        switch _codingField! {
+                        case .tooManyArray:
+                            tooManyArray = try valueDecoder.decode(using: [.losslessStringConversion, .pass])
+                        case .emptyArray:
+                            emptyArray = try valueDecoder.decode(using: [])
+                        case .emptyDict:
+                            emptyDict = try valueDecoder.decode(using: [:])
+                        case .tooManyDict:
+                            tooManyDict = try valueDecoder.decode(using: [.losslessStringConversion : .pass, .pass : .losslessStringConversion])
+                        case .unknown:
+                            break
+                        }
+                    }
+                    guard let tooManyArray else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'tooManyArray'")
+                    }
+                    guard let emptyArray else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'emptyArray'")
+                    }
+                    guard let emptyDict else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'emptyDict'")
+                    }
+                    guard let tooManyDict else {
+                        throw CodingError.dataCorrupted(debugDescription: "Missing required field 'tooManyDict'")
+                    }
+                    return BadStrategies(tooManyArray: tooManyArray, emptyArray: emptyArray, emptyDict: emptyDict, tooManyDict: tooManyDict)
+                }
+            }
+        }
+        """,
+        diagnostics: [
+            DiagnosticSpec(message: "@CodableBy array literal must contain exactly one element (the element strategy)", line: 3, column: 16),
+            DiagnosticSpec(message: "@CodableBy array literal must contain exactly one element (the element strategy)", line: 5, column: 16),
+            DiagnosticSpec(message: "@CodableBy dictionary literal must contain exactly one key-value pair (the key and value strategies)", line: 7, column: 16),
+            DiagnosticSpec(message: "@CodableBy dictionary literal must contain exactly one key-value pair (the key and value strategies)", line: 9, column: 16),
+        ],
+        macros: codableTestMacros)
+    }
 }
 
 private let codableTestMacros: [String: Macro.Type] = [
     "JSONCodable": JSONCodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
     "CodableDefault": CodableDefaultMacro.self,
+    "CodableBy": CodableByMacro.self,
     "DecodableAlias": DecodableAliasMacro.self,
 ]

@@ -49,3 +49,32 @@ public macro CodableDefault<T>(_ value: T) = #externalMacro(module: "NewCodableM
 /// Experimental per-property marker macro for accepting alternate decoding keys.
 @attached(peer)
 public macro DecodableAlias(_ names: String...) = #externalMacro(module: "NewCodableMacros", type: "DecodableAliasMacro")
+
+/// Experimental per-property marker macro for enabling the property to have a non-default codable representation.
+@attached(peer)
+public macro CodableBy<S: CommonCodingStrategy>(_ strategy: S) = #externalMacro(module: "NewCodableMacros", type: "CodableByMacro")
+
+/// Experimental per-property marker macro for enabling the property to have a non-default codable representation.
+@attached(peer)
+public macro DecodableBy<S: CommonDecodingStrategy>(_ strategy: S) = #externalMacro(module: "NewCodableMacros", type: "DecodableByMacro")
+
+/// Experimental per-property marker macro for enabling the property to have a non-default codable representation.
+@attached(peer)
+public macro EncodableBy<S: CommonEncodingStrategy>(_ strategy: S) = #externalMacro(module: "NewCodableMacros", type: "EncodableByMacro")
+
+/// JSON-specific variants of the above.
+@attached(peer)
+public macro CodableBy<S: JSONCodingStrategy>(_ strategy: S) = #externalMacro(module: "NewCodableMacros", type: "CodableByMacro")
+@attached(peer)
+public macro DecodableBy<S: JSONDecodingStrategy>(_ strategy: S) = #externalMacro(module: "NewCodableMacros", type: "DecodableByMacro")
+@attached(peer)
+public macro EncodableBy<S: JSONEncodingStrategy>(_ strategy: S) = #externalMacro(module: "NewCodableMacros", type: "EncodableByMacro")
+
+/// Experimental per-property marker macros accepting a `CodingStrategySyntax`
+/// for combinators whose generic parameters cannot be inferred at the attribute site.
+@attached(peer)
+public macro CodableBy(_ strategy: CodingStrategySyntax) = #externalMacro(module: "NewCodableMacros", type: "CodableByMacro")
+@attached(peer)
+public macro DecodableBy(_ strategy: CodingStrategySyntax) = #externalMacro(module: "NewCodableMacros", type: "CodableByMacro")
+@attached(peer)
+public macro EncodableBy(_ strategy: CodingStrategySyntax) = #externalMacro(module: "NewCodableMacros", type: "CodableByMacro")

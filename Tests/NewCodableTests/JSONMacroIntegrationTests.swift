@@ -450,3 +450,202 @@ struct CombinedMacroIntegrationTests {
         #expect(jsonString == commonString)
     }
 }
+
+// MARK: - @CodableBy Integration Tests
+
+@JSONCodable
+struct CodableByISO8601Type: Equatable {
+    @CodableBy(.dateFormat(.iso8601))
+    let createdAt: Date
+}
+
+@JSONCodable
+struct CodableByISO8601WithOptionsType: Equatable {
+    @CodableBy(.format(Date.ISO8601FormatStyle(includingFractionalSeconds: true)))
+    let createdAt: Date
+}
+
+@JSONCodable
+struct CodableByBase64Type: Equatable {
+    @CodableBy(.base64)
+    let payload: Data
+}
+
+/// A JSON-specific decoding strategy that extracts the JSONPrimtivie.Number
+/// of a JSON number using `decodeNumber()` on `JSONDecoderProtocol`.
+struct JSONNumberDecodingStrategy: JSONDecodingStrategy {
+    typealias Value = JSONPrimitive.Number
+
+    func decode(from decoder: inout some (JSONDecoderProtocol & ~Escapable)) throws(CodingError.Decoding) -> JSONPrimitive.Number {
+        return try decoder.decodeNumber()
+    }
+}
+
+@JSONDecodable
+struct DecodableByJSONNumberAsString {
+    @DecodableBy(JSONNumberDecodingStrategy())
+    let price: JSONPrimitive.Number
+    let name: String
+}
+
+@JSONCodable
+struct CodableByArrayOfDates: Equatable {
+    @CodableBy([.dateFormat(.iso8601)])
+    let timestamps: [Date]
+}
+
+@JSONCodable
+struct CodableByArrayOfBase64: Equatable {
+    @CodableBy([.base64])
+    let attachments: [Data]
+}
+
+@JSONCodable
+struct CodableByDictionaryWithLosslessKey {
+    @CodableBy([.losslessStringConversion : .pass])
+    let scores: [(Int, String)]
+}
+
+@JSONCodable
+struct CodableByDictionaryTuplesWithNestedValueStrategy {
+    @CodableBy([.pass : [.dateFormat(.iso8601)]])
+    let events: [(String, [Date])]
+}
+
+@JSONCodable
+struct CodableByDictionaryWithLosslessKeyAndNestedValueStrategy {
+    @CodableBy([.losslessStringConversion : [.dateFormat(.iso8601)]])
+    let schedule: [UInt8: [Date]]
+}
+
+@Suite("@CodableBy Strategy Tests")
+struct JSONCodableByStrategyTests {
+    
+    @Test func iso8601RoundTrip() throws {
+        let date = try Date.ISO8601FormatStyle().parse("2026-01-15T10:30:00Z")
+        let original = CodableByISO8601Type(createdAt: date)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"createdAt":"2026-01-15T10:30:00Z"}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByISO8601Type.self, from: data)
+        #expect(decoded.createdAt == date)
+    }
+
+    @Test func iso8601WithFractionalSeconds() throws {
+        let style = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        let date = try style.parse("2026-01-15T10:30:00.500Z")
+        let original = CodableByISO8601WithOptionsType(createdAt: date)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("2026-01-15T10:30:00.5"))
+        let decoded = try NewJSONDecoder().decode(CodableByISO8601WithOptionsType.self, from: data)
+        #expect(decoded.createdAt == date)
+    }
+
+    @Test func base64RoundTrip() throws {
+        let bytes = Data([0xDE, 0xAD, 0xBE, 0xEF])
+        let original = CodableByBase64Type(payload: bytes)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"payload":"3q2+7w=="}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByBase64Type.self, from: data)
+        #expect(decoded.payload == bytes)
+    }
+    
+    @Test func numberAsStringViaJSONDecodingStrategy() throws {
+        let json = Data(#"{"price":49.99,"name":"Widget"}"#.utf8)
+        let decoded = try NewJSONDecoder().decode(DecodableByJSONNumberAsString.self, from: json)
+        #expect(decoded.price.extendedPrecisionRepresentation == "49.99")
+        #expect(decoded.name == "Widget")
+    }
+
+    // MARK: - Array strategy tests
+
+    @Test func arrayOfISO8601Dates() throws {
+        let date1 = try Date.ISO8601FormatStyle().parse("2026-01-15T10:30:00Z")
+        let date2 = try Date.ISO8601FormatStyle().parse("2026-06-01T12:00:00Z")
+        let original = CodableByArrayOfDates(timestamps: [date1, date2])
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"timestamps":["2026-01-15T10:30:00Z","2026-06-01T12:00:00Z"]}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByArrayOfDates.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func arrayOfISO8601DatesEmpty() throws {
+        let original = CodableByArrayOfDates(timestamps: [])
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"timestamps":[]}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByArrayOfDates.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func arrayOfBase64() throws {
+        let a1 = Data([0xCA, 0xFE])
+        let a2 = Data([0xDE, 0xAD, 0xBE, 0xEF])
+        let original = CodableByArrayOfBase64(attachments: [a1, a2])
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"attachments":["yv4=","3q2+7w=="]}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByArrayOfBase64.self, from: data)
+        #expect(decoded == original)
+    }
+
+    // MARK: - Dictionary strategy tests
+
+    @Test func dictionaryWithLosslessStringKey() throws {
+        let original = CodableByDictionaryWithLosslessKey(scores: [(1, "Alice"), (2, "Bob")])
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"scores":{"1":"Alice","2":"Bob"}}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByDictionaryWithLosslessKey.self, from: data)
+        #expect(decoded.scores.count == 2)
+        #expect(decoded.scores[0] == (1, "Alice"))
+        #expect(decoded.scores[1] == (2, "Bob"))
+    }
+
+    @Test func dictionaryWithLosslessStringKeyEmpty() throws {
+        let original = CodableByDictionaryWithLosslessKey(scores: [])
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"scores":{}}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByDictionaryWithLosslessKey.self, from: data)
+        #expect(decoded.scores.isEmpty)
+    }
+
+    @Test func dictionaryTuplesWithNestedValueStrategy() throws {
+        let date1 = try Date.ISO8601FormatStyle().parse("2026-03-01T09:00:00Z")
+        let date2 = try Date.ISO8601FormatStyle().parse("2026-07-04T18:30:00Z")
+        let date3 = try Date.ISO8601FormatStyle().parse("2026-12-25T00:00:00Z")
+        let original = CodableByDictionaryTuplesWithNestedValueStrategy(events: [("work", [date1, date2]), ("holiday", [date3])])
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"events":{"work":["2026-03-01T09:00:00Z","2026-07-04T18:30:00Z"],"holiday":["2026-12-25T00:00:00Z"]}}"#)
+        let decoded = try NewJSONDecoder().decode(CodableByDictionaryTuplesWithNestedValueStrategy.self, from: data)
+        #expect(decoded.events.count == 2)
+        #expect(decoded.events[0].0 == "work")
+        #expect(decoded.events[0].1 == [date1, date2])
+        #expect(decoded.events[1].0 == "holiday")
+        #expect(decoded.events[1].1 == [date3])
+    }
+
+    @Test func dictionaryWithNestedValueStrategy() throws {
+        let date1 = try Date.ISO8601FormatStyle().parse("2026-02-14T10:00:00Z")
+        let date2 = try Date.ISO8601FormatStyle().parse("2026-08-20T15:00:00Z")
+        let date3 = try Date.ISO8601FormatStyle().parse("2026-11-11T11:11:00Z")
+        let original = CodableByDictionaryWithLosslessKeyAndNestedValueStrategy(schedule: [1: [date1, date2], 42: [date3]])
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        // Dictionary ordering is not guaranteed, so check both possible orderings
+        let option1 = #"{"schedule":{"1":["2026-02-14T10:00:00Z","2026-08-20T15:00:00Z"],"42":["2026-11-11T11:11:00Z"]}}"#
+        let option2 = #"{"schedule":{"42":["2026-11-11T11:11:00Z"],"1":["2026-02-14T10:00:00Z","2026-08-20T15:00:00Z"]}}"#
+        #expect(json == option1 || json == option2)
+        let decoded = try NewJSONDecoder().decode(CodableByDictionaryWithLosslessKeyAndNestedValueStrategy.self, from: data)
+        #expect(decoded.schedule.count == 2)
+        #expect(decoded.schedule[1] == [date1, date2])
+        #expect(decoded.schedule[42] == [date3])
+    }
+}
+
+

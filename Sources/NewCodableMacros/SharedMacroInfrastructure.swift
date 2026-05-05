@@ -26,9 +26,16 @@ struct DetailedStoredProperty {
     let isOptional: Bool
     let defaultExpr: String?
 
+    let encodingStrategy: PropertyCodingStrategy?
+    let decodingStrategy: PropertyCodingStrategy?
+
     var isRequired: Bool {
         !isOptional && defaultExpr == nil
     }
+}
+
+struct PropertyCodingStrategy {
+    let strategy: String
 }
 
 /// Represents an associated value of an enum case
@@ -215,6 +222,8 @@ func detectPeerMacros(
     )
 }
 
+// MARK: - Codable Type Declaration
+
 /// Abstracts over struct and enum declarations for codable macro expansion.
 /// Validates the declaration, extracts the relevant data, and provides methods
 /// to generate the coding field, encodable, and decodable extensions.
@@ -317,6 +326,7 @@ func extractDetailedStoredProperties(
             ))
             continue
         }
+        let (encodingStrat, decodingStrat) = codingStrategies(from: varDecl.attributes, in: context)
 
         for binding in varDecl.bindings {
             if let accessorBlock = binding.accessorBlock {
@@ -370,7 +380,9 @@ func extractDetailedStoredProperties(
                 aliases: aliases,
                 typeName: typeName,
                 isOptional: isOptional,
-                defaultExpr: defaultExpr
+                defaultExpr: defaultExpr,
+                encodingStrategy: encodingStrat,
+                decodingStrategy: decodingStrat
             ))
         }
     }
@@ -498,6 +510,97 @@ func defaultValueExpression(from attributes: AttributeListSyntax) -> String? {
         return firstArg.expression.trimmedDescription
     }
     return nil
+}
+
+func codingStrategies(from attributes: AttributeListSyntax, in context: some MacroExpansionContext) -> (encoding: PropertyCodingStrategy?, decoding: PropertyCodingStrategy?) {
+    var encoding: PropertyCodingStrategy?
+    var decoding: PropertyCodingStrategy?
+    for attribute in attributes {
+        guard let attrSyntax = attribute.as(AttributeSyntax.self),
+              let identifierType = attrSyntax.attributeName.as(IdentifierTypeSyntax.self) else {
+            continue
+        }
+
+        switch identifierType.name.trimmedDescription {
+        case "CodableBy":
+            let strat = codingStrategy(from: attrSyntax, in: context)
+            decoding = strat
+            encoding = strat
+        case "EncodableBy":
+            let strat = codingStrategy(from: attrSyntax, in: context)
+            encoding = strat
+        case "DecodableBy":
+            let strat = codingStrategy(from: attrSyntax, in: context)
+            decoding = strat
+        default: continue
+        }
+    }
+    return (encoding, decoding)
+}
+
+func codingStrategy(from attribute: AttributeSyntax, in context: some MacroExpansionContext) -> PropertyCodingStrategy? {
+    guard let arguments = attribute.arguments?.as(LabeledExprListSyntax.self) else {
+        return nil
+    }
+    var argumentIterator = arguments.makeIterator()
+    guard let first = argumentIterator.next() else {
+        return nil
+    }
+    return .init(strategy: translateStrategyExpression(first.expression, in: context))
+}
+
+/// Recursively translates a strategy expression AST into the real strategy
+/// protocol function-call forms expected in generated code.
+///
+/// - Array literals: `[.dateFormat(.iso8601)]` → `.array(.dateFormat(.iso8601))`
+/// - Dictionary literals: `[.losslessStringConversion : .pass]` → `.dictionary(key: .losslessStringConversion(), value: .passthrough())`
+/// - Bare member access: `.pass` → `.passthrough()`, `.losslessStringConversion` → `.losslessStringConversion()`
+/// - Function calls: arguments are recursed into for nested translation.
+/// - Nested literals are handled recursively.
+private func translateStrategyExpression(_ expr: ExprSyntax, in context: some MacroExpansionContext) -> String {
+    if let arrayExpr = expr.as(ArrayExprSyntax.self) {
+        let elements = Array(arrayExpr.elements)
+        guard elements.count == 1, let element = elements.first else {
+            context.diagnose(.init(
+                node: Syntax(arrayExpr),
+                message: SharedMacroDiagnostic.strategyArrayMustHaveOneElement
+            ))
+            return expr.trimmedDescription
+        }
+        return ".array(\(translateStrategyExpression(element.expression, in: context)))"
+    }
+    if let dictExpr = expr.as(DictionaryExprSyntax.self) {
+        guard case .elements(let elements) = dictExpr.content else {
+            // [:]  — empty dictionary literal
+            context.diagnose(.init(
+                node: Syntax(dictExpr),
+                message: SharedMacroDiagnostic.strategyDictionaryMustHaveOnePair
+            ))
+            return expr.trimmedDescription
+        }
+        let elementArray = Array(elements)
+        guard elementArray.count == 1, let element = elementArray.first else {
+            context.diagnose(.init(
+                node: Syntax(dictExpr),
+                message: SharedMacroDiagnostic.strategyDictionaryMustHaveOnePair
+            ))
+            return expr.trimmedDescription
+        }
+        let key = translateStrategyExpression(element.key, in: context)
+        let value = translateStrategyExpression(element.value, in: context)
+        return ".dictionary(key: \(key), value: \(value))"
+    }
+    // Bare member access: `.pass`, `.losslessStringConversion`
+    if let memberAccess = expr.as(MemberAccessExprSyntax.self),
+       memberAccess.base == nil {
+        let name = memberAccess.declName.baseName.text
+        switch name {
+        case "pass": return ".passthrough()"
+        case "losslessStringConversion": return ".losslessStringConversion()"
+        default: break
+        }
+    }
+    return expr.trimmedDescription
 }
 
 // MARK: - Coding Fields Generation
@@ -723,6 +826,8 @@ enum SharedMacroDiagnostic: DiagnosticMessage {
     case notAStructOrEnum(macroName: String)
     case codingKeyOnMultipleBindings
     case missingTypeAnnotation(macroName: String)
+    case strategyArrayMustHaveOneElement
+    case strategyDictionaryMustHaveOnePair
 
     var message: String {
         switch self {
@@ -732,14 +837,20 @@ enum SharedMacroDiagnostic: DiagnosticMessage {
             return "@CodingKey cannot be applied to a declaration with multiple bindings"
         case .missingTypeAnnotation(let macroName):
             return "@\(macroName) requires all stored properties to have explicit type annotations"
+        case .strategyArrayMustHaveOneElement:
+            return "@CodableBy array literal must contain exactly one element (the element strategy)"
+        case .strategyDictionaryMustHaveOnePair:
+            return "@CodableBy dictionary literal must contain exactly one key-value pair (the key and value strategies)"
         }
     }
-    
+
     var id: String {
         switch self {
         case .notAStructOrEnum: "notAStructOrEnum"
         case .codingKeyOnMultipleBindings: "codingKeyOnMultipleBindings"
         case .missingTypeAnnotation: "missingTypeAnnotation"
+        case .strategyArrayMustHaveOneElement: "strategyArrayMustHaveOneElement"
+        case .strategyDictionaryMustHaveOnePair: "strategyDictionaryMustHaveOnePair"
         }
     }
 
@@ -773,12 +884,20 @@ func makeEncodableExtension(
         let fieldType = expansion.fieldTypeName
         let encodeStatements: String
         if peerInfo.multiFormat {
-            encodeStatements = properties.map {
-                "try structEncoder.encode(field: \(fieldType)(.\($0.name)), value: self.\($0.name))"
+            encodeStatements = properties.map { prop in
+                if let encodingStrat = prop.encodingStrategy {
+                    return "try structEncoder.encode(field: \(fieldType)(.\(prop.name))) { valueEncoder throws(CodingError.Encoding) in try valueEncoder.encode(self.\(prop.name), using: \(encodingStrat.strategy)) }"
+                } else {
+                    return "try structEncoder.encode(field: \(fieldType)(.\(prop.name)), value: self.\(prop.name))"
+                }
             }.joined(separator: "\n")
         } else {
-            encodeStatements = properties.map {
-                "try structEncoder.encode(field: \(fieldType).\($0.name), value: self.\($0.name))"
+            encodeStatements = properties.map { prop in
+                if let encodingStrat = prop.encodingStrategy {
+                    return "try structEncoder.encode(field: \(fieldType).\(prop.name)) { valueEncoder throws(CodingError.Encoding) in try valueEncoder.encode(self.\(prop.name), using: \(encodingStrat.strategy)) }"
+                } else {
+                    return "try structEncoder.encode(field: \(fieldType).\(prop.name), value: self.\(prop.name))"
+                }
             }.joined(separator: "\n")
         }
 
@@ -824,11 +943,14 @@ func makeDecodableExtension(
         }.joined(separator: "\n")
 
         let switchCases = properties.map { prop in
-            if prop.isOptional {
-                return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName)?.self)"
+            let valueProducer = if let strat = prop.decodingStrategy {
+                "valueDecoder.decode(using: \(strat.strategy))"
+            } else if prop.isOptional {
+                "valueDecoder.decode(\(prop.typeName)?.self)"
             } else {
-                return "case .\(prop.name): \(prop.name) = try valueDecoder.decode(\(prop.typeName).self)"
+                "valueDecoder.decode(\(prop.typeName).self)"
             }
+            return "case .\(prop.name): \(prop.name) = try \(valueProducer)"
         }.joined(separator: "\n")
 
         let requiredProperties = properties.filter { $0.isRequired }
@@ -844,11 +966,7 @@ func makeDecodableExtension(
             guardAndReturn = "return \(typeName)(\(args))"
         } else {
             let requiredFieldGuards = requiredProperties.map {
-                """
-                guard let \($0.name) else {
-                throw CodingError.dataCorrupted(debugDescription: "Missing required field '\($0.key)'")
-                }
-                """
+                "guard let \($0.name) else { throw CodingError.dataCorrupted(debugDescription: \"Missing required field '\($0.key)'\") }"
             }.joined(separator: "\n")
             let args = properties.map { prop -> String in
                 if let defaultExpr = prop.defaultExpr {
@@ -856,10 +974,7 @@ func makeDecodableExtension(
                 }
                 return "\(prop.name): \(prop.name)"
             }.joined(separator: ", ")
-            guardAndReturn = """
-            \(requiredFieldGuards)
-            return \(typeName)(\(args))
-            """
+            guardAndReturn = requiredFieldGuards + "\nreturn \(typeName)(\(args))"
         }
 
         let switchExpr = peerInfo.multiFormat ? "_codingField!.base" : "_codingField!"
@@ -939,7 +1054,7 @@ private func makeSingleFormatEnumCodingFields(
     codingFieldsExpansionOverride: CodableExpansionType? = nil
 ) -> ExtensionDeclSyntax? {
     let effectiveFieldExpansionType = codingFieldsExpansionOverride ?? expansion.type
-    let includesKeyLookup = (codingFieldsExpansionOverride ?? expansion.type).defaultCodingFieldIncludesUnknownCase
+    let includesKeyLookup = (codingFieldsExpansionOverride ?? expansion.type).requiresCodingFieldLookup
     let protocolName = expansion.fieldTypeProtocolName(forExpansionType: effectiveFieldExpansionType)
 
     let casesList = cases.map { "case \($0.name)" }
@@ -1379,10 +1494,7 @@ func makeEnumEncodableExtension(
                 let fieldRef = peerInfo.multiFormat
                     ? "\(expansion.fieldTypeName)(.\(enumCase.name))"
                     : "\(expansion.fieldTypeName).\(enumCase.name)"
-                return """
-                case .\(enumCase.name):
-                    try encoder.encodeEnumCase(\(fieldRef))
-                """
+                return "case .\(enumCase.name): try encoder.encodeEnumCase(\(fieldRef))"
             } else {
                 let bindings = enumCase.associatedValues.map { "let \($0.encodedName)" }.joined(separator: ", ")
                 let fieldsEnumName = "\(expansion.fieldTypeName).\(capitalizedCaseName(enumCase.name))Fields"
@@ -1396,13 +1508,13 @@ func makeEnumEncodableExtension(
                     } else {
                         return "try valueEncoder.encode(field: \(fieldsEnumName).\($0.encodedName), value: \($0.encodedName))"
                     }
-                }.joined(separator: "\n")
+                }.joined(separator: "\n        ")
 
                 return """
                 case .\(enumCase.name)(\(bindings)):
-                try encoder.encodeEnumCase(\(fieldRef), associatedValueCount: \(enumCase.associatedValues.count)) { valueEncoder throws(CodingError.Encoding) in
-                \(encodeStatements)
-                }
+                    try encoder.encodeEnumCase(\(fieldRef), associatedValueCount: \(enumCase.associatedValues.count)) { valueEncoder throws(CodingError.Encoding) in
+                        \(encodeStatements)
+                    }
                 """
             }
         }.joined(separator: "\n")
@@ -1483,5 +1595,3 @@ func makeEnumDecodableExtension(
     }
     return []
 }
-
-

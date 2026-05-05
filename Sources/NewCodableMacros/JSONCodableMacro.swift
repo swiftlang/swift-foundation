@@ -45,11 +45,11 @@ struct JSONCodableExpanion: CodableExpansion {
     let type: CodableExpansionType
     let accessLevel: CodableDeclarationAccessLevel
 
-    let fieldTypeName = "JSONCodingFields"
     let encodableProtocolName = "JSONEncodable"
     let decodableProtocolName = "JSONDecodable"
     let combinedProtocolName = "JSONCodable"
 
+    let fieldTypeName = "JSONCodingFields"
     let encodableFieldProtocolName = "JSONOptimizedEncodingField"
     let decodableFieldProtocolName = "JSONOptimizedDecodingField"
     let combinedFieldProtocolName = "JSONOptimizedCodingField"

@@ -146,6 +146,44 @@ struct CommonEncodableMacroIntegrationTests {
     }
 }
 
+// MARK: - @CodableBy with @CommonCodable Integration Tests
+
+@CommonCodable
+struct CommonCodableByISO8601Type: Equatable {
+    @CodableBy(.dateFormat(.iso8601))
+    let createdAt: Date
+}
+
+@CommonCodable
+struct CommonCodableByBase64Type: Equatable {
+    @CodableBy(.base64)
+    let payload: Data
+}
+
+@Suite("@CodableBy with @CommonCodable Integration")
+struct CommonCodableByIntegrationTests {
+
+    @Test func iso8601RoundTrip() throws {
+        let date = try Date.ISO8601FormatStyle().parse("2026-01-15T10:30:00Z")
+        let original = CommonCodableByISO8601Type(createdAt: date)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"createdAt":"2026-01-15T10:30:00Z"}"#)
+        let decoded = try NewJSONDecoder().decode(CommonCodableByISO8601Type.self, from: data)
+        #expect(decoded.createdAt == date)
+    }
+
+    @Test func base64RoundTrip() throws {
+        let bytes = Data([0xDE, 0xAD, 0xBE, 0xEF])
+        let original = CommonCodableByBase64Type(payload: bytes)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"payload":"3q2+7w=="}"#)
+        let decoded = try NewJSONDecoder().decode(CommonCodableByBase64Type.self, from: data)
+        #expect(decoded.payload == bytes)
+    }
+}
+
 @Suite("@CommonDecodable Macro Integration")
 struct CommonDecodableMacroIntegrationTests {
 

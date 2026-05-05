@@ -202,6 +202,14 @@ extension CommonDecoder where Self: ~Escapable {
         try T.decode(from: &self)
     }
     
+    /// Convenience: decode a CommonDecodable type using its default implementation, using return value type inference to determine the decodable type
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    @_lifetime(self: copy self)
+    public mutating func decode<T: CommonDecodable & ~Copyable>() throws(CodingError.Decoding) -> T {
+        try T.decode(from: &self)
+    }
+    
     @inline(__always)
     @_alwaysEmitIntoClient
     @_lifetime(self: copy self)
@@ -511,6 +519,7 @@ public extension CommonDecoder where Self: ~Escapable {
     ///
     /// This implementation uses a visitor pattern to capture the raw value as `CommonCodablePrimitive` via `decodeAny`,
     /// then wraps it in an `AdaptorDecoder` to provide the standard `Decoder` interface expected by `Decodable` types.
+    @_disfavoredOverload
     @_lifetime(self: copy self)
     mutating func decode<D: Decodable>(_: D.Type) throws(CodingError.Decoding) -> D {
         guard self.supportsDecodeAny else {
