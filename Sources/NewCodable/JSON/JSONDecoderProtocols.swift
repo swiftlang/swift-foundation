@@ -42,7 +42,7 @@ extension JSONDecodableWithContext where Self: ~Copyable, JSONDecodingContext: C
 }
 
 // TODO: Generalize for non-JSON?
-public protocol JSONFieldDecoder: ~Escapable {
+public protocol JSONFieldDecoder: CommonFieldDecoder & ~Escapable {
     @inlinable
     func decode<T: DecodingField>(_: T.Type) throws(CodingError.Decoding) -> T
     
@@ -53,10 +53,11 @@ public protocol JSONFieldDecoder: ~Escapable {
     func matches(_ key: StaticString) -> Bool
 }
 
-public protocol JSONDictionaryDecoder: ~Escapable {
-    associatedtype FieldDecoder: JSONFieldDecoder & ~Escapable
-    associatedtype ValueDecoder: JSONDecoderProtocol & ~Escapable
-    
+public protocol JSONDictionaryDecoder: CommonStructDecoder, CommonDictionaryDecoder & ~Escapable where
+    FieldDecoder: JSONFieldDecoder & ~Escapable,
+    KeyDecoder: CommonDecoder & ~Escapable,
+    ValueDecoder: JSONDecoderProtocol & ~Escapable
+{
     @_lifetime(self: copy self)
     mutating func decodeExpectedOrderField(required: Bool, matchingClosure: (UTF8Span) -> Bool, optimizedSafeStringKey: JSONSafeStringKey?, andValue valueDecoderClosure: (inout ValueDecoder) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding) -> Bool
     
@@ -109,9 +110,7 @@ extension JSONDictionaryDecoder where Self: ~Escapable {
     public var sizeHint: Int? { nil }
 }
 
-public protocol JSONArrayDecoder: ~Escapable {
-    associatedtype ElementDecoder: JSONDecoderProtocol & ~Escapable
-    
+public protocol JSONArrayDecoder: CommonArrayDecoder & ~Escapable where ElementDecoder: JSONDecoderProtocol & ~Escapable {    
     @_lifetime(self: copy self)
     mutating func decodeNext<T: ~Copyable>(_ closure: (inout ElementDecoder) throws(CodingError.Decoding) -> T) throws(CodingError.Decoding) -> T?
     
@@ -155,11 +154,11 @@ extension JSONArrayDecoder where Self: ~Escapable {
     public var sizeHint: Int? { nil }
 }
 
-public protocol JSONDecoderProtocol: ~Escapable {
-    associatedtype StructDecoder: JSONDictionaryDecoder & ~Escapable
-    associatedtype ArrayDecoder: JSONArrayDecoder & ~Escapable
-    associatedtype FieldDecoder: JSONFieldDecoder & ~Escapable
-    
+public protocol JSONDecoderProtocol: CommonDecoder & ~Escapable where
+    StructDecoder: JSONDictionaryDecoder & ~Escapable,
+    ArrayDecoder: JSONArrayDecoder & ~Escapable,
+    FieldDecoder: JSONFieldDecoder & ~Escapable
+{    
     // MARK: - Structural Decoding
     
     @_lifetime(self: copy self)
@@ -294,6 +293,14 @@ extension JSONDecoderProtocol where Self: ~Escapable {
     @inline(__always)
     @_alwaysEmitIntoClient
     public mutating func decode<T: JSONDecodable & ~Copyable>(_ type: T.Type) throws(CodingError.Decoding) -> T {
+        try T.decode(from: &self)
+    }
+    
+    /// Convenience: decode a JSONDecodable type using its default implementation, using return value type inference to determine the decodable type
+    @_lifetime(self: copy self)
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public mutating func decode<T: JSONDecodable & ~Copyable>() throws(CodingError.Decoding) -> T {
         try T.decode(from: &self)
     }
     

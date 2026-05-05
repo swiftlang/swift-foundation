@@ -1157,6 +1157,271 @@ struct CommonCodableMacroTests {
             macros: codableTestMacros
         )
     }
+
+
+    // MARK: - CodableBy tests
+
+    @Test func codableBy() {
+        AssertMacroExpansion(
+            """
+            @CommonCodable
+            struct MyType {
+                @CodableBy(.dateFormat(.iso8601))
+                let foo: Date
+            }
+            """,
+            expandedSource: """
+            struct MyType {
+                let foo: Date
+            }
+
+            extension MyType {
+                enum CommonCodingFields: StaticStringCodingField {
+                    case foo
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .foo:
+                            "foo"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "foo":
+                            .foo
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension MyType: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CommonCodingFields.foo) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.foo, using: .dateFormat(.iso8601))
+                        }
+                    }
+                }
+            }
+
+            extension MyType: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> MyType {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var foo: Date?
+                        var _codingField: CommonCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .foo:
+                                foo = try valueDecoder.decode(using: .dateFormat(.iso8601))
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let foo else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'foo'")
+                        }
+                        return MyType(foo: foo)
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
+    @Test func codableByBase64() {
+        AssertMacroExpansion(
+            """
+            @CommonCodable
+            struct MyType {
+                @CodableBy(.base64)
+                let payload: Data
+            }
+            """,
+            expandedSource: """
+            struct MyType {
+                let payload: Data
+            }
+
+            extension MyType {
+                enum CommonCodingFields: StaticStringCodingField {
+                    case payload
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .payload:
+                            "payload"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "payload":
+                            .payload
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension MyType: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CommonCodingFields.payload) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.payload, using: .base64)
+                        }
+                    }
+                }
+            }
+
+            extension MyType: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> MyType {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var payload: Data?
+                        var _codingField: CommonCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .payload:
+                                payload = try valueDecoder.decode(using: .base64)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let payload else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'payload'")
+                        }
+                        return MyType(payload: payload)
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
+    @Test func codableByMultipleFields() {
+        AssertMacroExpansion(
+            """
+            @CommonCodable
+            struct MyType {
+                @CodableBy(.dateFormat(.iso8601))
+                let createdAt: Date
+                let name: String
+                @CodableBy(.base64)
+                let data: Data
+            }
+            """,
+            expandedSource: """
+            struct MyType {
+                let createdAt: Date
+                let name: String
+                let data: Data
+            }
+
+            extension MyType {
+                enum CommonCodingFields: StaticStringCodingField {
+                    case createdAt
+                    case name
+                    case data
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .createdAt:
+                            "createdAt"
+                        case .name:
+                            "name"
+                        case .data:
+                            "data"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "createdAt":
+                            .createdAt
+                        case "name":
+                            .name
+                        case "data":
+                            .data
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension MyType: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 3) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CommonCodingFields.createdAt) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.createdAt, using: .dateFormat(.iso8601))
+                        }
+                        try structEncoder.encode(field: CommonCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: CommonCodingFields.data) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.data, using: .base64)
+                        }
+                    }
+                }
+            }
+
+            extension MyType: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> MyType {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var createdAt: Date?
+                        var name: String?
+                        var data: Data?
+                        var _codingField: CommonCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .createdAt:
+                                createdAt = try valueDecoder.decode(using: .dateFormat(.iso8601))
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .data:
+                                data = try valueDecoder.decode(using: .base64)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let createdAt else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'createdAt'")
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        guard let data else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'data'")
+                        }
+                        return MyType(createdAt: createdAt, name: name, data: data)
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
 }
 
 private let codableTestMacros: [String: Macro.Type] = [
@@ -1164,4 +1429,5 @@ private let codableTestMacros: [String: Macro.Type] = [
     "CodingKey": CodingKeyMacro.self,
     "CodableDefault": CodableDefaultMacro.self,
     "DecodableAlias": DecodableAliasMacro.self,
+    "CodableBy": CodableByMacro.self,
 ]

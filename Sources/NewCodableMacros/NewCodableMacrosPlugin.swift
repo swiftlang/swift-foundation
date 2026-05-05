@@ -25,5 +25,8 @@ struct NewCodableMacrosPlugin: CompilerPlugin {
         CodingKeyMacro.self,
         CodableDefaultMacro.self,
         DecodableAliasMacro.self,
+        CodableByMacro.self,
+        DecodableByMacro.self,
+        EncodableByMacro.self,
     ]
 }
