@@ -15,6 +15,7 @@
 internal import _ForSwiftFoundation
 import CoreFoundation
 internal import os
+internal import Synchronization
 internal import CoreFoundation_Private.CFLocale
 
 extension NSCalendar.Unit {
@@ -83,7 +84,7 @@ extension NSCalendar {
 @objc(_NSSwiftCalendar)
 internal class _NSSwiftCalendar: _NSCalendarBridge {
     // NSCalendar is thread safe, so all access to its data is protected by this lock.
-    let _lock: OSAllocatedUnfairLock<Calendar>
+    let _lock: Mutex<Calendar>
 
     // We can use the calendar (for non-mutating functions) after retrieving it from inside the lock because `struct Calendar` is itself thread safe. Once we have another copy of the inner pointer (by returning the struct from this closure), any mutation of the original struct will trigger a copy-on-write. The code which has the original one will continue on with the original value, which is fine.
     // Mutating operations still have to take the lock and operate on the state inside there, so we don't lose the new state after the mutation is complete.
@@ -110,13 +111,13 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
             return nil
         }
 
-        _lock = OSAllocatedUnfairLock(initialState: Calendar(identifier: id))
+        _lock = Mutex(Calendar(identifier: id))
         // This does nothing in NSCalendarBridge, but we still need to call it
         super.init(checkedCalendarIdentifier: ident)
     }
 
     init!(calendar: Calendar) {
-        _lock = OSAllocatedUnfairLock(initialState: calendar)
+        _lock = Mutex(calendar)
         // This does nothing in NSCalendarBridge, but we still need to call it
         super.init(checkedCalendarIdentifier: .gregorian)
     }
@@ -135,7 +136,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
     /// `NSCalendar`'s `+allocWithZone:` returns `_NSSwiftCalendar`, which results in the following implementation being called when initializing an instance from an archive.
     required init?(coder: NSCoder) {
         // Ensure _lock is populated first in case of a re-entrant call from the unarchiver.
-        _lock = OSAllocatedUnfairLock(initialState: Calendar(identifier: .gregorian))
+        _lock = Mutex(Calendar(identifier: .gregorian))
 
         guard coder.allowsKeyedCoding else {
             coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Cannot be decoded without keyed coding"]))

@@ -123,7 +123,14 @@ internal struct JSON5Scanner {
             throw JSONError.unexpectedCharacter(context: "after top-level value", ascii: char, location: reader.sourceLocation)
         }
 
-        return JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
+        let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
+
+        // If the input contains only a number, ensure a trailing NUL byte is available for strtod/strtof parsing.
+        if case .number = map.loadValue(at: 0)! {
+            map.copyInBuffer()
+        }
+
+        return map
     }
 
     // MARK: Generic Value Scanning
@@ -1081,7 +1088,7 @@ extension JSON5Scanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ _stringshims_strncasecmp_clocale($0, "0x", $1) })
+        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ Platform.strncasecmp_clocale($0, "0x", $1) })
         if cmp == 0 {
             jsonBytes.formIndex(&index, offsetBy: 2)
 

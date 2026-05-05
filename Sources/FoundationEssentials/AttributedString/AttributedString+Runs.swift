@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// An iterable view into segments of the attributed string, each of which indicates where a run of identical attributes begins or ends.
     public struct Runs: Sendable {
         internal typealias _InternalRun = AttributedString._InternalRun
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
@@ -43,6 +44,19 @@ extension AttributedString {
         
         internal init(_ guts: Guts, in bounds: Range<BigString.Index>) {
             self.init(guts, in: RangeSet(bounds))
+        }
+
+        internal init(_ guts: Guts) {
+            _guts = guts
+            let strStart = _guts.string.unicodeScalars.startIndex
+            let strEnd = _guts.string.unicodeScalars.endIndex
+            _strBounds = RangeSet(strStart ..< strEnd)
+            _isDiscontiguous = false
+
+            let start = Index(_runIndex: _guts.runs.startIndex, startStringIndex: strStart, stringIndex: strStart, rangeOffset: 0, withinDiscontiguous: false)
+
+            let end = Index(_runIndex: _guts.runs.endIndex, startStringIndex: strEnd, stringIndex: strEnd, rangeOffset: 1, withinDiscontiguous: false)
+            self._bounds = start ..< end
         }
 
         internal init(_ guts: Guts, in bounds: RangeSet<BigString.Index>) {
@@ -90,8 +104,12 @@ extension AttributedString {
         }
     }
 
+    /// The attributed runs of the attributed string, as a view into the underlying string.
+    ///
+    /// Runs begin and end when the attributes for the characters change. Use this property to
+    /// iterate over the runs with `for`-`in` syntax.
     public var runs: Runs {
-        Runs(_guts, in: _guts.string.startIndex ..< _guts.string.endIndex)
+        Runs(_guts)
     }
 }
 
@@ -122,7 +140,7 @@ extension AttributedString.Runs: Equatable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs: CustomStringConvertible {
     public var description: String {
-        _guts.description(in: _strBounds)
+        AttributedString.Guts._description(in: self)
     }
 }
 

@@ -17,29 +17,452 @@ import FoundationEssentials
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
 
+    /// Types that customize formatting templates either by using the date format style's modifier functions or by constructing fixed-pattern date format strings.
     public struct Symbol : Hashable, Sendable {
         let symbolType: SymbolType
 
+        /// A type that specifies a format for the era in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/Era`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/Era`` objects.
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``abbreviated`` | An abbreviated representation of an era. For example, `AD`, `BC`. |
+        /// | ``narrow`` | A narrow era representation. For example, `A`, `B`. |
+        /// | ``wide`` | A full representation of an era. For example, `Anno Domini`, `Before Christ`. |
+        ///
+        ///
+        /// To customize the era format in a string representation of a `Date`, use ``Date/FormatStyle/era(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Era`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 3:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().era(.abbreviated)) // AD
+        /// meetingDate.formatted(Date.FormatStyle().era(.narrow)) // A
+        /// meetingDate.formatted(Date.FormatStyle().era(.wide)) // Anno Domini
+        /// meetingDate.formatted(Date.FormatStyle().era()) // AD
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``abbreviated`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Era : Hashable, Sendable { let option: SymbolType.EraOption? }
+        /// A type that specifies a format for the year in a date format style.
+        ///
+        /// The ``Date/FormatStyle/Symbol/Year`` type includes static factory variables and methods that create custom ``Date/FormatStyle/Symbol/Year`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``defaultDigits`` | The minimum number of digits that represents the full year. For example, `2`, `20`, `201`, `2017`. |
+        /// | ``twoDigits`` | The year's two lowest-order digits, zero-padded or truncated if necessary. For example, `02`, `20`, `01`, `17`, `73`. |
+        /// | ``padded(_:)`` | Three or more digits, zero-padded if necessary. For example, `002`, `020`, `201`, `2017`. |
+        /// | ``relatedGregorian(minimumLength:)`` | For non-Gregorian calendars, output corresponds to the extended Gregorian year in which the calendar's year begins. The default length is the minimum needed to show the full year. |
+        /// | ``extended(minimumLength:)`` | A single number designating the year of the calendar system, encompassing all supra-year fields. The default length is the minimum needed to show the full year. |
+        ///
+        ///
+        /// To customize the year format in a string representation of a `Date`, use ``Date/FormatStyle/year(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Year`` formats applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 3:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().year(.defaultDigits)) // 2021
+        /// meetingDate.formatted(Date.FormatStyle().year(.twoDigits)) // 21
+        /// meetingDate.formatted(Date.FormatStyle().year(.extended(minimumLength: 5))) // 02021
+        /// meetingDate.formatted(Date.FormatStyle().year(.extended())) // 2021
+        /// meetingDate.formatted(Date.FormatStyle().year(.padded(6))) // 002021
+        /// meetingDate.formatted(Date.FormatStyle().year(.relatedGregorian())) // 2021
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``Date/FormatStyle/Symbol/Year/defaultDigits`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Year : Hashable, Sendable { let option: SymbolType.YearOption? }
+        /// A type that specifies the format for a year in week-of-year calendars when you parse a string with a date format string.
         public struct YearForWeekOfYear : Hashable, Sendable { let option: SymbolType.YearForWeekOfYearOption? }
+        /// A type that specifies a format for a cyclic year in a date format style.
+        ///
+        /// Calendars such as the Chinese lunar calendar and Hindu calendars use 60-year cycles of year names. If the calendar doesn't provide cyclic year-name data, or if the year value to format is out of the range of years for which the system provides cyclic name data, then the formatting is numeric, as in ``Date/FormatStyle/Symbol/Year``.
+        ///
+        /// The ``Date/FormatStyle/Symbol/CyclicYear`` type includes static factory variables that create custom ``Date/FormatStyle/Symbol/CyclicYear`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``abbreviated`` | A shortened representation of the cyclic year appropriate for space-constrained applications.  |
+        /// | ``narrow`` | The shortest representation of the cyclic year. |
+        /// | ``wide`` | The full representation of the cyclic year. |
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``abbreviated`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see ``Date/FormatStyle``.
         public struct CyclicYear : Hashable, Sendable { let option: SymbolType.CyclicYearOption? }
+        /// A type that specifies the format for the quarter in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/Quarter`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/Quarter`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``abbreviated`` | Abbreviated quarter name. For example, `Q2`.  |
+        /// | ``narrow`` | Minimum number of digits that represents the  numeric quarter. For example, `2`.  |
+        /// | ``oneDigit`` | One-digit numeric quarter. For example, `1`, `4`.  |
+        /// | ``twoDigits`` | Two-digit numeric quarter, zero-padded if necessary. For example, `01`, `04`. |
+        /// | ``wide`` | Wide quarter name. For example, `2nd quarter`. |
+        ///
+        ///
+        /// To customize the month format in a string representation of a `Date`, use ``Date/FormatStyle/quarter(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Quarter`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Oct 7, 2020 at 3:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().quarter(.abbreviated)) // Q4
+        /// meetingDate.formatted(Date.FormatStyle().quarter(.narrow)) // 4th quarter
+        /// meetingDate.formatted(Date.FormatStyle().quarter(.oneDigit)) // 4
+        /// meetingDate.formatted(Date.FormatStyle().quarter(.twoDigits)) // 04
+        /// meetingDate.formatted(Date.FormatStyle().quarter(.wide)) // 4th quarter
+        /// meetingDate.formatted(Date.FormatStyle().quarter()) // Q4
+        ///
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``abbreviated`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Quarter : Hashable, Sendable { let option: SymbolType.QuarterOption? }
+        ///        A type that specifies a format for the month in a date format style.
+        ///
+        ///        The type ``Date/FormatStyle/Symbol/Month`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/Month`` objects:
+        ///
+        ///        |Factory variable|Description|
+        ///        |---|---|
+        ///        | ``abbreviated`` | Abbreviated month name. For example, `Sep`. |
+        ///        | ``defaultDigits`` | Minimum number of digits that represents the numeric month. For example, `9`, `12`. |
+        ///        | ``narrow`` | Narrow month name. For example, `S`. |
+        ///        | ``twoDigits`` | Two-digit numeric month, zero-padded if necessary. For example, `09`, `12`. |
+        ///        | ``wide`` | Wide month name. For example, `September`. |
+        ///
+        ///
+        ///        To customize the month format in a string representation of a `Date`, use ``Date/FormatStyle/month(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Month`` format styles applied to a date.
+        ///
+        ///        ```swift
+        ///        let meetingDate = Date() // Feb 9, 2021 at 3:00 PM
+        ///        meetingDate.formatted(Date.FormatStyle().month(.abbreviated)) // Feb
+        ///        meetingDate.formatted(Date.FormatStyle().month(.narrow)) // F
+        ///        meetingDate.formatted(Date.FormatStyle().month(.defaultDigits)) // 2
+        ///        meetingDate.formatted(Date.FormatStyle().month(.twoDigits)) // 02
+        ///        meetingDate.formatted(Date.FormatStyle().month(.wide)) // February
+        ///        meetingDate.formatted(Date.FormatStyle().month()) // Feb
+        ///        ```
+        ///
+        ///
+        ///        If no format is specified as a parameter, the ``abbreviated`` static variable is the default format.
+        ///
+        ///        For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Month : Hashable, Sendable { let option: SymbolType.MonthOption? }
+        /// A type that specifies the format for the week in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/Week`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/Week`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``defaultDigits`` | The minimum number of digits that represents the full numeric week. For example, `1`, `18`. |
+        /// | ``twoDigits`` | Two-digit numeric week, zero-padded if necessary. For example, `01`, `18`. |
+        /// | ``weekOfMonth`` | The numeric week of the month. For example, `1`, `4`. |
+        ///
+        ///
+        /// To customize the week format in a string representation of a `Date`, use ``Date/FormatStyle/week(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Week`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // May 3, 2021 at 3:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().week(.defaultDigits)) // 19
+        /// meetingDate.formatted(Date.FormatStyle().week(.twoDigits)) // 19
+        /// meetingDate.formatted(Date.FormatStyle().week(.weekOfMonth)) // 2
+        /// meetingDate.formatted(Date.FormatStyle().week()) // 19
+        ///
+        /// ```
+        ///
+        ///
+        /// An incomplete week at the start of a month is week of the month `1`. If no format is specified as a parameter, the ``defaultDigits`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Week : Hashable, Sendable { let option: SymbolType.WeekOption? }
+        /// A type that specifies the format for a day in a date format style.
+        ///
+        /// The ``Date/FormatStyle/Symbol/Day`` type includes static factory variables and methods that create custom ``Date/FormatStyle/Symbol/Day`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``defaultDigits`` | The minimum number of digits that shows the numeric day of month. For example, `1`, `18`. |
+        /// | ``julianModified(minimumLength:)`` | The modified Julian day. The field length specifies the minimum number of digits, zero-padded if necessary. For example, `2451334`. |
+        /// | ``ordinalOfDayInMonth`` | The ordinal of the day in the month. For example, the second Wednesday in July would yield `2`. |
+        /// | ``twoDigits`` | The two-digit numeric day of month, zero-padded if necessary. For example, `01`, `18`. |
+        ///
+        ///
+        /// To customize the day format in a string representation of a `Date`, use ``Date/FormatStyle/day(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Day`` formats applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 3:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().day(.defaultDigits)) // 9
+        /// meetingDate.formatted(Date.FormatStyle().day(.ordinalOfDayInMonth)) // 2 (second Tuesday of the month)
+        /// meetingDate.formatted(Date.FormatStyle().day(.twoDigits)) // 09
+        /// meetingDate.formatted(Date.FormatStyle().day(.julianModified(minimumLength: 12))) // 0002459255
+        /// meetingDate.formatted(Date.FormatStyle().day()) // 9
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``defaultDigits`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Day : Hashable, Sendable { let option: SymbolType.DayOption? }
+        /// A type that specifies the format for the day of the year in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/DayOfYear`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/DayOfYear`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``defaultDigits`` | The minimum number of digits that represents the full day of the year. For example, `1`, `18`, `317`. |
+        /// | ``threeDigits`` | Three-digit numeric day of the year, zero-padded if necessary. For example, `001`, `018`, `317`.  |
+        /// | ``twoDigits`` | Two-digit numeric day of the year, zero-padded if necessary. This format has no effect on three-digit values. For example, `01`, `18`, `317`. |
+        ///
+        ///
+        /// To customize the day format in a string representation of a `Date`, use ``Date/FormatStyle/dayOfYear(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/DayOfYear`` formats applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 3:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().dayOfYear(.defaultDigits)) // 40
+        /// meetingDate.formatted(Date.FormatStyle().dayOfYear(.twoDigits)) // 40
+        /// meetingDate.formatted(Date.FormatStyle().dayOfYear(.threeDigits)) // 040
+        /// meetingDate.formatted(Date.FormatStyle().dayOfYear()) // 40
+        ///
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``defaultDigits`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct DayOfYear : Hashable, Sendable { let option: SymbolType.DayOfYearOption? }
+        /// A type that specifies the format for the weekday name in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/Weekday`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/Weekday`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``Date/FormatStyle/Symbol/Weekday/abbreviated`` | Abbreviated weekday name. For example, `Tue`. |
+        /// | ``Date/FormatStyle/Symbol/Weekday/wide`` |  Wide weekday name. For example, `Tuesday`. |
+        /// | ``Date/FormatStyle/Symbol/Weekday/narrow`` | Narrow weekday name. For example, `T`. |
+        /// | ``short`` | Short weekday name. For example, `Tu`. |
+        /// | ``oneDigit`` | Local numeric one-digit day of week. The value depends on the local starting day of the week. For example, this is `2` if Sunday is the first day of the week. |
+        /// | ``twoDigits`` | Local numeric two-digit day of week, zero-padded if necessary. The value depends on the local starting day of the week. For example, this is `02` if Sunday is the first day of the week. |
+        ///
+        ///
+        /// To customize the weekday, name format in a string representation of a `Date`, use ``Date/FormatStyle/weekday(_:)``. This example shows a variety of ``Date/FormatStyle/Symbol/Weekday`` format styles applied to a Thursday, using locale `en_US`:
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 18, 2021 at 3:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().weekday(.abbreviated)) // Thu
+        /// meetingDate.formatted(Date.FormatStyle().weekday(.narrow)) // T
+        /// meetingDate.formatted(Date.FormatStyle().weekday(.short)) // Th
+        /// meetingDate.formatted(Date.FormatStyle().weekday(.wide)) // Thursday
+        /// meetingDate.formatted(Date.FormatStyle().weekday(.oneDigit)) // 5
+        /// meetingDate.formatted(Date.FormatStyle().weekday(.twoDigits)) // 05
+        /// meetingDate.formatted(Date.FormatStyle().weekday()) // Thu
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``Date/FormatStyle/Symbol/Weekday/abbreviated`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Weekday : Hashable, Sendable { let option: SymbolType.WeekdayOption? }
+        /// A type that specifies a format for the time period in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/DayPeriod`` includes static factory methods that create custom ``Date/FormatStyle/Symbol/DayPeriod`` objects.
+        ///
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``conversational(_:)`` | Conversational abbreviated period. For example, `at night`, `nachm.`, `iltap`. ![](spacer) Conversational narrow period. For example, `at night`, `nachmittags`, `iltapäivällä`. ![](spacer) Conversational wide period. For example, `at night`, `nachm.`, `ip.` |
+        /// | ``standard(_:)`` | Abbreviated period. For example, `am`. ![](spacer) Narrow period. For example, `a`. ![](spacer) Wide period. For example, `am`. |
+        /// | ``with12s(_:)`` | Abbreviated period including designations for noon and midnight. For example, `mid.` ![](spacer) Narrow period including designations for noon and midnight. For example, `md`. ![](spacer) Wide period including designations for noon and midnight. For example, `midnight`. |
+        ///
+        ///
+        /// The day period format style may be uppercase or lowercase depending on the locale and other options.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct DayPeriod : Hashable, Sendable { let option: SymbolType.DayPeriodOption? }
+        /// A type that specifies a format for the hour in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/Hour`` includes static factory variables and methods that create custom ``Date/FormatStyle/Symbol/Hour`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``defaultDigitsNoAMPM`` | The minimum number of digits that represents the full numeric hour. This doesn't include the day period (a.m. or p.m.). For example, `1`, `11`. |
+        /// | ``twoDigitsNoAMPM`` | Two-digit numeric hour, zero-padded if necessary. This doesn't include the day period (a.m. or p.m.). For example, `01`, `11`. |
+        /// | ``defaultDigits(amPM:)`` | The minimum number of digits that represents the full numeric hour. This may include the day period (a.m. or p.m.), depending on locale. For example, `7a` (`narrow`), `7AM` (`abbreviated`), `7A.M.` (`wide`). |
+        /// | ``twoDigits(amPM:)`` | Two-digit numeric hour, zero-padded if necessary. This may include the day period (a.m. or p.m.), depending on locale. For example, `07a` (`narrow`), `07AM` (`abbreviated`), `07A.M.` (`wide`). |
+        /// | ``conversationalDefaultDigits(amPM:)`` | The minimum number of digits that represents the full numeric hour. This may include the day period (a.m. or p.m.), depending on locale, and can include conversational period formats. For example, `7a` (`narrow`), `7AM` (`abbreviated`), `7A.M.` (`wide`). |
+        /// | ``conversationalTwoDigits(amPM:)`` | Two-digit numeric hour, zero-padded if necessary. This may include the day period (a.m. or p.m.), depending on locale, and can include conversational period formats. For example, `07a` (`narrow`), `07AM` (`abbreviated`), `07A.M.` (`wide`). |
+        ///
+        ///
+        /// To customize the hour format in a string representation of a `Date`, use ``Date/FormatStyle/hour(_:)`` The example below shows a variety of ``Date/FormatStyle/Symbol/Hour`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 7:00 PM
+        /// meetingDate.formatted(Date.FormatStyle().hour(.defaultDigitsNoAMPM))
+        /// // 7
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().hour(.twoDigitsNoAMPM))
+        /// // 07
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().hour(.defaultDigits(amPM: .narrow)))
+        /// // 7p
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().hour(.twoDigits(amPM: .abbreviated))
+        /// // 07 PM
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().hour(.conversationalDefaultDigits(amPM: .wide))
+        /// // 7 P.M.
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``Date/FormatStyle/Symbol/Minute/defaultDigits`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Hour : Hashable, Sendable { let option: SymbolType.HourOption? }
+        /// A type that specifies the format for the minutes in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/Minute`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/Minute`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``defaultDigits`` | The minimum number of digits that represents the  numeric minute. For example, `1`, `18`. |
+        /// | ``twoDigits`` | Two-digit numeric minute, zero-padded if necessary. For example, `01`, `18`. |
+        ///
+        ///
+        /// To customize the minute format in a string representation of a `Date`, use ``Date/FormatStyle/minute(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Minute`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 3:05 PM
+        /// meetingDate.formatted(Date.FormatStyle().minute(.defaultDigits)) // 5
+        /// meetingDate.formatted(Date.FormatStyle().minute(.twoDigits)) // 05
+        /// meetingDate.formatted(Date.FormatStyle().minute()) // 5
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``defaultDigits`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Minute : Hashable, Sendable { let option: SymbolType.MinuteOption? }
+        /// A type that specifies the format for the seconds in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/Second`` includes static factory variables that create custom ``Date/FormatStyle/Symbol/Second`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``defaultDigits`` | The minimum number of digits that represents the numeric second. For example, `1`, `18`. |
+        /// | ``twoDigits`` | Two-digit numeric second, zero-padded if necessary. For example, `01`, `18`. |
+        ///
+        ///
+        /// To customize the second format in a string representation of a `Date`, use ``Date/FormatStyle/second(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/Second`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 3:05 PM
+        /// meetingDate.formatted(Date.FormatStyle().second(.defaultDigits)) // 5
+        /// meetingDate.formatted(Date.FormatStyle().second(.twoDigits)) // 05
+        /// meetingDate.formatted(Date.FormatStyle().second()) // 5
+        /// ```
+        ///
+        ///
+        /// If no format is specified as a parameter, the ``defaultDigits`` static variable is the default format.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct Second : Hashable, Sendable { let option: SymbolType.SecondOption? }
+        /// A type that specifies the format for the second fraction in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/SecondFraction`` includes static factory methods that create custom ``Date/FormatStyle/Symbol/SecondFraction`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``fractional(_:)`` | Returns the numerical representation of the fractional component of the second. For example, `8`, `827`. |
+        /// | ``milliseconds(_:)`` | Returns the number of milliseconds elapsed in the day. For example, `11122827`. |
+        ///
+        ///
+        /// To customize the second format in a string representation of a `Date`, use ``Date/FormatStyle/secondFraction(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/SecondFraction`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 3:05:41 PM
+        /// meetingDate.formatted(Date.FormatStyle().secondFraction(.fractional(3))) // 827
+        /// meetingDate.formatted(Date.FormatStyle().secondFraction(.fractional(1))) // 8
+        /// meetingDate.formatted(Date.FormatStyle().secondFraction(.milliseconds(4))) // 11122827
+        /// ```
+        ///
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct SecondFraction : Hashable, Sendable { let option: SymbolType.SecondFractionOption? }
+        
+        /// A type that specifies a format for the time zone in a date format style.
+        ///
+        /// The type ``Date/FormatStyle/Symbol/TimeZone`` includes static factory variables and methods that create custom ``Date/FormatStyle/Symbol/TimeZone`` objects:
+        ///
+        /// |Factory variable|Description|
+        /// |---|---|
+        /// | ``specificName(_:)`` | The specific, non-location representation of a timezone. For example, `CDT` (`short`), `Central Daylight Time` (`long`). |
+        /// | ``genericName(_:)`` | The generic, non-location representation of a timezone. For example, `CT` (`short`), `Central Time` (`long`). |
+        /// | ``iso8601(_:)`` | The ISO 8601 representation of the timezone with hours, minutes, and optional seconds. For example, `-0500` (`short`), `-05:00` (`long`). |
+        /// | ``localizedGMT(_:)`` | The localized GMT format representation of a timezone. For example, `GMT-5` (`short`), `GMT-05:00` (`long`). |
+        /// | ``identifier(_:)`` | The timezone identifier. For example, `uschi` (`short`), `America/Chicago` (`long`). |
+        /// | ``exemplarLocation`` | The exemplar city for a timezone. For example, `Chicago`. |
+        /// | ``genericLocation`` | The generic location representation of a timezone. For example, `Chicago Time`. |
+        ///
+        ///
+        /// To customize the hour format in a string representation of a `Date`, use ``Date/FormatStyle/timeZone(_:)``. The following example shows a variety of ``Date/FormatStyle/Symbol/TimeZone`` format styles applied to a date.
+        ///
+        /// ```swift
+        /// let meetingDate = Date() // Feb 9, 2021 at 7:00 PM
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.specificName(.short)))
+        /// // CDT
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.specificName(.long)))
+        /// // Central Daylight Time
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.genericName(.short)))
+        /// // CT
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.genericName(.long)))
+        /// // Central Time
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.iso8601(.short)))
+        /// // -0500
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.iso8601(.long)))
+        /// // -05:00
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.localizedGMT(.short)))
+        /// // GMT-5
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.localizedGMT(.long)))
+        /// // GMT-05:00
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.identifier(.short)))
+        /// // uschi
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.identifier(.long)))
+        /// // America/Chicago
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.exemplarLocation))
+        /// // Chicago
+        ///
+        /// meetingDate.formatted(Date.FormatStyle().timeZone(.genericLocation))
+        /// // Chicago Time
+        ///
+        /// ```
+        ///
+        ///
+        /// If you don't provide a format, the system formats a timezone using the short ``specificName(_:)`` static function with the width ``Width/short``.
+        ///
+        /// For more information about formatting dates, see the ``Date/FormatStyle``.
         public struct TimeZone : Hashable, Sendable { let option: SymbolType.TimeZoneSymbolOption? }
-
+        
+        /// A type that specifies the format for a standalone quarter.
         public struct StandaloneQuarter : Hashable, Sendable { let option: SymbolType.StandaloneQuarterOption }
+        /// A type that specifies the format for a standalone month.
         public struct StandaloneMonth : Hashable, Sendable { let option: SymbolType.StandaloneMonthOption }
+        /// A type that specifies the format for a standalone weekday.
         public struct StandaloneWeekday : Hashable, Sendable { let option: SymbolType.StandaloneWeekdayOption }
+        /// A type that specifies a format for the hour in a date format style.
         public struct VerbatimHour : Hashable, Sendable { let option: SymbolType.VerbatimHourOption }
 
         static let maxPadding = 10
@@ -648,9 +1071,15 @@ public extension Date.FormatStyle.Symbol.StandaloneWeekday {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.DayPeriod {
 
+    /// A type representing the width of a day period in a format style.
+    ///
+    /// The possible values of a width are ``abbreviated``, ``narrow``, and ``wide``.
     enum Width : Sendable {
+        /// A shortened day period width representation.
         case abbreviated
+        /// A full day period width representation.
         case wide
+        /// The shortest day period width representation.
         case narrow
     }
 
@@ -709,6 +1138,9 @@ public extension Date.FormatStyle.Symbol.DayPeriod {
 /// Hour symbols.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.Hour {
+    /// The format style of the string representation of the day period, before or after noon, in a date.
+    ///
+    /// Possible values for this style are: ``omitted``, ``narrow``, ``abbreviated``, and ``wide``.
     struct AMPMStyle : Codable, Hashable, Sendable {
         let rawValue: UInt
 
@@ -801,9 +1233,15 @@ public extension Date.FormatStyle.Symbol.Hour {
         return new
     }
 
+    /// Custom format style portraying the minimum number of digits that represents the numeric hour.
+    ///
+    /// This style doesn't include the day period symbol (a.m. or p.m.). For example, `1`, `11`.
     @available(*, deprecated, renamed:"defaultDigits(amPM:)")
     static var defaultDigitsNoAMPM: Self { .init(option: .defaultDigitsNoAMPM) }
 
+    /// Custom format style portraying the numeric hour using two digits.
+    ///
+    /// This style pads the hour with a leading zero if necessary. It doesn't include the day period symbol (a.m. or p.m.). For example, `01`, `11`.
     @available(*, deprecated, renamed:"twoDigits(amPM:)")
     static var twoDigitsNoAMPM: Self { .init(option: .twoDigitsNoAMPM) }
 }
@@ -811,6 +1249,7 @@ public extension Date.FormatStyle.Symbol.Hour {
 /// Hour symbols that does not take users' preferences into account, and is displayed as-is.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.VerbatimHour {
+    /// A type that specifies the start of a clock representation for the format of a hour.
     struct HourCycle : Codable, Hashable, Sendable {
         /// The hour ranges from 0 to 11 in a 12-hour clock. Ranges from 0 to 23 in a 24-hour clock.
         public static let zeroBased = HourCycle(rawValue: 0)
@@ -821,6 +1260,7 @@ public extension Date.FormatStyle.Symbol.VerbatimHour {
         let rawValue : UInt
     }
 
+    /// A type that specifies a clock representation for the format of an hour.
     struct Clock : Codable, Hashable, Sendable {
         /// In a 12-hour clock system, the 24-hour day is divided into two periods, a.m. and p.m, and each period consists of 12 hours.
         /// - Note: Does not include the period marker (AM/PM). Specify a `PeriodSymbol` if that's desired.
@@ -922,8 +1362,13 @@ public extension Date.FormatStyle.Symbol.SecondFraction {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.TimeZone {
 
+    /// A type representing the width of a time zone in a format style.
+    ///
+    /// The possible values of a width are ``short`` and ``long``.
     enum Width : Sendable {
+        /// A short timezone representation.
         case short
+        /// A long timezone representation.
         case long
     }
 

@@ -69,7 +69,7 @@ extension String : _ObjectiveCBridgeable {
                 return String(unsafeUninitializedCapacity: SMALL_STRING_CAPACITY) {
                     _NSTaggedPointerStringGetBytes(source, $0.baseAddress!)
                 }
-            } else if tag == OBJC_TAG_NSAtom {
+            } else if tag == OBJC_TAG_NSIndirectString {
                 var len = UInt16(0)
                 let contentsPtr = _CFIndirectTaggedPointerStringGetContents(source, &len)
                 let contents = UnsafeBufferPointer(start: contentsPtr, count: Int(len))

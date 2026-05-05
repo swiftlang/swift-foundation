@@ -17,6 +17,7 @@ import Darwin
 #endif
 
 internal import _FoundationCShims
+internal import Synchronization
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Decodable` values (in which case it should be exempt from key conversion strategies).
@@ -35,7 +36,7 @@ extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String,
 // JSON Decoder
 //===----------------------------------------------------------------------===//
 
-/// `JSONDecoder` facilitates the decoding of JSON into semantic `Decodable` types.
+/// An object that decodes instances of a data type from JSON objects.
 // NOTE: older overlays had Foundation.JSONDecoder as the ObjC name.
 // The two must coexist, so it was renamed. The old name must not be
 // used in the new runtime. _TtC10Foundation13__JSONDecoder is the
@@ -43,11 +44,35 @@ extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String,
 #if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation13__JSONDecoder)
 #endif
+/// An object that decodes instances of a data type from JSON objects.
+///
+/// The example below shows how to decode an instance of a simple `GroceryProduct` type from a JSON object. The type adopts <doc://com.apple.documentation/documentation/swift/codable> so that it's decodable using a ``JSONDecoder`` instance.
+///
+/// ```swift
+/// struct GroceryProduct: Codable {
+/// var name: String
+/// var points: Int
+/// var description: String?
+/// }
+///
+/// let json = """
+/// {
+/// "name": "Durian",
+/// "points": 600,
+/// "description": "A fruit with a distinctive scent."
+/// }
+/// """.data(using: .utf8)!
+///
+/// let decoder = JSONDecoder()
+/// let product = try decoder.decode(GroceryProduct.self, from: json)
+///
+/// print(product.name) // Prints "Durian"
+/// ```
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class JSONDecoder {
     // MARK: Options
 
-    /// The strategy to use for decoding `Date` values.
+    /// The strategies available for formatting dates when decoding them from JSON.
     public enum DateDecodingStrategy : Sendable {
         /// Defer to `Date` for decoding. This is the default strategy.
         case deferredToDate
@@ -72,7 +97,7 @@ open class JSONDecoder {
         case custom(@Sendable (_ decoder: Decoder) throws -> Date)
     }
 
-    /// The strategy to use for decoding `Data` values.
+    /// The strategies for decoding raw data.
     public enum DataDecodingStrategy : Sendable {
         /// Defer to `Data` for decoding.
         case deferredToData
@@ -85,7 +110,9 @@ open class JSONDecoder {
         case custom(@Sendable (_ decoder: Decoder) throws -> Data)
     }
 
-    /// The strategy to use for non-JSON-conforming floating-point values (IEEE 754 infinity and NaN).
+    /// The strategies for encoding nonconforming floating-point numbers, also known as IEEE 754 exceptional values.
+    ///
+    /// The IEEE 754 floating-point specification defines exceptional values, which include <doc://com.apple.documentation/documentation/swift/floatingpoint/infinity> and <doc://com.apple.documentation/documentation/swift/floatingpoint/nan>.
     public enum NonConformingFloatDecodingStrategy : Sendable {
         /// Throw upon encountering non-conforming values. This is the default strategy.
         case `throw`
@@ -94,7 +121,10 @@ open class JSONDecoder {
         case convertFromString(positiveInfinity: String, negativeInfinity: String, nan: String)
     }
 
-    /// The strategy to use for automatically changing the value of keys before decoding.
+    /// The values that determine how to decode a type's coding keys from JSON keys.
+    ///
+    /// > Note:
+    /// > Key decoding strategies other than ``useDefaultKeys`` may have a noticeable performance cost because those strategies may inspect and transform each key.
     public enum KeyDecodingStrategy : Sendable {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
@@ -164,123 +194,131 @@ open class JSONDecoder {
         }
     }
 
-    /// The strategy to use in decoding dates. Defaults to `.deferredToDate`.
+    /// The strategy used when decoding dates from part of a JSON object.
     open var dateDecodingStrategy: DateDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.dateDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.dateDecodingStrategy
             defer {
                 options.dateDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.dateDecodingStrategy = newValue
         }
     }
 
-    /// The strategy to use in decoding binary data. Defaults to `.base64`.
+    /// The strategy that a decoder uses to decode raw data.
+    ///
+    /// Defaults to `.base64`.
     open var dataDecodingStrategy: DataDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.dataDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.dataDecodingStrategy
             defer {
                 options.dataDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.dataDecodingStrategy = newValue
         }
     }
 
-    /// The strategy to use in decoding non-conforming numbers. Defaults to `.throw`.
+    /// The strategy used by a decoder when it encounters exceptional floating-point values.
+    ///
+    /// Defaults to `.throw`.
     open var nonConformingFloatDecodingStrategy: NonConformingFloatDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.nonConformingFloatDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.nonConformingFloatDecodingStrategy
             defer {
                 options.nonConformingFloatDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.nonConformingFloatDecodingStrategy = newValue
         }
     }
 
-    /// The strategy to use for decoding keys. Defaults to `.useDefaultKeys`.
+    /// A value that determines how to decode a type's coding keys from JSON keys.
+    ///
+    /// Defaults to `.useDefaultKeys`.
     open var keyDecodingStrategy: KeyDecodingStrategy {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.keyDecodingStrategy
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.keyDecodingStrategy
             defer {
                 options.keyDecodingStrategy = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.keyDecodingStrategy = newValue
         }
     }
 
-    /// Contextual user-provided information for use during decoding.
+    /// A dictionary you use to customize the decoding process by providing contextual information.
     @preconcurrency
     open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.userInfo
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.userInfo
             defer {
                 options.userInfo = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.userInfo = newValue
         }
     }
 
-    /// Set to `true` to allow parsing of JSON5. Defaults to `false`.
+    /// Specifies that decoding supports the JSON5 syntax.
+    ///
+    /// Defaults to `false`.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     open var allowsJSON5: Bool {
         get {
@@ -293,7 +331,9 @@ open class JSONDecoder {
 
     private let assumesTopLevelDictionaryKey = CodingUserInfoKey(rawValue: "_NSAssumesTopLevelDictionaryJSON5")!
 
-    /// Set to `true` to assume the data is a top level Dictionary (no surrounding "{ }" required). Defaults to `false`. Compatible with both JSON5 and non-JSON5 mode.
+    /// Specifies that decoding assumes the top level of the JSON data is a dictionary, even if it doesn't begin and end with braces.
+    ///
+    /// Defaults to `false`. Compatible with both JSON5 and non-JSON5 mode.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     open var assumesTopLevelDictionary: Bool {
         get {
@@ -316,11 +356,11 @@ open class JSONDecoder {
 
     /// The options set on the top-level decoder.
     fileprivate var options = _Options()
-    fileprivate let optionsLock = LockedState<Void>()
+    fileprivate let optionsLock = Mutex<Void>(())
 
     // MARK: - Constructing a JSON Decoder
 
-    /// Initializes `self` with default strategies.
+    /// Creates a new, reusable JSON decoder with the default formatting settings and decoding strategies.
     public init() {}
 
     private var scannerOptions : JSONScanner.Options {
@@ -333,7 +373,7 @@ open class JSONDecoder {
 
     // MARK: - Decoding Values
 
-    /// Decodes a top-level value of the given type from the given JSON representation.
+    /// Returns a value of the type you specify, decoded from a JSON object.
     ///
     /// - parameter type: The type of the value to decode.
     /// - parameter data: The data to decode from.
@@ -504,7 +544,7 @@ fileprivate class JSONDecoderImpl {
     }
 
     @inline(__always)
-    func withBuffer<T>(for region: JSONMap.Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T) rethrows -> T {
+    func withBuffer<T: ~Copyable, E>(for region: JSONMap.Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T) throws(E) -> sending T {
         try jsonMap.withBuffer(for: region, perform: closure)
     }
 
@@ -861,7 +901,7 @@ extension JSONDecoderImpl: Decoder {
         return true
     }
 
-    private func unwrapFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>(
+    private func unwrapFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>(
         from value: JSONMap.Value,
         as type: T.Type,
         for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T
@@ -959,7 +999,7 @@ extension JSONDecoderImpl: Decoder {
         throw self.createTypeMismatchError(type: type, for: codingPathNode.path(byAppending: additionalKey), value: value)
     }
 
-    private func unwrapFixedWidthInteger<T: FixedWidthInteger>(
+    private func unwrapFixedWidthInteger<T: FixedWidthInteger & Sendable>(
         from value: JSONMap.Value,
         as type: T.Type,
         for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T
@@ -1178,11 +1218,11 @@ extension JSONDecoderImpl : SingleValueDecodingContainer {
         try self.unwrap(self.topValue, as: type, for: codingPathNode, _CodingKey?.none)
     }
 
-    @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>() throws -> T {
+    @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger & Sendable>() throws -> T {
         try self.unwrapFixedWidthInteger(from: self.topValue, as: T.self, for: codingPathNode, _CodingKey?.none)
     }
 
-    @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T {
+    @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>() throws -> T {
         try self.unwrapFloatingPoint(from: self.topValue, as: T.self, for: codingPathNode, _CodingKey?.none)
     }
 }
@@ -1468,17 +1508,17 @@ extension JSONDecoderImpl {
             ))
         }
 
-        @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>(key: Self.Key) throws -> T {
+        @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger & Sendable>(key: Self.Key) throws -> T {
             let value = try getValue(forKey: key)
             return try self.impl.unwrapFixedWidthInteger(from: value, as: T.self, for: codingPathNode, key)
         }
 
-        @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>(key: K) throws -> T {
+        @inline(__always) private func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>(key: K) throws -> T {
             let value = try getValue(forKey: key)
             return try self.impl.unwrapFloatingPoint(from: value, as: T.self, for: codingPathNode, key)
         }
 
-        @inline(__always) private func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger>(key: Self.Key) throws -> T? {
+        @inline(__always) private func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger & Sendable>(key: Self.Key) throws -> T? {
             guard let value = getValueIfPresent(forKey: key) else {
                 return nil
             }
@@ -1488,7 +1528,7 @@ extension JSONDecoderImpl {
             }
         }
 
-        @inline(__always) private func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>(key: K) throws -> T? {
+        @inline(__always) private func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>(key: K) throws -> T? {
             guard let value = getValueIfPresent(forKey: key) else {
                 return nil
             }
@@ -1785,7 +1825,7 @@ extension JSONDecoderImpl {
             return nextValue
         }
 
-        @inline(__always) private mutating func decodeFixedWidthInteger<T: FixedWidthInteger>() throws -> T {
+        @inline(__always) private mutating func decodeFixedWidthInteger<T: FixedWidthInteger & Sendable>() throws -> T {
             let value = try self.peekNextValue(ofType: T.self)
             let key = _CodingKey(index: self.currentIndex)
             let result = try self.impl.unwrapFixedWidthInteger(from: value, as: T.self, for: codingPathNode, key)
@@ -1793,7 +1833,7 @@ extension JSONDecoderImpl {
             return result
         }
 
-        @inline(__always) private mutating func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T {
+        @inline(__always) private mutating func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>() throws -> T {
             let value = try self.peekNextValue(ofType: T.self)
             let key = _CodingKey(index: self.currentIndex)
             let result = try self.impl.unwrapFloatingPoint(from: value, as: T.self, for: codingPathNode, key)
@@ -1801,7 +1841,7 @@ extension JSONDecoderImpl {
             return result
         }
 
-        @inline(__always) private mutating func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger>() throws -> T? {
+        @inline(__always) private mutating func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger & Sendable>() throws -> T? {
             let value = self.peekNextValueIfPresent(ofType: T.self)
             let result: T? = switch value {
             case nil, .null: nil
@@ -1811,7 +1851,7 @@ extension JSONDecoderImpl {
             return result
         }
 
-        @inline(__always) private mutating func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T? {
+        @inline(__always) private mutating func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>() throws -> T? {
             let value = self.peekNextValueIfPresent(ofType: T.self)
             let result: T? = switch value {
             case nil, .null: nil

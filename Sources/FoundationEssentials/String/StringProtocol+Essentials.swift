@@ -415,10 +415,10 @@ extension StringProtocol {
         // `Substring`. Note that we're only ever calling `_lineBounds` on a `Substring`; this is
         // to reduce the code size overhead of having to specialize it multiple times (at a slight
         // cost to runtime performance).
-        if let s = _specializingCast(self, to: String.self) {
+        if let s = _specialize(self, for: String.self) {
             let range = s.unicodeScalars._boundaryAlignedRange(range)
             return s[...].utf8._lineBounds(around: range)
-        } else if let s = _specializingCast(self, to: Substring.self) {
+        } else if let s = _specialize(self, for: Substring.self) {
             let range = s.unicodeScalars._boundaryAlignedRange(range)
             return s.utf8._lineBounds(around: range)
         } else {
@@ -454,10 +454,10 @@ extension StringProtocol {
         // `Substring`. Note that we're only ever calling `_paragraphBounds` on a `Substring`; this is
         // to reduce the code size overhead of having to specialize it multiple times (at a slight
         // cost to runtime performance).
-        if let s = _specializingCast(self, to: String.self) {
+        if let s = _specialize(self, for: String.self) {
             let range = s.unicodeScalars._boundaryAlignedRange(range)
             return s[...].utf8._paragraphBounds(around: range) // Note: We use [...] to get a Substring
-        } else if let s = _specializingCast(self, to: Substring.self) {
+        } else if let s = _specialize(self, for: Substring.self) {
             let range = s.unicodeScalars._boundaryAlignedRange(range)
             return s.utf8._paragraphBounds(around: range)
         } else {

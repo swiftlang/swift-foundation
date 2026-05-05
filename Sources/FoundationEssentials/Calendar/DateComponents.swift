@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-/**
- `DateComponents` encapsulates the components of a date in an extendable, structured manner.
-
- It is used to specify a date by providing the temporal components that make up a date and time in a particular calendar: hour, minutes, seconds, day, month, year, and so on. It can also be used to specify a duration of time, for example, 5 hours and 16 minutes. A `DateComponents` is not required to define all the component fields.
-
- When a new instance of `DateComponents` is created, the date components are set to `nil`.
-*/
+/// A date or time specified in terms of units (such as year, month, day, hour, minute) to be evaluated in a calendar system and time zone.
+///
+/// `DateComponents` encapsulates the components of a date in an extendable, structured manner.
+///
+/// It is used to specify a date by providing the temporal components that make up a date and time in a particular calendar: hour, minutes, seconds, day, month, year, and so on. It can also be used to specify a duration of time, for example, 5 hours and 16 minutes. A `DateComponents` is not required to define all the component fields.
+///
+/// When a new instance of `DateComponents` is created, the date components are set to `nil`.
 @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _calendar: Calendar?
@@ -40,7 +40,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _isLeapMonth: Bool?
     internal var _isRepeatedDay: Bool?
 
-    /// Initialize a `DateComponents`, optionally specifying values for its fields.
+    /// Initializes a date components value, optionally specifying values for its fields.
     public init(calendar: Calendar? = nil,
          timeZone: TimeZone? = nil,
          era: Int? = nil,
@@ -150,7 +150,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         }
     }
 
-    /// The `Calendar` used to interpret the other values in this structure.
+    /// The calendar used to interpret the other values in this structure.
     ///
     /// - note: API which uses `DateComponents` may have different behavior if this value is `nil`. For example, assuming the current calendar or ignoring certain values.
     public var calendar: Calendar? {
@@ -286,7 +286,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         set { _week = converted(newValue) }
     }
 
-    /// The ISO 8601 week-numbering year of the receiver.
+    /// The year corresponding to a week-counting week.
     ///
     /// The Gregorian calendar defines a week to have 7 days, and a year to have 365 days, or 366 in a leap year. However, neither 365 or 366 divide evenly into a 7 day week, so it is often the case that the last week of a year ends on a day in the next year, and the first week of a year begins in the preceding year. To reconcile this, ISO 8601 defines a week-numbering year, consisting of either 52 or 53 full weeks (364 or 371 days), such that the first week of a year is designated to be the week containing the first Thursday of the year.
     ///
@@ -310,7 +310,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         set { _isRepeatedDay = newValue }
     }
 
-    /// Returns a `Date` calculated from the current components using the `calendar` property.
+    /// The date calculated from the current components using the stored calendar.
     public var date: Date? {
         guard let calendar = _calendar else { return nil }
 
@@ -380,7 +380,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
     // MARK: -
 
-    /// Returns true if the combination of properties which have been set in the receiver is a date which exists in the `calendar` property.
+    /// Indicates whether the current combination of properties represents a date which exists in the current calendar.
     ///
     /// This method is not appropriate for use on `DateComponents` values which are specifying relative quantities of calendar components.
     ///
@@ -395,7 +395,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         return isValidDate(in: calendar)
     }
 
-    /// Returns true if the combination of properties which have been set in the receiver is a date which exists in the specified `Calendar`.
+    /// Indicates whether the current combination of properties represents a date which exists in the specified calendar.
     ///
     /// This method is not appropriate for use on `DateComponents` values which are specifying relative quantities of calendar components.
     ///

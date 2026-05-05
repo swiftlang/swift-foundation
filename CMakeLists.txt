@@ -93,8 +93,8 @@ FetchContent_MakeAvailable(SwiftFoundationICU SwiftCollections)
 list(APPEND CMAKE_MODULE_PATH ${SwiftFoundation_SOURCE_DIR}/cmake/modules)
 
 # Availability Macros (only applies to FoundationEssentials and FoundationInternationalization)
-set(_SwiftFoundation_BaseAvailability "macOS 15, iOS 18, tvOS 18, watchOS 11")
-set(_SwiftFoundation_FutureAvailability "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000")
+set(_SwiftFoundation_BaseAvailability "macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26")
+set(_SwiftFoundation_FutureAvailability "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000, visionOS 10000")
 
 # All versions to define for each availability name
 list(APPEND _SwiftFoundation_versions
@@ -102,6 +102,7 @@ list(APPEND _SwiftFoundation_versions
     "6.1"
     "6.2"
     "6.3"
+    "6.4"
     )
 
 # Each availability name to define

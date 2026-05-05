@@ -383,7 +383,7 @@ extension PredicateExpressions.Filter : DebugStringConvertiblePredicateExpressio
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.StringContainsRegex : DebugStringConvertiblePredicateExpression where Subject : DebugStringConvertiblePredicateExpression, Regex : DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
-        "\(subject.debugString(state: &state)).contains(\(subject.debugString(state: &state)))"
+        "\(subject.debugString(state: &state)).contains(\(regex.debugString(state: &state)))"
     }
 }
 #endif

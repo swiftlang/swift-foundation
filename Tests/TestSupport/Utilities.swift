@@ -12,6 +12,10 @@
 
 import Testing
 
+extension Testing.Tag {
+    @Tag package static var calendar: Self
+}
+
 /// Test that the elements of `instances` satisfy the semantic
 /// requirements of `Equatable`, using `oracle` to generate equality
 /// expectations from pairs of positions in `instances`.

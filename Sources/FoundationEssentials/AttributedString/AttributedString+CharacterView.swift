@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// A view into the underlying storage of the attributed string, as Unicode characters.
     public struct CharacterView : Sendable {
         /// The guts of the base attributed string.
         internal var _guts: Guts
@@ -55,6 +56,15 @@ extension AttributedString {
         }
     }
 
+    /// The characters of the attributed string, as a view into the underlying string.
+    ///
+    /// Use the ``AttributedString/characters`` view when you want to look for specific string
+    /// content. You can then use the resulting ranges to set attributes for specific parts of
+    /// the ``AttributedString``.
+    ///
+    /// You can also use this property to mutate the attributed string, using
+    /// `RangeReplaceableCollection` methods, such as `insert(_:at:)` and `append(_:)`.
+    /// Inserted characters inherit any attributes present at the insertion point.
     public var characters: CharacterView {
         get {
             return CharacterView(_guts)
@@ -113,6 +123,14 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         .init(_range.upperBound, version: _guts.version)
     }
 
+    /// The number of characters in the collection.
+    ///
+    /// To check whether a collection is empty, use its `isEmpty` property
+    /// instead of comparing `count` to zero. Unless the collection guarantees
+    /// random-access performance, calculating `count` can be an O(*n*)
+    /// operation.
+    ///
+    /// - Complexity: O(*n*)
     @_alwaysEmitIntoClient
     public var count: Int {
     #if FOUNDATION_FRAMEWORK
@@ -296,9 +314,9 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         let subrange = _guts.characterRange(roundingDown: subrange._bstringRange)
         
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
-        if let newElements = _specializingCast(newElements, to: Self.self) {
+        if let newElements = _specialize(newElements, for: Self.self) {
             _replaceSubrange(subrange, with: newElements._characters)
-        } else if let newElements = _specializingCast(newElements, to: Slice<Self>.self) {
+        } else if let newElements = _specialize(newElements, for: Slice<Self>.self) {
             _replaceSubrange(subrange, with: newElements._rebased._characters)
         } else {
             _replaceSubrange(subrange, with: newElements)
@@ -315,7 +333,7 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         // don't need to touch string storage, but we still want to update attributes as if it was
         // a full edit.
         var hasStringChanges = true
-        if let newElements = _specializingCast(newElements, to: BigSubstring.self),
+        if let newElements = _specialize(newElements, for: BigSubstring.self),
            newElements.isIdentical(to: _characters[subrange]) {
             hasStringChanges = false
         }

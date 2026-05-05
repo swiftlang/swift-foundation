@@ -337,6 +337,16 @@ private struct NumberFormatStyleTests {
 
     }
 
+    @Test func decimalFormatStyle_Currency_groupingWithRounding() throws {
+        let style = Decimal.FormatStyle.Currency(code: "USD", locale: enUSLocale)
+
+        _testNegativePositiveDecimal(style.grouping(.never), [ "$87650.00", "$8765.00", "$876.50", "$87.65", "$8.76", "$0.88", "$0.09", "$0.01", "$0.00", "-$0.01", "-$876.50", "-$87650.00" ], "currency grouping(.never)")
+        _testNegativePositiveDecimal(style.rounded(rule: .toNearestOrEven), [ "$87,650.00", "$8,765.00", "$876.50", "$87.65", "$8.76", "$0.88", "$0.09", "$0.01", "$0.00", "-$0.01", "-$876.50", "-$87,650.00" ], "currency rounded")
+
+        _testNegativePositiveDecimal(style.rounded(rule: .toNearestOrEven).grouping(.never), [ "$87650.00", "$8765.00", "$876.50", "$87.65", "$8.76", "$0.88", "$0.09", "$0.01", "$0.00", "-$0.01", "-$876.50", "-$87650.00" ], "currency rounded + grouping(.never)")
+        _testNegativePositiveDecimal(style.grouping(.never).rounded(rule: .toNearestOrEven), [ "$87650.00", "$8765.00", "$876.50", "$87.65", "$8.76", "$0.88", "$0.09", "$0.01", "$0.00", "-$0.01", "-$876.50", "-$87650.00" ], "currency grouping(.never) + rounded")
+    }
+
     @Test func decimal_withCustomShorthand() async {
         await usingCurrentInternationalizationPreferences {
             // This test can only be run with the system set to the en_US language

@@ -23,9 +23,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -41,9 +41,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                return PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                return PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -59,9 +59,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_NotEqual(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_NotEqual(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -77,9 +77,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Comparison(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB),
+                PredicateExpressions.\(foundationModuleName)::build_Comparison(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                     op: .lessThan
                 )
             })
@@ -94,9 +94,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Comparison(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB),
+                PredicateExpressions.\(foundationModuleName)::build_Comparison(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                     op: .lessThanOrEqual
                 )
             })
@@ -111,9 +111,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Comparison(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB),
+                PredicateExpressions.\(foundationModuleName)::build_Comparison(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                     op: .greaterThan
                 )
             })
@@ -128,9 +128,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Comparison(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB),
+                PredicateExpressions.\(foundationModuleName)::build_Comparison(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                     op: .greaterThanOrEqual
                 )
             })
@@ -147,9 +147,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Conjunction(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_Conjunction(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -165,9 +165,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Disjunction(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_Disjunction(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -183,9 +183,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Arithmetic(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB),
+                PredicateExpressions.\(foundationModuleName)::build_Arithmetic(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                     op: .add
                 )
             })
@@ -200,9 +200,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Arithmetic(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB),
+                PredicateExpressions.\(foundationModuleName)::build_Arithmetic(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                     op: .subtract
                 )
             })
@@ -217,9 +217,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Arithmetic(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB),
+                PredicateExpressions.\(foundationModuleName)::build_Arithmetic(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                     op: .multiply
                 )
             })
@@ -236,9 +236,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Division(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_Division(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -254,9 +254,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Remainder(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_Remainder(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -272,8 +272,8 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Negation(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_Negation(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 )
             })
             """
@@ -289,8 +289,8 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_UnaryMinus(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_UnaryMinus(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 )
             })
             """
@@ -306,9 +306,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_NilCoalesce(
-                    lhs: PredicateExpressions.build_Arg(inputA),
-                    rhs: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_NilCoalesce(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -324,9 +324,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_Range(
-                    lower: PredicateExpressions.build_Arg(inputA),
-                    upper: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_Range(
+                    lower: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    upper: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -340,9 +340,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_ClosedRange(
-                    lower: PredicateExpressions.build_Arg(inputA),
-                    upper: PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_ClosedRange(
+                    lower: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    upper: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -358,11 +358,11 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ inputA in
-                PredicateExpressions.build_flatMap(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 ) {
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                         keyPath: \\.foo
                     )
                 }
@@ -380,11 +380,11 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ inputA in
-                PredicateExpressions.build_flatMap(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 ) {
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                         keyPath: \\.foo
                     )
                 }
@@ -400,14 +400,14 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_flatMap(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                         keyPath: \\.foo
                     )
                 ) {
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                         keyPath: \\.bar
                     )
                 }
@@ -423,18 +423,18 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ inputA in
-                PredicateExpressions.build_flatMap(
-                    PredicateExpressions.build_flatMap(
-                        PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                    PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                     ) {
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg($0),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                             keyPath: \\.foo
                         )
                     }
                 ) {
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                         keyPath: \\.bar
                     )
                 }
@@ -450,15 +450,15 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_flatMap(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                         keyPath: \\.foo
                     )
                 ) {
-                    PredicateExpressions.build_contains(
-                        PredicateExpressions.build_Arg($0),
-                        PredicateExpressions.build_Arg(0)
+                    PredicateExpressions.\(foundationModuleName)::build_contains(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg($0),
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(0)
                     )
                 }
             })
@@ -485,20 +485,20 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({
-                PredicateExpressions.build_NilCoalesce(
-                    lhs: PredicateExpressions.build_flatMap(
-                        PredicateExpressions.build_Arg($0)
+                PredicateExpressions.\(foundationModuleName)::build_NilCoalesce(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg($0)
                     ) {
-                        PredicateExpressions.build_contains(
-                            PredicateExpressions.build_Arg($0)
+                        PredicateExpressions.\(foundationModuleName)::build_contains(
+                            PredicateExpressions.\(foundationModuleName)::build_Arg($0)
                         ) {
-                            PredicateExpressions.build_Equal(
-                                lhs: PredicateExpressions.build_Arg($0),
-                                rhs: PredicateExpressions.build_Arg("Test")
+                            PredicateExpressions.\(foundationModuleName)::build_Equal(
+                                lhs: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
+                                rhs: PredicateExpressions.\(foundationModuleName)::build_Arg("Test")
                             )
                         }
                     },
-                    rhs: PredicateExpressions.build_Arg(true)
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(true)
                 )
             })
             """
@@ -514,19 +514,19 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<[Object?]>({ objects in
-                PredicateExpressions.build_allSatisfy(
-                    PredicateExpressions.build_Arg(objects)
+                PredicateExpressions.\(foundationModuleName)::build_allSatisfy(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(objects)
                 ) {
-                    PredicateExpressions.build_Equal(
-                        lhs: PredicateExpressions.build_flatMap(
-                            PredicateExpressions.build_Arg($0)
+                    PredicateExpressions.\(foundationModuleName)::build_Equal(
+                        lhs: PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                            PredicateExpressions.\(foundationModuleName)::build_Arg($0)
                         ) {
-                            PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg($0),
+                            PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                                 keyPath: \\.bar
                             )
                         },
-                        rhs: PredicateExpressions.build_Arg(2)
+                        rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(2)
                     )
                 }
             })
@@ -543,9 +543,9 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ inputA in
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_ForcedUnwrap(
-                        PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                    root: PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                     ),
                     keyPath: \\.foo
                 )
@@ -561,10 +561,10 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_ForcedUnwrap(
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                    root: PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                             keyPath: \\.foo
                         )
                     ),
@@ -582,11 +582,11 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ inputA in
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_ForcedUnwrap(
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_ForcedUnwrap(
-                                PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                    root: PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                                PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                             ),
                             keyPath: \\.foo
                         )
@@ -605,14 +605,14 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_contains(
-                    PredicateExpressions.build_ForcedUnwrap(
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_contains(
+                    PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                             keyPath: \\.foo
                         )
                     ),
-                    PredicateExpressions.build_Arg(0)
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(0)
                 )
             })
             """
@@ -626,16 +626,16 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ inputA in
-                PredicateExpressions.build_flatMap(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_ForcedUnwrap(
-                            PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                            PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                         ),
                         keyPath: \\.foo
                     )
                 ) {
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                         keyPath: \\.bar
                     )
                 }
@@ -651,13 +651,13 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ inputA in
-                PredicateExpressions.build_flatMap(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 ) {
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_ForcedUnwrap(
-                            PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg($0),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                            PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                                 keyPath: \\.foo
                             )
                         ),

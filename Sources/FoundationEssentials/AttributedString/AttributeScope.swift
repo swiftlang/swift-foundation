@@ -10,18 +10,48 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import Synchronization
+
 // Developers can also add the attributes to pre-defined scopes of attributes, which are used to provide type information to the encoding and decoding of AttributedString values, as well as allow for dynamic member lookup in Runs of AttributedStrings.
 // Example, where ForegroundColor is an existing AttributedStringKey:
 // struct MyAttributes : AttributeScope {
 //     var foregroundColor : ForegroundColor
 // }
 // An AttributeScope can contain other scopes as well.
+
+/// A type that organizes attributes into a grouping, and supports dynamic member lookup and serialization of attribute keys.
+///
+/// Attribute owners — typically frameworks — define attributes with ``AttributedStringKey`` types. To allow access to attributes with dynamic member lookup, owners create one or more structures that conform to ``AttributeScope``. The scopes provide short names for their attributes that map to the ``AttributedStringKey`` type. The following example shows how to do this:
+///
+/// ```swift
+/// struct TextStyleAttributes : AttributeScope {
+/// let foregroundColor : ForegroundColorAttribute // ForegroundColorAttribute.Value == Color
+/// let backgroundColor : BackgroundColorAttribute // BackgroundColorAttribute.Value == Color
+/// let underlineStyle : UnderlineStyleAttribute // UnderlineStyleAttribute.Value == UnderlineStyle
+/// // etc.
+/// }
+/// ```
+///
+///
+/// This allows callers to use a syntax like `myAttributedString.foregroundColor = .red`.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding, SendableMetatype {
+    /// The configuration for decoding the attribute scope.
     static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
+    /// The configuration for encoding the attribute scope.
     static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
 }
 
+/// Collections of attributes that system frameworks define.
+///
+/// Attribute scopes define groups of attributes appropriate for use with attributed strings in a certain domain. Attribute definitions contain a name, value type, and encode/decode methods to support serialization.
+///
+/// For example, the ``FoundationAttributes`` scope provides an attribute type for a link to a URL, ``FoundationAttributes/LinkAttribute``, along with a property to access this type, ``FoundationAttributes/link``. Because ``FoundationAttributes`` implements ``AttributeDynamicLookup``, you can access the link attribute by name, as this example shows:
+///
+/// ```swift
+/// var attrStr = AttributedString("Example site")
+/// attrStr.link = URL(string: "http://example.com")
+/// ```
 @frozen
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public enum AttributeScopes { }
@@ -93,14 +123,19 @@ fileprivate struct LoadedScopeCache : Sendable {
             }
         }
         
-        guard let handle = dlopen(path, RTLD_NOLOAD),
+        guard let handle = dlopen(path, RTLD_NOLOAD | RTLD_FIRST),
              let symbol = dlsym(handle, name) else {
             scopeMangledNames[name] = .notLoaded
             return nil
         }
         
         guard let type = unsafeBitCast(symbol, to: Any.Type.self) as? any AttributeScope.Type else {
-            fatalError("Symbol \(name) is not an AttributeScope type")
+            // RTLD_NOLOAD means that dlopen will check the image list without taking the dlopen() lock
+            // This means that it is possible the image is currently added to the image list (and a handle is returned), but static initializers have not finished and the image is not fully "loaded"
+            // In these scenarios, the scope symbol may exist, but its AttributeScope conformance may not yet be available to the dynamic cast machinery
+            // Return nil for now to indicate that the scope is not yet loaded, but avoid cacheing the value so that we try again next time after loading may have successfully finished
+            dlclose(handle)
+            return nil
         }
         scopeMangledNames[name] = .loaded(type)
         return type
@@ -116,7 +151,17 @@ fileprivate struct LoadedScopeCache : Sendable {
     }
 }
 
-fileprivate let _loadedScopeCache = LockedState(initialState: LoadedScopeCache())
+fileprivate let _loadedScopeCache = Mutex(LoadedScopeCache())
+
+extension AttributeScopes {
+    @_spi(AttributedStringDefaultScopes)
+    @objc
+    open class _DefaultScopeRegistration: NSObject, @unchecked Sendable {
+        open class func _attributeScopeType() -> any AttributeScope.Type {
+            fatalError("Class \(Self.self) does not implement _attributeScopeType()")
+        }
+    }
+}
 
 internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type] {
     // On native macOS, the UI framework that gets loaded is AppKit. On

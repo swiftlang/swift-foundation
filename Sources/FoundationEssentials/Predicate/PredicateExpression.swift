@@ -10,10 +10,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
 internal import Synchronization
-#endif
 
+/// A component expression that makes up part of a predicate.
+///
+/// To transform a predicate, define a protocol for the result and add conformance on each predicate expression type that you support. For example:
+///
+/// ```swift
+/// protocol ProsePredicateExpression {
+/// func proseQuery() -> String
+/// }
+///
+/// // Repeated for each supported operator.
+/// extension PredicateExpressions.Equal: ProsePredicateExpression
+/// where LHS: ProsePredicateExpression,
+/// RHS: ProsePredicateExpression {
+/// func proseQuery() -> String {
+/// return lhs.proseQuery() + " is equal to " + rhs.proseQuery()
+/// }
+/// }
+///
+/// extension Predicate  {
+/// func proseQuery() -> String? {
+/// guard let expression = expression as? ProsePredicateExpression else { return nil }
+/// return expression.proseQuery()
+/// }
+/// }
+/// ```
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol PredicateExpression<Output> {
     associatedtype Output
@@ -21,10 +44,13 @@ public protocol PredicateExpression<Output> {
     func evaluate(_ bindings: PredicateBindings) throws -> Output
 }
 
-// Only Foundation should add conformances to this protocol
+/// A component expression that makes up part of a predicate, and that's supported by the standard predicate type.
+///
+/// Don't declare new types that conform to the `StandardPredicateExpression` protocol.  Only the types provided by Foundation are valid conforming types.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol StandardPredicateExpression<Output> : PredicateExpression, Codable, Sendable {}
 
+/// An error thrown while evaluating a predicate.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
     internal enum _Error: Hashable, Sendable {
@@ -85,23 +111,10 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
 extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
         let id: UInt
-        #if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
         private static let nextID = Atomic<UInt>(0)
-        #else
-        private static let nextID = LockedState(initialState: UInt(0))
-        #endif
         
         init() {
-            #if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
             self.id = Self.nextID.wrappingAdd(1, ordering: .relaxed).oldValue
-            #else
-            self.id = Self.nextID.withLock { value in
-                defer {
-                    (value, _) = value.addingReportingOverflow(1)
-                }
-                return value
-            }
-            #endif
         }
         
         public func encode(to encoder: Encoder) throws {

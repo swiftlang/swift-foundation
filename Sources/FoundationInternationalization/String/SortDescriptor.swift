@@ -14,7 +14,7 @@
 import FoundationEssentials
 #endif
 
-/// A serializable description of how to sort numeric and `String` types.
+/// A serializable description of how to sort numerics and strings.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {    
     /// The set of supported safely serializable comparisons.
@@ -222,7 +222,7 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         return result
     }
 
-    /// Sort order.
+    /// The sort order that the sort descriptor uses to compare.
     public var order: SortOrder
 
     /// The `String` key specifying the property to be compared.
@@ -1072,21 +1072,21 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     
 
 #if FOUNDATION_FRAMEWORK
-    /// Creates a `SortDescriptor` describing the same sort as the
-    /// `NSSortDescriptor` over the given `Compared` type.
+    /// Creates a sort descriptor using a sort descriptor and a type that you specify.
     ///
-    /// Returns `nil` if there is no `SortDescriptor` equivalent to the given
-    /// `NSSortDescriptor`, or if the `NSSortDescriptor`s selector is not one of
-    /// the standard string comparison algorithms, or `compare(_:)`.
+    /// Returns `nil` if there isn't a ``SortDescriptor`` equivalent to the
+    /// ``NSSortDescriptor`` you specify, or if the selector to
+    /// ``NSSortDescriptor`` isn't one of the standard string comparison
+    /// algorithms or `compare(_:)`.
     ///
-    /// The comparison for the created `SortDescriptor` uses the
-    /// `NSSortDescriptor`s associated selector directly, so in cases where
-    /// using the `NSSortDescriptor`s comparison would crash, the
-    /// `SortDescriptor`s comparison will as well.
+    /// The comparison for the created ``SortDescriptor`` uses the selector to
+    /// the associated ``NSSortDescriptor`` directly, so in cases where the
+    /// comparison of ``NSSortDescriptor`` might crash, the ``SortDescriptor``
+    /// comparison crashes as well.
     ///
     /// - Parameters:
-    ///     - descriptor: The `NSSortDescriptor` to convert.
-    ///     - comparedType: The type the resulting `SortDescriptor` compares.
+    ///     - descriptor: A sort descriptor.
+    ///     - comparedType: The type that the sort descriptor compares.
     public init?(_ descriptor: NSSortDescriptor, comparing comparedType: Compared.Type) where Compared: NSObject {
         guard let keyString = descriptor.key else { return nil }
         guard let selector = descriptor.selector else { return nil }
@@ -1098,6 +1098,12 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     }
 #endif
     
+    /// Provides the relative ordering of two elements.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first element to compare.
+    ///   - rhs: The second element to compare.
+    /// - Returns: The relative ordering between the two elements.
     public func compare(_ lhs: Compared, _ rhs: Compared) -> ComparisonResult {
         switch comparison {
         case .comparable(let comparator, let keyPath):

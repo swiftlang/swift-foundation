@@ -9,7 +9,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 
 #if canImport(Darwin)
 import Darwin
@@ -38,13 +40,20 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 @preconcurrency import Musl
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(C)
+#if canImport(C.unistd)
+import C.unistd
+import C.strings
+#else
+import C
+#endif
 fileprivate let _pageSize: Int = Int(getpagesize())
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif // canImport(Darwin)
 
 #if FOUNDATION_FRAMEWORK
 internal import CoreFoundation_Private
 #endif
-
 
 package struct Platform {
     static var pageSize: Int {
@@ -275,7 +284,7 @@ extension Platform {
 extension Platform {
     @discardableResult
     package static func copyCString(dst: UnsafeMutablePointer<CChar>, src: UnsafePointer<CChar>, size: Int) -> Int {
-        #if canImport(Darwin) || canImport(Android)
+        #if canImport(Darwin) || canImport(Android) || canImport(string_h)
         return strlcpy(dst, src, size)
         #else
         // Glibc doesn't support strlcpy
@@ -306,7 +315,7 @@ extension Platform {
           }
           return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
-#elseif os(WASI) // WASI does not have uname
+#elseif os(WASI) || targetEnvironment(exclaveCore) // WASI does not have uname
         return "localhost"
 #else
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
@@ -369,7 +378,57 @@ extension Platform {
         if let processPath = CommandLine.arguments.first {
             return processPath
         }
+        return nil
+#else
+        return nil
 #endif
-    return nil
+    }
+}
+
+extension Platform {
+    #if canImport(Darwin)
+    private static var cLocale: locale_t? { /* LC_C_LOCALE */ nil }
+    #elseif os(Windows)
+    private static var cLocale: _locale_t = {
+        _create_locale(LC_ALL, "C")
+    }()
+    #elseif NO_C_LOCALE
+    // No C locale
+    #else
+    private static var cLocale: locale_t = {
+        newlocale(_stringshims_LC_ALL_MASK(), "C", locale_t(bitPattern: 0))!
+    }()
+    #endif
+
+    public static func strncasecmp_clocale(_ s1: UnsafePointer<UInt8>, _ s2: UnsafePointer<UInt8>, _ n: Int) -> Int32 {
+        #if os(Windows)
+        return _strnicmp_l(s1, s2, n, Self.cLocale);
+        #elseif NO_LOCALIZATION
+        return strncasecmp(s1, s2, n);
+        #elseif os(Android)
+        return _stringshims_android_strncasecmp_l(s1, s2, n, Self.cLocale)
+        #else
+        return strncasecmp_l(s1, s2, n, Self.cLocale);
+        #endif
+    }
+
+    public static func strtod_clocale(_ nptr: UnsafePointer<UInt8>, _ endptr: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> Double {
+        #if os(Windows)
+        return _strtod_l(nptr, endptr, Self.cLocale)
+        #elseif NO_LOCALIZATION
+        return strtod(nptr, endptr);
+        #else
+        return strtod_l(nptr, endptr, Self.cLocale)
+        #endif
+    }
+
+    public static func strtof_clocale(_ nptr: UnsafePointer<UInt8>, _ endptr: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> Float {
+        #if os(Windows)
+        return _strtof_l(nptr, endptr, Self.cLocale)
+        #elseif NO_LOCALIZATION
+        return strtof(nptr, endptr);
+        #else
+        return strtof_l(nptr, endptr, Self.cLocale)
+        #endif
     }
 }

@@ -53,7 +53,11 @@ extension String {
         switch encoding {
         case .ascii, .nonLossyASCII:
             func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
-                return String(_validating: buffer, as: Unicode.ASCII.self)
+                guard let span = try? UTF8Span(validating: buffer.span) else {
+                    return nil
+                }
+                guard span.isKnownASCII else { return nil }
+                return String(copying: span)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -90,11 +94,7 @@ extension String {
                 if buffer.starts(with: [0xEF, 0xBB, 0xBF]) {
                     buffer = UnsafeBufferPointer(rebasing: buffer.suffix(from: 3))
                 }
-                if let string = String._tryFromUTF8(buffer) {
-                    return string
-                }
-
-                return String(_validating: buffer, as: UTF8.self)
+                return String._tryFromUTF8(buffer)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -136,7 +136,7 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
+            } else if let result = String(validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
                 self = result
             } else {
                 return nil
@@ -163,7 +163,7 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
+            } else if let result = String(validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
                 self = result
             } else {
                 return nil
@@ -250,15 +250,15 @@ extension String {
 
     /// Produces a string created by reading data from the file at a given path and returns by reference the encoding used to interpret the file.
     public init(contentsOfFile path: __shared String, usedEncoding: inout Encoding) throws {
-        self = try String(contentsOfFileOrPath: .path(path), usedEncoding: &usedEncoding)
+        self = try String(contentsOfFileOrPath: path, usedEncoding: &usedEncoding)
     }
 
     /// Produces a string created by reading data from a given URL and returns by reference the encoding used to interpret the data.
     public init(contentsOf url: __shared URL, usedEncoding: inout Encoding) throws {
-        self = try String(contentsOfFileOrPath: .url(url), usedEncoding: &usedEncoding)
+        self = try String(contentsOfFileOrPath: url, usedEncoding: &usedEncoding)
     }
     
-    internal init(contentsOfFileOrPath path: PathOrURL, usedEncoding: inout Encoding) throws {
+    internal init(contentsOfFileOrPath path: borrowing some FileSystemRepresentable & ~Copyable, usedEncoding: inout Encoding) throws {
         var attrs: [String : Data] = [:]
         let data = try readDataFromFile(path: path, reportProgress: false, maxLength: nil, options: [], attributesToRead: [stringEncodingAttributeName], attributes: &attrs)
         if let encodingAttributeData = attrs[stringEncodingAttributeName], let extendedAttributeEncoding = encodingFromDataForExtendedAttribute(encodingAttributeData) {
@@ -456,7 +456,7 @@ extension StringProtocol {
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
 #endif
 
-        try writeToFile(path: .path(String(path)), data: data, options: options, attributes: attributes, reportProgress: false)
+        try writeToFile(path: String(path), buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
     }
 
     /// Writes the contents of the `String` to the URL specified by url using the specified encoding.
@@ -479,32 +479,7 @@ extension StringProtocol {
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
 #endif
 
-        try writeToFile(path: .url(url), data: data, options: options, attributes: attributes, reportProgress: false)
+        try writeToFile(path: url, buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
     }
 #endif
-}
-
-// TODO: This is part of the stdlib as of 5.11. This is a copy to support building on previous Swift stdlib versions, but should be replaced with the stdlib one as soon as possible.
-extension String {
-    internal init?<Encoding: Unicode.Encoding>(_validating codeUnits: some Sequence<Encoding.CodeUnit>, as encoding: Encoding.Type) {
-        var transcoded: [UTF8.CodeUnit] = []
-        transcoded.reserveCapacity(codeUnits.underestimatedCount)
-        var isASCII = true
-        let error = transcode(
-            codeUnits.makeIterator(),
-            from: Encoding.self,
-            to: UTF8.self,
-            stoppingOnError: true,
-            into: {
-                uint8 in
-                transcoded.append(uint8)
-                if isASCII && (uint8 & 0x80) == 0x80 { isASCII = false }
-            }
-        )
-        if error { return nil }
-        let res = transcoded.withUnsafeBufferPointer{
-            String._tryFromUTF8($0)
-        }
-        if let res { self = res } else { return nil }
-    }
 }
