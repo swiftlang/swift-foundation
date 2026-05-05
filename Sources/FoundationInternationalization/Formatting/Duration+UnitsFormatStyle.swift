@@ -515,13 +515,13 @@ extension FormatStyle where Self == Duration.UnitsFormatStyle {
 
     /// A factory function to create a units format style to format a duration.
     /// - Parameters:
-    ///   - allowedUnits: The units that may be included in the output string.
+    ///   - units: The units that may be included in the output string.
     ///   - width: The width of the unit and the spacing between the value and the unit.
     ///   - maximumUnitCount: The maximum number of time units to include in the output string.
     ///   - zeroValueUnits: The strategy for how zero-value units are handled.
     ///   - valueLengthLimits: The padding or truncating behavior of the unit value.
     ///   - fractionalPart: The strategy for displaying a duration if it cannot be represented exactly with the allowed units.
-    ///   - Returns: A format style to format a duration.
+    /// - Returns: A format style to format a duration.
     public static func units<ValueRange: RangeExpression>(allowed units: Set<Duration.UnitsFormatStyle.Unit> = [.hours, .minutes, .seconds], width: Duration.UnitsFormatStyle.UnitWidth = .abbreviated, maximumUnitCount : Int? = nil, zeroValueUnits: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy = .hide, valueLengthLimits: ValueRange, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy = .hide) -> Self where ValueRange.Bound == Int {
         .init(allowedUnits: units, width: width, maximumUnitCount: maximumUnitCount, zeroValueUnits: zeroValueUnits, valueLengthLimits: valueLengthLimits, fractionalPart: fractionalPart)
     }

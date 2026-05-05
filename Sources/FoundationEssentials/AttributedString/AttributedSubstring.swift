@@ -18,6 +18,23 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
+/// A portion of an attributed string.
+///
+/// ``AttributedSubstring`` provides no-copy access to the contents of the string within the relevant range. The distinction between an ``AttributedString`` and an ``AttributedSubstring`` lets you distinguish between whether you're in possession of an entire string or just a slice of it.
+///
+/// Because ``AttributedSubstring`` and ``AttributedString`` both conform to ``AttributedStringProtocol``, working with ranges of ``AttributedString`` is natural. Modifying attributes by range works the same as it does on the base string.
+///
+/// If you use an ``AttributedSubstring`` to mutate its base ``AttributedString``, you must perform your mutation inline, as the following example shows:
+///
+/// ```swift
+/// // Correct use of copying.
+/// attrStr[range].link = url
+///
+/// // Incorrect use of AttributedString copy. Copies the referenced range of the base
+/// // AttributedString and mutates that.
+/// var substr = attrStr[range]
+/// substr.link = url
+/// ```
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributedSubstring: Sendable {
@@ -43,6 +60,7 @@ public struct AttributedSubstring: Sendable {
         self._range = Range(uncheckedBounds: (slice.startIndex, slice.endIndex))
     }
 
+    /// Creates an empty attributed substring.
     public init() {
         let str = AttributedString()
         self.init(str._guts, in: str._stringBounds)
@@ -51,6 +69,8 @@ public struct AttributedSubstring: Sendable {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring {
+    /// Returns the underlying attributed string that the attributed substring
+    /// derives from.
     public var base: AttributedString {
         return AttributedString(_guts)
     }
@@ -87,10 +107,13 @@ extension AttributedSubstring { // Equatable
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring : AttributedStringProtocol {
+    /// The position of the first character in a nonempty attributed substring.
     public var startIndex: AttributedString.Index {
         .init(_range.lowerBound, version: _guts.version)
     }
 
+    /// A substring's past-the-end position -- the position one greater than
+    /// the last valid subscript argument.
     public var endIndex: AttributedString.Index {
         .init(_range.upperBound, version: _guts.version)
     }
@@ -107,16 +130,33 @@ extension AttributedSubstring : AttributedStringProtocol {
         }
     }
 
+    /// Sets the attributed substring's attributes to those in a specified
+    /// attribute container.
+    ///
+    /// - Parameter attributes: The attribute container with the attributes to
+    ///   apply.
     public mutating func setAttributes(_ attributes: AttributeContainer) {
         ensureUniqueReference()
         _guts.setAttributes(attributes.storage, in: _range)
     }
 
+    /// Merges the attributed string's attributes with those in a specified
+    /// attribute container.
+    ///
+    /// - Parameters:
+    ///   - attributes: The attribute container with the attributes to merge.
+    ///   - mergePolicy: A policy to use when resolving conflicts.
     public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
         _guts.mergeAttributes(attributes, in: _range, mergePolicy:  mergePolicy)
     }
 
+    /// Replaces the attributed substring's attributes with those in a specified
+    /// attribute container.
+    ///
+    /// - Parameters:
+    ///   - attributes: The existing attributes to replace.
+    ///   - others: The new attributes to apply.
     public mutating func replaceAttributes(_ attributes: AttributeContainer, with others: AttributeContainer) {
         guard attributes != others else {
             return
@@ -141,18 +181,25 @@ extension AttributedSubstring : AttributedStringProtocol {
         }
     }
 
+    /// The attributed runs of the attributed string, as a view into the
+    /// underlying string.
     public var runs: AttributedString.Runs {
         get { .init(_guts, in: _range) }
     }
 
+    /// The characters of the attributed string, as a view into the underlying
+    /// string.
     public var characters: AttributedString.CharacterView {
         return AttributedString.CharacterView(_guts, in: _range)
     }
 
+    /// The Unicode scalars of the attributed string, as a view into the
+    /// underlying string.
     public var unicodeScalars: AttributedString.UnicodeScalarView {
         return AttributedString.UnicodeScalarView(_guts, in: _range)
     }
 
+    /// Returns a substring of the attributed substring that a range indicates.
     public subscript(bounds: some RangeExpression<AttributedString.Index>) -> AttributedSubstring {
         let bounds = bounds.relative(to: characters)
         return AttributedSubstring(_guts, in: bounds._bstringRange)
@@ -161,6 +208,11 @@ extension AttributedSubstring : AttributedStringProtocol {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring {
+    /// Returns an attribute value that corresponds to an attributed string key.
+    ///
+    /// Returns `nil` unless the specified attribute exists and is present and
+    /// identical for the entire string or substring. Use ``runs`` to find
+    /// portions with consistent attributes.
     @preconcurrency
     public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
         get {
@@ -176,6 +228,11 @@ extension AttributedSubstring {
         }
     }
 
+    /// Returns an attribute value that a key path indicates.
+    ///
+    /// Returns `nil` unless the specified attribute exists and is present and
+    /// identical for the entire string or substring. Use ``runs`` to find
+    /// portions with consistent attributes.
     @preconcurrency
     @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
@@ -185,6 +242,11 @@ extension AttributedSubstring {
         set { self[K.self] = newValue }
     }
 
+    /// Returns a scoped attribute container that a key path indicates.
+    ///
+    /// Use explicit attribute scopes to disambiguate attributes that exist in
+    /// more than one scope. The container contains only attributes present and
+    /// identical for the entire string or substring.
     public subscript<S: AttributeScope>(
         dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>
     ) -> ScopedAttributeContainer<S> {

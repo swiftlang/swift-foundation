@@ -10,18 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct RegexPatternCache: @unchecked Sendable {
+internal import Synchronization
+
+struct RegexPatternCache: Sendable, ~Copyable {
     private struct Key : Sendable, Hashable {
         var pattern: String
         var caseInsensitive: Bool
     }
 
-    private let _lock: LockedState<[Key: Regex<AnyRegexOutput>]>
+    private let _lock: Mutex<[Key: Regex<AnyRegexOutput>]>
 
     static let cache = RegexPatternCache()
 
     fileprivate init() {
-        _lock = LockedState(initialState: .init())
+        _lock = Mutex(.init())
     }
 
     func regex(for pattern: String, caseInsensitive: Bool) throws -> Regex<AnyRegexOutput>? {

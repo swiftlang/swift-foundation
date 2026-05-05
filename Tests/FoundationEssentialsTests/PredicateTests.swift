@@ -39,6 +39,36 @@ struct PredicateTestObject2 {
     var a: Bool
 }
 
+fileprivate class PredicateTestObject3 {
+    private let firstValue: Bool
+    private let secondValue: Bool
+    private let thirdValue: Bool
+    
+    private(set) var firstAccessed = false
+    private(set) var secondAccessed = false
+    private(set) var thirdAccessed = false
+    
+    var first: Bool {
+        firstAccessed = true
+        return firstValue
+    }
+    
+    var second: Bool {
+        secondAccessed = true
+        return secondValue
+    }
+    
+    var third: Bool {
+        thirdAccessed = true
+        return thirdValue
+    }
+    
+    init(first: Bool, second: Bool, third: Bool) {
+        self.firstValue = first
+        self.secondValue = second
+        self.thirdValue = third
+    }
+}
 
 fileprivate protocol PredicateProducer {
     var prop: Int { get }
@@ -541,4 +571,96 @@ private struct PredicateTests {
             #expect(try expression.evaluate(i) == i + 1)
         }
     }
+    
+    #if FOUNDATION_FRAMEWORK
+    @Test func all() throws {
+        #expect(try Predicate(all: []).evaluate(42))
+        #expect(try !Predicate(all: [Predicate.true, Predicate.false]).evaluate(42))
+        let input = Object(a: 6, b: "xyz", c: 0.27, d: 97, e: "u", f: false, g: [7, 42, 1, 0, 25])
+        var predicates: [Predicate<Object>] = [
+            #Predicate { $0.a == 6 },
+            #Predicate { $0.b == "xyz" },
+            #Predicate { $0.c < 0.3 },
+            #Predicate { $0.d == 97 },
+            #Predicate { $0.d % 2 != 0 },
+            #Predicate { !$0.f },
+            #Predicate { $0.g.contains(42) },
+            #Predicate { $0.g.min() == 0 }
+        ]
+        #expect(try Predicate(all: predicates).evaluate(input))
+        predicates.append(#Predicate { $0.g.max() == 7 })
+        #expect(try !Predicate(all: predicates).evaluate(input))
+        predicates.append(#Predicate { $0.c < 0.0 })
+        #expect(try !Predicate(all: predicates).evaluate(input))
+    }
+    
+    @Test func allShortCircuitEvaluation() throws {
+        let predicates: [Predicate<PredicateTestObject3>] = [
+            #Predicate { $0.first },
+            #Predicate { $0.second },
+            #Predicate { $0.third }
+        ]
+        
+        let input1 = PredicateTestObject3(first: false, second: true, third: true)
+        #expect(try !Predicate(all: predicates).evaluate(input1))
+        #expect(input1.firstAccessed)
+        #expect(!input1.secondAccessed)
+        #expect(!input1.thirdAccessed)
+        
+        let input2 = PredicateTestObject3(first: true, second: false, third: true)
+        #expect(try !Predicate(all: predicates).evaluate(input2))
+        #expect(input2.firstAccessed)
+        #expect(input2.secondAccessed)
+        #expect(!input2.thirdAccessed)
+        
+        let input3 = PredicateTestObject3(first: true, second: true, third: true)
+        #expect(try Predicate(all: predicates).evaluate(input3))
+        #expect(input3.firstAccessed)
+        #expect(input3.secondAccessed)
+        #expect(input3.thirdAccessed)
+    }
+    
+    @Test func any() throws {
+        #expect(try !Predicate(any: []).evaluate(42))
+        #expect(try Predicate(any: [Predicate.true, Predicate.false]).evaluate(42))
+        let input = Object(a: 6, b: "xyz", c: 0.27, d: 97, e: "u", f: false, g: [7, 42, 1, 0, 25])
+        let predicates: [Predicate<Object>] = [
+            #Predicate { $0.g.max() == 7 },
+            #Predicate { $0.c < 0.0 },
+            #Predicate { $0.a == 6 },
+            #Predicate { $0.b == "xyz" },
+            #Predicate { $0.c < 0.3 }
+        ]
+        #expect(try Predicate(any: predicates.dropLast()).evaluate(input))
+        #expect(try Predicate(any: predicates.dropLast(2)).evaluate(input))
+        #expect(try !Predicate(any: predicates.dropLast(3)).evaluate(input))
+        #expect(try !Predicate(any: predicates.dropLast(4)).evaluate(input))
+    }
+    
+    @Test func anyShortCircuitEvaluation() throws {
+        let predicates: [Predicate<PredicateTestObject3>] = [
+            #Predicate { $0.first },
+            #Predicate { $0.second },
+            #Predicate { $0.third }
+        ]
+        
+        let input1 = PredicateTestObject3(first: true, second: false, third: false)
+        #expect(try Predicate(any: predicates).evaluate(input1))
+        #expect(input1.firstAccessed)
+        #expect(!input1.secondAccessed)
+        #expect(!input1.thirdAccessed)
+        
+        let input2 = PredicateTestObject3(first: false, second: true, third: false)
+        #expect(try Predicate(any: predicates).evaluate(input2))
+        #expect(input2.firstAccessed)
+        #expect(input2.secondAccessed)
+        #expect(!input2.thirdAccessed)
+        
+        let input3 = PredicateTestObject3(first: false, second: false, third: false)
+        #expect(try !Predicate(any: predicates).evaluate(input3))
+        #expect(input3.firstAccessed)
+        #expect(input3.secondAccessed)
+        #expect(input3.thirdAccessed)
+    }
+    #endif
 }

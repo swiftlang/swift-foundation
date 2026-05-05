@@ -20,35 +20,10 @@ internal import _ForSwiftFoundation
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal {
+    /// An alias for a type that specifies possible rounding modes.
     public typealias RoundingMode = NSDecimalNumber.RoundingMode
+    /// An alias for a type that specifies possible calculation errors.
     public typealias CalculationError = NSDecimalNumber.CalculationError
-}
-
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal {
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func add(_ other: Decimal) {
-        self += other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func subtract(_ other: Decimal) {
-        self -= other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func multiply(by other: Decimal) {
-        self *= other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func divide(by other: Decimal) {
-        self /= other
-    }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -80,6 +55,12 @@ extension Decimal : _ObjectiveCBridgeable {
 // MARK: - Bridging code to C functions
 // We have one implementation function for each, and an entry point for both Darwin (cdecl, exported from the framework), and swift-corelibs-foundation (SPI here and available via that package as API)
 
+/// Returns a decimal number raised to a given power.
+///
+/// - Parameters:
+///   - x: The decimal number to raise to the power of `y`.
+///   - y: The power to raise `x` to.
+/// - Returns: The result of raising `x` to the power `y`. Returns `NaN` if the operation fails.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     let result = try? x._power(

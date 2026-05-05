@@ -374,11 +374,11 @@ extension PredicateExpressions.RangeExpressionContains : ConvertibleExpression {
         } else if let rangeValue = (range as? _RangeValue)?._anyRange {
             // Otherwise, if the range is a captured value then convert it to appropriate comparison expressions based on the range type
             switch rangeValue {
-            case let .range(upper, lower):
+            case let .range(lower, upper):
                 let lowerBoundCondition = _comparison(elementExpr, try _expressionForBound(lower), type: .greaterThanOrEqualTo)
                 let upperBoundCondition = _comparison(elementExpr, try _expressionForBound(upper), type: .lessThan)
                 return .predicate(NSCompoundPredicate(andPredicateWithSubpredicates: [lowerBoundCondition, upperBoundCondition]))
-            case let .closed(upper, lower):
+            case let .closed(lower, upper):
                 let lowerValue = try _expressionCompatibleValue(for: lower)
                 let upperValue = try _expressionCompatibleValue(for: upper)
                 return .predicate(NSComparisonPredicate(
@@ -564,6 +564,18 @@ extension NSExpression : OverwritingInitializable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension NSPredicate {
+    /// Creates a predicate by converting an existing predicate.
+    ///
+    /// Only a subset of predicates that can be expressed by `Predicate` are convertible to `NSPredicate`.
+    /// Predicates that include operations like the following can't be converted:
+    ///
+    /// - Accessing key paths for properties that aren't exposed to the Objective-C runtime.
+    /// - Capturing values of types that aren't supported by `NSPredicate`, like custom Swift structures.
+    /// - Using some functions or operators, like performing collection operations on a nonstring value.
+    ///
+    /// - Parameters:
+    ///   - predicate: The predicate to convert.
+    /// - Returns: The converted predicate, or `nil` if conversion fails.
     public convenience init?<Input>(_ predicate: Predicate<Input>) where Input : NSObject {
         let variable = predicate.variable
         var state = NSPredicateConversionState(object: variable.key)

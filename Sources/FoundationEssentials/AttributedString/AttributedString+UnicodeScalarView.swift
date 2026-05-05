@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// A view into the underlying storage of the attributed string, as Unicode scalars.
     public struct UnicodeScalarView: Sendable {
         internal var _guts: Guts
 
@@ -48,6 +49,15 @@ extension AttributedString {
         }
     }
 
+    /// The Unicode scalars of the attributed string, as a view into the underlying string.
+    ///
+    /// Use this property when you want to split the attributed string by Unicode scalar instead
+    /// of grapheme cluster. This is useful when you need to carefully control insertion points
+    /// or render the content.
+    ///
+    /// You can also use this property to mutate the attributed string, using
+    /// `RangeReplaceableCollection` methods, such as `insert(_:at:)` and `append(_:)`.
+    /// Inserted characters inherit any attributes present at the insertion point.
     public var unicodeScalars: UnicodeScalarView {
         get {
             UnicodeScalarView(_guts)
@@ -114,6 +124,16 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         .init(_range.upperBound, version: _guts.version)
     }
 
+    /// The number of elements in the collection.
+    ///
+    /// To check whether a collection is empty, use its `isEmpty` property
+    /// instead of comparing `count` to zero. Unless the collection guarantees
+    /// random-access performance, calculating `count` can be an O(*n*)
+    /// operation.
+    ///
+    /// - Complexity: O(1) if the collection conforms to
+    ///   `RandomAccessCollection`; otherwise, O(*n*), where *n* is the length
+    ///   of the collection.
     @_alwaysEmitIntoClient
     public var count: Int {
     #if FOUNDATION_FRAMEWORK
@@ -277,9 +297,9 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         let subrange = _guts.unicodeScalarRange(roundingDown: subrange._bstringRange)
 
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
-        if let newElements = _specializingCast(newElements, to: Self.self) {
+        if let newElements = _specialize(newElements, for: Self.self) {
             _replaceSubrange(subrange, with: newElements._unicodeScalars)
-        } else if let newElements = _specializingCast(newElements, to: Slice<Self>.self) {
+        } else if let newElements = _specialize(newElements, for: Slice<Self>.self) {
             _replaceSubrange(subrange, with: newElements._rebased._unicodeScalars)
         } else {
             _replaceSubrange(subrange, with: newElements)
@@ -296,7 +316,7 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         // don't need to touch string storage, but we still want to update attributes as if it was
         // a full edit.
         var hasStringChanges = true
-        if let newElements = _specializingCast(newElements, to: BigSubstring.UnicodeScalarView.self),
+        if let newElements = _specialize(newElements, for: BigSubstring.UnicodeScalarView.self),
            newElements.isIdentical(to: _unicodeScalars[subrange]) {
             hasStringChanges = false
         }

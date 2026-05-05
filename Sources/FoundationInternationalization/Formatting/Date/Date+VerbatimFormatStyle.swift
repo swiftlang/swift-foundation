@@ -18,7 +18,7 @@ import FoundationEssentials
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
-    /// Formats a `Date` using the given format.
+    /// A style that formats a date with an explicitly-specified style.
     public struct VerbatimFormatStyle : Sendable {
         public var timeZone: TimeZone
         public var calendar: Calendar
@@ -64,6 +64,40 @@ extension Date.VerbatimFormatStyle : FormatStyle {}
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension FormatStyle where Self == Date.VerbatimFormatStyle {
+    /// Returns a style for formatting a date with an explicitly-specified style.
+    ///
+    /// Use this format style only when you need to produce or parse an exact format, such as
+    /// when working with programmatically-produced date strings. For formatting dates that
+    /// people read, use ``FormatStyle/dateTime`` to get a localized ``Date/FormatStyle``
+    /// instead. To use the ISO-8601 standard, use ``FormatStyle/iso8601`` to get a
+    /// ``Date/ISO8601FormatStyle``.
+    ///
+    /// Use the dot-notation form of this type method when the call point allows the use of
+    /// ``Date/VerbatimFormatStyle``. You typically do this when calling the
+    /// ``Date/formatted(_:)`` method of ``Date``.
+    ///
+    /// The following example formats the current date with a verbatim format that uses a
+    /// two-digit month, two-digit day, and default-digits year, separated by slashes. This
+    /// style isn't localized --- it uses this format in any locale, ignoring locale-appropriate
+    /// conventions.
+    ///
+    /// ```swift
+    /// let date = Date()
+    /// let formatted = date.formatted(
+    ///     .verbatim("\(month: .twoDigits)/\(day: .twoDigits)/\(year: .defaultDigits)" as Date.FormatString,
+    ///               locale: .autoupdatingCurrent,
+    ///               timeZone: .current,
+    ///               calendar: .current)) // 12/05/2022
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - format: A ``Date/FormatString`` that provides the explicit components and their
+    ///     respective styles to use when formatting a date.
+    ///   - locale: The locale to use when formatting. Defaults to `nil`.
+    ///   - timeZone: The time zone to use when formatting.
+    ///   - calendar: The calendar to use when formatting.
+    /// - Returns: A date format style that uses the provided format string and timekeeping
+    ///   parameters.
     public static func verbatim(_ format: Date.FormatString, locale: Locale? = nil, timeZone: TimeZone, calendar: Calendar) -> Date.VerbatimFormatStyle { .init(format: format, locale: locale, timeZone: timeZone, calendar: calendar) }
 }
 

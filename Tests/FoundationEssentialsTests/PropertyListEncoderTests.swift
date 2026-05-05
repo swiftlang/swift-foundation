@@ -547,8 +547,6 @@ private struct PropertyListEncoderTests {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
-    // TODO: Depends on data's range(of:) implementation
     @Test func nonStringDictionaryKey() throws {
         let decoder = PropertyListDecoder()
         let encoder = PropertyListEncoder()
@@ -567,7 +565,6 @@ private struct PropertyListEncoderTests {
             try decoder.decode([String:String].self, from: xmlData)
         }
     }
-#endif
 
     struct GenericProperties : Decodable {
         var assertionFailure: String?
@@ -869,6 +866,23 @@ private struct PropertyListEncoderTests {
         let data = "goodbye cruel world".data(using: .utf16)!
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode(String.self, from: data)
+        }
+    }
+
+    @Test func oldStylePlist_errors() {
+        let oldStyleWithErrors = "{ hello = there; }\r\nextra stuff at end"
+
+        let data = oldStyleWithErrors.data(using: .ascii)!
+
+        struct Thing : Decodable {
+            var hello: String
+        }
+        let plistDecoder = PropertyListDecoder()
+
+        #expect {
+            try plistDecoder.decode(Thing.self, from: data)
+        } throws: {
+            String(describing: $0).contains("Junk after plist at line 2")
         }
     }
 

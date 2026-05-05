@@ -14,6 +14,7 @@
 
 internal import _ForSwiftFoundation
 internal import os
+internal import Synchronization
 
 @objc
 extension NSURLComponents {
@@ -101,18 +102,18 @@ extension NSURLComponents {
 
 @objc(_NSSwiftURLComponents)
 internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
-    let lock: OSAllocatedUnfairLock<URLComponents>
+    let lock: Mutex<URLComponents>
     var components: URLComponents {
         lock.withLock { $0 }
     }
 
     init(components: URLComponents) {
-        lock = OSAllocatedUnfairLock(initialState: components)
+        lock = Mutex(components)
         super.init()
     }
 
     override init() {
-        lock = OSAllocatedUnfairLock(initialState: URLComponents())
+        lock = Mutex(URLComponents())
         super.init()
     }
 
@@ -120,7 +121,7 @@ internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
         guard let comp = URLComponents(string: string) else {
             return nil
         }
-        lock = OSAllocatedUnfairLock(initialState: comp)
+        lock = Mutex(comp)
         super.init()
     }
 
@@ -134,7 +135,7 @@ internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
         guard let comp = URLComponents(string: string) else {
             return nil
         }
-        lock = OSAllocatedUnfairLock(initialState: comp)
+        lock = Mutex(comp)
         super.init()
     }
 

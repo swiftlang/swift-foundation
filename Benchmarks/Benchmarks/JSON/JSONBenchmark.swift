@@ -86,6 +86,10 @@ let benchmarks = {
     let twitterData = try! _Data(contentsOf: twitterPath!)
     let twitter = try! _JSONDecoder().decode(TwitterArchive.self, from: twitterData)
 
+    let arrayPath = path(forResource: "array.json")
+    let arrayData = try! _Data(contentsOf: arrayPath!)
+    let array = try! _JSONDecoder().decode([Int].self, from: arrayData)
+
     Benchmark("Canada-decodeFromJSON") { benchmark in
         let result = try _JSONDecoder().decode(FeatureCollection.self, from: canadaData)
         blackHole(result)
@@ -105,5 +109,9 @@ let benchmarks = {
         let result = try _JSONEncoder().encode(twitter)
         blackHole(result)
     }
-}
 
+    Benchmark("IntArray-encodeToJSON") { benchmark in
+        let result = try _JSONEncoder().encode(array)
+        blackHole(result)
+    }
+}

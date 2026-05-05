@@ -211,7 +211,7 @@ private struct NumberParseStrategyTests {
         try _verifyRoundtripCurrency(negativeData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
     }
 
-    @Test func parseStategyCodable_sameCurrency() throws {
+    @Test func parseStrategyCodable_sameCurrency() throws {
         // same currency code
         let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "USD", locale: Locale(identifier:"en_US"))
         let p = IntegerParseStrategy(format: fs)
@@ -228,7 +228,7 @@ private struct NumberParseStrategyTests {
         #expect(decoded.formatStyle.currencyCode == "USD")
     }
 
-    @Test func parseStategyCodable_differentCurrency() throws {
+    @Test func parseStrategyCodable_differentCurrency() throws {
         let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "GBP", locale: Locale(identifier:"en_US"))
         let p = IntegerParseStrategy(format: fs)
         // Valid JSON representation for `p`

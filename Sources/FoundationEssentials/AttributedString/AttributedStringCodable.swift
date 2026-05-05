@@ -30,21 +30,51 @@ extension Decoder {
     }
 }
 
+/// A protocol that defines how an attribute key encodes its value.
+///
+/// Implement this protocol to make an attribute encodable. Encoding an ``AttributedString`` or ``AttributeContainer`` drops any attributes whose types don't conform to this protocol.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol EncodableAttributedStringKey : AttributedStringKey {
+    /// Encodes a value to the provided encoder.
+    ///
+    /// This method throws an error if writing to the encoder fails.
+    ///
+    /// - Parameters:
+    ///   - value: The value to encode.
+    ///   - encoder: The encoder to write data to.
     static func encode(_ value: Value, to encoder: Encoder) throws
 }
 
+/// A protocol that defines how an attribute key decodes its value.
+///
+/// Implement this protocol to make an attribute decodable. Decoding an ``AttributedString`` or ``AttributeContainer`` drops any attributes whose types don't conform to this protocol.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol DecodableAttributedStringKey : AttributedStringKey {
+    /// Decodes a value from the provided decoder.
+    ///
+    /// This method throws an error if reading from the decoder fails, or if the data read is
+    /// corrupted or otherwise invalid.
+    ///
+    /// - Parameter decoder: The decoder to read data from.
+    /// - Returns: The decoded value.
     static func decode(from decoder: Decoder) throws -> Value
 }
 
+/// A type alias for attribute keys that are both encodable and decodable.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public typealias CodableAttributedStringKey = EncodableAttributedStringKey & DecodableAttributedStringKey
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension EncodableAttributedStringKey where Value : Encodable {
+    /// Encodes a Swift value to the provided encoder, using a default implementation.
+    ///
+    /// The default implementation calls down to the value's `Encodable.encode(to:)` method.
+    ///
+    /// This method throws an error if writing the encoder fails.
+    ///
+    /// - Parameters:
+    ///   - value: The value to encode.
+    ///   - encoder: The encoder to write data to.
     public static func encode(_ value: Value, to encoder: Encoder) throws {
         try value.encode(to: encoder)
     }
@@ -52,25 +82,68 @@ extension EncodableAttributedStringKey where Value : Encodable {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension DecodableAttributedStringKey where Value : Decodable {
+    /// Decodes a Swift value from the provided decoder, using a default implementation.
+    ///
+    /// The default implementation calls down to the value's `Decodable.init(from:)` method.
+    ///
+    /// This method throws an error if reading from the decoder fails, or if the data read is
+    /// corrupted or otherwise invalid.
+    ///
+    /// - Parameter decoder: The decoder to read data from.
+    /// - Returns: The decoded value.
     public static func decode(from decoder: Decoder) throws -> Value {
         return try Value.init(from: decoder)
     }
 }
 
 
+/// A protocol that defines how an attribute key decodes a value that corresponds to Markdown syntax.
+///
+/// This protocol is separate from ``DecodableAttributedStringKey`` to separate explicit attributes defined by the SDK from Markdown's semantic styling attributes. You use these attributes with Apple's extended syntax for markdown: `^[text](attribute: value)`.
+///
+/// Using this protocol allows your markup names to differ from the names of your attributes. For example, the automatic grammar agreement feature uses markup like `^[text to inflect](inflect: true)`. This feature defines an ``AttributeScopes/FoundationAttributes/InflectionRuleAttribute`` that conforms to ``MarkdownDecodableAttributedStringKey``. The value of its ``AttributeScopes/FoundationAttributes/InflectionRuleAttribute/name`` proprerty is `NSInflect`, while its ``AttributeScopes/FoundationAttributes/InflectionRuleAttribute/markdownName-aom1``, used in actual Markdown strings like the one shown here, is `inflect`.
+///
+/// To define your own attributes for use with Markdown syntax, make sure your attributes conform to this protocol. The markdown parser ignores attributes that don't conform, even if you use the extended Markdown syntax.
+///
+/// > Tip:
+/// > When creating attributed strings from Markdown-based initializers like ``AttributedString/init(markdown:options:baseURL:)-52n3u``, be sure to set the ``AttributedString/MarkdownParsingOptions/allowsExtendedAttributes`` option. If you don't include this option, the string won't parse ``MarkdownDecodableAttributedStringKey``-based attributes.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol MarkdownDecodableAttributedStringKey : AttributedStringKey {
+    /// Decodes a value from the provided decoder.
+    ///
+    /// This method throws an error if reading from the decoder fails, or if the data read is
+    /// corrupted or otherwise invalid.
+    ///
+    /// - Parameter decoder: The decoder to read data from.
+    /// - Returns: The decoded value.
     static func decodeMarkdown(from decoder: Decoder) throws -> Value
+    /// The Markdown name associated with an attributed string key.
     static var markdownName: String { get }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension MarkdownDecodableAttributedStringKey {
+    /// The Markdown name associated with an attributed string key, as provided by a default
+    /// implementation.
+    ///
+    /// The default value of this property is the value of the ``AttributedStringKey``'s
+    /// ``AttributedStringKey/name``.
     public static var markdownName: String { name }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedStringKey {
+    /// Decodes a value from the provided decoder, using a default implementation.
+    ///
+    /// The default implementation calls ``DecodableAttributedStringKey/decode(from:)-9mpts``,
+    /// inherited from ``DecodableAttributedStringKey``, meaning it uses the same decoding as
+    /// non-Markdown encoding.
+    ///
+    /// This method throws an error if reading from the decoder fails, or if the data read is
+    /// corrupted or otherwise invalid.
+    ///
+    /// - Parameter decoder: The decoder to read data from.
+    /// - Returns: The decoded value.
     public static func decodeMarkdown(from decoder: Decoder) throws -> Value {
         try Self.decode(from: decoder)
     }
@@ -79,6 +152,16 @@ extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedS
 #if FOUNDATION_FRAMEWORK
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+    /// Encodes an Objective-C value to the provided encoder, using a default implementation.
+    ///
+    /// The default implementation uses an ``NSKeyedArchiver`` on the object, then calls
+    /// `Encodable.encode(to:)` on the resulting data.
+    ///
+    /// This method throws an error if writing to the encoder fails.
+    ///
+    /// - Parameters:
+    ///   - value: The value to encode.
+    ///   - encoder: The encoder to write data to.
     public static func encode(_ value: Value, to encoder: Encoder) throws {
         let data = try NSKeyedArchiver.archivedData(withRootObject: value, requiringSecureCoding: true)
         var container = encoder.singleValueContainer()
@@ -88,6 +171,16 @@ extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+    /// Decodes an Objective-C value from the provided decoder, using a default implementation.
+    ///
+    /// The default implementation decodes the object as a ``Data`` instance, then uses an
+    /// ``NSKeyedUnarchiver`` to unarchive the object.
+    ///
+    /// This method throws an error if reading from the decoder fails, or if the data read is
+    /// corrupted or otherwise invalid.
+    ///
+    /// - Parameter decoder: The decoder to read data from.
+    /// - Returns: The decoded object.
     public static func decode(from decoder: Decoder) throws -> Value {
         let container = try decoder.singleValueContainer()
         let data = try container.decode(Data.self)
@@ -103,6 +196,7 @@ extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
 
 // MARK: AttributedString CodableWithConfiguration Conformance
 
+/// A configuration type for encoding and decoding attributed strings.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributeScopeCodableConfiguration : Sendable {
     internal let attributesTable : [String : any AttributedStringKey.Type]
@@ -126,7 +220,9 @@ public struct AttributeScopeCodableConfiguration : Sendable {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScope {
+    /// The configuration for encoding the attribute scope.
     public static var encodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
+    /// The configuration for decoding the attribute scope.
     public static var decodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
 }
 
@@ -363,6 +459,11 @@ extension AttributeContainer : CodableWithConfiguration {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension CodableConfiguration where ConfigurationProvider : AttributeScope {
+    /// Creates a codable configuration wrapper for the given value, using given configuration provider type identified by key path.
+    ///
+    /// - Parameters:
+    ///   - wrappedValue: The underlying value to make codable, using data from the configuration provider.
+    ///   - keyPath: A key path that identifies the type of the configuration provider, which provides additional information to encode `wrappedValue`.
     public init(wrappedValue: T, from keyPath: KeyPath<AttributeScopes, ConfigurationProvider.Type>) {
         self.wrappedValue = wrappedValue
     }

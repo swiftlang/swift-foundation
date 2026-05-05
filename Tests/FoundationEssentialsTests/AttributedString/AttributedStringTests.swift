@@ -1216,7 +1216,10 @@ E {
     }
     
     @Test func customCodableTypeWithCodableAttributedString() throws {
+        typealias NonCodableType = AttributeScopes.TestAttributes.NonCodableType
+        
         struct MyType : Codable, Equatable {
+
             var other: NonCodableType
             var str: AttributedString
             

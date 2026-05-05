@@ -20,18 +20,19 @@ public class UnitDuration: Dimension {}
 extension Measurement where UnitType: Dimension {
     public struct FormatStyle : Sendable {
         public struct UnitWidth : Codable, Hashable, Sendable {
-            /// Examples for formatting a measurement with value of 37.20:
+            /// A unit width that shows the full unit name.
             ///
-            /// Shows the unit in its full spelling.
-            /// For example, "37.20 Calories", "37,20 litres"
+            /// For example, `37.20 Calories` or `37,20 litres`.
             public static var wide: Self { .init(option: .wide) }
 
-            /// Shows the unit using abbreviation.
-            /// For example, "37.20 Cal", "37,2 L"
+            /// An abbreviated unit width.
+            ///
+            /// For example, `37.20 Cal` or `37,2 L`.
             public static var abbreviated: Self { .init(option: .abbreviated) }
 
-            /// Shows the unit in the shortest form possible, and may condense the spacing between the value and the unit.
-            /// For example, "37.20Cal", "37,2L"
+            /// The shortest unit width.
+            ///
+            /// This width may condense the spacing between the value and the unit; for example, `37.20Cal` or `37,2L`.
             public static var narrow: Self { .init(option: .narrow) }
 
             enum Option: Int, Codable, Hashable {
