@@ -1197,6 +1197,327 @@ struct CombinedMacroTests {
         )
     }
 
+    // MARK: - @CodableBy with both macros
+
+    @Test func codableByWithBothMacros() {
+        AssertMacroExpansion(
+            """
+            @JSONCodable @CommonCodable
+            struct Event {
+                @CodableBy(.dateFormat(.iso8601))
+                let timestamp: Date
+                let name: String
+            }
+            """,
+            expandedSource: """
+            struct Event {
+                let timestamp: Date
+                let name: String
+            }
+
+            extension Event {
+                enum CodingFields {
+                    case timestamp
+                    case name
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .timestamp:
+                            "timestamp"
+                        case .name:
+                            "name"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    @inline(__always)
+                    static func field(for key: UTF8Span, comparator: some DecodingFieldUTF8SpanComparator & ~Escapable) throws(CodingError.Decoding) -> CodingFields {
+                        switch comparator {
+                        case "timestamp":
+                            .timestamp
+                        case "name":
+                            .name
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension Event {
+                struct JSONCodingFields: JSONOptimizedCodingField {
+                    var base: CodingFields
+                    init(_ base: CodingFields) {
+                        self.base = base
+                    }
+
+                    @_transparent
+                    var staticString: StaticString {
+                        base.staticString
+                    }
+
+                    @inline(__always)
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                        .init(try CodingFields.field(for: key, comparator: UTF8SpanComparator(key)))
+                    }
+                }
+            }
+
+            extension Event: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: JSONCodingFields(.timestamp)) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.timestamp, using: .dateFormat(.iso8601))
+                        }
+                        try structEncoder.encode(field: JSONCodingFields(.name), value: self.name)
+                    }
+                }
+            }
+
+            extension Event: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Event {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var timestamp: Date?
+                        var name: String?
+                        var _codingField: JSONCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField!.base {
+                            case .timestamp:
+                                timestamp = try valueDecoder.decode(using: .dateFormat(.iso8601))
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let timestamp else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'timestamp'")
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        return Event(timestamp: timestamp, name: name)
+                    }
+                }
+            }
+
+            extension Event {
+                struct CommonCodingFields: StaticStringCodingField {
+                    var base: CodingFields
+                    init(_ base: CodingFields) {
+                        self.base = base
+                    }
+
+                    @_transparent
+                    var staticString: StaticString {
+                        base.staticString
+                    }
+
+                    @inline(__always)
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
+                        .init(try CodingFields.field(for: key, comparator: UTF8SpanComparator(key)))
+                    }
+                }
+            }
+
+            extension Event: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CommonCodingFields(.timestamp)) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.timestamp, using: .dateFormat(.iso8601))
+                        }
+                        try structEncoder.encode(field: CommonCodingFields(.name), value: self.name)
+                    }
+                }
+            }
+
+            extension Event: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Event {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var timestamp: Date?
+                        var name: String?
+                        var _codingField: CommonCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField!.base {
+                            case .timestamp:
+                                timestamp = try valueDecoder.decode(using: .dateFormat(.iso8601))
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let timestamp else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'timestamp'")
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        return Event(timestamp: timestamp, name: name)
+                    }
+                }
+            }
+            """,
+            macros: combinedTestMacros
+        )
+    }
+
+    @Test func codableByComplexWithBothMacros() {
+        AssertMacroExpansion(
+            """
+            @JSONCodable @CommonCodable
+            struct Schedule {
+                @CodableBy([.losslessStringConversion : [.dateFormat(.iso8601)]])
+                let events: [(Int, [Date])]
+            }
+            """,
+            expandedSource: """
+            struct Schedule {
+                let events: [(Int, [Date])]
+            }
+
+            extension Schedule {
+                enum CodingFields {
+                    case events
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .events:
+                            "events"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    @inline(__always)
+                    static func field(for key: UTF8Span, comparator: some DecodingFieldUTF8SpanComparator & ~Escapable) throws(CodingError.Decoding) -> CodingFields {
+                        switch comparator {
+                        case "events":
+                            .events
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension Schedule {
+                struct JSONCodingFields: JSONOptimizedCodingField {
+                    var base: CodingFields
+                    init(_ base: CodingFields) {
+                        self.base = base
+                    }
+
+                    @_transparent
+                    var staticString: StaticString {
+                        base.staticString
+                    }
+
+                    @inline(__always)
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                        .init(try CodingFields.field(for: key, comparator: UTF8SpanComparator(key)))
+                    }
+                }
+            }
+
+            extension Schedule: JSONEncodable {
+                func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: JSONCodingFields(.events)) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.events, using: .dictionary(key: .losslessStringConversion(), value: .array(.dateFormat(.iso8601))))
+                        }
+                    }
+                }
+            }
+
+            extension Schedule: JSONDecodable {
+                static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Schedule {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var events: [(Int, [Date])]?
+                        var _codingField: JSONCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField!.base {
+                            case .events:
+                                events = try valueDecoder.decode(using: .dictionary(key: .losslessStringConversion(), value: .array(.dateFormat(.iso8601))))
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let events else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'events'")
+                        }
+                        return Schedule(events: events)
+                    }
+                }
+            }
+
+            extension Schedule {
+                struct CommonCodingFields: StaticStringCodingField {
+                    var base: CodingFields
+                    init(_ base: CodingFields) {
+                        self.base = base
+                    }
+
+                    @_transparent
+                    var staticString: StaticString {
+                        base.staticString
+                    }
+
+                    @inline(__always)
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
+                        .init(try CodingFields.field(for: key, comparator: UTF8SpanComparator(key)))
+                    }
+                }
+            }
+
+            extension Schedule: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CommonCodingFields(.events)) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(self.events, using: .dictionary(key: .losslessStringConversion(), value: .array(.dateFormat(.iso8601))))
+                        }
+                    }
+                }
+            }
+
+            extension Schedule: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Schedule {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var events: [(Int, [Date])]?
+                        var _codingField: CommonCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField!.base {
+                            case .events:
+                                events = try valueDecoder.decode(using: .dictionary(key: .losslessStringConversion(), value: .array(.dateFormat(.iso8601))))
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let events else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'events'")
+                        }
+                        return Schedule(events: events)
+                    }
+                }
+            }
+            """,
+            macros: combinedTestMacros
+        )
+    }
+
     // MARK: - Same-format split macros (@JSONEncodable @JSONDecodable)
 
     @Test func jsonEncodableAndJsonDecodable() {
@@ -1385,5 +1706,6 @@ private let combinedTestMacros: [String: Macro.Type] = [
     "CommonDecodable": CommonDecodableMacro.self,
     "CodingKey": CodingKeyMacro.self,
     "CodableDefault": CodableDefaultMacro.self,
+    "CodableBy": CodableByMacro.self,
     "DecodableAlias": DecodableAliasMacro.self,
 ]
