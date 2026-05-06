@@ -28,12 +28,14 @@ import class Foundation.Bundle
 final internal class Canary { }
 #endif
 
-func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) -> Data? {
+func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) throws -> Data {
 #if FOUNDATION_FRAMEWORK
     guard let url = Bundle(for: Canary.self).url(forResource: resource, withExtension: ext, subdirectory: subdirectory) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile, userInfo: [
+            NSDebugDescriptionErrorKey: "Unable to find test resource named \(resource) with extension \(ext) in subdirectory \(subdirectory ?? "<none>") within bundle \(Bundle(for: Canary.self).bundlePath)"
+        ])
     }
-    return try? Data(contentsOf: url)
+    return try Data(contentsOf: url)
 #else
 #if os(macOS)
     let subdir: String
@@ -44,12 +46,14 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     }
 
     guard let url = Bundle.module.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile, userInfo: [
+            NSDebugDescriptionErrorKey: "Unable to find test resource named \(resource) with extension \(ext) in subdirectory \(subdir) within bundle \(Bundle.module.bundlePath)"
+        ])
     }
     
     let essentialsURL = FoundationEssentials.URL(filePath: url.path)
 
-    return try? Data(contentsOf: essentialsURL)
+    return try Data(contentsOf: essentialsURL)
 #else
     // swiftpm drops the resources next to the executable, at:
     // ./swift-foundation_FoundationEssentialsTests.{resources|bundle}/Resources/
@@ -69,7 +73,9 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     guard let resourcesDir = candidates
         .map({ execDir.appending(component: $0, directoryHint: .isDirectory) })
         .first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile, userInfo: [
+            NSDebugDescriptionErrorKey: "Unable to find any test resource candidate directories in \(execDir.path)"
+        ])
     }
 
     var path = resourcesDir.appending(component: "Resources", directoryHint: .isDirectory)
@@ -77,7 +83,7 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         path.append(path: subdirectory, directoryHint: .isDirectory)
     }
     path.append(component: resource + "." + ext, directoryHint: .notDirectory)
-    return try? Data(contentsOf: path)
+    return try Data(contentsOf: path)
 #endif
 #endif
 }
