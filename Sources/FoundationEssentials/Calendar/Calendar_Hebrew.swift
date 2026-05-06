@@ -24,6 +24,8 @@ import CRT
 @preconcurrency import WASILibc
 #endif
 
+internal import Synchronization
+
 /// Pure-Swift implementation of the Hebrew calendar, derived from the
 /// Reingold & Dershowitz algorithms (`Calendrical Calculations`) via
 /// `icu4swift/Sources/CalendarComplex/HebrewArithmetic.swift`.
@@ -891,7 +893,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                   let m = currentComps.month,
                   let d = currentComps.day else { return nil }
 
-            var newYear = Int32(y) + Int32(yearsToAdd)
+            let newYear = Int32(y) + Int32(yearsToAdd)
             var newCivilMonth = Int32(m)
 
             if newCivilMonth == 6 && !HebrewArithmetic.isLeapYear(newYear) {
@@ -1545,7 +1547,7 @@ internal enum HebrewArithmetic {
     /// and would thrash a single-slot cache. We populate the cache only at
     /// the END of `hebrewFromFixed` (and at the start of `fixedFromHebrew`),
     /// which captures the steady-state year for downstream calls to reuse.
-    private static let _yearDataCache = LockedState<YearData?>(initialState: nil)
+    private static let _yearDataCache = Mutex<YearData?>(nil)
 
     /// Cached `YearData(year:)`. Use for any call site that would otherwise
     /// build `YearData` from scratch in a hot path.
