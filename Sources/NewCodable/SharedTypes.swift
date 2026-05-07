@@ -721,33 +721,28 @@ extension BinaryInteger {
             return try closure(array.span)
         }
         
-        // TODO: Remove awkward workaround for lack of typed-throws on withUnsafeTemporaryAllocation.
-        do {
-            return try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 40) { buffer in
-                func _ascii(_ digit: UInt8) -> UTF8.CodeUnit {
-                    UInt8(("0" as Unicode.Scalar).value) + digit
-                }
-                let isNegative = Self.isSigned && self < (0 as Self)
-                var value = magnitude
-                
-                var index = buffer.count&-1
-                while value != 0 {
-                    let (quotient, remainder) = value.quotientAndRemainder(dividingBy: 10)
-                    buffer[index] = _ascii(UInt8(truncatingIfNeeded: remainder))
-                    index -= 1
-                    value = quotient
-                }
-                if isNegative {
-                    buffer[index] = UInt8(("-" as Unicode.Scalar).value)
-                    index -= 1
-                }
-                let length = buffer.count &- (index &+ 1)
-                
-                return try closure(buffer.span.extracting(last: length))
+        return try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 40) { buffer throws(E) in
+            func _ascii(_ digit: UInt8) -> UTF8.CodeUnit {
+                UInt8(("0" as Unicode.Scalar).value) + digit
             }
-        } catch let error as E {
-            throw error
-        } catch { fatalError() }
+            let isNegative = Self.isSigned && self < (0 as Self)
+            var value = magnitude
+            
+            var index = buffer.count&-1
+            while value != 0 {
+                let (quotient, remainder) = value.quotientAndRemainder(dividingBy: 10)
+                buffer[index] = _ascii(UInt8(truncatingIfNeeded: remainder))
+                index -= 1
+                value = quotient
+            }
+            if isNegative {
+                buffer[index] = UInt8(("-" as Unicode.Scalar).value)
+                index -= 1
+            }
+            let length = buffer.count &- (index &+ 1)
+            
+            return try closure(buffer.span.extracting(last: length))
+        }
 
     }
     
