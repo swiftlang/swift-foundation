@@ -14,11 +14,7 @@
 
 /// A strategy that delegates to the value's own `CommonCodable` conformance.
 ///
-/// This is the equivalent of serde_with's `_` (Same) — it means "use the
-/// default coding behavior." Useful as a slot-filler when composing with
-/// other combinators:
-///
-///     @CodableBy(.dictionary(key: .losslessStringConversion, value: .passthrough))
+///     @CodableBy([.losslessStringConversion : .pass])
 ///     let scores: [(Int, MyStruct)]
 ///
 public struct PassthroughCodingStrategy<Value: CommonEncodable & CommonDecodable>: CommonCodingStrategy, JSONCodingStrategy {
@@ -38,10 +34,7 @@ public struct PassthroughCodingStrategy<Value: CommonEncodable & CommonDecodable
 /// A strategy that encodes/decodes an `Array` by applying an inner strategy
 /// to each element.
 ///
-/// This is the combinator equivalent of serde_with's `Vec<A>` — it applies
-/// the adapter `A` element-wise:
-///
-///     @CodableBy(.array(.dateFormat(.iso8601)))
+///     @CodableBy([.dateFormat(.iso8601)])
 ///     let timestamps: [Date]
 ///
 ///     @CodableBy(.array(.base64))
@@ -88,15 +81,9 @@ public struct ArrayElementCodingStrategy<Element: CommonCodingStrategy>: CommonC
 /// A strategy that encodes a sequence of key-value pairs as a dictionary/map,
 /// applying separate strategies to keys and values.
 ///
-/// This is the combinator equivalent of serde_with's `Map<K, V>` — it can
-/// transform the serialized shape (e.g., `[(K, V)]` becomes a JSON object):
-///
-///     @CodableBy(.dictionary(key: .losslessStringConversion, value: .passthrough))
+///     @CodableBy([.losslessStringConversion : .pass])
 ///     let scores: [(Int, String)]
 ///     // Encodes as: {"1": "Alice", "2": "Bob"}
-///
-/// The key strategy must produce/consume `String` values, since most
-/// serialization formats require string-typed dictionary keys.
 public struct DictionaryPairsCodingStrategy<KeyStrategy: CommonCodingStrategy, ValueStrategy: CommonCodingStrategy>: CommonCodingStrategy, JSONCodingStrategy where KeyStrategy.Value: Hashable & Copyable, ValueStrategy.Value: Copyable {
     public typealias Value = [(KeyStrategy.Value, ValueStrategy.Value)]
 
@@ -148,11 +135,11 @@ public struct DictionaryPairsCodingStrategy<KeyStrategy: CommonCodingStrategy, V
 /// Unlike `DictionaryPairsCodingStrategy` (which operates on `[(K, V)]` tuples),
 /// this strategy works directly with `Dictionary<K, V>`:
 ///
-///     @CodableBy(.dictionary(key: .losslessStringConversion, value: .passthrough))
+///     @CodableBy(.dictionary([.losslessStringConversion : .pass])
 ///     let scores: [Int: String]
 ///     // Encodes as: {"1": "Alice", "2": "Bob"}
 ///
-///     @CodableBy(.dictionary(key: .losslessStringConversion, value: .array(.dateFormat(.iso8601))))
+///     @CodableBy([.losslessStringConversion : .array(.dateFormat(.iso8601))])
 ///     let schedule: [UInt8: [Date]]
 ///     // Encodes as: {"1": ["2026-02-14T10:00:00Z"], "42": ["2026-11-11T11:11:00Z"]}
 ///
@@ -203,17 +190,15 @@ public struct DictionaryCodingStrategy<KeyStrategy: CommonCodingStrategy, ValueS
 // MARK: - LosslessStringCodingStrategy
 
 /// A strategy that encodes/decodes a value as a string using its
-/// `LosslessStringConvertible` conformance.
-///
-/// This is analogous to serde_with's `DisplayFromStr` — encode via
-/// `description`, decode via `init?(_ description:)`:
+/// `LosslessStringConvertible` conformance. It encodes via
+/// `description` and decodes via `init?(_ description:)`:
 ///
 ///     @CodableBy(.losslessStringConversion)
 ///     let port: UInt16
 ///     // Encodes as: "8080"
 ///
-///     @CodableBy(.dictionary(key: .losslessStringConversion, value: .passthrough))
-///     let lookup: [(Int, String)]
+///     @CodableBy([.losslessStringConversion : .pass])
+///     let lookup: [Int:String]
 ///     // Encodes as: {"42": "answer", "7": "lucky"}
 ///
 public struct LosslessStringCodingStrategy<Value: LosslessStringConvertible>: CommonCodingStrategy, JSONCodingStrategy {
@@ -235,6 +220,104 @@ public struct LosslessStringCodingStrategy<Value: LosslessStringConvertible>: Co
 // MARK: - Convenience static members
 
 extension CommonCodingStrategy {
+    /// Apply an inner strategy element-wise to an array.
+    /// The `@CodableBy` macro expands `[]` array literal syntax to this strategy.
+    public static func array<S: CommonCodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
+        .init(elementStrategy)
+    }
+
+    /// Encode a sequence of pairs as a dictionary, with separate strategies for keys and values.
+    /// The `@CodableBy` macro expands `[:]` dictionary literal syntax to this strategy.
+    public static func dictionary<K: CommonCodingStrategy, V: CommonCodingStrategy>(key: K, value: V) -> DictionaryPairsCodingStrategy<K, V> where Self == DictionaryPairsCodingStrategy<K, V>, K.Value: Hashable & Copyable, V.Value: Copyable {
+        .init(key: key, value: value)
+    }
+
+    /// Encode/decode a `Dictionary` with separate strategies for keys and values.
+    /// The `@CodableBy` macro expands `[:]` dictionary literal syntax to this strategy.
+    public static func dictionary<K: CommonCodingStrategy, V: CommonCodingStrategy>(key: K, value: V) -> DictionaryCodingStrategy<K, V> where Self == DictionaryCodingStrategy<K, V>, K.Value: Hashable & Copyable, V.Value: Copyable {
+        .init(key: key, value: value)
+    }
+
+    /// Use the value's own `CommonCodable` conformance (the identity/passthrough strategy).
+    /// The `@CodableBy` macro expands  the more convenient `.pass` token to this strategy.
+    public static func passthrough<T: CommonEncodable & CommonDecodable>() -> PassthroughCodingStrategy<T> where Self == PassthroughCodingStrategy<T> {
+        .init()
+    }
+
+    /// Encode/decode a value as a string using `LosslessStringConvertible`.
+    /// The `@CodableBy` macro expands  the more convenient `.losslessStringConversion` token to this strategy.
+    public static func losslessStringConversion<T: LosslessStringConvertible>() -> LosslessStringCodingStrategy<T> where Self == LosslessStringCodingStrategy<T> {
+        .init()
+    }
+}
+
+extension CommonEncodingStrategy {
+    /// Apply an inner strategy element-wise to an array.
+    /// The `@EncodableBy` macro expands `[]` array literal syntax to this strategy.
+    public static func array<S: CommonEncodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
+        .init(elementStrategy)
+    }
+
+    /// Encode a sequence of pairs as a dictionary, with separate strategies for keys and values.
+    /// The `@EncodableBy` macro expands `[:]` dictionary literal syntax to this strategy.
+    public static func dictionary<K: CommonCodingStrategy, V: CommonCodingStrategy>(key: K, value: V) -> DictionaryPairsCodingStrategy<K, V> where Self == DictionaryPairsCodingStrategy<K, V>, K.Value: Hashable & Copyable, V.Value: Copyable {
+        .init(key: key, value: value)
+    }
+
+    /// Encode/decode a `Dictionary` with separate strategies for keys and values.
+    /// The `@EncodableBy` macro expands `[:]` dictionary literal syntax to this strategy.
+    public static func dictionary<K: CommonCodingStrategy, V: CommonCodingStrategy>(key: K, value: V) -> DictionaryCodingStrategy<K, V> where Self == DictionaryCodingStrategy<K, V>, K.Value: Hashable & Copyable, V.Value: Copyable {
+        .init(key: key, value: value)
+    }
+
+    /// Use the value's own `CommonCodable` conformance (the identity/passthrough strategy).
+    /// The `@EncodableBy` macro expands  the more convenient `.pass` token to this strategy.
+    public static func passthrough<T: CommonEncodable & CommonDecodable>() -> PassthroughCodingStrategy<T> where Self == PassthroughCodingStrategy<T> {
+        .init()
+    }
+
+    /// Encode/decode a value as a string using `LosslessStringConvertible`.
+    /// The `@EncodableBy` macro expands  the more convenient `.losslessStringConversion` token to this strategy.
+    public static func losslessStringConversion<T: LosslessStringConvertible>() -> LosslessStringCodingStrategy<T> where Self == LosslessStringCodingStrategy<T> {
+        .init()
+    }
+}
+
+extension CommonDecodingStrategy {
+    /// Apply an inner strategy element-wise to an array.
+    /// The `@DecodableBy` macro expands `[]` array literal syntax to this strategy.
+    public static func array<S: CommonEncodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
+        .init(elementStrategy)
+    }
+
+    /// Encode a sequence of pairs as a dictionary, with separate strategies for keys and values.
+    /// The `@DecodableBy` macro expands `[:]` dictionary literal syntax to this strategy.
+    public static func dictionary<K: CommonCodingStrategy, V: CommonCodingStrategy>(key: K, value: V) -> DictionaryPairsCodingStrategy<K, V> where Self == DictionaryPairsCodingStrategy<K, V>, K.Value: Hashable & Copyable, V.Value: Copyable {
+        .init(key: key, value: value)
+    }
+
+    /// Encode/decode a `Dictionary` with separate strategies for keys and values.
+    /// The `@DecodableBy` macro expands `[:]` dictionary literal syntax to this strategy.
+    public static func dictionary<K: CommonCodingStrategy, V: CommonCodingStrategy>(key: K, value: V) -> DictionaryCodingStrategy<K, V> where Self == DictionaryCodingStrategy<K, V>, K.Value: Hashable & Copyable, V.Value: Copyable {
+        .init(key: key, value: value)
+    }
+
+    /// Use the value's own `CommonCodable` conformance (the identity/passthrough strategy).
+    /// The `@DecodableBy` macro expands  the more convenient `.pass` token to this strategy.
+    public static func passthrough<T: CommonEncodable & CommonDecodable>() -> PassthroughCodingStrategy<T> where Self == PassthroughCodingStrategy<T> {
+        .init()
+    }
+
+    /// Encode/decode a value as a string using `LosslessStringConvertible`.
+    /// The `@DecodableBy` macro expands  the more convenient `.losslessStringConversion` token to this strategy.
+    public static func losslessStringConversion<T: LosslessStringConvertible>() -> LosslessStringCodingStrategy<T> where Self == LosslessStringCodingStrategy<T> {
+        .init()
+    }
+}
+
+// MARK: - JSON Strategy Convenience (mirrors Common* extensions)
+
+extension JSONCodingStrategy {
     /// Apply an inner strategy element-wise to an array.
     public static func array<S: CommonCodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
         .init(elementStrategy)
@@ -261,9 +344,9 @@ extension CommonCodingStrategy {
     }
 }
 
-extension CommonEncodingStrategy {
+extension JSONEncodingStrategy {
     /// Apply an inner strategy element-wise to an array.
-    public static func array<S: CommonEncodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
+    public static func array<S: CommonCodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
         .init(elementStrategy)
     }
 
@@ -288,9 +371,9 @@ extension CommonEncodingStrategy {
     }
 }
 
-extension CommonDecodingStrategy {
+extension JSONDecodingStrategy {
     /// Apply an inner strategy element-wise to an array.
-    public static func array<S: CommonDecodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
+    public static func array<S: CommonCodingStrategy>(_ elementStrategy: S) -> ArrayElementCodingStrategy<S> where Self == ArrayElementCodingStrategy<S> {
         .init(elementStrategy)
     }
 

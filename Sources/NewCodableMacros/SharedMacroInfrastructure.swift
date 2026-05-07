@@ -886,7 +886,9 @@ func makeEncodableExtension(
         if peerInfo.multiFormat {
             encodeStatements = properties.map { prop in
                 if let encodingStrat = prop.encodingStrategy {
-                    return "try structEncoder.encode(field: \(fieldType)(.\(prop.name))) { valueEncoder throws(CodingError.Encoding) in try valueEncoder.encode(self.\(prop.name), using: \(encodingStrat.strategy)) }"
+                    return """
+                    try structEncoder.encode(field: \(fieldType)(.\(prop.name))) { valueEncoder throws(CodingError.Encoding) in try valueEncoder.encode(self.\(prop.name), using: \(encodingStrat.strategy)) }
+                    """
                 } else {
                     return "try structEncoder.encode(field: \(fieldType)(.\(prop.name)), value: self.\(prop.name))"
                 }
@@ -894,7 +896,9 @@ func makeEncodableExtension(
         } else {
             encodeStatements = properties.map { prop in
                 if let encodingStrat = prop.encodingStrategy {
-                    return "try structEncoder.encode(field: \(fieldType).\(prop.name)) { valueEncoder throws(CodingError.Encoding) in try valueEncoder.encode(self.\(prop.name), using: \(encodingStrat.strategy)) }"
+                    return """
+                    try structEncoder.encode(field: \(fieldType).\(prop.name)) { valueEncoder throws(CodingError.Encoding) in try valueEncoder.encode(self.\(prop.name), using: \(encodingStrat.strategy)) }
+                    """
                 } else {
                     return "try structEncoder.encode(field: \(fieldType).\(prop.name), value: self.\(prop.name))"
                 }
@@ -943,12 +947,13 @@ func makeDecodableExtension(
         }.joined(separator: "\n")
 
         let switchCases = properties.map { prop in
-            let valueProducer = if let strat = prop.decodingStrategy {
-                "valueDecoder.decode(using: \(strat.strategy))"
+            let valueProducer: String
+            if let strat = prop.decodingStrategy {
+                valueProducer = "valueDecoder.decode(using: \(strat.strategy))"
             } else if prop.isOptional {
-                "valueDecoder.decode(\(prop.typeName)?.self)"
+                valueProducer = "valueDecoder.decode(\(prop.typeName)?.self)"
             } else {
-                "valueDecoder.decode(\(prop.typeName).self)"
+                valueProducer = "valueDecoder.decode(\(prop.typeName).self)"
             }
             return "case .\(prop.name): \(prop.name) = try \(valueProducer)"
         }.joined(separator: "\n")

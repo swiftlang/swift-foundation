@@ -457,6 +457,9 @@ struct CombinedMacroIntegrationTests {
 struct CodableByISO8601Type: Equatable {
     @CodableBy(.dateFormat(.iso8601))
     let createdAt: Date
+    
+    @CodableBy(.format(.iso8601, type: DateComponents.self))
+    let createdAtComponents: DateComponents
 }
 
 @JSONCodable
@@ -523,12 +526,13 @@ struct JSONCodableByStrategyTests {
     
     @Test func iso8601RoundTrip() throws {
         let date = try Date.ISO8601FormatStyle().parse("2026-01-15T10:30:00Z")
-        let original = CodableByISO8601Type(createdAt: date)
+        let components = try DateComponents.ISO8601FormatStyle().parse("2026-01-15T10:30:00Z")
+        let original = CodableByISO8601Type(createdAt: date, createdAtComponents: components)
         let data = try NewJSONEncoder().encode(original)
         let json = String(data: data, encoding: .utf8)!
-        #expect(json == #"{"createdAt":"2026-01-15T10:30:00Z"}"#)
+        #expect(json == #"{"createdAt":"2026-01-15T10:30:00Z","createdAtComponents":"2026-01-15T10:30:00Z"}"#)
         let decoded = try NewJSONDecoder().decode(CodableByISO8601Type.self, from: data)
-        #expect(decoded.createdAt == date)
+        #expect(decoded == original)
     }
 
     @Test func iso8601WithFractionalSeconds() throws {
