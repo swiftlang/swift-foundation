@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif canImport(Foundation)
-import Foundation
-#endif
+import NewCodable
 
 internal extension Data {
     init(_copying span: RawSpan) {

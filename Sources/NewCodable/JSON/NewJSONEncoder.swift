@@ -94,7 +94,10 @@ public struct NewJSONEncoder {
         self.options = options
     }
     
-    internal func encode(_ value: borrowing some JSONEncodable & ~Copyable) throws(CodingError.Encoding) -> GrowableEncodingBytes {
+    // TODO: Temporarily public
+    
+    @_disfavoredOverload
+    public func encode(_ value: borrowing some JSONEncodable & ~Copyable) throws(CodingError.Encoding) -> GrowableEncodingBytes {
         var rootNodeArray: InlineArray = [JSONDirectEncoder.CodingPathNode.root]
         var nodeSpan = rootNodeArray.mutableSpan
         return try nodeSpan.withUnsafeMutableBufferPointer { ptr throws(CodingError.Encoding) in
@@ -104,7 +107,8 @@ public struct NewJSONEncoder {
         }
     }
     
-    internal func encode(_ value: borrowing some CommonEncodable & ~Copyable) throws(CodingError.Encoding) -> GrowableEncodingBytes {
+    @_disfavoredOverload
+    public func encode(_ value: borrowing some CommonEncodable & ~Copyable) throws(CodingError.Encoding) -> GrowableEncodingBytes {
         var rootNodeArray: InlineArray = [JSONDirectEncoder.CodingPathNode.root]
         var nodeSpan = rootNodeArray.mutableSpan
         return try nodeSpan.withUnsafeMutableBufferPointer { ptr throws(CodingError.Encoding) in

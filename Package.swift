@@ -123,6 +123,7 @@ let package = Package(
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "DequeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
+            .target(name: "NewCodable")
           ],
           exclude: [
             "Formatting/CMakeLists.txt",
@@ -251,7 +252,6 @@ let package = Package(
         .target(
             name: "NewCodable",
             dependencies: [
-                .target(name: "FoundationEssentials"),
                 "NewCodableMacros",
                 .product(name: "OrderedCollections", package: "swift-collections"),
                 .product(name: "BasicContainers", package: "swift-collections"),
