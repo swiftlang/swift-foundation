@@ -27,14 +27,12 @@ import CRT
 internal import Synchronization
 
 /// Pure-Swift implementation of the Hebrew calendar, derived from the
-/// Reingold & Dershowitz algorithms (`Calendrical Calculations`) via
-/// `icu4swift/Sources/CalendarComplex/HebrewArithmetic.swift`.
+/// Reingold & Dershowitz algorithms (`Calendrical Calculations`).
 ///
 /// This replaces the ICU4C-backed Hebrew path in `_CalendarICU`. It works on
-/// all supported platforms (including Linux, which cannot compile ICU without
-/// significant effort) and is substantially faster than the ICU path because
+/// all supported platforms and is substantially faster than the ICU path because
 /// Foundation's `_CalendarProtocol` contract does not require the ICU
-/// `ucal_set` / `add` / `roll` eager-recalculation semantics.
+/// `ucal_set` / `add` / `roll` eager recalculation semantics.
 internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
 #if canImport(os)
@@ -1418,8 +1416,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
 /// Low-level arithmetic for the Hebrew calendar.
 ///
-/// Algorithms from "Calendrical Calculations" by Reingold & Dershowitz (4th ed., 2018),
-/// ported from `icu4swift/Sources/CalendarComplex/HebrewArithmetic.swift`.
+/// Algorithms from "Calendrical Calculations" by Reingold & Dershowitz (4th ed., 2018).
 ///
 /// All algorithms work in biblical month numbering (Nisan = 1, Tishri = 7).
 /// `_CalendarHebrew`'s public API exposes civil ordering (Tishri = 1), so
@@ -1429,8 +1426,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 /// start of proleptic Gregorian January 1, year 1. All arithmetic is `Int64`
 /// to avoid overflow at extreme years (year ≈ ±5.88 M in Int32 terms).
 ///
-/// Three floor-division fixes (2026-04-22, from icu4swift's ±10,000-year
-/// round-trip stability test) are preserved:
+/// Three floor-division fixes are preserved:
 ///   1. `hebrewFromFixed` year approximation: uses `floorDiv` (else one year high at extreme negatives).
 ///   2. `calendarElapsedDays` returns `Int64` (else Int32 overflow at year ≈ ±5.88 M).
 ///   3. `calendarElapsedDays` internal divisions use `floorDiv` (else ~29-day skew at very negative years).
@@ -1563,7 +1559,6 @@ internal enum HebrewArithmetic {
     /// Year-level precomputed metadata. Computing this once per `fromRataDie` /
     /// `toRataDie` call avoids the redundant `newYear` / `calendarElapsedDays`
     /// invocations that a naive implementation would incur inside month-walk loops.
-    /// (This was the 2026-04-19 optimization in icu4swift: 2.9 µs → 96 ns.)
     struct YearData {
         let year: Int32
         let newYear: Int64
