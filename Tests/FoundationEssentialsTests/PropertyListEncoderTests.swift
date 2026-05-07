@@ -532,8 +532,8 @@ private struct PropertyListEncoderTests {
         _testRoundTrip(of: UnkeyedContainerContainingNullTestType(array: array), in: .binary)
     }
     
-    @Test func invalidNSDataKey_82142612() {
-        let data = testData(forResource: "Test_82142612", withExtension: "bad")!
+    @Test func invalidNSDataKey_82142612() throws {
+        let data = try testData(forResource: "Test_82142612", withExtension: "bad")
 
         let decoder = PropertyListDecoder()
         #expect(throws: (any Error).self) {
@@ -600,21 +600,21 @@ private struct PropertyListEncoderTests {
     }
 
     @Test func issue5616259() throws {
-        let plistData = testData(forResource: "Test_5616259", withExtension: "bad")!
+        let plistData = try testData(forResource: "Test_5616259", withExtension: "bad")
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([String].self, from: plistData)
         }
     }
 
     @Test func genericProperties_XML() throws {
-        let data = testData(forResource: "Generic_XML_Properties", withExtension: "plist")!
+        let data = try testData(forResource: "Generic_XML_Properties", withExtension: "plist")
 
         let props = try PropertyListDecoder().decode(GenericProperties.self, from: data)
         #expect(props.assertionFailure == nil)
     }
 
     @Test func genericProperties_binary() throws {
-        let data = testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")!
+        let data = try testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")
 
         let props = try PropertyListDecoder().decode(GenericProperties.self, from: data)
         #expect(props.assertionFailure == nil)
@@ -622,7 +622,7 @@ private struct PropertyListEncoderTests {
 
     // <rdar://problem/5877417> Binary plist parser should parse any version 'bplist0?'
     @Test func issue5877417() throws {
-        var data = testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")!
+        var data = try testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")
 
         // Modify the data so the header starts with bplist0x
         data[7] = UInt8(ascii: "x")
@@ -631,8 +631,8 @@ private struct PropertyListEncoderTests {
         #expect(props.assertionFailure == nil)
     }
 
-    @Test func xmlErrors() {
-        let data = testData(forResource: "Generic_XML_Properties", withExtension: "plist")!
+    @Test func xmlErrors() throws {
+        let data = try testData(forResource: "Generic_XML_Properties", withExtension: "plist")
         let originalXML = String(data: data, encoding: .utf8)!
 
         // Try an empty plist
@@ -890,10 +890,10 @@ private struct PropertyListEncoderTests {
     // Escaped octal chars can be shorter than 3 chars long; i.e. \5 ≡ \05 ≡ \005.
     @Test func oldStylePlist_getSlashedChars_octal() throws {
         // ('\0', '\00', '\000', '\1', '\01', '\001', ..., '\777')
-        let data = testData(forResource: "test_oldStylePlist_getSlashedChars_octal", withExtension: "plist")!
+        let data = try testData(forResource: "test_oldStylePlist_getSlashedChars_octal", withExtension: "plist")
         let actualStrings = try PropertyListDecoder().decode([String].self, from: data)
 
-        let expectedData = testData(forResource: "test_oldStylePlist_getSlashedChars_octal_expected", withExtension: "plist")!
+        let expectedData = try testData(forResource: "test_oldStylePlist_getSlashedChars_octal_expected", withExtension: "plist")
         let expectedStrings = try PropertyListDecoder().decode([String].self, from: expectedData)
 
         #expect(actualStrings == expectedStrings)
@@ -902,10 +902,10 @@ private struct PropertyListEncoderTests {
     // Old-style plists support Unicode literals via \U syntax. They can be 1–4 characters wide.
     @Test func oldStylePlist_getSlashedChars_unicode() throws {
         // ('\U0', '\U00', '\U000', '\U0000', '\U1', ..., '\UFFFF')
-        let data = testData(forResource: "test_oldStylePlist_getSlashedChars_unicode", withExtension: "plist")!
+        let data = try testData(forResource: "test_oldStylePlist_getSlashedChars_unicode", withExtension: "plist")
         let actualStrings = try PropertyListDecoder().decode([String].self, from: data)
 
-        let expectedData = testData(forResource: "test_oldStylePlist_getSlashedChars_unicode_expected", withExtension: "plist")!
+        let expectedData = try testData(forResource: "test_oldStylePlist_getSlashedChars_unicode_expected", withExtension: "plist")
         let expectedStrings = try PropertyListDecoder().decode([String].self, from: expectedData)
 
         #expect(actualStrings == expectedStrings)
@@ -1163,7 +1163,7 @@ data1 = <7465
     }
 
     @Test func plistWithBadUTF8() throws {
-        let data = testData(forResource: "bad_plist", withExtension: "bad")!
+        let data = try testData(forResource: "bad_plist", withExtension: "bad")
 
         #expect(throws: (any Error).self) {
     try PropertyListDecoder().decode([String].self, from: data)
