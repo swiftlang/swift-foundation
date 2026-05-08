@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 // MARK: CommonDecodable primitive types
 
 extension String: CommonDecodable {
@@ -171,34 +165,6 @@ extension Dictionary: CommonDecodable where Key: CodingStringKeyRepresentable, V
     @inline(__always)
     public static func decode(from decoder: inout some (CommonDecoder & ~Escapable)) throws(CodingError.Decoding) -> Self {
         return try decoder.decode(Self.self, sizeHint: 0)
-    }
-}
-
-// MARK: Foundation currency type adoptions
-
-extension Date: CommonDecodable {
-    public static func decode(from decoder: inout some (CommonDecoder & ~Escapable)) throws(CodingError.Decoding) -> Self {
-        let interval = try decoder.decode(TimeInterval.self)
-        return .init(timeIntervalSinceReferenceDate: interval)
-    }
-}
-
-extension Data: CommonDecodable {
-    struct Visitor: DecodingBytesVisitor {
-        typealias DecodedValue = Data
-        func visitBytes(_ span: RawSpan) throws(CodingError.Decoding) -> DecodedValue {
-            span.withUnsafeBytes {
-                Data($0)
-            }
-        }
-
-        func visitBytes(_ array: [UInt8]) throws(CodingError.Decoding) -> DecodedValue {
-            Data(array)
-        }
-    }
-    
-    public static func decode(from decoder: inout some (CommonDecoder & ~Escapable)) throws(CodingError.Decoding) -> Self {
-        try decoder.decodeBytes(visitor: Visitor())
     }
 }
 
