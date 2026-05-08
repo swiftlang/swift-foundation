@@ -13,8 +13,9 @@
 
 // MARK: - GrowableEncodingBytes
 
+// TODO: Temporarily public
 @safe
-internal struct GrowableEncodingBytes: ~Copyable {
+public struct GrowableEncodingBytes: ~Copyable {
     @usableFromInline
     internal var _pointer: UnsafeMutableRawPointer?
     

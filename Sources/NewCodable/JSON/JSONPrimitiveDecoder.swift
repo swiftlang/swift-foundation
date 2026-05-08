@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
@@ -542,16 +535,6 @@ extension JSONPrimitiveDecoder {
         try closure(&copy)
     }
     
-    public func decode(_ hint: Date.Type) throws(CodingError.Decoding) -> Date {
-        var copy = self
-        return try self.options.dateDecodingStrategy.decodeDate(from: &copy)
-    }
-    
-    public func decode(_ hint: Data.Type) throws(CodingError.Decoding) -> Data {
-        var copy = self
-        return try self.options.dataDecodingStrategy.decodeData(from: &copy)
-    }
-    
     func decodeUnhintedNumber<V: JSONDecodingVisitor & ~Copyable & ~Escapable>(_ visitor: borrowing V, number: JSONPrimitive.Number) throws(CodingError.Decoding) -> V.DecodedValue {
         // Check if the visitor wants arbitrary precision numbers
         if visitor.prefersArbitraryPrecisionNumbers {
@@ -607,24 +590,6 @@ extension JSONPrimitiveDecoder {
     }
     
     public mutating func decode<T: CommonDecodable & ~Copyable>(_ type: T.Type) throws(CodingError.Decoding) -> T {
-        // TODO: Uhoh. This doesn't work.
-//        // Cover all the types that JSONDecoder supports specially that CommonDecodable does not.
-//        if type == Date.self {
-//            return _identityCast(try self.decode(Date.self), as: T.Type)
-//        }
-//        if type == Data.self {
-//            return try self.decode(Data.self) as! T
-//        }
-        if type == URL.self {
-            fatalError("TBD")
-            // TODO: Should this exist as a separate overload for JSON? Public or internal?
-//            return try self.decode(URL.self) as! T
-        }
-        if type == Decimal.self {
-            fatalError("TBD")
-            // TODO: Should this exist as a separate overload for JSON? Public or internal?
-//            return try self.decode(Decimal.self) as! T
-        }
         return try T.decode(from: &self)
     }
     
@@ -742,7 +707,6 @@ extension JSONPrimitiveDecoder: CommonDecoder {
     
     public mutating func decodeBytes<V: DecodingBytesVisitor>(visitor: V) throws(CodingError.Decoding) -> V.DecodedValue {
         do throws(_JSONDecodingError) {
-            // TODO: Respect data decoding options?
             switch self.value {
             case .string(let string):
                 var iterator = JSONBase64ByteIterator(iterator: JSONPrimitiveStringByteIterator(string: string))

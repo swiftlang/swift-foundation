@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 // MARK: CommonEncodable primitive types
 
 extension String: CommonEncodable {
@@ -135,23 +128,6 @@ extension Optional: CommonEncodable where Wrapped: CommonEncodable {
         }
     }
 }
-
-// MARK: Foundation currency type adoptions
-
-extension Date: CommonEncodable {
-    public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
-        try encoder.encode(self.timeIntervalSinceReferenceDate)
-    }
-}
-
-extension Data: CommonEncodable {
-    public func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
-        try encoder.encodeBytes(self.bytes)
-    }
-}
-
-// TODO: URL, UUID
-
 
 // MARK: RawRepresentable extension
 
