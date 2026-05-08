@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#elseif FOUNDATION_FRAMEWORK
-import Foundation
-#endif
+import NewCodable
 
 // MARK: - StringFormattedCodingStrategy
 
@@ -183,53 +179,65 @@ extension DateComponents.HTTPFormatStyle: CodingFormatStyle, CodingFormatParseSt
 
 extension CodingParseableFormatStyle where Self == Date.ISO8601FormatStyle {
     /// An ISO 8601 format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var iso8601: Self { return Date.ISO8601FormatStyle() }
 }
 extension CodingFormatStyle where Self == Date.ISO8601FormatStyle {
     /// An ISO 8601 format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var iso8601: Self { return Date.ISO8601FormatStyle() }
 }
 extension CodingFormatParseStrategy where Self == Date.ISO8601FormatStyle {
     /// An ISO 8601 format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var iso8601: Self { return Date.ISO8601FormatStyle() }
 }
 
 extension CodingParseableFormatStyle where Self == Date.HTTPFormatStyle {
     /// An HTTP date format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var http: Self { return Date.HTTPFormatStyle() }
 }
 extension CodingFormatStyle where Self == Date.HTTPFormatStyle {
     /// An HTTP date format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var http: Self { return Date.HTTPFormatStyle() }
 }
 extension CodingFormatParseStrategy where Self == Date.HTTPFormatStyle {
     /// An HTTP date format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var http: Self { return Date.HTTPFormatStyle() }
 }
 
 extension CodingParseableFormatStyle where Self == DateComponents.ISO8601FormatStyle {
     /// An ISO 8601 format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var iso8601: Self { return DateComponents.ISO8601FormatStyle() }
 }
 extension CodingFormatStyle where Self == DateComponents.ISO8601FormatStyle {
     /// An ISO 8601 format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var iso8601: Self { return DateComponents.ISO8601FormatStyle() }
 }
 extension CodingFormatParseStrategy where Self == DateComponents.ISO8601FormatStyle {
     /// An ISO 8601 format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var iso8601: Self { return DateComponents.ISO8601FormatStyle() }
 }
 
 extension CodingParseableFormatStyle where Self == DateComponents.HTTPFormatStyle {
     /// An HTTP date components format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var http: Self { return DateComponents.HTTPFormatStyle() }
 }
 extension CodingFormatStyle where Self == DateComponents.HTTPFormatStyle {
     /// An HTTP date components format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var http: Self { return DateComponents.HTTPFormatStyle() }
 }
 extension CodingFormatParseStrategy where Self == DateComponents.HTTPFormatStyle {
     /// An HTTP date components format style for use with ``StringFormattedCodingStrategy``.
+    @_disfavoredOverload
     public static var http: Self { return DateComponents.HTTPFormatStyle() }
 }
 
