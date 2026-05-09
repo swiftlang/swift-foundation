@@ -190,10 +190,10 @@ public struct JSONDirectEncoder: CommonEncoder, ~Copyable, ~Escapable {
                 print("root")
             case .array(_, let parent):
                 parent.pointee.printCodingPathAddrs()
-                print("array:", parent)
+                print("array: \(parent)")
             case .dictionary(_, let parent):
                 parent.pointee.printCodingPathAddrs()
-                print("dict:", parent)
+                print("dict: \(parent)")
             }
         }
         

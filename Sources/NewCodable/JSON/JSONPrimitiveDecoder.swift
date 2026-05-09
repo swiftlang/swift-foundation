@@ -755,17 +755,17 @@ extension JSONPrimitive {
         case .array(let array): CodingError.typeMismatch(expectedType: expectedType, actualValue: array, at: path)
         case .dictionary(let dict): CodingError.typeMismatch(expectedType: expectedType, actualValue: dict, at: path)
         case .bool(let bool): CodingError.typeMismatch(expectedType: expectedType, actualValue: bool, at: path)
-        case .number(let number): CodingError.typeMismatch(expectedTypeDescription: String(describing: expectedType), actualValueDescription: number.extendedPrecisionRepresentation)
-        case .string(let string): CodingError.typeMismatch(expectedTypeDescription: String(describing: expectedType), actualValueDescription: "\"\(string)\"")
-        case .null: CodingError.typeMismatch(expectedTypeDescription: String(describing: expectedType), actualValueDescription: "null")
+        case .number(let number): CodingError.typeMismatch(expectedTypeDescription: "\(expectedType)", actualValueDescription: number.extendedPrecisionRepresentation)
+        case .string(let string): CodingError.typeMismatch(expectedTypeDescription: "\(expectedType)", actualValueDescription: "\"\(string)\"")
+        case .null: CodingError.typeMismatch(expectedTypeDescription: "\(expectedType)", actualValueDescription: "null")
         }
     }
     
     @usableFromInline
     func typeMismatchError(expectedTypeDescription: String, at path: CodingPath) -> CodingError.Decoding {
         switch self {
-        case .array(let array): CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: array.description, at: path)
-        case .dictionary(let dict): CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: dict.description, at: path)
+        case .array(let array): CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: "\(array)", at: path)
+        case .dictionary(let dict): CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: "\(dict)", at: path)
         case .bool(let bool): CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: bool.description, at: path)
         case .number(let number): CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: number.extendedPrecisionRepresentation)
         case .string(let string): CodingError.typeMismatch(expectedTypeDescription: expectedTypeDescription, actualValueDescription: "\"\(string)\"")
