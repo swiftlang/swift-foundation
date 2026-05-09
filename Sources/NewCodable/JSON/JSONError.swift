@@ -102,19 +102,6 @@ enum JSONError: Swift.Error, Equatable {
             return nil
         }
     }
-
-#if FOUNDATION_FRAMEWORK
-    @usableFromInline
-    var nsError: NSError {
-        var userInfo : [String: Any] = [
-            NSDebugDescriptionErrorKey : self.debugDescription
-        ]
-        if let location = self.sourceLocation {
-            userInfo["NSJSONSerializationErrorIndex"] = location.index
-        }
-        return .init(domain: NSCocoaErrorDomain, code: CocoaError.propertyListReadCorrupt.rawValue, userInfo: userInfo)
-    }
-#endif // FOUNDATION_FRAMEWORK
 }
 
 extension JSONError {
