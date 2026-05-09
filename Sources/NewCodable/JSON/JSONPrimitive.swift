@@ -29,7 +29,7 @@ public enum JSONPrimitive {
         // TODO: Other numeric initializers? Alternative numeric storage?
         
         public subscript<T: FixedWidthInteger>(_ : T.Type) -> T {
-            get throws {
+            get throws(JSONError) {
                 // TODO: We probably need to convert these errors to something else because it will present information like SourceLocation. What even is the type of the error?
                 let span = string.utf8Span.span.bytes
                 var reader = JSONParserDecoder.ParserState.DocumentReader(bytes: span)
@@ -54,7 +54,7 @@ public enum JSONPrimitive {
             }
         }
         public subscript<T: BinaryFloatingPoint>(_ : T.Type) -> T {
-            get throws {
+            get throws(JSONError) {
                 // TODO: Implement better.
                 if T.self == Double.self {
                     return Double(string)! as! T
@@ -173,25 +173,25 @@ extension JSONPrimitive {
         }
         return true
     }
-    func decode(_ type: Bool.Type) throws -> Bool {
+    func decode(_ type: Bool.Type) throws(JSONError) -> Bool {
         guard case .bool(let value) = self else {
             fatalError("ERROR")
         }
         return value
     }
-    func decode(_ type: String.Type) throws -> String {
+    func decode(_ type: String.Type) throws(JSONError) -> String {
         guard case .string(let value) = self else {
             fatalError("ERROR")
         }
         return value
     }
-    func decode(_ type: Double.Type) throws -> Double {
+    func decode(_ type: Double.Type) throws(JSONError) -> Double {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
         return try number[type]
     }
-    func decode(_ type: Float.Type) throws -> Float {
+    func decode(_ type: Float.Type) throws(JSONError) -> Float {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -201,7 +201,7 @@ extension JSONPrimitive {
         }
         return float
     }
-    func decode(_ type: Int.Type) throws -> Int {
+    func decode(_ type: Int.Type) throws(JSONError) -> Int {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -211,7 +211,7 @@ extension JSONPrimitive {
         }
         return result
     }
-    func decode(_ type: Int8.Type) throws -> Int8 {
+    func decode(_ type: Int8.Type) throws(JSONError) -> Int8 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -221,7 +221,7 @@ extension JSONPrimitive {
         }
         return result
     }
-    func decode(_ type: Int16.Type) throws -> Int16 {
+    func decode(_ type: Int16.Type) throws(JSONError) -> Int16 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -231,7 +231,7 @@ extension JSONPrimitive {
         }
         return result
     }
-    func decode(_ type: Int32.Type) throws -> Int32 {
+    func decode(_ type: Int32.Type) throws(JSONError) -> Int32 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -241,19 +241,19 @@ extension JSONPrimitive {
         }
         return result
     }
-    func decode(_ type: Int64.Type) throws -> Int64 {
+    func decode(_ type: Int64.Type) throws(JSONError) -> Int64 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
         return try number[type]
     }
-    func decode(_ type: Int128.Type) throws -> Int128 {
+    func decode(_ type: Int128.Type) throws(JSONError) -> Int128 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
         return try number[type]
     }
-    func decode(_ type: UInt.Type) throws -> UInt {
+    func decode(_ type: UInt.Type) throws(JSONError) -> UInt {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -263,7 +263,7 @@ extension JSONPrimitive {
         }
         return result
     }
-    func decode(_ type: UInt8.Type) throws -> UInt8 {
+    func decode(_ type: UInt8.Type) throws(JSONError) -> UInt8 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -272,7 +272,7 @@ extension JSONPrimitive {
             fatalError("ERROR")
         }
         return result}
-    func decode(_ type: UInt16.Type) throws -> UInt16 {
+    func decode(_ type: UInt16.Type) throws(JSONError) -> UInt16 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -282,7 +282,7 @@ extension JSONPrimitive {
         }
         return result
     }
-    func decode(_ type: UInt32.Type) throws -> UInt32 {
+    func decode(_ type: UInt32.Type) throws(JSONError) -> UInt32 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
@@ -291,13 +291,13 @@ extension JSONPrimitive {
             fatalError("ERROR")
         }
         return result}
-    func decode(_ type: UInt64.Type) throws -> UInt64 {
+    func decode(_ type: UInt64.Type) throws(JSONError) -> UInt64 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
         return try number[type]
     }
-    func decode(_ type: UInt128.Type) throws -> UInt128 {
+    func decode(_ type: UInt128.Type) throws(JSONError) -> UInt128 {
         guard case .number(let number) = self else {
             fatalError("ERROR")
         }
