@@ -415,7 +415,7 @@ extension Platform {
     public static func strtod_clocale(_ nptr: UnsafePointer<UInt8>, _ endptr: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> Double {
         #if os(Windows)
         return _strtod_l(nptr, endptr, Self.cLocale)
-        #elseif NO_LOCALIZATION
+        #elseif NO_LOCALIZATION || os(OpenBSD)
         return strtod(nptr, endptr);
         #else
         return strtod_l(nptr, endptr, Self.cLocale)
@@ -425,7 +425,7 @@ extension Platform {
     public static func strtof_clocale(_ nptr: UnsafePointer<UInt8>, _ endptr: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> Float {
         #if os(Windows)
         return _strtof_l(nptr, endptr, Self.cLocale)
-        #elseif NO_LOCALIZATION
+        #elseif NO_LOCALIZATION || os(OpenBSD)
         return strtof(nptr, endptr);
         #else
         return strtof_l(nptr, endptr, Self.cLocale)
