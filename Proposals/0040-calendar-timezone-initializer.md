@@ -86,7 +86,7 @@ init(identifier: Identifier) // existing
 init(identifier: Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) // new
 ```
 
-When `timeZone`, `locale`, `firstWeekday`, or `minimumDaysInFirstWeek` are `nil`, which initializer does the compiler choose, as in the following code?
+When `timeZone`, `locale`, `firstWeekday`, and `minimumDaysInFirstWeek` are all `nil`, which initializer does the compiler choose, as in the following code?
 ```swift
 let calendar = Calendar(identifier: .gregorian)
 ```
