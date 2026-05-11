@@ -2055,6 +2055,20 @@ private struct URLTests {
         #expect(url.pathComponents == ["/", "a"])
     }
 
+    @Test func appendingEmptyQueryItemsLeavesURLUnchanged() throws {
+        // Appending an empty list of query items to a URL that has no existing query string should not introduce a stray "?" trailer.
+        let plain = try #require(URL(string: "https://www.example.com/path"))
+        #expect(plain.appending(queryItems: []).absoluteString == "https://www.example.com/path")
+
+        // If there are existing query items, an empty append must preserve them.
+        let withQuery = try #require(URL(string: "https://www.example.com/path?a=1"))
+        #expect(withQuery.appending(queryItems: []).absoluteString == "https://www.example.com/path?a=1")
+
+        // And of course the regular case must still work.
+        let appended = plain.appending(queryItems: [.init(name: "k", value: "v")])
+        #expect(appended.absoluteString == "https://www.example.com/path?k=v")
+    }
+
     @Test func lastPathComponent() throws {
         var url = URL(filePath: "/")
         #expect(url.lastPathComponent == "/")

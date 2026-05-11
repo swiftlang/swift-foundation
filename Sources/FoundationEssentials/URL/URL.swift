@@ -1713,6 +1713,9 @@ extension URL {
     /// - Parameter queryItems: A list of `URLQueryItem` to append to the receiver.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func appending(queryItems: [URLQueryItem]) -> URL {
+        // Appending nothing should not alter the URL — in particular, must not
+        // synthesize a trailing "?" when the receiver had no query.
+        guard !queryItems.isEmpty else { return self }
         guard var c = URLComponents(url: self, resolvingAgainstBaseURL: true) else { return self }
         var newItems = c.queryItems ?? []
         newItems.append(contentsOf: queryItems)
