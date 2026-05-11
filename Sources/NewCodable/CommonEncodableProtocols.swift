@@ -293,9 +293,11 @@ public protocol CommonEncoder: ~Copyable, ~Escapable {
     @_lifetime(self: copy self)
     mutating func encodeEnumCase(_ name: UTF8Span, associatedValueCount: Int, _ associatedValueClosure: (inout StructEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding)
         
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @_lifetime(self: copy self)
     mutating func encode(_ value: some Encodable) throws(CodingError.Encoding)
+#endif
     
     var codingPath: CodingPath { get }
 }
@@ -498,6 +500,7 @@ public extension CommonDictionaryEncoder where Self: ~Copyable & ~Escapable {
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @inline(__always)
     @_alwaysEmitIntoClient
@@ -505,6 +508,7 @@ public extension CommonDictionaryEncoder where Self: ~Copyable & ~Escapable {
     mutating func encode(key: String, value: some Encodable) throws(CodingError.Encoding) {
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
+#endif
 }
 
 /// A type that can encode a struct type based on "common" data types into a native format for
@@ -564,6 +568,7 @@ public extension CommonStructEncoder where Self: ~Copyable & ~Escapable {
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @inline(__always)
     @_alwaysEmitIntoClient
@@ -581,6 +586,7 @@ public extension CommonStructEncoder where Self: ~Copyable & ~Escapable {
     mutating func encode(key: String, value: some Encodable) throws(CodingError.Encoding) {
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
+#endif
 }
 
 // To avoid duplicate implementations for types that conform to both.
@@ -606,6 +612,7 @@ public extension CommonStructEncoder where Self: CommonDictionaryEncoder & ~Copy
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @inline(__always)
     @_alwaysEmitIntoClient
@@ -623,6 +630,7 @@ public extension CommonStructEncoder where Self: CommonDictionaryEncoder & ~Copy
     mutating func encode(key: String, value: some Encodable) throws(CodingError.Encoding) {
         try self.encode(key: key) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
+#endif
 }
 
 /// A type that can encode an array based on "common" data types into
@@ -649,6 +657,7 @@ extension CommonArrayEncoder where Self: ~Copyable & ~Escapable {
         try self.encodeElement { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
+#if !hasFeature(Embedded)
     /// Convenience: encode an Encodable value.
     @_disfavoredOverload
     @inline(__always)
@@ -657,6 +666,7 @@ extension CommonArrayEncoder where Self: ~Copyable & ~Escapable {
     public mutating func encode<T: Encodable>(_ value: T) throws(CodingError.Encoding) {
         try self.encodeElement { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
+#endif
 }
 
 
@@ -710,7 +720,9 @@ public extension CommonEncoder where Self: ~Copyable & ~Escapable {
     mutating func encodeEnumCase(_ name: UTF8Span) throws(CodingError.Encoding) { throw CodingError.unsupportedEncodingType("enum") }
     @_lifetime(self: copy self)
     mutating func encodeEnumCase(_ name: UTF8Span, associatedValueCount: Int, _ associatedValueClosure: (inout StructEncoder) throws(CodingError.Encoding) -> Void) throws(CodingError.Encoding) { throw CodingError.unsupportedEncodingType("enum") }
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @_lifetime(self: copy self)
     mutating func encode(_ value: some Encodable) throws(CodingError.Encoding) { throw CodingError.unsupportedEncodingType("Encodable") }
+#endif
 }

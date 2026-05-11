@@ -1169,6 +1169,7 @@ extension JSONParserDecoder {
         return try decodeAny(JSONElementVisitor())
     }
     
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @_lifetime(self: copy self)
     public mutating func decode<T: Decodable>(_ t: T.Type) throws(CodingError.Decoding) -> T {
@@ -1191,6 +1192,7 @@ extension JSONParserDecoder {
             fatalError("TODO: Convert/wrap error")
         }
     }
+#endif
 }
 
 extension JSONParserDecoder {

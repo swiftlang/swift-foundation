@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
 /// A type that provides context relevant for both the overall decoding operation, as well as the
 /// decoding of a specific value.
 public struct AdaptorDecodableValueContext<Value: AdaptableDecodableValue> {
@@ -547,4 +548,5 @@ extension AdaptorDecoder: SingleValueDecodingContainer {
     public func decode(_ type: UInt128.Type) throws -> UInt128 { try value.decode(type, context: context) }
     public func decode<T>(_ type: T.Type) throws -> T where T : Decodable { try value.decode(type, context: context) }
 }
+#endif
 

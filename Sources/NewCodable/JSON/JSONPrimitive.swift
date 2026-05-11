@@ -303,10 +303,12 @@ extension JSONPrimitive {
         }
         return try number[type]
     }
+#if !hasFeature(Embedded)
     func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
         let decoder = _JSONValueDecoder(self)
         return try type.init(from: decoder)
     }
+#endif
 }
 
 internal class _JSONValueDecoder {
@@ -316,6 +318,7 @@ internal class _JSONValueDecoder {
     }
 }
 
+#if !hasFeature(Embedded)
 extension _JSONValueDecoder: Decoder {
     // TODO: Need to pass down decoding strategies.
     // TODO: Coding Paths
@@ -1024,4 +1027,5 @@ extension JSONPrimitive: AdaptorEncodableValue {
     
     
 }
+#endif
 

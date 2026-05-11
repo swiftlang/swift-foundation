@@ -172,6 +172,7 @@ public protocol CommonDecoder: ~Escapable {
     @_lifetime(self: copy self)
     mutating func decodeBytes<V: DecodingBytesVisitor>(visitor: V) throws(CodingError.Decoding) -> V.DecodedValue
     
+#if !hasFeature(Embedded)
     /// Decodes a value conforming to the standard `Decodable` protocol using `decodeAny` and an `AdaptorDecoder`.
     ///
     /// This method provides a bridge between the new `CommonDecoder` protocol and the existing `Decodable` protocol
@@ -183,6 +184,7 @@ public protocol CommonDecoder: ~Escapable {
     @_disfavoredOverload
     @_lifetime(self: copy self)
     mutating func decode<D: Decodable>(_: D.Type) throws(CodingError.Decoding) -> D
+#endif
     
     var codingPath: CodingPath { get }
 }
@@ -321,6 +323,7 @@ public extension CommonArrayDecoder where Self: ~Escapable {
         }
     }
     
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @_alwaysEmitIntoClient
     @inline(__always)
@@ -340,6 +343,7 @@ public extension CommonArrayDecoder where Self: ~Escapable {
             try elementDecoder.decode(t)
         }
     }
+#endif
     
     var sizeHint: Int? { nil }
 }
@@ -506,6 +510,7 @@ public extension CommonDecodingVisitor where Self: ~Copyable & ~Escapable {
     }
 }
 
+#if !hasFeature(Embedded)
 public extension CommonDecoder where Self: ~Escapable {
     /// Default implementation for decoding standard `Decodable` types using `decodeAny` and `AdaptorDecoder`.
     ///
@@ -529,3 +534,4 @@ public extension CommonDecoder where Self: ~Escapable {
         }
     }
 }
+#endif

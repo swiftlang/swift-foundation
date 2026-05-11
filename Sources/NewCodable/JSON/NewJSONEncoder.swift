@@ -711,6 +711,7 @@ extension JSONDirectEncoder.DictionaryEncoder {
         try self.encode(field: field) { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
+#if !hasFeature(Embedded)
     /// Convenience: encode an Encodable value for a key.
     @_disfavoredOverload
     @inline(__always)
@@ -728,6 +729,7 @@ extension JSONDirectEncoder.DictionaryEncoder {
     public mutating func encode<T: Encodable>(key: String, value: T) throws(CodingError.Encoding) {
         try self.encode(key: key.utf8Span, checkForEscapes: true, value: value)
     }
+#endif
 }
 
 extension JSONDirectEncoder {
@@ -778,6 +780,7 @@ extension JSONDirectEncoder.ArrayEncoder {
         try self.encodeElement { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
     
+#if !hasFeature(Embedded)
     /// Convenience: encode an Encodable value.
         @_disfavoredOverload
     @inline(__always)
@@ -786,6 +789,7 @@ extension JSONDirectEncoder.ArrayEncoder {
     public mutating func encode<T: Encodable>(_ value: T) throws(CodingError.Encoding) {
         try self.encodeElement { encoder throws(CodingError.Encoding) in try encoder.encode(value) }
     }
+#endif
 }
 
 extension JSONDirectEncoder {
@@ -869,6 +873,7 @@ extension JSONDirectEncoder {
     }
 }
 
+#if !hasFeature(Embedded)
 // MARK: - Convenience Extension for Encodable support
 
 extension JSONDirectEncoder {
@@ -885,3 +890,4 @@ extension JSONDirectEncoder {
         }
     }
 }
+#endif

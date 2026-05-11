@@ -134,6 +134,7 @@ internal struct CommonPrimitiveVisitor: CommonDecodingVisitor {
     }
 }
 
+#if !hasFeature(Embedded)
 /// Conformance that allows decoding Decodable types in a CommonDecoder.
 extension CommonCodablePrimitive: AdaptableDecodableValue {
     typealias ArrayIterator = Array<CommonCodablePrimitive>.Iterator
@@ -508,3 +509,4 @@ extension CommonCodablePrimitive: AdaptableDecodableValue {
         throw CodingError.dataCorrupted(debugDescription: "Expected array but found \(self)")
     }
 }
+#endif
