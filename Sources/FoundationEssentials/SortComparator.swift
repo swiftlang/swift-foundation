@@ -258,6 +258,12 @@ extension Sequence {
         S.Element == Comparator,
         Element == Comparator.Compared
     {
+        // Materialize the comparator sequence into an array: `compare(_:_:)` is
+        // invoked once per pair of elements, and `Sequence` does not promise
+        // non-destructive multi-pass iteration. A single-use sequence (e.g. one
+        // backed by `AnyIterator`) would otherwise be exhausted after the first
+        // comparison and silently produce an unsorted result.
+        let comparators = Array(comparators)
         return self.sorted {
             comparators.compare($0, $1) == .orderedAscending
         }
