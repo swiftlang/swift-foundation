@@ -118,20 +118,20 @@ public struct NewJSONEncoder {
         }
     }
     
-    // TODO: Replace with a more desirable span-based interface 
-    public func encode<T: ~Copyable>(_ value: borrowing some JSONEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws -> T) throws -> T {
+    // TODO: Replace with a more desirable span-based interface
+    public func encode<T: ~Copyable>(_ value: borrowing some JSONEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws(CodingError.Encoding) -> T) throws(CodingError.Encoding) -> T {
         let bytes: GrowableEncodingBytes = try self.encode(value)
         return try resultSpanClosure(bytes.span.bytes)
     }
     
-    public func encode<T: ~Copyable>(_ value: borrowing some JSONEncodable & CommonEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws -> T) throws -> T {
-        @_transparent func asJSON<TAsJSON: JSONEncodable & ~Copyable>(_ value: borrowing TAsJSON) throws -> T {
+    public func encode<T: ~Copyable>(_ value: borrowing some JSONEncodable & CommonEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws(CodingError.Encoding) -> T) throws(CodingError.Encoding) -> T {
+        @_transparent func asJSON<TAsJSON: JSONEncodable & ~Copyable>(_ value: borrowing TAsJSON) throws(CodingError.Encoding) -> T {
             try self.encode(value, resultSpanClosure)
         }
         return try asJSON(value)
     }
     
-    public func encode<T: ~Copyable>(_ value: borrowing some CommonEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws -> T) throws -> T {
+    public func encode<T: ~Copyable>(_ value: borrowing some CommonEncodable & ~Copyable, _ resultSpanClosure: (RawSpan) throws(CodingError.Encoding) -> T) throws(CodingError.Encoding) -> T {
         let bytes: GrowableEncodingBytes = try self.encode(value)
         return try resultSpanClosure(bytes.span.bytes)
     }
