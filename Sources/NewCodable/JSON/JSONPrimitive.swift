@@ -53,13 +53,10 @@ public enum JSONPrimitive {
                 }
             }
         }
-        public subscript<T: BinaryFloatingPoint>(_ : T.Type) -> T {
+        public subscript<T: BinaryFloatingPoint & LosslessStringConvertible>(_ : T.Type) -> T {
             get throws(JSONError) {
-                // TODO: Implement better.
-                if T.self == Double.self {
-                    return Double(string)! as! T
-                } else if T.self == Float.self {
-                    return Float(string)! as! T
+                if let value = T(string) {
+                    return value
                 }
                 fatalError()
             }
