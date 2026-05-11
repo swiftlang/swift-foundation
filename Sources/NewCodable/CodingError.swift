@@ -136,8 +136,8 @@ extension CodingError {
         sourceLocation: CodingError._Decoding.SourceLocation? = nil
     ) -> _Decoding {
         typeMismatch(
-            expectedTypeDescription: String(describing: Expected.self),
-            actualValueDescription: String(describing: actualValue),
+            expectedTypeDescription: "\(Expected.self)",
+            actualValueDescription: "\(actualValue)",
             at: codingPath,
             sourceLocation: sourceLocation)
     }
@@ -211,7 +211,7 @@ extension CodingError {
         sourceLocation: CodingError._Decoding.SourceLocation? = nil
     ) -> _Decoding {
         valueNotFound(
-            expectedTypeDescription: String(describing: Expected.self),
+            expectedTypeDescription: "\(Expected.self)",
             at: codingPath,
             debugDescription: debugDescription,
             sourceLocation: sourceLocation
