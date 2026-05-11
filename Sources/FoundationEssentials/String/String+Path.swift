@@ -267,20 +267,17 @@ extension String {
 
     private func _removingDotSegments(useRFC1808: Bool = false) -> String {
         guard !isEmpty else { return "" }
-        var mut = self
-        return mut.withUTF8 { buffer in
-            String(unsafeUninitializedCapacity: buffer.count) { resolvedBuffer in
-                _ = resolvedBuffer.initialize(fromContentsOf: buffer)
-                let length = resolveDotSegmentsInPlace(buffer: resolvedBuffer, useRFC1808: useRFC1808)
-                if !useRFC1808 && length == 1 && resolvedBuffer[0] == ._dot {
-                    // resolveDotSegmentsInPlace returns "." instead of "" for
-                    // compatibility with CFURL behavior. This Swift function
-                    // has historically returned "" instead, so maintain that
-                    // behavior here.
-                    return 0
-                }
-                return length
+        return String(unsafeUninitializedCapacity: utf8.count) { resolvedBuffer in
+            _ = resolvedBuffer.initialize(fromContentsOf: utf8)
+            let length = resolveDotSegmentsInPlace(buffer: resolvedBuffer, useRFC1808: useRFC1808)
+            if !useRFC1808 && length == 1 && resolvedBuffer[0] == ._dot {
+                // resolveDotSegmentsInPlace returns "." instead of "" for
+                // compatibility with CFURL behavior. This Swift function
+                // has historically returned "" instead, so maintain that
+                // behavior here.
+                return 0
             }
+            return length
         }
     }
 
