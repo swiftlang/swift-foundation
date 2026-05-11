@@ -12,16 +12,6 @@
 
 #if canImport(os)
 internal import os
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(CRT)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
 #endif
 
 internal import Synchronization
