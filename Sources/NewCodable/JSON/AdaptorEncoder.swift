@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 
+#if !hasFeature(Embedded)
 // TBD?
 public struct AdaptorEncodableValueContext<Value: AdaptorEncodableValue> {
     
@@ -803,3 +804,4 @@ extension AdaptorEncodableValue {
         return .init(array: array.map { .value($0) })
     }
 }
+#endif

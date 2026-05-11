@@ -262,9 +262,11 @@ public protocol JSONDecoderProtocol: ~Escapable {
     @_lifetime(self: copy self)
     mutating func decode<T: CommonDecodable & ~Copyable>(_ t: T.Type) throws(CodingError.Decoding) -> T
     
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     @_lifetime(self: copy self)
     mutating func decode<T: Decodable>(_ t: T.Type) throws(CodingError.Decoding) -> T
+#endif
     
     var codingPath: CodingPath { get }
 }

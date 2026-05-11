@@ -15,6 +15,7 @@
 // Shared Key Type
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
 @usableFromInline
 internal enum _CodingKey : CodingKey {
     case string(String)
@@ -68,6 +69,7 @@ internal enum _CodingKey : CodingKey {
 
     internal static let `super` = _CodingKey.string("super")
 }
+#endif
 
 
 //===----------------------------------------------------------------------===//

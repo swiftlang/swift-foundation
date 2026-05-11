@@ -593,6 +593,7 @@ extension JSONPrimitiveDecoder {
         return try T.decode(from: &self)
     }
     
+#if !hasFeature(Embedded)
     @_disfavoredOverload
     public mutating func decode<T: Decodable>(_ t: T.Type) throws(CodingError.Decoding) -> T {
         // JSONPrimitiveDecoder already has a JSONPrimitive, so we can directly create an AdaptorDecoder
@@ -609,6 +610,7 @@ extension JSONPrimitiveDecoder {
             return try T(from: decoder)
         } catch { fatalError("TODO: Wrap/convert error" ) }
     }
+#endif
 }
 
 extension JSONPrimitiveDecoder: CommonDecoder {

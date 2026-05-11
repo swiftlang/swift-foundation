@@ -815,6 +815,7 @@ extension CodingPath.Component {
         }
     }
 }
+#if !hasFeature(Embedded)
 extension CodingPath {
     /// Converts the coding path components to an array of `CodingKey` values
     /// for use with traditional `Decoder` APIs.
@@ -863,6 +864,7 @@ private struct _IntCodingKey: CodingKey {
         self._intValue = intValue
     }
 }
+#endif
 
 protocol JSONByteIterator: ~Copyable, ~Escapable {
     mutating func nextByte() throws(JSONError) -> UInt8?
