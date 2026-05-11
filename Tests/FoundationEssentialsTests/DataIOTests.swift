@@ -112,6 +112,29 @@ private final class DataIOTests {
         // Make sure clearing the error condition allows the write to succeed
         try data.write(to: url, options: [.withoutOverwriting])
     }
+
+#if !os(WASI) // `.atomic` is unavailable on WASI
+    @Test func writeAtomicWithoutOverwriting() throws {
+        let data = Data("hello".utf8)
+        try? FileManager.default.removeItem(at: url)
+
+        // Absent destination: write succeeds atomically.
+        try data.write(to: url, options: [.atomic, .withoutOverwriting])
+        #expect(try Data(contentsOf: url) == data)
+
+        // Existing destination: write fails with fileWriteFileExists, original is preserved.
+        let original = try Data(contentsOf: url)
+        let differentData = Data("world".utf8)
+
+        #expect {
+            try differentData.write(to: url, options: [.atomic, .withoutOverwriting])
+        } throws: {
+            ($0 as? CocoaError)?.code == .fileWriteFileExists
+        }
+
+        #expect(try Data(contentsOf: url) == original)
+    }
+#endif
     
 #if FOUNDATION_FRAMEWORK
     // Progress is currently stubbed out for FoundationPreview
