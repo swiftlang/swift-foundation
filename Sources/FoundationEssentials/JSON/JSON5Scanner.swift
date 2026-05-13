@@ -12,8 +12,17 @@
 
 #if canImport(Darwin)
 import Darwin
+#elseif canImport(Android)
+@preconcurrency import Android
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif os(Windows)
+import CRT
+import WinSDK
+#elseif os(WASI)
+@preconcurrency import WASILibc
 #elseif canImport(string_h)
 import string_h
 #endif
