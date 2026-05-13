@@ -214,6 +214,8 @@ extension UInt8 {
     }
 }
 
+#if !NO_JSON_FOUNDATION_SPECIALIZATION
+
 //===----------------------------------------------------------------------===//
 // Date parsing conveniences
 //===----------------------------------------------------------------------===//
@@ -338,6 +340,8 @@ internal extension Date {
         return (y, m, d)
     }
 }
+
+#endif
 
 //===----------------------------------------------------------------------===//
 // Integer parsing conveniences
