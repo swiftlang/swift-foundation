@@ -636,9 +636,10 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputRawSpan` covering uninitialized memory with
     ///         space for the specified number of additional bytes.
+    // TODO: Make public pending SE-0527 naming discussion
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
-    public mutating func append<E: Error>(
+    internal mutating func append<E: Error>(
         addingRawCapacity uninitializedCount: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
@@ -665,9 +666,10 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputSpan` covering uninitialized memory with
     ///         space for the specified number of additional elements.
+    // TODO: Make public pending SE-0527 naming discussion
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
-    public mutating func append<E: Error>(
+    internal mutating func append<E: Error>(
         addingCapacity uninitializedCount: Int,
         initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {

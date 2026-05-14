@@ -875,13 +875,13 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         let newPath = if URL.compatibility1 && _parseInfo.path == "/../" {
             ""
         } else {
-            String(_parseInfo.path).removingDotSegments
+            String(_parseInfo.path)
         }
         #else
-        let newPath = String(_parseInfo.path).removingDotSegments
+        let newPath = String(_parseInfo.path)
         #endif
         var components = URLComponents(parseInfo: _parseInfo)
-        components.percentEncodedPath = newPath.removingDotSegments
+        components.percentEncodedPath = newPath.removingDotSegments(useRFC1808: true)
         if components.scheme != nil {
             // Standardize scheme:// to scheme:///
             if newPath.isEmpty && _parseInfo.netLocationRange?.isEmpty ?? false {

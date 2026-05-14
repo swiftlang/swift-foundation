@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 
 import PackageDescription
 
@@ -6,7 +6,7 @@ enum UsePackage {
     /// Use a known package hash downloaded from GitHub. Set with env var `USE_PACKAGE`
     case useGitHubPackage
 
-    /// Use a local package, rooted at `String`. For example ".." to back up one directory from the Benchmark package. This is useful when testing local changes. 
+    /// Use a local package, rooted at `String`. For example ".." to back up one directory from the Benchmark package. This is useful when testing local changes.
     /// Set with env var `SWIFTCI_USE_LOCAL_DEPS=<path to root>`, for example `SWIFTCI_USE_LOCAL_DEPS=..`
     case useLocalPackage(String)
 
@@ -15,7 +15,7 @@ enum UsePackage {
 
     var description: String {
         switch self {
-            case .useGitHubPackage: 
+            case .useGitHubPackage:
                 return "Using GitHub package"
             case .useLocalPackage(let root):
                 #if os(macOS)
@@ -51,7 +51,11 @@ print("swift-foundation benchmarks: \(usePackage.description)")
 
 // ------------
 
-var packageDependency : [Package.Dependency] = [.package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1")]
+var packageDependency : [Package.Dependency] = [
+    Context.environment["BENCHMARK_DISABLE_JEMALLOC"] != nil
+        ? .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1", traits: [])
+        : .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1")
+]
 var targetDependency : [Target.Dependency] = [.product(name: "Benchmark", package: "package-benchmark")]
 var i18nTargetDependencies : [Target.Dependency] = []
 var swiftSettings : [SwiftSetting] = [.unsafeFlags(["-Rmodule-loading"]), .enableUpcomingFeature("MemberImportVisibility")]
@@ -167,7 +171,7 @@ let package = Package(
             name: "JSONBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/JSON",
-            resources: [.copy("Resources")],
+            resources: [.process("Resources")],
             swiftSettings: swiftSettings,
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")

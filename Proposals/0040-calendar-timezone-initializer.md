@@ -1,9 +1,9 @@
 # Calendar initializer with time zone, locale, first weekday, and minimum days in first week
 
-* Proposal: [SF-NNNN](NNNN-calendar-timezone-initializer.md)
+* Proposal: [SF-0040](0040-calendar-timezone-initializer.md)
 * Authors: [Kiel Gillard](https://github.com/kielgillard)
-* Review Manager: TBD
-* Status: **Awaiting review**
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Review: 2026-05-08...2026-05-15**
 * Implementation: [swiftlang/swift-foundation#1923](https://github.com/swiftlang/swift-foundation/pull/1923)
 * Review: ([discussion](https://forums.swift.org/t/expressively-initialising-calendars-for-specific-time-zones), [pitch](https://forums.swift.org))
 
@@ -86,7 +86,7 @@ init(identifier: Identifier) // existing
 init(identifier: Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) // new
 ```
 
-When `timeZone`, `locale`, `firstWeekday`, or `minimumDaysInFirstWeek` are `nil`, which initializer does the compiler choose, as in the following code?
+When `timeZone`, `locale`, `firstWeekday`, and `minimumDaysInFirstWeek` are all `nil`, which initializer does the compiler choose, as in the following code?
 ```swift
 let calendar = Calendar(identifier: .gregorian)
 ```
