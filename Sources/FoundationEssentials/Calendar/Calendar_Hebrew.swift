@@ -556,9 +556,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Weekend queries
 
-    // Matches _CalendarGregorian.isDateInWeekend exactly. Uses locale's weekendRange
-    // if set, else defaults to Saturday (7) through Sunday (1) per CLDR 001 region.
-    // Note: ICU's Hebrew calendar (with locale=nil) also uses this Sat+Sun default.
+    // TODO: Factor out into shared utility; identical to _CalendarGregorian.isDateInWeekend.
     func isDateInWeekend(_ date: Date) -> Bool {
         let weekendRange: WeekendRange
         if let localeWeekendRange = locale?.weekendRange {
@@ -614,15 +612,8 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         return (rd, secondsInDay)
     }
 
-    /// Given a fixed-day RD + local-seconds-within-day, build a UTC Date after
+    /// Build a UTC Date from a fixed-day RD + local-seconds-within-day,
     /// subtracting the TimeZone offset at that local instant.
-    /// Internal (not private) so tests can verify policy parity against `_CalendarGregorian`.
-    ///
-    /// Note: `skippedTimePolicy` is accepted for API compatibility but **not passed
-    /// through** to `TimeZone.rawAndDaylightSavingTimeOffset` — this exactly matches
-    /// `_CalendarGregorian.date(from:inTimeZone:dstRepeatedTimePolicy:dstSkippedTimePolicy:)`,
-    /// which also drops the skipped policy at the TZ-offset query boundary.
-    /// Verified by `utcDate_allPolicyCombinations_matchGregorian`.
     internal func utcDate(fromRataDie rd: Int64, secondsInDay: Double, in timeZone: TimeZone,
                         repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy,
                         skippedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> Date {
@@ -827,14 +818,9 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
         // Application order (matching ICU / _CalendarGregorian):
-        //   1. era (not used — Hebrew has 1 era)
-        //   2. year, yearForWeekOfYear, month   — unpack, adjust, repack.
-        //   3. weeks + day-level components     — accumulate as days, apply via offset-delta.
-        //   4. time-of-day                      — direct TimeInterval arithmetic.
-        //
-        // `wrappingComponents: true`: each component wraps within its containing unit.
-        // Currently only single-field `.day` wrap is handled (wraps within month);
-        // other wrap paths fall through to carry-over (imperfect).
+        //   1. year, yearForWeekOfYear, month
+        //   2. weeks + day-level components (as days, via offset-delta)
+        //   3. time-of-day (direct TimeInterval arithmetic)
 
         var result = date
 
@@ -1212,11 +1198,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
         let delta: Int64
         if currentWeekday == targetWeekday {
-            // Same weekday: always advance by a full week. We deliberately don't
-            // try to match same-day-with-later-time-of-day — ICU's behavior at
-            // that boundary varies by call site (e.g., `nextWeekend(direction:.backward)`
-            // post-processes to find the prior weekend, not today midnight).
-            // Stepping a full week is the safe, ICU-matching choice.
+            // Same weekday: advance by a full week.
             delta = forward ? 7 : -7
         } else if forward {
             let raw = (targetWeekday - currentWeekday + 7) % 7   // 1..6
@@ -1231,10 +1213,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
-    /// Fast path for `{month, weekday, weekdayOrdinal, h?, m?, s?, ns?}` —
-    /// "Nth weekday of month" (e.g. 4th Thursday of November / last Friday of Adar).
-    /// Pure O(1) Hebrew arithmetic per candidate year, with year iteration to honor
-    /// the strict-after-input requirement, leap-only Adar I, and out-of-range ordinals.
+    /// Fast path for `{month, weekday, weekdayOrdinal}` — "Nth weekday of month".
     private func nextMonthWeekdayOrdinalMatch(
         rd: Int64, currentSecsInDay: Double, currentYear: Int32,
         targetMonth: Int, targetWeekday: Int, targetWdOrd: Int,
@@ -1289,14 +1268,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
-        // Proper multi-unit subtraction, matching `_CalendarGregorian`'s algorithm:
-        //   1. Order requested components largest-to-smallest.
-        //   2. For each component, iteratively add it to `curr` until one more step
-        //      would overshoot `end`. Record the count, advance `curr`.
-        //   3. Recurse with the smaller components for the remainder.
-        //
-        // For time components (.hour, .minute, .second, .nanosecond), use direct
-        // TimeInterval arithmetic instead of iterative add (fast path).
         var result = DateComponents()
         var curr = start
 
@@ -1407,19 +1378,8 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 /// Low-level arithmetic for the Hebrew calendar.
 ///
 /// Algorithms from "Calendrical Calculations" by Reingold & Dershowitz (4th ed., 2018).
-///
-/// All algorithms work in biblical month numbering (Nisan = 1, Tishri = 7).
-/// `_CalendarHebrew`'s public API exposes civil ordering (Tishri = 1), so
-/// we convert at the boundary via `biblicalToCivil` / `civilToBiblical`.
-///
-/// Fixed-day numbers use the Rata Die convention: R.D. 1 = midnight at the
-/// start of proleptic Gregorian January 1, year 1. All arithmetic is `Int64`
-/// to avoid overflow at extreme years (year ≈ ±5.88 M in Int32 terms).
-///
-/// Three floor-division fixes are preserved:
-///   1. `hebrewFromFixed` year approximation: uses `floorDiv` (else one year high at extreme negatives).
-///   2. `calendarElapsedDays` returns `Int64` (else Int32 overflow at year ≈ ±5.88 M).
-///   3. `calendarElapsedDays` internal divisions use `floorDiv` (else ~29-day skew at very negative years).
+/// All algorithms work in biblical month numbering (Nisan = 1, Tishri = 7);
+/// civil ordering (Tishri = 1) is converted at the boundary.
 internal enum HebrewArithmetic {
 
     /// Hebrew epoch: Tishri 1 of year 1 AM = R.D. -1,373,427
@@ -1471,20 +1431,8 @@ internal enum HebrewArithmetic {
 
     // MARK: Elapsed Days (Molad Arithmetic)
 
-    /// Days elapsed from the Sunday noon before the epoch to the start of the
-    /// given Hebrew year, with **all four dehiyot** applied inline:
-    ///   - **Lo ADU Rosh** — RH may not fall on Sun/Wed/Fri.
-    ///   - **Molad Zaken** — molad at noon or later → +1 (subsumed by Lo ADU's wd shift).
-    ///   - **Gatarad** — common year, molad on Tue at/after 9h+204p AM → +2 (prevents 356d).
-    ///   - **Betutakpat** — year after a leap, molad on Mon at/after 15h+589p AM → +1 (prevents 382d).
-    ///
-    /// Matches `swift-foundation-icu/icuSources/i18n/hebrwcal.cpp` `startOfYear`.
-    /// IMPORTANT: that file diverges from upstream icu4c — the Gatarad/Betutakpat
-    /// checks are a separate `if` block AFTER Lo ADU (not else-if), so Lo ADU's
-    /// wd shift can chain into Betutakpat. e.g. Hebrew year 5462 raw wd=Sun → Lo
-    /// ADU shifts to Mon → Betutakpat (since 5461 was leap and frac > threshold)
-    /// shifts to Tue. RH 5462 = 1701-10-04 (Tue) instead of 1701-10-03 (Mon).
-    /// The previous R&D post-hoc `yearLengthCorrection` couldn't model this chain.
+    /// Days elapsed from the epoch to the start of the given Hebrew year,
+    /// with all four dehiyot (Lo ADU, Molad Zaken, Gatarad, Betutakpat) applied inline.
     static func calendarElapsedDays(_ year: Int32) -> Int64 {
         let monthsElapsed = floorDiv(235 &* Int64(year) &- 234, 19)
         let partsElapsed = 12084 &+ 13753 &* monthsElapsed
@@ -1502,9 +1450,7 @@ internal enum HebrewArithmetic {
             wd = days % 7
             if wd < 0 { wd &+= 7 }
         }
-        // NOTE: separate `if` (not else-if) — matches swift-foundation-icu, not
-        // upstream icu4c. After Lo ADU shifts a Sunday RH to Monday, Betutakpat
-        // can still fire.
+        // Separate `if` (not else-if) — Lo ADU's shift can chain into Betutakpat.
         if wd == 1 && frac > 15 &* 1080 &+ 204 && !isLeapYear(year) {
             // Gatarad: common year, molad after 9:11:20.6 AM Tuesday → prevent 356-day year.
             days &+= 2
@@ -1522,21 +1468,10 @@ internal enum HebrewArithmetic {
 
     // MARK: YearData (cached per conversion)
 
-    /// Single-slot YearData cache. Hit rate is high in tight loops over the
-    /// same year — primitives like `dateInterval(of:)`, `dateComponents`, and
-    /// `date(byAdding:)` typically touch only one or two Hebrew years per
-    /// invocation, and downstream `lastDayOfMonth` / `daysInCivilMonth` calls
-    /// reuse the same year. Save 2× `calendarElapsedDays` per cache hit.
-    ///
-    /// Deliberately NOT consulted inside the year-approximation loop in
-    /// `hebrewFromFixed` — that loop probes year+1, year+2 for ~1–2 iterations
-    /// and would thrash a single-slot cache. We populate the cache only at
-    /// the END of `hebrewFromFixed` (and at the start of `fixedFromHebrew`),
-    /// which captures the steady-state year for downstream calls to reuse.
+    /// Single-slot YearData cache.
     private static let _yearDataCache = Mutex<YearData?>(nil)
 
-    /// Cached `YearData(year:)`. Use for any call site that would otherwise
-    /// build `YearData` from scratch in a hot path.
+    /// Returns cached `YearData` if available, otherwise computes and caches it.
     internal static func yearData(_ year: Int32) -> YearData {
         if let yd = _yearDataCache.withLock({ $0 }), yd.year == year {
             return yd
@@ -1546,9 +1481,7 @@ internal enum HebrewArithmetic {
         return fresh
     }
 
-    /// Year-level precomputed metadata. Computing this once per `fromRataDie` /
-    /// `toRataDie` call avoids the redundant `newYear` / `calendarElapsedDays`
-    /// invocations that a naive implementation would incur inside month-walk loops.
+    /// Precomputed year-level metadata cached to avoid repeated molad arithmetic.
     struct YearData {
         let year: Int32
         let newYear: Int64
@@ -1646,12 +1579,7 @@ internal enum HebrewArithmetic {
     }
 
     static func hebrewFromFixed(_ date: Int64) -> (year: Int32, month: UInt8, day: UInt8) {
-        // Approximate year using average Hebrew year length ≈ 365.2468.
-        //
-        // Uses floor division: the approximation must err LOW, never high.
-        // The forward-only `while newYear(year+1) <= date` loop can't backtrack,
-        // so a high-skewed `approx` at extreme negative RDs would leave `year`
-        // pinned past the true value and produce a negative day-of-year remainder.
+        // Approximate year using average Hebrew year length. Must err low.
         let dayDelta = date &- epoch
         let approx = Int32(1 &+ floorDiv(dayDelta &* 98496, 35975351))
 
