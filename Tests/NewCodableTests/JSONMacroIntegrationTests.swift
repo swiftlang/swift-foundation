@@ -450,3 +450,502 @@ struct CombinedMacroIntegrationTests {
         #expect(jsonString == commonString)
     }
 }
+
+// MARK: - Naming Convention Integration Tests
+
+// Each struct below uses the same comprehensive set of field names to exercise
+// word splitting edge cases (single char, single word, all-caps, numerics,
+// leading underscores, diacritics, emoji) across every naming strategy.
+
+@JSONCodable(fieldNaming: .snake_case)
+struct SnakeCaseNamingChecks: Equatable {
+    let a: Int
+    let single: Int
+    let ALLCAPS: Int
+    let ALL_CAPS: Int
+    let userName: String
+    let parseHTTPResponse: Int
+    let one2Three: Int
+    let one2three: Int
+    let camelCaseField: String
+    let _myField: Int
+    let __doubleUnderscore: Int
+    let snake_ćase: String
+    let _one_two_three_: Int
+    let caféName: String
+    let data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .SCREAMING_SNAKE_CASE)
+struct ScreamingSnakeCaseNamingChecks: Equatable {
+    let a: Int
+    let single: Int
+    let ALLCAPS: Int
+    let ALL_CAPS: Int
+    let userName: String
+    let parseHTTPResponse: Int
+    let one2Three: Int
+    let one2three: Int
+    let camelCaseField: String
+    let _myField: Int
+    let __doubleUnderscore: Int
+    let snake_ćase: String
+    let _one_two_three_: Int
+    let caféName: String
+    let data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .kebab_case)
+struct KebabCaseNamingChecks: Equatable {
+    let a: Int
+    let single: Int
+    let ALLCAPS: Int
+    let ALL_CAPS: Int
+    let userName: String
+    let parseHTTPResponse: Int
+    let one2Three: Int
+    let one2three: Int
+    let camelCaseField: String
+    let _myField: Int
+    let __doubleUnderscore: Int
+    let snake_ćase: String
+    let _one_two_three_: Int
+    let caféName: String
+    let data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .SCREAMING_KEBAB_CASE)
+struct ScreamingKebabCaseNamingChecks: Equatable {
+    let a: Int
+    let single: Int
+    let ALLCAPS: Int
+    let ALL_CAPS: Int
+    let userName: String
+    let parseHTTPResponse: Int
+    let one2Three: Int
+    let one2three: Int
+    let camelCaseField: String
+    let _myField: Int
+    let __doubleUnderscore: Int
+    let snake_ćase: String
+    let _one_two_three_: Int
+    let caféName: String
+    let data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .PascalCase)
+struct PascalCaseNamingChecks: Equatable {
+    let a: Int
+    let single: Int
+    let ALLCAPS: Int
+    let ALL_CAPS: Int
+    let userName: String
+    let parseHTTPResponse: Int
+    let one2Three: Int
+    let one2three: Int
+    let camelCaseField: String
+    let _myField: Int
+    let __doubleUnderscore: Int
+    let snake_ćase: String
+    let _one_two_three_: Int
+    let caféName: String
+    let data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .camelCase)
+struct CamelCaseNamingChecks: Equatable {
+    let A: Int
+    let Single: Int
+    let ALLCAPS: Int
+    let ALL_CAPS: Int
+    let UserName: String
+    let ParseHTTPResponse: Int
+    let One2Three: Int
+    let One2three: Int
+    let CamelCaseField: String
+    let _MyField: Int
+    let __DoubleUnderscore: Int
+    let Snake_Ćase: String
+    let _One_Two_Three_: Int
+    let CaféName: String
+    let Data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .lowercase)
+struct LowercaseNamingChecks: Equatable {
+    let a: Int
+    let single: Int
+    let ALLCAPS: Int
+    let userName: String
+    let parseHTTPResponse: Int
+    let one2Three: Int
+    let camelCaseField: String
+    let _myField: Int
+    let __doubleUnderscore: Int
+    let snake_ćase: String
+    let _one_two_three_: Int
+    let caféName: String
+    let data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .UPPERCASE)
+struct UppercaseNamingChecks: Equatable {
+    let a: Int
+    let single: Int
+    let ALLCAPS: Int
+    let userName: String
+    let parseHTTPResponse: Int
+    let one2Three: Int
+    let camelCaseField: String
+    let _myField: Int
+    let __doubleUnderscore: Int
+    let snake_ćase: String
+    let _one_two_three_: Int
+    let caféName: String
+    let data📦Size: Int
+}
+
+@JSONCodable(fieldNaming: .snake_case)
+struct NamingWithCodingKeyOverride: Equatable {
+    let userName: String
+    @CodingKey("custom_email") let emailAddress: String
+}
+
+@JSONCodable(caseNaming: .snake_case)
+enum SnakeCaseEnum: Equatable {
+    case myCase
+    case anotherLongCase
+}
+
+@JSONCodable(caseNaming: .SCREAMING_SNAKE_CASE)
+enum ScreamingSnakeCaseEnum: Equatable {
+    case myCase
+    case anotherLongCase
+}
+
+@JSONCodable(caseNaming: .kebab_case)
+enum KebabCaseEnum: Equatable {
+    case myCase
+    case anotherLongCase
+}
+
+@JSONCodable(caseNaming: .snake_case, associatedValueLabelNaming: .snake_case)
+enum SnakeCaseEnumWithAssocValues: Equatable {
+    case userProfile(firstName: String, lastName: String)
+    case errorCode(Int)
+}
+
+@JSONCodable(caseNaming: .snake_case)
+enum SnakeCaseEnumWithCodingKeyOverride: Equatable {
+    @CodingKey("custom_case") case myCase
+    case anotherLongCase
+}
+
+@Suite("Naming Convention Integration")
+struct NamingConventionIntegrationTests {
+
+    // MARK: - Struct fieldNaming tests
+
+    @Test func structSnakeCase() throws {
+        let original = SnakeCaseNamingChecks(
+            a: 1, single: 2, ALLCAPS: 3, ALL_CAPS: 9, userName: "alice",
+            parseHTTPResponse: 200, one2Three: 4, one2three: 5,
+            camelCaseField: "x", _myField: 6, __doubleUnderscore: 7,
+            snake_ćase: "ć", _one_two_three_: 10, caféName: "Café", data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""a":1"#))
+        #expect(json.contains(#""single":2"#))
+        #expect(json.contains(#""allcaps":3"#))
+        #expect(json.contains(#""all_caps":9"#))
+        #expect(json.contains(#""user_name":"alice""#))
+        #expect(json.contains(#""parse_http_response":200"#))
+        #expect(json.contains(#""one2_three":4"#))
+        #expect(json.contains(#""one2three":5"#))
+        #expect(json.contains(#""camel_case_field":"x""#))
+        #expect(json.contains(#""_my_field":6"#))
+        #expect(json.contains(#""__double_underscore":7"#))
+        #expect(json.contains(#""snake_ćase":"ć""#))
+        #expect(json.contains(#""_one_two_three_":10"#))
+        #expect(json.contains(#""café_name":"Café""#))
+        #expect(json.contains(#""data📦_size":8"#))
+        let decoded = try NewJSONDecoder().decode(SnakeCaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func structScreamingSnakeCase() throws {
+        let original = ScreamingSnakeCaseNamingChecks(
+            a: 1, single: 2, ALLCAPS: 3, ALL_CAPS: 9, userName: "alice",
+            parseHTTPResponse: 200, one2Three: 4, one2three: 5,
+            camelCaseField: "x", _myField: 6, __doubleUnderscore: 7,
+            snake_ćase: "ć", _one_two_three_: 10, caféName: "Café", data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""A":1"#))
+        #expect(json.contains(#""SINGLE":2"#))
+        #expect(json.contains(#""ALLCAPS":3"#))
+        #expect(json.contains(#""ALL_CAPS":9"#))
+        #expect(json.contains(#""USER_NAME":"alice""#))
+        #expect(json.contains(#""PARSE_HTTP_RESPONSE":200"#))
+        #expect(json.contains(#""ONE2_THREE":4"#))
+        #expect(json.contains(#""ONE2THREE":5"#))
+        #expect(json.contains(#""CAMEL_CASE_FIELD":"x""#))
+        #expect(json.contains(#""_MY_FIELD":6"#))
+        #expect(json.contains(#""__DOUBLE_UNDERSCORE":7"#))
+        #expect(json.contains(#""SNAKE_ĆASE":"ć""#))
+        #expect(json.contains(#""_ONE_TWO_THREE_":10"#))
+        #expect(json.contains(#""CAFÉ_NAME":"Café""#))
+        #expect(json.contains(#""DATA📦_SIZE":8"#))
+        let decoded = try NewJSONDecoder().decode(ScreamingSnakeCaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func structKebabCase() throws {
+        let original = KebabCaseNamingChecks(
+            a: 1, single: 2, ALLCAPS: 3, ALL_CAPS: 9, userName: "alice",
+            parseHTTPResponse: 200, one2Three: 4, one2three: 5,
+            camelCaseField: "x", _myField: 6, __doubleUnderscore: 7,
+            snake_ćase: "ć", _one_two_three_: 10, caféName: "Café", data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""a":1"#))
+        #expect(json.contains(#""single":2"#))
+        #expect(json.contains(#""allcaps":3"#))
+        #expect(json.contains(#""all-caps":9"#))
+        #expect(json.contains(#""user-name":"alice""#))
+        #expect(json.contains(#""parse-http-response":200"#))
+        #expect(json.contains(#""one2-three":4"#))
+        #expect(json.contains(#""one2three":5"#))
+        #expect(json.contains(#""camel-case-field":"x""#))
+        #expect(json.contains(#""_my-field":6"#))
+        #expect(json.contains(#""__double-underscore":7"#))
+        #expect(json.contains(#""snake-ćase":"ć""#))
+        #expect(json.contains(#""_one-two-three_":10"#))
+        #expect(json.contains(#""café-name":"Café""#))
+        #expect(json.contains(#""data📦-size":8"#))
+        let decoded = try NewJSONDecoder().decode(KebabCaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func structScreamingKebabCase() throws {
+        let original = ScreamingKebabCaseNamingChecks(
+            a: 1, single: 2, ALLCAPS: 3, ALL_CAPS: 9, userName: "alice",
+            parseHTTPResponse: 200, one2Three: 4, one2three: 5,
+            camelCaseField: "x", _myField: 6, __doubleUnderscore: 7,
+            snake_ćase: "ć", _one_two_three_: 10, caféName: "Café", data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""A":1"#))
+        #expect(json.contains(#""SINGLE":2"#))
+        #expect(json.contains(#""ALLCAPS":3"#))
+        #expect(json.contains(#""ALL-CAPS":9"#))
+        #expect(json.contains(#""USER-NAME":"alice""#))
+        #expect(json.contains(#""PARSE-HTTP-RESPONSE":200"#))
+        #expect(json.contains(#""ONE2-THREE":4"#))
+        #expect(json.contains(#""ONE2THREE":5"#))
+        #expect(json.contains(#""CAMEL-CASE-FIELD":"x""#))
+        #expect(json.contains(#""_MY-FIELD":6"#))
+        #expect(json.contains(#""__DOUBLE-UNDERSCORE":7"#))
+        #expect(json.contains(#""SNAKE-ĆASE":"ć""#))
+        #expect(json.contains(#""_ONE-TWO-THREE_":10"#))
+        #expect(json.contains(#""CAFÉ-NAME":"Café""#))
+        #expect(json.contains(#""DATA📦-SIZE":8"#))
+        let decoded = try NewJSONDecoder().decode(ScreamingKebabCaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func structPascalCase() throws {
+        let original = PascalCaseNamingChecks(
+            a: 1, single: 2, ALLCAPS: 3, ALL_CAPS: 9, userName: "alice",
+            parseHTTPResponse: 200, one2Three: 4, one2three: 5,
+            camelCaseField: "x", _myField: 6, __doubleUnderscore: 7,
+            snake_ćase: "ć", _one_two_three_: 10, caféName: "Café", data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""A":1"#))
+        #expect(json.contains(#""Single":2"#))
+        #expect(json.contains(#""Allcaps":3"#))
+        #expect(json.contains(#""AllCaps":9"#))
+        #expect(json.contains(#""UserName":"alice""#))
+        #expect(json.contains(#""ParseHttpResponse":200"#))
+        #expect(json.contains(#""One2Three":4"#))
+        #expect(json.contains(#""One2three":5"#))
+        #expect(json.contains(#""CamelCaseField":"x""#))
+        #expect(json.contains(#""_MyField":6"#))
+        #expect(json.contains(#""__DoubleUnderscore":7"#))
+        #expect(json.contains(#""SnakeĆase":"ć""#))
+        #expect(json.contains(#""_OneTwoThree_":10"#))
+        #expect(json.contains(#""CaféName":"Café""#))
+        #expect(json.contains(#""Data📦Size":8"#))
+        let decoded = try NewJSONDecoder().decode(PascalCaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func structCamelCase() throws {
+        let original = CamelCaseNamingChecks(
+            A: 1, Single: 2, ALLCAPS: 3, ALL_CAPS: 9, UserName: "alice",
+            ParseHTTPResponse: 200, One2Three: 4, One2three: 5,
+            CamelCaseField: "x", _MyField: 6, __DoubleUnderscore: 7,
+            Snake_Ćase: "ć", _One_Two_Three_: 10, CaféName: "Café", Data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""a":1"#))
+        #expect(json.contains(#""single":2"#))
+        #expect(json.contains(#""allcaps":3"#))
+        #expect(json.contains(#""allCaps":9"#))
+        #expect(json.contains(#""userName":"alice""#))
+        #expect(json.contains(#""parseHttpResponse":200"#))
+        #expect(json.contains(#""one2Three":4"#))
+        #expect(json.contains(#""one2three":5"#))
+        #expect(json.contains(#""camelCaseField":"x""#))
+        #expect(json.contains(#""_myField":6"#))
+        #expect(json.contains(#""__doubleUnderscore":7"#))
+        #expect(json.contains(#""snakeĆase":"ć""#))
+        #expect(json.contains(#""_oneTwoThree_":10"#))
+        #expect(json.contains(#""caféName":"Café""#))
+        #expect(json.contains(#""data📦Size":8"#))
+        let decoded = try NewJSONDecoder().decode(CamelCaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func structLowercase() throws {
+        let original = LowercaseNamingChecks(
+            a: 1, single: 2, ALLCAPS: 3, userName: "alice",
+            parseHTTPResponse: 200, one2Three: 4,
+            camelCaseField: "x", _myField: 6, __doubleUnderscore: 7,
+            snake_ćase: "ć", _one_two_three_: 10, caféName: "Café", data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""a":1"#))
+        #expect(json.contains(#""single":2"#))
+        #expect(json.contains(#""allcaps":3"#))
+        #expect(json.contains(#""username":"alice""#))
+        #expect(json.contains(#""parsehttpresponse":200"#))
+        #expect(json.contains(#""one2three":4"#))
+        #expect(json.contains(#""camelcasefield":"x""#))
+        #expect(json.contains(#""_myfield":6"#))
+        #expect(json.contains(#""__doubleunderscore":7"#))
+        #expect(json.contains(#""snakećase":"ć""#))
+        #expect(json.contains(#""_onetwothree_":10"#))
+        #expect(json.contains(#""caféname":"Café""#))
+        #expect(json.contains(#""data📦size":8"#))
+        let decoded = try NewJSONDecoder().decode(LowercaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func structUppercase() throws {
+        let original = UppercaseNamingChecks(
+            a: 1, single: 2, ALLCAPS: 3, userName: "alice",
+            parseHTTPResponse: 200, one2Three: 4,
+            camelCaseField: "x", _myField: 6, __doubleUnderscore: 7,
+            snake_ćase: "ć", _one_two_three_: 10, caféName: "Café", data📦Size: 8
+        )
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains(#""A":1"#))
+        #expect(json.contains(#""SINGLE":2"#))
+        #expect(json.contains(#""ALLCAPS":3"#))
+        #expect(json.contains(#""USERNAME":"alice""#))
+        #expect(json.contains(#""PARSEHTTPRESPONSE":200"#))
+        #expect(json.contains(#""ONE2THREE":4"#))
+        #expect(json.contains(#""CAMELCASEFIELD":"x""#))
+        #expect(json.contains(#""_MYFIELD":6"#))
+        #expect(json.contains(#""__DOUBLEUNDERSCORE":7"#))
+        #expect(json.contains(#""SNAKEĆASE":"ć""#))
+        #expect(json.contains(#""_ONETWOTHREE_":10"#))
+        #expect(json.contains(#""CAFÉNAME":"Café""#))
+        #expect(json.contains(#""DATA📦SIZE":8"#))
+        let decoded = try NewJSONDecoder().decode(UppercaseNamingChecks.self, from: data)
+        #expect(decoded == original)
+    }
+
+    // MARK: - CodingKey override
+
+    @Test func codingKeyOverridesNamingConvention() throws {
+        let original = NamingWithCodingKeyOverride(userName: "alice", emailAddress: "a@b.com")
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        // userName → snake_case → "user_name", but emailAddress has @CodingKey("custom_email")
+        #expect(json == #"{"user_name":"alice","custom_email":"a@b.com"}"#)
+        let decoded = try NewJSONDecoder().decode(NamingWithCodingKeyOverride.self, from: data)
+        #expect(decoded == original)
+    }
+
+    // MARK: - Enum caseNaming tests
+
+    @Test func enumSnakeCase() throws {
+        let original = SnakeCaseEnum.anotherLongCase
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"another_long_case":{}}"#)
+        let decoded = try NewJSONDecoder().decode(SnakeCaseEnum.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func enumScreamingSnakeCase() throws {
+        let original = ScreamingSnakeCaseEnum.anotherLongCase
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"ANOTHER_LONG_CASE":{}}"#)
+        let decoded = try NewJSONDecoder().decode(ScreamingSnakeCaseEnum.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func enumKebabCase() throws {
+        let original = KebabCaseEnum.anotherLongCase
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"another-long-case":{}}"#)
+        let decoded = try NewJSONDecoder().decode(KebabCaseEnum.self, from: data)
+        #expect(decoded == original)
+    }
+
+    // MARK: - Enum associatedValueLabelNaming tests
+
+    @Test func enumWithAssociatedValueNaming() throws {
+        let original = SnakeCaseEnumWithAssocValues.userProfile(firstName: "Alice", lastName: "Smith")
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        // Case name → snake_case: "user_profile", labels → snake_case: "first_name", "last_name"
+        #expect(json == #"{"user_profile":{"first_name":"Alice","last_name":"Smith"}}"#)
+        let decoded = try NewJSONDecoder().decode(SnakeCaseEnumWithAssocValues.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test func enumWithUnlabeledAssociatedValueUnaffectedByNaming() throws {
+        // Unlabeled associated values use positional names (_0, _1) which should not be transformed
+        let original = SnakeCaseEnumWithAssocValues.errorCode(404)
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"error_code":{"_0":404}}"#)
+        let decoded = try NewJSONDecoder().decode(SnakeCaseEnumWithAssocValues.self, from: data)
+        #expect(decoded == original)
+    }
+
+    // MARK: - Enum CodingKey override
+
+    @Test func enumCodingKeyOverridesNamingConvention() throws {
+        let original = SnakeCaseEnumWithCodingKeyOverride.myCase
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        // myCase has @CodingKey("custom_case"), so it uses "custom_case" not "my_case"
+        #expect(json == #"{"custom_case":{}}"#)
+        let decoded = try NewJSONDecoder().decode(SnakeCaseEnumWithCodingKeyOverride.self, from: data)
+        #expect(decoded == original)
+
+        // anotherLongCase has no override, so caseNaming applies
+        let original2 = SnakeCaseEnumWithCodingKeyOverride.anotherLongCase
+        let data2 = try NewJSONEncoder().encode(original2)
+        let json2 = String(data: data2, encoding: .utf8)!
+        #expect(json2 == #"{"another_long_case":{}}"#)
+        let decoded2 = try NewJSONDecoder().decode(SnakeCaseEnumWithCodingKeyOverride.self, from: data2)
+        #expect(decoded2 == original2)
+    }
+}

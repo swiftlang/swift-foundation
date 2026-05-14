@@ -234,14 +234,16 @@ enum CodableTypeDeclaration {
         } else {
             typeName = TokenSyntax(.identifier(type.trimmedDescription), presence: .present)
         }
-        
+
+        let naming = parseNamingConventions(from: node)
+
         if declaration.is(EnumDeclSyntax.self) {
-            guard let cases = extractEnumCases(from: declaration.memberBlock, for: node, in: context) else {
+            guard let cases = extractEnumCases(from: declaration.memberBlock, for: node, in: context, naming: naming) else {
                 return nil
             }
             self = .enumDecl(typeName: typeName, cases: cases)
         } else if declaration.is(StructDeclSyntax.self) {
-            guard let properties = extractDetailedStoredProperties(from: declaration.memberBlock, for: node, in: context) else {
+            guard let properties = extractDetailedStoredProperties(from: declaration.memberBlock, for: node, in: context, naming: naming) else {
                 return nil
             }
             self = .structDecl(typeName: typeName, properties: properties)
@@ -292,7 +294,8 @@ enum CodableTypeDeclaration {
 func extractDetailedStoredProperties(
     from members: MemberBlockSyntax,
     for node: AttributeSyntax,
-    in context: some MacroExpansionContext
+    in context: some MacroExpansionContext,
+    naming: NamingConventions = NamingConventions()
 ) -> [DetailedStoredProperty]? {
     var properties: [DetailedStoredProperty] = []
 
@@ -347,7 +350,7 @@ func extractDetailedStoredProperties(
             }
 
             let propertyName = pattern.identifier.trimmedDescription
-            let key = customKey ?? propertyName
+            let key = customKey ?? applyNamingConvention(propertyName, convention: naming.fieldNaming)
 
             let type = typeAnnotation.type
             let isOptional: Bool
@@ -415,7 +418,8 @@ func accessLevel(of declaration: some DeclGroupSyntax) -> CodableDeclarationAcce
 func extractEnumCases(
     from members: MemberBlockSyntax,
     for node: AttributeSyntax,
-    in context: some MacroExpansionContext
+    in context: some MacroExpansionContext,
+    naming: NamingConventions = NamingConventions()
 ) -> [EnumCaseInfo]? {
     var cases: [EnumCaseInfo] = []
 
@@ -429,14 +433,19 @@ func extractEnumCases(
 
         for element in caseDecl.elements {
             let caseName = element.name.trimmedDescription
-            let key = customKey ?? caseName
+            let key = customKey ?? applyNamingConvention(caseName, convention: naming.caseNaming)
             var parameters: [EnumCaseAssociatedValue] = []
 
             if let paramClause = element.parameterClause {
                 for (index, param) in paramClause.parameters.enumerated() {
                     var label = param.firstName?.trimmedDescription
                     if label == "_" { label = nil }
-                    let encodedName = label ?? "_\(index)"
+                    let encodedName: String
+                    if let label {
+                        encodedName = applyNamingConvention(label, convention: naming.associatedValueLabelNaming)
+                    } else {
+                        encodedName = "_\(index)"
+                    }
                     let typeName = param.type.trimmedDescription
                     parameters.append(EnumCaseAssociatedValue(label: label, encodedName: encodedName, typeName: typeName))
                 }
@@ -1189,8 +1198,8 @@ private func generatePerCaseFieldEnums(
             let guardLetNames = enumCase.associatedValues.map { "let \($0.encodedName)" }.joined(separator: ", ")
 
             let args = enumCase.associatedValues.map { param -> String in
-                if param.label != nil {
-                    return "\(param.encodedName): \(param.encodedName)"
+                if let label = param.label {
+                    return "\(label): \(param.encodedName)"
                 } else {
                     return "\(param.encodedName)"
                 }
@@ -1291,8 +1300,8 @@ private func generatePerCaseFieldWrapperStructs(
             let guardLetNames = enumCase.associatedValues.map { "let \($0.encodedName)" }.joined(separator: ", ")
 
             let args = enumCase.associatedValues.map { param -> String in
-                if param.label != nil {
-                    return "\(param.encodedName): \(param.encodedName)"
+                if let label = param.label {
+                    return "\(label): \(param.encodedName)"
                 } else {
                     return "\(param.encodedName)"
                 }

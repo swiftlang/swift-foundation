@@ -20,4 +20,4 @@
 # overrides, and makes uncharted parts of the repository easier to pin down.
 
 # Default code owner of everything.
-* @swiftlang/swift-foundation-codeowners
+* @kperryua
