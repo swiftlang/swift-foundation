@@ -720,9 +720,8 @@ extension Calendar {
         // few seconds can give us the last day in the interval
         lazy var lastWeekday = component(.weekday, from: interval.end.addingTimeInterval(-0.1))
         let calendarFirstWeekday = self.firstWeekday
-        // Convert an absolute weekday (Sun=1...Sat=7) to its position within the
-        // calendar's week (firstWeekday → 0). Used to decide whether two weekdays
-        // fall in the same week given a non-Sunday firstWeekday.
+        /// Convert an absolute weekday (Sun=1...Sat=7) to an index within the
+        /// calendar's week, which can start on an arbitrary weekday.
         func positionInWeek(_ weekday: Int) -> Int {
             (weekday - calendarFirstWeekday + 7) % 7
         }
