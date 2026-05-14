@@ -912,7 +912,6 @@ private struct GregorianCalendarRecurrenceRuleTests {
 
     @available(FoundationPreview 6.3, *)
     @Test func ordinalWeekdaysWithNonSundayFirstWeekday() {
-        // Regression test for https://github.com/swiftlang/swift-foundation/issues/1387
         // Ordinal weekday calculations (.nth(...)) must produce the same dates regardless
         // of the calendar's firstWeekday setting.
         let jan2024 = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00Z (a Monday)
