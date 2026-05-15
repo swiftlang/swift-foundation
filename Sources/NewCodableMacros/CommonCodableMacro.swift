@@ -44,12 +44,12 @@ extension CommonCodableMacro: ExtensionMacro {
 struct CommonCodableExpansion: CodableExpansion {
     let type: CodableExpansionType
     let accessLevel: CodableDeclarationAccessLevel
-    
-    let fieldTypeName = "CommonCodingFields"
+
     let encodableProtocolName = "CommonEncodable"
     let decodableProtocolName = "CommonDecodable"
     let combinedProtocolName = "CommonCodable"
-    
+
+    let fieldTypeName = "CommonCodingFields"
     let encodableFieldProtocolName = "StaticStringEncodingField"
     let decodableFieldProtocolName = "StaticStringDecodingField"
     let combinedFieldProtocolName = "StaticStringCodingField"
