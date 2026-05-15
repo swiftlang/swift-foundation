@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NewCodable
+
+// NOTE: This is a provisional proof-of-concept. It will be up to Foundation how exactly they want to expose .format() and FormatStyles in @CodableBy() macros.
+
 /// A type that converts a value into a representation in another type using a
 /// locale-independent format.
 ///
