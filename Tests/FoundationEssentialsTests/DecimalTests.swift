@@ -282,11 +282,6 @@ private struct DecimalTests {
     }
 
     @Test func decimalParseTruncatedMultiByteSeparator() {
-        // Regression: Decimal._decimal walked past `endIndex` when the input ended on a
-        // proper prefix of a multi-byte decimal separator. The check that the separator
-        // matches at the current index only tested that the first byte was in range, then
-        // unconditionally indexed forward by `decimalSeparator.count - 1` more bytes.
-        // With separator ",," and input "1,", parsing crashed on `utf8View[endIndex]`.
         let result = Decimal._decimal(from: "1,".utf8, decimalSeparator: ",,".utf8, matchEntireString: false)
         switch result {
         case .success(let d, _): #expect(d == Decimal(1))
