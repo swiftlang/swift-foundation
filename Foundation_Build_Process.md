@@ -125,9 +125,14 @@ The swift-foundation project is also built internally within Apple as part of th
 Benchmarks for `swift-foundation` live in the `Benchmarks/` subfolder as a separate Swift Package. 
 
 From swift-foundation directory, run
-```
+```shell
 cd Benchmarks
 swift package benchmark
+```
+
+If `jemalloc` is not available, disable it by setting `BENCHMARK_DISABLE_JEMALLOC=1`:
+```shell
+BENCHMARK_DISABLE_JEMALLOC=1 swift package benchmark
 ```
 
 See [`Benchmarks/README.md`](Benchmarks/README.md) for setup and usage instructions.
