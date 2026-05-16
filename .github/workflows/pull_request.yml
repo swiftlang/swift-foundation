@@ -35,8 +35,8 @@ jobs:
       enable_windows_checks: false
       enable_embedded_wasm_sdk_build: true
       wasm_sdk_versions: '["nightly-main"]'
-      swift_nightly_flags: --target NewCodable --toolset Toolsets/Embedded.json --build-system native
-      swift_flags: --target NewCodable --toolset Toolsets/Embedded.json --build-system native
+      swift_nightly_flags: --target NewCodable --target NewCodableCompileSmokeTest --toolset Toolsets/Embedded.json --build-system native
+      swift_flags: --target NewCodable --target NewCodableCompileSmokeTest --toolset Toolsets/Embedded.json --build-system native
 
   cmake_build:
     name: Build (CMake)
