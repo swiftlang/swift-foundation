@@ -695,6 +695,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _append(buffer)
     }
 
+    @_alwaysEmitIntoClient
+    public mutating func append(_ byte: UInt8) {
+        Swift.withUnsafeBytes(of: byte) { buffer in
+            _representation.append(contentsOf: buffer)
+        }
+    }
+
     #if FOUNDATION_FRAMEWORK
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -809,6 +816,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.resetBytes(in: range)
     }
 
+    @_alwaysEmitIntoClient
+    public mutating func insert(_ newElement: UInt8, at i: Index) {
+        Swift.withUnsafeBytes(of: newElement) { buffer in
+            _representation.replaceSubrange(i ..< i, with: buffer.baseAddress, count: buffer.count)
+        }
+    }
+
     #if FOUNDATION_FRAMEWORK
     /// Replace a region of bytes in the data with new data.
     ///
@@ -917,6 +931,32 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @inlinable // This is @inlinable as trivially forwarding.
     public mutating func replaceSubrange(_ subrange: Range<Index>, with bytes: UnsafeRawPointer, count cnt: Int) {
         _representation.replaceSubrange(subrange, with: bytes, count: cnt)
+    }
+
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func remove(at position: Index) -> UInt8 {
+        precondition(!isEmpty, "Can't remove from an empty collection")
+        let result: UInt8 = self[position]
+        // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+        replaceSubrange(position..<index(after: position), with: UnsafeRawBufferPointer(start: nil, count: 0))
+        return result
+    }
+
+    @_alwaysEmitIntoClient
+    public mutating func removeSubrange(_ bounds: Range<Index>) {
+        // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+        replaceSubrange(bounds, with: UnsafeRawBufferPointer(start: nil, count: 0))
+    }
+
+    @_alwaysEmitIntoClient
+    public mutating func removeAll(keepingCapacity keepCapacity: Bool = false) {
+        if !keepCapacity {
+            self = Data()
+        } else {
+            // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+            replaceSubrange(startIndex..<endIndex, with: UnsafeRawBufferPointer(start: nil, count: 0))
+        }
     }
 
     /// Returns a new copy of the data in a specified range.
