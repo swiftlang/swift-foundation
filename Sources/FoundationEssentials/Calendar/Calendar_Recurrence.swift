@@ -12,7 +12,7 @@
 //
 // Recurrence enumeration
 //
-// This file implements enumerating occurences according to a recurrence rule as
+// This file implements enumerating occurrences according to a recurrence rule as
 // specified in RFC5545 and RFC7529
 
 extension Calendar.RecurrenceRule.Frequency {
@@ -672,11 +672,11 @@ extension Calendar {
     ///   - parent: .year if the frequency is yearly, otherwise .month
     ///   - anchor: a date around which to perform the expansion
     /// - Returns: array of `DateComponents`, which can be used to enumerate all
-    ///   weekdays of intereset, or to filter a list of dates
+    ///   weekdays of interest, or to filter a list of dates
     func _weekdayComponents(for weekdays: [Calendar.RecurrenceRule.Weekday],
                             in parent: Calendar.Component,
                             anchor: Date) -> [DateComponents]? {
-        /// Map of weekdays to which occurences of the weekday we are interested
+        /// Map of weekdays to which occurrences of the weekday we are interested
         /// in. `1` is the first such weekday in the interval, `-1` is the last.
         /// An empty array indicates that any weekday is valid
         var map: [Locale.Weekday: [Int]] = [:]
@@ -699,7 +699,7 @@ extension Calendar {
         // necessarily occur in the first week of the month.
         
         /// The component where we set the week number, if we are targeting only
-        /// a particular occurence of a weekday
+        /// a particular occurrence of a weekday
         let weekComponent: Calendar.Component = if parent == .month {
             .weekOfMonth
         } else {
@@ -720,9 +720,9 @@ extension Calendar {
         // few seconds can give us the last day in the interval
         lazy var lastWeekday = component(.weekday, from: interval.end.addingTimeInterval(-0.1))
         
-        for (weekday, occurences) in map {
+        for (weekday, occurrences) in map {
             let weekdayIdx = weekday.icuIndex
-            if occurences == [] {
+            if occurrences == [] {
                 var components = DateComponents()
                 components.setValue(nil, for: weekComponent)
                 components.weekday = weekdayIdx
@@ -730,12 +730,12 @@ extension Calendar {
             } else {
                 lazy var firstWeek = weekRange.lowerBound + (weekdayIdx < firstWeekday ? 1 : 0)
                 lazy var lastWeek  = weekRange.upperBound - (weekdayIdx > lastWeekday  ? 1 : 0)
-                for occurence in occurences {
+                for occurrence in occurrences {
                     var components = DateComponents()
-                    if occurence > 0 {
-                        components.setValue(firstWeek - 1 + occurence, for: weekComponent)
+                    if occurrence > 0 {
+                        components.setValue(firstWeek - 1 + occurrence, for: weekComponent)
                     } else {
-                        components.setValue(lastWeek + occurence, for: weekComponent)
+                        components.setValue(lastWeek + occurrence, for: weekComponent)
                     }
                     components.weekday = weekdayIdx
                     result.append(components)
