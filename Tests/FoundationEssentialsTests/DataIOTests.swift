@@ -211,6 +211,29 @@ private final class DataIOTests {
         let readData = try Data(contentsOf: url, options: [])
         #expect(readData == data)
     }
+
+    // Atomic writes must succeed when the destination is read-only, and the resulting file must not retain the read-only state.
+    // On POSIX this is the behavior of rename(2). On Windows, SetFileInformationByHandle with FileRenameInfoEx returns ERROR_ACCESS_DENIED for a FILE_ATTRIBUTE_READONLY destination even with FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS. So the read-only attribute is cleared and the rename is retried.
+    @Test
+    func atomicWriteReplacesReadOnlyDestination() throws {
+        let initial = Data("initial".utf8)
+        let next = Data("next".utf8)
+        let later = Data("later".utf8)
+
+        try initial.write(to: url)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o400], // Read-only for owner
+            ofItemAtPath: url.path
+        )
+
+        try next.write(to: url, options: [.atomic])
+
+        let read = try Data(contentsOf: url)
+        #expect(read == next)
+
+        // The path now resolves to the new temp file (the rename operation detached the old destination). Confirm it's writable by performing a subsequent non-atomic write.
+        try later.write(to: url)
+    }
 }
 
 extension LargeDataTests {
