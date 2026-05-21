@@ -18,6 +18,10 @@ import Testing
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
+#if os(Windows)
+import WinSDK
+#endif
+
 private func generateTestData(count: Int = 16_777_216) -> Data {
     // Set a few bytes so we're sure to not be all zeros
     let buf = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: count)
@@ -211,6 +215,30 @@ private final class DataIOTests {
         let readData = try Data(contentsOf: url, options: [])
         #expect(readData == data)
     }
+
+#if os(Windows)
+    // Atomic writes on Windows use FileRenameInfoEx with POSIX_SEMANTICS.
+    // Even with REPLACE_IF_EXISTS the rename returns ERROR_ACCESS_DENIED when
+    // the destination has FILE_ATTRIBUTE_READONLY. Verify the attribute-clear
+    // retry path lets the write succeed.
+    @Test
+    func atomicWriteReplacesReadOnlyDestination() throws {
+        let initial = Data("initial".utf8)
+        let next = Data("next".utf8)
+
+        try initial.write(to: url)
+
+        let setOK: Bool = try url.path.withNTPathRepresentation { pwszPath in
+            SetFileAttributesW(pwszPath, DWORD(WinSDK.FILE_ATTRIBUTE_READONLY))
+        }
+        #expect(setOK)
+
+        try next.write(to: url, options: [.atomic])
+
+        let read = try Data(contentsOf: url)
+        #expect(read == next)
+    }
+#endif
 }
 
 extension LargeDataTests {
