@@ -45,7 +45,6 @@ target_sources(FoundationInternationalization PRIVATE
     Duration+TimeFormatStyle.swift
     Duration+UnitsFormatStyle.swift
     ICUListFormatter.swift
-    ListFormatData.swift
     ListFormatPatterns.swift
     ListFormatStyle.swift
     Measurement+FormatStyle+Stub.swift
