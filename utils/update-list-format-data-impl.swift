@@ -1,4 +1,3 @@
-#!/usr/bin/env swift -D PRINT_CODE
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
@@ -30,6 +29,9 @@
       parent chain. The explicit parent map ships with the data.
    7. Self-check: simulate the runtime lookup against the sparse output and
       assert every (locale, slot) still resolves to the original row.
+   8. Globally intern pattern strings and (start, middle, end, pair) row
+      tuples across all slots (further dedup). Emit as JSON via the schema
+      defined in list-format-data-schema.swift.
 
  Contextual rules (Spanish y→e, o→u; Hebrew ו prefix; Thai joiner) are NOT
  tagged in the data. They're a function of (locale.language, type, pattern),
@@ -474,22 +476,14 @@ func simplifyParentMap(
 func emit(slotTables: [(type: String, width: String, table: [String: Row])],
           parentMap: [String: String],
           cldrVersion: String) -> String {
-    var out = ""
-    out += "// Generated from CLDR \(cldrVersion). Do not edit by hand.\n\n"
-    out += "#if FOUNDATION_LIST_FORMAT_NATIVE\n\n"
-
     let emissions = buildSlotEmissions(slotTables, parentMap: parentMap)
+
+    // Self-check: simulate the runtime parent-walk against the sparse output
+    // and confirm every (locale, slot) still resolves to the original row.
+    // Sparse construction guarantees this by design; the assertion catches any
+    // future generator bug that violates the invariant.
     for (i, slot) in slotTables.enumerated() {
         let emission = emissions[i]
-        // UInt8 indexes require fewer than 256 unique rows per slot. With 9
-        // slots × ~1200 locales heavily deduped, the largest slot today is
-        // ~150 rows; we'd need a major locale-data shift to overflow.
-        precondition(emission.uniqueRows.count < 256,
-                     "slot \(slot.type)/\(slot.width) has \(emission.uniqueRows.count) unique rows; UInt8 index won't fit")
-
-        // Verify lookup correctness for the final (parentMap, sparseIndex)
-        // pair. Sparse construction guarantees this by design; the assertion
-        // catches any future generator bug that violates the invariant.
         let runtimeIndex = emission.sparseIndex.mapValues { UInt8($0) }
         for (locale, expectedRow) in slot.table {
             guard let idx = lookup(locale, in: runtimeIndex, parentMap: parentMap),
@@ -497,38 +491,64 @@ func emit(slotTables: [(type: String, width: String, table: [String: Row])],
                 fatalError("sparse-lookup mismatch for \(locale) in \(slot.type)/\(slot.width)")
             }
         }
-
-        let suffix = slot.type.capitalized + slot.width.capitalized
-        let patternsName = "_listPatterns\(suffix)"
-        let indexName = "_listPatterns\(suffix)Index"
-
-        out += "internal let \(patternsName): [ListPatterns] = [\n"
-        for row in emission.uniqueRows {
-            out += "\(indent)ListPatterns(start: \(swiftStringLiteral(row.start)),"
-            out += " middle: \(swiftStringLiteral(row.middle)),"
-            out += " end: \(swiftStringLiteral(row.end)),"
-            out += " pair: \(swiftStringLiteral(row.pair))),\n"
-        }
-        out += "]\n\n"
-
-        out += "internal let \(indexName): [String: UInt8] = [\n"
-        for locale in emission.sparseIndex.keys.sorted() {
-            out += "\(indent)\(swiftStringLiteral(locale)): \(emission.sparseIndex[locale]!),\n"
-        }
-        out += "]\n\n"
     }
 
-    // Emit the explicit parent-locale map. Truncation parents (e.g., en_AU → en)
-    // and the root fallback are computed at runtime from the locale string itself;
-    // only the supplementalData.xml overrides that affect a lookup result need to
-    // ship — the simplifier in simplifyParentMap drops the rest.
-    out += "internal let _listFormatParentLocales: [String: String] = [\n"
-    for locale in parentMap.keys.sorted() {
-        out += "\(indent)\(swiftStringLiteral(locale)): \(swiftStringLiteral(parentMap[locale]!)),\n"
+    // Global pattern interning: each unique pattern string lives in the pool
+    // once, regardless of how many rows reference it.
+    var patternIndex: [String: Int] = [:]
+    var patterns: [String] = []
+    func internPattern(_ s: String) -> Int {
+        if let i = patternIndex[s] { return i }
+        let i = patterns.count
+        patternIndex[s] = i
+        patterns.append(s)
+        return i
     }
-    out += "]\n\n"
-    out += "#endif // FOUNDATION_LIST_FORMAT_NATIVE\n"
-    return out
+
+    // Global row interning: a (start, middle, end, pair) tuple of pattern
+    // indexes lives in the pool once, regardless of how many slots reference it.
+    var rowIndex: [ListFormatDataSchema.Row: Int] = [:]
+    var rowTable: [ListFormatDataSchema.Row] = []
+    func internRow(_ r: Row) -> Int {
+        let packed = ListFormatDataSchema.Row(
+            start: internPattern(r.start),
+            middle: internPattern(r.middle),
+            end: internPattern(r.end),
+            pair: internPattern(r.pair)
+        )
+        if let i = rowIndex[packed] { return i }
+        let i = rowTable.count
+        rowIndex[packed] = i
+        rowTable.append(packed)
+        return i
+    }
+
+    // Build slot maps using global row indexes.
+    var slots: [String: [String: Int]] = [:]
+    for (i, slot) in slotTables.enumerated() {
+        let emission = emissions[i]
+        var map: [String: Int] = [:]
+        for (locale, localRowIdx) in emission.sparseIndex {
+            let row = emission.uniqueRows[localRowIdx]
+            map[locale] = internRow(row)
+        }
+        slots["\(slot.type)_\(slot.width)"] = map
+    }
+
+    let payload = ListFormatDataSchema(
+        generatedFrom: "CLDR \(cldrVersion)",
+        cldrVersion: cldrVersion,
+        patterns: patterns,
+        rows: rowTable,
+        slots: slots,
+        parents: parentMap
+    )
+
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    encoder.keyEncodingStrategy = .convertToSnakeCase
+    let bytes = try! encoder.encode(payload)
+    return String(data: bytes, encoding: .utf8)!
 }
 
 // MARK: - Entry
