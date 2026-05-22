@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the Swift.org open source project
+##
+## Copyright (c) 2026 Apple Inc. and the Swift project authors
+## Licensed under Apache License v2.0 with Runtime Library Exception
+##
+## See https://swift.org/LICENSE.txt for license information
+## See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+##
+##===----------------------------------------------------------------------===##
+
+# Builds the packed list-format C header from ListFormatData.json.
+#
+# Usage:
+#   build-list-format-data [--locales=en,es,...] [--fallback=en_001] \
+#                          [--input=path/to/ListFormatData.json] \
+#                          [--output=path/to/ListFormatData.h]
+#
+# --locales: comma-separated subset of locales to include (default: all).
+# --fallback: locale used when a runtime lookup misses; auto-included in
+#             the locale set if not already listed (default: root).
+# --input: path to the JSON intermediate (default: in the source tree).
+# --output: path to the generated C header (default: in the source tree).
+
+set -eu
+
+declare -r commandName="$(basename "$0")"
+declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
+declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
+declare -r inputDefault="${foundationRepoDir}/Sources/FoundationInternationalization/Formatting/ListFormatData.json"
+declare -r outputDefault="${foundationRepoDir}/Sources/_FoundationCShims/include/_ListFormatData.h"
+
+INPUT="${INPUT:-${inputDefault}}"
+OUTPUT="${OUTPUT:-${outputDefault}}"
+LOCALES="${LOCALES:-}"
+FALLBACK="${FALLBACK:-root}"
+
+for arg in "$@"; do
+  case "$arg" in
+    --locales=*)  LOCALES="${arg#--locales=}" ;;
+    --fallback=*) FALLBACK="${arg#--fallback=}" ;;
+    --input=*)    INPUT="${arg#--input=}" ;;
+    --output=*)   OUTPUT="${arg#--output=}" ;;
+    --help|-h)
+      echo "Usage: ${commandName} [--locales=en,es,...] [--fallback=en_001] [--input=path] [--output=path]" 1>&2
+      exit 0
+      ;;
+    *)
+      echo "error: unknown argument: ${arg}" 1>&2
+      echo "Try --help." 1>&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ ! -f "${INPUT}" ]]; then
+  echo "error: input JSON not found at ${INPUT}" 1>&2
+  echo "Run utils/update-list-format-data first to generate it from CLDR XML." 1>&2
+  exit 1
+fi
+
+echo "Building ${OUTPUT}" 1>&2
+echo "  from:    ${INPUT}" 1>&2
+if [[ -n "${LOCALES}" ]]; then
+  echo "  locales: ${LOCALES} (+ root, ${FALLBACK})" 1>&2
+else
+  echo "  locales: all" 1>&2
+fi
+echo "  fallback: ${FALLBACK}" 1>&2
+
+# Compose schema + impl into a single source file and run as a script.
+combined=$(mktemp -t "${commandName}.XXXXXX.swift")
+trap 'rm -f "${combined}"' EXIT
+cat "${utilsDir}/list-format-data-schema.swift" \
+    "${utilsDir}/${commandName}-impl.swift" \
+    > "${combined}"
+
+env LOCALES="${LOCALES}" FALLBACK="${FALLBACK}" INPUT="${INPUT}" OUTPUT="${OUTPUT}" \
+  swift "${combined}"
+
+echo "Done." 1>&2
