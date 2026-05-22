@@ -48,7 +48,7 @@ internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool {
     _foundation_swift_ICUResourceTimeZone_feature_enabled()
 }
 #else
-internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool { return false }
+internal func foundation_swift_ICUResourceTimeZone_feature_enabled() -> Bool { return true }
 #endif
 
 final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
