@@ -212,4 +212,27 @@ private struct ISO8601FormatStyleFormattingTests {
         let str = Date.ISO8601FormatStyle().timeZone(separator: .colon).time(includingFractionalSeconds: true).timeSeparator(.colon).format(date)
         #expect(str == "15:35:45.999Z")
     }
+
+    @Test func fractionalSecondsRoundToNearestMillisecond() throws {
+        // A `Date` built from a fractional `TimeInterval` at a present-day magnitude cannot represent
+        // the value exactly, so the extracted nanosecond lands just below the intended value (e.g.
+        // 122999906 for .123). The milliseconds field must round to the nearest millisecond rather
+        // than truncating toward zero, otherwise it is reported one millisecond too low.
+        let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
+
+        // 1674036251.123 -> "2023-01-18T10:04:11.123" (previously ".122")
+        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_251.123)) == "2023-01-18T10:04:11.123")
+
+        // Every millisecond from a present-day base must round-trip through the formatted string.
+        let base = 1_674_036_251.0
+        for ms in 0..<1000 {
+            let formatted = style.format(Date(timeIntervalSince1970: base + Double(ms) / 1000.0))
+            let padded = "00\(ms)".suffix(3)
+            let suffix = ".\(padded)"
+            #expect(formatted.hasSuffix(suffix), "ms=\(ms) formatted as \(formatted)")
+        }
+
+        // A sub-millisecond remainder that rounds up to 1000 must clamp to .999, never overflow to ".1000".
+        #expect(style.format(Date(timeIntervalSince1970: base + 0.9996)) == "2023-01-18T10:04:11.999")
+    }
 }
