@@ -235,4 +235,16 @@ private struct ISO8601FormatStyleFormattingTests {
         // A sub-millisecond remainder that rounds up to 1000 must clamp to .999, never overflow to ".1000".
         #expect(style.format(Date(timeIntervalSince1970: base + 0.9996)) == "2023-01-18T10:04:11.999")
     }
+
+    @Test func fractionalSecondsClampAtSecondBoundary() throws {
+        // parkera's scenario from issue #963: a time like HH:MM:59.9999 formatted with three
+        // fractional digits and round-nearest must not read HH:MM:59.000. The min(..., 999)
+        // clamp keeps it at .999 rather than wrapping the rounded-up millisecond to zero or
+        // silently carrying into the seconds field, which this format layer does not do.
+        let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
+
+        // 1674036299.0 is 2023-01-18T10:04:59. The sub-millisecond remainder rounds up to 1000
+        // and clamps to .999, so the second stays 59 and never reads .000.
+        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_299.0 + 0.9996)) == "2023-01-18T10:04:59.999")
+    }
 }
