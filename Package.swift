@@ -175,10 +175,17 @@ let package = Package(
 
         // FoundationInternationalization
         .target(
+            name: "_FoundationInternationalizationData",
+            dependencies: [
+                "_FoundationCShims"
+            ]
+        ),
+        .target(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "_FoundationCShims"),
+                .target(name: "_FoundationInternationalizationData"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             exclude: [
