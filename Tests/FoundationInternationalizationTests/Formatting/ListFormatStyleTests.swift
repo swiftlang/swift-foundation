@@ -410,4 +410,44 @@ private struct ListFormatStyleTests {
         #expect([Self.arabicOne, bob, Self.arabicThree].formatted(s) == "\(one), \(bob), and \(three)")
         #expect([Self.arabicOne, bob, Self.arabicThree, delta].formatted(s) == "\(one), \(bob), \(three), and \(delta)")
     }
+
+    // MARK: - Internal pattern parser
+
+    #if FOUNDATION_LIST_FORMAT_NATIVE
+    /// `NativeListFormatter.parse(_:)` decomposes patterns into prefix /
+    /// connector / suffix at formatter init. The format tests cover this
+    /// indirectly; these cases pin the parser's contract directly.
+    @Test func parseCanonicalPattern() {
+        let p = NativeListFormatter.parse("{0}, {1}")
+        #expect(p?.prefix == "")
+        #expect(p?.connector == ", ")
+        #expect(p?.suffix == "")
+        #expect(p?.connectorStartsWithSpace == false)
+        #expect(p?.connectorEndsWithSpace == true)
+    }
+
+    @Test func parseSpanishPattern() {
+        let p = NativeListFormatter.parse("{0} y {1}")
+        #expect(p?.connector == " y ")
+        #expect(p?.connectorStartsWithSpace == true)
+        #expect(p?.connectorEndsWithSpace == true)
+    }
+
+    @Test func parseWithPrefixAndSuffix() {
+        let p = NativeListFormatter.parse("foo{0}…{1}bar")
+        #expect(p?.prefix == "foo")
+        #expect(p?.connector == "…")
+        #expect(p?.suffix == "bar")
+        #expect(p?.connectorStartsWithSpace == false)
+        #expect(p?.connectorEndsWithSpace == false)
+    }
+
+    @Test func parseRejectsMalformed() {
+        #expect(NativeListFormatter.parse("garbage") == nil)
+        #expect(NativeListFormatter.parse("{0}") == nil)            // missing {1}
+        #expect(NativeListFormatter.parse("{1}, {0}") == nil)       // wrong order
+        #expect(NativeListFormatter.parse("{0, {1}") == nil)        // unclosed brace
+        #expect(NativeListFormatter.parse("") == nil)
+    }
+    #endif
 }
