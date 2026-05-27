@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
 #include "_CShimsMacros.h"
-#else
-#import <_FoundationCShims/_CShimsMacros.h>
-#endif
 
 // Stub for data that will be populated
 INTERNAL const char * const * _ListFormatPatterns;
