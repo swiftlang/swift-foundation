@@ -452,21 +452,14 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                 if !renameOk {
                     var dwError = GetLastError()
 
-                    // FileRenameInfoEx with POSIX_SEMANTICS + REPLACE_IF_EXISTS
-                    // returns ERROR_ACCESS_DENIED (mapped from NTSTATUS STATUS_CANNOT_DELETE)
-                    // when the destination has FILE_ATTRIBUTE_READONLY.
-                    // Clear it on the destination (in line with POSIX semantics)
-                    // and retry once before falling through.
+                    // FileRenameInfoEx with POSIX_SEMANTICS + REPLACE_IF_EXISTS returns ERROR_ACCESS_DENIED (mapped from NTSTATUS STATUS_CANNOT_DELETE) when the destination has FILE_ATTRIBUTE_READONLY. Clear it on the destination (in line with POSIX semantics) and retry once before falling through.
                     if dwError == ERROR_ACCESS_DENIED {
                         let dwAttributes = GetFileAttributesW(pwszPath)
 
                         if dwAttributes != INVALID_FILE_ATTRIBUTES
                             && dwAttributes & FILE_ATTRIBUTE_READONLY != 0
                         {
-                            // TOCTOU is possible here between GetFileAttributesW and SetFileAttributesW.
-                            // Only relevant though in the atypical case when SetFileInformationByHandle
-                            // returns false, where the thread is already on an error path.
-                            // Hence, skip expensive mitigation and defer to caller.
+                            // TOCTOU is possible here between GetFileAttributesW and SetFileAttributesW. Only relevant though in the atypical case when SetFileInformationByHandle returns false, where the thread is already on an error path. Hence, skip expensive mitigation and defer to caller.
                             if SetFileAttributesW(pwszPath, dwAttributes & ~FILE_ATTRIBUTE_READONLY) {
                                 renameOk = SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) // Retry
 
