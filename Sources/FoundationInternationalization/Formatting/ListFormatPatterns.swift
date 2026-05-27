@@ -29,8 +29,8 @@ internal struct ListPatterns: Hashable, Sendable {
 }
 
 /// A locale-specific contextual rule that may modify the `end`/`pair` pattern
-/// based on the surrounding text. Implementation lives below in
-/// `_applyListPatternCondition`; the data tables don't carry the tag because
+/// based on the surrounding text. Application happens in
+/// `NativeListFormatter.apply`; the data tables don't carry the tag because
 /// it's determined by `(locale.language, type, default-pattern)` at format time.
 internal enum ListPatternCondition: Sendable, Hashable {
     case spanishYToE
@@ -236,29 +236,9 @@ internal func _listPatternCondition(language: String, type: Int, defaultPattern:
     return nil
 }
 
-/// Apply a contextual rule to a pattern, given the text on either side.
-internal func _applyListPatternCondition(
-    _ condition: ListPatternCondition,
-    pattern: String,
-    isPair: Bool,
-    before: String,
-    after: String
-) -> String {
-    switch condition {
-    case .spanishYToE:
-        return _spanishYToEFires(on: after) ? "{0} e {1}" : pattern
-    case .spanishOToU:
-        return _spanishOToUFires(on: after) ? "{0} u {1}" : pattern
-    case .hebrewNonHebrewPrefix:
-        return _hebrewVavDashFires(on: after) ? "{0} \u{05D5}-{1}" : pattern
-    case .thaiContextual:
-        return _applyThaiContextual(pattern: pattern, isPair: isPair, before: before, after: after)
-    }
-}
-
 // MARK: - Predicate implementations
 
-private func _spanishYToEFires(on text: String) -> Bool {
+internal func _spanishYToEFires(on text: String) -> Bool {
     var iter = text.unicodeScalars.makeIterator()
     guard let c0 = iter.next() else { return false }
     if c0 == "i" || c0 == "I" { return true }
@@ -269,7 +249,7 @@ private func _spanishYToEFires(on text: String) -> Bool {
     return c2 != "a" && c2 != "A" && c2 != "e" && c2 != "E"
 }
 
-private func _spanishOToUFires(on text: String) -> Bool {
+internal func _spanishOToUFires(on text: String) -> Bool {
     var iter = text.unicodeScalars.makeIterator()
     guard let c0 = iter.next() else { return false }
     if c0 == "o" || c0 == "O" || c0 == "8" { return true }
@@ -285,57 +265,14 @@ private func _spanishOToUFires(on text: String) -> Bool {
     return false
 }
 
-private func _hebrewVavDashFires(on text: String) -> Bool {
+internal func _hebrewVavDashFires(on text: String) -> Bool {
     guard let scalar = text.unicodeScalars.first else { return false }
     let v = scalar.value
     let isHebrewBlock = (0x0590...0x05FF).contains(v) || (0xFB1D...0xFB4F).contains(v)
     return !isHebrewBlock
 }
 
-private func _applyThaiContextual(pattern: String, isPair: Bool, before: String, after: String) -> String {
-    let spaceBefore = isPair && _thaiNeedsSpace(adjacentScalar: before.unicodeScalars.last)
-    let spaceAfter = _thaiNeedsSpace(adjacentScalar: after.unicodeScalars.first)
-    if !spaceBefore && !spaceAfter { return pattern }
-
-    let scalars = Array(pattern.unicodeScalars)
-    guard let zeroEnd = _indexAfterPlaceholder("0", in: scalars),
-          let oneStart = _indexBeforePlaceholder("1", in: scalars, from: zeroEnd),
-          zeroEnd <= oneStart else {
-        return pattern
-    }
-    let connectorScalars = scalars[zeroEnd..<oneStart]
-    let connector = String(String.UnicodeScalarView(connectorScalars))
-    var rebuilt = "{0}"
-    if spaceBefore && !connector.hasPrefix(" ") { rebuilt += " " }
-    rebuilt += connector
-    if spaceAfter && !connector.hasSuffix(" ") { rebuilt += " " }
-    rebuilt += "{1}"
-    return rebuilt
-}
-
-private func _indexAfterPlaceholder(_ digit: Unicode.Scalar, in scalars: [Unicode.Scalar]) -> Int? {
-    var i = 0
-    while i + 2 < scalars.count {
-        if scalars[i] == "{" && scalars[i+1] == digit && scalars[i+2] == "}" {
-            return i + 3
-        }
-        i += 1
-    }
-    return nil
-}
-
-private func _indexBeforePlaceholder(_ digit: Unicode.Scalar, in scalars: [Unicode.Scalar], from start: Int) -> Int? {
-    var i = start
-    while i + 2 < scalars.count {
-        if scalars[i] == "{" && scalars[i+1] == digit && scalars[i+2] == "}" {
-            return i
-        }
-        i += 1
-    }
-    return nil
-}
-
-private func _thaiNeedsSpace(adjacentScalar: Unicode.Scalar?) -> Bool {
+internal func _thaiNeedsSpace(adjacentScalar: Unicode.Scalar?) -> Bool {
     guard let s = adjacentScalar else { return false }
     return !(0x0E00...0x0E7F).contains(s.value)
 }
