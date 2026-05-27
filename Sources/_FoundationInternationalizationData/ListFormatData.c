@@ -10,4 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-const char * const _ListFormatPatterns[] = {};
+#include "ListFormatData.h"
+#include <stddef.h>
+
+const char * const * _ListFormatPatterns = NULL;
