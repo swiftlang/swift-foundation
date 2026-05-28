@@ -161,32 +161,87 @@ internal final class NativeListFormatter: @unchecked Sendable {
     ///         <middle.connector> ... <middle.connector> items[N-2]
     ///         <end.connector> items[N-1]
     ///
-    /// Calls `wrapBidi` inline so we don't materialize an intermediate
-    /// `[String]`. Pre-sums the byte count for an exact reservation in the
-    /// common no-conflict case; if any item needs FSI/PDI wrapping, the
-    /// buffer grows once per conflict (cheaper on average than reserving
-    /// worst-case room for every item).
+    /// Pre-classifies bidi conflicts in a sizing pass (using a stack-allocated
+    /// `Bool` buffer via `withUnsafeTemporaryAllocation`), then writes UTF-8
+    /// bytes directly into a `String(unsafeUninitializedCapacity:)` buffer.
+    /// Skips the per-`+=` UTF-8 validity / COW machinery that the old
+    /// `result += …` version paid on every append.
     private func buildLinear(items: [String],
                              start: ParsedPattern,
                              middle: ParsedPattern,
                              end: ParsedPattern) -> String {
-        var total = 0
-        for item in items { total += item.utf8.count }
-        total += start.connector.utf8.count
-            + middle.connector.utf8.count * (items.count - 3)
-            + end.connector.utf8.count
-        var result = ""
-        result.reserveCapacity(total)
-        result += wrapBidi(items[0])
-        result += start.connector
-        result += wrapBidi(items[1])
-        for i in 2..<(items.count - 1) {
-            result += middle.connector
-            result += wrapBidi(items[i])
+        return withUnsafeTemporaryAllocation(of: Bool.self, capacity: items.count) { conflicts in
+            var total = 0
+            for i in items.indices {
+                let wrap = shouldWrapBidi(items[i])
+                conflicts.initializeElement(at: i, to: wrap)
+                total += items[i].utf8.count + (wrap ? 6 : 0)
+            }
+            total += start.connector.utf8.count
+                + middle.connector.utf8.count * (items.count - 3)
+                + end.connector.utf8.count
+
+            return String(unsafeUninitializedCapacity: total) { buffer in
+                var offset = 0
+                Self.writeItem(items[0], wrapped: conflicts[0], into: buffer, at: &offset)
+                Self.writeBytes(start.connector, into: buffer, at: &offset)
+                Self.writeItem(items[1], wrapped: conflicts[1], into: buffer, at: &offset)
+                for i in 2..<(items.count - 1) {
+                    Self.writeBytes(middle.connector, into: buffer, at: &offset)
+                    Self.writeItem(items[i], wrapped: conflicts[i], into: buffer, at: &offset)
+                }
+                Self.writeBytes(end.connector, into: buffer, at: &offset)
+                let lastIdx = items.count - 1
+                Self.writeItem(items[lastIdx], wrapped: conflicts[lastIdx], into: buffer, at: &offset)
+                return offset
+            }
         }
-        result += end.connector
-        result += wrapBidi(items[items.count - 1])
-        return result
+    }
+
+    /// Write `source`'s UTF-8 bytes into `buffer` starting at `offset`,
+    /// advancing `offset` by the number of bytes written. Uses
+    /// `withContiguousStorageIfAvailable` for a `memcpy` fast path on native
+    /// Swift strings; falls back to a per-byte iterator for the rare
+    /// non-contiguous case (e.g. bridged NSStrings).
+    @inline(__always)
+    private static func writeBytes(_ source: String,
+                                   into buffer: UnsafeMutableBufferPointer<UInt8>,
+                                   at offset: inout Int) {
+        let copied: Void? = source.utf8.withContiguousStorageIfAvailable { src in
+            guard !src.isEmpty else { return }
+            buffer.baseAddress!.advanced(by: offset)
+                .initialize(from: src.baseAddress!, count: src.count)
+            offset += src.count
+        }
+        if copied != nil { return }
+        for byte in source.utf8 {
+            buffer[offset] = byte
+            offset += 1
+        }
+    }
+
+    /// Write `item` into `buffer`, optionally wrapped in FSI (U+2068) and PDI
+    /// (U+2069) for bidi isolation. The caller has already decided whether
+    /// wrapping is needed.
+    @inline(__always)
+    private static func writeItem(_ item: String, wrapped: Bool,
+                                  into buffer: UnsafeMutableBufferPointer<UInt8>,
+                                  at offset: inout Int) {
+        if wrapped {
+            // U+2068 FIRST STRONG ISOLATE (FSI) = E2 81 A8
+            buffer[offset] = 0xE2
+            buffer[offset + 1] = 0x81
+            buffer[offset + 2] = 0xA8
+            offset += 3
+        }
+        writeBytes(item, into: buffer, at: &offset)
+        if wrapped {
+            // U+2069 POP DIRECTIONAL ISOLATE (PDI) = E2 81 A9
+            buffer[offset] = 0xE2
+            buffer[offset + 1] = 0x81
+            buffer[offset + 2] = 0xA9
+            offset += 3
+        }
     }
 
     /// Apply a contextual rule (if any) to `pattern`, then interpolate.
@@ -233,28 +288,30 @@ internal final class NativeListFormatter: @unchecked Sendable {
     /// rewritten pattern is a known `{0}<connector>{1}` constant — emitting
     /// the result directly is cheaper than going through `interpolate`.
     private func concat3(_ a: String, _ b: String, _ c: String) -> String {
-        var result = ""
-        result.reserveCapacity(a.utf8.count + b.utf8.count + c.utf8.count)
-        result += a
-        result += b
-        result += c
-        return result
+        let total = a.utf8.count + b.utf8.count + c.utf8.count
+        return String(unsafeUninitializedCapacity: total) { buffer in
+            var offset = 0
+            Self.writeBytes(a, into: buffer, at: &offset)
+            Self.writeBytes(b, into: buffer, at: &offset)
+            Self.writeBytes(c, into: buffer, at: &offset)
+            return offset
+        }
     }
 
     /// Fast interpolation using the cached parsed layout. Skips the per-call
     /// placeholder scan that `interpolate(_:_:_:)` does.
     private func interpolate(layout p: ParsedPattern, _ s0: String, _ s1: String) -> String {
-        var result = ""
-        result.reserveCapacity(
-            p.prefix.utf8.count + s0.utf8.count + p.connector.utf8.count
-                + s1.utf8.count + p.suffix.utf8.count
-        )
-        result += p.prefix
-        result += s0
-        result += p.connector
-        result += s1
-        result += p.suffix
-        return result
+        let total = p.prefix.utf8.count + s0.utf8.count + p.connector.utf8.count
+            + s1.utf8.count + p.suffix.utf8.count
+        return String(unsafeUninitializedCapacity: total) { buffer in
+            var offset = 0
+            Self.writeBytes(p.prefix, into: buffer, at: &offset)
+            Self.writeBytes(s0, into: buffer, at: &offset)
+            Self.writeBytes(p.connector, into: buffer, at: &offset)
+            Self.writeBytes(s1, into: buffer, at: &offset)
+            Self.writeBytes(p.suffix, into: buffer, at: &offset)
+            return offset
+        }
     }
 
     /// Single-pass Thai formatter: emit the final string directly using the
@@ -266,21 +323,26 @@ internal final class NativeListFormatter: @unchecked Sendable {
         let spaceAfter = _thaiNeedsSpace(adjacentScalar: after.unicodeScalars.first)
         let needsLeading = spaceBefore && !parsed.connectorStartsWithSpace
         let needsTrailing = spaceAfter && !parsed.connectorEndsWithSpace
-
         let extra = (needsLeading ? 1 : 0) + (needsTrailing ? 1 : 0)
-        var result = ""
-        result.reserveCapacity(
-            parsed.prefix.utf8.count + before.utf8.count + parsed.connector.utf8.count
-                + after.utf8.count + parsed.suffix.utf8.count + extra
-        )
-        result += parsed.prefix
-        result += before
-        if needsLeading { result += " " }
-        result += parsed.connector
-        if needsTrailing { result += " " }
-        result += after
-        result += parsed.suffix
-        return result
+        let total = parsed.prefix.utf8.count + before.utf8.count + parsed.connector.utf8.count
+            + after.utf8.count + parsed.suffix.utf8.count + extra
+        return String(unsafeUninitializedCapacity: total) { buffer in
+            var offset = 0
+            Self.writeBytes(parsed.prefix, into: buffer, at: &offset)
+            Self.writeBytes(before, into: buffer, at: &offset)
+            if needsLeading {
+                buffer[offset] = 0x20 // ASCII space
+                offset += 1
+            }
+            Self.writeBytes(parsed.connector, into: buffer, at: &offset)
+            if needsTrailing {
+                buffer[offset] = 0x20
+                offset += 1
+            }
+            Self.writeBytes(after, into: buffer, at: &offset)
+            Self.writeBytes(parsed.suffix, into: buffer, at: &offset)
+            return offset
+        }
     }
 
     /// Parse a `<prefix>{0}<connector>{1}<suffix>` pattern. Returns `nil` when
@@ -343,13 +405,19 @@ internal final class NativeListFormatter: @unchecked Sendable {
     /// scalar (digits, punctuation only) inherit the list direction and are
     /// left alone — matches the `["1", "2"]` Hebrew case.
     private func wrapBidi(_ item: String) -> String {
-        guard let itemDir = direction(of: item) else { return item }
-        let conflict: Bool
+        return shouldWrapBidi(item) ? "\u{2068}\(item)\u{2069}" : item
+    }
+
+    /// Whether `item` would be wrapped by `wrapBidi`. Factored out so
+    /// `buildLinear` can pre-classify items (sizing the output buffer exactly)
+    /// without materializing the wrapped strings.
+    @inline(__always)
+    private func shouldWrapBidi(_ item: String) -> Bool {
+        guard let itemDir = direction(of: item) else { return false }
         switch (listDirection, itemDir) {
-        case (.leftToRight, .rightToLeft), (.rightToLeft, .leftToRight): conflict = true
-        default: conflict = false
+        case (.leftToRight, .rightToLeft), (.rightToLeft, .leftToRight): return true
+        default: return false
         }
-        return conflict ? "\u{2068}\(item)\u{2069}" : item
     }
 
     /// First-strong-directional detection (UAX #9 P2-style). Strong-RTL is the
