@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "_CShimsMacros.h"
+#include "InternationalizationDataMacros.h"
 
 // Stub for data that will be populated
 INTERNAL const char * const * _ListFormatPatterns;
