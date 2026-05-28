@@ -305,6 +305,12 @@ let package = Package(
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ],
             swiftSettings: featureSettings
+        ),
+        .target(
+            name: "NewCodableCompileSmokeTest",
+            dependencies: [
+                .target(name: "NewCodable"),
+            ]
         )
     ]
 )
