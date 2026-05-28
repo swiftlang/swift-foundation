@@ -16,6 +16,25 @@
 import FoundationEssentials
 #endif
 
+extension OutputSpan where Element == UInt8 {
+    /// Append `source`'s bytes onto this output span. Stand-in for a stdlib
+    /// `append(copying:)`-style API; previewed as `_append(copying:)` in
+    /// swift-collections' `ContainersPreview` module. Remove when the stdlib
+    /// gains an equivalent.
+    @inline(__always)
+    mutating func append(copying source: Span<UInt8>) {
+        guard !source.isEmpty else { return }
+        self.withUnsafeMutableBufferPointer { dst, dstCount in
+            source.withUnsafeBufferPointer { src in
+                let dstEnd = dstCount + src.count
+                precondition(dstEnd <= dst.count, "OutputSpan capacity overflow")
+                _ = dst[dstCount..<dstEnd].initialize(fromContentsOf: src)
+                dstCount = dstEnd
+            }
+        }
+    }
+}
+
 /// Pure-Swift list formatter, used in place of `ICUListFormatter` when the
 /// `FOUNDATION_LIST_FORMAT_NATIVE` build flag is on.
 ///
@@ -163,9 +182,9 @@ internal final class NativeListFormatter: @unchecked Sendable {
     ///
     /// Pre-classifies bidi conflicts in a sizing pass (using a stack-allocated
     /// `Bool` buffer via `withUnsafeTemporaryAllocation`), then writes UTF-8
-    /// bytes directly into a `String(unsafeUninitializedCapacity:)` buffer.
-    /// Skips the per-`+=` UTF-8 validity / COW machinery that the old
-    /// `result += …` version paid on every append.
+    /// bytes directly into a `String(unsafeUninitializedCapacity:)` buffer
+    /// wrapped in an `OutputSpan`. Skips the per-`+=` UTF-8 validity checks
+    /// and copy-on-write uniqueness checks `String +=` paid on every append.
     private func buildLinear(items: [String],
                              start: ParsedPattern,
                              middle: ParsedPattern,
@@ -182,65 +201,40 @@ internal final class NativeListFormatter: @unchecked Sendable {
                 + end.connector.utf8.count
 
             return String(unsafeUninitializedCapacity: total) { buffer in
-                var offset = 0
-                Self.writeItem(items[0], wrapped: conflicts[0], into: buffer, at: &offset)
-                Self.writeBytes(start.connector, into: buffer, at: &offset)
-                Self.writeItem(items[1], wrapped: conflicts[1], into: buffer, at: &offset)
+                var output = OutputSpan(buffer: buffer, initializedCount: 0)
+                Self.writeItem(items[0].utf8Span, wrapped: conflicts[0], into: &output)
+                output.append(copying: start.connector.utf8Span.span)
+                Self.writeItem(items[1].utf8Span, wrapped: conflicts[1], into: &output)
                 for i in 2..<(items.count - 1) {
-                    Self.writeBytes(middle.connector, into: buffer, at: &offset)
-                    Self.writeItem(items[i], wrapped: conflicts[i], into: buffer, at: &offset)
+                    output.append(copying: middle.connector.utf8Span.span)
+                    Self.writeItem(items[i].utf8Span, wrapped: conflicts[i], into: &output)
                 }
-                Self.writeBytes(end.connector, into: buffer, at: &offset)
+                output.append(copying: end.connector.utf8Span.span)
                 let lastIdx = items.count - 1
-                Self.writeItem(items[lastIdx], wrapped: conflicts[lastIdx], into: buffer, at: &offset)
-                return offset
+                Self.writeItem(items[lastIdx].utf8Span, wrapped: conflicts[lastIdx], into: &output)
+                return output.finalize(for: buffer)
             }
         }
     }
 
-    /// Write `source`'s UTF-8 bytes into `buffer` starting at `offset`,
-    /// advancing `offset` by the number of bytes written. Uses
-    /// `withContiguousStorageIfAvailable` for a `memcpy` fast path on native
-    /// Swift strings; falls back to a per-byte iterator for the rare
-    /// non-contiguous case (e.g. bridged NSStrings).
-    @inline(__always)
-    private static func writeBytes(_ source: String,
-                                   into buffer: UnsafeMutableBufferPointer<UInt8>,
-                                   at offset: inout Int) {
-        let copied: Void? = source.utf8.withContiguousStorageIfAvailable { src in
-            guard !src.isEmpty else { return }
-            buffer.baseAddress!.advanced(by: offset)
-                .initialize(from: src.baseAddress!, count: src.count)
-            offset += src.count
-        }
-        if copied != nil { return }
-        for byte in source.utf8 {
-            buffer[offset] = byte
-            offset += 1
-        }
-    }
-
-    /// Write `item` into `buffer`, optionally wrapped in FSI (U+2068) and PDI
-    /// (U+2069) for bidi isolation. The caller has already decided whether
+    /// Append `item` onto `output`, optionally bracketed by FSI (U+2068) and
+    /// PDI (U+2069) for bidi isolation. The caller has already decided whether
     /// wrapping is needed.
     @inline(__always)
-    private static func writeItem(_ item: String, wrapped: Bool,
-                                  into buffer: UnsafeMutableBufferPointer<UInt8>,
-                                  at offset: inout Int) {
+    private static func writeItem(_ item: borrowing UTF8Span, wrapped: Bool,
+                                  into output: inout OutputSpan<UInt8>) {
         if wrapped {
             // U+2068 FIRST STRONG ISOLATE (FSI) = E2 81 A8
-            buffer[offset] = 0xE2
-            buffer[offset + 1] = 0x81
-            buffer[offset + 2] = 0xA8
-            offset += 3
+            output.append(0xE2)
+            output.append(0x81)
+            output.append(0xA8)
         }
-        writeBytes(item, into: buffer, at: &offset)
+        output.append(copying: item.span)
         if wrapped {
             // U+2069 POP DIRECTIONAL ISOLATE (PDI) = E2 81 A9
-            buffer[offset] = 0xE2
-            buffer[offset + 1] = 0x81
-            buffer[offset + 2] = 0xA9
-            offset += 3
+            output.append(0xE2)
+            output.append(0x81)
+            output.append(0xA9)
         }
     }
 
@@ -290,11 +284,11 @@ internal final class NativeListFormatter: @unchecked Sendable {
     private func concat3(_ a: String, _ b: String, _ c: String) -> String {
         let total = a.utf8.count + b.utf8.count + c.utf8.count
         return String(unsafeUninitializedCapacity: total) { buffer in
-            var offset = 0
-            Self.writeBytes(a, into: buffer, at: &offset)
-            Self.writeBytes(b, into: buffer, at: &offset)
-            Self.writeBytes(c, into: buffer, at: &offset)
-            return offset
+            var output = OutputSpan(buffer: buffer, initializedCount: 0)
+            output.append(copying: a.utf8Span.span)
+            output.append(copying: b.utf8Span.span)
+            output.append(copying: c.utf8Span.span)
+            return output.finalize(for: buffer)
         }
     }
 
@@ -304,13 +298,13 @@ internal final class NativeListFormatter: @unchecked Sendable {
         let total = p.prefix.utf8.count + s0.utf8.count + p.connector.utf8.count
             + s1.utf8.count + p.suffix.utf8.count
         return String(unsafeUninitializedCapacity: total) { buffer in
-            var offset = 0
-            Self.writeBytes(p.prefix, into: buffer, at: &offset)
-            Self.writeBytes(s0, into: buffer, at: &offset)
-            Self.writeBytes(p.connector, into: buffer, at: &offset)
-            Self.writeBytes(s1, into: buffer, at: &offset)
-            Self.writeBytes(p.suffix, into: buffer, at: &offset)
-            return offset
+            var output = OutputSpan(buffer: buffer, initializedCount: 0)
+            output.append(copying: p.prefix.utf8Span.span)
+            output.append(copying: s0.utf8Span.span)
+            output.append(copying: p.connector.utf8Span.span)
+            output.append(copying: s1.utf8Span.span)
+            output.append(copying: p.suffix.utf8Span.span)
+            return output.finalize(for: buffer)
         }
     }
 
@@ -327,21 +321,19 @@ internal final class NativeListFormatter: @unchecked Sendable {
         let total = parsed.prefix.utf8.count + before.utf8.count + parsed.connector.utf8.count
             + after.utf8.count + parsed.suffix.utf8.count + extra
         return String(unsafeUninitializedCapacity: total) { buffer in
-            var offset = 0
-            Self.writeBytes(parsed.prefix, into: buffer, at: &offset)
-            Self.writeBytes(before, into: buffer, at: &offset)
+            var output = OutputSpan(buffer: buffer, initializedCount: 0)
+            output.append(copying: parsed.prefix.utf8Span.span)
+            output.append(copying: before.utf8Span.span)
             if needsLeading {
-                buffer[offset] = 0x20 // ASCII space
-                offset += 1
+                output.append(0x20) // ASCII space
             }
-            Self.writeBytes(parsed.connector, into: buffer, at: &offset)
+            output.append(copying: parsed.connector.utf8Span.span)
             if needsTrailing {
-                buffer[offset] = 0x20
-                offset += 1
+                output.append(0x20)
             }
-            Self.writeBytes(after, into: buffer, at: &offset)
-            Self.writeBytes(parsed.suffix, into: buffer, at: &offset)
-            return offset
+            output.append(copying: after.utf8Span.span)
+            output.append(copying: parsed.suffix.utf8Span.span)
+            return output.finalize(for: buffer)
         }
     }
 
