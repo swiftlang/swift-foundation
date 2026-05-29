@@ -16,7 +16,7 @@
 import FoundationEssentials
 #endif
 
-internal import _FoundationCShims
+internal import _FoundationInternationalizationData
 
 // MARK: - Types
 

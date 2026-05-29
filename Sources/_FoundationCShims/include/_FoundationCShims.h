@@ -24,10 +24,6 @@
 #include "filemanager_shims.h"
 #include "uuid.h"
 
-#if FOUNDATION_LIST_FORMAT_NATIVE
-#include "_ListFormatData.h"
-#endif
-
 #if FOUNDATION_FRAMEWORK && !TARGET_OS_EXCLAVEKIT
 #include "sandbox_shims.h"
 #endif
