@@ -314,9 +314,9 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         let subrange = _guts.characterRange(roundingDown: subrange._bstringRange)
         
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
-        if let newElements = _specializingCast(newElements, to: Self.self) {
+        if let newElements = _specialize(newElements, for: Self.self) {
             _replaceSubrange(subrange, with: newElements._characters)
-        } else if let newElements = _specializingCast(newElements, to: Slice<Self>.self) {
+        } else if let newElements = _specialize(newElements, for: Slice<Self>.self) {
             _replaceSubrange(subrange, with: newElements._rebased._characters)
         } else {
             _replaceSubrange(subrange, with: newElements)
@@ -333,7 +333,7 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         // don't need to touch string storage, but we still want to update attributes as if it was
         // a full edit.
         var hasStringChanges = true
-        if let newElements = _specializingCast(newElements, to: BigSubstring.self),
+        if let newElements = _specialize(newElements, for: BigSubstring.self),
            newElements.isIdentical(to: _characters[subrange]) {
             hasStringChanges = false
         }

@@ -106,12 +106,12 @@ extension Data {
         
         @inlinable // This is @inlinable as trivially computable.
         var startIndex: Int {
-            return Int(slice.lowerBound)
+            return _assumeNonNegative(Int(slice.lowerBound))
         }
         
         @inlinable // This is @inlinable as trivially computable.
         var endIndex: Int {
-            return Int(slice.upperBound)
+            return _assumeNonNegative(Int(slice.upperBound))
         }
         
         @inlinable // This is @inlinable as trivially computable.
@@ -149,7 +149,7 @@ extension Data {
         var count: Int {
             get {
                 // The upper bound is guaranteed to be greater than or equal to the lower bound, and the lower bound must be non-negative so subtraction can never overflow
-                return Int(slice.upperBound &- slice.lowerBound)
+                return _assumeNonNegative(Int(slice.upperBound &- slice.lowerBound))
             }
             set(newValue) {
                 assert(newValue < HalfInt.max)

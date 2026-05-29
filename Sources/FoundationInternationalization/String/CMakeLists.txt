@@ -16,6 +16,7 @@ target_include_directories(FoundationInternationalization PRIVATE .)
 target_sources(FoundationInternationalization PRIVATE
     KeyPathComparator.swift
     SortDescriptor.swift
+    String+Comparison_ICU.swift
     String+Locale.swift
     String+SortComparator.swift
     StringProtocol+Locale.swift)

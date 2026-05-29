@@ -16,6 +16,7 @@ target_sources(FoundationEssentials PRIVATE
     Representations/Data+Inline.swift
     Representations/Data+InlineSlice.swift
     Representations/Data+LargeSlice.swift
+    Representations/Data+LegacyRepresentation.swift
     Representations/Data+Representation.swift
     Representations/DataStorage.swift
     
@@ -29,6 +30,7 @@ target_sources(FoundationEssentials PRIVATE
     Data+Iterator.swift
     Data+Reading.swift
     Data+Searching.swift
+    Data+Searching+BoyerMoore.swift
     Data+Writing.swift
     Data+WritingOptions.swift
     DataProtocol.swift

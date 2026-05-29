@@ -34,7 +34,7 @@ extension Data {
         @inlinable @inline(__always) // This is @inlinable as trivially computable.
         var count: Int {
             // The upper bound is guaranteed to be greater than or equal to the lower bound, and the lower bound must be non-negative so subtraction can never overflow
-            return range.upperBound &- range.lowerBound
+            return _assumeNonNegative(range.upperBound &- range.lowerBound)
         }
         
         @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
@@ -105,12 +105,12 @@ extension Data {
         
         @inlinable // This is @inlinable as trivially forwarding.
         var startIndex: Int {
-            return slice.range.lowerBound
+            return _assumeNonNegative(slice.range.lowerBound)
         }
         
         @inlinable // This is @inlinable as trivially forwarding.
         var endIndex: Int {
-            return slice.range.upperBound
+            return _assumeNonNegative(slice.range.upperBound)
         }
         
         @inlinable // This is @inlinable as trivially forwarding.

@@ -96,6 +96,56 @@ extension Predicate {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
+@available(FoundationPreview 6.4, *)
+extension Predicate {
+    public init(all subpredicates: some BidirectionalCollection<Self>) {
+        var iterator = subpredicates.reversed().makeIterator()
+        
+        if let guarded = iterator.next() {
+            self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
+                let condition = PredicateExpressions.Value(guarded)
+                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
+                
+                while let next = iterator.next() {
+                    pieces = Self.meet(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
+                }
+                
+                return pieces
+            })
+        } else {
+            self.init(value: true)
+        }
+    }
+    
+    public init(any subpredicates: some BidirectionalCollection<Self>) {
+        var iterator = subpredicates.reversed().makeIterator()
+        
+        if let guarded = iterator.next() {
+            self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
+                let condition = PredicateExpressions.Value(guarded)
+                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
+                
+                while let next = iterator.next() {
+                    pieces = Self.join(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
+                }
+                
+                return pieces
+            })
+        } else {
+            self.init(value: false)
+        }
+    }
+    
+    fileprivate static func meet<T: StandardPredicateExpression<Bool>, U: StandardPredicateExpression<Bool>>(_ lhs: T, _ rhs: U) -> any StandardPredicateExpression<Bool> {
+        PredicateExpressions.build_Conjunction(lhs: lhs, rhs: rhs)
+    }
+    
+    fileprivate static func join<T: StandardPredicateExpression<Bool>, U: StandardPredicateExpression<Bool>>(_ lhs: T, _ rhs: U) -> any StandardPredicateExpression<Bool> {
+        PredicateExpressions.build_Disjunction(lhs: lhs, rhs: rhs)
+    }
+}
+#endif
 
 // Namespace for operator expressions
 /// The expressions that make up a predicate.

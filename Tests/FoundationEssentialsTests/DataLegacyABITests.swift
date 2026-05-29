@@ -74,6 +74,41 @@ extension Foundation.__DataStorage {
     final func __testable_withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R
 }
 
+extension UnsafeRawBufferPointer {
+    @_silgen_name("$sSW10FoundationE15withUnsafeBytesyxxSWKXEKlF")
+    func __testable_withUnsafeBytes<R>(body: (UnsafeRawBufferPointer) throws -> R) throws -> R
+}
+
+extension UnsafeMutableRawBufferPointer {
+    @_silgen_name("$sSw10FoundationE15withUnsafeBytesyxxSWKXEKlF")
+    func __testable_withUnsafeBytes<R>(body: (UnsafeRawBufferPointer) throws -> R) throws -> R
+}
+
+extension UnsafeBufferPointer where Element == UInt8 {
+    @_silgen_name("$sSR10Foundations5UInt8VRszlE15withUnsafeBytesyqd__qd__SWKXEKlF")
+    func __testable_withUnsafeBytes<R>(body: (UnsafeRawBufferPointer) throws -> R) throws -> R
+}
+
+extension UnsafeMutableBufferPointer where Element == UInt8 {
+    @_silgen_name("$sSr10Foundations5UInt8VRszlE15withUnsafeBytesyqd__qd__SWKXEKlF")
+    func __testable_withUnsafeBytes<R>(body: (UnsafeRawBufferPointer) throws -> R) throws -> R
+}
+
+extension EmptyCollection where Element == UInt8 {
+    @_silgen_name("$ss15EmptyCollectionV10Foundations5UInt8VRszlE15withUnsafeBytesyqd__qd__SWKXEKlF")
+    func __testable_withUnsafeBytes<R>(body: (UnsafeRawBufferPointer) throws -> R) throws -> R
+}
+
+extension CollectionOfOne where Element == UInt8 {
+    @_silgen_name("$ss15CollectionOfOneV10Foundations5UInt8VRszlE15withUnsafeBytesyqd__qd__SWKXEKlF")
+    func __testable_withUnsafeBytes<R>(body: (UnsafeRawBufferPointer) throws -> R) throws -> R
+}
+
+extension Slice where Base: ContiguousBytes {
+    @_silgen_name("$ss5SliceV10FoundationAC15ContiguousBytesRzrlE010withUnsafeD0yqd__qd__SWKXEKlF")
+    func __testable_withUnsafeBytes<R>(body: (UnsafeRawBufferPointer) throws -> R) throws -> R
+}
+
 @Suite("Foundation Legacy ABI")
 private final class FoundationLegacyABITests {
 
@@ -177,6 +212,42 @@ private final class FoundationLegacyABITests {
         }
         #expect(slice[count7] == 31)
         #expect(countA.0 == 40-count7)
+    }
+
+    @Test func validateContiguousBytesLegacyABI() throws {
+        let ptr = UnsafeMutablePointer<UInt8>(bitPattern: 0xABC)
+        try UnsafeRawBufferPointer(start: ptr, count: 1).__testable_withUnsafeBytes { buffer in
+            #expect(buffer.baseAddress == UnsafeRawPointer(ptr))
+            #expect(buffer.count == 1)
+        }
+        try UnsafeMutableRawBufferPointer(start: ptr, count: 1).__testable_withUnsafeBytes { buffer in
+            #expect(buffer.baseAddress == UnsafeRawPointer(ptr))
+            #expect(buffer.count == 1)
+        }
+        try UnsafeBufferPointer<UInt8>(start: ptr, count: 1).__testable_withUnsafeBytes { buffer in
+            #expect(buffer.baseAddress == UnsafeRawPointer(ptr))
+            #expect(buffer.count == 1)
+        }
+        try UnsafeMutableBufferPointer<UInt8>(start: ptr, count: 1).__testable_withUnsafeBytes { buffer in
+            #expect(buffer.baseAddress == UnsafeRawPointer(ptr))
+            #expect(buffer.count == 1)
+        }
+
+        try EmptyCollection().__testable_withUnsafeBytes { buffer in
+            #expect(buffer.baseAddress == nil)
+            #expect(buffer.count == 0)
+        }
+
+        try CollectionOfOne(UInt8(2)).__testable_withUnsafeBytes { buffer in
+            #expect(buffer.baseAddress != nil)
+            #expect(buffer.count == 1)
+        }
+
+        try Slice<Data>().__testable_withUnsafeBytes { buffer in
+            // Data never provide's a nil base address, so Slice<Data> won't either
+            #expect(buffer.baseAddress != nil)
+            #expect(buffer.count == 0)
+        }
     }
 }
 

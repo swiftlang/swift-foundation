@@ -791,6 +791,16 @@ private struct URLTests {
     }
     #endif
 
+    @Test func percentEncodedBackslashInFileURLPath() throws {
+        // URL(string:) percent-encodes "\" to "%5C", and clients expect file
+        // path APIs to return it decoded (matches prior _SwiftURL behavior).
+        let url = URL(string: #"file:///C:\hello\world"#)!
+        #expect(url.absoluteString == "file:///C:%5Chello%5Cworld")
+        #expect(url.lastPathComponent == #"C:\hello\world"#)
+        #expect(url.fileSystemPath(style: .windows) == #"/C:\hello\world"#)
+        #expect(url.fileSystemPath(style: .posix) == #"/C:\hello\world"#)
+    }
+
     @Test func relativeDotDotResolution() throws {
         let baseURL = URL(filePath: "/docs/src/")
         var result = URL(filePath: "../images/foo.png", relativeTo: baseURL)
@@ -1865,8 +1875,7 @@ private struct URLTests {
         #expect(comp.path == "/my\u{0}path")
     }
 
-    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
-    func standardizedDotSegments() throws {
+    @Test func standardizedDotSegments() throws {
         var standardized = try #require(URL(string: "../../../")).standardized
         // URL should not remove leading dot segments until it's actually
         // resolved against a base (longstanding CFURL behavior, too).
@@ -1902,32 +1911,30 @@ private struct URLTests {
         url = try #require(URL(string: "https://example.com/a/b/.."))
         #expect(url.standardized.path() == "/a/")
 
-        if foundation_swift_url_v2_enabled() {
-            // Preserve leading dot segments until resolution (RFC 1808)
-            url = try #require(URL(string: "https://example.com/../../a"))
-            #expect(url.standardized.path() == "/../../a")
+        // Preserve leading dot segments until resolution (RFC 1808)
+        url = try #require(URL(string: "https://example.com/../../a"))
+        #expect(url.standardized.path() == "/../../a")
 
-            url = try #require(URL(string: "../../a/b"))
-            #expect(url.standardized.path() == "../../a/b")
+        url = try #require(URL(string: "../../a/b"))
+        #expect(url.standardized.path() == "../../a/b")
 
-            url = try #require(URL(string: "../../.."))
-            #expect(url.relativeString == "../../..")
-            #expect(url.hasDirectoryPath)
+        url = try #require(URL(string: "../../.."))
+        #expect(url.relativeString == "../../..")
+        #expect(url.hasDirectoryPath)
 
-            // URL should maintain directory path status for "../../.."
-            // even though the path doesn't end in an explicit "/"
-            url.standardize()
-            #expect(url.relativeString == "../../..")
-            #expect(url.hasDirectoryPath)
+        // URL should maintain directory path status for "../../.."
+        // even though the path doesn't end in an explicit "/"
+        url.standardize()
+        #expect(url.relativeString == "../../..")
+        #expect(url.hasDirectoryPath)
 
-            url = try #require(URL(string: ".."))
-            #expect(url.relativeString == "..")
-            #expect(url.hasDirectoryPath)
+        url = try #require(URL(string: ".."))
+        #expect(url.relativeString == "..")
+        #expect(url.hasDirectoryPath)
 
-            url.standardize()
-            #expect(url.relativeString == "..")
-            #expect(url.hasDirectoryPath)
-        }
+        url.standardize()
+        #expect(url.relativeString == "..")
+        #expect(url.hasDirectoryPath)
 
         #if FOUNDATION_FRAMEWORK
         // Non-decomposable URL returns self
@@ -2621,6 +2628,25 @@ private struct URLTests {
             symlinkURL = dirURL.appending(path: "symlink", directoryHint: .checkFileSystem)
             #expect(!symlinkURL.hasDirectoryPath)
         }
+    }
+
+    @Test func hashIncludesBaseURL() throws {
+        let base1 = try #require(URL(string: "https://example.com"))
+        let base2 = try #require(URL(string: "https://other.com"))
+        let relative1 = try #require(URL(string: "/path", relativeTo: base1))
+        let relative2 = try #require(URL(string: "/path", relativeTo: base2))
+
+        // These URLs have the same relativeString but different baseURLs
+        #expect(relative1.relativeString == relative2.relativeString)
+        #expect(relative1 != relative2)
+
+        // Their hashes should (very probably) differ
+        #expect(relative1.hashValue != relative2.hashValue)
+
+        // Verify equal URLs hash equally
+        let relative1Copy = try #require(URL(string: "/path", relativeTo: base1))
+        #expect(relative1 == relative1Copy)
+        #expect(relative1.hashValue == relative1Copy.hashValue)
     }
 
     @Test func squareBracketsAllowedInPathQueryFragment() {

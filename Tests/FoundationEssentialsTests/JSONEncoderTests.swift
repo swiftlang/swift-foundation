@@ -470,10 +470,6 @@ private struct JSONEncoderTests {
         let outerValue: EncodeNested
     }
 
-    private struct CodingKeyRepresentableKey: RawRepresentable, CodingKeyRepresentable, Hashable, Codable {
-        let rawValue: String
-    }
-
     @Test func encodingKeyStrategyPath() throws {
         // Make sure a more complex path shows up the way we want
         // Make sure the path reflects keys in the Swift, not the resulting ones in the JSON
@@ -551,18 +547,6 @@ private struct JSONEncoderTests {
         let result = try decoder.decode([String: String].self, from: input)
 
         #expect(["leave_me_alone": "test"] == result)
-    }
-    
-    @Test func decodingDictionaryCodingKeyRepresentableKeyConversionUntouched() throws {
-        // CodingKeyRepresentable dictionary keys should NOT be converted by key decoding strategy,
-        // but nested struct properties should still be converted.
-        let input = "{\"leave_me_alone\":{\"this_is_camel_case\":\"test\"}}".data(using: .utf8)!
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let result = try decoder.decode([CodingKeyRepresentableKey: DecodeMe3].self, from: input)
-
-        let value = try #require(result[CodingKeyRepresentableKey(rawValue: "leave_me_alone")])
-        #expect(value.thisIsCamelCase == "test")
     }
 
     @Test func decodingDictionaryFailureKeyPath() {
@@ -2349,22 +2333,6 @@ extension JSONEncoderTests {
 
         #expect(expected == resultString)
     }
-    
-    @Test func encodingDictionaryCodingKeyRepresentableKeyConversionUntouched() throws {
-        // CodingKeyRepresentable dictionary keys should NOT be converted by key encoding strategy,
-        // but nested struct properties should still be converted.
-        let expected = "{\"leaveMeAlone\":{\"this_is_camel_case\":\"test\"}}"
-        let toEncode: [CodingKeyRepresentableKey: DecodeMe3] = [
-            CodingKeyRepresentableKey(rawValue: "leaveMeAlone"): DecodeMe3(thisIsCamelCase: "test")
-        ]
-
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        let resultData = try encoder.encode(toEncode)
-        let resultString = String(bytes: resultData, encoding: .utf8)
-
-        #expect(expected == resultString)
-    }
 
     @Test func keyStrategySnakeGeneratedAndCustom() throws {
         // Test that this works with a struct that has automatically generated keys
@@ -2533,10 +2501,10 @@ extension JSONEncoderTests {
         #expect(try 7 == decoder.decode(Int.self, from: json.data(using: .utf16LittleEndian)!))
     }
     
-    private func _run_passTest<T:Codable & Equatable>(name: String, json5: Bool = false, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) {
-        let jsonData = testData(forResource: name, withExtension: json5 ? "json5" : "json" , subdirectory: json5 ? "JSON5/pass" : "JSON/pass")!
+    private func _run_passTest<T:Codable & Equatable>(name: String, json5: Bool = false, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) throws {
+        let jsonData = try testData(forResource: name, withExtension: json5 ? "json5" : "json" , subdirectory: json5 ? "JSON5/pass" : "JSON/pass")
 
-        let plistData = testData(forResource: name, withExtension: "plist", subdirectory: "JSON/pass")
+        let plistData = try? testData(forResource: name, withExtension: "plist", subdirectory: "JSON/pass")
         let decoder = json5Decoder
 
         let decoded: T
@@ -2566,38 +2534,38 @@ extension JSONEncoderTests {
         }
     }
 
-    @Test func jsonPassTests() {
-        _run_passTest(name: "pass1-utf8", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf16be", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf16le", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf32be", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf32le", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass2", type: JSONPass.Test2.self)
-        _run_passTest(name: "pass3", type: JSONPass.Test3.self)
-        _run_passTest(name: "pass4", type: JSONPass.Test4.self)
-        _run_passTest(name: "pass5", type: JSONPass.Test5.self)
-        _run_passTest(name: "pass6", type: JSONPass.Test6.self)
-        _run_passTest(name: "pass7", type: JSONPass.Test7.self)
-        _run_passTest(name: "pass8", type: JSONPass.Test8.self)
-        _run_passTest(name: "pass9", type: JSONPass.Test9.self)
-        _run_passTest(name: "pass10", type: JSONPass.Test10.self)
-        _run_passTest(name: "pass11", type: JSONPass.Test11.self)
-        _run_passTest(name: "pass12", type: JSONPass.Test12.self)
-        _run_passTest(name: "pass13", type: JSONPass.Test13.self)
-        _run_passTest(name: "pass14", type: JSONPass.Test14.self)
-        _run_passTest(name: "pass15", type: JSONPass.Test15.self)
+    @Test func jsonPassTests() throws {
+        try _run_passTest(name: "pass1-utf8", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf16be", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf16le", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf32be", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf32le", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass2", type: JSONPass.Test2.self)
+        try _run_passTest(name: "pass3", type: JSONPass.Test3.self)
+        try _run_passTest(name: "pass4", type: JSONPass.Test4.self)
+        try _run_passTest(name: "pass5", type: JSONPass.Test5.self)
+        try _run_passTest(name: "pass6", type: JSONPass.Test6.self)
+        try _run_passTest(name: "pass7", type: JSONPass.Test7.self)
+        try _run_passTest(name: "pass8", type: JSONPass.Test8.self)
+        try _run_passTest(name: "pass9", type: JSONPass.Test9.self)
+        try _run_passTest(name: "pass10", type: JSONPass.Test10.self)
+        try _run_passTest(name: "pass11", type: JSONPass.Test11.self)
+        try _run_passTest(name: "pass12", type: JSONPass.Test12.self)
+        try _run_passTest(name: "pass13", type: JSONPass.Test13.self)
+        try _run_passTest(name: "pass14", type: JSONPass.Test14.self)
+        try _run_passTest(name: "pass15", type: JSONPass.Test15.self)
     }
 
-    @Test func json5PassJSONFiles() {
-        _run_passTest(name: "example", json5: true, type: JSON5Pass.Example.self)
-        _run_passTest(name: "hex", json5: true, type: JSON5Pass.Hex.self)
-        _run_passTest(name: "numbers", json5: true, type: JSON5Pass.Numbers.self)
-        _run_passTest(name: "strings", json5: true, type: JSON5Pass.Strings.self)
-        _run_passTest(name: "whitespace", json5: true, type: JSON5Pass.Whitespace.self)
+    @Test func json5PassJSONFiles() throws {
+        try _run_passTest(name: "example", json5: true, type: JSON5Pass.Example.self)
+        try _run_passTest(name: "hex", json5: true, type: JSON5Pass.Hex.self)
+        try _run_passTest(name: "numbers", json5: true, type: JSON5Pass.Numbers.self)
+        try _run_passTest(name: "strings", json5: true, type: JSON5Pass.Strings.self)
+        try _run_passTest(name: "whitespace", json5: true, type: JSON5Pass.Whitespace.self)
     }
 
-    private func _run_failTest<T:Decodable>(name: String, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) {
-        let jsonData = testData(forResource: name, withExtension: "json", subdirectory: "JSON/fail")!
+    private func _run_failTest<T:Decodable>(name: String, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) throws {
+        let jsonData = try testData(forResource: name, withExtension: "json", subdirectory: "JSON/fail")
 
         let decoder = JSONDecoder()
         decoder.assumesTopLevelDictionary = true
@@ -2606,57 +2574,54 @@ extension JSONEncoderTests {
         }
     }
 
-    @Test func jsonFailTests() {
-        _run_failTest(name: "fail1", type: JSONFail.Test1.self)
-        _run_failTest(name: "fail2", type: JSONFail.Test2.self)
-        _run_failTest(name: "fail3", type: JSONFail.Test3.self)
-        _run_failTest(name: "fail4", type: JSONFail.Test4.self)
-        _run_failTest(name: "fail5", type: JSONFail.Test5.self)
-        _run_failTest(name: "fail6", type: JSONFail.Test6.self)
-        _run_failTest(name: "fail7", type: JSONFail.Test7.self)
-        _run_failTest(name: "fail8", type: JSONFail.Test8.self)
-        _run_failTest(name: "fail9", type: JSONFail.Test9.self)
-        _run_failTest(name: "fail10", type: JSONFail.Test10.self)
-        _run_failTest(name: "fail11", type: JSONFail.Test11.self)
-        _run_failTest(name: "fail12", type: JSONFail.Test12.self)
-        _run_failTest(name: "fail13", type: JSONFail.Test13.self)
-        _run_failTest(name: "fail14", type: JSONFail.Test14.self)
-        _run_failTest(name: "fail15", type: JSONFail.Test15.self)
-        _run_failTest(name: "fail16", type: JSONFail.Test16.self)
-        _run_failTest(name: "fail17", type: JSONFail.Test17.self)
-        _run_failTest(name: "fail18", type: JSONFail.Test18.self)
-        _run_failTest(name: "fail19", type: JSONFail.Test19.self)
-        _run_failTest(name: "fail21", type: JSONFail.Test21.self)
-        _run_failTest(name: "fail22", type: JSONFail.Test22.self)
-        _run_failTest(name: "fail23", type: JSONFail.Test23.self)
-        _run_failTest(name: "fail24", type: JSONFail.Test24.self)
-        _run_failTest(name: "fail25", type: JSONFail.Test25.self)
-        _run_failTest(name: "fail26", type: JSONFail.Test26.self)
-        _run_failTest(name: "fail27", type: JSONFail.Test27.self)
-        _run_failTest(name: "fail28", type: JSONFail.Test28.self)
-        _run_failTest(name: "fail29", type: JSONFail.Test29.self)
-        _run_failTest(name: "fail30", type: JSONFail.Test30.self)
-        _run_failTest(name: "fail31", type: JSONFail.Test31.self)
-        _run_failTest(name: "fail32", type: JSONFail.Test32.self)
-        _run_failTest(name: "fail33", type: JSONFail.Test33.self)
-        _run_failTest(name: "fail34", type: JSONFail.Test34.self)
-        _run_failTest(name: "fail35", type: JSONFail.Test35.self)
-        _run_failTest(name: "fail36", type: JSONFail.Test36.self)
-        _run_failTest(name: "fail37", type: JSONFail.Test37.self)
-        _run_failTest(name: "fail38", type: JSONFail.Test38.self)
-        _run_failTest(name: "fail39", type: JSONFail.Test39.self)
-        _run_failTest(name: "fail40", type: JSONFail.Test40.self)
-        _run_failTest(name: "fail41", type: JSONFail.Test41.self)
+    @Test func jsonFailTests() throws {
+        try _run_failTest(name: "fail1", type: JSONFail.Test1.self)
+        try _run_failTest(name: "fail2", type: JSONFail.Test2.self)
+        try _run_failTest(name: "fail3", type: JSONFail.Test3.self)
+        try _run_failTest(name: "fail4", type: JSONFail.Test4.self)
+        try _run_failTest(name: "fail5", type: JSONFail.Test5.self)
+        try _run_failTest(name: "fail6", type: JSONFail.Test6.self)
+        try _run_failTest(name: "fail7", type: JSONFail.Test7.self)
+        try _run_failTest(name: "fail8", type: JSONFail.Test8.self)
+        try _run_failTest(name: "fail9", type: JSONFail.Test9.self)
+        try _run_failTest(name: "fail10", type: JSONFail.Test10.self)
+        try _run_failTest(name: "fail11", type: JSONFail.Test11.self)
+        try _run_failTest(name: "fail12", type: JSONFail.Test12.self)
+        try _run_failTest(name: "fail13", type: JSONFail.Test13.self)
+        try _run_failTest(name: "fail14", type: JSONFail.Test14.self)
+        try _run_failTest(name: "fail15", type: JSONFail.Test15.self)
+        try _run_failTest(name: "fail16", type: JSONFail.Test16.self)
+        try _run_failTest(name: "fail17", type: JSONFail.Test17.self)
+        try _run_failTest(name: "fail18", type: JSONFail.Test18.self)
+        try _run_failTest(name: "fail19", type: JSONFail.Test19.self)
+        try _run_failTest(name: "fail21", type: JSONFail.Test21.self)
+        try _run_failTest(name: "fail22", type: JSONFail.Test22.self)
+        try _run_failTest(name: "fail23", type: JSONFail.Test23.self)
+        try _run_failTest(name: "fail24", type: JSONFail.Test24.self)
+        try _run_failTest(name: "fail25", type: JSONFail.Test25.self)
+        try _run_failTest(name: "fail26", type: JSONFail.Test26.self)
+        try _run_failTest(name: "fail27", type: JSONFail.Test27.self)
+        try _run_failTest(name: "fail28", type: JSONFail.Test28.self)
+        try _run_failTest(name: "fail29", type: JSONFail.Test29.self)
+        try _run_failTest(name: "fail30", type: JSONFail.Test30.self)
+        try _run_failTest(name: "fail31", type: JSONFail.Test31.self)
+        try _run_failTest(name: "fail32", type: JSONFail.Test32.self)
+        try _run_failTest(name: "fail33", type: JSONFail.Test33.self)
+        try _run_failTest(name: "fail34", type: JSONFail.Test34.self)
+        try _run_failTest(name: "fail35", type: JSONFail.Test35.self)
+        try _run_failTest(name: "fail36", type: JSONFail.Test36.self)
+        try _run_failTest(name: "fail37", type: JSONFail.Test37.self)
+        try _run_failTest(name: "fail38", type: JSONFail.Test38.self)
+        try _run_failTest(name: "fail39", type: JSONFail.Test39.self)
+        try _run_failTest(name: "fail40", type: JSONFail.Test40.self)
+        try _run_failTest(name: "fail41", type: JSONFail.Test41.self)
 
     }
 
-    func _run_json5SpecTest<T:Decodable>(_ category: String, _ name: String, testType: JSON5SpecTestType, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) {
+    func _run_json5SpecTest<T:Decodable>(_ category: String, _ name: String, testType: JSON5SpecTestType, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) throws {
         let subdirectory = "/JSON5/spec/\(category)"
         let ext = testType.fileExtension
-        guard let jsonData = testData(forResource: name, withExtension: ext, subdirectory: subdirectory) else {
-            Issue.record("Failed to load test data forResource: \(name), withExtension: \(ext), subdirectory: \(subdirectory)", sourceLocation: sourceLocation)
-            return
-        }
+        let jsonData = try testData(forResource: name, withExtension: ext, subdirectory: subdirectory)
 
         let json5 = json5Decoder
         let json = JSONDecoder()
@@ -2710,130 +2675,130 @@ extension JSONEncoderTests {
     }
 
     // Also tests non-JSON5 decoder against the non-JSON5 tests in this test suite.
-    @Test func json5Spec() {
+    @Test func json5Spec() throws {
         // Expected successes:
-        _run_json5SpecTest("arrays", "empty-array", testType: .json, type: [Bool].self)
-        _run_json5SpecTest("arrays", "regular-array", testType: .json, type: [Bool?].self)
-        _run_json5SpecTest("arrays", "trailing-comma-array", testType: .json5_foundationPermissiveJSON, type: [NullReader].self)
+        try _run_json5SpecTest("arrays", "empty-array", testType: .json, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "regular-array", testType: .json, type: [Bool?].self)
+        try _run_json5SpecTest("arrays", "trailing-comma-array", testType: .json5_foundationPermissiveJSON, type: [NullReader].self)
 
-        _run_json5SpecTest("comments", "block-comment-following-array-element", testType: .json5, type: [Bool].self)
-        _run_json5SpecTest("comments", "block-comment-following-top-level-value", testType: .json5, type: NullReader.self)
-        _run_json5SpecTest("comments", "block-comment-in-string", testType: .json, type: String.self)
-        _run_json5SpecTest("comments", "block-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
-        _run_json5SpecTest("comments", "block-comment-with-asterisks", testType: .json5, type: Bool.self)
-        _run_json5SpecTest("comments", "inline-comment-following-array-element", testType: .json5, type: [Bool].self)
-        _run_json5SpecTest("comments", "inline-comment-following-top-level-value", testType: .json5, type: NullReader.self)
-        _run_json5SpecTest("comments", "inline-comment-in-string", testType: .json, type: String.self)
-        _run_json5SpecTest("comments", "inline-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "block-comment-following-array-element", testType: .json5, type: [Bool].self)
+        try _run_json5SpecTest("comments", "block-comment-following-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "block-comment-in-string", testType: .json, type: String.self)
+        try _run_json5SpecTest("comments", "block-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "block-comment-with-asterisks", testType: .json5, type: Bool.self)
+        try _run_json5SpecTest("comments", "inline-comment-following-array-element", testType: .json5, type: [Bool].self)
+        try _run_json5SpecTest("comments", "inline-comment-following-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "inline-comment-in-string", testType: .json, type: String.self)
+        try _run_json5SpecTest("comments", "inline-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
 
-        _run_json5SpecTest("misc", "npm-package", testType: .json, type: JSON5Spec.NPMPackage.self)
-        _run_json5SpecTest("misc", "npm-package", testType: .json5, type: JSON5Spec.NPMPackage.self)
-        _run_json5SpecTest("misc", "readme-example", testType: .json5, type: JSON5Spec.ReadmeExample.self)
-        _run_json5SpecTest("misc", "valid-whitespace", testType: .json5, type: [String:Bool].self)
+        try _run_json5SpecTest("misc", "npm-package", testType: .json, type: JSON5Spec.NPMPackage.self)
+        try _run_json5SpecTest("misc", "npm-package", testType: .json5, type: JSON5Spec.NPMPackage.self)
+        try _run_json5SpecTest("misc", "readme-example", testType: .json5, type: JSON5Spec.ReadmeExample.self)
+        try _run_json5SpecTest("misc", "valid-whitespace", testType: .json5, type: [String:Bool].self)
 
-        _run_json5SpecTest("new-lines", "comment-cr", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "comment-crlf", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "comment-lf", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "escaped-cr", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "escaped-crlf", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "escaped-lf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "comment-cr", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "comment-crlf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "comment-lf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "escaped-cr", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "escaped-crlf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "escaped-lf", testType: .json5, type: [String:String].self)
 
-        _run_json5SpecTest("numbers", "float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "float-leading-zero", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "float-trailing-decimal-point-with-integer-exponent", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "float-with-integer-exponent", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "float", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "hexadecimal-lowercase-letter", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "hexadecimal-uppercase-x", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "hexadecimal-with-integer-exponent", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "hexadecimal", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "infinity", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-integer-exponent", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-integer-exponent", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-zero-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-zero-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer-with-zero-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "nan", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float-leading-zero", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-infinity", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-integer", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-zero-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-zero-integer", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-integer", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "positive-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "positive-zero-float", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "positive-zero-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-zero-integer", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "zero-float", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "zero-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-integer-with-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-leading-zero", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-trailing-decimal-point-with-integer-exponent", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-with-integer-exponent", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "float", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-lowercase-letter", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-uppercase-x", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-with-integer-exponent", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "hexadecimal", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "infinity", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-integer-exponent", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-integer-exponent", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-zero-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-zero-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer-with-zero-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "nan", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float-leading-zero", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-infinity", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-zero-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-zero-integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-integer", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "positive-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "positive-zero-float", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "positive-zero-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-zero-integer", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "zero-float", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "zero-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-integer-with-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-integer", testType: .json, type: Int.self)
 
-        _run_json5SpecTest("objects", "duplicate-keys", testType: .json, type: [String:Bool].self)
-        _run_json5SpecTest("objects", "empty-object", testType: .json, type: [String:Bool].self)
-        _run_json5SpecTest("objects", "reserved-unquoted-key", testType: .json5, type: [String:Bool].self)
-        _run_json5SpecTest("objects", "single-quoted-key", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("objects", "trailing-comma-object", testType: .json5_foundationPermissiveJSON, type: [String:String].self)
-        _run_json5SpecTest("objects", "unquoted-keys", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("objects", "duplicate-keys", testType: .json, type: [String:Bool].self)
+        try _run_json5SpecTest("objects", "empty-object", testType: .json, type: [String:Bool].self)
+        try _run_json5SpecTest("objects", "reserved-unquoted-key", testType: .json5, type: [String:Bool].self)
+        try _run_json5SpecTest("objects", "single-quoted-key", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("objects", "trailing-comma-object", testType: .json5_foundationPermissiveJSON, type: [String:String].self)
+        try _run_json5SpecTest("objects", "unquoted-keys", testType: .json5, type: [String:String].self)
 
-        _run_json5SpecTest("strings", "escaped-single-quoted-string", testType: .json5, type: String.self)
-        _run_json5SpecTest("strings", "multi-line-string", testType: .json5, type: String.self)
-        _run_json5SpecTest("strings", "single-quoted-string", testType: .json5, type: String.self)
+        try _run_json5SpecTest("strings", "escaped-single-quoted-string", testType: .json5, type: String.self)
+        try _run_json5SpecTest("strings", "multi-line-string", testType: .json5, type: String.self)
+        try _run_json5SpecTest("strings", "single-quoted-string", testType: .json5, type: String.self)
 
-        _run_json5SpecTest("todo", "unicode-escaped-unquoted-key", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("todo", "unicode-unquoted-key", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("todo", "unicode-escaped-unquoted-key", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("todo", "unicode-unquoted-key", testType: .json5, type: [String:String].self)
 
         // Expected failures:
-        _run_json5SpecTest("arrays", "leading-comma-array", testType: .js, type: [Bool].self)
-        _run_json5SpecTest("arrays", "lone-trailing-comma-array", testType: .js, type: [Bool].self)
-        _run_json5SpecTest("arrays", "no-comma-array", testType: .malformed, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "leading-comma-array", testType: .js, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "lone-trailing-comma-array", testType: .js, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "no-comma-array", testType: .malformed, type: [Bool].self)
 
-        _run_json5SpecTest("comments", "top-level-block-comment", testType: .malformed, type: Bool.self)
-        _run_json5SpecTest("comments", "top-level-inline-comment", testType: .malformed, type: Bool.self)
-        _run_json5SpecTest("comments", "unterminated-block-comment", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("comments", "top-level-block-comment", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("comments", "top-level-inline-comment", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("comments", "unterminated-block-comment", testType: .malformed, type: Bool.self)
 
-        _run_json5SpecTest("misc", "empty", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("misc", "empty", testType: .malformed, type: Bool.self)
 
-        _run_json5SpecTest("numbers", "hexadecimal-empty", testType: .malformed, type: UInt.self)
-        _run_json5SpecTest("numbers", "integer-with-float-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-hexadecimal-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-float-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-hexadecimal-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-float-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-hexadecimal-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "lone-decimal-point", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-noctal", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "noctal-with-leading-octal-digit", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "noctal", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-noctal", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-zero-octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-empty", testType: .malformed, type: UInt.self)
+        try _run_json5SpecTest("numbers", "integer-with-float-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-hexadecimal-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-float-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-hexadecimal-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-float-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-hexadecimal-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "lone-decimal-point", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-noctal", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "noctal-with-leading-octal-digit", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "noctal", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-noctal", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-zero-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-octal", testType: .malformed, type: Int.self)
 
-        _run_json5SpecTest("objects", "illegal-unquoted-key-number", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "illegal-unquoted-key-number", testType: .malformed, type: [String:String].self)
 
         // The spec test disallows this case, but historically NSJSONSerialization has allowed it. Our new implementation is more up-to-spec.
-        _run_json5SpecTest("objects", "illegal-unquoted-key-symbol", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "illegal-unquoted-key-symbol", testType: .malformed, type: [String:String].self)
 
-        _run_json5SpecTest("objects", "leading-comma-object", testType: .malformed, type: [String:String].self)
-        _run_json5SpecTest("objects", "lone-trailing-comma-object", testType: .malformed, type: [String:String].self)
-        _run_json5SpecTest("objects", "no-comma-object", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "leading-comma-object", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "lone-trailing-comma-object", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "no-comma-object", testType: .malformed, type: [String:String].self)
 
-        _run_json5SpecTest("strings", "unescaped-multi-line-string", testType: .malformed, type: String.self)
+        try _run_json5SpecTest("strings", "unescaped-multi-line-string", testType: .malformed, type: String.self)
 
     }
 

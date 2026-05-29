@@ -168,7 +168,7 @@ internal final class __DataStorage : @unchecked Sendable {
     /// their original allocation, this may point to memory before the actual allocation.
     @inlinable // This is @inlinable as trivially computable.
     var bytes: UnsafeRawPointer? {
-        return UnsafeRawPointer(_bytes)?.advanced(by: -_offset)
+        return UnsafeRawPointer(_bytes)?.advanced(by: _offset &* -1)
     }
 
     @inline(__always)
@@ -451,14 +451,14 @@ internal final class __DataStorage : @unchecked Sendable {
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func get(_ index: Int) -> UInt8 {
         // index must have already been validated by the caller
-        return _bytes!.load(fromByteOffset: index - _offset, as: UInt8.self)
+        return _bytes.unsafelyUnwrapped.load(fromByteOffset: index &- _offset, as: UInt8.self)
     }
     
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
     func set(_ index: Int, to value: UInt8) {
         // index must have already been validated by the caller
         ensureUniqueBufferReference()
-        _bytes!.storeBytes(of: value, toByteOffset: index - _offset, as: UInt8.self)
+        _bytes.unsafelyUnwrapped.storeBytes(of: value, toByteOffset: index &- _offset, as: UInt8.self)
     }
     
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.

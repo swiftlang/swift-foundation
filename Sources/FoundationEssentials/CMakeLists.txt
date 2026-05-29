@@ -29,6 +29,7 @@ add_library(FoundationEssentials
     Platform.swift
     Progress+Stub.swift
     SortComparator.swift
+    Span+Utils.swift
     UUID_Wrappers.swift
     UUID.swift
     WASILibc+Extensions.swift
@@ -66,7 +67,7 @@ else()
     FetchContent_MakeAvailable(FoundationMacros)
     add_dependencies(FoundationEssentials FoundationMacros)
     get_target_property(MacroDIR FoundationMacros RUNTIME_OUTPUT_DIRECTORY)
-    if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(MacroExecutable "${MacroDIR}/FoundationMacros.exe#FoundationMacros")
     else()
         set(MacroExecutable "${MacroDIR}/FoundationMacros#FoundationMacros")
@@ -75,13 +76,13 @@ else()
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-load-plugin-executable ${MacroExecutable}>")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "WASI")
     target_compile_options(FoundationEssentials PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -Xcc -Xfrontend -D_GNU_SOURCE>")
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     target_compile_options(FoundationEssentials PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-DDATA_LEGACY_ABI>")
 endif()

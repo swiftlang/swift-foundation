@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
+#endif
 
 //===----------------------------------------------------------------------===//
 // JSON Encoder
@@ -82,6 +84,7 @@ open class JSONEncoder {
         public static let withoutEscapingSlashes = OutputFormatting(rawValue: 1 << 3)
     }
 
+    #if !NO_JSON_FOUNDATION_SPECIALIZATION
     /// The formatting strategies available for formatting dates when encoding a date as JSON.
     public enum DateEncodingStrategy : Sendable {
         /// The strategy that uses formatting from the Date structure.
@@ -108,7 +111,8 @@ open class JSONEncoder {
         @preconcurrency
         case custom(@Sendable (Date, Encoder) throws -> Void)
     }
-    
+    #endif
+
     /// The strategies for encoding raw data.
     public enum DataEncodingStrategy : Sendable {
         /// The strategy that encodes data using the encoding specified by the data instance itself.
@@ -143,6 +147,7 @@ open class JSONEncoder {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
 
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         /// Convert from "camelCaseKeys" to "snake_case_keys" before writing a key to JSON payload.
         ///
         /// Capital characters are determined by testing membership in Unicode General Categories Lu and Lt.
@@ -158,6 +163,7 @@ open class JSONEncoder {
         ///
         /// - Note: Using a key encoding strategy has a nominal performance cost, as each string key has to be converted.
         case convertToSnakeCase
+        #endif
 
         /// Provide a custom conversion to the key in the encoded JSON from the keys specified by the encoded types.
         /// The full path to the current encoding position is provided for context (in case you need to locate this key within the payload). The returned key is used in place of the last component in the coding path before encoding.
@@ -165,6 +171,7 @@ open class JSONEncoder {
         @preconcurrency
         case custom(@Sendable (_ codingPath: [CodingKey]) -> CodingKey)
 
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         fileprivate static func _convertToSnakeCase(_ stringKey: String) -> String {
             guard !stringKey.isEmpty else { return stringKey }
 
@@ -213,6 +220,7 @@ open class JSONEncoder {
             }).joined(separator: "_")
             return result
         }
+        #endif
     }
 
     /// A value that determines the readability, size, and element order of the encoded JSON object.
@@ -240,6 +248,7 @@ open class JSONEncoder {
         }
     }
 
+    #if !NO_JSON_FOUNDATION_SPECIALIZATION
     /// The strategy used when encoding dates as part of a JSON object.
     ///
     /// Defaults to `.deferredToDate`.
@@ -264,6 +273,7 @@ open class JSONEncoder {
             options.dateEncodingStrategy = newValue
         }
     }
+    #endif
 
     /// The strategy that an encoder uses to encode raw data.
     ///
@@ -367,7 +377,9 @@ open class JSONEncoder {
     /// Options set on the top-level encoder to pass down the encoding hierarchy.
     fileprivate struct _Options {
         var outputFormatting: OutputFormatting = []
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         var dateEncodingStrategy: DateEncodingStrategy = .deferredToDate
+        #endif
         var dataEncodingStrategy: DataEncodingStrategy = .base64
         var nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy = .throw
         var keyEncodingStrategy: KeyEncodingStrategy = .useDefaultKeys
@@ -828,9 +840,11 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
         switch encoder.options.keyEncodingStrategy {
         case .useDefaultKeys:
             return key.stringValue
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         case .convertToSnakeCase:
             let newKeyString = JSONEncoder.KeyEncodingStrategy._convertToSnakeCase(key.stringValue)
             return newKeyString
+        #endif
         case .custom(let converter):
             var path = codingPath
             path.append(key)
@@ -1173,6 +1187,7 @@ private extension __JSONEncoder {
         try .number(from: double, encoder: self, additionalKey)
     }
 
+    #if !NO_JSON_FOUNDATION_SPECIALIZATION
     func wrap(_ date: Date, for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue {
         switch self.options.dateEncodingStrategy {
         case .deferredToDate:
@@ -1206,6 +1221,7 @@ private extension __JSONEncoder {
             return encoder.takeValue() ?? .object([:])
         }
     }
+    #endif
 
     func wrap(_ data: Data, for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue {
         switch self.options.dataEncodingStrategy {
@@ -1248,20 +1264,23 @@ private extension __JSONEncoder {
     }
 
     func wrapGeneric<T: Encodable>(_ value: T, for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue? {
-
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         if let date = value as? Date {
             // Respect Date encoding strategy
             return try self.wrap(date, for: additionalKey)
-        } else if let data = value as? Data {
-            // Respect Data encoding strategy
-            return try self.wrap(data, for: additionalKey)
         } else if let url = value as? URL {
             // Encode URLs as single strings.
             return self.wrap(url.absoluteString)
         } else if let decimal = value as? Decimal {
             return .number(decimal.description)
-        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONCodingKeyRepresentableDictionaryEncodableMarker {
-            return try self.wrap(encodable._stringKeyedDictionary, for: additionalKey)
+        }
+        #endif
+
+        if let data = value as? Data {
+            // Respect Data encoding strategy
+            return try self.wrap(data, for: additionalKey)
+        } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
+            return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
         } else if let array = _asDirectArrayEncodable(value) {
             if options.outputFormatting.contains(.prettyPrinted) {
                 let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
@@ -1293,35 +1312,35 @@ private extension __JSONEncoder {
     }
 
     func _asDirectArrayEncodable<T: Encodable>(_ value: T) -> _JSONDirectArrayEncodable? {
-        return if let array = _specializingCast(value, to: [Int8].self) {
+        return if let array = _specialize(value, for: [Int8].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int16].self) {
+        } else if let array = _specialize(value, for: [Int16].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int32].self) {
+        } else if let array = _specialize(value, for: [Int32].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int64].self) {
+        } else if let array = _specialize(value, for: [Int64].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int128].self) {
+        } else if let array = _specialize(value, for: [Int128].self) {
             array
-        } else if let array = _specializingCast(value, to: [Int].self) {
+        } else if let array = _specialize(value, for: [Int].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt8].self) {
+        } else if let array = _specialize(value, for: [UInt8].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt16].self) {
+        } else if let array = _specialize(value, for: [UInt16].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt32].self) {
+        } else if let array = _specialize(value, for: [UInt32].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt64].self) {
+        } else if let array = _specialize(value, for: [UInt64].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt128].self) {
+        } else if let array = _specialize(value, for: [UInt128].self) {
             array
-        } else if let array = _specializingCast(value, to: [UInt].self) {
+        } else if let array = _specialize(value, for: [UInt].self) {
             array
-        } else if let array = _specializingCast(value, to: [String].self) {
+        } else if let array = _specialize(value, for: [String].self) {
             array
-        } else if let array = _specializingCast(value, to: [Float].self) {
+        } else if let array = _specialize(value, for: [Float].self) {
             array
-        } else if let array = _specializingCast(value, to: [Double].self) {
+        } else if let array = _specialize(value, for: [Double].self) {
             array
         } else {
             nil
@@ -1440,37 +1459,22 @@ extension EncodingError {
     }
 }
 
+#if NO_JSON_FOUNDATION_SPECIALIZATION
+@available(*, unavailable)
+#else
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+#endif
 extension JSONEncoder : @unchecked Sendable {}
 
 //===----------------------------------------------------------------------===//
 // Special-casing Support
 //===----------------------------------------------------------------------===//
 
-/// A marker protocol used to determine whether a value is a `CodingKeyRepresentable`-keyed `Dictionary`
+/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
-///
-/// The protocol provides `_stringKeyedDictionary` to convert keys using their `codingKey.stringValue`,
-/// allowing the encoder to use the optimized String-keyed encoding path.
-private protocol _JSONCodingKeyRepresentableDictionaryEncodableMarker {
-    var _stringKeyedDictionary: [String: Encodable] { get }
-}
+private protocol _JSONStringDictionaryEncodableMarker { }
 
-extension Dictionary: _JSONCodingKeyRepresentableDictionaryEncodableMarker where Key: CodingKeyRepresentable, Value: Encodable {
-    var _stringKeyedDictionary: [String: Encodable] {
-        // Fast path for String keys - return self without creating a new dictionary
-        if Key.self == String.self {
-            return self as! [String: Encodable]
-        }
-        // Convert other CodingKeyRepresentable keys to String
-        var result = [String: Encodable]()
-        result.reserveCapacity(count)
-        for (key, value) in self {
-            result[key.codingKey.stringValue] = value
-        }
-        return result
-    }
-}
+extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
 
 /// A protocol used to determine whether a value is an `Array` containing values that allow
 /// us to bypass UnkeyedEncodingContainer overhead by directly encoding the contents as
@@ -1576,8 +1580,9 @@ fileprivate extension JSONEncoder.KeyEncodingStrategy {
         switch self {
         case .useDefaultKeys:
             return true
-        case .custom, .convertToSnakeCase:
+        default:
             return false
+
         }
     }
 }

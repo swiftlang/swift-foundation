@@ -911,6 +911,31 @@ private struct GregorianCalendarRecurrenceRuleTests {
     }
 
     @available(FoundationPreview 6.3, *)
+    @Test func ordinalWeekdaysWithNonSundayFirstWeekday() {
+        // Ordinal weekday calculations (.nth(...)) must produce the same dates regardless of the calendar's firstWeekday setting.
+        let jan2024 = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00Z (a Monday)
+        let feb2024 = Date(timeIntervalSince1970: 1706745600.0) // 2024-02-01T00:00:00Z
+
+        let firstSundayJan2024 = Date(timeIntervalSince1970: 1704585600.0) // 2024-01-07T00:00:00Z
+        let lastSundayJan2024  = Date(timeIntervalSince1970: 1706400000.0) // 2024-01-28T00:00:00Z
+
+        for firstWeekday in 1...7 {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
+            calendar.firstWeekday = firstWeekday
+
+            var firstSundayRule = Calendar.RecurrenceRule(calendar: calendar, frequency: .monthly)
+            firstSundayRule.weekdays = [.nth(1, .sunday)]
+            let firstResults = Array(firstSundayRule.recurrences(of: jan2024, in: jan2024..<feb2024))
+            #expect(firstResults == [firstSundayJan2024], "firstWeekday=\(firstWeekday) returned \(firstResults) for 1st Sunday")
+
+            var lastSundayRule = Calendar.RecurrenceRule(calendar: calendar, frequency: .monthly)
+            lastSundayRule.weekdays = [.nth(-1, .sunday)]
+            let lastResults = Array(lastSundayRule.recurrences(of: jan2024, in: jan2024..<feb2024))
+            #expect(lastResults == [lastSundayJan2024], "firstWeekday=\(firstWeekday) returned \(lastResults) for last Sunday")
+        }
+    }
+
     @Test func partialRangeFrom() {
         let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily, end: .never)
         

@@ -27,33 +27,6 @@ extension Decimal {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal {
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func add(_ other: Decimal) {
-        self += other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func subtract(_ other: Decimal) {
-        self -= other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func multiply(by other: Decimal) {
-        self *= other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func divide(by other: Decimal) {
-        self /= other
-    }
-}
-
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSDecimalNumber {

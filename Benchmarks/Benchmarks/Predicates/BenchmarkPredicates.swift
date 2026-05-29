@@ -109,7 +109,7 @@ func registerPredicateTests() {
     #endif // USE_PACKAGE || !os(Windows)
 }
 
-let benchmarks : () -> Void = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo

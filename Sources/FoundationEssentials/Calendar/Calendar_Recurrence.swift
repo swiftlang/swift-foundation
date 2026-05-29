@@ -719,7 +719,13 @@ extension Calendar {
         // it falls on the day after the last day in the interval. Subtracting a
         // few seconds can give us the last day in the interval
         lazy var lastWeekday = component(.weekday, from: interval.end.addingTimeInterval(-0.1))
-        
+        let calendarFirstWeekday = self.firstWeekday
+
+        /// Convert an absolute weekday (Sun=1...Sat=7) to an index within the calendar's week, which can start on an arbitrary weekday.
+        func positionInWeek(_ weekday: Int) -> Int {
+            (weekday - calendarFirstWeekday + 7) % 7
+        }
+
         for (weekday, occurences) in map {
             let weekdayIdx = weekday.icuIndex
             if occurences == [] {
@@ -728,8 +734,8 @@ extension Calendar {
                 components.weekday = weekdayIdx
                 result.append(components)
             } else {
-                lazy var firstWeek = weekRange.lowerBound + (weekdayIdx < firstWeekday ? 1 : 0)
-                lazy var lastWeek  = weekRange.upperBound - (weekdayIdx > lastWeekday  ? 1 : 0)
+                lazy var firstWeek = weekRange.lowerBound + (positionInWeek(weekdayIdx) < positionInWeek(firstWeekday) ? 1 : 0)
+                lazy var lastWeek  = weekRange.upperBound - (positionInWeek(weekdayIdx) > positionInWeek(lastWeekday)  ? 1 : 0)
                 for occurence in occurences {
                     var components = DateComponents()
                     if occurence > 0 {

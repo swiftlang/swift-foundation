@@ -144,7 +144,7 @@ let package = Package(
             "ProgressManager/CMakeLists.txt",
           ],
           cSettings: [
-            .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))
           ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),

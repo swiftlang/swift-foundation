@@ -2,7 +2,7 @@ import Benchmark
 
 
 #if !FOUNDATION_FRAMEWORK
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     calendarBenchmarks()
     localeBenchmarks()
     timeZoneBenchmarks()
