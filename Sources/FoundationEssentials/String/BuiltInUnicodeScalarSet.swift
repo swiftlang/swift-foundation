@@ -454,6 +454,85 @@ internal struct BuiltInUnicodeScalarSet {
         return isInverted ? (.bitmapAll, Data()) : (.bitmapEmpty, Data())
     }
 
+    internal func bitmap(forPlane plane: Int, isInverted: Bool, into destination: inout MutableSpan<UInt8>, apply: (inout UInt8, UInt8) -> Void) -> BitmapResult {
+        if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
+            let shouldInvert = invertBitmapData ? !isInverted : isInverted
+            if shouldInvert {
+                for i in 0..<Self.byteCount {
+                    apply(&destination[unchecked: i], ~src[i])
+                }
+            } else {
+                for i in 0..<Self.byteCount {
+                    apply(&destination[unchecked: i], src[i])
+                }
+            }
+            return .bitmapFilled
+        } else if charset == .illegal {
+            if plane == 14 {
+                let asciiRange: UInt8 = isInverted ? 0xFF : 0x00
+                let otherRange: UInt8 = isInverted ? 0x00 : 0xFF
+                apply(&destination[0], 0x02)
+                for i in 1..<Self.byteCount {
+                    let isAsciiRange = (i >= (0x20 / 8)) && (i < (0x80 / 8))
+                    apply(&destination[i], isAsciiRange ? asciiRange : otherRange)
+                }
+                return .bitmapFilled
+            } else if plane == 15 || plane == 16 {
+                let value: UInt32 = isInverted ? ~0 : 0
+                for i in stride(from: 0, to: Self.byteCount, by: 4) {
+                    apply(&destination[i],     UInt8(value & 0xFF))
+                    apply(&destination[i + 1], UInt8((value >> 8) & 0xFF))
+                    apply(&destination[i + 2], UInt8((value >> 16) & 0xFF))
+                    apply(&destination[i + 3], UInt8((value >> 24) & 0xFF))
+                }
+                let specialIndex = destination.count - 5
+                if specialIndex >= 0 {
+                    apply(&destination[specialIndex], isInverted ? 0x3F : 0xC0)
+                }
+                return .bitmapFilled
+            }
+            return isInverted ? .bitmapEmpty : .bitmapAll
+        } else if charset == .control || charset == .whitespace || charset == .whitespaceAndNewline || charset == .newline {
+            if plane != 0 {
+                return isInverted ? .bitmapAll : .bitmapEmpty
+            }
+            let nonFillValue: UInt8 = isInverted ? 0xFF : 0x00
+            assert(destination.count >= Self.byteCount)
+            for i in 0..<Self.byteCount {
+                apply(&destination[unchecked: i], nonFillValue)
+            }
+            if charset == .whitespaceAndNewline || charset == .newline {
+                let newlines: [UInt16] = [0x000A, 0x000B, 0x000C, 0x000D, 0x0085, 0x2028, 0x2029]
+                for newlineChar in newlines {
+                    if isInverted {
+                        _CharacterSet.modifyBitmap(.remove, char: newlineChar, mutableSpan: &destination)
+                    } else {
+                        _CharacterSet.modifyBitmap(.add, char: newlineChar, mutableSpan: &destination)
+                    }
+                }
+                if charset == .newline { return .bitmapFilled }
+            }
+            let whitespaces: [UInt16] = [0x0009, 0x0020, 0x00A0, 0x1680, 0x202F, 0x205F, 0x3000]
+            for whitespaceChar in whitespaces {
+                if isInverted {
+                    _CharacterSet.modifyBitmap(.remove, char: whitespaceChar, mutableSpan: &destination)
+                } else {
+                    _CharacterSet.modifyBitmap(.add, char: whitespaceChar, mutableSpan: &destination)
+                }
+            }
+            let characterRange: ClosedRange<UInt16> = 0x2000...0x200B
+            for char in characterRange {
+                if isInverted {
+                    _CharacterSet.modifyBitmap(.remove, char: char, mutableSpan: &destination)
+                } else {
+                    _CharacterSet.modifyBitmap(.add, char: char, mutableSpan: &destination)
+                }
+            }
+            return .bitmapFilled
+        }
+        return isInverted ? .bitmapAll : .bitmapEmpty
+    }
+
     // CFUniCharGetNumberOfPlanes
     internal var _numberOfPlanes: Int {
         switch charset {
