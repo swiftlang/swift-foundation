@@ -202,19 +202,19 @@ private struct CalendarTests {
         #expect(anyHashables[1] == anyHashables[2])
     }
     
-    @Test func longInitializer() {
+    @Test func longInitializer() throws {
         let locale = Locale(identifier: "en_AU")
-        let tz = TimeZone(identifier: "Australia/Sydney")!
+        let timeZone = try #require(TimeZone(identifier: "Australia/Sydney"))
 
-        var c = Calendar(identifier: .gregorian)
-        c.locale = locale
-        c.timeZone = tz
-        c.firstWeekday = 2
-        c.minimumDaysInFirstWeek = 2
+        var stepwiseCalendar = Calendar(identifier: .gregorian)
+        stepwiseCalendar.locale = locale
+        stepwiseCalendar.timeZone = timeZone
+        stepwiseCalendar.firstWeekday = 2
+        stepwiseCalendar.minimumDaysInFirstWeek = 2
 
-        let calendar = Calendar(identifier: .gregorian, timeZone: tz, locale: locale, firstWeekday: 2, minimumDaysInFirstWeek: 2)
+        let calendar = Calendar(identifier: .gregorian, timeZone: timeZone, locale: locale, firstWeekday: 2, minimumDaysInFirstWeek: 2)
 
-        #expect(c == calendar)
+        #expect(stepwiseCalendar == calendar)
     }
 
     func decodeHelper(_ l: Calendar) throws -> Calendar {
