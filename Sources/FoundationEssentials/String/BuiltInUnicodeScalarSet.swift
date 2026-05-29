@@ -333,27 +333,34 @@ internal struct BuiltInUnicodeScalarSet {
     // CFUniCharGetBitmapForPlane
     internal func bitmap(forPlane plane: Int, isInverted: Bool) -> (BitmapResult, Data) {
         
-        var bitmap = Data(repeating: 0, count: _CharacterSet.__kCFBitmapSize)
-        var bitmapMutableSpan = bitmap.mutableSpan
-        
         if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
-            assert(bitmapMutableSpan.count >= Self.byteCount)
-
             let shouldInvert = invertBitmapData ? !isInverted : isInverted
+
+            // For non-inverted, initialize Data using the pointer to avoid allocation
+            if !shouldInvert {
+                let data = src.withUnsafeBufferPointer { buffer in
+                    Data(
+                        bytesNoCopy: UnsafeMutableRawPointer(mutating: buffer.baseAddress!),
+                        count: Self.byteCount,
+                        deallocator: .none
+                    )
+                }
+                return (.bitmapFilled, data)
+            }
             
-            if shouldInvert {
-                for i in 0..<Self.byteCount {
-                    bitmapMutableSpan[unchecked: i] = ~src[i]
-                }
-            } else {
-                for i in 0..<Self.byteCount {
-                    bitmapMutableSpan[unchecked: i] = src[i]
-                }
+            // For inverted case, we have to allocate
+            var bitmap = Data(count: _CharacterSet.__kCFBitmapSize)
+            var bitmapMutableSpan = bitmap.mutableSpan
+            assert(bitmapMutableSpan.count >= Self.byteCount)
+            for i in 0..<Self.byteCount {
+                bitmapMutableSpan[unchecked: i] = ~src[i]
             }
             return (.bitmapFilled, bitmap)
         } else if charset == .illegal {
             // Special handling for planes 14, 15, and 16 which don't have bitmap data
             if plane == 14 {
+                var bitmap = Data(repeating: 0, count: _CharacterSet.__kCFBitmapSize)
+                var bitmapMutableSpan = bitmap.mutableSpan
                 let asciiRange: UInt8 = isInverted ? 0xFF : 0x00
                 let otherRange: UInt8 = isInverted ? 0x00 : 0xFF
                 
@@ -371,6 +378,8 @@ internal struct BuiltInUnicodeScalarSet {
                 }
                 return (.bitmapFilled, bitmap)
             } else if plane == 15 || plane == 16 {
+                var bitmap = Data(repeating: 0, count: _CharacterSet.__kCFBitmapSize)
+                var bitmapMutableSpan = bitmap.mutableSpan
                 let value: UInt32 = isInverted ? ~0 : 0
                 
                 for i in stride(from: 0, to: Self.byteCount, by: 4) {
@@ -388,13 +397,15 @@ internal struct BuiltInUnicodeScalarSet {
                 }
                 return (.bitmapFilled, bitmap)
             }
-            return isInverted ? (.bitmapEmpty, bitmap) : (.bitmapAll, bitmap)
+            return isInverted ? (.bitmapEmpty, Data()) : (.bitmapAll, Data())
 
         } else if charset == .control || charset == .whitespace || charset == .whitespaceAndNewline || charset == .newline {
             if plane != 0 {
-                return isInverted ? (.bitmapAll, bitmap) : (.bitmapEmpty, bitmap)
+                return isInverted ? (.bitmapAll, Data()) : (.bitmapEmpty, Data())
             }
             
+            var bitmap = Data(repeating: 0, count: _CharacterSet.__kCFBitmapSize)
+            var bitmapMutableSpan = bitmap.mutableSpan
             let nonFillValue: UInt8 = isInverted ? 0xFF : 0x00
             assert(bitmapMutableSpan.count >= Self.byteCount)
             for i in 0..<Self.byteCount {
@@ -440,7 +451,7 @@ internal struct BuiltInUnicodeScalarSet {
             
             return (.bitmapFilled, bitmap)
         }
-        return isInverted ? (.bitmapAll, bitmap) : (.bitmapEmpty, bitmap)
+        return isInverted ? (.bitmapAll, Data()) : (.bitmapEmpty, Data())
     }
 
     // CFUniCharGetNumberOfPlanes
