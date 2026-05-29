@@ -12,6 +12,15 @@ We are using [GitHub Issues](https://github.com/apple/swift-foundation/issues) f
 
 Before embarking on a large amount of work to implement missing functionality, please double-check with the community in the [Swift Forums](https://forums.swift.org/). Someone may already be working in this area, and we want to avoid duplication of work.
 
+## Branching and Merging Strategy
+
+Foundation uses a **merge-forward** branching strategy, which differs from the rest of the Swift project's cherry-pick-backward model. This reduces the risk of a fix accidentally being omitted from an active release branch.
+
+When submitting a pull request:
+
+* **Target the earliest release branch** that your change should appear in (e.g., `release/6.x` rather than `main` if the fix should ship in the next release). If the change is only relevant to future development, target `main` directly. An **automerger** will automatically forward merged changes up through subsequent release branches and into `main`, so you do not need to open separate PRs for each branch.
+* Choosing the correct target branch is an explicit part of the review process. Reviewers will help confirm the right target if you are unsure.
+
 ## Review
 
 Each pull request will be reviewed by a code owner before merging.

@@ -72,7 +72,7 @@ func path(forResource name: String) -> _URL? {
     return _URL(fileURLWithPath: url.path)
 }
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo

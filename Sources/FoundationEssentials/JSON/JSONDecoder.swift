@@ -16,8 +16,9 @@ import Darwin
 @preconcurrency import Glibc
 #endif
 
-internal import _FoundationCShims
+#if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
+#endif
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Decodable` values (in which case it should be exempt from key conversion strategies).
@@ -72,6 +73,7 @@ extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String,
 open class JSONDecoder {
     // MARK: Options
 
+    #if !NO_JSON_FOUNDATION_SPECIALIZATION
     /// The strategies available for formatting dates when decoding them from JSON.
     public enum DateDecodingStrategy : Sendable {
         /// Defer to `Date` for decoding. This is the default strategy.
@@ -96,6 +98,7 @@ open class JSONDecoder {
         @preconcurrency
         case custom(@Sendable (_ decoder: Decoder) throws -> Date)
     }
+    #endif
 
     /// The strategies for decoding raw data.
     public enum DataDecodingStrategy : Sendable {
@@ -129,6 +132,7 @@ open class JSONDecoder {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
 
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         /// Convert from "snake_case_keys" to "camelCaseKeys" before attempting to match a key with the one specified by each type.
         ///
         /// The conversion to upper case uses `Locale.system`, also known as the ICU "root" locale. This means the result is consistent regardless of the current user's locale and language preferences.
@@ -141,6 +145,7 @@ open class JSONDecoder {
         ///
         /// - Note: Using a key decoding strategy has a nominal performance cost, as each string key has to be inspected for the `_` character.
         case convertFromSnakeCase
+        #endif
 
         /// Provide a custom conversion from the key in the encoded JSON to the keys specified by the decoded types.
         /// The full path to the current decoding position is provided for context (in case you need to locate this key within the payload). The returned key is used in place of the last component in the coding path before decoding.
@@ -148,6 +153,7 @@ open class JSONDecoder {
         @preconcurrency
         case custom(@Sendable (_ codingPath: [CodingKey]) -> CodingKey)
 
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         fileprivate static func _convertFromSnakeCase(_ stringKey: String) -> String {
             guard !stringKey.isEmpty else { return stringKey }
 
@@ -192,8 +198,10 @@ open class JSONDecoder {
             }
             return result
         }
+        #endif
     }
 
+    #if !NO_JSON_FOUNDATION_SPECIALIZATION
     /// The strategy used when decoding dates from part of a JSON object.
     open var dateDecodingStrategy: DateDecodingStrategy {
         get {
@@ -216,6 +224,7 @@ open class JSONDecoder {
             options.dateDecodingStrategy = newValue
         }
     }
+    #endif
 
     /// The strategy that a decoder uses to decode raw data.
     ///
@@ -346,7 +355,9 @@ open class JSONDecoder {
 
     /// Options set on the top-level encoder to pass down the decoding hierarchy.
     fileprivate struct _Options {
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         var dateDecodingStrategy: DateDecodingStrategy = .deferredToDate
+        #endif
         var dataDecodingStrategy: DataDecodingStrategy = .base64
         var nonConformingFloatDecodingStrategy: NonConformingFloatDecodingStrategy = .throw
         var keyDecodingStrategy: KeyDecodingStrategy = .useDefaultKeys
@@ -444,6 +455,9 @@ open class JSONDecoder {
         return try jsonData.withBufferView {
             [length = jsonData.count] bytes in
             assert(bytes.count == length)
+            #if NO_JSON_FOUNDATION_SPECIALIZATION
+            return try closure(bytes)
+            #else
             // RFC4627 section 3
             // The first two characters of a JSON text will always be ASCII. We can determine encoding by looking at the first four bytes.
             let byte0 = (length > 0) ? bytes[uncheckedOffset: 0] : nil
@@ -508,6 +522,7 @@ open class JSONDecoder {
                     try closure(BufferView(unsafeBufferPointer: $0)!)
                 }
             }
+            #endif
         }
     }
 }
@@ -553,6 +568,9 @@ fileprivate class JSONDecoderImpl {
     // In either case, we need to copy-in the input buffer since it's about to go out of scope.
     func takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: Bool) {
         if !selfIsUniquelyReferenced || !isKnownUniquelyReferenced(&jsonMap) {
+            #if NO_JSON_FOUNDATION_SPECIALIZATION
+            fatalError("Cannot have multiple references to a JSONDecoder implementation")
+            #endif
             jsonMap.copyInBuffer()
         }
     }
@@ -638,11 +656,12 @@ extension JSONDecoderImpl: Decoder {
     }
 
     func unwrap<T: Decodable>(_ mapValue: JSONMap.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
-        if type == Date.self {
-            return try self.unwrapDate(from: mapValue, for: codingPathNode, additionalKey) as! T
-        }
         if type == Data.self {
             return try self.unwrapData(from: mapValue, for: codingPathNode, additionalKey) as! T
+        }
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
+        if type == Date.self {
+            return try self.unwrapDate(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
         if type == URL.self {
             return try self.unwrapURL(from: mapValue, for: codingPathNode, additionalKey) as! T
@@ -650,6 +669,7 @@ extension JSONDecoderImpl: Decoder {
         if type == Decimal.self {
             return try self.unwrapDecimal(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
+        #endif
         if !options.keyDecodingStrategy.isDefault, T.self is _JSONStringDictionaryDecodableMarker.Type {
             return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
         }
@@ -665,6 +685,7 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
+    #if !NO_JSON_FOUNDATION_SPECIALIZATION
     private func unwrapDate<K: CodingKey>(from mapValue: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: K? = nil) throws -> Date {
         try checkNotNull(mapValue, expectedType: Date.self, for: codingPathNode, additionalKey)
 
@@ -702,6 +723,7 @@ extension JSONDecoderImpl: Decoder {
             }
         }
     }
+    #endif
 
     private func unwrapData(from mapValue: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> Data {
         try checkNotNull(mapValue, expectedType: Data.self, for: codingPathNode, additionalKey)
@@ -740,6 +762,7 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
+    #if !NO_JSON_FOUNDATION_SPECIALIZATION
     private func unwrapURL(from mapValue: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> URL {
         try checkNotNull(mapValue, expectedType: URL.self, for: codingPathNode, additionalKey)
 
@@ -805,6 +828,7 @@ extension JSONDecoderImpl: Decoder {
             }
         }
     }
+    #endif
 
     private func unwrapDictionary<T: Decodable>(from mapValue: JSONMap.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
         try checkNotNull(mapValue, expectedType: [String:Any].self, for: codingPathNode, additionalKey)
@@ -1058,6 +1082,7 @@ extension JSONDecoderImpl: Decoder {
             }
         }
 
+        #if !NO_JSON_FOUNDATION_SPECIALIZATION
         let decimalParseResult = Decimal._decimal(from: numberBuffer, matchEntireString: true).asOptional
         if let decimal = decimalParseResult.result {
             guard let value = T(decimal) else {
@@ -1065,6 +1090,7 @@ extension JSONDecoderImpl: Decoder {
             }
             return value
         }
+        #endif
         // Maybe it was just an unreadable sequence?
         if json5 {
             throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitBeginning), fullSource: fullSource)
@@ -1081,6 +1107,7 @@ extension JSONDecoderImpl: Decoder {
     }
 }
 
+#if !NO_JSON_FOUNDATION_SPECIALIZATION
 extension FixedWidthInteger {
     init?(_ decimal: Decimal) {
         let isNegative = decimal._isNegative != 0
@@ -1133,6 +1160,7 @@ extension FixedWidthInteger {
         }
     }
 }
+#endif
 
 extension JSONDecoderImpl : SingleValueDecodingContainer {
     func decodeNil() -> Bool {
@@ -1247,6 +1275,7 @@ extension JSONDecoderImpl {
                     let key = try impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
                     result[key]._setIfNil(to: value)
                 }
+            #if !NO_JSON_FOUNDATION_SPECIALIZATION
             case .convertFromSnakeCase:
                 while let (keyValue, value) = iter.next() {
                     // We know these values are keys, but UTF-8 decoding could still fail.
@@ -1257,6 +1286,7 @@ extension JSONDecoderImpl {
                     // Effectively an undefined behavior with JSON dictionaries.
                     result[JSONDecoder.KeyDecodingStrategy._convertFromSnakeCase(key)]._setIfNil(to: value)
                 }
+            #endif
             case .custom(let converter):
                 let codingPathForCustomConverter = codingPathNode.path
                 while let (keyValue, value) = iter.next() {
@@ -1906,5 +1936,9 @@ fileprivate extension JSONDecoder.KeyDecodingStrategy {
     }
 }
 
+#if NO_JSON_FOUNDATION_SPECIALIZATION
+@available(*, unavailable)
+#else
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+#endif
 extension JSONDecoder : @unchecked Sendable {}

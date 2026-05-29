@@ -636,9 +636,10 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputRawSpan` covering uninitialized memory with
     ///         space for the specified number of additional bytes.
+    // TODO: Make public pending SE-0527 naming discussion
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
-    public mutating func append<E: Error>(
+    internal mutating func append<E: Error>(
         addingRawCapacity uninitializedCount: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
@@ -665,9 +666,10 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputSpan` covering uninitialized memory with
     ///         space for the specified number of additional elements.
+    // TODO: Make public pending SE-0527 naming discussion
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
-    public mutating func append<E: Error>(
+    internal mutating func append<E: Error>(
         addingCapacity uninitializedCount: Int,
         initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {
@@ -691,6 +693,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public mutating func append<SourceType>(_ buffer : UnsafeBufferPointer<SourceType>) {
         _append(buffer)
+    }
+
+    @_alwaysEmitIntoClient
+    public mutating func append(_ byte: UInt8) {
+        Swift.withUnsafeBytes(of: byte) { buffer in
+            _representation.append(contentsOf: buffer)
+        }
     }
 
     #if FOUNDATION_FRAMEWORK
@@ -807,6 +816,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.resetBytes(in: range)
     }
 
+    @_alwaysEmitIntoClient
+    public mutating func insert(_ newElement: UInt8, at i: Index) {
+        Swift.withUnsafeBytes(of: newElement) { buffer in
+            _representation.replaceSubrange(i ..< i, with: buffer.baseAddress, count: buffer.count)
+        }
+    }
+
     #if FOUNDATION_FRAMEWORK
     /// Replace a region of bytes in the data with new data.
     ///
@@ -915,6 +931,32 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @inlinable // This is @inlinable as trivially forwarding.
     public mutating func replaceSubrange(_ subrange: Range<Index>, with bytes: UnsafeRawPointer, count cnt: Int) {
         _representation.replaceSubrange(subrange, with: bytes, count: cnt)
+    }
+
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func remove(at position: Index) -> UInt8 {
+        precondition(!isEmpty, "Can't remove from an empty collection")
+        let result: UInt8 = self[position]
+        // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+        replaceSubrange(position..<index(after: position), with: UnsafeRawBufferPointer(start: nil, count: 0))
+        return result
+    }
+
+    @_alwaysEmitIntoClient
+    public mutating func removeSubrange(_ bounds: Range<Index>) {
+        // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+        replaceSubrange(bounds, with: UnsafeRawBufferPointer(start: nil, count: 0))
+    }
+
+    @_alwaysEmitIntoClient
+    public mutating func removeAll(keepingCapacity keepCapacity: Bool = false) {
+        if !keepCapacity {
+            self = Data()
+        } else {
+            // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+            replaceSubrange(startIndex..<endIndex, with: UnsafeRawBufferPointer(start: nil, count: 0))
+        }
     }
 
     /// Returns a new copy of the data in a specified range.

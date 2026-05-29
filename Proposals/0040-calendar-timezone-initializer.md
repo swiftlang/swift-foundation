@@ -3,9 +3,9 @@
 * Proposal: [SF-0040](0040-calendar-timezone-initializer.md)
 * Authors: [Kiel Gillard](https://github.com/kielgillard)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Review: 2026-05-08...2026-05-15**
+* Status: **Accepted**
 * Implementation: [swiftlang/swift-foundation#1923](https://github.com/swiftlang/swift-foundation/pull/1923)
-* Review: ([discussion](https://forums.swift.org/t/expressively-initialising-calendars-for-specific-time-zones), [pitch](https://forums.swift.org))
+* Review: ([discussion](https://forums.swift.org/t/expressively-initialising-calendars-for-specific-time-zones), [review](https://forums.swift.org/t/review-sf-0040-calendar-initializer-with-time-zone-locale-first-weekday-and-minimum-days-in-first-week/86559))
 
 ## Introduction
 

@@ -22,7 +22,7 @@ import Foundation
 
 #if FOUNDATION_FRAMEWORK
 // FOUNDATION_FRAMEWORK has a scheme per benchmark file, so only include one benchmark here.
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     calendarBenchmarks()
 }
 #endif

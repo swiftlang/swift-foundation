@@ -59,8 +59,9 @@ import Darwin
 @preconcurrency import Glibc
 #endif // canImport(Darwin)
 
-internal import _FoundationCShims
+#if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
+#endif
 
 internal class JSONMap {
     enum TypeDescriptor : Int {

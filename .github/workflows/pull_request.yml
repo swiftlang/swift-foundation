@@ -35,10 +35,24 @@ jobs:
         uses: actions/checkout@v6
       - name: Install Dependencies
         shell: bash
-        run: apt update && apt install -y cmake ninja-build
+        run: apt update && apt install -y cmake ninja-build jq
       - name: Configure Project
         shell: bash
-        run: cmake -G 'Ninja' -B build -S . -DCMAKE_C_COMPILER=clang -DCMAKE_Swift_COMPILER=swiftc -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=YES
+        run: |
+          mkdir -p build/.cmake/api/v1/query
+          touch build/.cmake/api/v1/query/codemodel-v2
+          cmake -G 'Ninja' -B build -S . -DCMAKE_C_COMPILER=clang -DCMAKE_Swift_COMPILER=swiftc -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=YES
+      - name: Validate CMake File Lists Match SwiftPM
+        shell: bash
+        run: |
+          swift package describe --type json | jq '.targets[] | select(.name == "FoundationEssentials") | .sources[]' | sort > /tmp/swiftpm-essentials
+          cat build/.cmake/api/v1/reply/target-FoundationEssentials-*.json | jq '.sources[].path[29:]' | sort > /tmp/cmake-essentials
+          swift package describe --type json | jq '.targets[] | select(.name == "FoundationInternationalization") | .sources[]' | sort > /tmp/swiftpm-internationalization
+          cat build/.cmake/api/v1/reply/target-FoundationInternationalization-*.json | jq '.sources[].path[39:]' | sort > /tmp/cmake-internationalization
+          exit_code=0
+          diff -u0 -L "SwiftPM" -L "CMake" /tmp/swiftpm-essentials /tmp/cmake-essentials && echo "::notice::FoundationEssentials CMakeLists.txt matches SwiftPM" || { echo "::error::FoundationEssentials CMakeLists.txt does not match SwiftPM"; exit_code=1; }
+          diff -u0 -L "SwiftPM" -L "CMake" /tmp/swiftpm-internationalization /tmp/cmake-internationalization  && echo "::notice::FoundationInternationalization CMakeLists.txt matches SwiftPM" || { echo "::error::FoundationInternationalization CMakeLists.txt does not match SwiftPM"; exit_code=1; }
+          exit $exit_code
       - name: Build Project
         shell: bash
         run: cmake --build build

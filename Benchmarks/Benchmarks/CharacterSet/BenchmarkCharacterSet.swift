@@ -20,7 +20,7 @@ import FoundationInternationalization
 import Foundation
 #endif
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     #if FOUNDATION_FRAMEWORK
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
