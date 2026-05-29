@@ -477,11 +477,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter firstWeekday: A first day of the week to use, instead of the default.
     /// - parameter minimumDaysInFirstWeek: A number of minimum days in the first week to use, instead of the default.
     public init(identifier: Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) {
-        self.init(identifier: identifier)
-        guard timeZone != nil || locale != nil || firstWeekday != nil || minimumDaysInFirstWeek != nil else {
-            return
-        }
-        _calendar = _calendar.copy(changingLocale: locale, changingTimeZone: timeZone, changingFirstWeekday: firstWeekday, changingMinimumDaysInFirstWeek: minimumDaysInFirstWeek)
+        _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
