@@ -513,7 +513,7 @@ extension _FileManagerImpl {
         // This is solely to minimize the number of allocations and number of bytes allocated versus starting with a hardcoded value like MAX_PATH.
         // We should NOT early-return if this returns 0, in order to avoid TOCTOU issues.
         let dwSize = GetCurrentDirectoryW(0, nil)
-        return try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
+        return try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : MAX_PATH, maxSize: DWORD(Int16.max)) {
             GetCurrentDirectoryW(DWORD($0.count), $0.baseAddress)
         }
 #else
