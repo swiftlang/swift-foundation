@@ -206,15 +206,15 @@ private struct CalendarTests {
         let locale = Locale(identifier: "en_AU")
         let timeZone = try #require(TimeZone(identifier: "Australia/Sydney"))
 
-        var stepwiseCalendar = Calendar(identifier: .gregorian)
-        stepwiseCalendar.locale = locale
-        stepwiseCalendar.timeZone = timeZone
-        stepwiseCalendar.firstWeekday = 2
-        stepwiseCalendar.minimumDaysInFirstWeek = 2
+        var configuredCalendar = Calendar(identifier: .gregorian)
+        configuredCalendar.locale = locale
+        configuredCalendar.timeZone = timeZone
+        configuredCalendar.firstWeekday = 2
+        configuredCalendar.minimumDaysInFirstWeek = 2
 
-        let calendar = Calendar(identifier: .gregorian, timeZone: timeZone, locale: locale, firstWeekday: 2, minimumDaysInFirstWeek: 2)
+        let initializedCalendar = Calendar(identifier: .gregorian, timeZone: timeZone, locale: locale, firstWeekday: 2, minimumDaysInFirstWeek: 2)
 
-        #expect(stepwiseCalendar == calendar)
+        #expect(configuredCalendar == initializedCalendar)
     }
 
     func decodeHelper(_ l: Calendar) throws -> Calendar {

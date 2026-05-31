@@ -476,6 +476,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter locale: A `Locale` to use, instead of the default.
     /// - parameter firstWeekday: A first day of the week to use, instead of the default.
     /// - parameter minimumDaysInFirstWeek: A number of minimum days in the first week to use, instead of the default.
+    @available(FoundationPreview 6.5, *)
     public init(identifier: Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
     }
