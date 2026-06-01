@@ -17,6 +17,7 @@
 internal import CoreFoundation_Private.CFString
 internal import ObjectiveC_Private.objc_internal
 internal import CoreFoundation_Private.ForFoundationOnly
+internal import Foundation_Private.NSString
 
 //===----------------------------------------------------------------------===//
 // New Strings
@@ -79,9 +80,52 @@ extension String : _ObjectiveCBridgeable {
                 }
                 // Since our contents are invalid, force a real copy of the string and bridge that instead. This should basically never be hit in practice
                 return source.mutableCopy() as! String
-            } else if tag.rawValue == 22 /* OBJC_TAG_Foundation_1 */ {
-                let cStr = source.utf8String!
-                return String.init(utf8String: cStr)!
+            } else if tag == OBJC_TAG_Foundation_1 {
+                // _NSBPlistMappedString. The bytes live in a permanently-mmap'd file and may contain embedded NULs (see rdar://173406489), so avoid methods with C string length semantics
+                var len = 0
+                if let asciiPtr = source._fastUTF8StringContents(false, utf8Length: &len) {
+                    let buffer = UnsafeBufferPointer(start: asciiPtr, count: len)
+                    return String(unsafeUninitializedCapacity: len) { dest in
+                        _ = dest.initialize(fromContentsOf: buffer)
+                        return len
+                    }
+                }
+
+                let nsLen = source.length
+                if nsLen == 0 { return "" }
+
+                func writeUTF8(into buffer: UnsafeMutableBufferPointer<UInt8>, capacity: Int) -> Int {
+                    var usedLen = 0
+                    var remaining = NSRange(location: 0, length: 0)
+                    let ok = source.getBytes(buffer.baseAddress,
+                                             maxLength: capacity,
+                                             usedLength: &usedLen,
+                                             encoding: String.Encoding.utf8.rawValue,
+                                             options: [],
+                                             range: NSRange(location: 0, length: nsLen),
+                                             remaining: &remaining)
+                    assert(!ok || remaining.length == 0, "getBytes should consume the entire source range when capacity is sufficient")
+                    return ok ? usedLen : 0
+                }
+
+                // If the worst-case UTF-8 size fits in withUnsafeTemporaryAllocation's 1024-byte stack cutoff, stack allocate as much as we could possibly need, and let the closure return the actual size.
+                let conservativeUTF8Cap = nsLen * 3
+                if conservativeUTF8Cap <= 1024 {
+                    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: conservativeUTF8Cap) { tempBuf in
+                        let usedLen = writeUTF8(into: tempBuf, capacity: conservativeUTF8Cap)
+                        return String(unsafeUninitializedCapacity: usedLen) { dest in
+                            let src = UnsafeBufferPointer(start: tempBuf.baseAddress, count: usedLen)
+                            _ = dest.initialize(fromContentsOf: src)
+                            return usedLen
+                        }
+                    }
+                }
+                
+                // Otherwise, do an extra pass to get the exact length, so we don't risk over-allocating
+                let exactUTF8Len = source.lengthOfBytes(using: String.Encoding.utf8.rawValue)
+                return String(unsafeUninitializedCapacity: exactUTF8Len) { buffer in
+                    writeUTF8(into: buffer, capacity: exactUTF8Len)
+                }
             }
         }
 #endif
