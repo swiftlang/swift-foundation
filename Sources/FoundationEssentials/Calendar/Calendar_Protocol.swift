@@ -49,22 +49,13 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date?
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents
-
-    /// Optional fast path for `Calendar.nextDate(after:matching:)`. Default
-    /// returns nil, falling through to the generic enumerate framework. Calendar
-    /// implementations may override for patterns they can answer in O(1).
-    func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date?
-
+    
 #if FOUNDATION_FRAMEWORK
     func bridgeToNSCalendar() -> NSCalendar
 #endif
 }
 
 extension _CalendarProtocol {
-    package func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date? {
-        nil   // default — fall through to Calendar's enumerate-based implementation
-    }
-
     package var preferredFirstWeekday: Int? { nil }
     package var preferredMinimumDaysInFirstweek: Int? { nil }
     
