@@ -23,6 +23,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 import WASILibc
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+internal import _FoundationDarwinExtras
 #elseif canImport(stdlib_h)
 import stdlib_h
 #endif

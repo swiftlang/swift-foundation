@@ -47,6 +47,12 @@ import C.strings
 import C
 #endif
 fileprivate let _pageSize: Int = Int(getpagesize())
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+internal import _FoundationDarwinExtras
+internal import _FoundationDarwinExtras._string_runtime.xlocale
+import stdlib_h
+
+fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(stdlib_h)
 import stdlib_h
 #endif // canImport(Darwin)
@@ -386,7 +392,7 @@ extension Platform {
 }
 
 extension Platform {
-    #if canImport(Darwin)
+    #if canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS
     private static var cLocale: locale_t? { /* LC_C_LOCALE */ nil }
     #elseif os(Windows)
     private static var cLocale: _locale_t = {

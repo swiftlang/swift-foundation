@@ -46,6 +46,10 @@
 @usableFromInline let memset = WASILibc.memset
 @usableFromInline let memcpy = WASILibc.memcpy
 @usableFromInline let memcmp = WASILibc.memcmp
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+@usableFromInline let memset = _FoundationDarwinExtras.memset
+@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
+@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
 #endif
 
 #if !NO_CSHIMS
@@ -81,6 +85,8 @@ internal func malloc_good_size(_ size: Int) -> Int {
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+internal import _FoundationDarwinExtras.POSIX.sys.mman
 #elseif canImport(string_h)
 import string_h
 #endif
