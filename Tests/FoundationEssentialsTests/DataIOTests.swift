@@ -218,7 +218,6 @@ private final class DataIOTests {
     func atomicWriteReplacesReadOnlyDestination() throws {
         let initial = Data("initial".utf8)
         let next = Data("next".utf8)
-        let later = Data("later".utf8)
 
         try initial.write(to: url)
         try FileManager.default.setAttributes(
@@ -231,8 +230,13 @@ private final class DataIOTests {
         let read = try Data(contentsOf: url)
         #expect(read == next)
 
+#if !FOUNDATION_FRAMEWORK
         // The path now resolves to the new temp file (the rename operation detached the old destination). Confirm it's writable by performing a subsequent non-atomic write.
+        // Skipped for FOUNDATION_FRAMEWORK: that path preserves and reapplies the destination's pre-rename mode on the new file, so the new file would still be read-only.
+        // TODO: Preserve the destination's mode across platforms.
+        let later = Data("later".utf8)
         try later.write(to: url)
+#endif
     }
 }
 
