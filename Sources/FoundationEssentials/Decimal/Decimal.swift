@@ -112,7 +112,19 @@ public struct Decimal: Sendable {
             self.storage.mantissa = newValue
         }
     }
-
+    
+    internal var _significand: UInt128 {
+        // Note that per project policy we no longer consider big-endian architectures.
+        @inline(__always) get {
+            return unsafeBitCast(storage.mantissa, to: UInt128.self)
+        }
+        @inline(__always) set {
+            self.storage.mantissa = unsafeBitCast(newValue, to: Mantissa.self)
+            self._length = UInt32((128 &- newValue.leadingZeroBitCount &+ 15) / 16)
+            // Note that if `_significand` is set to `0` while `_isNegative == 1`, setting `_length` results in NaN.
+        }
+    }
+    
     internal var _lengthFlagsAndReserved: UInt8 {
         get {
             return self.storage.lengthFlagsAndReserved
