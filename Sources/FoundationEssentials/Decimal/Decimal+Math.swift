@@ -259,27 +259,28 @@ extension Decimal {
         if self._length == 0 || multiplicand._length == 0 {
             return .zero
         }
-        let bigSize = Int(Decimal.maxSize) * 2
-        var bigResult = try Self._integerMultiply(
-            lhs: self.asVariableLengthInteger(),
-            rhs: multiplicand.asVariableLengthInteger(),
-            maxResultLength: bigSize
-        )
+        
+        let isNegative = self._isNegative != multiplicand._isNegative
+        let (high, low) = self._significand.multipliedFullWidth(by: multiplicand._significand)
+        var exponent = self._exponent + multiplicand._exponent
+        let fitted: UInt128
+        if high == 0 {
+            fitted = low
+        } else {
+            //FIXME: Track loss of precision.
+            let (fitted_, shift, _) = Self._fitSignificand(high: high, low: low, roundingMode: roundingMode, isNegative: isNegative)
+            fitted = fitted_
+            exponent += shift
+        }
+        
+        if exponent > Int8.max { throw _CalculationError.overflow }
+        if exponent < Int8.min { throw _CalculationError.underflow }
+        
         var result = Decimal()
-        result._isNegative = self._isNegative == multiplicand._isNegative ? 0 : 1
-        var secureExponent = self._exponent + multiplicand._exponent
-        if bigResult.count > Decimal.maxSize {
-            var exponent = 0
-            (bigResult, exponent, _) = try Self._fitMantissa(bigResult, roundingMode: roundingMode)
-            secureExponent += Int32(exponent)
-        }
-        try result.copyVariableLengthInteger(bigResult)
-        result._length = UInt32(bigResult.count)
+        result._significand = fitted
+        result._isNegative = isNegative ? 1 : 0
+        result._exponent = exponent
         result._isCompact = 0
-        if secureExponent > CChar.max {
-            throw _CalculationError.overflow
-        }
-        result._exponent = secureExponent
         result.compact()
         return result
     }
@@ -316,7 +317,6 @@ extension Decimal {
             throw _CalculationError.overflow
         }
     }
-
 
     internal func _divide(by divisor: UInt16) throws -> (result: Decimal, remainder: UInt16) {
         let (resultValue, remainder) = try Self._integerDivideByShort(
@@ -1283,11 +1283,63 @@ extension Decimal {
     private static func _fitSignificand(
         high: UInt128,
         low: UInt128,
-        roundingMode: RoundingMode
-    ) -> (result: UInt128, exponent: Int, lossOfPrecision: Bool) {
+        roundingMode: RoundingMode,
+        isNegative: Bool
+    ) -> (result: UInt128, exponent: Int32, lossOfPrecision: Bool) {
         if high == 0 {
             return (result: low, exponent: 0, lossOfPrecision: false)
         }
-        fatalError("not implemented")
+        
+        var high = high
+        var low = low
+        var lastDropped = 0 as UInt128
+        var exponent = 0 as Int32
+        var droppedNonzeroDigit = false
+        
+        while high >= 10000 {
+            if lastDropped != 0 { droppedNonzeroDigit = true }
+            let (q1, r1) = high._quotientAndRemainderDividingBy10000()
+            let (q2, r2) = (10000 as UInt128).dividingFullWidth((r1, low))
+            high = q1
+            low = q2
+            lastDropped = r2
+            exponent += 4
+        }
+        while high != 0 {
+            if lastDropped != 0 { droppedNonzeroDigit = true }
+            let (q1, r1) = high._quotientAndRemainderDividingBy10()
+            let (q2, r2) = (10 as UInt128).dividingFullWidth((r1, low))
+            high = q1
+            low = q2
+            lastDropped = r2
+            exponent += 1
+        }
+        
+        // Nudge ties if necessary.
+        assert(lastDropped < 10)
+        if droppedNonzeroDigit && (lastDropped == 0 || lastDropped == 5) {
+            lastDropped += 1
+        }
+        if lastDropped == 0 {
+            return (low, exponent, false)
+        }
+        
+        // Round if necessary.
+        let roundAway = switch roundingMode {
+        case .down: isNegative
+        case .up: !isNegative
+        case .plain: lastDropped >= 5
+        case .bankers: lastDropped > 5 || (lastDropped == 5 && (low & 1) == 1)
+        @unknown default: fatalError("Not implemented") //TODO: Determine a consistent sensible behavior for unknown rounding mode.
+        }
+        if roundAway {
+            if low == .max {
+                low = 34028236692093846346337460743176821146 // 2^128 / 10, rounded (always away from zero).
+                exponent += 1
+            } else {
+                low &+= 1
+            }
+        }
+        return (low, exponent, true)
     }
 }

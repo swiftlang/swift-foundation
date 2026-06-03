@@ -753,6 +753,8 @@ extension Decimal : SignedNumeric {
         do {
             let result = try lhs._multiply(by: rhs, roundingMode: .plain)
             lhs = result
+        } catch _CalculationError.underflow {
+            lhs = .zero
         } catch {
             lhs = .nan
         }
