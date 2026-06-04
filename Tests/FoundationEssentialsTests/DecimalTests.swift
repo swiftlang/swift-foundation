@@ -519,19 +519,19 @@ private struct DecimalTests {
             by: repeating, roundingMode: .down
         )
         var expected = Decimal()
-        expected._exponent = -35
-        expected._length = 8
+        expected._exponent = -3
+        expected._length = 2
         expected._isNegative = 0
         expected._isCompact = 1
         expected._reserved = 0
-        expected._mantissa.0 = 248
-        expected._mantissa.1 = 0
-        expected._mantissa.2 = 15549
-        expected._mantissa.3 = 55864
-        expected._mantissa.4 = 57984
-        expected._mantissa.5 = 55436
-        expected._mantissa.6 = 45186
-        expected._mantissa.7 = 10941
+        expected._mantissa.0 = 43837
+        expected._mantissa.1 = 8
+        expected._mantissa.2 = 0
+        expected._mantissa.3 = 0
+        expected._mantissa.4 = 0
+        expected._mantissa.5 = 0
+        expected._mantissa.6 = 0
+        expected._mantissa.7 = 0
         #expect(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
     }
 
@@ -544,20 +544,20 @@ private struct DecimalTests {
         let second: Decimal = Decimal(4294967295)
         let result = first / second
         let expected: Decimal = Decimal(
-            _exponent: -38,
+            _exponent: -39,
             _length: 8,
             _isNegative: 0,
             _isCompact: 1,
             _reserved: 0,
             _mantissa: (
-                58076,
-                13229,
-                12316,
-                25502,
-                15252,
-                32996,
-                11611,
-                5147
+                56474,
+                1226,
+                57626,
+                58413,
+                21451,
+                2282,
+                50579,
+                51471
             )
         )
         #expect(result == expected)

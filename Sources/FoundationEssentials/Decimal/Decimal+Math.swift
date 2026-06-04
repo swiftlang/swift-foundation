@@ -351,49 +351,42 @@ extension Decimal {
         if self._length == 0 {
             return .zero
         }
+
+        let isNegative = self._isNegative != divisor._isNegative
         
-        //TODO: Consider multiple-of-10 fast path.
-
-        var a = self
-        var b = divisor
-
-        /// If the precision of the left operand is much smaller
-        /// than that of the right operand (for example,
-        /// 20 and 0.112314123094856724234234572), then the
-        /// difference in their exponents is large and a lot of
-        /// precision will be lost below. This is particularly
-        /// true as the difference approaches 38 or larger.
-        /// Normalizing here looses some precision on the
-        /// individual operands, but often produces a more
-        /// accurate result later. I chose 19 arbitrarily
-        /// as half of the magic 38, so that normalization
-        /// doesn't always occur. - cjk 5 Aug 1999
-        if 19 <= a._exponent - b._exponent {
-            _ = try Decimal._normalize(
-                a: &a, b: &b, roundingMode: roundingMode
-            )
-            // Sometimes the normalization done is inappropriate
-            // and forces one of the operands to b 0. If this
-            // happens, restore both
-            // <rdar://problem/5197585>, <rdar://problem/2354750>
-            if a._length == 0 || b._length == 0 {
-                a = self
-                b = divisor
-            }
+        let dm = divisor._significand // Nonzero.
+        // Power-of-ten divisor.
+        if dm == 1 {
+            let exponent = self._exponent - divisor._exponent
+            if exponent > Int8.max { throw _CalculationError.overflow }
+            if exponent < Int8.min { throw _CalculationError.underflow }
+            
+            var result = self
+            result._isNegative = isNegative ? 1 : 0
+            result._exponent = exponent
+            result._isCompact = 0
+            result.compact()
+            return result
         }
-
-        let isNegative = a._isNegative != b._isNegative
         
-        let bm = b._significand // Nonzero.
-        let (hi, lo) = a._significand.multipliedFullWidth(by: _pow10[38])
-        let (q1, r1) = hi.quotientAndRemainder(dividingBy: bm)
-        let (q2, r2) = bm.dividingFullWidth((r1, lo))
+        let sm = self._significand
+        var shift_ = ((sm|1).leadingZeroBitCount &* 1233) &>> 12
+        var scaled = sm * _pow10[shift_]
+        // Top up our estimate, if needed
+        while scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
+            shift_ &+= 1
+            scaled &*= 10
+        }
+        
+        let (hi, lo) = scaled.multipliedFullWidth(by: _pow10[38])
+        let (q1, r1) = hi.quotientAndRemainder(dividingBy: dm)
+        let (q2, r2) = dm.dividingFullWidth((r1, lo))
         
         let fitted: UInt128
-        var exponent = a._exponent - b._exponent - 38
+        var exponent = self._exponent - divisor._exponent - Int32(shift_) - 38
         if q1 == 0 {
             //FIXME: Track loss of precision.
-            let (fitted_, shift) = Self._roundSignificandByRemainderAfterDivision(isNegative: isNegative, significand: q2, remainder: r2, divisor: bm, roundingMode: roundingMode)
+            let (fitted_, shift) = Self._roundSignificandByRemainderAfterDivision(isNegative: isNegative, significand: q2, remainder: r2, divisor: dm, roundingMode: roundingMode)
             fitted = fitted_
             exponent += shift
         } else {
@@ -403,10 +396,7 @@ extension Decimal {
             exponent += shift
         }
         
-        if fitted == 0 {
-            //TODO: Tiny dividend, huge divisor, to be addressed soon.
-            return .zero
-        }
+        assert(fitted != 0)
         if exponent > Int8.max { throw _CalculationError.overflow }
         if exponent < Int8.min { throw _CalculationError.underflow }
         
