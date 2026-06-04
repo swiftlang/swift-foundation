@@ -438,8 +438,10 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
             let dwSize = DWORD(MemoryLayout<FILE_RENAME_INFO>.size + cbSize + MemoryLayout<WCHAR>.size)
             try withUnsafeTemporaryAllocation(byteCount: Int(dwSize),
                                               alignment: MemoryLayout<FILE_RENAME_INFO>.alignment) { pBuffer in
+                let withoutOverwriting = options.contains(.withoutOverwriting)
+
                 var pInfo = pBuffer.baseAddress?.bindMemory(to: FILE_RENAME_INFO.self, capacity: 1)
-                pInfo?.pointee.Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS
+                pInfo?.pointee.Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS | (withoutOverwriting ? 0 : FILE_RENAME_FLAG_REPLACE_IF_EXISTS)
                 pInfo?.pointee.RootDirectory = nil
                 pInfo?.pointee.FileNameLength = DWORD(cbSize)
                 pBuffer.baseAddress?.advanced(by: MemoryLayout<FILE_RENAME_INFO>.offset(of: \.FileName)!)
@@ -449,6 +451,11 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
 
                 if !SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) {
                     let dwError = GetLastError()
+
+                    if withoutOverwriting && (dwError == ERROR_ALREADY_EXISTS || dwError == ERROR_FILE_EXISTS) {
+                        throw CocoaError.errorWithFilePath(.fileWriteFileExists, inPath)
+                    }
+
                     guard dwError == ERROR_NOT_SAME_DEVICE
                         || dwError == ERROR_NOT_SUPPORTED
                         || dwError == ERROR_FILE_SYSTEM_LIMITATION
@@ -460,8 +467,16 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                     hFile = INVALID_HANDLE_VALUE
 
                     // The move is across volumes or on Volumes that don't support FILE_RENAME_FLAG_POSIX_SEMANTICS, like exFat.
-                    guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) else {
-                        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+                    let moveFlags: DWORD = MOVEFILE_COPY_ALLOWED | (withoutOverwriting ? 0 : MOVEFILE_REPLACE_EXISTING)
+
+                    guard MoveFileExW(pwszAuxiliaryPath, pwszPath, moveFlags) else {
+                        let moveError = GetLastError()
+
+                        if withoutOverwriting && (moveError == ERROR_ALREADY_EXISTS || moveError == ERROR_FILE_EXISTS) {
+                            throw CocoaError.errorWithFilePath(.fileWriteFileExists, inPath)
+                        }
+
+                        throw CocoaError.errorWithFilePath(inPath, win32: moveError, reading: false)
                     }
                 }
             }
@@ -545,6 +560,23 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                     throw CocoaError(.fileWriteInvalidFileName)
                 }
                 
+                if options.contains(.withoutOverwriting) {
+                    // To get atomic write + fail-on-exists in one operation, hard-link the aux file at the destination and then unlink the aux name.  link(2) atomically fails with EEXIST if the destination already exists, which is the contract of `.withoutOverwriting`.
+                    if link(auxPathFileSystemRep, newPathFileSystemRep) == 0 {
+                        unlink(auxPathFileSystemRep)
+                        cleanupTemporaryDirectory(at: temporaryDirectoryPath)
+                        return
+                    }
+
+                    let linkErrno = errno
+
+                    unlink(auxPathFileSystemRep)
+
+                    cleanupTemporaryDirectory(at: temporaryDirectoryPath)
+
+                    throw CocoaError.errorWithFilePath(inPath, errno: linkErrno, reading: false)
+                }
+
                 if rename(auxPathFileSystemRep, newPathFileSystemRep) != 0 {
                     if errno == EINVAL {
                         // rename() fails on DOS file systems if newname already exists.
@@ -761,11 +793,6 @@ extension Data {
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
-        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
-            fatalError("withoutOverwriting is not supported with atomic")
-        }
-#endif
         
         guard url.isFileURL else {
             throw CocoaError(.fileWriteUnsupportedScheme)
