@@ -519,11 +519,11 @@ private struct DecimalTests {
         let repeatingNumerator = Decimal(16)
         let repeatingDenominator = Decimal(9)
         let repeating = try repeatingNumerator._divide(
-            by: repeatingDenominator, roundingMode: .plain
+            by: repeatingDenominator, roundingMode: .down
         )
         let numerator = Decimal(1010)
         let result = try numerator._divide(
-            by: repeating, roundingMode: .plain
+            by: repeating, roundingMode: .down
         )
         var expected = Decimal()
         expected._exponent = -35
@@ -894,8 +894,8 @@ private struct DecimalTests {
             let aDivD = a / d
             let caDivD = c * aDivD
             #expect(try ab == #require(Decimal(string: "498.7509045")))
-            #expect(try aDivD == #require(Decimal(string: "0.46424522863476857959755328492004843907")))
-            #expect(try caDivD == #require(Decimal(string: "8.453441368210501065891847765109162027")))
+            #expect(try aDivD == #require(Decimal(string: "0.46424522863476857959755328492004843908")))
+            #expect(try caDivD == #require(Decimal(string: "8.4534413682105010658918477651091620272")))
 
             let result = (a * b) + (c * (a / d))
             #expect(try result == #require(Decimal(string: "507.2043458682105010658918477651091")))

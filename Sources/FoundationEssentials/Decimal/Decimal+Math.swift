@@ -268,7 +268,7 @@ extension Decimal {
             fitted = low
         } else {
             //FIXME: Track loss of precision.
-            let (fitted_, shift, _) = Self._fitSignificand(high: high, low: low, roundingMode: roundingMode, isNegative: isNegative)
+            let (fitted_, shift, _) = Self._fitSignificand(isNegative: isNegative, high: high, low: low, roundingMode: roundingMode)
             fitted = fitted_
             exponent += shift
         }
@@ -319,13 +319,11 @@ extension Decimal {
     }
 
     internal func _divide(by divisor: UInt16) throws -> (result: Decimal, remainder: UInt16) {
-        let (resultValue, remainder) = try Self._integerDivideByShort(
-            self.asVariableLengthInteger(), UInt32(divisor)
-        )
+        guard divisor != 0 else { throw _CalculationError.divideByZero }
+        let (q, r) = self._significand.quotientAndRemainder(dividingBy: UInt128(divisor))
         var result = self
-        try result.copyVariableLengthInteger(resultValue)
-        result._length = UInt32(resultValue.count)
-        return (result: result, remainder: UInt16(remainder))
+        result._significand = q
+        return (result, UInt16(r))
     }
 
     internal func _divide(
@@ -344,7 +342,7 @@ extension Decimal {
 
         var a = self
         var b = divisor
-        let bigSize = Int(Decimal.maxSize) * 2
+
         /// If the precision of the left operand is much smaller
         /// than that of the right operand (for example,
         /// 20 and 0.112314123094856724234234572), then the
@@ -369,32 +367,39 @@ extension Decimal {
                 b = divisor
             }
         }
-        var bigResult = try Self._integerMultiplyByPowerOfTen(
-            lhs: a.asVariableLengthInteger(),
-            power: 38,
-            maxResultLength: bigSize
-        )
-        bigResult = try Self._integerDivide(
-            dividend: bigResult,
-            divisor: b.asVariableLengthInteger(),
-            maxResultLength: bigResult.count
-        )
-        var exponent: Int = 0
-        (bigResult, exponent, _) = try Self._fitMantissa(
-            bigResult, roundingMode: .down
-        )
+
+        let isNegative = a._isNegative != b._isNegative
+        
+        let bm = b._significand // Nonzero.
+        let (hi, lo) = a._significand.multipliedFullWidth(by: _pow10[38])
+        let (q1, r1) = hi.quotientAndRemainder(dividingBy: bm)
+        let (q2, r2) = bm.dividingFullWidth((r1, lo))
+        
+        let fitted: UInt128
+        var exponent = a._exponent - b._exponent - 38
+        if q1 == 0 {
+            //FIXME: Track loss of precision.
+            let (fitted_, shift) = Self._roundSignificandByRemainderAfterDivision(isNegative: isNegative, significand: q2, remainder: r2, divisor: bm, roundingMode: roundingMode)
+            fitted = fitted_
+            exponent += shift
+        } else {
+            //FIXME: Track loss of precision.
+            let (fitted_, shift, _) = Self._fitSignificand(isNegative: isNegative, high: q1, low: q2, inexact: r2 != 0, roundingMode: roundingMode)
+            fitted = fitted_
+            exponent += shift
+        }
+        
+        if fitted == 0 {
+            //TODO: Tiny dividend, huge divisor, to be addressed soon.
+            return .zero
+        }
+        if exponent > Int8.max { throw _CalculationError.overflow }
+        if exponent < Int8.min { throw _CalculationError.underflow }
+        
         var result = Decimal()
-        try result.copyVariableLengthInteger(bigResult)
-        result._length = UInt32(bigResult.count)
-        result._isNegative = a._isNegative != b._isNegative ? 1 : 0
-        exponent = Int(a._exponent) - Int(b._exponent) - 38 + exponent
-        if exponent < CChar.min {
-            throw _CalculationError.underflow
-        }
-        if exponent > CChar.max {
-            throw _CalculationError.overflow
-        }
-        result._exponent = Int32(exponent)
+        result._significand = fitted
+        result._isNegative = isNegative ? 1 : 0
+        result._exponent = exponent
         result._isCompact = 0
         result.compact()
         return result
@@ -913,23 +918,6 @@ extension Decimal {
         }
     }
     
-    private static func _integerAddShort(_ lhs: VariableLengthInteger, rhs: UInt32, maxResultLength: Int? = nil) throws -> VariableLengthInteger {
-        var carry: UInt32 = rhs
-        var result = VariableLengthInteger(repeating: 0, count: lhs.count)
-        for index in 0 ..< lhs.count {
-            let acc = UInt32(lhs[index]) + carry
-            carry = acc >> 16
-            result[index] = UInt16(acc & 0xFFFF)
-        }
-        if carry != 0 {
-            if let maxResultLength = maxResultLength, result.count == maxResultLength {
-                throw _CalculationError.overflow
-            }
-            result.append(UInt16(carry))
-        }
-        return result
-    }
-    
     private static func _integerDivideByShort(
         _ dividend: VariableLengthInteger,
         _ divisor: UInt32
@@ -1211,127 +1199,63 @@ extension Decimal {
         return .orderedSame
     }
     
-    private static func _fitMantissa(
-        _ value: VariableLengthInteger,
-        roundingMode: RoundingMode
-    ) throws -> (result: VariableLengthInteger, exponent: Int, lossOfPrecision: Bool) {
-        if value.count <= Decimal.maxSize {
-            return (result: value, exponent: 0, lossOfPrecision: false)
-        }
-        // Divide by 10 as much as possible
-        var result = value
-        var premdr: UInt32 = 0
-        var remdr: UInt32 = 0
-        var exponent: Int = 0
-        while result.count > Decimal.maxSize + 1 {
-            if remdr != 0 {
-                premdr = 1
-            }
-            let (quotient, remainder) = try _integerDivideByShort(result, 10000)
-            result = quotient
-            remdr = remainder
-            exponent += 4
-        }
-        while result.count > Decimal.maxSize {
-            if remdr != 0 {
-                premdr = 1
-            }
-            let (quotient, remainder) = try _integerDivideByShort(result, 10)
-            result = quotient
-            remdr = remainder
-            exponent += 1
-        }
-        // If we are on a tie, adjust with premdr. .50001 is equivalent to .6
-        if premdr != 0 && (remdr == 0 || remdr == 5) {
-            remdr += 1
-        }
-        if remdr == 0 {
-            return (result: result, exponent: exponent, lossOfPrecision: false)
-        }
-        // Round the result
-        switch roundingMode {
-        case .down:
-            break
-        case .bankers:
-            if (remdr == 5) && (result[0] & 1) != 0 {
-                break
-            }
-            fallthrough
-        case .plain:
-            if remdr < 5 {
-                break
-            }
-            fallthrough
-        case .up:
-            let size = result.count
-            var rounded = try Self._integerAddShort(
-                result, rhs: 1,
-                maxResultLength: result.count + 1
-            )
-            if size > rounded.count {
-                // The last digit is 0, remove it.
-                let (_rounded, _) = try Self._integerDivideByShort(rounded, 10)
-                exponent += 1
-                rounded = _rounded
-            }
-        @unknown default:
-            break
-        }
-        return (result: result, exponent: exponent, lossOfPrecision: true)
-    }
-    
     private static func _fitSignificand(
+        isNegative: Bool,
         high: UInt128,
         low: UInt128,
-        roundingMode: RoundingMode,
-        isNegative: Bool
+        inexact: Bool = false,
+        roundingMode: RoundingMode
     ) -> (result: UInt128, exponent: Int32, lossOfPrecision: Bool) {
         if high == 0 {
+            // An internal invariant is that we don't use this code path with a sticky bit;
+            // otherwise, we'd have to consider rounding mode here.
+            assert(!inexact)
             return (result: low, exponent: 0, lossOfPrecision: false)
         }
         
         var high = high
         var low = low
-        var lastDropped = 0 as UInt128
+        var lastTruncated = 0 as UInt128
         var exponent = 0 as Int32
-        var droppedNonzeroDigit = false
+        var inexact = inexact
         
         while high >= 10000 {
-            if lastDropped != 0 { droppedNonzeroDigit = true }
+            if lastTruncated != 0 { inexact = true }
             let (q1, r1) = high._quotientAndRemainderDividingBy10000()
             let (q2, r2) = (10000 as UInt128).dividingFullWidth((r1, low))
             high = q1
             low = q2
-            lastDropped = r2
+            lastTruncated = r2
             exponent += 4
         }
         while high != 0 {
-            if lastDropped != 0 { droppedNonzeroDigit = true }
+            if lastTruncated != 0 { inexact = true }
             let (q1, r1) = high._quotientAndRemainderDividingBy10()
             let (q2, r2) = (10 as UInt128).dividingFullWidth((r1, low))
             high = q1
             low = q2
-            lastDropped = r2
+            lastTruncated = r2
             exponent += 1
         }
         
-        // Nudge ties if necessary.
-        assert(lastDropped < 10)
-        if droppedNonzeroDigit && (lastDropped == 0 || lastDropped == 5) {
-            lastDropped += 1
+        // Nudge if necessary.
+        assert(lastTruncated < 10)
+        if inexact && (lastTruncated == 0 || lastTruncated == 5) {
+            lastTruncated &+= 1
         }
-        if lastDropped == 0 {
+        if lastTruncated == 0 {
             return (low, exponent, false)
         }
         
         // Round if necessary.
-        let roundAway = switch roundingMode {
-        case .down: isNegative
-        case .up: !isNegative
-        case .plain: lastDropped >= 5
-        case .bankers: lastDropped > 5 || (lastDropped == 5 && (low & 1) == 1)
-        @unknown default: fatalError("Not implemented") //TODO: Determine a consistent sensible behavior for unknown rounding mode.
-        }
+        let roundAway =
+            switch roundingMode {
+            case .down: isNegative
+            case .up: !isNegative
+            case .plain: lastTruncated >= 5
+            case .bankers: lastTruncated > 5 || (lastTruncated == 5 && (low & 1) == 1)
+            @unknown default: fatalError("Not implemented")  //TODO: Determine a consistent sensible behavior for unknown rounding mode.
+            }
         if roundAway {
             if low == .max {
                 low = 34028236692093846346337460743176821146 // 2^128 / 10, rounded (always away from zero).
@@ -1341,5 +1265,31 @@ extension Decimal {
             }
         }
         return (low, exponent, true)
+    }
+    
+    private static func _roundSignificandByRemainderAfterDivision(
+        isNegative: Bool,
+        significand: UInt128,
+        remainder: UInt128,
+        divisor: UInt128,
+        roundingMode: RoundingMode
+    ) -> (result: UInt128, exponent: Int32) {
+        guard remainder != 0 else { return (significand, 0) }
+        let cmp = UInt128._compare(remainder, divisor &- remainder)
+        let roundAway =
+            switch roundingMode {
+            case .down: isNegative
+            case .up: !isNegative
+            case .plain: cmp != .orderedAscending
+            case .bankers: cmp == .orderedDescending || (cmp == .orderedSame && (significand & 1) == 1)
+            @unknown default: fatalError("Not implemented") //TODO: Determine a consistent sensible behavior for unknown rounding mode.
+            }
+        if roundAway {
+            if significand == .max {
+                return (34028236692093846346337460743176821146, 1) // See above.
+            }
+            return (significand &+ 1, 0)
+        }
+        return (significand, 0)
     }
 }
