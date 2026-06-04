@@ -898,7 +898,7 @@ private struct DecimalTests {
             #expect(try caDivD == #require(Decimal(string: "8.4534413682105010658918477651091620272")))
 
             let result = (a * b) + (c * (a / d))
-            #expect(try result == #require(Decimal(string: "507.2043458682105010658918477651091")))
+            #expect(try result == #require(Decimal(string: "507.20434586821050106589184776510916203")))
         }
     }
 

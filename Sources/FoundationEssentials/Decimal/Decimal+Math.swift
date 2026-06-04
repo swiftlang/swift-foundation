@@ -149,6 +149,7 @@ extension UInt128 {
     internal static func _10000DividingFullWidth(
         _ dividend: (high: Self, low: Self)
     ) -> (quotient: Self, remainder: Self) {
+        assert(dividend.high < 10000)
         let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821, 1456) // (2^128 / 10000, 2^128 % 10000)
         let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
         let carry: UInt128 = carry_ ? 1 : 0
@@ -180,48 +181,77 @@ extension Decimal {
         if rhs._length == 0 {
             return (result: self, lossOfPrecision: false)
         }
+        
         var a = self
         var b = rhs
-        var lossOfPrecision = try Decimal._normalize(a: &a, b: &b, roundingMode: roundingMode)
-        //TODO: Review how `_normalize` determines `lossOfPrecision` and standardize semantics so that it's only `true` when nonzero figures are actually discarded.
-        if a._length == 0 {
-            return (result: b, lossOfPrecision: lossOfPrecision)
+        if a._exponent < b._exponent { swap(&a, &b) }
+        let commonExponent = max(b._exponent, a._exponent - 38)
+        let shift = (a: Int(a._exponent - commonExponent), b: Int(commonExponent - b._exponent))
+        
+        var (hi, lo) = a._significand.multipliedFullWidth(by: _pow10[shift.a])
+        let divisor: UInt128
+        let q: UInt128
+        var r: UInt128
+        if shift.b == 0 {
+            divisor = 1
+            (q, r) = (b._significand, 0)
+        } else if shift.b < 39 {
+            divisor = _pow10[shift.b]
+            (q, r) = b._significand.quotientAndRemainder(dividingBy: divisor)
+        } else {
+            // A nonzero proxy value under 0.5 ulp.
+            divisor = 10
+            (q, r) = (0, 1)
         }
-        if b._length == 0 {
-            return (result: a, lossOfPrecision: lossOfPrecision)
-        }
-        var result = a
+        
+        let isNegative: UInt32
         if a._isNegative == b._isNegative {
-            result._isNegative = a._isNegative
-            let (sum, carry) = a._significand.addingReportingOverflow(b._significand)
-            if !carry {
-                result._significand = sum
-            } else {
-                var (fitted, remainder) = UInt128._10DividingFullWidth((1, sum))
-                if remainder != 0 { lossOfPrecision = true }
-                // We've never actually supported non-default rounding modes; so let's not pretend.
-                // guard roundingMode == .plain else { fatalError("Not implemented") }
-                if remainder >= 5 { fitted += 1 }
-                if result._exponent + 1 > Int8.max { throw _CalculationError.overflow }
-                result._exponent += 1
-                result._significand = fitted
+            isNegative = a._isNegative
+            let carry: Bool
+            (lo, carry) = lo.addingReportingOverflow(q)
+            if carry { hi &+= 1 }
+        } else if hi != 0 || lo > q {
+            isNegative = a._isNegative
+            let borrow: Bool
+            (lo, borrow) = lo.subtractingReportingOverflow(q)
+            if borrow { hi &-= 1 }
+            if r != 0 {
+                // We have a "negative" remainder, so we need to borrow 1 ulp
+                // and set the remainder to (divisor - remainder) / divisor.
+                let borrow_: Bool
+                (lo, borrow_) = lo.subtractingReportingOverflow(1)
+                if borrow_ { hi &-= 1 }
+                r = divisor - r
             }
         } else {
-            let am = a._significand, bm = b._significand
-            if am == bm {
-                return (result: .zero, lossOfPrecision: lossOfPrecision)
-            }
-            if am > bm {
-                result._significand = am &- bm
-                result._isNegative = a._isNegative
-            } else {
-                result._significand = bm &- am
-                result._isNegative = b._isNegative
-            }
+            isNegative = b._isNegative
+            lo = q - lo
         }
+        
+        let (fitted, shift_, lossOfPrecision): (UInt128, Int32, Bool)
+        if hi != 0 {
+            (fitted, shift_, lossOfPrecision) = Self._fitSignificand(isNegative: isNegative != 0, high: hi, low: lo, inexact: r != 0, roundingMode: roundingMode)
+        } else {
+            (fitted, shift_) = Self._roundSignificandByRemainderAfterDivision(isNegative: isNegative != 0, significand: lo, remainder: r, divisor: divisor, roundingMode: roundingMode)
+            lossOfPrecision = r != 0
+        }
+        
+        if fitted == 0 {
+            return (.zero, lossOfPrecision)
+        }
+        let exponent = commonExponent + shift_
+        if exponent > Int8.max {
+            throw _CalculationError.overflow
+            //TODO: Consider conditions under which it might be possible to adjust the significand so that the exponent fits.
+        }
+        
+        var result = Decimal()
+        result._significand = fitted
+        result._isNegative = isNegative
+        result._exponent = exponent
         result._isCompact = 0
         result.compact()
-        return (result: result, lossOfPrecision: lossOfPrecision)
+        return (result, lossOfPrecision)
     }
 
     internal func _add(_ amount: UInt16) throws -> Decimal {
