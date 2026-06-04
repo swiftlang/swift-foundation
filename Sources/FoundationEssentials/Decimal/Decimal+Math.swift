@@ -568,76 +568,67 @@ extension Decimal {
         return result
     }
 
-    internal static func _normalize(a: inout Decimal, b: inout Decimal, roundingMode: RoundingMode) throws -> Bool {
-        var diffExp = Int(a._exponent - b._exponent)
+    // `_normalize` has always unconditionally truncated regardless of `roundingMode`.
+    internal static func _normalize(a: inout Decimal, b: inout Decimal, roundingMode _: RoundingMode) throws -> Bool {
+        let diffExp = Int(a._exponent - b._exponent)
         // If the two numbers share the same exponents,
         // the normalization is already done
         if diffExp == 0 {
             return false
         }
-
-        return try withUnsafeMutablePointer(to: &a) { aPtr -> Bool in
-            return try withUnsafeMutablePointer(to: &b) { bPtr -> Bool in
-                // Put the smaller number in aa
-                let aa: UnsafeMutablePointer<Decimal>
-                let bb: UnsafeMutablePointer<Decimal>
-                if diffExp < 0 {
-                    aa = bPtr
-                    bb = aPtr
-                    diffExp = -diffExp
-                } else {
-                    aa = aPtr
-                    bb = bPtr
-                }
-                // Try to multiply aa to reach the same exponent level as bb
-                let multiplyResult = try? self._integerMultiplyByPowerOfTen(
-                    lhs: aa.pointee.asVariableLengthInteger(),
-                    power: diffExp,
-                    maxResultLength: Int(Decimal.maxSize)
-                )
-                if let multiplyResult = multiplyResult {
-                    // Success! Adjust the length/exponent info
-                    try aa.pointee.copyVariableLengthInteger(multiplyResult)
-                    aa.pointee._length = UInt32(multiplyResult.count)
-                    aa.pointee._exponent = bb.pointee._exponent
-                    aa.pointee._isCompact = 0
-                    return false
-                }
-                // What is the maximum pow10 we can apply to aa?
-                let maxPowerTen = self._integerMaxPowerOfTenMultiplier(
-                    number: aa.pointee.asVariableLengthInteger(),
-                    maxResultLength: Int(Decimal.maxSize)
-                )
-                // Divide bb by this value
-                let divideResult = try self._integerMultiplyByPowerOfTen(
-                    lhs: bb.pointee.asVariableLengthInteger(),
-                    power: maxPowerTen - diffExp,
-                    maxResultLength: Int(Decimal.maxSize)
-                )
-                try bb.pointee.copyVariableLengthInteger(divideResult)
-                bb.pointee._length = UInt32(Int32(divideResult.count))
-                bb.pointee._exponent -= Int32(maxPowerTen - diffExp)
-                bb.pointee._isCompact = 0
-                // If bb > 0 multiply aa by the same value
-                if bb.pointee._length != 0 {
-                    let aaResult = try self._integerMultiplyByPowerOfTen(
-                        lhs: aa.pointee.asVariableLengthInteger(),
-                        power: maxPowerTen,
-                        maxResultLength: Int(Decimal.maxSize)
-                    )
-                    try aa.pointee.copyVariableLengthInteger(aaResult)
-                    aa.pointee._length = UInt32(aaResult.count)
-                    aa.pointee._exponent -= Int32(maxPowerTen)
-                    aa.pointee._isCompact = 0
-                } else {
-                    bb.pointee._exponent = aa.pointee._exponent
-                }
-
-                // Now the two exponents are identical, but we've lost
-                // some digits in the operation
-                return true
+        
+        func __normalize(large: inout Decimal, small: inout Decimal, diffExp: Int) throws -> Bool {
+            let lm = large._significand
+            if lm == 0 {
+                large._exponent = small._exponent
+                large._isCompact = 0
+                // Don't compact.
+                return false // Exact.
             }
+            
+            if diffExp <= 38 {
+                let (hi, lo) = lm.multipliedFullWidth(by: _pow10[diffExp])
+                if hi == 0 {
+                    large._significand = lo
+                    large._exponent = small._exponent
+                    large._isCompact = 0
+                    // Don't compact.
+                    return false // Exact.
+                }
+            }
+            
+            // Deliberately underestimate the max "headroom" for scaling up `large._significand`.
+            let maxPowerOfTen = ((lm|1).leadingZeroBitCount &* 1233) &>> 12
+            let idx = diffExp - maxPowerOfTen
+            let sm_ = idx < 39 ? small._significand / _pow10[idx] : 0
+            if sm_ == 0 {
+                if small._significand != 0 {
+                    // Strip sign bit if truncating a nonzero magnitude,
+                    // so that the result isn't spuriously NaN.
+                    small = Decimal()
+                }
+                small._exponent = large._exponent
+                small._isCompact = 0
+                // Don't compact.
+                return true // Inexact.
+            }
+            small._significand = sm_
+            small._exponent += Int32(diffExp - maxPowerOfTen)
+            small._isCompact = 0
+            
+            let (hi, lo) = lm.multipliedFullWidth(by: _pow10[maxPowerOfTen])
+            assert(hi == 0)
+            large._significand = lo
+            large._exponent -= Int32(maxPowerOfTen)
+            large._isCompact = 0
+            // Don't compact.
+            return true // Inexact.
         }
+        
+        if diffExp < 0 {
+            return try __normalize(large: &b, small: &a, diffExp: -diffExp)
+        }
+        return try __normalize(large: &a, small: &b, diffExp: diffExp)
     }
 
     internal mutating func compact() {

@@ -319,25 +319,18 @@ private struct DecimalTests {
             a: &aNormalized, b: &bNormalized, roundingMode: .plain)
         #expect(lossPrecision)
 
-        #expect(aNormalized.exponent == -31)
-        #expect(aNormalized._mantissa.0 == 0)
-        #expect(aNormalized._mantissa.1 == 21760)
-        #expect(aNormalized._mantissa.2 == 45355)
-        #expect(aNormalized._mantissa.3 == 11455)
-        #expect(aNormalized._mantissa.4 == 62709)
-        #expect(aNormalized._mantissa.5 == 14050)
-        #expect(aNormalized._mantissa.6 == 62951)
-        #expect(aNormalized._mantissa.7 == 0)
-        #expect(bNormalized.exponent == -31)
-        #expect(bNormalized._mantissa.0 == 56467)
-        #expect(bNormalized._mantissa.1 == 17616)
-        #expect(bNormalized._mantissa.2 == 59987)
-        #expect(bNormalized._mantissa.3 == 21635)
-        #expect(bNormalized._mantissa.4 == 5988)
-        #expect(bNormalized._mantissa.5 == 63852)
-        #expect(bNormalized._mantissa.6 == 1066)
-        #expect(bNormalized._length == 7)
+        #expect(aNormalized.exponent == -35)
         #expect(a == aNormalized)
+        #expect(bNormalized.exponent == -35)
+        #expect(bNormalized._mantissa.0 == 18026)
+        #expect(bNormalized._mantissa.1 == 7848)
+        #expect(bNormalized._mantissa.2 == 21680)
+        #expect(bNormalized._mantissa.3 == 24817)
+        #expect(bNormalized._mantissa.4 == 48933)
+        #expect(bNormalized._mantissa.5 == 3665)
+        #expect(bNormalized._mantissa.6 == 52911)
+        #expect(bNormalized._mantissa.7 == 162)
+        #expect(bNormalized._length == 8)
         #expect(b != bNormalized)   // b had a loss Of Precision when normalising
     }
 
@@ -531,8 +524,8 @@ private struct DecimalTests {
         expected._isNegative = 0
         expected._isCompact = 1
         expected._reserved = 0
-        expected._mantissa.0 = 51946
-        expected._mantissa.1 = 3
+        expected._mantissa.0 = 248
+        expected._mantissa.1 = 0
         expected._mantissa.2 = 15549
         expected._mantissa.3 = 55864
         expected._mantissa.4 = 57984
