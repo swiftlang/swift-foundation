@@ -239,7 +239,11 @@ private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) ->
                 return nil
             }
             
-            guard let scalar = UnicodeScalar(getSlashedChar(&pInfo)) else {
+            guard let slashedChar = getSlashedChar(&pInfo) else {
+                // Error set by getSlashedChar.
+                return nil
+            }
+            guard let scalar = UnicodeScalar(slashedChar) else {
                 pInfo.err = OpenStepPlistError("Invalid character on line \(lineNumberStrings(pInfo))")
                 return nil
             }
@@ -310,7 +314,7 @@ private func parseOctal(startingWith ch: UInt16, _ pInfo: inout _ParseInfo) -> U
     return .init(nextStep: num)
 }
 
-private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16 {
+private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16? {
     var num : UInt16 = 0
     var numDigits = 4
     while !pInfo.isAtEnd && numDigits > 0 {
@@ -325,13 +329,20 @@ private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16 {
             } else {
                 num += (ch2 &- UInt16(ascii: "a") &+ 10)
             }
+            numDigits -= 1
+        } else {
+            break
         }
-        numDigits -= 1
+    }
+    // We have to have encountered at least one hex digit for the `\U` directive to be valid.
+    if num == 0, numDigits == 4 {
+        pInfo.err = OpenStepPlistError("Unexpected character `\(String(describing: Unicode.Scalar(pInfo.currChar)))` while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")
+        return nil
     }
     return num
 }
 
-private func getSlashedChar(_ pInfo: inout _ParseInfo) -> UInt16 {
+private func getSlashedChar(_ pInfo: inout _ParseInfo) -> UInt16? {
     let ch = pInfo.currChar
     pInfo.advance()
     switch ch {

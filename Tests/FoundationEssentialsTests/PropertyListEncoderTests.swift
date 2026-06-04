@@ -918,7 +918,38 @@ private struct PropertyListEncoderTests {
         let strings = try PropertyListDecoder().decode([String].self, from: data)
         #expect(strings == literals)
     }
-    
+
+    // \U syntax stops counting characters after a non-hex digit.
+    @Test func oldStylePlist_getSlashedChars_variableSizeWithFollowingCharacters() throws {
+        let data = #"('\U1z', '\U12z', '\U123z', '\U1234')"#.data(using: .utf8)!
+
+        let expectedResults = [
+            "\u{1}z",
+            "\u{12}z",
+            "\u{123}z",
+            "\u{1234}",
+        ]
+
+        let strings = try PropertyListDecoder().decode([String].self, from: data)
+        #expect(strings == expectedResults)
+    }
+
+    @Test func oldStylePlist_getSlashedChars_unicode_invalid() {
+        let examples = [
+            #"'\U'"#,
+            #"'\Ux'"#,
+            #"'\Uxx'"#,
+            #"'\Uxxx'"#,
+            #"'\Uxxxx'"#,
+        ]
+        for example in examples {
+            let data = example.data(using: .utf8)!
+            #expect(throws: (any Error).self) {
+                try PropertyListDecoder().decode(String.self, from: data)
+            }
+        }
+    }
+
     @Test func oldStylePlist_dictionary() {
         let data = """
 { "test key" = value;
