@@ -132,6 +132,29 @@ extension UInt128 {
         let r = self &- q &* 10000
         return (q, r)
     }
+    
+    @inline(__always)
+    internal static func _10DividingFullWidth(
+        _ dividend: (high: Self, low: Self)
+    ) -> (quotient: Self, remainder: Self) {
+        assert(dividend.high < 10)
+        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821145, 6) // (2^128 / 10, 2^128 % 10)
+        let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
+        let carry: UInt128 = carry_ ? 1 : 0
+        let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10()
+        return (dividend.high &* q1 &+ carry &* q1 &+ q2, r2)
+    }
+    
+    @inline(__always)
+    internal static func _10000DividingFullWidth(
+        _ dividend: (high: Self, low: Self)
+    ) -> (quotient: Self, remainder: Self) {
+        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821, 1456) // (2^128 / 10000, 2^128 % 10000)
+        let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
+        let carry: UInt128 = carry_ ? 1 : 0
+        let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10000()
+        return (dividend.high &* q1 &+ carry &* q1 &+ q2, r2)
+    }
 }
 
 // MARK: - Mathmatics
@@ -174,7 +197,7 @@ extension Decimal {
             if !carry {
                 result._significand = sum
             } else {
-                var (fitted, remainder) = (10 as UInt128).dividingFullWidth((1, sum))
+                var (fitted, remainder) = UInt128._10DividingFullWidth((1, sum))
                 if remainder != 0 { lossOfPrecision = true }
                 // We've never actually supported non-default rounding modes; so let's not pretend.
                 // guard roundingMode == .plain else { fatalError("Not implemented") }
@@ -274,6 +297,7 @@ extension Decimal {
         }
         
         if exponent > Int8.max { throw _CalculationError.overflow }
+        //FIXME: `.underflow` only when subnormal-like loss of precision still won't fit: enhance `_fitSignificand` to take a `maxDigits` parameter.
         if exponent < Int8.min { throw _CalculationError.underflow }
         
         var result = Decimal()
@@ -339,6 +363,8 @@ extension Decimal {
         if self._length == 0 {
             return .zero
         }
+        
+        //TODO: Consider multiple-of-10 fast path.
 
         var a = self
         var b = divisor
@@ -1222,7 +1248,7 @@ extension Decimal {
         while high >= 10000 {
             if lastTruncated != 0 { inexact = true }
             let (q1, r1) = high._quotientAndRemainderDividingBy10000()
-            let (q2, r2) = (10000 as UInt128).dividingFullWidth((r1, low))
+            let (q2, r2) = UInt128._10000DividingFullWidth((r1, low))
             high = q1
             low = q2
             lastTruncated = r2
@@ -1231,7 +1257,7 @@ extension Decimal {
         while high != 0 {
             if lastTruncated != 0 { inexact = true }
             let (q1, r1) = high._quotientAndRemainderDividingBy10()
-            let (q2, r2) = (10 as UInt128).dividingFullWidth((r1, low))
+            let (q2, r2) = UInt128._10DividingFullWidth((r1, low))
             high = q1
             low = q2
             lastTruncated = r2
