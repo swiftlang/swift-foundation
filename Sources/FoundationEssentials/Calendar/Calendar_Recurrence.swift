@@ -663,6 +663,218 @@ extension Calendar {
         var minutes: [Int]? = nil
         var seconds: [Int]? = nil
     }
+
+    /// Whether the combinations contain any `.nth(N, day)` with `N < 0`.
+    fileprivate func _unadjustedDatesHasNegativeOrdinal(_ c: _DateComponentCombinations) -> Bool {
+        guard let weekdays = c.weekdays else { return false }
+        for w in weekdays {
+            if case .nth(let n, _) = w, n < 0 { return true }
+        }
+        return false
+    }
+
+    /// Expand `_DateComponentCombinations` into a flat array of single-valued
+    /// `DateComponents`. Negative ordinals are translated to `{month, weekday,
+    /// weekOfMonth}` using `anchor`'s month structure. Returns nil if the
+    /// pattern can't be expanded (too many combinations, `.every()` weekday, etc).
+    fileprivate func _expandedDateComponents(
+        _ c: _DateComponentCombinations,
+        anchor: Date? = nil,
+        maxCombinations: Int = 64
+    ) -> [DateComponents]? {
+        var hasNegativeOrdinal = false
+        if let weekdays = c.weekdays {
+            for w in weekdays {
+                switch w {
+                case .every:
+                    return nil
+                case .nth(let n, _):
+                    if n == 0 { return nil }
+                    if n < 0 {
+                        guard anchor != nil else { return nil }
+                        hasNegativeOrdinal = true
+                    }
+                }
+            }
+        }
+
+        let monthsCount = c.months?.count ?? 1
+        let weekdaysCount = c.weekdays?.count ?? 1
+        let daysOfMonthCount = c.daysOfMonth?.count ?? 1
+        let daysOfYearCount = c.daysOfYear?.count ?? 1
+        let weeksOfYearCount = c.weeksOfYear?.count ?? 1
+        let hoursCount = c.hours?.count ?? 1
+        let minutesCount = c.minutes?.count ?? 1
+        let secondsCount = c.seconds?.count ?? 1
+
+        let total = monthsCount * weekdaysCount * daysOfMonthCount
+                  * daysOfYearCount * weeksOfYearCount
+                  * hoursCount * minutesCount * secondsCount
+        if total <= 0 { return nil }
+        if total > maxCombinations { return nil }
+        if total <= 1 { return nil }
+
+        // Precompute target month structure for negative-ordinal translation.
+        struct MonthInfo {
+            let month: Int
+            let isLeapMonth: Bool
+            let day1Weekday: Int   // 1..7 (Sunday=1)
+            let daysInMonth: Int
+            let firstWeekday: Int  // calendar's
+            let minDays: Int       // calendar's
+        }
+        var monthInfo: MonthInfo? = nil
+        if hasNegativeOrdinal, let anchor = anchor {
+            let targetMonth: Int
+            let targetIsLeap: Bool
+            let targetYear: Int
+            if let ms = c.months, ms.count == 1 {
+                targetMonth = ms[0].index
+                targetIsLeap = ms[0].isLeap
+                targetYear = self.component(.year, from: anchor)
+            } else if c.months == nil || c.months!.isEmpty {
+                targetMonth = self.component(.month, from: anchor)
+                targetIsLeap = false
+                targetYear = self.component(.year, from: anchor)
+            } else {
+                return nil
+            }
+
+            var monthStartComps = DateComponents()
+            monthStartComps.year = targetYear
+            monthStartComps.month = targetMonth
+            monthStartComps.day = 1
+            if targetIsLeap { monthStartComps.isLeapMonth = true }
+
+            guard let monthStart = self.date(from: monthStartComps),
+                  let dayRange = self.range(of: .day, in: .month, for: monthStart) else {
+                return nil
+            }
+            let daysInMonth = dayRange.upperBound - 1
+            let day1Weekday = self.component(.weekday, from: monthStart)
+
+            monthInfo = MonthInfo(
+                month: targetMonth,
+                isLeapMonth: targetIsLeap,
+                day1Weekday: day1Weekday,
+                daysInMonth: daysInMonth,
+                firstWeekday: self.firstWeekday,
+                minDays: self.minimumDaysInFirstWeek
+            )
+        }
+
+        // Translate a `.nth(N, day)` entry to DC fields. Returns false if out of range.
+        func translateWeekday(_ entry: RecurrenceRule.Weekday, into dc: inout DateComponents) -> Bool {
+            guard case .nth(let n, let dayOfWeek) = entry else { return false }
+            let wdIdx = dayOfWeek.icuIndex
+            if n > 0 {
+                dc.weekdayOrdinal = n
+                dc.weekday = wdIdx
+                return true
+            }
+            // Negative ordinal → {month, weekday, weekOfMonth}.
+            guard let info = monthInfo else { return false }
+            let firstOcc = 1 + ((wdIdx - info.day1Weekday + 7) % 7)   // 1..7
+            let totalOcc = (info.daysInMonth - firstOcc) / 7 + 1
+            let kthFromLast = -n
+            let dayOfMonth = firstOcc + (totalOcc - kthFromLast) * 7
+            guard dayOfMonth >= 1, dayOfMonth <= info.daysInMonth else { return false }
+            let periodStart = ((info.day1Weekday - info.firstWeekday) % 7 + 7) % 7
+            let correction = (7 - periodStart) >= info.minDays ? 1 : 0
+            let weekOfMonth = (dayOfMonth + periodStart - 1) / 7 + correction
+            dc.month = info.month
+            dc.isLeapMonth = info.isLeapMonth
+            dc.weekday = wdIdx
+            dc.weekOfMonth = weekOfMonth
+            return true
+        }
+
+        func make(monthIdx: Int, weekdayIdx: Int,
+                  daysOfMonthIdx: Int, daysOfYearIdx: Int, weeksOfYearIdx: Int,
+                  hoursIdx: Int, minutesIdx: Int, secondsIdx: Int) -> DateComponents? {
+            var dc = DateComponents()
+            if let ms = c.months {
+                dc.month = ms[monthIdx].index
+                dc.isLeapMonth = ms[monthIdx].isLeap
+            }
+            if let woy = c.weeksOfYear { dc.weekOfYear = woy[weeksOfYearIdx] }
+            if let doy = c.daysOfYear { dc.dayOfYear = doy[daysOfYearIdx] }
+            if let dom = c.daysOfMonth { dc.day = dom[daysOfMonthIdx] }
+            if let wds = c.weekdays {
+                guard translateWeekday(wds[weekdayIdx], into: &dc) else { return nil }
+            }
+            if let hs = c.hours { dc.hour = hs[hoursIdx] }
+            if let mins = c.minutes { dc.minute = mins[minutesIdx] }
+            if let secs = c.seconds { dc.second = secs[secondsIdx] }
+            return dc
+        }
+
+        var result: [DateComponents] = []
+        result.reserveCapacity(total)
+        for mIdx in 0..<monthsCount {
+            for wIdx in 0..<weekdaysCount {
+                for domIdx in 0..<daysOfMonthCount {
+                    for doyIdx in 0..<daysOfYearCount {
+                        for woyIdx in 0..<weeksOfYearCount {
+                            for hIdx in 0..<hoursCount {
+                                for miIdx in 0..<minutesCount {
+                                    for sIdx in 0..<secondsCount {
+                                        guard let dc = make(
+                                            monthIdx: mIdx, weekdayIdx: wIdx,
+                                            daysOfMonthIdx: domIdx,
+                                            daysOfYearIdx: doyIdx,
+                                            weeksOfYearIdx: woyIdx,
+                                            hoursIdx: hIdx, minutesIdx: miIdx,
+                                            secondsIdx: sIdx) else { return nil }
+                                        result.append(dc)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    /// Single-valued `DateComponents` from combinations, or nil if expansion is needed.
+    fileprivate func _singleCombinationDateComponents(
+        _ c: _DateComponentCombinations
+    ) -> DateComponents? {
+        if let count = c.weeksOfYear?.count, count > 1 { return nil }
+        if let count = c.daysOfYear?.count, count > 1 { return nil }
+        if let count = c.months?.count, count > 1 { return nil }
+        if let count = c.daysOfMonth?.count, count > 1 { return nil }
+        if let count = c.weekdays?.count, count > 1 { return nil }
+        if let count = c.hours?.count, count > 1 { return nil }
+        if let count = c.minutes?.count, count > 1 { return nil }
+        if let count = c.seconds?.count, count > 1 { return nil }
+
+        var dc = DateComponents()
+        if let m = c.months?.first {
+            dc.month = m.index
+            dc.isLeapMonth = m.isLeap
+        }
+        if let woy = c.weeksOfYear?.first { dc.weekOfYear = woy }
+        if let doy = c.daysOfYear?.first { dc.dayOfYear = doy }
+        if let dom = c.daysOfMonth?.first { dc.day = dom }
+        if let weekday = c.weekdays?.first {
+            switch weekday {
+            case .every:
+                return nil
+            case .nth(let n, let day):
+                guard n >= 1 else { return nil }   // negative ordinals not in our fast path
+                dc.weekdayOrdinal = n
+                dc.weekday = day.icuIndex
+            }
+        }
+        if let h = c.hours?.first { dc.hour = h }
+        if let mi = c.minutes?.first { dc.minute = mi }
+        if let s = c.seconds?.first { dc.second = s }
+
+        return dc
+    }
     
 
     /// Find date components which can be used to filter or enumerate each given
@@ -827,6 +1039,59 @@ extension Calendar {
                                       matching combinationComponents: _DateComponentCombinations,
                                       matchingPolicy: MatchingPolicy,
                                       repeatedTimePolicy: RepeatedTimePolicy) throws -> [(Date, DateComponents)]? {
+
+        // Fast-path short-circuits. The protocol default for _calendarNextDate is nil,
+        // so non-Hebrew calendars fall through to the existing path unchanged.
+
+        // (1) Single-combination: one value per field → single _calendarNextDate call.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
+           let dc = _singleCombinationDateComponents(combinationComponents),
+           let fast = _calendarNextDate(after: startDate, matching: dc, direction: .forward) {
+            return [(fast, dc)]
+        }
+
+        // (2) Multi-combination (positive ordinals): cartesian product → probe each.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
+           let allDCs = _expandedDateComponents(combinationComponents) {
+            var results: [(Date, DateComponents)] = []
+            results.reserveCapacity(allDCs.count)
+            var allFastPathed = true
+            for dc in allDCs {
+                guard let fast = _calendarNextDate(after: startDate, matching: dc, direction: .forward) else {
+                    allFastPathed = false
+                    break
+                }
+                results.append((fast, dc))
+            }
+            if allFastPathed && !results.isEmpty {
+                results.sort { $0.0 < $1.0 }
+                return results
+            }
+        }
+
+        // (3) Multi-combination with negative-ordinal translation.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
+           _unadjustedDatesHasNegativeOrdinal(combinationComponents) {
+            var sentinel = DateComponents()
+            sentinel.weekday = 1
+            if _calendarNextDate(after: startDate, matching: sentinel, direction: .forward) != nil,
+               let allDCs = _expandedDateComponents(combinationComponents, anchor: startDate) {
+                var results: [(Date, DateComponents)] = []
+                results.reserveCapacity(allDCs.count)
+                var allFastPathed = true
+                for dc in allDCs {
+                    guard let fast = _calendarNextDate(after: startDate, matching: dc, direction: .forward) else {
+                        allFastPathed = false
+                        break
+                    }
+                    results.append((fast, dc))
+                }
+                if allFastPathed && !results.isEmpty {
+                    results.sort { $0.0 < $1.0 }
+                    return results
+                }
+            }
+        }
 
         let isStrictMatching = matchingPolicy == .strict
 

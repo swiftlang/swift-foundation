@@ -1299,12 +1299,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter direction: Which direction in time to search. The default value is `.forward`, which means later in time.
     /// - parameter block: A closure that is called with search results.
     @available(iOS 8.0, *)
+    /// Proxy to the calendar implementation's fast-path `nextDate`.
+    internal func _calendarNextDate(after date: Date, matching components: DateComponents, direction: SearchDirection) -> Date? {
+        _calendar.nextDate(after: date, matching: components, direction: direction)
+    }
+
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
-        // Fast-path: if the calendar implementation has a direct answer for the
-        // first match AND default policies are in effect, drive the loop with
-        // repeated nextDate(after:matching:) calls instead of the generic
-        // enumerate framework. The fast path opts out (returns nil) for any
-        // pattern it can't handle, so this is safe.
+        // Fast-path: drive the loop with direct nextDate calls when default policies are in effect.
         if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
            let _ = _calendar.nextDate(after: start, matching: components, direction: direction) {
             var current = start
