@@ -12,6 +12,16 @@
 
 #if canImport(os)
 internal import os
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(CRT)
+import CRT
+#elseif os(WASI)
+@preconcurrency import WASILibc
 #endif
 
 internal import Synchronization
@@ -30,13 +40,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         Logger(subsystem: "com.apple.foundation", category: "hebrew_calendar")
     }()
 #endif
-
-    let kSecondsInWeek = 604_800
-    let kSecondsInDay = 86400
-    let kSecondsInHour = 3600
-    let kSecondsInMinute = 60
-
-    let inf_ti: TimeInterval = 4398046511104.0
 
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         // .hebrew is the only identifier this class handles. `gregorianStartDate`
@@ -69,77 +72,27 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     var _firstWeekday: Int?
     var firstWeekday: Int {
-        set {
-            precondition(newValue >= 1 && newValue <= 7, "Weekday should be in the range of 1...7")
-            _firstWeekday = newValue
-        }
-        get {
-            if let _firstWeekday {
-                return _firstWeekday
-            } else if let locale {
-                return locale.firstDayOfWeek.icuIndex
-            } else {
-                return 1
-            }
-        }
+        set { _firstWeekday = _CalendarUtility.validatedFirstWeekday(newValue) }
+        get { _CalendarUtility.resolveFirstWeekday(stored: _firstWeekday, locale: locale) }
     }
 
     var _minimumDaysInFirstWeek: Int?
     var minimumDaysInFirstWeek: Int {
-        set {
-            if newValue < 1 {
-                _minimumDaysInFirstWeek = 1
-            } else if newValue > 7 {
-                _minimumDaysInFirstWeek = 7
-            } else {
-                _minimumDaysInFirstWeek = newValue
-            }
-        }
-        get {
-            if let _minimumDaysInFirstWeek {
-                return _minimumDaysInFirstWeek
-            } else if let locale {
-                return locale.minimumDaysInFirstWeek
-            } else {
-                return 1
-            }
-        }
+        set { _minimumDaysInFirstWeek = _CalendarUtility.clampedMinimumDaysInFirstWeek(newValue) }
+        get { _CalendarUtility.resolveMinimumDaysInFirstWeek(stored: _minimumDaysInFirstWeek, locale: locale) }
     }
 
     func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> _CalendarProtocol {
-        let newTimeZone = changingTimeZone ?? self.timeZone
-        let newLocale = changingLocale ?? self.locale
-
-        let newFirstWeekday: Int?
-        if let changingFirstWeekday {
-            newFirstWeekday = changingFirstWeekday
-        } else if let _firstWeekday {
-            newFirstWeekday = _firstWeekday
-        } else {
-            newFirstWeekday = nil
-        }
-
-        let newMinDays: Int?
-        if let changingMinimumDaysInFirstWeek {
-            newMinDays = changingMinimumDaysInFirstWeek
-        } else if let _minimumDaysInFirstWeek {
-            newMinDays = _minimumDaysInFirstWeek
-        } else {
-            newMinDays = nil
-        }
-
-        return _CalendarHebrew(identifier: identifier, timeZone: newTimeZone, locale: newLocale, firstWeekday: newFirstWeekday, minimumDaysInFirstWeek: newMinDays, gregorianStartDate: nil)
+        let args = _CalendarUtility.resolvedCopyArgs(
+            currentTimeZone: timeZone, changingTimeZone: changingTimeZone,
+            currentLocale: locale, changingLocale: changingLocale,
+            currentFirstWeekday: _firstWeekday, changingFirstWeekday: changingFirstWeekday,
+            currentMinimumDaysInFirstWeek: _minimumDaysInFirstWeek, changingMinimumDaysInFirstWeek: changingMinimumDaysInFirstWeek
+        )
+        return _CalendarHebrew(identifier: identifier, timeZone: args.timeZone, locale: args.locale, firstWeekday: args.firstWeekday, minimumDaysInFirstWeek: args.minimumDaysInFirstWeek, gregorianStartDate: nil)
     }
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(identifier)
-        hasher.combine(timeZone)
-        hasher.combine(firstWeekday)
-        hasher.combine(minimumDaysInFirstWeek)
-        hasher.combine(localeIdentifier)
-        hasher.combine(preferredFirstWeekday)
-        hasher.combine(preferredMinimumDaysInFirstweek)
-    }
+    // hash(into:) uses the `_CalendarProtocol` default impl.
 
     // MARK: - Range
 
@@ -415,10 +368,10 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         case .era:
             // Hebrew has a single AM era spanning from epoch to effectively forever.
             // Matches ICU's reported start (Hebrew epoch, -181,778,083,200 s before
-            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (inf_ti).
+            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (_CalendarConstants.inf_ti).
             return DateInterval(
                 start: Date(timeIntervalSinceReferenceDate: -181_778_083_200.0),
-                duration: inf_ti
+                duration: _CalendarConstants.inf_ti
             )
         case .year:
             // Tishri 1 of this year → Tishri 1 of next year.
@@ -556,47 +509,16 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Weekend queries
 
-    // TODO: Factor out into shared utility; identical to _CalendarGregorian.isDateInWeekend.
     func isDateInWeekend(_ date: Date) -> Bool {
-        let weekendRange: WeekendRange
-        if let localeWeekendRange = locale?.weekendRange {
-            weekendRange = localeWeekendRange
-        } else {
-            // Weekend range for 001 region (world default).
-            weekendRange = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
-        }
-
-        let comps = dateComponents([.weekday], from: date, in: self.timeZone)
+        let weekendRange = locale?.weekendRange ?? _CalendarUtility.defaultWeekendRange
+        let comps = dateComponents([.weekday, .hour, .minute, .second], from: date, in: self.timeZone)
         guard let dayOfWeek = comps.weekday else { return false }
-
-        if weekendRange.start == weekendRange.end && dayOfWeek != weekendRange.start {
-            return false
-        } else if weekendRange.start < weekendRange.end && (dayOfWeek < weekendRange.start || dayOfWeek > weekendRange.end) {
-            return false
-        } else if weekendRange.start > weekendRange.end && (dayOfWeek > weekendRange.end && dayOfWeek < weekendRange.start) {
-            return false
-        }
-
-        // Day matches; now check time-in-day if this day is the weekend start or end.
-        let tz = self.timeZone
-        let (tzOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: date, repeatedTimePolicy: .former, skippedTimePolicy: .former)
-        let localSeconds = date.timeIntervalSinceReferenceDate + Double(tzOffset) + dstOffset
-        let daysSinceRef = (localSeconds / 86400).rounded(.down)
-        let timeInDay = localSeconds - daysSinceRef * 86400
-
-        if dayOfWeek == weekendRange.start {
-            guard let onsetTime = weekendRange.onsetTime, onsetTime != 0 else {
-                return true
-            }
-            return timeInDay >= onsetTime
-        } else if dayOfWeek == weekendRange.end {
-            guard let ceaseTime = weekendRange.ceaseTime, ceaseTime < 86400 else {
-                return true
-            }
-            return timeInDay < ceaseTime
-        } else {
-            return true
-        }
+        let timeInDay = TimeInterval(
+            (comps.hour ?? 0) * _CalendarConstants.kSecondsInHour
+            + (comps.minute ?? 0) * 60
+            + (comps.second ?? 0)
+        )
+        return _CalendarUtility.isDateInWeekend(weekday: dayOfWeek, timeInDay: timeInDay, weekendRange: weekendRange)
     }
 
     // MARK: - Date ↔ DateComponents

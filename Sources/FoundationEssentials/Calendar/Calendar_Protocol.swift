@@ -50,9 +50,8 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date?
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents
 
-    /// Optional fast path for `Calendar.nextDate(after:matching:)`. Default
-    /// returns nil, falling through to the generic enumerate framework. Calendar
-    /// implementations may override for patterns they can answer in O(1).
+    /// Optional fast path for `Calendar.nextDate(after:matching:)`.
+    /// Returns nil to fall through to the generic enumerate framework.
     func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date?
 
 #if FOUNDATION_FRAMEWORK
@@ -77,6 +76,23 @@ extension _CalendarProtocol {
     package var localeIdentifier: String {
         // We use this to provide a consistent answer for hashing and equality -- null is equal to an empty string
         locale?.identifier ?? ""
+    }
+
+    /// Default `hash(into:)` for calendars whose identity is the standard
+    /// `(identifier, timeZone, firstWeekday, minimumDaysInFirstWeek,
+    /// localeIdentifier, preferredFirstWeekday, preferredMinimumDaysInFirstweek)`
+    /// tuple. Calendars with non-standard hashing semantics
+    /// (e.g. `_CalendarAutoupdating`'s "all-equal" sentinel, `_CalendarICU`'s
+    /// locked-accessor variant, `_CalendarBridged`'s underlying-`NSCalendar`
+    /// hash) override this.
+    package func hash(into hasher: inout Hasher) {
+        hasher.combine(identifier)
+        hasher.combine(timeZone)
+        hasher.combine(firstWeekday)
+        hasher.combine(minimumDaysInFirstWeek)
+        hasher.combine(localeIdentifier)
+        hasher.combine(preferredFirstWeekday)
+        hasher.combine(preferredMinimumDaysInFirstweek)
     }
 }
 
