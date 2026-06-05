@@ -387,6 +387,16 @@ private struct DecimalTests {
         #expect(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
     }
 
+    @Test func additionRounding() throws {
+        let a = Decimal(
+            _exponent: 0, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0,
+            _mantissa: (0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff))
+        let b = Decimal(
+            _exponent: 0, _length: 1, _isNegative: 0, _isCompact: 0, _reserved: 0,
+            _mantissa: (10, 0, 0, 0, 0, 0, 0, 0))
+        #expect((a + b)._mantissa.0 == 39323) // Round up.
+    }
+
     @Test func simpleMultiplication() throws {
         var multiplicand = Decimal()
         multiplicand._isNegative = 0
@@ -463,7 +473,7 @@ private struct DecimalTests {
         _ = try multiplier._multiply(
             by: multiplicand, roundingMode: .plain)
 
-        // The following should throw .overlow
+        // The following should throw .overflow
         multiplier._exponent = 0x7F
         #expect {
             // 2e127 * max_mantissa
@@ -480,6 +490,24 @@ private struct DecimalTests {
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
+
+        // There's room to represent the result by adjusting the mantissa,
+        // so the result shouldn't be NaN.
+        let a = try #require(Decimal(string: "1234e100"))
+        let b = try #require(Decimal(string: "1e30"))
+        #expect(!(a * b).isNaN)
+        #expect((a * b)._exponent == 127)
+    }
+
+    @Test func multiplicationUnderflow() throws {
+        let a = Decimal(sign: .plus, exponent: -100, significand: Decimal(2))
+        let b = Decimal(sign: .plus, exponent: -100, significand: Decimal(3))
+        #expect {
+            _ = try a._multiplyReportingInexact(by: b, roundingMode: .plain)
+        } throws: {
+            ($0 as? Decimal._CalculationError) == .underflow
+        }
+        #expect((a * b).isZero)
     }
 
     @Test func multiplyByPowerOfTen() throws {
@@ -563,6 +591,27 @@ private struct DecimalTests {
         #expect(result == expected)
     }
 #endif
+
+    @Test func divisionRoundingAndPrecision() throws {
+        let a = Decimal(2)
+        let b = Decimal(3)
+        #expect(try! a._divideReportingInexact(by: b, roundingMode: .plain).inexact)
+        #expect((a / b).description.hasSuffix("7"))
+        #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .up).result.description.hasSuffix("6"))
+        #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .down).result.description.hasSuffix("7"))
+
+        #expect((Decimal(1) / Decimal.pi).description.hasSuffix("1830988618379067153776752674502872407")) // 0.31830988618379067153776752674502872407
+
+        let huge = try #require(Decimal(string: "340282366920938463463374607431768211455")) // UInt128.max
+        let quotient1 = Decimal(1) / huge
+        let quotient2 = Decimal(-1) / huge
+        #expect(!quotient1.isZero)
+        #expect(!quotient1.isNaN)
+        #expect(quotient1.description.hasSuffix("9387358770557187699218413430556141946")) // 2.9387358770557187699218413430556141946e-39
+        #expect(!quotient2.isZero)
+        #expect(!quotient2.isNaN)
+        #expect(quotient2 < .zero)
+    }
 
     @Test func power() throws {
         var a = Decimal(1234)
