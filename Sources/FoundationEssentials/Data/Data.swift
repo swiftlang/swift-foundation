@@ -278,6 +278,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///         space for the specified number of bytes.
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
+    @_spi(_) // TODO: Remove pending API surface amendment
     public init<E: Error>(
         rawCapacity capacity: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
@@ -304,9 +305,9 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///     - Parameters:
     ///       - span: An `OutputSpan` covering uninitialized memory with
     ///         space for the specified number of elements.
+    // TODO: Make public pending API surface amendment
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
-    public init<E: Error>(
+    internal init<E: Error>(
         capacity: Int,
         initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
     ) throws(E) {
