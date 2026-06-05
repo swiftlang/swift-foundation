@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2020-2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2020-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -66,49 +66,49 @@ private let _pow10: [39 of UInt128] = [
     100_000_000_000_000_000_000_000_000_000_000_000_000,    // 38
 ]
 
-extension UInt128 {
+private extension UInt128 {
     @inline(__always)
-    internal static func _compare(_ lhs: Self, _ rhs: Self) -> ComparisonResult {
+    static func _compare(_ lhs: Self, _ rhs: Self) -> ComparisonResult {
         if lhs == rhs { return .orderedSame }
         if lhs < rhs { return .orderedAscending }
         return .orderedDescending
     }
-    
-    // Division by constant integer by multiplication and shift.
+
+    // Division by constant integer using multiplication and shift (cf. Granlund and Montgomery, 1991).
     @inline(__always)
-    internal func _quotientAndRemainderDividingBy10() -> (quotient: Self, remainder: Self) {
+    func _quotientAndRemainderDividingBy10() -> (quotient: Self, remainder: Self) {
         let m = 0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCD as UInt128
         let q = self.multipliedFullWidth(by: m).high &>> 3
         let r = self &- q &* 10
         return (q, r)
     }
-    
+
     @inline(__always)
-    internal func _quotientAndRemainderDividingBy10000() -> (quotient: Self, remainder: Self) {
+    func _quotientAndRemainderDividingBy10000() -> (quotient: Self, remainder: Self) {
         let m = 0xD1B71758E219652BD3C36113404EA4A9 as UInt128
         let q = self.multipliedFullWidth(by: m).high &>> 13
         let r = self &- q &* 10000
         return (q, r)
     }
-    
+
     @inline(__always)
-    internal static func _10DividingFullWidth(
+    static func _10DividingFullWidth(
         _ dividend: (high: Self, low: Self)
     ) -> (quotient: Self, remainder: Self) {
         assert(dividend.high < 10)
-        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821145, 6) // (2^128 / 10, 2^128 % 10)
+        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821145, 6) // (2**128 / 10, 2**128 % 10)
         let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
         let carry: UInt128 = carry_ ? 1 : 0
         let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10()
         return (dividend.high &* q1 &+ carry &* q1 &+ q2, r2)
     }
-    
+
     @inline(__always)
-    internal static func _10000DividingFullWidth(
+    static func _10000DividingFullWidth(
         _ dividend: (high: Self, low: Self)
     ) -> (quotient: Self, remainder: Self) {
         assert(dividend.high < 10000)
-        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821, 1456) // (2^128 / 10000, 2^128 % 10000)
+        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821, 1456) // (2**128 / 10000, 2**128 % 10000)
         let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
         let carry: UInt128 = carry_ ? 1 : 0
         let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10000()
@@ -139,14 +139,14 @@ extension Decimal {
         if rhs._length == 0 {
             return (result: self, lossOfPrecision: false)
         }
-        
+
         var a = self
         var b = rhs
         if a._exponent < b._exponent { swap(&a, &b) }
-        
+
         let commonExponent = max(b._exponent, a._exponent - 38)
         let shift = (a: Int(a._exponent - commonExponent), b: Int(commonExponent - b._exponent))
-        
+
         var (hi, lo) = a._significand.multipliedFullWidth(by: _pow10[shift.a])
         let divisor: UInt128
         let q: UInt128
@@ -162,7 +162,7 @@ extension Decimal {
             divisor = 10
             (q, r) = (0, 1)
         }
-        
+
         let isNegative: UInt32
         if a._isNegative == b._isNegative {
             isNegative = a._isNegative
@@ -186,7 +186,7 @@ extension Decimal {
             isNegative = b._isNegative
             lo = q - lo
         }
-        
+
         let (result, inexact) = try Self._assemble(
             isNegative: isNegative != 0,
             significand: (hi, lo),
@@ -338,7 +338,7 @@ extension Decimal {
         }
 
         let isNegative = self._isNegative != divisor._isNegative
-        
+
         let dm = divisor._significand // Nonzero.
         // Power-of-ten divisor.
         if dm == 1 {
@@ -349,14 +349,14 @@ extension Decimal {
                 roundingMode: roundingMode)
         }
         let sm = self._significand
-        var shift_ = ((sm|1).leadingZeroBitCount &* 1233) &>> 12
-        var scaled = sm * _pow10[shift_]
+        var shift = ((sm|1).leadingZeroBitCount &* 1233) &>> 12
+        var scaled = sm * _pow10[shift]
         // Top up our estimate, if needed
         while scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
-            shift_ &+= 1
+            shift &+= 1
             scaled &*= 10
         }
-        
+
         let (hi, lo) = scaled.multipliedFullWidth(by: _pow10[38])
         let (q1, r1) = hi.quotientAndRemainder(dividingBy: dm)
         let (q2, r2) = dm.dividingFullWidth((r1, lo))
@@ -364,10 +364,10 @@ extension Decimal {
             isNegative: isNegative,
             significand: (q1, q2),
             tail: (r2, dm),
-            exponent: self._exponent - divisor._exponent - Int32(shift_) - 38,
+            exponent: self._exponent - divisor._exponent - Int32(shift) - 38,
             roundingMode: roundingMode)
     }
-    
+
     internal func _divide(
         by divisor: Decimal,
         roundingMode: RoundingMode
@@ -447,8 +447,8 @@ extension Decimal {
         if rhs._length == 0 {
             return lhs._length != 0 ? .orderedDescending : .orderedSame
         }
-        
-        // Compare nonzero magnitudes
+
+        // Compare nonzero magnitudes.
         let result: ComparisonResult
         let diffExp = Int(lhs._exponent - rhs._exponent)
         if diffExp == 0 {
@@ -485,16 +485,20 @@ extension Decimal {
         return result
     }
 
-    // We're keeping the signature (for now at least), but this function no longer throws.
+    // We're keeping the signature (for now at least), but this function doesn't throw.
     // Note also that `_normalize` has always unconditionally truncated regardless of `roundingMode`.
-    internal static func _normalize(a: inout Decimal, b: inout Decimal, roundingMode _: RoundingMode) throws -> Bool {
+    internal static func _normalize(
+        a: inout Decimal,
+        b: inout Decimal,
+        roundingMode _: RoundingMode
+    ) throws -> Bool {
         let diffExp = Int(a._exponent - b._exponent)
         // If the two numbers share the same exponents,
         // the normalization is already done
         if diffExp == 0 {
             return false
         }
-        
+
         func __normalize(large: inout Decimal, small: inout Decimal, diffExp: Int) throws -> Bool {
             let lm = large._significand
             if lm == 0 {
@@ -503,7 +507,7 @@ extension Decimal {
                 // Don't compact.
                 return false // Exact.
             }
-            
+
             if diffExp <= 38 {
                 let (hi, lo) = lm.multipliedFullWidth(by: _pow10[diffExp])
                 if hi == 0 {
@@ -514,7 +518,7 @@ extension Decimal {
                     return false // Exact.
                 }
             }
-            
+
             // Deliberately underestimate the max "headroom" for scaling up `large._significand`.
             let maxPowerOfTen = ((lm|1).leadingZeroBitCount &* 1233) &>> 12
             let idx = diffExp - maxPowerOfTen
@@ -533,7 +537,7 @@ extension Decimal {
             small._significand = sm_
             small._exponent += Int32(diffExp - maxPowerOfTen)
             small._isCompact = 0
-            
+
             let (hi, lo) = lm.multipliedFullWidth(by: _pow10[maxPowerOfTen])
             assert(hi == 0)
             large._significand = lo
@@ -542,7 +546,7 @@ extension Decimal {
             // Don't compact.
             return true // Inexact.
         }
-        
+
         if diffExp < 0 {
             return try __normalize(large: &b, small: &a, diffExp: -diffExp)
         }
@@ -787,7 +791,7 @@ extension Decimal {
             return cmp != .orderedAscending
         }
     }
-    
+
     private static func _assemble(
         isNegative: Bool,
         significand: (high: UInt128, low: UInt128),
@@ -799,14 +803,15 @@ extension Decimal {
         if significand == (0, 0) && tail.numerator == 0 {
             return (.zero, false)
         }
-        
+
         var (high, low) = significand
         var exponent = exponent
         var roundDigits = 0 as UInt128
         var sticky = tail.numerator != 0
         var shifted = false
         var underflowed = false
-        
+
+        // Fit significand in 128 bits.
         while high >= 10000 {
             if roundDigits != 0 { sticky = true }
             let (q1, r1) = high._quotientAndRemainderDividingBy10000()
@@ -827,7 +832,9 @@ extension Decimal {
             exponent += 1
             shifted = true
         }
-        
+
+        // Shrink significand further, if necessary, so that `exponent >= minExponent`.
+        // This step and the regrowing step below are obviously mutually exclusive.
         if exponent < minExponent {
             var k = minExponent - exponent
             while k > 4 {
@@ -846,7 +853,8 @@ extension Decimal {
             underflowed = true
         }
         assert(roundDigits < 10)
-        
+
+        // Round.
         var inexact = false
         if shifted {
             if sticky && (roundDigits == 0 || roundDigits == 5) {
@@ -862,7 +870,7 @@ extension Decimal {
                     roundingMode: roundingMode
                 ) {
                     if low == .max {
-                        low = 34028236692093846346337460743176821146 // 2^128/10, rounded away.
+                        low = 34028236692093846346337460743176821146 // 2**128 / 10, rounded away.
                         exponent += 1
                     } else {
                         low += 1
@@ -878,19 +886,21 @@ extension Decimal {
                 roundingMode: roundingMode
             ) {
                 if low == .max {
-                    low = 34028236692093846346337460743176821146 // 2^128/10, rounded away.
+                    low = 34028236692093846346337460743176821146 // 2**128 / 10, rounded away.
                     exponent += 1
                 } else {
                     low += 1
                 }
             }
         }
-        
+
+        // Handle zero, distinguishing flush-to-zero underflow from rounding to zero.
         if low == 0 {
             if underflowed { throw _CalculationError.underflow }
             return (.zero, inexact)
         }
-        
+
+        // Regrow significand, if necessary, so that `exponent <= maxExponent`.
         while exponent > 127 /* maxExponent */ {
             if low > 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
                 throw _CalculationError.overflow
@@ -898,7 +908,7 @@ extension Decimal {
             low *= 10
             exponent -= 1
         }
-        
+
         var result = Decimal()
         result._significand = low
         result._isNegative = isNegative ? 1 : 0

@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2020-2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2020-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -112,19 +112,19 @@ public struct Decimal: Sendable {
             self.storage.mantissa = newValue
         }
     }
-    
+
     internal var _significand: UInt128 {
         // Note that per project policy we no longer consider big-endian architectures.
         @inline(__always) get {
             return unsafeBitCast(storage.mantissa, to: UInt128.self)
         }
+        // Note that if `_significand` is set to `0` while `_isNegative == 1`, setting `_length` results in NaN.
         @inline(__always) set {
             self.storage.mantissa = unsafeBitCast(newValue, to: Mantissa.self)
             self._length = UInt32((128 &- newValue.leadingZeroBitCount &+ 15) / 16)
-            // Note that if `_significand` is set to `0` while `_isNegative == 1`, setting `_length` results in NaN.
         }
     }
-    
+
     internal var _lengthFlagsAndReserved: UInt8 {
         get {
             return self.storage.lengthFlagsAndReserved
