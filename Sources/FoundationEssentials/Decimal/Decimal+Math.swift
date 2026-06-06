@@ -91,15 +91,32 @@ private extension UInt128 {
         return (q, r)
     }
 
+    // Full-width division of `(high * 2**128 + low)` by a constant divisor,
+    // using a single step of schoolbook division in base `2**128` (cf. Knuth Algorithm D).
     @inline(__always)
     static func _10DividingFullWidth(
         _ dividend: (high: Self, low: Self)
     ) -> (quotient: Self, remainder: Self) {
-        assert(dividend.high < 10)
+        assert(dividend.high < 10) // ...or else the result would overflow `UInt128`.
+
+        // Since base `2**128` is not a multiple of the divisor `d`,
+        // which in this case is 10, we split the base into `q1 * d + r1`.
         let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821145, 6) // (2**128 / 10, 2**128 % 10)
+
+        // Substituting, the dividend becomes `high * (q1 * d + r1) + low`. Rearranging, `d * (high * q1) + (high * r1 + low)`.
+        // The result of full-width flooring division by `d` is then `(high * q1) + ⌊ (high * r1 + low) / d ⌋`,
+        // and the remainder is `(high * r1 + low) % d`.
+        //
+        // Compute `high * r1 + low`, which may overflow by a single carry bit
+        // (`high * r1` itself can't overflow because `high < d` and `r1 < d` and `d * d < UInt128.max`):
         let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
         let carry: UInt128 = carry_ ? 1 : 0
+        // Compute `⌊ (high * r1 + low) / d ⌋` and `(high * r1 + low) % d`.
+        // When there's been a carry, we again use the identity `2**128 = q1 * d + r1`, giving us:
+        // `(high * r1 + low) / d = (sum_ + 2**128) / d = (sum_ + q1 * d + r1) / d = (sum_ + r1) / d + q1`.
+        // That is, we need to add `carry * r1` to the value to be divided by `d`...
         let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10()
+        // ...and we need to add `carry * q1` to the final quotient.
         return (dividend.high &* q1 &+ carry &* q1 &+ q2, r2)
     }
 
@@ -165,11 +182,13 @@ extension Decimal {
 
         let isNegative: UInt32
         if a._isNegative == b._isNegative {
+            // Same sign: add magnitudes.
             isNegative = a._isNegative
             let carry: Bool
             (lo, carry) = lo.addingReportingOverflow(q)
             if carry { hi &+= 1 }
         } else if hi != 0 || lo > q {
+            // Opposite sign, |a| > |b|.
             isNegative = a._isNegative
             let borrow: Bool
             (lo, borrow) = lo.subtractingReportingOverflow(q)
@@ -183,6 +202,7 @@ extension Decimal {
                 r = divisor - r
             }
         } else {
+            // Opposite sign, |b| >= |a|.
             isNegative = b._isNegative
             lo = q - lo
         }
@@ -338,7 +358,6 @@ extension Decimal {
         }
 
         let isNegative = self._isNegative != divisor._isNegative
-
         let dm = divisor._significand // Nonzero.
         // Power-of-ten divisor.
         if dm == 1 {
@@ -348,15 +367,17 @@ extension Decimal {
                 exponent: self._exponent - divisor._exponent,
                 roundingMode: roundingMode)
         }
+        // Scale dividend significand maximally for quotient precision.
         let sm = self._significand
+        // Deliberately underestimate the max "headroom" for scaling up,
+        // using 1233/4096 as a close approximation of 1/log2(10) -- cf. Hacker's Delight, ch. 11.
         var shift = ((sm|1).leadingZeroBitCount &* 1233) &>> 12
         var scaled = sm * _pow10[shift]
-        // Top up our estimate, if needed
+        // Top up our estimate, if needed.
         while scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
             shift &+= 1
             scaled &*= 10
         }
-
         let (hi, lo) = scaled.multipliedFullWidth(by: _pow10[38])
         let (q1, r1) = hi.quotientAndRemainder(dividingBy: dm)
         let (q2, r2) = dm.dividingFullWidth((r1, lo))
@@ -519,7 +540,8 @@ extension Decimal {
                 }
             }
 
-            // Deliberately underestimate the max "headroom" for scaling up `large._significand`.
+            // Deliberately underestimate the max "headroom" for scaling up the significand of the value with larger exponent,
+            // using 1233/4096 as a close approximation of 1/log2(10)--cf. Hacker's Delight, ch. 11.
             let maxPowerOfTen = ((lm|1).leadingZeroBitCount &* 1233) &>> 12
             let idx = diffExp - maxPowerOfTen
             let sm_ = idx < 39 ? small._significand / _pow10[idx] : 0
