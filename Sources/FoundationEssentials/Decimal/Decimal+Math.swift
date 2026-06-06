@@ -159,6 +159,36 @@ extension Decimal {
 
         var a = self
         var b = rhs
+        if a._exponent == b._exponent {
+            if a._isNegative == b._isNegative {
+                let (sum, carry) = a._significand.addingReportingOverflow(b._significand)
+                if !carry {
+                    var result = a
+                    result._significand = sum
+                    result._isCompact = 0
+                    result.compact()
+                    return (result, false)
+                }
+                let (result, inexact) = try Self._assemble(
+                    isNegative: a._isNegative != 0,
+                    significand: (1, sum),
+                    exponent: a._exponent,
+                    roundingMode: roundingMode)
+                return (result, inexact)
+            } else {
+                if a._significand == b._significand {
+                    return (.zero, false)
+                }
+                if a._significand < b._significand {
+                    swap(&a, &b)
+                }
+                var result = a
+                result._significand -= b._significand
+                result._isCompact = 0
+                result.compact()
+                return (result, false)
+            }
+        }
         if a._exponent < b._exponent { swap(&a, &b) }
 
         let commonExponent = max(b._exponent, a._exponent - 38)
@@ -586,13 +616,13 @@ extension Decimal {
             return
         }
         var exponent = self._exponent
-        while true {
+        while (significand & 15) == 0 {
             let (q, r) = significand._quotientAndRemainderDividingBy10000()
             if r != 0 { break }
             significand = q
             exponent += 4
         }
-        while true {
+        while (significand & 1) == 0 {
             let (q, r) = significand._quotientAndRemainderDividingBy10()
             if r != 0 { break }
             significand = q
