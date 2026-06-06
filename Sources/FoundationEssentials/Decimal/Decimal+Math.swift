@@ -315,9 +315,17 @@ extension Decimal {
         if self._length == 0 || multiplicand._length == 0 {
             return (.zero, false)
         }
+        let product: (high: UInt128, low: UInt128)
+        if self._length <= 4 && multiplicand._length <= 4 {
+            let (hi, lo) = UInt64(truncatingIfNeeded: self._significand)
+                .multipliedFullWidth(by: UInt64(truncatingIfNeeded: multiplicand._significand))
+            product = (0, UInt128(truncatingIfNeeded: hi) &<< 64 | UInt128(truncatingIfNeeded: lo))
+        } else {
+            product = self._significand.multipliedFullWidth(by: multiplicand._significand)
+        }
         return try Self._assemble(
             isNegative: self._isNegative != multiplicand._isNegative,
-            significand: self._significand.multipliedFullWidth(by: multiplicand._significand),
+            significand: product,
             exponent: self._exponent + multiplicand._exponent,
             roundingMode: roundingMode)
     }
@@ -615,26 +623,31 @@ extension Decimal {
             self = .zero
             return
         }
+        var changed = false
         var exponent = self._exponent
         while (significand & 15) == 0 {
             let (q, r) = significand._quotientAndRemainderDividingBy10000()
             if r != 0 { break }
             significand = q
             exponent += 4
+            changed = true
         }
         while (significand & 1) == 0 {
             let (q, r) = significand._quotientAndRemainderDividingBy10()
             if r != 0 { break }
             significand = q
             exponent += 1
+            changed = true
         }
-        // Regrow if the exponent is beyond range.
-        while exponent > Int8.max {
-            significand &*= 10
-            exponent &-= 1
+        if changed {
+            // Regrow if the exponent is beyond range.
+            while exponent > Int8.max {
+                significand &*= 10
+                exponent &-= 1
+            }
+            self._significand = significand
+            self._exponent = exponent
         }
-        self._significand = significand
-        self._exponent = exponent
         // Mark the value as compact.
         self._isCompact = 1
     }
