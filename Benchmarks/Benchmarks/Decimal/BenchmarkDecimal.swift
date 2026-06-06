@@ -24,6 +24,25 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(2)
     Benchmark.defaultConfiguration.maxIterations = .count(100_000_000)
 
+    let values = [
+        Decimal(100),
+        Decimal(25),
+        Decimal.pi,
+        Decimal(Double.pi),
+        Decimal(1),
+        Decimal(0.25),
+        Decimal(0.01),
+        Decimal(),
+        Decimal(-0.01),
+        Decimal(-0.25),
+        Decimal(-1),
+        Decimal(-Double.pi),
+        -Decimal.pi,
+        Decimal(-25),
+        Decimal(-100),
+        Decimal.nan,
+    ]
+
     Benchmark("Decimal init from Double(1)") { benchmark in
         let value = Double(1)
 
@@ -73,6 +92,39 @@ let benchmarks: @Sendable () -> Void = {
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
             blackHole(value1 + value2)
+        }
+        benchmark.stopMeasurement()
+    }
+
+    Benchmark("Decimal compare") { benchmark in
+        let count = values.count
+        var a = 0
+        var b = 0
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            blackHole(values[a] < values[b])
+            a += 1
+            if a == count {
+                a = 0
+                b += 1
+                if b == count {
+                    b = 0
+                }
+            }
+        }
+        benchmark.stopMeasurement()
+    }
+
+    Benchmark("Decimal hash") { benchmark in
+        let count = values.count
+        var index = 0
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            blackHole(values[index].hashValue)
+            index += 1
+            if index == count {
+                index = 0
+            }
         }
         benchmark.stopMeasurement()
     }
