@@ -73,6 +73,16 @@ private extension UInt128 {
         if lhs < rhs { return .orderedAscending }
         return .orderedDescending
     }
+    
+    @inline(__always)
+    func _multipliedFullWidth(by1e exponent: Int) -> (high: Self, low: Self) {
+        if exponent <= 19 && self <= 18446744073709551615 /* UInt64.max */ {
+            let (hi, lo) = UInt64(truncatingIfNeeded: self)
+                .multipliedFullWidth(by: UInt64(truncatingIfNeeded: _pow10[exponent]))
+            return (0, UInt128(truncatingIfNeeded: hi) &<< 64 | UInt128(truncatingIfNeeded: lo))
+        }
+        return self.multipliedFullWidth(by: _pow10[exponent])
+    }
 
     // Division by constant integer using multiplication and shift (cf. Granlund and Montgomery, 1991).
     @inline(__always)
@@ -194,7 +204,7 @@ extension Decimal {
         let commonExponent = max(b._exponent, a._exponent - 38)
         let shift = (a: Int(a._exponent - commonExponent), b: Int(commonExponent - b._exponent))
 
-        var (hi, lo) = a._significand.multipliedFullWidth(by: _pow10[shift.a])
+        var (hi, lo) = a._significand._multipliedFullWidth(by1e: shift.a)
         let divisor: UInt128
         let q: UInt128
         var r: UInt128
@@ -518,7 +528,7 @@ extension Decimal {
             if diffExp >= 39 {
                 result = .orderedAscending
             } else {
-                let (high, low) = rhs._significand.multipliedFullWidth(by: _pow10[diffExp])
+                let (high, low) = rhs._significand._multipliedFullWidth(by1e: diffExp)
                 result = (high != 0) ? .orderedAscending : UInt128._compare(lhs._significand, low)
             }
         } else {
@@ -526,7 +536,7 @@ extension Decimal {
             if diffExp >= 39 {
                 result = .orderedDescending
             } else {
-                let (high, low) = lhs._significand.multipliedFullWidth(by: _pow10[diffExp])
+                let (high, low) = lhs._significand._multipliedFullWidth(by1e: diffExp)
                 result = (high != 0) ? .orderedDescending : UInt128._compare(low, rhs._significand)
             }
         }
@@ -568,7 +578,7 @@ extension Decimal {
             }
 
             if diffExp <= 38 {
-                let (hi, lo) = lm.multipliedFullWidth(by: _pow10[diffExp])
+                let (hi, lo) = lm._multipliedFullWidth(by1e: diffExp)
                 if hi == 0 {
                     large._significand = lo
                     large._exponent = small._exponent
@@ -598,7 +608,7 @@ extension Decimal {
             small._exponent += Int32(diffExp - maxPowerOfTen)
             small._isCompact = 0
 
-            let (hi, lo) = lm.multipliedFullWidth(by: _pow10[maxPowerOfTen])
+            let (hi, lo) = lm._multipliedFullWidth(by1e: maxPowerOfTen)
             assert(hi == 0)
             large._significand = lo
             large._exponent -= Int32(maxPowerOfTen)
