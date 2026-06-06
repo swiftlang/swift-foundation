@@ -153,13 +153,11 @@ private func __NSDecimalMultiply(
             return .lossOfPrecision
         }
         return .noError
-    } catch Decimal._CalculationError.underflow {
-        let converted = Decimal.CalculationError.underflow
-        result.pointee = .zero
-        return converted
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }
@@ -191,13 +189,11 @@ private func __NSDecimalDivide(
             return .lossOfPrecision
         }
         return .noError
-    } catch Decimal._CalculationError.underflow {
-        let converted = Decimal.CalculationError.underflow
-        result.pointee = .zero
-        return converted
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }

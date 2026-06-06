@@ -64,7 +64,7 @@ extension Decimal /* : FloatingPoint */ {
 
     /// The decimal value that represents the smallest possible normal magnitude for the underlying representation.
     public static let leastNormalMagnitude = Decimal(
-        _exponent: -128,
+        _exponent: -127,
         _length: 1,
         _isNegative: 0,
         _isCompact: 1,
@@ -74,7 +74,7 @@ extension Decimal /* : FloatingPoint */ {
 
     /// The decimal value that represents the smallest possible non-zero value for the underlying representation.
     public static let leastNonzeroMagnitude = Decimal(
-        _exponent: -128,
+        _exponent: -127,
         _length: 1,
         _isNegative: 0,
         _isCompact: 1,
