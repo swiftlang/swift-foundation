@@ -92,7 +92,7 @@ private extension UInt128 {
     }
 
     // Full-width division of `(high * 2**128 + low)` by a constant divisor,
-    // using a single step of schoolbook division in base `2**128` (cf. Knuth Algorithm D).
+    // using a single step of schoolbook short division in base `2**128` (cf. Knuth exercise 4.3.1-16).
     @inline(__always)
     static func _10DividingFullWidth(
         _ dividend: (high: Self, low: Self)
