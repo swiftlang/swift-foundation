@@ -689,88 +689,34 @@ extension Decimal {
         scale: Int,
         roundingMode: RoundingMode
     ) throws -> Decimal {
-        var s = scale + Int(self._exponent)
-        if scale == CShort.max || s >= 0 {
+        if self._length == 0 {
             return self
         }
-        s = -s
-        var exponent = Int(self._exponent) + s
-        var result = self
-        var remainder: UInt16 = 0
-        var premainder: UInt16 = 0
-        while s > 4 {
-            if remainder != 0 {
-                premainder = 1
-            }
-            (result, remainder) = try result._divide(by: 10000)
-            s -= 4
+        let scale = min(max(scale, -32768), 32767)
+        let shift = -(scale + Int(self._exponent))
+        if shift <= 0 {
+            // Requested scale is at least as fine as current precision,
+            // including when `scale` is `NSDecimalNoScale` (aka `CShort.max`).
+            return self
         }
-        while s != 0 {
-            if remainder != 0 {
-                premainder = 1
-            }
-            (result, remainder) = try result._divide(by: 10)
-            s -= 1
-        }
-        // If we are on a tie, adjust with premdr.
-        // 0.50001 is equivalent to .6
-        if premainder != 0 && (remainder == 0 || remainder == 5) {
-            remainder += 1
-        }
-        if remainder != 0 {
-            if self._isNegative != 0 {
-                switch roundingMode {
-                case .up:
-                    break
-                case .bankers:
-                    if remainder == 5 && result._mantissa.0 & 1 == 0 {
-                        remainder -= 1
-                    }
-                    fallthrough
-                case .plain:
-                    if remainder < 5 {
-                        break
-                    }
-                    fallthrough
-                case .down:
-                    result = try result._add(1)
-                    break
-                @unknown default:
-                    break
-                }
-                if result._length == 0 {
-                    result._isNegative = 0
-                }
-            } else {
-                switch roundingMode {
-                case .down:
-                    break
-                case .bankers:
-                    if remainder == 5 && result._mantissa.0 & 1 == 0 {
-                        remainder -= 1
-                    }
-                    fallthrough
-                case .plain:
-                    if remainder < 5 {
-                        break
-                    }
-                    fallthrough
-                case .up:
-                    result = try result._add(1)
-                @unknown default:
-                    break
-                }
-            }
-        }
-        result._isCompact = 0
 
-        while exponent > CChar.max {
-            exponent -= 1
-            result = try result._multiply(byShort: 10)
+        let divisor: UInt128
+        let (q, r): (UInt128, UInt128)
+        if shift < 39 {
+            divisor = _pow10[shift]
+            (q, r) = self._significand.quotientAndRemainder(dividingBy: divisor)
+        } else {
+            // A nonzero proxy value under 0.5 ulp.
+            divisor = 10
+            (q, r) = (0, 1)
         }
-        result._exponent = Int32(exponent)
-        result.compact()
-        return result
+        return try Self._assemble(
+            isNegative: self._isNegative != 0,
+            significand: (0, q),
+            tail: (r, divisor),
+            exponent: Int32(-scale),
+            roundingMode: roundingMode
+        ).result
     }
 }
 

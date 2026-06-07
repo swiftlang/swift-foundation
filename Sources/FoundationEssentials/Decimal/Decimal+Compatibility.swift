@@ -302,8 +302,8 @@ private func __NSDecimalRound(
         )
         result.pointee = rounded
     } catch {
-        // Noop since this method does not
-        // return a calculation error
+        // If rounding away from zero, a sufficiently negative `scale` can cause overflow.
+        result.pointee = .nan
     }
 }
 
