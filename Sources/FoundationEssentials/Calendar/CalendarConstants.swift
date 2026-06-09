@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// Time-unit constants shared across calendar implementations.
-internal enum _CalendarConstants {
-    static let kSecondsInWeek = 604_800
-    static let kSecondsInDay = 86400
-    static let kSecondsInHour = 3600
-    static let kSecondsInMinute = 60
+extension Calendar {
+    /// Time unit constants shared across calendar implementations.
+    static let _kSecondsInWeek = 604_800
+    static let _kSecondsInDay = 86400
+    static let _kSecondsInHour = 3600
+    static let _kSecondsInMinute = 60
 
-    /// Sentinel used by unbounded-range loops in date arithmetic.
-    static let inf_ti: TimeInterval = 4398046511104.0
+    /// Sentinel used by unbounded range loops in date arithmetic.
+    static let _inf_ti: TimeInterval = 4398046511104.0
 }

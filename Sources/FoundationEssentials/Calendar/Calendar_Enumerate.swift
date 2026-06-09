@@ -331,13 +331,7 @@ extension Calendar {
                 let validates = matchingComponents._validate(for: calendar)
                 finished = !validates
 
-                // Probe: commit to the fast loop if the calendar recognizes this pattern.
-                if validates && matchingPolicy == .nextTime && repeatedTimePolicy == .first,
-                   calendar._calendarNextDate(after: start, matching: matchingComponents, direction: direction) != nil {
-                    self.usesFastPath = true
-                } else {
-                    self.usesFastPath = false
-                }
+                self.usesFastPath = validates && matchingPolicy == .nextTime && repeatedTimePolicy == .first && calendar._supportsNextDateFastPath
             }
             
             mutating func next() -> Element? {
@@ -543,7 +537,7 @@ extension Calendar {
                                          previouslyReturnedMatchDate: Date?) throws -> SearchStepResult {
 
         // Fast-path: ask the calendar directly. Returns nil for unrecognized patterns.
-        if matchingPolicy == .nextTime && repeatedTimePolicy == .first {
+        if _supportsNextDateFastPath && matchingPolicy == .nextTime && repeatedTimePolicy == .first {
             if let fast = _calendarNextDate(after: searchingDate, matching: matchingComponents, direction: direction) {
                 return SearchStepResult(result: (fast, true), newSearchDate: fast)
             }

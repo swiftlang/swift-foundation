@@ -50,9 +50,11 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date?
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents
 
-    /// Optional fast path for `Calendar.nextDate(after:matching:)`.
-    /// Returns nil to fall through to the generic enumerate framework.
+    /// Optional fast path for `Calendar.nextDate(after:matching:)`. Returns nil to fall through to the generic enumerate framework.
     func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date?
+
+    /// Whether this calendar implements `nextDate(after:matching:direction:)`.
+    var supportsNextDateFastPath: Bool { get }
 
 #if FOUNDATION_FRAMEWORK
     func bridgeToNSCalendar() -> NSCalendar
@@ -61,8 +63,10 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
 
 extension _CalendarProtocol {
     package func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date? {
-        nil   // default — fall through to Calendar's enumerate-based implementation
+        nil
     }
+
+    package var supportsNextDateFastPath: Bool { false }
 
     package var preferredFirstWeekday: Int? { nil }
     package var preferredMinimumDaysInFirstweek: Int? { nil }
@@ -78,13 +82,7 @@ extension _CalendarProtocol {
         locale?.identifier ?? ""
     }
 
-    /// Default `hash(into:)` for calendars whose identity is the standard
-    /// `(identifier, timeZone, firstWeekday, minimumDaysInFirstWeek,
-    /// localeIdentifier, preferredFirstWeekday, preferredMinimumDaysInFirstweek)`
-    /// tuple. Calendars with non-standard hashing semantics
-    /// (e.g. `_CalendarAutoupdating`'s "all-equal" sentinel, `_CalendarICU`'s
-    /// locked-accessor variant, `_CalendarBridged`'s underlying-`NSCalendar`
-    /// hash) override this.
+    /// Default `hash(into:)` for the standard calendar identity tuple. Calendars with non-standard hashing (e.g. `_CalendarAutoupdating`, `_CalendarICU`, `_CalendarBridged`) override this.
     package func hash(into hasher: inout Hasher) {
         hasher.combine(identifier)
         hasher.combine(timeZone)

@@ -94,6 +94,8 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     // hash(into:) uses the `_CalendarProtocol` default impl.
 
+    var supportsNextDateFastPath: Bool { true }
+
     // MARK: - Range
 
     // Year bounds: match ICU's Hebrew reporting of ±5M (covers full Int32 year range
@@ -368,10 +370,10 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         case .era:
             // Hebrew has a single AM era spanning from epoch to effectively forever.
             // Matches ICU's reported start (Hebrew epoch, -181,778,083,200 s before
-            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (_CalendarConstants.inf_ti).
+            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (Calendar._inf_ti).
             return DateInterval(
                 start: Date(timeIntervalSinceReferenceDate: -181_778_083_200.0),
-                duration: _CalendarConstants.inf_ti
+                duration: Calendar._inf_ti
             )
         case .year:
             // Tishri 1 of this year → Tishri 1 of next year.
@@ -514,7 +516,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let comps = dateComponents([.weekday, .hour, .minute, .second], from: date, in: self.timeZone)
         guard let dayOfWeek = comps.weekday else { return false }
         let timeInDay = TimeInterval(
-            (comps.hour ?? 0) * _CalendarConstants.kSecondsInHour
+            (comps.hour ?? 0) * Calendar._kSecondsInHour
             + (comps.minute ?? 0) * 60
             + (comps.second ?? 0)
         )

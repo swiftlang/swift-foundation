@@ -1304,10 +1304,15 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar.nextDate(after: date, matching: components, direction: direction)
     }
 
+    /// Whether the calendar implementation supports the `nextDate` fast path.
+    internal var _supportsNextDateFastPath: Bool {
+        _calendar.supportsNextDateFastPath
+    }
+
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
         // Fast-path: drive the loop with direct nextDate calls when default policies are in effect.
         if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
-           let _ = _calendar.nextDate(after: start, matching: components, direction: direction) {
+           _supportsNextDateFastPath {
             var current = start
             var stop = false
             while !stop {
