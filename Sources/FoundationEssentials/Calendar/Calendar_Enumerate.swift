@@ -331,7 +331,9 @@ extension Calendar {
                 let validates = matchingComponents._validate(for: calendar)
                 finished = !validates
 
-                self.usesFastPath = validates && matchingPolicy == .nextTime && repeatedTimePolicy == .first && calendar._supportsNextDateFastPath
+                self.usesFastPath = validates && matchingPolicy == .nextTime && repeatedTimePolicy == .first
+                    && calendar._supportsNextDateFastPath
+                    && calendar._calendarNextDate(after: start, matching: matchingComponents, direction: direction) != nil
             }
             
             mutating func next() -> Element? {

@@ -1312,9 +1312,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
         // Fast-path: drive the loop with direct nextDate calls when default policies are in effect.
         if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
-           _supportsNextDateFastPath {
-            var current = start
+           _supportsNextDateFastPath,
+           let firstMatch = _calendar.nextDate(after: start, matching: components, direction: direction) {
             var stop = false
+            block(firstMatch, true, &stop)
+            var current = firstMatch
             while !stop {
                 guard let next = _calendar.nextDate(after: current, matching: components, direction: direction) else {
                     block(nil, false, &stop)
