@@ -228,4 +228,43 @@ extension Span<UInt8> {
             memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
         }
     }
+
+    /// Returns a `String` by compressing consecutive forward slashes.
+    func slashCompressedString() -> String {
+        String(unsafeUninitializedCapacity: count) { buffer in
+            _compressSlashes(into: buffer)
+        }
+    }
+
+    /// - Precondition: `buffer.count >= self.count`
+    private func _compressSlashes(into buffer: UnsafeMutableBufferPointer<UInt8>) -> Int {
+        precondition(buffer.count >= count)
+        var writeIndex = 0, prev = UInt8(0), i = 0
+        while i < count {
+            let v = self[i]
+            buffer[writeIndex] = v
+            // Branchless skip of duplicate slashes
+            writeIndex &+= (v == ._slash && prev == ._slash) ? 0 : 1
+            prev = v
+            i &+= 1
+        }
+        return writeIndex
+    }
+}
+
+extension UnsafeBufferPointer<UInt8> {
+    func count(trailingNullsRemoved: Bool) -> Int {
+        var length = self.count
+        if trailingNullsRemoved {
+            while length > 0 && self[length - 1] == 0 {
+                length -= 1
+            }
+        }
+        return length
+    }
+
+    @_lifetime(borrow self)
+    func span(trailingNullsRemoved: Bool) -> Span<UInt8> {
+        self.span.extracting(first: count(trailingNullsRemoved: trailingNullsRemoved))
+    }
 }

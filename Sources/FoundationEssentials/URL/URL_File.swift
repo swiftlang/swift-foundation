@@ -30,6 +30,11 @@ private extension UnsafeMutableBufferPointer<UInt8> {
 
 extension URL {
 
+    enum _FilePathCompatibility {
+        case swiftURL
+        case cfURL
+    }
+
     /// Updates `pathBuffer` for directory trailing-slash handling, returning the
     /// new path length. May append a trailing slash for directories or trim trailing
     /// slashes for non-directories.
@@ -77,7 +82,7 @@ extension URL {
     static func parseFinalFileSystemRepresentation(
         path: borrowing Span<UInt8>,
         flags: inout _URLFlags,
-        encodeSemicolons: Bool
+        compatibility: _FilePathCompatibility
     ) -> String {
         guard path.count > 0 else {
             return ""
@@ -101,40 +106,61 @@ extension URL {
             maxEncodedSize += filePrefix.utf8CodeUnitCount
         }
         return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxEncodedSize) { encodedBuffer in
-            var pathStart = 0
+            var encodeFrom = 0
+            var writeIndex = 0
             if isAbsolute {
-                pathStart = encodedBuffer.initialize(fromContentsOf: filePrefix)
+                writeIndex = encodedBuffer.initialize(fromContentsOf: filePrefix)
+            } else if compatibility == .swiftURL {
+                // Encode ":" in the first segment of the relative path
+                var firstSegmentEnd = 0
+                while firstSegmentEnd < path.count && path[firstSegmentEnd] != UInt8(ascii: "/") {
+                    firstSegmentEnd += 1
+                }
+                writeIndex = path.withUnsafeBufferPointer { pathBuffer in
+                    URLEncoder.percentEncodeUnchecked(
+                        input: .init(rebasing: pathBuffer[..<firstSegmentEnd]),
+                        output: encodedBuffer,
+                        component: .pathFirstSegment,
+                        skipAlreadyEncoded: false
+                    )
+                }
+                encodeFrom = firstSegmentEnd
             }
-            let bytesWritten = path.withUnsafeBufferPointer { pathBuffer in
+            writeIndex += path.withUnsafeBufferPointer { pathBuffer in
                 URLEncoder.percentEncodeUnchecked(
-                    input: pathBuffer,
-                    output: .init(rebasing: encodedBuffer[pathStart...]),
-                    // Encode ";" for CF/NSURL (encodeSemicolons: true)
-                    component: encodeSemicolons ? .pathNoSemicolon : .path,
+                    input: .init(rebasing: pathBuffer[encodeFrom...]),
+                    output: .init(rebasing: encodedBuffer[writeIndex...]),
+                    // Encode ";" for CF/NSURL
+                    component: compatibility == .cfURL ? .pathNoSemicolon : .path,
                     skipAlreadyEncoded: false
                 )
             }
-            if bytesWritten != path.count {
-                // The path was percent-encoded
+            // Percent-encoding only ever adds bytes, so a longer encoded path
+            // means something was encoded (and the path now contains a "%").
+            let pathStart = isAbsolute ? filePrefix.utf8CodeUnitCount : 0
+            if writeIndex - pathStart != path.count {
                 flags.insert(.hasEncodedPath)
             }
-            return String(decoding: encodedBuffer[..<(pathStart + bytesWritten)], as: UTF8.self)
+            return String(decoding: encodedBuffer[..<writeIndex], as: UTF8.self)
         }
     }
 
-    static func parseUTF8Path(_ path: String, flags: inout _URLFlags, isDirectory: Bool, encodeSemicolons: Bool) -> String {
+    static func parseUTF8Path(_ path: String, flags: inout _URLFlags, isDirectory: Bool, compatibility: _FilePathCompatibility) -> String {
         var path = path
         return path.withUTF8 { pathBuffer in
+            // Swift URL strips trailing nulls. CFURL (HFS path style) doesn't.
+            let length = pathBuffer.count(trailingNullsRemoved: compatibility == .swiftURL)
+
             // Allocate an extra byte in case we need to append a directory slash.
-            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: pathBuffer.count + 1) {
+            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: length + 1) {
                 let pathLength = finalPathLength(
                     updating: $0,
-                    currentLength: $0.initialize(fromContentsOf: pathBuffer),
+                    currentLength: $0.initialize(fromContentsOf: pathBuffer[..<length]),
                     flags: &flags,
                     isDirectory: isDirectory
                 )
                 let path = $0.span.extracting(first: pathLength)
-                return parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: encodeSemicolons)
+                return parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: compatibility)
             }
         }
     }
@@ -145,7 +171,7 @@ extension URL {
         #if FOUNDATION_FRAMEWORK
         #if !os(watchOS)
         if path.utf8Span.isKnownASCII {
-            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
+            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: .swiftURL)
         }
         #endif
         // Convert path to its decomposed file system representation
@@ -164,7 +190,7 @@ extension URL {
                     isDirectory: isDirectory
                 )
                 let path = pathBuffer.span.extracting(first: finalLength)
-                return parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: false)
+                return parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: .swiftURL)
             }
 
             // Decomposition failed or there was an embedded null byte.
@@ -177,10 +203,10 @@ extension URL {
             // to a "file not found" error, this is more practical and debuggable
             // than returning an empty URL or crashing with fatalError().
 
-            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
+            return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: .swiftURL)
         }
         #else
-        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
+        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: .swiftURL)
         #endif
     }
 
@@ -191,6 +217,6 @@ extension URL {
         guard !path.isEmpty else {
             return ""
         }
-        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, encodeSemicolons: false)
+        return parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: .swiftURL)
     }
 }
