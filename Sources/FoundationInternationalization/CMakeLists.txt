@@ -19,9 +19,7 @@ add_library(FoundationInternationalization
     RangeExpression.swift
     TimeInterval+Utils.swift
     URL+UnicodeLookalikeTable.swift
-    Formatting/URLFormatStyle.swift
-    URLParser+ICU.swift
-    Formatting/URLParseStrategy.swift)
+    URLParser+ICU.swift)
 
 add_subdirectory(Calendar)
 add_subdirectory(Formatting)
