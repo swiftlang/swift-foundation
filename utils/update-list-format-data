@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the Swift.org open source project
+##
+## Copyright (c) 2026 Apple Inc. and the Swift project authors
+## Licensed under Apache License v2.0 with Runtime Library Exception
+##
+## See https://swift.org/LICENSE.txt for license information
+## See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+##
+##===----------------------------------------------------------------------===##
+
+# Generates Sources/FoundationInternationalization/Formatting/ListFormatData.json
+# from a CLDR XML checkout. The CLDR_PATH environment variable must point at
+# the CLDR root (the directory containing common/main/ and common/supplemental/),
+# e.g. /path/to/cldr.
+#
+# The output is the intermediate form for the list-format data pipeline.
+# A second tool (utils/build-list-format-data) consumes the JSON to produce
+# a packed C header at consumer build time.
+
+set -eu
+
+declare -r commandName="$(basename "$0")"
+declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
+declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
+declare -r targetFileRelativePath="Sources/FoundationInternationalization/Formatting/ListFormatData.json"
+
+if [[ -z "${CLDR_PATH:-}" ]]; then
+  echo "error: CLDR_PATH environment variable is not set." 1>&2
+  echo "Set it to the root of a CLDR checkout, e.g.:" 1>&2
+  echo "  CLDR_PATH=/path/to/cldr ${commandName}" 1>&2
+  exit 1
+fi
+
+if [[ ! -d "${CLDR_PATH}/common/main" || ! -d "${CLDR_PATH}/common/supplemental" ]]; then
+  echo "error: CLDR_PATH does not point at a CLDR root." 1>&2
+  echo "Expected ${CLDR_PATH}/common/main and ${CLDR_PATH}/common/supplemental." 1>&2
+  exit 1
+fi
+
+echo "Generating ${targetFileRelativePath} from ${CLDR_PATH}..." 1>&2
+
+# Compose schema + impl into a single source file and run as a script.
+# `swift` doesn't reliably link multiple top-level scripts together, so
+# concatenation is the simplest way to share the schema between stages.
+combined=$(mktemp -t "${commandName}.XXXXXX.swift")
+trap 'rm -f "${combined}"' EXIT
+cat "${utilsDir}/list-format-data-schema.swift" \
+    "${utilsDir}/${commandName}-impl.swift" \
+    > "${combined}"
+
+swift -D PRINT_CODE "${combined}" \
+  > "${foundationRepoDir}/${targetFileRelativePath}"
+
+echo "Done." 1>&2

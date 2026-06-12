@@ -153,8 +153,12 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
     /// - Parameter value: The sequence of elements to format.
     /// - Returns: A string representation of the provided sequence.
     public func format(_ value: Base) -> String {
-        let formatter = ICUListFormatter.formatter(for: self)
-        return formatter.format(strings: value.map(memberStyle.format(_:)))
+        let strings = value.map(memberStyle.format(_:))
+        #if FOUNDATION_LIST_FORMAT_NATIVE
+        return NativeListFormatter.formatter(for: self).format(strings: strings)
+        #else
+        return ICUListFormatter.formatter(for: self).format(strings: strings)
+        #endif
     }
 
     /// The type representing the width of a list.
