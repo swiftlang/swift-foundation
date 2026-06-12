@@ -56,15 +56,12 @@ public protocol ContiguousBytes: ~Escapable, ~Copyable {
     func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R
 #endif
 
-    /*
-     TODO: For now, this is not a protocol requirement because adding it can be a source breaking change for clients with MemberImportVisibility enabled (such as swift-crypto): https://github.com/swiftlang/swift/issues/87227
     /// Calls the given closure with the contents of underlying storage.
     ///
     /// - note: Calling `withBytes` multiple times does not guarantee that
     ///         the same span will be passed in every time.
     @available(FoundationPreview 6.4, *)
     func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R
-     */
 }
 
 extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
