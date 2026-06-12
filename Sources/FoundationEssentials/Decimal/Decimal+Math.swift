@@ -422,7 +422,7 @@ extension Decimal {
         var shift = ((sm|1).leadingZeroBitCount &* 1233) &>> 12
         var scaled = sm * _pow10[shift]
         // Top up our estimate, if needed.
-        while scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
+        if scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
             shift &+= 1
             scaled &*= 10
         }
@@ -555,11 +555,10 @@ extension Decimal {
     }
 
     // We're keeping the signature (for now at least), but this function doesn't throw.
-    // Note also that `_normalize` has always unconditionally truncated regardless of `roundingMode`.
     internal static func _normalize(
         a: inout Decimal,
         b: inout Decimal,
-        roundingMode _: RoundingMode
+        roundingMode: RoundingMode
     ) throws -> Bool {
         let diffExp = Int(a._exponent - b._exponent)
         // If the two numbers share the same exponents,
@@ -567,16 +566,26 @@ extension Decimal {
         if diffExp == 0 {
             return false
         }
+        if a._length == 0 {
+            a._exponent = b._exponent
+            a._isCompact = 0
+            // Don't compact.
+            return false
+        }
+        if b._length == 0 {
+            b._exponent = a._exponent
+            b._isCompact = 0
+            // Don't compact.
+            return false
+        }
 
-        func __normalize(large: inout Decimal, small: inout Decimal, diffExp: Int) throws -> Bool {
+        func __normalize(
+            large: inout Decimal,
+            small: inout Decimal,
+            diffExp: Int,
+            roundingMode: RoundingMode
+        ) -> Bool {
             let lm = large._significand
-            if lm == 0 {
-                large._exponent = small._exponent
-                large._isCompact = 0
-                // Don't compact.
-                return false // Exact.
-            }
-
             if diffExp <= 38 {
                 let (hi, lo) = lm._multipliedFullWidth(by1e: diffExp)
                 if hi == 0 {
@@ -587,40 +596,52 @@ extension Decimal {
                     return false // Exact.
                 }
             }
-
             // Deliberately underestimate the max "headroom" for scaling up the significand of the value with larger exponent,
             // using 1233/4096 as a close approximation of 1/log2(10)--cf. Hacker's Delight, ch. 11.
-            let maxPowerOfTen = ((lm|1).leadingZeroBitCount &* 1233) &>> 12
-            let idx = diffExp - maxPowerOfTen
-            let sm_ = idx < 39 ? small._significand / _pow10[idx] : 0
-            if sm_ == 0 {
-                if small._significand != 0 {
-                    // Strip sign bit if truncating a nonzero magnitude,
-                    // so that the result isn't spuriously NaN.
-                    small = Decimal()
-                }
-                small._exponent = large._exponent
-                small._isCompact = 0
-                // Don't compact.
-                return true // Inexact.
+            var shift1 = ((lm|1).leadingZeroBitCount &* 1233) &>> 12
+            var scaled = lm * _pow10[shift1]
+            // Top up our estimate, if needed.
+            if scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
+                shift1 &+= 1
+                scaled &*= 10
             }
-            small._significand = sm_
-            small._exponent += Int32(diffExp - maxPowerOfTen)
-            small._isCompact = 0
-
-            let (hi, lo) = lm._multipliedFullWidth(by1e: maxPowerOfTen)
-            assert(hi == 0)
-            large._significand = lo
-            large._exponent -= Int32(maxPowerOfTen)
+            large._significand = scaled
+            large._exponent -= Int32(shift1)
             large._isCompact = 0
             // Don't compact.
-            return true // Inexact.
+
+            let shift2 = diffExp - shift1
+            let divisor: UInt128
+            var q: UInt128
+            let r: UInt128
+            if shift2 < 39 {
+                divisor = _pow10[shift2]
+                (q, r) = small._significand.quotientAndRemainder(dividingBy: divisor)
+            } else {
+                // A nonzero proxy value under 0.5 ulp.
+                divisor = 10
+                (q, r) = (0, 1)
+            }
+            if r != 0 && _roundAway(
+                isNegative: small._isNegative != 0,
+                isSignificandOdd: (q & 1) != 0,
+                tail: (r, divisor),
+                roundingMode: roundingMode
+            ) {
+                q &+= 1
+            }
+            small._significand = q
+            if q == 0 { small._isNegative = 0 }
+            small._exponent += Int32(shift2)
+            small._isCompact = 0
+            // Don't compact.
+            return r != 0
         }
 
         if diffExp < 0 {
-            return try __normalize(large: &b, small: &a, diffExp: -diffExp)
+            return __normalize(large: &b, small: &a, diffExp: -diffExp, roundingMode: roundingMode)
         }
-        return try __normalize(large: &a, small: &b, diffExp: diffExp)
+        return __normalize(large: &a, small: &b, diffExp: diffExp, roundingMode: roundingMode)
     }
 
     internal mutating func compact() {
@@ -852,7 +873,7 @@ extension Decimal {
         tail: (numerator: UInt128, denominator: UInt128),
         roundingMode: RoundingMode
     ) -> Bool {
-        let cmp = UInt128._compare(tail.numerator, tail.denominator &- tail.numerator)
+        let cmp = UInt128._compare(tail.numerator, tail.denominator - tail.numerator)
         switch roundingMode {
         case .down:
             return isNegative
@@ -952,7 +973,7 @@ extension Decimal {
                     }
                 }
             }
-        } else if tail.numerator != 0 {
+        } else if sticky {
             inexact = true
             if _roundAway(
                 isNegative: isNegative,

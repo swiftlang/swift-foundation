@@ -322,7 +322,7 @@ private struct DecimalTests {
         #expect(aNormalized.exponent == -35)
         #expect(a == aNormalized)
         #expect(bNormalized.exponent == -35)
-        #expect(bNormalized._mantissa.0 == 18026)
+        #expect(bNormalized._mantissa.0 == 18027)
         #expect(bNormalized._mantissa.1 == 7848)
         #expect(bNormalized._mantissa.2 == 21680)
         #expect(bNormalized._mantissa.3 == 24817)
@@ -331,7 +331,7 @@ private struct DecimalTests {
         #expect(bNormalized._mantissa.6 == 52911)
         #expect(bNormalized._mantissa.7 == 162)
         #expect(bNormalized._length == 8)
-        #expect(b != bNormalized)   // b had a loss Of Precision when normalising
+        #expect(b != bNormalized)   // b had a loss of precision when normalising
     }
 
     @Test func additionWithNormalization() throws {
