@@ -143,6 +143,62 @@ private extension UInt128 {
         let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10000()
         return (dividend.high &* q1 &+ carry &* q1 &+ q2, r2)
     }
+
+    // Exact division by a constant (cf. Granlund and Montgomery, 1994 §9).
+    // See discussion on analogous `UInt64` extensions for more.
+    @inline(__always)
+    func _quotientIfExactDividingBy10() -> Self? {
+        let m = 0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCD as UInt128 // Inverse of 5 (mod 2**128).
+        let p = self &* m
+        let q = p &>> 1 | p &<< 127
+        guard q <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ else { return nil }
+        return q
+    }
+
+    @inline(__always)
+    func _quotientIfExactDividingBy100() -> Self? {
+        let m = 0x28F5C28F5C28F5C28F5C28F5C28F5C29 as UInt128 // Inverse of 5**2 (mod 2**128).
+        let p = self &* m
+        let q = p &>> 2 | p &<< 126
+        guard q <= 3402823669209384634633746074317682114 /* UInt128.max / 100 */ else { return nil }
+        return q
+    }
+
+    @inline(__always)
+    func _quotientIfExactDividingBy10000() -> Self? {
+        let m = 0x495182A9930BE0DED288CE703AFB7E91 as UInt128 // Inverse of 5**4 (mod 2**128).
+        let p = self &* m
+        let q = p &>> 4 | p &<< 124
+        guard q <= 34028236692093846346337460743176821 /* UInt128.max / 10**4 */ else { return nil }
+        return q
+    }
+
+    @inline(__always)
+    func _quotientIfExactDividingBy1e8() -> Self? {
+        let m = 0xF36B7213EE9F5A78C767074B22E90E21 as UInt128 // Inverse of 5**8 (mod 2**128).
+        let p = self &* m
+        let q = p &>> 8 | p &<< 120
+        guard q <= 3402823669209384634633746074317 /* UInt128.max / 10**8 */ else { return nil }
+        return q
+    }
+
+    @inline(__always)
+    func _quotientIfExactDividingBy1e16() -> Self? {
+        let m = 0xF60B3275305C1066E4A4D1417CD9A041 as UInt128 // Inverse of 5**16 (mod 2**128).
+        let p = self &* m
+        let q = p &>> 16 | p &<< 112
+        guard q <= 34028236692093846346337 /* UInt128.max / 10**16 */ else { return nil }
+        return q
+    }
+
+    @inline(__always)
+    func _quotientIfExactDividingBy1e32() -> Self? {
+        let m = 0x62B42691AD836EB116590F420A835081 as UInt128 // Inverse of 5**32 (mod 2**128).
+        let p = self &* m
+        let q = p &>> 32 | p &<< 96
+        guard q <= 3402823 /* UInt128.max / 10**32 */ else { return nil }
+        return q
+    }
 }
 
 // MARK: - Mathematics
@@ -352,27 +408,43 @@ extension Decimal {
         ).result
     }
 
-    internal func _multiplyByPowerOfTen(
-        power: Int, roundingMode: RoundingMode
-    ) throws -> Decimal {
+    internal func _multiplyByPowerOfTenReportingInexact(
+        power: Int,
+        roundingMode: RoundingMode
+    ) throws -> (result: Decimal, inexact: Bool) {
         if self.isNaN {
             throw _CalculationError.overflow
         }
         if self._length == 0 {
-            return .zero
+            return (.zero, false)
         }
-        var result = self
-        let secureExponent = result._exponent + Int32(power)
-        if secureExponent < CChar.min {
-            throw _CalculationError.underflow
+        let exponent = self._exponent + Int32(power)
+        if exponent >= -128 && exponent <= 127 {
+            var result = self
+            result._exponent = exponent
+            result.compact()
+            return (result, false)
         }
-        if secureExponent > CChar.max {
+        if exponent >= 166 {
             throw _CalculationError.overflow
         }
-        result._exponent = secureExponent
-        return result
+        return try Self._assemble(
+            isNegative: self._isNegative != 0,
+            significand: (0, self._significand),
+            exponent: max(exponent, -167), // Clamp lower bound and reuse rounding logic.
+            roundingMode: roundingMode)
     }
-    
+
+    internal func _multiplyByPowerOfTen(
+        power: Int,
+        roundingMode: RoundingMode
+    ) throws -> Decimal {
+        return try self._multiplyByPowerOfTenReportingInexact(
+            power: power,
+            roundingMode: roundingMode
+        ).result
+    }
+
     internal func _multiplyBy10AndAdd(
         number: UInt16
     ) throws -> Decimal {
@@ -649,38 +721,50 @@ extension Decimal {
     internal mutating func compact() {
         if self._isCompact != 0 || self._length == 0 { return }
 
-        // Divide by 10 as much as possible.
         var significand = self._significand
         if significand == 0 {
             // This branch is not reachable except with invalid values, such as in the test case.
             self = .zero
             return
         }
-        var changed = false
-        var exponent = self._exponent
-        while (significand & 15) == 0 {
-            let (q, r) = significand._quotientAndRemainderDividingBy10000()
-            if r != 0 { break }
+        // Divide by 10 as much as possible.
+        guard (significand & 1) == 0, let q = significand._quotientIfExactDividingBy10() else {
+            self._isCompact = 1
+            return
+        }
+        significand = q
+        var exponent = self._exponent + 1
+        if (significand & 0xFFFFFFFF) == 0, let q = significand._quotientIfExactDividingBy1e32() {
+            significand = q
+            exponent += 32
+        }
+        if (significand & 0xFFFF) == 0, let q = significand._quotientIfExactDividingBy1e16() {
+            significand = q
+            exponent += 16
+        }
+        if (significand & 0xFF) == 0, let q = significand._quotientIfExactDividingBy1e8() {
+            significand = q
+            exponent += 8
+        }
+        if (significand & 0xF) == 0, let q = significand._quotientIfExactDividingBy10000() {
             significand = q
             exponent += 4
-            changed = true
         }
-        while (significand & 1) == 0 {
-            let (q, r) = significand._quotientAndRemainderDividingBy10()
-            if r != 0 { break }
+        if (significand & 0x3) == 0, let q = significand._quotientIfExactDividingBy100() {
+            significand = q
+            exponent += 2
+        }
+        if (significand & 0x1) == 0, let q = significand._quotientIfExactDividingBy10() {
             significand = q
             exponent += 1
-            changed = true
         }
-        if changed {
-            // Regrow if the exponent is beyond range.
-            while exponent > Int8.max {
-                significand &*= 10
-                exponent &-= 1
-            }
-            self._significand = significand
-            self._exponent = exponent
+        // Regrow if the exponent is beyond range.
+        if exponent > 127 /* Int8.max */ {
+            significand *= _uint128_pow10[Int(exponent - 127)]
+            exponent = 127
         }
+        self._significand = significand
+        self._exponent = exponent
         // Mark the value as compact.
         self._isCompact = 1
     }

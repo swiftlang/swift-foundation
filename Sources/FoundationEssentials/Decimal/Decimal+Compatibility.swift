@@ -248,12 +248,19 @@ private func __NSDecimalMultiplyByPowerOf10(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try decimal.pointee._multiplyByPowerOfTen(power: Int(power), roundingMode: roundingMode)
-        result.pointee = product
+        let product = try decimal.pointee._multiplyByPowerOfTenReportingInexact(
+            power: Int(power), roundingMode: roundingMode
+        )
+        result.pointee = product.result
+        if product.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }

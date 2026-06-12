@@ -523,14 +523,14 @@ private struct DecimalTests {
 
         // Overflow
         #expect {
-            _ = try a._multiplyByPowerOfTen(power: 128, roundingMode: .plain)
+            _ = try a._multiplyByPowerOfTen(power: 163, roundingMode: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
         // Underflow
         #expect {
-            _ = try Decimal(12.34)._multiplyByPowerOfTen(power: -128, roundingMode: .plain)
+            _ = try Decimal(12.34)._multiplyByPowerOfTen(power: -130, roundingMode: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .underflow
         }
@@ -894,19 +894,13 @@ private struct DecimalTests {
         #expect(Decimal(123400) == result)
         a = result
         #expect {
-            result = try a._multiplyByPowerOfTen(power: 128, roundingMode: .plain)
+            result = try a._multiplyByPowerOfTen(power: 161, roundingMode: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
         a = Decimal(1234)
         result = try a._multiplyByPowerOfTen(power: -2, roundingMode: .plain)
         #expect(Decimal(12.34) == result)
-        a = result
-        #expect {
-            result = try a._multiplyByPowerOfTen(power: -128, roundingMode: .plain)
-        } throws: {
-            ($0 as? Decimal._CalculationError) == .underflow
-        }
         a = Decimal(1234)
         result = try a._power(exponent: 0, roundingMode: .plain)
         #expect(Decimal(1) == result)
