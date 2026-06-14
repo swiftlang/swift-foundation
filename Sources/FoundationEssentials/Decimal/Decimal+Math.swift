@@ -418,6 +418,7 @@ extension Decimal {
         if self._length == 0 {
             return (.zero, false)
         }
+        let power = min(max(power, -32768), 32767)
         let exponent = self._exponent + Int32(power)
         if exponent >= -128 && exponent <= 127 {
             var result = self

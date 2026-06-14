@@ -1126,6 +1126,11 @@ private struct DecimalTests {
         #expect(x.ulp == Decimal(string: "0.0000000000000000000000000000000000001")!)
         #expect(x.nextDown == Decimal(string: "3.40282366920938463463374607431768211455")!)
 
+        x = 3
+        #expect(x.ulp == Decimal(string: "1e-38")!)
+        x = 2
+        #expect(x.ulp == Decimal(string: "1e-38")!)
+
         x = 1
         #expect(x.ulp == Decimal(string: "1e-38")!)
         #expect(x.nextDown == x - Decimal(string: "1e-38")!)
