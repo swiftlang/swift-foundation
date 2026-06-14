@@ -321,7 +321,7 @@ extension Decimal /* : FloatingPoint */ {
             // Deliberately underestimate the max "headroom" for scaling up,
             // using 1233/4096 as a close approximation of 1/log2(10) -- cf. Hacker's Delight, ch. 11.
             var shift = ((m|1).leadingZeroBitCount &* 1233) &>> 12
-            if shift < 38 && m <= _pow10DividingUInt128Max[shift] {
+            if shift < 38 && m <= _uint128_maxDividedByPow10[shift &+ 1] {
                 shift &+= 1
             }
             exponent = _exponent &- Int32(truncatingIfNeeded: shift)
@@ -647,38 +647,28 @@ extension Decimal : SignedNumeric {
         var mantissa = source.magnitude
         var exponent: Int32 = 0
 
+        if mantissa <= UInt128.max {
+            self = Decimal()
+            self._significand = UInt128(truncatingIfNeeded: mantissa)
+            self._exponent = exponent
+            self._isCompact = 0
+            self.compact()
+            self._isNegative = negative
+            return
+        }
+
         let maxExponent = Int8.max
         while mantissa.isMultiple(of: 10) && (exponent < maxExponent) {
             exponent += 1
             mantissa /= 10
         }
-
         // If the mantissa still requires more than 128 bits of storage then it is too large.
-        if mantissa.bitWidth > 128 && (mantissa >> 128 != zero) { return nil }
-
-        let mantissaParts: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)
-        let loWord = UInt64(truncatingIfNeeded: mantissa)
-        var length = ((loWord.bitWidth - loWord.leadingZeroBitCount) + (UInt16.bitWidth - 1)) / UInt16.bitWidth
-        mantissaParts.0 = UInt16(truncatingIfNeeded: loWord >> 0)
-        mantissaParts.1 = UInt16(truncatingIfNeeded: loWord >> 16)
-        mantissaParts.2 = UInt16(truncatingIfNeeded: loWord >> 32)
-        mantissaParts.3 = UInt16(truncatingIfNeeded: loWord >> 48)
-
-        let hiWord = mantissa.bitWidth > 64 ? UInt64(truncatingIfNeeded: mantissa >> 64) : 0
-        if hiWord != 0 {
-            length = 4 + ((hiWord.bitWidth - hiWord.leadingZeroBitCount) + (UInt16.bitWidth - 1)) / UInt16.bitWidth
-            mantissaParts.4 = UInt16(truncatingIfNeeded: hiWord >> 0)
-            mantissaParts.5 = UInt16(truncatingIfNeeded: hiWord >> 16)
-            mantissaParts.6 = UInt16(truncatingIfNeeded: hiWord >> 32)
-            mantissaParts.7 = UInt16(truncatingIfNeeded: hiWord >> 48)
-        } else {
-            mantissaParts.4 = 0
-            mantissaParts.5 = 0
-            mantissaParts.6 = 0
-            mantissaParts.7 = 0
-        }
-
-        self = Decimal(_exponent: exponent, _length: UInt32(length), _isNegative: negative, _isCompact: 1, _reserved: 0, _mantissa: mantissaParts)
+        if mantissa > UInt128.max { return nil }
+        self = Decimal()
+        self._significand = UInt128(truncatingIfNeeded: mantissa)
+        self._exponent = exponent
+        self._isCompact = 1
+        self._isNegative = negative
     }
 
 #if FOUNDATION_FRAMEWORK
@@ -858,44 +848,44 @@ extension Decimal : Strideable {
     }
 }
 
-private let _pow10DividingUInt128Max: [38 of UInt128] = [
-    /* 10**00 dividing UInt128.max is deliberately omitted. */
-    /* 10**01 */ 34028236692093846346337460743176821145,
-    /* 10**02 */ 3402823669209384634633746074317682114,
-    /* 10**03 */ 340282366920938463463374607431768211,
-    /* 10**04 */ 34028236692093846346337460743176821,
-    /* 10**05 */ 3402823669209384634633746074317682,
-    /* 10**06 */ 340282366920938463463374607431768,
-    /* 10**07 */ 34028236692093846346337460743176,
-    /* 10**08 */ 3402823669209384634633746074317,
-    /* 10**09 */ 340282366920938463463374607431,
-    /* 10**10 */ 34028236692093846346337460743,
-    /* 10**11 */ 3402823669209384634633746074,
-    /* 10**12 */ 340282366920938463463374607,
-    /* 10**13 */ 34028236692093846346337460,
-    /* 10**14 */ 3402823669209384634633746,
-    /* 10**15 */ 340282366920938463463374,
-    /* 10**16 */ 34028236692093846346337,
-    /* 10**17 */ 3402823669209384634633,
-    /* 10**18 */ 340282366920938463463,
-    /* 10**19 */ 34028236692093846346,
-    /* 10**20 */ 3402823669209384634,
-    /* 10**21 */ 340282366920938463,
-    /* 10**22 */ 34028236692093846,
-    /* 10**23 */ 3402823669209384,
-    /* 10**24 */ 340282366920938,
-    /* 10**25 */ 34028236692093,
-    /* 10**26 */ 3402823669209,
-    /* 10**27 */ 340282366920,
-    /* 10**28 */ 34028236692,
-    /* 10**29 */ 3402823669,
-    /* 10**30 */ 340282366,
-    /* 10**31 */ 34028236,
-    /* 10**32 */ 3402823,
-    /* 10**33 */ 340282,
-    /* 10**34 */ 34028,
-    /* 10**35 */ 3402,
-    /* 10**36 */ 340,
-    /* 10**37 */ 34,
-    /* 10**38 */ 3,
+private let _uint128_maxDividedByPow10: [39 of UInt128] = [
+    /* .max / 10**00 */ 340282366920938463463374607431768211455,
+    /* .max / 10**01 */ 34028236692093846346337460743176821145,
+    /* .max / 10**02 */ 3402823669209384634633746074317682114,
+    /* .max / 10**03 */ 340282366920938463463374607431768211,
+    /* .max / 10**04 */ 34028236692093846346337460743176821,
+    /* .max / 10**05 */ 3402823669209384634633746074317682,
+    /* .max / 10**06 */ 340282366920938463463374607431768,
+    /* .max / 10**07 */ 34028236692093846346337460743176,
+    /* .max / 10**08 */ 3402823669209384634633746074317,
+    /* .max / 10**09 */ 340282366920938463463374607431,
+    /* .max / 10**10 */ 34028236692093846346337460743,
+    /* .max / 10**11 */ 3402823669209384634633746074,
+    /* .max / 10**12 */ 340282366920938463463374607,
+    /* .max / 10**13 */ 34028236692093846346337460,
+    /* .max / 10**14 */ 3402823669209384634633746,
+    /* .max / 10**15 */ 340282366920938463463374,
+    /* .max / 10**16 */ 34028236692093846346337,
+    /* .max / 10**17 */ 3402823669209384634633,
+    /* .max / 10**18 */ 340282366920938463463,
+    /* .max / 10**19 */ 34028236692093846346,
+    /* .max / 10**20 */ 3402823669209384634,
+    /* .max / 10**21 */ 340282366920938463,
+    /* .max / 10**22 */ 34028236692093846,
+    /* .max / 10**23 */ 3402823669209384,
+    /* .max / 10**24 */ 340282366920938,
+    /* .max / 10**25 */ 34028236692093,
+    /* .max / 10**26 */ 3402823669209,
+    /* .max / 10**27 */ 340282366920,
+    /* .max / 10**28 */ 34028236692,
+    /* .max / 10**29 */ 3402823669,
+    /* .max / 10**30 */ 340282366,
+    /* .max / 10**31 */ 34028236,
+    /* .max / 10**32 */ 3402823,
+    /* .max / 10**33 */ 340282,
+    /* .max / 10**34 */ 34028,
+    /* .max / 10**35 */ 3402,
+    /* .max / 10**36 */ 340,
+    /* .max / 10**37 */ 34,
+    /* .max / 10**38 */ 3,
 ]
