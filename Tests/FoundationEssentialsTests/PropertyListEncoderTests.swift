@@ -1625,6 +1625,18 @@ data1 = <7465
         
         #expect(try PropertyListDecoder().decode([String:String].self, from: acceptable) == ["bar":"foo"])
     }
+
+    @Test(arguments: [
+        ["ke\0y": "value"], ["key": "val\0ue"]
+    ]) func xmlEncodingRejectsStringsWithEmbeddedNUL(dict: [String:String]) throws {
+        // A dictionary key containing an embedded NUL character should fail to encode as XML
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .xml
+
+        #expect(throws: (any Error).self, "Encoding a dict key with embedded NUL to XML should fail") {
+            let _ = try encoder.encode(dict)
+        }
+    }
 }
             
 
