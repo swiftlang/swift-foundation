@@ -411,6 +411,38 @@ private struct ListFormatStyleTests {
         #expect([Self.arabicOne, bob, Self.arabicThree, delta].formatted(s) == "\(one), \(bob), \(three), and \(delta)")
     }
 
+    /// Mixed-direction *within* a single item: a Latin first name with an RTL
+    /// surname (Hebrew, Arabic, Syriac). Each item's first strong character is
+    /// Latin, matching the English list, but the trailing RTL run can still
+    /// disturb the adjacent separators — so every item must be isolated, as
+    /// Apple-ICU's `needsBidiIsolates` does (it wraps on *any* opposite-direction
+    /// character, not merely a differing leading one).
+    @Test func bidiMixedWithinItem() {
+        let s = style("en")
+        let isolate: (String) -> String = { "\u{2068}\($0)\u{2069}" }
+        let david = "David \u{05DB}\u{05D4}\u{05DF}"          // David Cohen — Hebrew surname
+        let omar  = "Omar \u{062D}\u{0633}\u{0646}"           // Omar Hassan — Arabic surname
+        let sara  = "Sara \u{071D}\u{0718}\u{0722}\u{0722}"   // Sara Yonan — Syriac surname
+        #expect([david].formatted(s) == isolate(david))
+        #expect([david, omar].formatted(s) == "\(isolate(david)) and \(isolate(omar))")
+        #expect([david, omar, sara].formatted(s) == "\(isolate(david)), \(isolate(omar)), and \(isolate(sara))")
+    }
+
+    /// Weak-RTL: Arabic-Indic numerals (Bidi_Class AN) carry no *strong*
+    /// direction, but Apple-ICU's `needsBidiIsolates` still isolates them in an
+    /// LTR list so mixed number/text runs (codes, phone numbers) aren't
+    /// reordered. Persian/extended digits (U+06F0–06F9) are Bidi_Class EN, which
+    /// the list formatter does *not* isolate — so they pass through unwrapped.
+    @Test func bidiArabicIndicNumbers() {
+        let s = style("en")
+        let isolate: (String) -> String = { "\u{2068}\($0)\u{2069}" }
+        let arabicIndic = "\u{0661}\u{0662}\u{0663}"   // ١٢٣ — Bidi_Class AN
+        let persian = "\u{06F1}\u{06F2}\u{06F3}"       // ۱۲۳ — Bidi_Class EN
+        #expect([arabicIndic].formatted(s) == isolate(arabicIndic))
+        #expect([arabicIndic, arabicIndic].formatted(s) == "\(isolate(arabicIndic)) and \(isolate(arabicIndic))")
+        #expect([persian, persian].formatted(s) == "\(persian) and \(persian)")
+    }
+
     // MARK: - Internal pattern parser
 
     #if FOUNDATION_LIST_FORMAT_NATIVE

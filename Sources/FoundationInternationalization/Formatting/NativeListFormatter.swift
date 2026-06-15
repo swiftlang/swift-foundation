@@ -35,11 +35,16 @@ extension OutputSpan where Element == UInt8 {
     }
 }
 
-/// Pure-Swift list formatter, used in place of `ICUListFormatter` when the
+/// Swift list formatter, used in place of `ICUListFormatter` when the
 /// `FOUNDATION_LIST_FORMAT_NATIVE` build flag is on.
 ///
-/// Mirrors the algorithm from ICU4X's `list_formatter.rs` and the Apple-ICU
-/// extensions for FSI/PDI bidi isolates and the Thai contextual joiner.
+/// Reimplements Apple-ICU's `i18n/listformatter.cpp`
+/// (`ListFormatter::formatStringsToValue` and its `PatternHandler` family):
+/// the CLDR "List Patterns" empty/single/pair/3+ composition, the contextual
+/// rules (Spanish y→e / o→u and the Hebrew non-Hebrew prefix), and the Apple
+/// extensions (`ThaiHandler`'s contextual joiner and FSI/PDI bidi isolate
+/// wrapping, which isolates any item containing a character of the opposite
+/// direction to the list, matching `ListFormatter::needsBidiIsolates`).
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 internal final class NativeListFormatter: @unchecked Sendable {
 
@@ -392,53 +397,93 @@ internal final class NativeListFormatter: @unchecked Sendable {
         return result
     }
 
-    /// Wrap an item in FSI/PDI isolates when its dominant direction conflicts
-    /// with the list's overall direction. Items with no strong-directional
+    /// Wrap an item in FSI/PDI isolates when it contains directional content
+    /// opposite the list's overall direction. Items with no strong-directional
     /// scalar (digits, punctuation only) inherit the list direction and are
     /// left alone — matches the `["1", "2"]` Hebrew case.
     private func wrapBidi(_ item: String) -> String {
         return shouldWrapBidi(item) ? "\u{2068}\(item)\u{2069}" : item
     }
 
-    /// Whether `item` would be wrapped by `wrapBidi`. Factored out so
+    /// Whether `item` needs FSI/PDI isolation: true when it carries directional
+    /// content that could disturb the surrounding list. Mirrors Apple-ICU's
+    /// `ListFormatter::needsBidiIsolates`, including its asymmetry: in an LTR
+    /// list an item is isolated if it contains any strong-RTL character (`R`/`AL`)
+    /// or Arabic number (weak RTL, `AN`); in an RTL list, if it contains any
+    /// strong-LTR character (`L`). Scanning the whole item (rather than only its
+    /// leading direction) catches a same-leading item with a trailing opposite
+    /// run, e.g. "David \u{05DB}\u{05D4}\u{05DF}" in an English list. Factored out so
     /// `buildLinear` can pre-classify items (sizing the output buffer exactly)
     /// without materializing the wrapped strings.
     @inline(__always)
     private func shouldWrapBidi(_ item: String) -> Bool {
-        guard let itemDir = direction(of: item) else { return false }
-        switch (listDirection, itemDir) {
-        case (.leftToRight, .rightToLeft), (.rightToLeft, .leftToRight): return true
-        default: return false
+        if listDirection == .rightToLeft {
+            for scalar in item.unicodeScalars where isStrongLTR(scalar) {
+                return true
+            }
+        } else {
+            for scalar in item.unicodeScalars {
+                // ASCII is never strong-RTL and never an Arabic number, so skip
+                // the bitmap/range checks for it (the common case) — calling
+                // `_isStrongRTL` per ASCII scalar would pay a full bitmap lookup.
+                if scalar.value < 0x80 { continue }
+                if scalar._isStrongRTL || isArabicNumber(scalar) { return true }
+            }
+        }
+        return false
+    }
+
+    /// Whether `scalar` is a strong left-to-right character (UAX #9 class `L`),
+    /// approximated as "a letter that isn't strong-RTL". Strong-RTL is the
+    /// `BuiltInUnicodeScalarSet(.strongRightToLeft)` bitmap.
+    @inline(__always)
+    private func isStrongLTR(_ scalar: Unicode.Scalar) -> Bool {
+        let v = scalar.value
+        // ASCII fast path: ASCII letters are strong LTR; nothing else in the
+        // ASCII range is strong-directional.
+        if v < 0x80 {
+            return (v >= 0x41 && v <= 0x5A) || (v >= 0x61 && v <= 0x7A)
+        }
+        if scalar._isStrongRTL { return false }
+        switch scalar.properties.generalCategory {
+        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter,
+             .modifierLetter, .otherLetter:
+            return true
+        default:
+            return false
         }
     }
 
-    /// First-strong-directional detection (UAX #9 P2-style). Strong-RTL is the
-    /// `BuiltInUnicodeScalarSet(.strongRightToLeft)` bitmap; strong-LTR is
-    /// approximated as "letter that isn't strong-RTL", which suffices for
-    /// the list-formatting cases pinned by `TestBidi`.
-    private func direction(of item: String) -> Locale.LanguageDirection? {
-        for scalar in item.unicodeScalars {
-            // ASCII fast path: skip the strong-RTL bitmap and the
-            // `generalCategory` Unicode-property lookup. ASCII is never
-            // strong-RTL; ASCII letters resolve to LTR; everything else in
-            // the ASCII range is direction-neutral.
-            let v = scalar.value
-            if v < 0x80 {
-                if (v >= 0x41 && v <= 0x5A) || (v >= 0x61 && v <= 0x7A) {
-                    return .leftToRight
-                }
-                continue
-            }
-            if scalar._isStrongRTL { return .rightToLeft }
-            switch scalar.properties.generalCategory {
-            case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter,
-                 .modifierLetter, .otherLetter:
-                return .leftToRight
-            default:
-                continue
-            }
+    /// Whether `scalar` is Bidi_Class `AN` (Arabic Number) — Arabic-Indic digits
+    /// plus the associated Arabic number signs and separators.
+    ///
+    /// These are isolated in an LTR list because, for neutral resolution (UAX #9
+    /// rule N1), Arabic numbers "act as if they were R": an unwrapped `AN` item
+    /// would pull the list's neutral separators (", ") to RTL and misorder them.
+    /// European numbers (ASCII digits, and Persian "extended Arabic-Indic" digits
+    /// U+06F0–06F9, which Unicode classes as `EN`) are deliberately *excluded*:
+    /// rule W7 turns an `EN` preceded by strong-LTR context into `L`, so they
+    /// behave as ordinary LTR and don't disturb the separators. This matches
+    /// Apple-ICU's `needsBidiIsolates` (which triggers on `AN` but not `EN`).
+    ///
+    /// TODO: Replace these hand-coded ranges with a real Bidi_Class lookup once
+    /// swift-foundation exposes one without depending on ICU. The bundled
+    /// CFUniChar bitmaps cover the strong-RTL set used by `_isStrongRTL` but
+    /// carry no Arabic-number / bidi-class data, so the ranges are maintained by
+    /// hand for now (and don't cover the SMP `AN` ranges, e.g. Rumi numerals).
+    @inline(__always)
+    private func isArabicNumber(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x0600...0x0605,  // Arabic number signs
+             0x0660...0x0669,  // Arabic-Indic digits
+             0x066B...0x066C,  // Arabic decimal / thousands separators
+             0x06DD,           // Arabic end of ayah
+             0x0890...0x0891,  // Arabic pound / piastre marks
+             0x08E2:           // Arabic disputed end of ayah
+            return true
+        default:
+            return false
         }
-        return nil
     }
 
     private static func language(of locale: String) -> String {
