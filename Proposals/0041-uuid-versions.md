@@ -243,7 +243,9 @@ This feature can be freely adopted and un-adopted in source code with no deploym
 
 Instead of `UUID.version7()`, we considered `UUID(version: 7)`. However, different versions require different parameters — version 5 needs a name and namespace, version 8 needs custom data — so a single initializer would either need to accept many optional parameters or use an associated-value enum. Static factory methods are clearer and allow each version to have its own natural parameter list.
 
-We also considered using an enumeration for each version with associated types for the different parameters. In practice, this doesn't look or act much differently than simply adding functions to `UUID` with the required arguments.
+We considered using an enumeration for each version with associated types for the different parameters. In practice, this doesn't look or act much differently than simply adding functions to `UUID` with the required arguments.
+
+We also considered an enumeration for each version, without an associated type. This is effectively an enumeration for the values of integers from 0 to 15. Version 0 is used for the `min` UUID proposed in this API. Version 15 is reserved in the spec, but is used for the `max` UUID propsed in this API. Version 4 would be the existing support, and this proposal adds version 7. Even though support for other versions is not included here, we do support initializing UUIDs from bytes. That would lead to the enum needing to have a case for all 15 values. It is the author's opinion that this is better expressed as a simple integer value.
 
 ### Supporting all UUID versions immediately
 
@@ -268,3 +270,4 @@ We considered prefixing the function name with `make`, as the Swift naming guide
 We considered deprecating the no-argument initializer for `UUID`. We believe that this could be counter-productive in the long term, because it can create "deprecation fatigue." This may encourage callers to ignore warnings because they feel somewhat arbitrary, especially when existing code is correct and will continue to work in the future.
 
 For similar reasons, we cannot change the behavior of the current methods to change the case of the string or version of the result. For example, we expect there to be existing code that would break if we change the result of the `uuidString` to be lowercased.
+
