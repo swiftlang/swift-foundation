@@ -1062,16 +1062,18 @@ extension Calendar {
                                       repeatedTimePolicy: RepeatedTimePolicy) throws -> [(Date, DateComponents)]? {
 
         // Fast-path short-circuits. Only fires when the calendar opts in.
-        if _supportsNextDateFastPath && matchingPolicy == .nextTime && repeatedTimePolicy == .first {
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first {
 
             // (1) Single-combination: one value per field.
             if let dc = _singleCombinationDateComponents(combinationComponents),
+               _supportsNextDateFastPath(for: dc),
                let fast = _calendarNextDate(after: startDate, matching: dc, direction: .forward) {
                 return [(fast, dc)]
             }
 
             // (2) Multi-combination (positive ordinals): cartesian product.
-            if let allDCs = _expandedDateComponents(combinationComponents) {
+            if let allDCs = _expandedDateComponents(combinationComponents),
+               allDCs.allSatisfy({ _supportsNextDateFastPath(for: $0) }) {
                 var results: [(Date, DateComponents)] = []
                 results.reserveCapacity(allDCs.count)
                 var allFastPathed = true
@@ -1090,7 +1092,8 @@ extension Calendar {
 
             // (3) Multi-combination with negative ordinal translation.
             if _unadjustedDatesHasNegativeOrdinal(combinationComponents),
-               let allDCs = _expandedDateComponents(combinationComponents, anchor: startDate) {
+               let allDCs = _expandedDateComponents(combinationComponents, anchor: startDate),
+               allDCs.allSatisfy({ _supportsNextDateFastPath(for: $0) }) {
                 var results: [(Date, DateComponents)] = []
                 results.reserveCapacity(allDCs.count)
                 var allFastPathed = true

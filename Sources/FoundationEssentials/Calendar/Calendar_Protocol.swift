@@ -50,11 +50,11 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date?
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents
 
-    /// Optional fast path for `Calendar.nextDate(after:matching:)`. Returns nil to fall through to the generic enumerate framework.
+    /// Optional fast path for `Calendar.nextDate(after:matching:)`. Nil means no more matches (not "unsupported pattern" — use `supportsNextDateFastPath(for:)` to check that).
     func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date?
 
-    /// Whether this calendar implements `nextDate(after:matching:direction:)`.
-    var supportsNextDateFastPath: Bool { get }
+    /// Whether this calendar can fast path the given pattern. Default returns false; calendar implementations override for patterns they handle.
+    func supportsNextDateFastPath(for components: DateComponents) -> Bool
 
 #if FOUNDATION_FRAMEWORK
     func bridgeToNSCalendar() -> NSCalendar
@@ -66,7 +66,7 @@ extension _CalendarProtocol {
         nil
     }
 
-    package var supportsNextDateFastPath: Bool { false }
+    package func supportsNextDateFastPath(for components: DateComponents) -> Bool { false }
 
     package var preferredFirstWeekday: Int? { nil }
     package var preferredMinimumDaysInFirstweek: Int? { nil }

@@ -94,7 +94,29 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     // hash(into:) uses the `_CalendarProtocol` default impl.
 
-    var supportsNextDateFastPath: Bool { true }
+    func supportsNextDateFastPath(for components: DateComponents) -> Bool {
+        if components.era != nil || components.year != nil || components.weekOfYear != nil || components.yearForWeekOfYear != nil || components.dayOfYear != nil {
+            return false
+        }
+
+        let hasMonth = components.month != nil
+        let hasDay = components.day != nil
+        let hasWeekday = components.weekday != nil
+        let hasWdOrd = components.weekdayOrdinal != nil
+        let hasWeekOfMonth = components.weekOfMonth != nil
+
+        if hasWeekOfMonth && !(hasMonth && hasWeekday && !hasDay && !hasWdOrd) { return false }
+        if hasWdOrd && !(hasWeekday && !hasDay && !hasWeekOfMonth) { return false }
+        if hasWeekday && hasDay { return false }
+        if hasWeekday && hasMonth && !hasWdOrd && !hasWeekOfMonth { return false }
+
+        let timeOnly = !hasMonth && !hasDay && !hasWeekday
+        if timeOnly {
+            guard components.hour != nil, components.minute != nil, components.second != nil else { return false }
+        }
+
+        return true
+    }
 
     // MARK: - Range
 
@@ -952,33 +974,14 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     package func nextDate(after date: Date, matching components: DateComponents,
                           direction: Calendar.SearchDirection) -> Date? {
-        // Reject anything that requires the generic enumerate framework.
-        // Time-of-day fields (hour/minute/second/nanosecond) ARE allowed and preserved.
-        if components.era != nil || components.year != nil ||
-           components.weekOfYear != nil ||
-           components.yearForWeekOfYear != nil ||
-           components.dayOfYear != nil {
-            return nil
-        }
+        guard supportsNextDateFastPath(for: components) else { return nil }
 
         let hasMonth = components.month != nil
         let hasDay = components.day != nil
         let hasWeekday = components.weekday != nil
         let hasWdOrd = components.weekdayOrdinal != nil
         let hasWeekOfMonth = components.weekOfMonth != nil
-
-        // Only {month, weekday, weekOfMonth} is allowed for weekOfMonth patterns.
-        if hasWeekOfMonth && !(hasMonth && hasWeekday && !hasDay && !hasWdOrd) { return nil }
-        // weekdayOrdinal requires weekday, without day or weekOfMonth.
-        if hasWdOrd && !(hasWeekday && !hasDay && !hasWeekOfMonth) { return nil }
-        // {weekday, day} and {weekday, month} (without wdOrd/wOM) aren't fast-pathed.
-        if hasWeekday && hasDay { return nil }
-        if hasWeekday && hasMonth && !hasWdOrd && !hasWeekOfMonth { return nil }
-        // Time-only: requires hour/minute/second all set.
         let timeOnly = !hasMonth && !hasDay && !hasWeekday
-        if timeOnly {
-            guard components.hour != nil, components.minute != nil, components.second != nil else { return nil }
-        }
 
         let tz = self.timeZone
         let totalOffset = tz.secondsFromGMT(for: date)
