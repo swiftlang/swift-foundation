@@ -1298,8 +1298,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter repeatedTimePolicy: Determines the behavior of the search algorithm when the input produces a time that occurs twice on a particular day.
     /// - parameter direction: Which direction in time to search. The default value is `.forward`, which means later in time.
     /// - parameter block: A closure that is called with search results.
-    @available(iOS 8.0, *)
-    /// Proxy to the calendar implementation's fast-path `nextDate`.
     internal func _calendarNextDate(after date: Date, matching components: DateComponents, direction: SearchDirection) -> Date? {
         _calendar.nextDate(after: date, matching: components, direction: direction)
     }
@@ -1309,10 +1307,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar.supportsNextDateFastPath
     }
 
+    @available(iOS 8.0, *)
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
         // Fast-path: drive the loop with direct nextDate calls when default policies are in effect.
-        if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
-           _supportsNextDateFastPath,
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first, _supportsNextDateFastPath,
            let firstMatch = _calendar.nextDate(after: start, matching: components, direction: direction) {
             var stop = false
             block(firstMatch, true, &stop)
