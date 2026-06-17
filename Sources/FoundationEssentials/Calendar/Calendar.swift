@@ -469,6 +469,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar = CalendarCache.cache.fixed(identifier)
     }
 
+    /// Returns a new Calendar using optional, non-default values.
+    ///
+    /// - parameter identifier: The kind of calendar to use.
+    /// - parameter timeZone: A `TimeZone` to use, instead of the default.
+    /// - parameter locale: A `Locale` to use, instead of the default.
+    /// - parameter firstWeekday: A first day of the week to use, instead of the default.
+    /// - parameter minimumDaysInFirstWeek: A number of minimum days in the first week to use, instead of the default.
+    @available(FoundationPreview 6.5, *)
+    public init(identifier: Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) {
+        _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+    }
+
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
     internal init(identifier: Calendar.Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
