@@ -693,7 +693,7 @@ extension Decimal : SignedNumeric {
     public static func +=(lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._add(rhs: rhs, roundingMode: .plain)
-            lhs = result.result
+            lhs = result
         } catch {
             lhs = .nan
         }

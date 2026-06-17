@@ -339,7 +339,7 @@ private struct DecimalTests {
         var addend: Decimal = one
         // 2 digits
         addend._exponent = -1
-        var (result, lostPrecision) = try one._add(rhs: addend, roundingMode: .plain)
+        var (result, lostPrecision) = try one._addReportingInexact(rhs: addend, roundingMode: .plain)
         var expected: Decimal = Decimal()
         expected._isNegative = 0
         expected._isCompact = 0
@@ -359,11 +359,11 @@ private struct DecimalTests {
         expected._mantissa.5 = 0xd5da;
         expected._mantissa.6 = 0xee10;
         expected._mantissa.7 = 0x0785;
-        (result, _) = try one._add(rhs: addend, roundingMode: .plain)
+        result = try one._add(rhs: addend, roundingMode: .plain)
         #expect(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
         // 39 Digits -- not guaranteed to work
         addend._exponent = -38
-        (result, lostPrecision) = try one._add(rhs: addend, roundingMode: .plain)
+        (result, lostPrecision) = try one._addReportingInexact(rhs: addend, roundingMode: .plain)
         if !lostPrecision {
             expected._exponent = -38;
             expected._length = 8;
@@ -381,7 +381,7 @@ private struct DecimalTests {
         }
         // 40 Digits -- does NOT work, make sure we round
         addend._exponent = -39
-        (result, lostPrecision) = try one._add(rhs: addend, roundingMode: .plain)
+        (result, lostPrecision) = try one._addReportingInexact(rhs: addend, roundingMode: .plain)
         #expect(lostPrecision)
         #expect("1" == result.description)
         #expect(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
@@ -395,6 +395,27 @@ private struct DecimalTests {
             _exponent: 0, _length: 1, _isNegative: 0, _isCompact: 0, _reserved: 0,
             _mantissa: (10, 0, 0, 0, 0, 0, 0, 0))
         #expect((a + b)._mantissa.0 == 39323) // Round up.
+    }
+
+    @Test func additionWithScaling() throws {
+        let a = Decimal(123)
+        let b = Decimal(456) / Decimal(1000)
+        #expect(try a._add(rhs: b, roundingMode: .plain) == Decimal(string: "123.456"))
+        #expect(try a._add(rhs: b, minExponent: -2, roundingMode: .plain) == Decimal(string: "123.46"))
+        #expect(try a._add(rhs: b, minExponent: -2, roundingMode: .down) == Decimal(string: "123.45"))
+        #expect(try a._add(rhs: b, minExponent: 0, roundingMode: .plain) == Decimal(string: "123"))
+        #expect(try a._add(rhs: b, minExponent: 0, roundingMode: .up) == Decimal(string: "124"))
+        #expect(try a._add(rhs: b, minExponent: 2, roundingMode: .plain) == Decimal(string: "100"))
+        #expect(try a._add(rhs: b, minExponent: 2, roundingMode: .bankers) == Decimal(string: "100"))
+
+        let c = Decimal(string: "1.005")!
+        let d = Decimal(string: "2.005")!
+        #expect(try c._add(rhs: d, roundingMode: .plain) == Decimal(string: "3.01"))
+        #expect(try c._add(rhs: d, minExponent: -2, roundingMode: .plain) == Decimal(string: "3.01"))
+        #expect(try c._add(rhs: .zero, minExponent: -2, roundingMode: .bankers) == Decimal(1))
+
+        let z = Decimal(string: "0.001")!
+        #expect(try z._addReportingInexact(rhs: z, minExponent: -2, roundingMode: .plain) == (.zero, true))
     }
 
     @Test func simpleMultiplication() throws {

@@ -76,11 +76,11 @@ private func __NSDecimalAdd(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let addition = try lhs.pointee._add(
+        let addition = try lhs.pointee._addReportingInexact(
             rhs: rhs.pointee, roundingMode: roundingMode
         )
         result.pointee = addition.result
-        if addition.lossOfPrecision {
+        if addition.inexact {
             return .lossOfPrecision
         } else {
             return .noError
