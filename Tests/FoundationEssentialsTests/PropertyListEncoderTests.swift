@@ -936,6 +936,7 @@ private struct PropertyListEncoderTests {
 
     @Test func oldStylePlist_getSlashedChars_unicode_invalid() {
         let examples = [
+            #"'\U"#, // EOF following directive
             #"'\U'"#,
             #"'\Ux'"#,
             #"'\Uxx'"#,

@@ -336,7 +336,11 @@ private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16? {
     }
     // We have to have encountered at least one hex digit for the `\U` directive to be valid.
     if num == 0, numDigits == 4 {
-        pInfo.err = OpenStepPlistError("Unexpected character `\(String(describing: Unicode.Scalar(pInfo.currChar)))` while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")
+        if !pInfo.isAtEnd {
+            pInfo.err = OpenStepPlistError("Unexpected character `\(String(describing: Unicode.Scalar(pInfo.currChar)))` while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")
+        } else {
+            pInfo.err = OpenStepPlistError("Unexpected end of file while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")
+        }
         return nil
     }
     return num
