@@ -213,6 +213,92 @@ extension Decimal {
 }
 
 // MARK: - String
+
+// Table to look up two digits at once.
+private let _asciiDigits: [100 of (UInt8, UInt8)] = [
+  (0x30, 0x30), (0x30, 0x31), (0x30, 0x32), (0x30, 0x33), (0x30, 0x34),
+  (0x30, 0x35), (0x30, 0x36), (0x30, 0x37), (0x30, 0x38), (0x30, 0x39),
+  (0x31, 0x30), (0x31, 0x31), (0x31, 0x32), (0x31, 0x33), (0x31, 0x34),
+  (0x31, 0x35), (0x31, 0x36), (0x31, 0x37), (0x31, 0x38), (0x31, 0x39),
+  (0x32, 0x30), (0x32, 0x31), (0x32, 0x32), (0x32, 0x33), (0x32, 0x34),
+  (0x32, 0x35), (0x32, 0x36), (0x32, 0x37), (0x32, 0x38), (0x32, 0x39),
+  (0x33, 0x30), (0x33, 0x31), (0x33, 0x32), (0x33, 0x33), (0x33, 0x34),
+  (0x33, 0x35), (0x33, 0x36), (0x33, 0x37), (0x33, 0x38), (0x33, 0x39),
+  (0x34, 0x30), (0x34, 0x31), (0x34, 0x32), (0x34, 0x33), (0x34, 0x34),
+  (0x34, 0x35), (0x34, 0x36), (0x34, 0x37), (0x34, 0x38), (0x34, 0x39),
+  (0x35, 0x30), (0x35, 0x31), (0x35, 0x32), (0x35, 0x33), (0x35, 0x34),
+  (0x35, 0x35), (0x35, 0x36), (0x35, 0x37), (0x35, 0x38), (0x35, 0x39),
+  (0x36, 0x30), (0x36, 0x31), (0x36, 0x32), (0x36, 0x33), (0x36, 0x34),
+  (0x36, 0x35), (0x36, 0x36), (0x36, 0x37), (0x36, 0x38), (0x36, 0x39),
+  (0x37, 0x30), (0x37, 0x31), (0x37, 0x32), (0x37, 0x33), (0x37, 0x34),
+  (0x37, 0x35), (0x37, 0x36), (0x37, 0x37), (0x37, 0x38), (0x37, 0x39),
+  (0x38, 0x30), (0x38, 0x31), (0x38, 0x32), (0x38, 0x33), (0x38, 0x34),
+  (0x38, 0x35), (0x38, 0x36), (0x38, 0x37), (0x38, 0x38), (0x38, 0x39),
+  (0x39, 0x30), (0x39, 0x31), (0x39, 0x32), (0x39, 0x33), (0x39, 0x34),
+  (0x39, 0x35), (0x39, 0x36), (0x39, 0x37), (0x39, 0x38), (0x39, 0x39)
+]
+
+private extension UInt64 {
+    func _ascii(_ buffer: inout MutableRawSpan) -> Range<Int> {
+        // We need a `MutableRawSpan` to use wide store/load operations.
+        var value = self
+        var offset = buffer.byteCount
+
+        if value == 0 {
+            offset &-= 1
+            buffer.storeBytes(
+                of: 0x30 /* "0" */,
+                toUncheckedByteOffset: offset,
+                as: UInt8.self)
+        } else {
+            while value >= 10 {
+                offset &-= 2
+                buffer.storeBytes(
+                    of: _asciiDigits[unchecked: Int(truncatingIfNeeded: value % 100)],
+                    toUncheckedByteOffset: offset,
+                    as: (UInt8, UInt8).self)
+                value /= 100
+            }
+            if value != 0 {
+                offset &-= 1
+                buffer.storeBytes(
+                    of: UInt8(truncatingIfNeeded: value) | 0x30,
+                    toUncheckedByteOffset: offset,
+                    as: UInt8.self)
+            }
+        }
+        return offset..<buffer.byteCount
+    }
+}
+
+private extension UInt128 {
+    func _ascii(_ buffer: inout MutableRawSpan) -> Range<Int> {
+        if self <= 18446744073709551615 /* UInt64.max */ {
+            return UInt64(truncatingIfNeeded: self)._ascii(&buffer)
+        }
+        var value = self
+        var remainder: Self
+        var offset = buffer.byteCount
+        (value, remainder) = value._quotientAndRemainder(dividingBy1e: 19)
+        _ = UInt64(truncatingIfNeeded: remainder)._ascii(&buffer)
+        var b = buffer._mutatingExtracting(unchecked: 0..<(offset &- 19))
+        if value < 10000000000000000000 {
+            offset =
+                UInt64(truncatingIfNeeded: value)._ascii(&b).lowerBound
+        } else {
+            (value, remainder) = value._quotientAndRemainder(dividingBy1e: 19)
+            _ = UInt64(truncatingIfNeeded: remainder)._ascii(&b)
+            offset &-= 39
+            b.storeBytes(
+                of: UInt8(truncatingIfNeeded: value) | 0x30,
+                toUncheckedByteOffset: offset,
+                as: UInt8.self)
+
+        }
+        return offset..<buffer.byteCount
+    }
+}
+
 extension Decimal {
 #if FOUNDATION_FRAMEWORK
 #else
@@ -237,48 +323,52 @@ extension Decimal {
         _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString).asOptional
     }
 #endif
+
     internal func _toString(withDecimalSeparator separator: String) -> String {
-        if self.isNaN {
-            return "NaN"
-        }
         if self._length == 0 {
-            return "0"
+            return self._isNegative == 0 ? "0" : "NaN"
         }
-        var buffer = ""
-        var copy = self
-        while copy._exponent > 0 {
-            buffer += "0"
-            copy._exponent -= 1
-        }
-        if copy._exponent == 0 {
-            copy._exponent = 1
-        }
-        while copy._length != 0 {
-            if copy._exponent == 0 {
-                buffer.append(separator)
+        let isNegative = (self._isNegative != 0)
+        let significand = self._significand
+        var digits = [39 of UTF8.CodeUnit](repeating: 0x30 /* "0" */)
+        var span = digits.mutableSpan, bytes = span.mutableBytes
+        let range = significand._ascii(&bytes)
+        let digitCount = range.count
+        let separatorCount = separator.utf8.count
+        let exponent = Int(self._exponent)
+        let byteCount = (isNegative ? 1 : 0)
+            + (exponent >= 0
+                ? digitCount + exponent
+                : -exponent < digitCount
+                    ? digitCount + separatorCount
+                    : 1 + separatorCount + (-exponent))
+        return String(unsafeUninitializedCapacity: byteCount) { buffer in
+            var i = 0
+            func put(_ byte: UInt8) {
+                buffer[i] = byte
+                i &+= 1
             }
-            copy._exponent += 1
-            // _divide only throws `.divideByZero` which we are obviously
-            // not doing here, hence try!
-            let (result, remainder) = try! copy._divide(by: 10)
-            copy = result
-            let zero = Unicode.Scalar("0")
-            buffer.append(String(Unicode.Scalar(zero.value + UInt32(remainder))!))
-        }
-
-        if copy._exponent <= 0 {
-            while copy._exponent != 0 {
-                buffer.append("0")
-                copy._exponent += 1
+            if isNegative { put(0x2D /* "-" */) }
+            if exponent >= 0 {
+                for j in range { put(digits[unchecked: j]) }
+                for _ in 0..<exponent { put(0x30 /* "0" */) }
+            } else {
+                let scale = -exponent
+                if scale < digitCount {
+                    let n = digitCount - scale
+                    for j in range.prefix(n) { put(digits[unchecked: j]) }
+                    for byte in separator.utf8 { put(byte) }
+                    for k in range.dropFirst(n) { put(digits[unchecked: k])}
+                } else {
+                    put(0x30)
+                    for byte in separator.utf8 { put(byte) }
+                    for _ in 0..<(scale - digitCount) { put(0x30) }
+                    for j in range { put(digits[unchecked: j]) }
+                }
             }
-            buffer.append(separator)
-            buffer.append("0")
+            assert(i == byteCount)
+            return i
         }
-
-        if copy._isNegative != 0 {
-            buffer.append("-")
-        }
-        return String(buffer.reversed())
     }
 
     internal enum DecimalParseResult {
