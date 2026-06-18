@@ -40,7 +40,7 @@ extension NotificationCenter {
     public protocol MessageIdentifier {
         associatedtype MessageType
     }
-    
+
     /// A type for use when defining optional Message identifiers.
     ///
     /// See ``MessageIdentifier`` for an example of how to use this type when defining your own message identifiers.
@@ -51,10 +51,10 @@ extension NotificationCenter {
 }
 
 extension NotificationCenter {
-#if !FOUNDATION_FRAMEWORK
+    #if !FOUNDATION_FRAMEWORK
     internal typealias _NSNotificationObserverToken = _NotificationObserverToken
-#endif
-    
+    #endif
+
     /// A unique token representing a single observer registration in a notification center.
     ///
     /// You receive the `ObservationToken` type as a return value from `addObserver(of:for:using:)` and related methods.
@@ -69,7 +69,7 @@ extension NotificationCenter {
         internal init(center: NotificationCenter, token: _NSNotificationObserverToken) {
             self.tokenWrapper = _NSNotificationObserverTokenWrapper(center: center, token: token)
         }
-        
+
         internal func remove() {
             self.tokenWrapper.remove()
         }
@@ -82,7 +82,7 @@ extension NotificationCenter {
                 self.token = token
                 self.center = center
             }
-            
+
             func remove() {
                 if let value = token {
                     self.center?._removeObserver(value)
@@ -103,16 +103,18 @@ extension NotificationCenter {
             }
         }
     }
-    
+
     /// Stops the observation represented by the given observation token.
     ///
     /// - Parameter token: a unique token representing a specific observer in a specific notification center. You receive this type from prior calls to `addObserver(of:for:using:)`.
     @available(FoundationPreview 6.2, *)
     public func removeObserver(_ token: ObservationToken) {
         guard token.center == nil || token.center == self else {
-#if canImport(os)
-            NotificationCenter.logger.fault("Unable to remove observer. The provided token does not belong to this notification center. Expected: <\(_typeName(Self.self)) 0x\(String(UInt(bitPattern: ObjectIdentifier(token.center!)), radix: 16))>, got <\(_typeName(Self.self)) 0x\(String(UInt(bitPattern: ObjectIdentifier(self)), radix: 16))>.")
-#endif
+            #if canImport(os)
+            NotificationCenter.logger.fault(
+                "Unable to remove observer. The provided token does not belong to this notification center. Expected: <\(_typeName(Self.self)) 0x\(String(UInt(bitPattern: ObjectIdentifier(token.center!)), radix: 16))>, got <\(_typeName(Self.self)) 0x\(String(UInt(bitPattern: ObjectIdentifier(self)), radix: 16))>."
+            )
+            #endif
             return
         }
 
@@ -121,17 +123,17 @@ extension NotificationCenter {
 }
 
 extension NotificationCenter {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     internal final class NotificationMessageKey: NSObject, NSCopying, Sendable {
         func copy(with zone: NSZone? = nil) -> Any { return self }
 
         static let key = NotificationMessageKey()
     }
-#else
+    #else
     internal final class NotificationMessageKey: Sendable {
         static var key: ObjectIdentifier { ObjectIdentifier(NotificationCenter.NotificationMessageKey.self) }
     }
-#endif
+    #endif
 }
 
 extension NotificationCenter {

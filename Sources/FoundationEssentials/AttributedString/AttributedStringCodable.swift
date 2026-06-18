@@ -34,7 +34,7 @@ extension Decoder {
 ///
 /// Implement this protocol to make an attribute encodable. Encoding an ``AttributedString`` or ``AttributeContainer`` drops any attributes whose types don't conform to this protocol.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol EncodableAttributedStringKey : AttributedStringKey {
+public protocol EncodableAttributedStringKey: AttributedStringKey {
     /// Encodes a value to the provided encoder.
     ///
     /// This method throws an error if writing to the encoder fails.
@@ -49,7 +49,7 @@ public protocol EncodableAttributedStringKey : AttributedStringKey {
 ///
 /// Implement this protocol to make an attribute decodable. Decoding an ``AttributedString`` or ``AttributeContainer`` drops any attributes whose types don't conform to this protocol.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol DecodableAttributedStringKey : AttributedStringKey {
+public protocol DecodableAttributedStringKey: AttributedStringKey {
     /// Decodes a value from the provided decoder.
     ///
     /// This method throws an error if reading from the decoder fails, or if the data read is
@@ -65,7 +65,7 @@ public protocol DecodableAttributedStringKey : AttributedStringKey {
 public typealias CodableAttributedStringKey = EncodableAttributedStringKey & DecodableAttributedStringKey
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension EncodableAttributedStringKey where Value : Encodable {
+extension EncodableAttributedStringKey where Value: Encodable {
     /// Encodes a Swift value to the provided encoder, using a default implementation.
     ///
     /// The default implementation calls down to the value's `Encodable.encode(to:)` method.
@@ -81,7 +81,7 @@ extension EncodableAttributedStringKey where Value : Encodable {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension DecodableAttributedStringKey where Value : Decodable {
+extension DecodableAttributedStringKey where Value: Decodable {
     /// Decodes a Swift value from the provided decoder, using a default implementation.
     ///
     /// The default implementation calls down to the value's `Decodable.init(from:)` method.
@@ -108,7 +108,7 @@ extension DecodableAttributedStringKey where Value : Decodable {
 /// > Tip:
 /// > When creating attributed strings from Markdown-based initializers like ``AttributedString/init(markdown:options:baseURL:)-52n3u``, be sure to set the ``AttributedString/MarkdownParsingOptions/allowsExtendedAttributes`` option. If you don't include this option, the string won't parse ``MarkdownDecodableAttributedStringKey``-based attributes.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol MarkdownDecodableAttributedStringKey : AttributedStringKey {
+public protocol MarkdownDecodableAttributedStringKey: AttributedStringKey {
     /// Decodes a value from the provided decoder.
     ///
     /// This method throws an error if reading from the decoder fails, or if the data read is
@@ -132,7 +132,7 @@ extension MarkdownDecodableAttributedStringKey {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedStringKey {
+extension MarkdownDecodableAttributedStringKey where Self: DecodableAttributedStringKey {
     /// Decodes a value from the provided decoder, using a default implementation.
     ///
     /// The default implementation calls ``DecodableAttributedStringKey/decode(from:)-9mpts``,
@@ -151,7 +151,7 @@ extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedS
 
 #if FOUNDATION_FRAMEWORK
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+extension EncodableAttributedStringKey where Value: NSSecureCoding & NSObject {
     /// Encodes an Objective-C value to the provided encoder, using a default implementation.
     ///
     /// The default implementation uses an ``NSKeyedArchiver`` on the object, then calls
@@ -170,7 +170,7 @@ extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+extension DecodableAttributedStringKey where Value: NSSecureCoding & NSObject {
     /// Decodes an Objective-C value from the provided decoder, using a default implementation.
     ///
     /// The default implementation decodes the object as a ``Data`` instance, then uses an
@@ -198,23 +198,23 @@ extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
 
 /// A configuration type for encoding and decoding attributed strings.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributeScopeCodableConfiguration : Sendable {
-    internal let attributesTable : [String : any AttributedStringKey.Type]
-    
+public struct AttributeScopeCodableConfiguration: Sendable {
+    internal let attributesTable: [String: any AttributedStringKey.Type]
+
     internal init(
-        _ attributesTable: [String : any AttributedStringKey.Type]
+        _ attributesTable: [String: any AttributedStringKey.Type]
     ) {
         self.attributesTable = attributesTable
     }
-    
+
     internal init<S: AttributeScope>(
         _ scope: S.Type
     ) {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         self.attributesTable = S.attributeKeyTypes()
-#else
+        #else
         self.attributesTable = [:]
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
     }
 }
 
@@ -229,12 +229,12 @@ extension AttributeScope {
 #if FOUNDATION_FRAMEWORK
 // TODO: Support AttributedString codable conformance in FoundationPreview
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedString : Codable {
+extension AttributedString: Codable {
     public func encode(to encoder: Encoder) throws {
         let conf = AttributeScopeCodableConfiguration(_loadDefaultAttributes())
         try encode(to: encoder, configuration: conf)
     }
-    
+
     public init(from decoder: Decoder) throws {
         let conf = AttributeScopeCodableConfiguration(_loadDefaultAttributes())
         try self.init(from: decoder, configuration: conf)
@@ -242,9 +242,9 @@ extension AttributedString : Codable {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedString : CodableWithConfiguration {
+extension AttributedString: CodableWithConfiguration {
 
-    private enum CodingKeys : String, CodingKey {
+    private enum CodingKeys: String, CodingKey {
         case runs
         case attributeTable
     }
@@ -271,7 +271,7 @@ extension AttributedString : CodableWithConfiguration {
         }
 
         var runsContainer: UnkeyedEncodingContainer
-        var attributeTable = [_AttributeStorage : Int]()
+        var attributeTable = [_AttributeStorage: Int]()
         var attributeTableNextIndex = 0
         var attributeTableContainer: UnkeyedEncodingContainer?
         if self._guts.runs.count <= 10 {
@@ -285,7 +285,7 @@ extension AttributedString : CodableWithConfiguration {
         var currentIndex = self.startIndex._value
         for run in self._guts.runs {
             let currentEndIndex = self._guts.string.utf8.index(currentIndex, offsetBy: run.length)
-            let range = currentIndex ..< currentEndIndex
+            let range = currentIndex..<currentEndIndex
             let text = String(self._guts.string.unicodeScalars[range])
             try runsContainer.encode(text)
 
@@ -318,8 +318,7 @@ extension AttributedString : CodableWithConfiguration {
     ) throws {
         var attributesContainer = encoder.container(keyedBy: AttributeKey.self)
         for name in attributes.keys {
-            if
-                let attributeKeyType = configuration.attributesTable[name],
+            if let attributeKeyType = configuration.attributesTable[name],
                 let encodableAttributeType = attributeKeyType as? any EncodableAttributedStringKey.Type
             {
                 let attributeEncoder = attributesContainer.superEncoder(forKey: AttributeKey(stringValue: name)!)
@@ -367,8 +366,7 @@ extension AttributedString : CodableWithConfiguration {
                 guard tableIndex >= 0 && tableIndex < attributeTable.count else {
                     throw decoder._dataCorruptedError(
                         """
-                        Attribute table index \(tableIndex) is not within the bounds of \
-                        the attribute table [0...\(attributeTable.count - 1)]
+                        Attribute table index \(tableIndex) is not within the bounds of the attribute table [0...\(attributeTable.count - 1)]
                         """)
                 }
                 attributes = attributeTable[tableIndex]
@@ -428,8 +426,7 @@ extension AttributedString : CodableWithConfiguration {
         var attributes = _AttributeStorage()
         for key in attributesContainer.allKeys {
             let name = key.stringValue
-            if
-                let attributeKeyType = configuration.attributesTable[name],
+            if let attributeKeyType = configuration.attributesTable[name],
                 let decodableAttributeType = attributeKeyType as? any DecodableAttributedStringKey.Type
             {
                 func project<K: DecodableAttributedStringKey>(_: K.Type) throws {
@@ -445,7 +442,7 @@ extension AttributedString : CodableWithConfiguration {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributeContainer : CodableWithConfiguration {
+extension AttributeContainer: CodableWithConfiguration {
     public func encode(to encoder: Encoder, configuration: AttributeScopeCodableConfiguration) throws {
         try AttributedString.encodeAttributeContainer(self.storage, to: encoder, configuration: configuration)
     }
@@ -458,7 +455,7 @@ extension AttributeContainer : CodableWithConfiguration {
 #endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension CodableConfiguration where ConfigurationProvider : AttributeScope {
+extension CodableConfiguration where ConfigurationProvider: AttributeScope {
     /// Creates a codable configuration wrapper for the given value, using given configuration provider type identified by key path.
     ///
     /// - Parameters:

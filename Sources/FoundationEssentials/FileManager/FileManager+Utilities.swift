@@ -53,15 +53,15 @@ extension stat {
     var isDirectory: Bool {
         (mode_t(self.st_mode) & S_IFMT) == S_IFDIR
     }
-    
+
     var isRegular: Bool {
         (mode_t(self.st_mode) & S_IFMT) == S_IFREG
     }
-    
+
     var isSymbolicLink: Bool {
         (mode_t(self.st_mode) & S_IFMT) == S_IFLNK
     }
-    
+
     var isSpecial: Bool {
         let type = mode_t(self.st_mode) & S_IFMT
         return type == S_IFBLK || type == S_IFCHR
@@ -82,8 +82,8 @@ extension _FileManagerImpl {
         var extendedFileInfo: FndrExtendedFileInfo
     }
     #endif
-    
-    static func _catInfo(for url: URL, statInfo: stat, into attributes: inout [FileAttributeKey : Any]) throws {
+
+    static func _catInfo(for url: URL, statInfo: stat, into attributes: inout [FileAttributeKey: Any]) throws {
         #if FOUNDATION_FRAMEWORK
         // Get the info we care about for the file (creatorCode, fileTypeCode, extensionHidden, creationDate, fileBusy) and set validFields for each of them.
         #if os(macOS)
@@ -110,7 +110,7 @@ extension _FileManagerImpl {
             }
         }
         #endif
-        
+
         // Record whether or not the file or directory's name extension is hidden.
         if let value = values.hasHiddenExtension {
             attributes[.extensionHidden] = _writeFileAttributePrimitive(value)
@@ -122,13 +122,13 @@ extension _FileManagerImpl {
         return // TODO: implement fetching cat info attributes in swift-foundation
         #endif
     }
-    
+
     private static let _catInfoKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden, .creationDate]
     private static let _swiftFoundationUnsupportedKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden]
-    static func _setCatInfoAttributes(_ attributes: [FileAttributeKey : Any], path: String) throws {
+    static func _setCatInfoAttributes(_ attributes: [FileAttributeKey: Any], path: String) throws {
         let hasRelevantKeys = attributes.keys.contains(where: { _catInfoKeys.contains($0) })
         guard hasRelevantKeys else { return }
-        
+
         #if !FOUNDATION_FRAMEWORK
         // Exclude some attributes (like .creationDate) from this check since they are unconditionally, implicitly included in `attributesForItem(atPath:)` results
         if attributes.keys.contains(where: { _swiftFoundationUnsupportedKeys.contains($0) }) {
@@ -140,7 +140,7 @@ extension _FileManagerImpl {
         // -setAttributes:ofItemAtPath:error: follows symlinks (<rdar://5815920>), but the NSURL resource value API doesn't, so we have to manually resolve the symlink.
         // We lie to fileURLWithPath:isDirectory: to avoid the extra stat. Since this URL isn't used as a base URL for another URL, it shouldn't make any difference.
         var url = URL(fileURLWithPath: path.resolvingSymlinksInPath, isDirectory: false)
-        var urlAttributes: [URLResourceKey : Any] = [:]
+        var urlAttributes: [URLResourceKey: Any] = [:]
         #if os(macOS)
         let creatorCode = _readFileAttributePrimitive(attributes[.hfsCreatorCode], as: UInt32.self)
         let fileTypeCode = _readFileAttributePrimitive(attributes[.hfsTypeCode], as: UInt32.self)
@@ -167,7 +167,7 @@ extension _FileManagerImpl {
             }
         }
         #endif
-        
+
         if let extensionHidden = attributes[.extensionHidden] {
             urlAttributes[.hasHiddenExtensionKey] = extensionHidden
         }
@@ -178,7 +178,7 @@ extension _FileManagerImpl {
         #endif
     }
 
-#if !os(Windows) && !os(WASI) && !os(OpenBSD)
+    #if !os(Windows) && !os(WASI) && !os(OpenBSD)
     static func _setAttribute(_ key: UnsafePointer<CChar>, value: Data, at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         try value.withUnsafeBytes { buffer in
             #if canImport(Darwin)
@@ -212,14 +212,14 @@ extension _FileManagerImpl {
         }
     }
 
-    static func _setAttributes(_ attributes: [String : Data], at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
+    static func _setAttributes(_ attributes: [String: Data], at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         for (key, value) in attributes {
             try key.withCString {
                 try Self._setAttribute($0, value: value, at: path, followSymLinks: followSymLinks)
             }
         }
     }
-#endif
+    #endif
 
     #if FOUNDATION_FRAMEWORK
     static func _fileProtectionValueForPath(_ fileSystemRepresentation: UnsafePointer<CChar>) -> Int32? {
@@ -236,13 +236,13 @@ extension _FileManagerImpl {
         }
         return attributesBuffer.class
     }
-    
+
     static func _setFileProtectionValueForPath(_ path: String, _ fileSystemRepresentation: UnsafePointer<CChar>, newValue: Int32) throws {
         // It's probably better to do a single getattrlist than and open()/fcntl()/close(), so skip the work in case the value is already set correctly.
         guard Self._fileProtectionValueForPath(fileSystemRepresentation) != newValue else {
             return
         }
-        
+
         var fd = open(fileSystemRepresentation, O_WRONLY)
         var dir: UnsafeMutablePointer<DIR>?
         defer {
@@ -253,7 +253,7 @@ extension _FileManagerImpl {
                 close(fd)
             }
         }
-        
+
         // If open() failed because the file is a directory, try again using opendir/dirfd.
         if fd < 0 && errno == EISDIR {
             dir = opendir(fileSystemRepresentation)
@@ -261,13 +261,13 @@ extension _FileManagerImpl {
                 fd = dirfd(dir)
             }
         }
-        
+
         if fd >= 0 {
             if fcntl(fd, F_SETPROTECTIONCLASS, newValue) != 0 {
                 guard errno == ENOTSUP else {
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: true)
                 }
-                
+
                 // If we fail with ENOTSUP because the volume doesn't support file protection, then no-op.
                 var s = statfs()
                 guard fstatfs(fd, &s) != 0 || s.f_flags & UInt32(MNT_CPROTECT) == 0 else {
@@ -288,10 +288,10 @@ extension _FileManagerImpl {
 extension FileManager {
     @nonobjc
     var safeDelegate: FileManagerDelegate? {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         self._safeDelegate()
-#else
+        #else
         self.delegate
-#endif
+        #endif
     }
 }

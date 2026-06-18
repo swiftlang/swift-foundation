@@ -57,16 +57,16 @@
 ///
 /// You can transform a predicate into another representation — for example, to express a predicate in another query language, or to create a modified predicate — using the ``expression`` property.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-public struct Predicate<each Input> : Sendable {
+public struct Predicate<each Input>: Sendable {
     /// The component expressions of the predicate.
-    public let expression : any StandardPredicateExpression<Bool>
+    public let expression: any StandardPredicateExpression<Bool>
     public let variable: (repeat PredicateExpressions.Variable<each Input>)
-    
+
     public init(_ builder: (repeat PredicateExpressions.Variable<each Input>) -> any StandardPredicateExpression<Bool>) {
         self.variable = (repeat PredicateExpressions.Variable<each Input>())
         self.expression = builder(repeat each variable)
     }
-    
+
     public func evaluate(_ input: repeat each Input) throws -> Bool {
         try expression.evaluate(
             .init(repeat (each variable, each input))
@@ -86,11 +86,11 @@ extension Predicate {
         self.variable = (repeat PredicateExpressions.Variable<each Input>())
         self.expression = PredicateExpressions.Value(value)
     }
-    
+
     public static var `true`: Self {
         Self(value: true)
     }
-    
+
     public static var `false`: Self {
         Self(value: false)
     }
@@ -101,46 +101,46 @@ extension Predicate {
 extension Predicate {
     public init(all subpredicates: some BidirectionalCollection<Self>) {
         var iterator = subpredicates.reversed().makeIterator()
-        
+
         if let guarded = iterator.next() {
             self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
                 let condition = PredicateExpressions.Value(guarded)
                 var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
-                
+
                 while let next = iterator.next() {
                     pieces = Self.meet(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
                 }
-                
+
                 return pieces
             })
         } else {
             self.init(value: true)
         }
     }
-    
+
     public init(any subpredicates: some BidirectionalCollection<Self>) {
         var iterator = subpredicates.reversed().makeIterator()
-        
+
         if let guarded = iterator.next() {
             self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
                 let condition = PredicateExpressions.Value(guarded)
                 var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
-                
+
                 while let next = iterator.next() {
                     pieces = Self.join(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
                 }
-                
+
                 return pieces
             })
         } else {
             self.init(value: false)
         }
     }
-    
+
     fileprivate static func meet<T: StandardPredicateExpression<Bool>, U: StandardPredicateExpression<Bool>>(_ lhs: T, _ rhs: U) -> any StandardPredicateExpression<Bool> {
         PredicateExpressions.build_Conjunction(lhs: lhs, rhs: rhs)
     }
-    
+
     fileprivate static func join<T: StandardPredicateExpression<Bool>, U: StandardPredicateExpression<Bool>>(_ lhs: T, _ rhs: U) -> any StandardPredicateExpression<Bool> {
         PredicateExpressions.build_Disjunction(lhs: lhs, rhs: rhs)
     }
@@ -160,7 +160,7 @@ extension Predicate {
 @available(tvOS, unavailable, introduced: 17.0)
 @available(watchOS, unavailable, introduced: 10.0)
 @available(*, unavailable)
-extension PredicateExpressions : Sendable {}
+extension PredicateExpressions: Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Sequence {

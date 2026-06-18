@@ -51,15 +51,15 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
         /// Non-nil if the components were initialized from a string, which is parsed into a `URLParseInfo`.
         private var urlParseInfo: URLParseInfo?
-        private var parseInfoIsValidForAllRanges:   Bool = true
-        private var parseInfoIsValidForScheme:      Bool = true
-        private var parseInfoIsValidForUser:        Bool = true
-        private var parseInfoIsValidForPassword:    Bool = true
-        private var parseInfoIsValidForHost:        Bool = true
-        private var parseInfoIsValidForPort:        Bool = true
-        private var parseInfoIsValidForPath:        Bool = true
-        private var parseInfoIsValidForQuery:       Bool = true
-        private var parseInfoIsValidForFragment:    Bool = true
+        private var parseInfoIsValidForAllRanges: Bool = true
+        private var parseInfoIsValidForScheme: Bool = true
+        private var parseInfoIsValidForUser: Bool = true
+        private var parseInfoIsValidForPassword: Bool = true
+        private var parseInfoIsValidForHost: Bool = true
+        private var parseInfoIsValidForPort: Bool = true
+        private var parseInfoIsValidForPath: Bool = true
+        private var parseInfoIsValidForQuery: Bool = true
+        private var parseInfoIsValidForFragment: Bool = true
 
         /// Non-nil if that component was set directly (e.g. `components.scheme = "http"`).
         /// If non-nil, the string will always be valid and properly encoded.  The public computed vars
@@ -81,15 +81,15 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         private var didSetInvalidHost: Bool = false
 
         init() {
-            parseInfoIsValidForAllRanges    = false
-            parseInfoIsValidForScheme       = false
-            parseInfoIsValidForUser         = false
-            parseInfoIsValidForPassword     = false
-            parseInfoIsValidForHost         = false
-            parseInfoIsValidForPort         = false
-            parseInfoIsValidForPath         = false
-            parseInfoIsValidForQuery        = false
-            parseInfoIsValidForFragment     = false
+            parseInfoIsValidForAllRanges = false
+            parseInfoIsValidForScheme = false
+            parseInfoIsValidForUser = false
+            parseInfoIsValidForPassword = false
+            parseInfoIsValidForHost = false
+            parseInfoIsValidForPort = false
+            parseInfoIsValidForPath = false
+            parseInfoIsValidForQuery = false
+            parseInfoIsValidForFragment = false
         }
 
         init?(string: String, encodingInvalidCharacters: Bool = true) {
@@ -213,7 +213,8 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                     return
                 }
                 if let idnaEncoded = Parser.IDNAEncodeHost(newValue),
-                   Parser.validate(idnaEncoded, component: .host) {
+                    Parser.validate(idnaEncoded, component: .host)
+                {
                     _host = idnaEncoded
                     return
                 }
@@ -242,10 +243,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         private var isFileURL: Bool {
             guard var scheme, scheme.utf8.count == 4 else { return false }
             return scheme.withUTF8 {
-                ($0[0] | 0x20) == UInt8(ascii: "f") &&
-                ($0[1] | 0x20) == UInt8(ascii: "i") &&
-                ($0[2] | 0x20) == UInt8(ascii: "l") &&
-                ($0[3] | 0x20) == UInt8(ascii: "e")
+                ($0[0] | 0x20) == UInt8(ascii: "f") && ($0[1] | 0x20) == UInt8(ascii: "i") && ($0[2] | 0x20) == UInt8(ascii: "l") && ($0[3] | 0x20) == UInt8(ascii: "e")
             }
         }
 
@@ -316,7 +314,8 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 if didPercentEncodeHost { return encodedHost }
                 // Undo any IDNA-encoding and return the percent-encoded version.
                 if let decoded = Parser.IDNADecodeHost(encodedHost),
-                   let percentEncoded = Parser.percentEncode(decoded, component: .host) {
+                    let percentEncoded = Parser.percentEncode(decoded, component: .host)
+                {
                     return percentEncoded
                 }
             }
@@ -456,11 +455,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 // If there is no authority, do not allow the path to start with "//",
                 // which could be mistaken for the authority separator.
                 let pathUTF8 = percentEncodedPath.utf8
-                let pathStartsWithDoubleSlash = (
-                    pathUTF8.index(after: pathUTF8.startIndex) != pathUTF8.endIndex &&
-                    UInt8(ascii: "/") == pathUTF8.first &&
-                    UInt8(ascii: "/") == pathUTF8[pathUTF8.index(after: pathUTF8.startIndex)]
-                )
+                let pathStartsWithDoubleSlash = (pathUTF8.index(after: pathUTF8.startIndex) != pathUTF8.endIndex && UInt8(ascii: "/") == pathUTF8.first && UInt8(ascii: "/") == pathUTF8[pathUTF8.index(after: pathUTF8.startIndex)])
                 guard !pathStartsWithDoubleSlash else {
                     return nil
                 }
@@ -831,12 +826,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         try? components.setScheme(scheme, force: true)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setScheme(_ newValue: String?) throws {
         try components.setScheme(newValue)
     }
-#endif
+    #endif
 
     /// The user subcomponent.
     ///
@@ -881,12 +876,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPort(_ newValue: Int?) throws {
         try components.setPort(newValue)
     }
-#endif
+    #endif
 
     /// The path subcomponent.
     ///
@@ -929,12 +924,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPercentEncodedUser(_ newValue: String?) throws {
         try components.setPercentEncodedUser(newValue)
     }
-#endif
+    #endif
 
     /// The password subcomponent, percent-encoded.
     ///
@@ -952,12 +947,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPercentEncodedPassword(_ newValue: String?) throws {
         try components.setPercentEncodedPassword(newValue)
     }
-#endif
+    #endif
 
     /// The host subcomponent, percent-encoded.
     ///
@@ -980,12 +975,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPercentEncodedHost(_ newValue: String?) throws {
         try components.setPercentEncodedHost(newValue)
     }
-#endif
+    #endif
 
     /// The host subcomponent, percent-encoded.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
@@ -1000,12 +995,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setEncodedHost(_ newValue: String?) throws {
         try components.setEncodedHost(newValue)
     }
-#endif
+    #endif
 
     /// The path subcomponent, percent-encoded.
     ///
@@ -1023,12 +1018,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPercentEncodedPath(_ newValue: String) throws {
         try components.setPercentEncodedPath(newValue)
     }
-#endif
+    #endif
 
     /// The query subcomponent, percent-encoded.
     ///
@@ -1046,12 +1041,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPercentEncodedQuery(_ newValue: String?) throws {
         try components.setPercentEncodedQuery(newValue)
     }
-#endif
+    #endif
 
     /// The fragment subcomponent, percent-encoded.
     ///
@@ -1069,12 +1064,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPercentEncodedFragment(_ newValue: String?) throws {
         try components.setPercentEncodedFragment(newValue)
     }
-#endif
+    #endif
 
     /// The character range of the scheme in the ``string`` property.
     ///
@@ -1178,12 +1173,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Throwing function used by `_NSSwiftURLComponents` to generate an exception for ObjC callers
     internal mutating func setPercentEncodedQueryItems(_ newValue: [URLQueryItem]?) throws {
         try components.setPercentEncodedQueryItems(newValue)
     }
-#endif
+    #endif
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(scheme)
@@ -1198,18 +1193,11 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 
     // MARK: - Bridging
 
-    public static func ==(lhs: URLComponents, rhs: URLComponents) -> Bool {
+    public static func == (lhs: URLComponents, rhs: URLComponents) -> Bool {
         return (
             // Check in (estimated) order of most likely to exist, so we fail faster if non-equal.
-            lhs.percentEncodedPath == rhs.percentEncodedPath &&
-            lhs.scheme == rhs.scheme &&
-            lhs.encodedHost == rhs.encodedHost &&
-            lhs.port == rhs.port &&
-            lhs.percentEncodedQuery == rhs.percentEncodedQuery &&
-            lhs.percentEncodedFragment == rhs.percentEncodedFragment &&
-            lhs.percentEncodedUser == rhs.percentEncodedUser &&
-            lhs.percentEncodedPassword == rhs.percentEncodedPassword
-        )
+            lhs.percentEncodedPath == rhs.percentEncodedPath && lhs.scheme == rhs.scheme && lhs.encodedHost == rhs.encodedHost && lhs.port == rhs.port && lhs.percentEncodedQuery == rhs.percentEncodedQuery
+            && lhs.percentEncodedFragment == rhs.percentEncodedFragment && lhs.percentEncodedUser == rhs.percentEncodedUser && lhs.percentEncodedPassword == rhs.percentEncodedPassword)
     }
 }
 
@@ -1331,7 +1319,7 @@ public struct URLQueryItem: Hashable, Equatable, Sendable {
     }
 
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public static func ==(lhs: URLQueryItem, rhs: URLQueryItem) -> Bool {
+    public static func == (lhs: URLQueryItem, rhs: URLQueryItem) -> Bool {
         return lhs.name == rhs.name && lhs.value == rhs.value
     }
 }

@@ -21,13 +21,13 @@ extension Duration {
 
     /// A `FormatStyle` that displays a duration as a list of duration units, such as "2 hours, 43 minutes, 26 seconds" in English.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public struct UnitsFormatStyle : FormatStyle, Sendable {
+    public struct UnitsFormatStyle: FormatStyle, Sendable {
 
         /// Specifies the width of the unit and the spacing of the value and the unit.
-        public struct UnitWidth : Codable, Hashable, Sendable {
+        public struct UnitWidth: Codable, Hashable, Sendable {
             var width: Measurement<UnitDuration>.FormatStyle.UnitWidth
             var patternStyle: UATimeUnitStyle
-            
+
             private init(width: Measurement<UnitDuration>.FormatStyle.UnitWidth, patternStyle: UATimeUnitStyle) {
                 self.width = width
                 self.patternStyle = patternStyle
@@ -44,25 +44,25 @@ extension Duration {
 
             /// Shows the shortest unit name, such as "3h" for a 3-hour duration in the en_US locale.
             public static var narrow: UnitWidth { .init(width: .narrow, patternStyle: UATIMEUNITSTYLE_NARROW) }
-            
+
             private enum CodingKeys: CodingKey {
                 case width
                 case patternStyle
             }
-            
+
             public init(from decoder: any Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self.width = try container.decode(Measurement<UnitDuration>.FormatStyle.UnitWidth.self, forKey: .width)
                 let rawValue = try container.decode(UATimeUnitStyle.RawValue.self, forKey: .patternStyle)
                 self.patternStyle = UATimeUnitStyle(rawValue)
             }
-            
+
             public func encode(to encoder: any Encoder) throws {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self.width, forKey: .width)
                 try container.encode(self.patternStyle.rawValue, forKey: .patternStyle)
             }
-            
+
             public func hash(into hasher: inout Hasher) {
                 hasher.combine(width)
                 hasher.combine(patternStyle.rawValue)
@@ -70,9 +70,9 @@ extension Duration {
         }
 
         /// Units that a duration can be displayed as with `UnitsFormatStyle`.
-        public struct Unit : Codable, Hashable, Sendable {
+        public struct Unit: Codable, Hashable, Sendable {
             // Sorted from largest to smallest
-            enum _Unit : Int, Codable, Hashable, Comparable, CaseIterable {
+            enum _Unit: Int, Codable, Hashable, Comparable, CaseIterable {
                 static func < (lhs: Duration.UnitsFormatStyle.Unit._Unit, rhs: Duration.UnitsFormatStyle.Unit._Unit) -> Bool {
                     // It's more intuitive to represent comparison by the unit duration, i.e. .weeks > .hours
                     // But the raw value is ordered the other way; reverse the comparison
@@ -138,20 +138,20 @@ extension Duration {
         }
 
         /// Specifies how zero value units are handled.
-        public struct ZeroValueUnitsDisplayStrategy : Codable, Hashable, Sendable {
+        public struct ZeroValueUnitsDisplayStrategy: Codable, Hashable, Sendable {
             var length: Int
 
             /// Excludes zero-value units from the formatted string.
             public static var hide: ZeroValueUnitsDisplayStrategy { .init(length: 0) }
 
             /// Displays zero-value units with zero padding to the specified length.
-            public static func show(length: Int) -> ZeroValueUnitsDisplayStrategy { .init(length: length)}
+            public static func show(length: Int) -> ZeroValueUnitsDisplayStrategy { .init(length: length) }
         }
 
         /// Specifies how a duration is displayed if it cannot be represented exactly with the allowed units.
         ///
         /// For example, you can change this option to show a duration of 1 hour and 15 minutes as "1.25 hr", "1 hr", or "1.5 hr" with different lengths and rounding rules when hour is the only allowed unit.
-        public struct FractionalPartDisplayStrategy : Codable, Hashable, Sendable {
+        public struct FractionalPartDisplayStrategy: Codable, Hashable, Sendable {
             public var minimumLength: Int
             public var maximumLength: Int
             public var roundingRule: FloatingPointRoundingRule
@@ -235,7 +235,7 @@ extension Duration {
             self.fractionalPartDisplay = fractionalPart
             if let valueLength, valueLength > 0 {
                 let upperBound = min(Int.max - 1, valueLength)
-                self.valueLengthLimits = upperBound ..< upperBound + 1
+                self.valueLengthLimits = upperBound..<upperBound + 1
             } else {
                 self.valueLengthLimits = nil
             }
@@ -250,7 +250,9 @@ extension Duration {
         ///   - zeroValueUnits: The strategy for how zero-value units are handled.
         ///   - valueLengthLimits: The padding or truncating behavior of the unit value. Values with negative bounds are ignored.
         ///   - fractionalPart: The strategy for displaying a duration if it cannot be represented exactly with the allowed units.
-        public init<ValueRange: RangeExpression>(allowedUnits: Set<Unit>, width: UnitWidth, maximumUnitCount: Int? = nil, zeroValueUnits: ZeroValueUnitsDisplayStrategy = .hide, valueLengthLimits: ValueRange, fractionalPart: FractionalPartDisplayStrategy = .hide) where ValueRange.Bound == Int {
+        public init<ValueRange: RangeExpression>(
+            allowedUnits: Set<Unit>, width: UnitWidth, maximumUnitCount: Int? = nil, zeroValueUnits: ZeroValueUnitsDisplayStrategy = .hide, valueLengthLimits: ValueRange, fractionalPart: FractionalPartDisplayStrategy = .hide
+        ) where ValueRange.Bound == Int {
             self.allowedUnits = allowedUnits
             self.unitWidth = width
             self.maximumUnitCount = maximumUnitCount
@@ -260,7 +262,7 @@ extension Duration {
             if lower == nil && upper == nil {
                 self.valueLengthLimits = nil
             } else {
-                self.valueLengthLimits = (lower ?? 0) ..< (upper ?? Int.max)
+                self.valueLengthLimits = (lower ?? 0)..<(upper ?? Int.max)
             }
 
             self.locale = .autoupdatingCurrent
@@ -315,7 +317,9 @@ extension Duration {
 
         func _getSkeletons(_ duration: Duration) -> [(skeleton: String, measurementUnit: Unit, measurementValue: Double)] {
 
-            let (units, values) = Self.unitsToUse(duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: fractionalPartDisplay.roundingRule, trailingFractionalPartLength: fractionalPartDisplay.maximumLength, roundingIncrement: fractionalPartDisplay.roundingIncrement, dropZeroUnits: zeroValueUnitsDisplay.length <= 0)
+            let (units, values) = Self.unitsToUse(
+                duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: fractionalPartDisplay.roundingRule, trailingFractionalPartLength: fractionalPartDisplay.maximumLength,
+                roundingIncrement: fractionalPartDisplay.roundingIncrement, dropZeroUnits: zeroValueUnitsDisplay.length <= 0)
 
             let numberFormatStyleWithFraction = _createNumberFormatStyle(useFractionalLimitsIfAvailable: true)
             let numberFormatStyleNoFraction = _createNumberFormatStyle(useFractionalLimitsIfAvailable: false)
@@ -408,7 +412,7 @@ extension Duration {
                 // Each of the three pieces provides _two_ placeholders each,
                 // such that we start with two and each replacement adds one
                 // more, so start the loop at 2 as well.
-                for _ in 2 ..< (length - 1) {
+                for _ in 2..<(length - 1) {
                     pattern.replace(lastPlaceholder, with: middle)
                 }
 
@@ -431,7 +435,9 @@ extension Duration {
         }
 
         // Returns the units that are going to show up in the final string, sorted from largest to smallest
-        static func unitsToUse(duration: Duration, allowedUnits: Set<Unit>, maximumUnitCount: Int?, roundSmallerParts: FloatingPointRoundingRule, trailingFractionalPartLength: Int, roundingIncrement: Double?, dropZeroUnits: Bool) -> (units: [Unit], values: [Double]) {
+        static func unitsToUse(duration: Duration, allowedUnits: Set<Unit>, maximumUnitCount: Int?, roundSmallerParts: FloatingPointRoundingRule, trailingFractionalPartLength: Int, roundingIncrement: Double?, dropZeroUnits: Bool) -> (
+            units: [Unit], values: [Double]
+        ) {
 
             var units = allowedUnits.sorted { $0.unit.rawValue < $1.unit.rawValue }
             var values = duration.valuesForUnits(units, trailingFractionalLength: trailingFractionalPartLength, smallestUnitRounding: roundSmallerParts, roundingIncrement: roundingIncrement)
@@ -462,7 +468,7 @@ extension Duration {
                 return (units, values)
             }
 
-            let r = idx ..< min(units.count, idx + maximumUnitCount)
+            let r = idx..<min(units.count, idx + maximumUnitCount)
             let usefulUnits = Array(units[r])
             let usefulValues = duration.valuesForUnits(usefulUnits, trailingFractionalLength: trailingFractionalPartLength, smallestUnitRounding: roundSmallerParts, roundingIncrement: roundingIncrement)
 
@@ -509,7 +515,10 @@ extension FormatStyle where Self == Duration.UnitsFormatStyle {
     ///   - valueLength: The padding or truncating behavior of the unit value.
     ///   - fractionalPart: The strategy for displaying a duration if it cannot be represented exactly with the allowed units.
     /// - Returns: A format style to format a duration.
-    public static func units(allowed units: Set<Duration.UnitsFormatStyle.Unit> = [.hours, .minutes, .seconds], width: Duration.UnitsFormatStyle.UnitWidth = .abbreviated, maximumUnitCount : Int? = nil, zeroValueUnits: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy = .hide, valueLength: Int? = nil, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy = .hide) -> Self {
+    public static func units(
+        allowed units: Set<Duration.UnitsFormatStyle.Unit> = [.hours, .minutes, .seconds], width: Duration.UnitsFormatStyle.UnitWidth = .abbreviated, maximumUnitCount: Int? = nil,
+        zeroValueUnits: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy = .hide, valueLength: Int? = nil, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy = .hide
+    ) -> Self {
         .init(allowedUnits: units, width: width, maximumUnitCount: maximumUnitCount, zeroValueUnits: zeroValueUnits, valueLength: valueLength, fractionalPart: fractionalPart)
     }
 
@@ -522,7 +531,10 @@ extension FormatStyle where Self == Duration.UnitsFormatStyle {
     ///   - valueLengthLimits: The padding or truncating behavior of the unit value.
     ///   - fractionalPart: The strategy for displaying a duration if it cannot be represented exactly with the allowed units.
     /// - Returns: A format style to format a duration.
-    public static func units<ValueRange: RangeExpression>(allowed units: Set<Duration.UnitsFormatStyle.Unit> = [.hours, .minutes, .seconds], width: Duration.UnitsFormatStyle.UnitWidth = .abbreviated, maximumUnitCount : Int? = nil, zeroValueUnits: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy = .hide, valueLengthLimits: ValueRange, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy = .hide) -> Self where ValueRange.Bound == Int {
+    public static func units<ValueRange: RangeExpression>(
+        allowed units: Set<Duration.UnitsFormatStyle.Unit> = [.hours, .minutes, .seconds], width: Duration.UnitsFormatStyle.UnitWidth = .abbreviated, maximumUnitCount: Int? = nil,
+        zeroValueUnits: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy = .hide, valueLengthLimits: ValueRange, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy = .hide
+    ) -> Self where ValueRange.Bound == Int {
         .init(allowedUnits: units, width: width, maximumUnitCount: maximumUnitCount, zeroValueUnits: zeroValueUnits, valueLengthLimits: valueLengthLimits, fractionalPart: fractionalPart)
     }
 }
@@ -549,7 +561,7 @@ extension Duration.UnitsFormatStyle {
     /// ```
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     @dynamicMemberLookup
-    public struct Attributed : FormatStyle, Sendable {
+    public struct Attributed: FormatStyle, Sendable {
 
         var innerStyle: Duration.UnitsFormatStyle
 
@@ -648,7 +660,7 @@ extension Duration.UnitsFormatStyle.Attributed {
 // MARK: DiscreteFormatStyle Conformance
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
+extension Duration.UnitsFormatStyle.Attributed: DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         self.innerStyle.discreteInput(before: input)
     }
@@ -659,7 +671,7 @@ extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
+extension Duration.UnitsFormatStyle: DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         let (bound, isIncluded) = self.bound(for: input, countingDown: true)
 
@@ -677,19 +689,21 @@ extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
         // format `input`. If `forceRoundingToFull` is true, that is because we are
         // rounding `toNearestOr` and we are close to the point where `interval`
         // changes.
-        let (interval, forceRoundingToFull) = interval(for: input,
-                                                       countingDown: countingDown,
-                                                       allowedUnits: self.allowedUnits)
+        let (interval, forceRoundingToFull) = interval(
+            for: input,
+            countingDown: countingDown,
+            allowedUnits: self.allowedUnits)
 
         // Thus, if `forceRoundingToFull` is true, we round `.towardZero`. E.g.
         // if we can only show one unit and we're at -70 seconds, we format that
         // as "1 minute". By rounding `.towardZero`, we get 60 seconds as the
         // `unadjustedBound`, not 30 seconds as we would get for `toNearestOr`
         // rounding.
-        let (unadjustedBound, includedInRangeOfInput) = Duration.bound(for: input,
-                                                                       in: interval,
-                                                                       countingDown: countingDown,
-                                                                       roundingRule: forceRoundingToFull ? .towardZero : self.fractionalPartDisplay.roundingRule)
+        let (unadjustedBound, includedInRangeOfInput) = Duration.bound(
+            for: input,
+            in: interval,
+            countingDown: countingDown,
+            roundingRule: forceRoundingToFull ? .towardZero : self.fractionalPartDisplay.roundingRule)
 
         // If we didn't `forceRoundingToFull`, we're done at this point. However,
         // if we did, we determine the bound again, disallowing the unit that
@@ -697,12 +711,15 @@ extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
         // we get the appropriate bound for the smaller unit, which would be
         // 59.5 seconds in the example, rendered as "59 seconds".
         if forceRoundingToFull {
-            let (bound, includedInRangeOfInput) = Duration.bound(for: unadjustedBound,
-                                                                    in: self.interval(for: unadjustedBound,
-                                                                                      countingDown: countingDown,
-                                                                                      allowedUnits: allowedUnits.filter({ Duration.interval(for: $0) < abs(unadjustedBound) })).duration,
-                                                                    countingDown: countingDown,
-                                                                    roundingRule: self.fractionalPartDisplay.roundingRule)
+            let (bound, includedInRangeOfInput) = Duration.bound(
+                for: unadjustedBound,
+                in: self.interval(
+                    for: unadjustedBound,
+                    countingDown: countingDown,
+                    allowedUnits: allowedUnits.filter({ Duration.interval(for: $0) < abs(unadjustedBound) })
+                ).duration,
+                countingDown: countingDown,
+                roundingRule: self.fractionalPartDisplay.roundingRule)
 
             return (bound, includedInRangeOfInput)
         } else {
@@ -731,19 +748,20 @@ extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
 
             let unitInterval = Duration.interval(for: unit)
 
-            let roundedRemainder = input.rounded(increment: Duration.interval(for: smallestAllowedUnit,
-                                                                       fractionalDigits: self.fractionalPartDisplay.maximumLength,
-                                                                       roundingIncrement: self.fractionalPartDisplay.roundingIncrement),
-                                          rule: self.fractionalPartDisplay.roundingRule)
+            let roundedRemainder = input.rounded(
+                increment: Duration.interval(
+                    for: smallestAllowedUnit,
+                    fractionalDigits: self.fractionalPartDisplay.maximumLength,
+                    roundingIncrement: self.fractionalPartDisplay.roundingIncrement),
+                rule: self.fractionalPartDisplay.roundingRule)
 
             guard unit == smallestAllowedUnit || unitInterval < abs(roundedRemainder) || unitInterval == abs(roundedRemainder) && (remainder < .zero) == countingDown else {
                 continue
             }
 
 
-
             var interval: Duration
-            if unit == smallestAllowedUnit || visibleUnitLimit == 1  {
+            if unit == smallestAllowedUnit || visibleUnitLimit == 1 {
                 interval = Duration.interval(for: unit, fractionalDigits: self.fractionalPartDisplay.maximumLength, roundingIncrement: self.fractionalPartDisplay.roundingIncrement)
             } else {
                 interval = Duration.interval(for: unit)

@@ -22,11 +22,13 @@ import Testing
 @Suite("Locale.Language.Components")
 private struct LocaleLanguageComponentsTests {
 
-    func verifyComponents(_ identifier: String,
-                          expectedLanguageCode: String?,
-                          expectedScriptCode: String?,
-                          expectedRegionCode: String?,
-                          sourceLocation: SourceLocation = #_sourceLocation) {
+    func verifyComponents(
+        _ identifier: String,
+        expectedLanguageCode: String?,
+        expectedScriptCode: String?,
+        expectedRegionCode: String?,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) {
         let comp = Locale.Language.Components(identifier: identifier)
         #expect(comp.languageCode?.identifier == expectedLanguageCode, sourceLocation: sourceLocation)
         #expect(comp.script?.identifier == expectedScriptCode, sourceLocation: sourceLocation)
@@ -60,7 +62,10 @@ private struct LocaleLanguageComponentsTests {
 @Suite("Locale.Language")
 private struct LocaleLanguageTests {
 
-    func verify(_ identifier: String, expectedParent: Locale.Language, minBCP47: String, maxBCP47: String, langCode: Locale.LanguageCode?, script: Locale.Script?, region: Locale.Region?, lineDirection: Locale.LanguageDirection, characterDirection: Locale.LanguageDirection, sourceLocation: SourceLocation = #_sourceLocation) {
+    func verify(
+        _ identifier: String, expectedParent: Locale.Language, minBCP47: String, maxBCP47: String, langCode: Locale.LanguageCode?, script: Locale.Script?, region: Locale.Region?, lineDirection: Locale.LanguageDirection,
+        characterDirection: Locale.LanguageDirection, sourceLocation: SourceLocation = #_sourceLocation
+    ) {
         let lan = Locale.Language(identifier: identifier)
         #expect(lan.parent == expectedParent, "Parents should be equal", sourceLocation: sourceLocation)
         #expect(lan.minimalIdentifier == minBCP47, "minimalIdentifiers should be equal", sourceLocation: sourceLocation)

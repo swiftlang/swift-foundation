@@ -1,13 +1,13 @@
 //===----------------------------------------------------------------------===//
- //
- // This source file is part of the Swift.org open source project
- //
- // Copyright (c) 2022 Apple Inc. and the Swift project authors
- // Licensed under Apache License v2.0 with Runtime Library Exception
- //
- // See https://swift.org/LICENSE.txt for license information
- //
- //===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2022 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+//
+//===----------------------------------------------------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension CocoaError.Code {
@@ -154,7 +154,7 @@ extension CocoaError.Code {
         return CocoaError.Code(rawValue: 3852)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @available(macOS, introduced: 10.10) @available(iOS, introduced: 8.0)
     public static var xpcConnectionInterrupted: CocoaError.Code {
         return CocoaError.Code(rawValue: 4097)
@@ -218,7 +218,7 @@ extension CocoaError.Code {
     public static var coderInvalidValue: CocoaError.Code {
         return CocoaError.Code(rawValue: 4866)
     }
-#endif
+    #endif
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -366,7 +366,7 @@ extension CocoaError {
         return CocoaError.Code(rawValue: 3852)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @available(macOS, introduced: 10.10) @available(iOS, introduced: 8.0)
     public static var xpcConnectionInterrupted: CocoaError.Code {
         return CocoaError.Code(rawValue: 4097)
@@ -430,7 +430,7 @@ extension CocoaError {
     public static var coderInvalidValue: CocoaError.Code {
         return CocoaError.Code(rawValue: 4866)
     }
-#endif
+    #endif
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -461,8 +461,8 @@ extension CocoaError {
     public var isValidationError: Bool {
         return code.rawValue >= 1024 && code.rawValue <= 2047
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     @available(macOS, introduced: 10.10) @available(iOS, introduced: 8.0)
     public var isUbiquitousFileError: Bool {
         return code.rawValue >= 4352 && code.rawValue <= 4607
@@ -477,5 +477,5 @@ extension CocoaError {
     public var isXPCConnectionError: Bool {
         return code.rawValue >= 4096 && code.rawValue <= 4224
     }
-#endif
+    #endif
 }

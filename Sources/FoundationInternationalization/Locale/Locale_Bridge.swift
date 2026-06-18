@@ -22,25 +22,25 @@ internal import Foundation_Private.NSLocale
 /// This is only used in the case where we have custom Objective-C subclasses of `NSLocale`. It is assumed that the subclass is Sendable.
 /// TODO: It is a bit of a TBD if this extra effort to preserve a subclass sent to Swift from ObjC is worth it for `struct Locale`.
 internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
-    
+
     init(identifier: String, prefs: LocalePreferences?) {
         fatalError("Unexpected init")
     }
-    
+
     init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
         fatalError("Unexpected init")
     }
-    
+
     init(components: Locale.Components) {
         fatalError("Unexpected init")
     }
-    
+
     let _wrapped: NSLocale
 
     init(adoptingReference reference: NSLocale) {
         self._wrapped = reference
     }
-    
+
     func bridgeToNSLocale() -> NSLocale {
         return _wrapped.copy() as! NSLocale
     }
@@ -50,20 +50,20 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     }
 
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         // Round trip through Locale.Components
         var comps = Locale.Components(identifier: self.identifier)
         comps.calendar = identifier
         return Locale(components: comps)._locale
-#else
+        #else
         return _LocaleUnlocalized(identifier: identifier.cfCalendarIdentifier)
-#endif
+        #endif
     }
-    
+
     var isBridged: Bool {
         true
     }
-    
+
     // MARK: -
     //
 
@@ -101,7 +101,7 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     func currencyCodeDisplayName(for currencyCode: String) -> String? {
         _wrapped.displayName(forKey: .currencyCode, value: currencyCode)
     }
-    
+
     func currencySymbolDisplayName(for currencySymbol: String) -> String? {
         _wrapped.displayName(forKey: .currencySymbol, value: currencySymbol)
     }
@@ -129,14 +129,14 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
         guard let result = _wrapped.object(forKey: .variantCode) as? String else {
             return nil
         }
-        
+
         if result.isEmpty {
             return nil
         } else {
             return result
         }
     }
-    
+
     var regionCode: String? {
         if let result = _wrapped.object(forKey: .countryCode) as? String {
             if result.isEmpty {
@@ -152,7 +152,7 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     var exemplarCharacterSet: CharacterSet? {
         _wrapped.object(forKey: .exemplarCharacterSet) as? CharacterSet
     }
-    
+
     var calendar: Calendar {
         if let result = _wrapped.object(forKey: .calendar) as? Calendar {
             // NSLocale should not return nil here
@@ -214,23 +214,23 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     var alternateQuotationEndDelimiter: String? {
         _wrapped.object(forKey: .alternateQuotationEndDelimiterKey) as? String
     }
-    
+
     var measurementSystem: Locale.MeasurementSystem {
         LocaleCache.cache.fixed(identifier).measurementSystem
     }
-    
+
     var currency: Locale.Currency? {
         LocaleCache.cache.fixed(identifier).currency
     }
-    
+
     var numberingSystem: Locale.NumberingSystem {
         LocaleCache.cache.fixed(identifier).numberingSystem
     }
-    
+
     var availableNumberingSystems: [Locale.NumberingSystem] {
         LocaleCache.cache.fixed(identifier).availableNumberingSystems
     }
-    
+
     var firstDayOfWeek: Locale.Weekday {
         LocaleCache.cache.fixed(identifier).firstDayOfWeek
     }
@@ -250,31 +250,31 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     func identifier(_ type: Locale.IdentifierType) -> String {
         LocaleCache.cache.fixed(identifier).identifier(type)
     }
-    
+
     var hourCycle: Locale.HourCycle {
         LocaleCache.cache.fixed(identifier).hourCycle
     }
-    
+
     var collation: Locale.Collation {
         LocaleCache.cache.fixed(identifier).collation
     }
-    
+
     var region: Locale.Region? {
         LocaleCache.cache.fixed(identifier).region
     }
-    
+
     var timeZone: TimeZone? {
         LocaleCache.cache.fixed(identifier).timeZone
     }
-    
+
     var subdivision: Locale.Subdivision? {
         LocaleCache.cache.fixed(identifier).subdivision
     }
-    
+
     var variant: Locale.Variant? {
         LocaleCache.cache.fixed(identifier).variant
     }
-    
+
     var temperatureUnit: LocalePreferences.TemperatureUnit {
         LocaleCache.cache.fixed(identifier).temperatureUnit
     }
@@ -282,37 +282,37 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     var forceHourCycle: Locale.HourCycle? {
         nil
     }
-    
+
     func forceFirstWeekday(_ calendar: Calendar.Identifier) -> Locale.Weekday? {
         nil
     }
-    
+
     func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int? {
         nil
     }
-        
+
     var forceMeasurementSystem: Locale.MeasurementSystem? {
         nil
     }
-    
+
     var forceTemperatureUnit: LocalePreferences.TemperatureUnit? {
         nil
     }
 
-#if !NO_FORMATTERS
+    #if !NO_FORMATTERS
     func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
         nil
     }
-#endif
-    
+    #endif
+
     var prefs: LocalePreferences? {
         nil
     }
-    
+
     var identifierCapturingPreferences: String {
         identifier
     }
-    
+
     func pref(for key: String) -> Any? {
         nil
     }

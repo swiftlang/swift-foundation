@@ -61,10 +61,12 @@ import Builtin
 import Darwin
 
 internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointer, _ length: Int) {
-    guard vm_deallocate(
-        _platform_mach_task_self(),
-        vm_address_t(UInt(bitPattern: mem)),
-        vm_size_t(length)) == ERR_SUCCESS else {
+    guard
+        vm_deallocate(
+            _platform_mach_task_self(),
+            vm_address_t(UInt(bitPattern: mem)),
+            vm_size_t(length)) == ERR_SUCCESS
+    else {
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
     }
 }
@@ -96,13 +98,13 @@ import func WinSDK.UnmapViewOfFile
 #endif
 
 internal func __DataInvokeDeallocatorUnmap(_ mem: UnsafeMutableRawPointer, _ length: Int) {
-#if os(Windows)
+    #if os(Windows)
     _ = UnmapViewOfFile(mem)
-#elseif canImport(C)
+    #elseif canImport(C)
     free(mem)
-#else
+    #else
     munmap(mem, length)
-#endif
+    #endif
 }
 
 internal func __DataInvokeDeallocatorFree(_ mem: UnsafeMutableRawPointer, _ length: Int) {
@@ -143,7 +145,7 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
 #if compiler(>=6.2)
 @_addressableForDependencies
 #endif
-public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceableCollection, Sendable, Hashable {
+public struct Data: RandomAccessCollection, MutableCollection, RangeReplaceableCollection, Sendable, Hashable {
     /// A type used to indicate a position in a data's buffer.
     public typealias Index = Int
     /// A type used to indicate a range of positions in a data's buffer.
@@ -156,9 +158,9 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// When creating a `Data` with the no-copy initializer, you may specify a `Data.Deallocator` to customize the behavior of how the backing store is deallocated.
     public enum Deallocator {
         /// Use a virtual memory deallocator.
-#if canImport(Darwin)
+        #if canImport(Darwin)
         case virtualMemory
-#endif // canImport(Darwin)
+        #endif // canImport(Darwin)
 
         /// Use `munmap`.
         case unmap
@@ -172,7 +174,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         /// A custom deallocator.
         case custom((UnsafeMutableRawPointer, Int) -> Void)
 
-        @usableFromInline internal var _deallocator : ((UnsafeMutableRawPointer, Int) -> Void) {
+        @usableFromInline internal var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void) {
             switch self {
             case .unmap:
                 return { __DataInvokeDeallocatorUnmap($0, $1) }
@@ -182,10 +184,10 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
                 return { _, _ in }
             case .custom(let b):
                 return b
-#if canImport(Darwin)
+            #if canImport(Darwin)
             case .virtualMemory:
                 return { __DataInvokeDeallocatorVirtualMemory($0, $1) }
-#endif // canImport(Darwin)
+            #endif // canImport(Darwin)
             }
         }
     }
@@ -386,9 +388,10 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             return
         }
         // Since the sequence is already contiguous, access the underlying raw memory directly.
-        self.init(representation: elements.withUnsafeBytes {
-            _Representation($0)
-        })
+        self.init(
+            representation: elements.withUnsafeBytes {
+                _Representation($0)
+            })
     }
 
     @inline(__always)
@@ -457,7 +460,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         guard endIndex == _representation.count else {
             // We can't trap here. We have to allow an underfilled buffer
             // to emulate the previous implementation.
-            _representation.replaceSubrange(endIndex ..< _representation.endIndex, with: nil, count: 0)
+            _representation.replaceSubrange(endIndex..<_representation.endIndex, with: nil, count: 0)
             return
         }
 
@@ -518,7 +521,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try _representation.withUnsafeBytes(body)
     }
 
-#if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI
     @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -529,7 +532,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     internal func __legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeBytes(body)
     }
-#endif // DATA_LEGACY_ABI
+    #endif // DATA_LEGACY_ABI
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
@@ -575,10 +578,10 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @inline(__always)
     @_alwaysEmitIntoClient
     public func withContiguousStorageIfAvailable<E, ResultType: ~Copyable>(
-      _ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws(E) -> ResultType
+        _ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws(E) -> ResultType
     ) throws(E) -> ResultType? {
         try _representation.withUnsafeBytes { bytes throws(E) in
-          try bytes.withMemoryRebound(to: UInt8.self, body)
+            try bytes.withMemoryRebound(to: UInt8.self, body)
         }
     }
 
@@ -588,7 +591,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try _representation.withUnsafeMutableBytes(body)
     }
 
-#if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI
     @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -599,12 +602,12 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     internal mutating func __legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeMutableBytes(body)
     }
-#endif // DATA_LEGACY_ABI
+    #endif // DATA_LEGACY_ABI
 
     // MARK: -
 
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    internal mutating func _append<SourceType>(_ buffer : UnsafeBufferPointer<SourceType>) {
+    internal mutating func _append<SourceType>(_ buffer: UnsafeBufferPointer<SourceType>) {
         if buffer.isEmpty { return }
         _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
     }
@@ -698,7 +701,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///
     /// - parameter buffer: The buffer of bytes to append. The size is calculated from `SourceType` and `buffer.count`.
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    public mutating func append<SourceType>(_ buffer : UnsafeBufferPointer<SourceType>) {
+    public mutating func append<SourceType>(_ buffer: UnsafeBufferPointer<SourceType>) {
         _append(buffer)
     }
 
@@ -775,7 +778,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         // Copy as much as we can in one shot.
         let underestimatedCount = elements.underestimatedCount
         let originalCount = _representation.count
-        resetBytes(in: self.endIndex ..< self.endIndex + underestimatedCount)
+        resetBytes(in: self.endIndex..<self.endIndex + underestimatedCount)
         var (iter, copiedCount): (S.Iterator, Int) = _representation.withUnsafeMutableBytes { buffer in
             assert(buffer.count == originalCount + underestimatedCount)
             let start = buffer.baseAddress?.advanced(by: originalCount)
@@ -785,7 +788,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         guard copiedCount == underestimatedCount else {
             // We can't trap here. We have to allow an underfilled buffer
             // to emulate the previous implementation.
-            _representation.replaceSubrange(startIndex + originalCount + copiedCount ..< endIndex, with: nil, count: 0)
+            _representation.replaceSubrange(startIndex + originalCount + copiedCount..<endIndex, with: nil, count: 0)
             return
         }
 
@@ -826,7 +829,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @_alwaysEmitIntoClient
     public mutating func insert(_ newElement: UInt8, at i: Index) {
         Swift.withUnsafeBytes(of: newElement) { buffer in
-            _representation.replaceSubrange(i ..< i, with: buffer.baseAddress, count: buffer.count)
+            _representation.replaceSubrange(i..<i, with: buffer.baseAddress, count: buffer.count)
         }
     }
 
@@ -906,8 +909,8 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - parameter subrange: The range in the data to replace.
     /// - parameter newElements: The replacement bytes.
     @inlinable // This is @inlinable as generic and reasonably small.
-    @abi(mutating func replaceSubrange<ByteCollection : Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element)
-    internal mutating func replaceSubrangeSlow<ByteCollection : Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element {
+    @abi(mutating func replaceSubrange<ByteCollection: Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element)
+    internal mutating func replaceSubrangeSlow<ByteCollection: Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element {
         #if FOUNDATION_FRAMEWORK
         // We still check for fast paths here on ABI stable platforms (withContiguousStorageIfAvailable and ContiguousBytes) because older SDKs did not contain always-inline fast paths, so some callers may still be using this ABI entrypoint with values that have fast paths
         // We check withContiguousStorageIfAvailable first because it is cheaper than a protocol conformance check and all Foundation-defined ContiguousBytes-conforming types respond to withContiguousStorageIfAvailable
@@ -1018,7 +1021,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public subscript<R: RangeExpression>(_ rangeExpression: R) -> Data
-        where R.Bound: FixedWidthInteger {
+    where R.Bound: FixedWidthInteger {
         get {
             let lower = R.Bound(startIndex)
             let upper = R.Bound(endIndex)
@@ -1095,7 +1098,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 @available(tvOS, unavailable, introduced: 9.0)
 @available(watchOS, unavailable, introduced: 2.0)
 @available(*, unavailable)
-extension Data.Deallocator : Sendable {}
+extension Data.Deallocator: Sendable {}
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
@@ -1110,7 +1113,7 @@ extension Data {
 extension Data {
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
-    public static func ==(d1 : Data, d2 : Data) -> Bool {
+    public static func == (d1: Data, d2: Data) -> Bool {
         #if DATA_LEGACY_ABI
         // See if both are empty
         switch (d1._representation, d2._representation) {
@@ -1156,7 +1159,7 @@ extension Data {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension Data: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     /// A human-readable description for the data.
     public var description: String {
         return "\(self.count) bytes"
@@ -1172,7 +1175,7 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
         var children: [(label: String?, value: Any)] = []
         children.append((label: "count", value: nBytes))
 
-        self.withUnsafeBytes { (bytes : UnsafeRawBufferPointer) in
+        self.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
             children.append((label: "pointer", value: bytes.baseAddress!))
         }
 
@@ -1181,13 +1184,13 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
             children.append((label: "bytes", value: Array(self)))
         }
 
-        let m = Mirror(self, children:children, displayStyle: Mirror.DisplayStyle.struct)
+        let m = Mirror(self, children: children, displayStyle: Mirror.DisplayStyle.struct)
         return m
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : Codable {
+extension Data: Codable {
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
 
@@ -1197,7 +1200,7 @@ extension Data : Codable {
 
             // Loop only until count, not while !container.isAtEnd, in case count is underestimated (this is misbehavior) and we haven't allocated enough space.
             // We don't want to write past the end of what we allocated.
-            for i in 0 ..< count {
+            for i in 0..<count {
                 let byte = try container.decode(UInt8.self)
                 self[i] = byte
             }

@@ -23,12 +23,12 @@ import Darwin
 //===----------------------------------------------------------------------===//
 
 // This construction allows overall fewer and smaller allocations as the coding path is modified.
-internal enum _CodingPathNode : Sendable {
+internal enum _CodingPathNode: Sendable {
     case root
     indirect case node(CodingKey, _CodingPathNode, depth: Int)
     indirect case indexNode(Int, _CodingPathNode, depth: Int)
 
-    var path : [CodingKey] {
+    var path: [CodingKey] {
         switch self {
         case .root:
             return []
@@ -79,7 +79,7 @@ internal enum _CodingPathNode : Sendable {
 // Shared Key Type
 //===----------------------------------------------------------------------===//
 
-internal enum _CodingKey : CodingKey {
+internal enum _CodingKey: CodingKey {
     case string(String)
     case int(Int)
     case index(Int)
@@ -136,7 +136,7 @@ internal enum _CodingKey : CodingKey {
 //===----------------------------------------------------------------------===//
 
 extension UInt8 {
-    
+
     internal static var _space: UInt8 { UInt8(ascii: " ") }
     internal static var _return: UInt8 { UInt8(ascii: "\r") }
     internal static var _newline: UInt8 { UInt8(ascii: "\n") }
@@ -154,7 +154,7 @@ extension UInt8 {
 
     internal static let _openangle = UInt8(ascii: "<")
     internal static let _closeangle = UInt8(ascii: ">")
-    
+
     internal static var _quote: UInt8 { UInt8(ascii: "\"") }
     internal static var _backslash: UInt8 { UInt8(ascii: "\\") }
     internal static var _forwardslash: UInt8 { UInt8(ascii: "/") }
@@ -177,16 +177,16 @@ extension UInt8 {
     }
 
     internal var isLetter: Bool? {
-        return (0x41 ... 0x5a) ~= self || (0x61 ... 0x7a) ~= self
+        return (0x41...0x5a) ~= self || (0x61...0x7a) ~= self
     }
 }
 
 
-internal var _asciiNumbers: ClosedRange<UInt8> { UInt8(ascii: "0") ... UInt8(ascii: "9") }
-internal var _hexCharsUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "F") }
-internal var _hexCharsLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "f") }
-internal var _allLettersUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "Z") }
-internal var _allLettersLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "z") }
+internal var _asciiNumbers: ClosedRange<UInt8> { UInt8(ascii: "0")...UInt8(ascii: "9") }
+internal var _hexCharsUpper: ClosedRange<UInt8> { UInt8(ascii: "A")...UInt8(ascii: "F") }
+internal var _hexCharsLower: ClosedRange<UInt8> { UInt8(ascii: "a")...UInt8(ascii: "f") }
+internal var _allLettersUpper: ClosedRange<UInt8> { UInt8(ascii: "A")...UInt8(ascii: "Z") }
+internal var _allLettersLower: ClosedRange<UInt8> { UInt8(ascii: "a")...UInt8(ascii: "z") }
 
 extension UInt8 {
     internal var hexDigitValue: UInt8? {
@@ -235,15 +235,15 @@ internal extension Date {
 
     static func daysBeforeMonth(_ month: Int8, year: Int64) -> Int16? {
         switch month {
-        case 1:  return 0
-        case 2:  return 31
-        case 3:  return 59  + (isLeapYear(year) ? 1 : 0)
-        case 4:  return 90  + (isLeapYear(year) ? 1 : 0)
-        case 5:  return 120 + (isLeapYear(year) ? 1 : 0)
-        case 6:  return 151 + (isLeapYear(year) ? 1 : 0)
-        case 7:  return 181 + (isLeapYear(year) ? 1 : 0)
-        case 8:  return 212 + (isLeapYear(year) ? 1 : 0)
-        case 9:  return 243 + (isLeapYear(year) ? 1 : 0)
+        case 1: return 0
+        case 2: return 31
+        case 3: return 59 + (isLeapYear(year) ? 1 : 0)
+        case 4: return 90 + (isLeapYear(year) ? 1 : 0)
+        case 5: return 120 + (isLeapYear(year) ? 1 : 0)
+        case 6: return 151 + (isLeapYear(year) ? 1 : 0)
+        case 7: return 181 + (isLeapYear(year) ? 1 : 0)
+        case 8: return 212 + (isLeapYear(year) ? 1 : 0)
+        case 9: return 243 + (isLeapYear(year) ? 1 : 0)
         case 10: return 273 + (isLeapYear(year) ? 1 : 0)
         case 11: return 304 + (isLeapYear(year) ? 1 : 0)
         case 12: return 334 + (isLeapYear(year) ? 1 : 0)
@@ -251,19 +251,19 @@ internal extension Date {
         default: return nil
         }
     }
-    
+
     static func daysAfterMonth(_ month: Int8, year: Int64) -> Int16 {
         switch month {
-        case 0:  return 365 + (isLeapYear(year) ? 1 : 0)
-        case 1:  return 334 + (isLeapYear(year) ? 1 : 0)
-        case 2:  return 306
-        case 3:  return 275
-        case 4:  return 245
-        case 5:  return 214
-        case 6:  return 184
-        case 7:  return 153
-        case 8:  return 122
-        case 9:  return 92
+        case 0: return 365 + (isLeapYear(year) ? 1 : 0)
+        case 1: return 334 + (isLeapYear(year) ? 1 : 0)
+        case 2: return 306
+        case 3: return 275
+        case 4: return 245
+        case 5: return 214
+        case 6: return 184
+        case 7: return 153
+        case 8: return 122
+        case 9: return 92
         case 10: return 61
         case 11: return 31
         default: return 0
@@ -277,11 +277,11 @@ internal extension Date {
         var result = Double(num400YearChunks) * DAYS_PER_400_YEARS
         let remainingYears = year - num400YearChunks &* 400
         if remainingYears < 0 {
-            for curYear in remainingYears ..< 0 {
+            for curYear in remainingYears..<0 {
                 result -= Double(daysInYear(curYear))
             }
         } else {
-            for curYear in 0 ..< remainingYears {
+            for curYear in 0..<remainingYears {
                 result += Double(daysInYear(curYear))
             }
         }
@@ -305,20 +305,20 @@ internal extension Date {
 
         self = Date(timeIntervalSinceReferenceDate: timeInterval)
     }
-    
+
     // year is absolute year; Gregorian 2001 == year 0; 2001/1/1 = absolute date 0
     private static func gregorianYMD(from absolute: Int64) -> (year: Int64, month: Int8, day: Int8) {
         var absolute = absolute
         let b = absolute / 146097 // take care of as many multiples of 400 years as possible
         var y = b * 400
-        
+
         var ydays: Int64
         absolute -= b * 146097
         while absolute < 0 {
             y -= 1
             absolute += Int64(daysAfterMonth(0, year: y))
         }
-        
+
         // Now absolute is non-negative days to add to year
         ydays = Int64(daysAfterMonth(0, year: y))
         while ydays <= absolute {
@@ -326,17 +326,17 @@ internal extension Date {
             absolute -= ydays
             ydays = Int64(daysAfterMonth(0, year: y))
         }
-        
+
         // Now we have year and days-into-year
         var m = Int8(absolute / 33 + 1) //search from the approximation
-        
+
         // Calculations above should guarantee that 0 <= absolute < 365, meaning 1 <= m <= 12. However, m+1 may well become out of bounds.
         while let dbm = daysBeforeMonth(m + 1, year: y), dbm < absolute {
             m &+= 1
         }
-        
+
         let d = Int8(absolute - Int64(daysBeforeMonth(m, year: y)!) + 1)
-        
+
         return (y, m, d)
     }
 }
@@ -348,9 +348,10 @@ internal extension Date {
 //===----------------------------------------------------------------------===//
 
 internal
-func _parseIntegerDigits<Result: FixedWidthInteger>(
-    _ codeUnits: BufferView<UInt8>, isNegative: Bool
-) -> Result? {
+    func _parseIntegerDigits<Result: FixedWidthInteger>(
+        _ codeUnits: BufferView<UInt8>, isNegative: Bool
+    ) -> Result?
+{
     guard _fastPath(!codeUnits.isEmpty) else { return nil }
 
     // ASCII constants, named for clarity:
@@ -371,18 +372,20 @@ func _parseIntegerDigits<Result: FixedWidthInteger>(
         let overflow1: Bool
         (result, overflow1) = result.multipliedReportingOverflow(by: multiplicand)
         let overflow2: Bool
-        (result, overflow2) = isNegative
-        ? result.subtractingReportingOverflow(digitValue)
-        : result.addingReportingOverflow(digitValue)
+        (result, overflow2) =
+            isNegative
+            ? result.subtractingReportingOverflow(digitValue)
+            : result.addingReportingOverflow(digitValue)
         guard _fastPath(!overflow1 && !overflow2) else { return nil }
     }
     return result
 }
 
 internal
-func _parseHexIntegerDigits<Result: FixedWidthInteger>(
-    _ codeUnits: BufferView<UInt8>, isNegative: Bool
-) -> Result? {
+    func _parseHexIntegerDigits<Result: FixedWidthInteger>(
+        _ codeUnits: BufferView<UInt8>, isNegative: Bool
+    ) -> Result?
+{
     guard _fastPath(!codeUnits.isEmpty) else { return nil }
 
     // ASCII constants, named for clarity:
@@ -409,9 +412,10 @@ func _parseHexIntegerDigits<Result: FixedWidthInteger>(
         let overflow1: Bool
         (result, overflow1) = result.multipliedReportingOverflow(by: multiplicand)
         let overflow2: Bool
-        (result, overflow2) = isNegative
-        ? result.subtractingReportingOverflow(digitValue)
-        : result.addingReportingOverflow(digitValue)
+        (result, overflow2) =
+            isNegative
+            ? result.subtractingReportingOverflow(digitValue)
+            : result.addingReportingOverflow(digitValue)
         guard _fastPath(!overflow1 && !overflow2) else { return nil }
     }
     return result
@@ -422,7 +426,8 @@ func _parseHexIntegerDigits<Result: FixedWidthInteger>(
 //===----------------------------------------------------------------------===//
 
 internal
-extension DecodingError {
+    extension DecodingError
+{
     static func _dataCorrupted(_ debugDescription: String, for node: _CodingPathNode, _ additionalKey: (some CodingKey)?) -> Self {
         Self.dataCorrupted(.init(codingPath: node.path(byAppending: additionalKey), debugDescription: debugDescription))
     }
@@ -493,7 +498,7 @@ struct BufferReader {
         self.readIndex = bytes.startIndex
         self.endIndex = bytes.endIndex
     }
-    
+
     @inline(__always)
     init(bytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) {
         self.fullBuffer = fullSource
@@ -503,7 +508,7 @@ struct BufferReader {
     }
 
     @inline(__always)
-    var isAtEnd : Bool {
+    var isAtEnd: Bool {
         readIndex == endIndex
     }
 
@@ -516,12 +521,12 @@ struct BufferReader {
     func index(offset: Int) -> BufferViewIndex<UInt8> {
         readIndex.advanced(by: offset)
     }
-    
+
     @inline(__always)
     func byteOffset(at index: BufferViewIndex<UInt8>) -> Int {
         fullBuffer.distance(from: fullBuffer.startIndex, to: index)
     }
-    
+
     @inline(__always)
     mutating func read() -> UInt8? {
         guard !isAtEnd else {
@@ -531,27 +536,33 @@ struct BufferReader {
         defer { fullBuffer.formIndex(after: &readIndex) }
         return fullBuffer[unchecked: readIndex]
     }
-    
+
     @inline(__always)
     func peek() -> UInt8? {
         hasBytes(1) ? remainingBuffer[unchecked: readIndex] : nil
     }
-    
+
     @_disfavoredOverload
     @inline(__always)
     func peek() -> (UInt8, UInt8)? {
         let buf = remainingBuffer
-        return hasBytes(2) ? (buf[uncheckedOffset: 0],
-                              buf[uncheckedOffset: 1]) : nil
+        return hasBytes(2)
+            ? (
+                buf[uncheckedOffset: 0],
+                buf[uncheckedOffset: 1]
+            ) : nil
     }
-    
+
     @_disfavoredOverload
     @inline(__always)
     func peek() -> (UInt8, UInt8, UInt8)? {
         let buf = remainingBuffer
-        return hasBytes(3) ? (buf[uncheckedOffset: 0],
-                              buf[uncheckedOffset: 1],
-                              buf[uncheckedOffset: 2]) : nil
+        return hasBytes(3)
+            ? (
+                buf[uncheckedOffset: 0],
+                buf[uncheckedOffset: 1],
+                buf[uncheckedOffset: 2]
+            ) : nil
     }
 
     @inline(__always)
@@ -563,7 +574,7 @@ struct BufferReader {
     mutating func advance(_ amt: Int = 1) {
         advance(&readIndex, by: amt)
     }
-    
+
     @inline(__always)
     func advance(_ idx: inout BufferViewIndex<UInt8>, by amt: Int = 1) {
         fullBuffer.formIndex(&idx, offsetBy: amt)
@@ -582,16 +593,16 @@ struct BufferReader {
     }
 
     @inline(__always)
-    var bytes : BufferView<UInt8> {
+    var bytes: BufferView<UInt8> {
         fullBuffer[startIndex..<self.endIndex]
     }
 
     @inline(__always)
-    var remainingBuffer : BufferView<UInt8> {
+    var remainingBuffer: BufferView<UInt8> {
         fullBuffer[self.readIndex..<self.endIndex]
     }
 
-    var lineNumber : Int {
+    var lineNumber: Int {
         assert(readIndex <= endIndex)
 
         var count = 1
@@ -647,28 +658,30 @@ private func _decodeUTF8(_ x: UInt8, _ y: UInt8) -> Unicode.Scalar? {
 
 @inline(__always)
 private func _decodeUTF8(
-  _ x: UInt8, _ y: UInt8, _ z: UInt8
+    _ x: UInt8, _ y: UInt8, _ z: UInt8
 ) -> Unicode.Scalar? {
     assert(_utf8ScalarLength(x) == 3)
     guard UTF8.isContinuation(y), UTF8.isContinuation(z) else { return nil }
     let x = UInt32(x)
-    let value = ((x & 0b0000_1111) &<< 12)
-    | (_continuationPayload(y) &<< 6)
-    | _continuationPayload(z)
+    let value =
+        ((x & 0b0000_1111) &<< 12)
+        | (_continuationPayload(y) &<< 6)
+        | _continuationPayload(z)
     return Unicode.Scalar(value).unsafelyUnwrapped
 }
 
 @inline(__always)
 private func _decodeUTF8(
-  _ x: UInt8, _ y: UInt8, _ z: UInt8, _ w: UInt8
+    _ x: UInt8, _ y: UInt8, _ z: UInt8, _ w: UInt8
 ) -> Unicode.Scalar? {
     assert(_utf8ScalarLength(x) == 4)
     guard UTF8.isContinuation(y), UTF8.isContinuation(z), UTF8.isContinuation(w) else { return nil }
     let x = UInt32(x)
-    let value = ((x & 0b0000_1111) &<< 18)
-    | (_continuationPayload(y) &<< 12)
-    | (_continuationPayload(z) &<< 6)
-    | _continuationPayload(w)
+    let value =
+        ((x & 0b0000_1111) &<< 18)
+        | (_continuationPayload(y) &<< 12)
+        | (_continuationPayload(z) &<< 6)
+        | _continuationPayload(w)
     return Unicode.Scalar(value).unsafelyUnwrapped
 }
 
@@ -694,7 +707,7 @@ extension BufferView where Element == UInt8 {
 // Non-RawRepresentable Codable enum cases with the same number and labels of associated values all share equivalent CodingKeys, but the compiler-synthesized implementation generates a new type for each case.
 // Each of these types has their own set of `metadata instantiation cache for protocol conformance descriptor` symbols for each of 5 protocol conformances which consumes DATA space.
 // Instead of using the synthesized CodingKey types, you can make a `private typealias <CaseName>CodingKeys = <one of these types>` inside the Codable enum to reduce the amount of redundant DATA.
-package enum EmptyCodingKeys: CodingKey { }
+package enum EmptyCodingKeys: CodingKey {}
 package enum DefaultAssociatedValueCodingKeys1: String, CodingKey {
     case _0
 }

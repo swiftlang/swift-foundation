@@ -43,26 +43,26 @@ fileprivate class PredicateTestObject3 {
     private let firstValue: Bool
     private let secondValue: Bool
     private let thirdValue: Bool
-    
+
     private(set) var firstAccessed = false
     private(set) var secondAccessed = false
     private(set) var thirdAccessed = false
-    
+
     var first: Bool {
         firstAccessed = true
         return firstValue
     }
-    
+
     var second: Bool {
         secondAccessed = true
         return secondValue
     }
-    
+
     var third: Bool {
         thirdAccessed = true
         return thirdValue
     }
-    
+
     init(first: Bool, second: Bool, third: Bool) {
         self.firstValue = first
         self.secondValue = second
@@ -75,7 +75,7 @@ fileprivate protocol PredicateProducer {
     func getPredicate() -> Predicate<Self>
 }
 
-fileprivate struct PredicateProducerConformer : PredicateProducer {
+fileprivate struct PredicateProducerConformer: PredicateProducer {
     let prop = 2
 }
 
@@ -89,7 +89,7 @@ extension PredicateProducer {
 private struct PredicateTests {
     typealias Object = PredicateTestObject
     typealias Object2 = PredicateTestObject2
-    
+
     @Test func basic() throws {
         let compareTo = 2
         let predicate = #Predicate<Object> {
@@ -98,21 +98,21 @@ private struct PredicateTests {
         #expect(try !predicate.evaluate(Object(a: 1, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
         #expect(try predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
-    
+
     @Test func variadic() throws {
         let predicate = #Predicate<Object, Int> {
             $0.a == $1 + 1
         }
         #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), 2))
     }
-    
+
     @Test func arithmetic() throws {
         let predicate = #Predicate<Object> {
             $0.a + 2 == 4
         }
         #expect(try predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
-    
+
     @Test func division() throws {
         let predicate = #Predicate<Object> {
             $0.a / 2 == 3
@@ -123,21 +123,21 @@ private struct PredicateTests {
         #expect(try predicate.evaluate(Object(a: 6, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
         #expect(try predicate2.evaluate(Object(a: 2, b: "", c: 6.0, d: 0, e: "c", f: true, g: [])))
     }
-    
+
     @Test func unaryMinus() throws {
         let predicate = #Predicate<Object> {
             -$0.a == 17
         }
         #expect(try predicate.evaluate(Object(a: -17, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
-    
+
     @Test func count() throws {
         let predicate = #Predicate<Object> {
             $0.g.count == 5
         }
         #expect(try predicate.evaluate(Object(a: 0, b: "", c: 0, d: 0, e: "c", f: true, g: [2, 3, 5, 7, 11])))
     }
-    
+
     @Test func filter() throws {
         let predicate = #Predicate<Object> { object in
             !object.g.filter {
@@ -146,14 +146,14 @@ private struct PredicateTests {
         }
         #expect(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 17, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
     }
-    
+
     @Test func contains() throws {
         let predicate = #Predicate<Object> {
             $0.g.contains($0.a)
         }
         #expect(try predicate.evaluate(Object(a: 13, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3, 5, 11, 13, 17])))
     }
-    
+
     @Test func containsWhere() throws {
         let predicate = #Predicate<Object> { object in
             object.g.contains {
@@ -162,7 +162,7 @@ private struct PredicateTests {
         }
         #expect(try predicate.evaluate(Object(a: 2, b: "", c: 0.0, d: 0, e: "c", f: true, g: [3, 5, 7, 2, 11, 13])))
     }
-    
+
     @Test func allSatisfy() throws {
         let predicate = #Predicate<Object> { object in
             object.g.allSatisfy {
@@ -171,7 +171,7 @@ private struct PredicateTests {
         }
         #expect(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 2, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
     }
-    
+
     @Test func optional() throws {
         struct Wrapper<T> {
             let wrapped: T?
@@ -188,54 +188,54 @@ private struct PredicateTests {
         #expect(throws: (any Error).self) {
             try predicate2.evaluate(Wrapper<Int>(wrapped: nil))
         }
-        
-        struct _NonCodableType : Equatable {}
+
+        struct _NonCodableType: Equatable {}
         let predicate3 = #Predicate<Wrapper<_NonCodableType>> {
             $0.wrapped == nil
         }
         #expect(try !predicate3.evaluate(Wrapper(wrapped: _NonCodableType())))
         #expect(try predicate3.evaluate(Wrapper(wrapped: nil)))
     }
-    
+
     @Test func conditional() throws {
         let predicate = #Predicate<Bool, String, String> {
             ($0 ? $1 : $2) == "if branch"
         }
         #expect(try predicate.evaluate(true, "if branch", "else branch"))
     }
-    
+
     @Test func closedRange() throws {
         let predicate = #Predicate<Object> {
             (3...5).contains($0.a)
         }
         let predicate2 = #Predicate<Object> {
-            ($0.a ... $0.d).contains(4)
+            ($0.a...$0.d).contains(4)
         }
         #expect(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         #expect(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
-    
+
     @Test func range() throws {
         let predicate = #Predicate<Object> {
-            (3 ..< 5).contains($0.a)
+            (3..<5).contains($0.a)
         }
         let toMatch = 4
         let predicate2 = #Predicate<Object> {
-            ($0.a ..< $0.d).contains(toMatch)
+            ($0.a..<$0.d).contains(toMatch)
         }
         #expect(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         #expect(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
-    
+
     @Test func rangeContains() throws {
         let date = Date.distantPast
         let predicate = #Predicate<Object> {
-            (date ..< date).contains($0.h)
+            (date..<date).contains($0.h)
         }
-        
+
         #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
-    
+
     @Test func types() throws {
         let predicate = #Predicate<Object> {
             ($0.i as? Int).flatMap { $0 == 3 } ?? false
@@ -246,22 +246,22 @@ private struct PredicateTests {
         #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         #expect(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
-    
+
     @Test func subscripts() throws {
         var predicate = #Predicate<Object> {
             $0.g[0] == 0
         }
-        
+
         #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
         #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1])))
         #expect(throws: (any Error).self) {
             try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: []))
         }
-        
+
         predicate = #Predicate<Object> {
-            $0.g[0 ..< 2].isEmpty
+            $0.g[0..<2].isEmpty
         }
-        
+
         #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1, 2])))
         #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1])))
         #expect(throws: (any Error).self) {
@@ -271,46 +271,46 @@ private struct PredicateTests {
             try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: []))
         }
     }
-    
+
     @Test func lazyDefaultValueSubscript() throws {
-        struct Foo : Codable, Sendable {
+        struct Foo: Codable, Sendable {
             var property: Int {
                 fatalError("This property should not have been accessed")
             }
         }
-        
+
         let foo = Foo()
-        let predicate = #Predicate<[String : Int]> {
+        let predicate = #Predicate<[String: Int]> {
             $0["key", default: foo.property] == 1
         }
-        #expect(try !predicate.evaluate(["key" : 2]))
+        #expect(try !predicate.evaluate(["key": 2]))
     }
-    
+
     @Test func staticValues() throws {
         func assertPredicate<T>(_ pred: Predicate<T>, value: T, expected: Bool, sourceLocation: SourceLocation = #_sourceLocation) throws {
             #expect(try pred.evaluate(value) == expected, sourceLocation: sourceLocation)
         }
-        
+
         try assertPredicate(.true, value: "Hello", expected: true)
         try assertPredicate(.false, value: "Hello", expected: false)
     }
-    
+
     @Test func maxMin() throws {
         var predicate = #Predicate<Object> {
             $0.g.max() == 2
         }
         #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 2])))
-        
+
         predicate = #Predicate<Object> {
             $0.g.min() == 2
         }
         #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3])))
     }
-    
+
     #if FOUNDATION_FRAMEWORK
-    
+
     @Test func caseInsensitiveCompare() throws {
         let equal = ComparisonResult.orderedSame
         let predicate = #Predicate<Object> {
@@ -319,9 +319,9 @@ private struct PredicateTests {
         #expect(try predicate.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         #expect(try !predicate.evaluate(Object(a: 3, b: "def", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
     }
-    
+
     #endif
-    
+
     @Test func buildDynamically() throws {
         func _build(_ equal: Bool) -> Predicate<Int> {
             Predicate<Int> {
@@ -338,39 +338,39 @@ private struct PredicateTests {
                 }
             }
         }
-        
+
         #expect(try _build(true).evaluate(1))
         #expect(try !_build(false).evaluate(1))
     }
-    
+
     @Test func resilientKeyPaths() {
         // Local, non-resilient type
         struct Foo {
-            let a: String   // Non-resilient
-            let b: Date     // Resilient (in Foundation)
-            let c: String   // Non-resilient
+            let a: String // Non-resilient
+            let b: Date // Resilient (in Foundation)
+            let c: String // Non-resilient
         }
-        
+
         let now = Date.now
         let _ = #Predicate<Foo> {
             $0.a == $0.c && $0.b == now
         }
     }
-    
+
     @Test func finalKeyPaths() {
         final class Foo {
             var id: Int = 1
         }
         _ = #Predicate<Foo> { $0.id == 2 }
     }
-    
+
     @Test func genericKeyPaths() {
         let obj = PredicateProducerConformer()
         // Ensure forming a predicate to a generic type does not cause crashes when validating keypaths
         _ = obj.getPredicate()
     }
-    
-#if FOUNDATION_EXIT_TESTS
+
+    #if FOUNDATION_EXIT_TESTS
     @Test func unsupportedKeyPaths() async {
         struct Sample {
             let stored: Sample2
@@ -380,15 +380,15 @@ private struct PredicateTests {
                 set { fatalError() }
             }
             var optional: Sample2? { fatalError() }
-            
+
             subscript(_ arg: Int) -> Sample2 { fatalError() }
             subscript() -> Sample2 { fatalError() }
         }
-        
+
         struct Sample2 {
             var prop: Int
         }
-        
+
         // multiple components
         await #expect(processExitsWith: .failure) {
             _ = PredicateExpressions.KeyPath(
@@ -420,7 +420,7 @@ private struct PredicateTests {
                 keyPath: \Sample.[1].prop
             )
         }
-        
+
         // subscripts with arguments
         // This keypath is currently allow but should be considered invalid (https://github.com/swiftlang/swift-foundation/issues/1482)
         #if false
@@ -431,7 +431,7 @@ private struct PredicateTests {
             )
         }
         #endif
-        
+
         // Optional chaining
         await #expect(processExitsWith: .failure) {
             _ = PredicateExpressions.KeyPath(
@@ -451,7 +451,7 @@ private struct PredicateTests {
                 keyPath: \Sample?.?.stored
             )
         }
-        
+
         // Force unwrapping
         await #expect(processExitsWith: .failure) {
             _ = PredicateExpressions.KeyPath(
@@ -472,7 +472,7 @@ private struct PredicateTests {
             )
         }
     }
-#endif
+    #endif
 
     @Test
     func regex() throws {
@@ -488,7 +488,7 @@ private struct PredicateTests {
         #expect(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
         #expect(try !predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
     }
-    
+
     #if canImport(RegexBuilder)
     @Test
     func regex_RegexBuilder() throws {
@@ -508,7 +508,7 @@ private struct PredicateTests {
         #expect(try !predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
     }
     #endif
-    
+
     @Test
     func debugDescription() throws {
         let date = Date.now
@@ -519,27 +519,26 @@ private struct PredicateTests {
                 $0.h == date
             }
         }
-        
+
         let dateName = _typeName(Date.self)
         let objectName = _typeName(Object.self)
         #expect(
-            predicate.description ==
-            """
-            capture1 (Swift.Int): 3
-            capture2 (\(dateName)): <Date \(date.timeIntervalSince1970)>
-            Predicate<\(objectName)> { input1 in
-                (input1.i as? Swift.Int).flatMap({ variable1 in
-                    variable1 == capture1
-                }) ?? (input1.h == capture2)
-            }
-            """
+            predicate.description == """
+                capture1 (Swift.Int): 3
+                capture2 (\(dateName)): <Date \(date.timeIntervalSince1970)>
+                Predicate<\(objectName)> { input1 in
+                    (input1.i as? Swift.Int).flatMap({ variable1 in
+                        variable1 == capture1
+                    }) ?? (input1.h == capture2)
+                }
+                """
         )
-        
+
         let debugDescription = predicate.debugDescription.replacing(#/Variable\([0-9]+\)/#, with: "Variable(#)")
         let predicateName = _typeName(Predicate<Object>.self)
         #expect(
-            debugDescription ==
-            "\(predicateName)(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.h), rhs: Value<\(dateName)>(\(date.debugDescription)))))"
+            debugDescription
+                == "\(predicateName)(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.h), rhs: Value<\(dateName)>(\(date.debugDescription)))))"
         )
     }
 
@@ -561,17 +560,17 @@ private struct PredicateTests {
         #expect(try !predicateB.evaluate(Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
     }
     #endif
-    
+
     @Test
     func expression() throws {
         let expression = #Expression<Int, Int> {
             $0 + 1
         }
-        for i in 0 ..< 10 {
+        for i in 0..<10 {
             #expect(try expression.evaluate(i) == i + 1)
         }
     }
-    
+
     #if FOUNDATION_FRAMEWORK
     @Test func all() throws {
         #expect(try Predicate(all: []).evaluate(42))
@@ -585,7 +584,7 @@ private struct PredicateTests {
             #Predicate { $0.d % 2 != 0 },
             #Predicate { !$0.f },
             #Predicate { $0.g.contains(42) },
-            #Predicate { $0.g.min() == 0 }
+            #Predicate { $0.g.min() == 0 },
         ]
         #expect(try Predicate(all: predicates).evaluate(input))
         predicates.append(#Predicate { $0.g.max() == 7 })
@@ -593,33 +592,33 @@ private struct PredicateTests {
         predicates.append(#Predicate { $0.c < 0.0 })
         #expect(try !Predicate(all: predicates).evaluate(input))
     }
-    
+
     @Test func allShortCircuitEvaluation() throws {
         let predicates: [Predicate<PredicateTestObject3>] = [
             #Predicate { $0.first },
             #Predicate { $0.second },
-            #Predicate { $0.third }
+            #Predicate { $0.third },
         ]
-        
+
         let input1 = PredicateTestObject3(first: false, second: true, third: true)
         #expect(try !Predicate(all: predicates).evaluate(input1))
         #expect(input1.firstAccessed)
         #expect(!input1.secondAccessed)
         #expect(!input1.thirdAccessed)
-        
+
         let input2 = PredicateTestObject3(first: true, second: false, third: true)
         #expect(try !Predicate(all: predicates).evaluate(input2))
         #expect(input2.firstAccessed)
         #expect(input2.secondAccessed)
         #expect(!input2.thirdAccessed)
-        
+
         let input3 = PredicateTestObject3(first: true, second: true, third: true)
         #expect(try Predicate(all: predicates).evaluate(input3))
         #expect(input3.firstAccessed)
         #expect(input3.secondAccessed)
         #expect(input3.thirdAccessed)
     }
-    
+
     @Test func any() throws {
         #expect(try !Predicate(any: []).evaluate(42))
         #expect(try Predicate(any: [Predicate.true, Predicate.false]).evaluate(42))
@@ -629,33 +628,33 @@ private struct PredicateTests {
             #Predicate { $0.c < 0.0 },
             #Predicate { $0.a == 6 },
             #Predicate { $0.b == "xyz" },
-            #Predicate { $0.c < 0.3 }
+            #Predicate { $0.c < 0.3 },
         ]
         #expect(try Predicate(any: predicates.dropLast()).evaluate(input))
         #expect(try Predicate(any: predicates.dropLast(2)).evaluate(input))
         #expect(try !Predicate(any: predicates.dropLast(3)).evaluate(input))
         #expect(try !Predicate(any: predicates.dropLast(4)).evaluate(input))
     }
-    
+
     @Test func anyShortCircuitEvaluation() throws {
         let predicates: [Predicate<PredicateTestObject3>] = [
             #Predicate { $0.first },
             #Predicate { $0.second },
-            #Predicate { $0.third }
+            #Predicate { $0.third },
         ]
-        
+
         let input1 = PredicateTestObject3(first: true, second: false, third: false)
         #expect(try Predicate(any: predicates).evaluate(input1))
         #expect(input1.firstAccessed)
         #expect(!input1.secondAccessed)
         #expect(!input1.thirdAccessed)
-        
+
         let input2 = PredicateTestObject3(first: false, second: true, third: false)
         #expect(try Predicate(any: predicates).evaluate(input2))
         #expect(input2.firstAccessed)
         #expect(input2.secondAccessed)
         #expect(!input2.thirdAccessed)
-        
+
         let input3 = PredicateTestObject3(first: false, second: false, third: false)
         #expect(try !Predicate(any: predicates).evaluate(input3))
         #expect(input3.firstAccessed)

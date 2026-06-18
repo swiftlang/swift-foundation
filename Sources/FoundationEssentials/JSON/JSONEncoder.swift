@@ -58,7 +58,7 @@ open class JSONEncoder {
     // MARK: Options
 
     /// The output formatting options that determine the readability, size, and element order of an encoded JSON object.
-    public struct OutputFormatting : OptionSet, Sendable {
+    public struct OutputFormatting: OptionSet, Sendable {
         /// The format's default value.
         public let rawValue: UInt
 
@@ -72,7 +72,7 @@ open class JSONEncoder {
 
         /// The output formatting option that sorts keys in lexicographic order.
         @available(macOS 10.13, iOS 11.0, watchOS 4.0, tvOS 11.0, *)
-        public static let sortedKeys    = OutputFormatting(rawValue: 1 << 1)
+        public static let sortedKeys = OutputFormatting(rawValue: 1 << 1)
 
         /// The output formatting option specifies that the output doesn't prefix slash characters with escape characters.
         ///
@@ -86,7 +86,7 @@ open class JSONEncoder {
 
     #if !NO_JSON_FOUNDATION_SPECIALIZATION
     /// The formatting strategies available for formatting dates when encoding a date as JSON.
-    public enum DateEncodingStrategy : Sendable {
+    public enum DateEncodingStrategy: Sendable {
         /// The strategy that uses formatting from the Date structure.
         case deferredToDate
 
@@ -100,10 +100,10 @@ open class JSONEncoder {
         @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
         case iso8601
 
-#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
+        #if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         /// The strategy that defers formatting settings to a supplied date formatter.
         case formatted(DateFormatter)
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
 
         /// The strategy that formats custom dates by calling a user-defined function.
         ///
@@ -114,7 +114,7 @@ open class JSONEncoder {
     #endif
 
     /// The strategies for encoding raw data.
-    public enum DataEncodingStrategy : Sendable {
+    public enum DataEncodingStrategy: Sendable {
         /// The strategy that encodes data using the encoding specified by the data instance itself.
         case deferredToData
 
@@ -131,7 +131,7 @@ open class JSONEncoder {
     /// The strategies for encoding nonconforming floating-point numbers, also known as IEEE 754 exceptional values.
     ///
     /// The IEEE 754 floating-point specification defines exceptional values, which include <doc://com.apple.documentation/documentation/swift/floatingpoint/infinity> and <doc://com.apple.documentation/documentation/swift/floatingpoint/nan>.
-    public enum NonConformingFloatEncodingStrategy : Sendable {
+    public enum NonConformingFloatEncodingStrategy: Sendable {
         /// The strategy that throws an error upon encoding an exceptional floating-point value. This is the default strategy.
         case `throw`
 
@@ -143,7 +143,7 @@ open class JSONEncoder {
     ///
     /// > Note:
     /// > Key encoding strategies other than ``useDefaultKeys`` may have a noticeable performance cost because those strategies may inspect and transform each key.
-    public enum KeyEncodingStrategy : Sendable {
+    public enum KeyEncodingStrategy: Sendable {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
 
@@ -175,7 +175,7 @@ open class JSONEncoder {
         fileprivate static func _convertToSnakeCase(_ stringKey: String) -> String {
             guard !stringKey.isEmpty else { return stringKey }
 
-            var words : [Range<String.Index>] = []
+            var words: [Range<String.Index>] = []
             // The general idea of this algorithm is to split words on transition from lower to upper case, then on transition of >1 upper case characters to lowercase
             //
             // myProperty -> my_property
@@ -352,7 +352,7 @@ open class JSONEncoder {
 
     /// A dictionary you use to customize the encoding process by providing contextual information.
     @preconcurrency
-    open var userInfo: [CodingUserInfoKey : any Sendable] {
+    open var userInfo: [CodingUserInfoKey: any Sendable] {
         get {
             optionsLock._unsafeLock()
             defer { optionsLock._unsafeUnlock() }
@@ -383,7 +383,7 @@ open class JSONEncoder {
         var dataEncodingStrategy: DataEncodingStrategy = .base64
         var nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy = .throw
         var keyEncodingStrategy: KeyEncodingStrategy = .useDefaultKeys
-        var userInfo: [CodingUserInfoKey : any Sendable] = [:]
+        var userInfo: [CodingUserInfoKey: any Sendable] = [:]
     }
 
     /// The options set on the top-level encoder.
@@ -404,30 +404,33 @@ open class JSONEncoder {
     /// - returns: A new `Data` value containing the encoded JSON data.
     /// - throws: `EncodingError.invalidValue` if a non-conforming floating-point value is encountered during encoding, and the encoding strategy is `.throw`.
     /// - throws: An error if any value throws an error during encoding.
-    open func encode<T : Encodable>(_ value: T) throws -> Data {
-        try _encode({
-            try $0.wrapGeneric(value)
-        }, value: value)
+    open func encode<T: Encodable>(_ value: T) throws -> Data {
+        try _encode(
+            {
+                try $0.wrapGeneric(value)
+            }, value: value)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func encode<T : EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
-        try _encode({
-            try $0.wrapGeneric(value, configuration: configuration)
-        }, value: value)
+    open func encode<T: EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
+        try _encode(
+            {
+                try $0.wrapGeneric(value, configuration: configuration)
+            }, value: value)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func encode<T, C>(_ value: T, configuration: C.Type) throws -> Data where T : EncodableWithConfiguration, C : EncodingConfigurationProviding, T.EncodingConfiguration == C.EncodingConfiguration {
+    open func encode<T, C>(_ value: T, configuration: C.Type) throws -> Data where T: EncodableWithConfiguration, C: EncodingConfigurationProviding, T.EncodingConfiguration == C.EncodingConfiguration {
         try encode(value, configuration: C.encodingConfiguration)
     }
-    
+
     private func _encode<T>(_ wrap: (__JSONEncoder) throws -> JSONEncoderValue?, value: T) throws -> Data {
         let encoder = __JSONEncoder(options: self.options, ownerEncoder: nil)
 
         guard let topLevel = try wrap(encoder) else {
-            throw EncodingError.invalidValue(value,
-                                             EncodingError.Context(codingPath: [], debugDescription: "Top-level \(T.self) did not encode any values."))
+            throw EncodingError.invalidValue(
+                value,
+                EncodingError.Context(codingPath: [], debugDescription: "Top-level \(T.self) did not encode any values."))
         }
 
         let writingOptions = self.outputFormatting
@@ -441,8 +444,9 @@ open class JSONEncoder {
             #else
             let underlyingError: Error? = nil
             #endif // FOUNDATION_FRAMEWORK
-            throw EncodingError.invalidValue(value,
-                                             EncodingError.Context(codingPath: [], debugDescription: "Unable to encode the given top-level value to JSON.", underlyingError: underlyingError))
+            throw EncodingError.invalidValue(
+                value,
+                EncodingError.Context(codingPath: [], debugDescription: "Unable to encode the given top-level value to JSON.", underlyingError: underlyingError))
         }
     }
 }
@@ -452,7 +456,7 @@ open class JSONEncoder {
 // NOTE: older overlays called this class _JSONEncoder.
 // The two must coexist without a conflicting ObjC class name, so it
 // was renamed. The old name must not be used in the new runtime.
-private class __JSONEncoder : Encoder {
+private class __JSONEncoder: Encoder {
     // MARK: Properties
 
     /// The encoder's storage.
@@ -484,7 +488,7 @@ private class __JSONEncoder : Encoder {
 
 
     /// Contextual user-provided information for use during encoding.
-    public var userInfo: [CodingUserInfoKey : Any] {
+    public var userInfo: [CodingUserInfoKey: Any] {
         return self.options.userInfo
     }
 
@@ -497,7 +501,8 @@ private class __JSONEncoder : Encoder {
         }
 
         while let ownerEncoder = encoder.ownerEncoder,
-              let key = ownerEncoder.codingKey {
+            let key = ownerEncoder.codingKey
+        {
             result.append(key)
             encoder = ownerEncoder
         }
@@ -728,10 +733,12 @@ extension JSONEncoderValue {
     @inline(never)
     fileprivate static func cannotEncodeNumber<T: BinaryFloatingPoint>(_ float: T, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) -> EncodingError {
         let path = encoder.codingPath + (additionalKey.map { [$0] } ?? [])
-        return EncodingError.invalidValue(float, .init(
-            codingPath: path,
-            debugDescription: "Unable to encode \(T.self).\(float) directly in JSON."
-        ))
+        return EncodingError.invalidValue(
+            float,
+            .init(
+                codingPath: path,
+                debugDescription: "Unable to encode \(T.self).\(float) directly in JSON."
+            ))
     }
 
     @inline(never)
@@ -751,7 +758,9 @@ extension JSONEncoderValue {
     }
 
     @inline(__always)
-    fileprivate static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)? = Optional<_CodingKey>.none) throws -> JSONEncoderValue {
+    fileprivate static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)? = Optional<_CodingKey>.none)
+        throws -> JSONEncoderValue
+    {
         guard !float.isNaN, !float.isInfinite else {
             return try nonConformantNumber(from: float, with: options, encoder: encoder, additionalKey)
         }
@@ -809,7 +818,7 @@ private struct _JSONEncodingStorage {
 
 // MARK: - Encoding Containers
 
-private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContainerProtocol {
+private struct _JSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerProtocol {
     typealias Key = K
 
     // MARK: Properties
@@ -912,7 +921,7 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
         reference.set(wrapped, for: _converted(key))
     }
 
-    public mutating func encode<T : Encodable>(_ value: T, forKey key: Key) throws {
+    public mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
         let wrapped = try self.encoder.wrap(value, for: key)
         reference.set(wrapped, for: _converted(key))
     }
@@ -925,7 +934,8 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
                 // Was encoded as an object ref previously. We can just use it again.
                 nestedRef = object
             } else if case .value(let value) = existingRef,
-                      let convertedObject = value.convertedToObjectRef() {
+                let convertedObject = value.convertedToObjectRef()
+            {
                 // Was encoded as an object *value* previously. We need to convert it back to a reference before we can use it.
                 nestedRef = convertedObject
                 self.reference.dict[containerKey] = .nestedObject(convertedObject)
@@ -950,7 +960,8 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
                 // Was encoded as an array ref previously. We can just use it again.
                 nestedRef = array
             } else if case .value(let value) = existingRef,
-                      let convertedArray = value.convertedToArrayRef() {
+                let convertedArray = value.convertedToArrayRef()
+            {
                 // Was encoded as an array *value* previously. We need to convert it back to a reference before we can use it.
                 nestedRef = convertedArray
                 self.reference.dict[containerKey] = .nestedArray(convertedArray)
@@ -975,7 +986,7 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
     }
 }
 
-private struct _JSONUnkeyedEncodingContainer : UnkeyedEncodingContainer {
+private struct _JSONUnkeyedEncodingContainer: UnkeyedEncodingContainer {
     // MARK: Properties
 
     /// A reference to the encoder we're writing to.
@@ -1005,25 +1016,25 @@ private struct _JSONUnkeyedEncodingContainer : UnkeyedEncodingContainer {
 
     // MARK: - UnkeyedEncodingContainer Methods
 
-    public mutating func encodeNil()             throws { self.reference.append(.null) }
-    public mutating func encode(_ value: Bool)   throws { self.reference.append(.bool(value)) }
-    public mutating func encode(_ value: Int)    throws { self.reference.append(self.encoder.wrap(value)) }
-    public mutating func encode(_ value: Int8)   throws { self.reference.append(self.encoder.wrap(value)) }
-    public mutating func encode(_ value: Int16)  throws { self.reference.append(self.encoder.wrap(value)) }
-    public mutating func encode(_ value: Int32)  throws { self.reference.append(self.encoder.wrap(value)) }
-    public mutating func encode(_ value: Int64)  throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encodeNil() throws { self.reference.append(.null) }
+    public mutating func encode(_ value: Bool) throws { self.reference.append(.bool(value)) }
+    public mutating func encode(_ value: Int) throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: Int8) throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: Int16) throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: Int32) throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: Int64) throws { self.reference.append(self.encoder.wrap(value)) }
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-    public mutating func encode(_ value: Int128)  throws { self.reference.append(self.encoder.wrap(value)) }
-    public mutating func encode(_ value: UInt)   throws { self.reference.append(self.encoder.wrap(value)) }
-    public mutating func encode(_ value: UInt8)  throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: Int128) throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: UInt) throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: UInt8) throws { self.reference.append(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt16) throws { self.reference.append(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt32) throws { self.reference.append(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt64) throws { self.reference.append(self.encoder.wrap(value)) }
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-    public mutating func encode(_ value: UInt128)  throws { self.reference.append(self.encoder.wrap(value)) }
+    public mutating func encode(_ value: UInt128) throws { self.reference.append(self.encoder.wrap(value)) }
     public mutating func encode(_ value: String) throws { self.reference.append(self.encoder.wrap(value)) }
 
-    public mutating func encode(_ value: Float)  throws {
+    public mutating func encode(_ value: Float) throws {
         self.reference.append(try .number(from: value, encoder: encoder, _CodingKey(index: self.count)))
     }
 
@@ -1031,7 +1042,7 @@ private struct _JSONUnkeyedEncodingContainer : UnkeyedEncodingContainer {
         self.reference.append(try .number(from: value, encoder: encoder, _CodingKey(index: self.count)))
     }
 
-    public mutating func encode<T : Encodable>(_ value: T) throws {
+    public mutating func encode<T: Encodable>(_ value: T) throws {
         let wrapped = try self.encoder.wrap(value, for: _CodingKey(index: self.count))
         self.reference.append(wrapped)
     }
@@ -1054,7 +1065,7 @@ private struct _JSONUnkeyedEncodingContainer : UnkeyedEncodingContainer {
     }
 }
 
-extension __JSONEncoder : SingleValueEncodingContainer {
+extension __JSONEncoder: SingleValueEncodingContainer {
     // MARK: - SingleValueEncodingContainer Methods
 
     private func assertCanEncodeNewValue() {
@@ -1095,7 +1106,7 @@ extension __JSONEncoder : SingleValueEncodingContainer {
         assertCanEncodeNewValue()
         self.singleValue = wrap(value)
     }
-    
+
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     public func encode(_ value: Int128) throws {
         assertCanEncodeNewValue()
@@ -1126,7 +1137,7 @@ extension __JSONEncoder : SingleValueEncodingContainer {
         assertCanEncodeNewValue()
         self.singleValue = wrap(value)
     }
-    
+
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     public func encode(_ value: UInt128) throws {
         assertCanEncodeNewValue()
@@ -1150,7 +1161,7 @@ extension __JSONEncoder : SingleValueEncodingContainer {
         self.singleValue = wrapped
     }
 
-    public func encode<T : Encodable>(_ value: T) throws {
+    public func encode<T: Encodable>(_ value: T) throws {
         assertCanEncodeNewValue()
         self.singleValue = try self.wrap(value)
     }
@@ -1160,21 +1171,21 @@ extension __JSONEncoder : SingleValueEncodingContainer {
 
 private extension __JSONEncoder {
     /// Returns the given value boxed in a container appropriate for pushing onto the container stack.
-    @inline(__always) func wrap(_ value: Bool)   -> JSONEncoderValue { .bool(value) }
-    @inline(__always) func wrap(_ value: Int)    -> JSONEncoderValue { .number(from: value) }
-    @inline(__always) func wrap(_ value: Int8)   -> JSONEncoderValue { .number(from: value) }
-    @inline(__always) func wrap(_ value: Int16)  -> JSONEncoderValue { .number(from: value) }
-    @inline(__always) func wrap(_ value: Int32)  -> JSONEncoderValue { .number(from: value) }
-    @inline(__always) func wrap(_ value: Int64)  -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: Bool) -> JSONEncoderValue { .bool(value) }
+    @inline(__always) func wrap(_ value: Int) -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: Int8) -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: Int16) -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: Int32) -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: Int64) -> JSONEncoderValue { .number(from: value) }
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-    @inline(__always) func wrap(_ value: Int128)  -> JSONEncoderValue { .number(from: value) }
-    @inline(__always) func wrap(_ value: UInt)   -> JSONEncoderValue { .number(from: value) }
-    @inline(__always) func wrap(_ value: UInt8)  -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: Int128) -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: UInt) -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: UInt8) -> JSONEncoderValue { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt16) -> JSONEncoderValue { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt32) -> JSONEncoderValue { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt64) -> JSONEncoderValue { .number(from: value) }
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-    @inline(__always) func wrap(_ value: UInt128)  -> JSONEncoderValue { .number(from: value) }
+    @inline(__always) func wrap(_ value: UInt128) -> JSONEncoderValue { .number(from: value) }
     @inline(__always) func wrap(_ value: String) -> JSONEncoderValue { .string(value) }
 
     @inline(__always)
@@ -1207,10 +1218,10 @@ private extension __JSONEncoder {
         case .iso8601:
             return self.wrap(date.formatted(.iso8601))
 
-#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
+        #if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         case .formatted(let formatter):
             return self.wrap(formatter.string(from: date))
-#endif
+        #endif
 
         case .custom(let closure):
             var encoder = getEncoder(for: additionalKey)
@@ -1246,7 +1257,7 @@ private extension __JSONEncoder {
         }
     }
 
-    func wrap(_ dict: [String : Encodable], for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue? {
+    func wrap(_ dict: [String: Encodable], for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue? {
         var result = [String: JSONEncoderValue]()
         result.reserveCapacity(dict.count)
 
@@ -1280,7 +1291,7 @@ private extension __JSONEncoder {
             // Respect Data encoding strategy
             return try self.wrap(data, for: additionalKey)
         } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
-            return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
+            return try self.wrap(encodable as! [String: Encodable], for: additionalKey)
         } else if let array = _asDirectArrayEncodable(value) {
             if options.outputFormatting.contains(.prettyPrinted) {
                 let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
@@ -1290,15 +1301,17 @@ private extension __JSONEncoder {
             }
         }
 
-        return try _wrapGeneric({
-            try value.encode(to: $0)
-        }, for: additionalKey)
+        return try _wrapGeneric(
+            {
+                try value.encode(to: $0)
+            }, for: additionalKey)
     }
-    
+
     func wrapGeneric<T: EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration, for additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONEncoderValue? {
-        try _wrapGeneric({
-            try value.encode(to: $0, configuration: configuration)
-        }, for: additionalKey)
+        try _wrapGeneric(
+            {
+                try value.encode(to: $0, configuration: configuration)
+            }, for: additionalKey)
     }
 
     @inline(__always)
@@ -1382,7 +1395,7 @@ private extension __JSONEncoder {
 // NOTE: older overlays called this class _JSONReferencingEncoder.
 // The two must coexist without a conflicting ObjC class name, so it
 // was renamed. The old name must not be used in the new runtime.
-private class __JSONReferencingEncoder : __JSONEncoder {
+private class __JSONReferencingEncoder: __JSONEncoder {
     // MARK: Reference types.
 
     /// The type of container we're referencing.
@@ -1444,7 +1457,7 @@ extension EncodingError {
     /// - parameter value: The value that was invalid to encode.
     /// - parameter path: The path of `CodingKey`s taken to encode this value.
     /// - returns: An `EncodingError` with the appropriate path and debug description.
-    fileprivate static func _invalidFloatingPointValue<T : FloatingPoint>(_ value: T, at codingPath: [CodingKey]) -> EncodingError {
+    fileprivate static func _invalidFloatingPointValue<T: FloatingPoint>(_ value: T, at codingPath: [CodingKey]) -> EncodingError {
         let valueDescription: String
         if value == T.infinity {
             valueDescription = "\(T.self).infinity"
@@ -1464,7 +1477,7 @@ extension EncodingError {
 #else
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 #endif
-extension JSONEncoder : @unchecked Sendable {}
+extension JSONEncoder: @unchecked Sendable {}
 
 //===----------------------------------------------------------------------===//
 // Special-casing Support
@@ -1472,9 +1485,9 @@ extension JSONEncoder : @unchecked Sendable {}
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
-private protocol _JSONStringDictionaryEncodableMarker { }
+private protocol _JSONStringDictionaryEncodableMarker {}
 
-extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
+extension Dictionary: _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable {}
 
 /// A protocol used to determine whether a value is an `Array` containing values that allow
 /// us to bypass UnkeyedEncodingContainer overhead by directly encoding the contents as
@@ -1494,20 +1507,20 @@ extension _JSONSimpleValueArrayElement where Self: FixedWidthInteger & CustomStr
         return writer.serializeSimpleStringContents(description)
     }
 }
-extension Int : _JSONSimpleValueArrayElement { }
-extension Int8 : _JSONSimpleValueArrayElement { }
-extension Int16 : _JSONSimpleValueArrayElement { }
-extension Int32 : _JSONSimpleValueArrayElement { }
-extension Int64 : _JSONSimpleValueArrayElement { }
+extension Int: _JSONSimpleValueArrayElement {}
+extension Int8: _JSONSimpleValueArrayElement {}
+extension Int16: _JSONSimpleValueArrayElement {}
+extension Int32: _JSONSimpleValueArrayElement {}
+extension Int64: _JSONSimpleValueArrayElement {}
 @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-extension Int128 : _JSONSimpleValueArrayElement { }
-extension UInt : _JSONSimpleValueArrayElement { }
-extension UInt8 : _JSONSimpleValueArrayElement { }
-extension UInt16 : _JSONSimpleValueArrayElement { }
-extension UInt32 : _JSONSimpleValueArrayElement { }
-extension UInt64 : _JSONSimpleValueArrayElement { }
+extension Int128: _JSONSimpleValueArrayElement {}
+extension UInt: _JSONSimpleValueArrayElement {}
+extension UInt8: _JSONSimpleValueArrayElement {}
+extension UInt16: _JSONSimpleValueArrayElement {}
+extension UInt32: _JSONSimpleValueArrayElement {}
+extension UInt64: _JSONSimpleValueArrayElement {}
 @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-extension UInt128 : _JSONSimpleValueArrayElement { }
+extension UInt128: _JSONSimpleValueArrayElement {}
 extension String: _JSONSimpleValueArrayElement {
     fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) -> Int {
         return writer.serializeString(self)
@@ -1541,7 +1554,7 @@ extension Double: _JSONSimpleValueArrayElement {
 
 // This is not yet extended to Double & Float. That case is more complicated, given the possibility of Infinity or NaN values, which require nonConformingFloatEncodingStrategy and the ability to throw errors.
 
-extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArrayElement {
+extension Array: _JSONDirectArrayEncodable where Element: _JSONSimpleValueArrayElement {
     func nonPrettyJSONRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> [UInt8] {
         var writer = JSONWriter(options: encoder.options.outputFormatting)
 
@@ -1551,7 +1564,7 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
         if count > 0 {
             _ = try self[0].serializeJsonRepresentation(into: &writer, encoder: encoder, additionalKey)
 
-            for idx in 1 ..< count {
+            for idx in 1..<count {
                 writer.writer(ascii: ._comma)
                 _ = try self[idx].serializeJsonRepresentation(into: &writer, encoder: encoder, additionalKey)
             }
@@ -1560,7 +1573,7 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
         writer.writer(ascii: ._closebracket)
         return writer.bytes
     }
-    
+
     func individualElementRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> ([UInt8], lengths: [Int]) {
         var writer = JSONWriter(options: encoder.options.outputFormatting)
         var byteLengths = [Int]()

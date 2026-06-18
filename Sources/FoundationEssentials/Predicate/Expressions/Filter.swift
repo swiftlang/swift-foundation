@@ -13,26 +13,26 @@
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Filter<
-        LHS : PredicateExpression,
-        RHS : PredicateExpression
-    > : PredicateExpression
+        LHS: PredicateExpression,
+        RHS: PredicateExpression
+    >: PredicateExpression
     where
         LHS.Output: Sequence,
         RHS.Output == Bool
     {
         public typealias Element = LHS.Output.Element
         public typealias Output = [Element]
-        
+
         public let sequence: LHS
         public let filter: RHS
         public let variable: Variable<Element>
-        
+
         public init(_ sequence: LHS, _ builder: (Variable<Element>) -> RHS) {
             self.variable = Variable()
             self.sequence = sequence
             self.filter = builder(variable)
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             var mutableBindings = bindings
             return try sequence.evaluate(bindings).filter {
@@ -41,31 +41,31 @@ extension PredicateExpressions {
             }
         }
     }
-    
+
     public static func build_filter<LHS, RHS>(_ lhs: LHS, _ builder: (Variable<LHS.Output.Element>) -> RHS) -> Filter<LHS, RHS> {
         Filter(lhs, builder)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Filter : CustomStringConvertible {
+extension PredicateExpressions.Filter: CustomStringConvertible {
     public var description: String {
         "Filter(sequence: \(sequence), variable: \(variable), filter: \(filter))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Filter : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.Filter: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.Filter: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(sequence)
         try container.encode(filter)
         try container.encode(variable)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         sequence = try container.decode(LHS.self)
@@ -75,4 +75,4 @@ extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codab
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Filter : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.Filter: Sendable where LHS: Sendable, RHS: Sendable {}

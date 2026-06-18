@@ -15,12 +15,12 @@
 internal import ReflectionInternal
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-enum PredicateCodableError : Error, CustomStringConvertible {
+enum PredicateCodableError: Error, CustomStringConvertible {
     case disallowedType(typeName: String, path: String)
     case disallowedIdentifier(String, path: String)
     case reconstructionFailure(PartialType, [GenericArgument])
     case variadicType(typeName: String, path: String)
-    
+
     var description: String {
         switch self {
         case .disallowedType(let typeName, let path): return "The '\(typeName)' type is not in the provided allowlist (required by \(path))"
@@ -39,11 +39,11 @@ enum PredicateCodableError : Error, CustomStringConvertible {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-private struct ExpressionStructure : Codable {
-    private enum Argument : Codable {
+private struct ExpressionStructure: Codable {
+    private enum Argument: Codable {
         case scalar(ExpressionStructure)
         case pack([ExpressionStructure])
-        
+
         init(from decoder: any Decoder) throws {
             let container = try decoder.singleValueContainer()
             if let scalarArg = try? container.decode(ExpressionStructure.self) {
@@ -52,7 +52,7 @@ private struct ExpressionStructure : Codable {
                 self = .pack(try container.decode([ExpressionStructure].self))
             }
         }
-        
+
         func encode(to encoder: any Encoder) throws {
             switch self {
             case let .scalar(arg):
@@ -66,12 +66,12 @@ private struct ExpressionStructure : Codable {
     }
     private let identifier: String
     private let args: [Argument]
-    
+
     private enum CodingKeys: CodingKey {
         case identifier
         case args
     }
-    
+
     func encode(to encoder: Encoder) throws {
         if args.isEmpty {
             var container = encoder.singleValueContainer()
@@ -82,25 +82,25 @@ private struct ExpressionStructure : Codable {
             try container.encode(args, forKey: .args)
         }
     }
-    
+
     init(from decoder: Decoder) throws {
         if let keyedContainer = try? decoder.container(keyedBy: CodingKeys.self) {
             identifier = try keyedContainer.decode(String.self, forKey: .identifier)
             args = try keyedContainer.decode([Argument].self, forKey: .args)
             return
         }
-        
+
         identifier = try decoder.singleValueContainer().decode(String.self)
         args = []
     }
-    
+
     init(_ type: Type, with configuration: PredicateCodableConfiguration, path: [String] = []) throws {
         guard let result = configuration._identifier(for: type) else {
             throw PredicateCodableError.disallowedType(typeName: _typeName(type.swiftType), path: "/\(path.joined(separator: "/"))")
         }
-        
+
         self.identifier = result.identifier
-        
+
         if !result.isConcrete {
             self.args = try type.genericArguments2.map {
                 switch $0 {
@@ -114,12 +114,12 @@ private struct ExpressionStructure : Codable {
             self.args = []
         }
     }
-    
+
     func reconstruct(with configuration: PredicateCodableConfiguration, path: [String] = []) throws -> Type {
         guard let result = configuration._type(for: identifier) else {
             throw PredicateCodableError.disallowedIdentifier(identifier, path: "/\(path.joined(separator: "/"))")
         }
-        
+
         let partial: PartialType
         switch result {
         case .concrete(let type):
@@ -127,7 +127,7 @@ private struct ExpressionStructure : Codable {
         case .partial(let partialType):
             partial = partialType
         }
-        
+
         let argTypes: [GenericArgument] = try args.map {
             switch $0 {
             case let .scalar(arg):
@@ -136,7 +136,7 @@ private struct ExpressionStructure : Codable {
                 .pack(try args.map { try $0.reconstruct(with: configuration, path: path + [identifier]) })
             }
         }
-        
+
         guard let created = partial.create2(with: argTypes) else {
             throw PredicateCodableError.reconstructionFailure(partial, argTypes)
         }
@@ -147,14 +147,14 @@ private struct ExpressionStructure : Codable {
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 class PredicateArchivingState {
     var configuration: PredicateCodableConfiguration
-    
-    private var variableMap: [UInt : PredicateExpressions.VariableID]
-    
+
+    private var variableMap: [UInt: PredicateExpressions.VariableID]
+
     init(configuration: PredicateCodableConfiguration) {
         self.configuration = configuration
         variableMap = [:]
     }
-    
+
     func createVariable(for key: UInt) -> PredicateExpressions.VariableID {
         guard let existing = variableMap[key] else {
             let new = PredicateExpressions.VariableID()
@@ -170,7 +170,7 @@ extension _ThreadLocal.Key<PredicateArchivingState> {
     static let predicateArchivingState = Self<PredicateArchivingState>()
 }
 
-enum PredicateExpressionCodingKeys : CodingKey {
+enum PredicateExpressionCodingKeys: CodingKey {
     case variable
     case expression
     case structure
@@ -193,7 +193,7 @@ private func _withPredicateArchivingState<R>(_ configuration: PredicateCodableCo
         // Store the new configuration and reset it after encoding the subtree
         let oldConfiguration = currentState.configuration
         defer { currentState.configuration = oldConfiguration }
-        
+
         currentState.configuration = configuration
         return try block()
     } else {
@@ -219,7 +219,9 @@ extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
-    mutating func _decode<each Input, Output>(input: repeat (each Input).Type, output: Output.Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Output>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
+    mutating func _decode<each Input, Output>(input: repeat (each Input).Type, output: Output.Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (
+        expression: any PredicateExpression<Output>, variable: (repeat PredicateExpressions.Variable<each Input>)
+    ) {
         var predicateConfiguration = predicateConfiguration
         predicateConfiguration.allowInputs(repeat (each Input).self)
         let structure = try self.decode(ExpressionStructure.self, forKey: .structure)

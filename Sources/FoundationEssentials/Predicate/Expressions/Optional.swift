@@ -13,13 +13,13 @@
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct OptionalFlatMap<
-        LHS : PredicateExpression,
+        LHS: PredicateExpression,
         Wrapped,
-        RHS : PredicateExpression,
+        RHS: PredicateExpression,
         Result
-    > : PredicateExpression
+    >: PredicateExpression
     where
-    LHS.Output == Optional<Wrapped>
+        LHS.Output == Optional<Wrapped>
     {
         public typealias Output = Optional<Result>
 
@@ -32,13 +32,13 @@ extension PredicateExpressions {
             self.variable = Variable()
             self.transform = builder(variable)
         }
-        
+
         public init(_ wrapped: LHS, _ builder: (Variable<Wrapped>) -> RHS) where RHS.Output == Optional<Result> {
             self.wrapped = wrapped
             self.variable = Variable()
             self.transform = builder(variable)
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             var mutableBindings = bindings
             return try wrapped.evaluate(bindings).flatMap { inner in
@@ -55,48 +55,48 @@ extension PredicateExpressions {
     public static func build_flatMap<LHS, RHS, Wrapped, Result>(_ wrapped: LHS, _ builder: (Variable<Wrapped>) -> RHS) -> OptionalFlatMap<LHS, Wrapped, RHS, Result> where RHS.Output == Optional<Result> {
         OptionalFlatMap(wrapped, builder)
     }
-    
+
     public struct NilCoalesce<
-        LHS : PredicateExpression,
-        RHS : PredicateExpression
-    > : PredicateExpression
+        LHS: PredicateExpression,
+        RHS: PredicateExpression
+    >: PredicateExpression
     where
-    LHS.Output == Optional<RHS.Output>
+        LHS.Output == Optional<RHS.Output>
     {
         public typealias Output = RHS.Output
-        
+
         public let lhs: LHS
         public let rhs: RHS
-        
+
         public init(lhs: LHS, rhs: RHS) {
             self.lhs = lhs
             self.rhs = rhs
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             try lhs.evaluate(bindings) ?? rhs.evaluate(bindings)
         }
     }
-    
+
     public static func build_NilCoalesce<LHS, RHS>(lhs: LHS, rhs: RHS) -> NilCoalesce<LHS, RHS> {
         NilCoalesce(lhs: lhs, rhs: rhs)
     }
-    
+
     public struct ForcedUnwrap<
-        Inner : PredicateExpression,
+        Inner: PredicateExpression,
         Wrapped
-    > : PredicateExpression
+    >: PredicateExpression
     where
         Inner.Output == Optional<Wrapped>
     {
         public typealias Output = Wrapped
-        
+
         public let inner: Inner
-        
+
         public init(_ inner: Inner) {
             self.inner = inner
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Wrapped {
             let input = try inner.evaluate(bindings)
             if let result = input {
@@ -105,51 +105,51 @@ extension PredicateExpressions {
             throw PredicateError(.forceUnwrapFailure("Found nil when unwrapping value of type '\(type(of: input))'"))
         }
     }
-    
+
     public static func build_ForcedUnwrap<Inner, Wrapped>(_ inner: Inner) -> ForcedUnwrap<Inner, Wrapped> where Inner.Output == Optional<Wrapped> {
         ForcedUnwrap(inner)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.OptionalFlatMap : CustomStringConvertible {
+extension PredicateExpressions.OptionalFlatMap: CustomStringConvertible {
     public var description: String {
         "OptionalFlatMap(wrapped: \(wrapped), variable: \(variable), transform: \(transform))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.NilCoalesce : CustomStringConvertible {
+extension PredicateExpressions.NilCoalesce: CustomStringConvertible {
     public var description: String {
         "NilCoalesce(lhs: \(lhs), rhs: \(rhs))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.ForcedUnwrap : CustomStringConvertible {
+extension PredicateExpressions.ForcedUnwrap: CustomStringConvertible {
     public var description: String {
         "ForcedUnwrap(inner: \(inner))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.OptionalFlatMap : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.OptionalFlatMap: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.NilCoalesce : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.NilCoalesce: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.ForcedUnwrap : StandardPredicateExpression where Inner : StandardPredicateExpression {}
+extension PredicateExpressions.ForcedUnwrap: StandardPredicateExpression where Inner: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.OptionalFlatMap: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(wrapped)
         try container.encode(transform)
         try container.encode(variable)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         wrapped = try container.decode(LHS.self)
@@ -159,13 +159,13 @@ extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RH
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.NilCoalesce: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(lhs)
         try container.encode(rhs)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         lhs = try container.decode(LHS.self)
@@ -174,12 +174,12 @@ extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : 
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
+extension PredicateExpressions.ForcedUnwrap: Codable where Inner: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(inner)
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         inner = try container.decode(Inner.self)
@@ -187,33 +187,33 @@ extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.OptionalFlatMap : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.OptionalFlatMap: Sendable where LHS: Sendable, RHS: Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.NilCoalesce : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.NilCoalesce: Sendable where LHS: Sendable, RHS: Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.ForcedUnwrap : Sendable where Inner : Sendable {}
+extension PredicateExpressions.ForcedUnwrap: Sendable where Inner: Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
-    public struct NilLiteral<Wrapped> : StandardPredicateExpression, Codable, Sendable {
+    public struct NilLiteral<Wrapped>: StandardPredicateExpression, Codable, Sendable {
         public typealias Output = Optional<Wrapped>
-        
+
         public init() {}
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             nil
         }
-        
+
         public func encode(to encoder: Encoder) throws {
             var container = encoder.singleValueContainer()
             try container.encodeNil()
         }
-        
+
         public init(from decoder: Decoder) throws {}
     }
-    
+
     public static func build_NilLiteral<Wrapped>() -> NilLiteral<Wrapped> {
         NilLiteral()
     }

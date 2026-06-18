@@ -24,11 +24,11 @@ internal import _FoundationCollections
 public struct DiscontiguousAttributedSubstring: Sendable {
     /// The guts of the base attributed string.
     internal var _guts: AttributedString.Guts
-    
+
     internal var _indices: RangeSet<BigString.Index>
-    
+
     internal var _identity: Int = 0
-    
+
     internal init(_ guts: AttributedString.Guts, in indices: RangeSet<BigString.Index>) {
         self._guts = guts
         // Forcibly resolve bounds and round them down to nearest scalar boundary.
@@ -50,21 +50,21 @@ extension DiscontiguousAttributedSubstring {
 }
 
 @available(FoundationPreview 6.2, *)
-extension DiscontiguousAttributedSubstring : CustomStringConvertible {
+extension DiscontiguousAttributedSubstring: CustomStringConvertible {
     public var description: String {
         _guts.description(in: _indices)
     }
 }
 
 @available(FoundationPreview 6.2, *)
-extension DiscontiguousAttributedSubstring : Equatable {
+extension DiscontiguousAttributedSubstring: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         AttributedString.Guts._characterwiseIsEqual(lhs.runs, to: rhs.runs)
     }
 }
 
 @available(FoundationPreview 6.2, *)
-extension DiscontiguousAttributedSubstring : Hashable {
+extension DiscontiguousAttributedSubstring: Hashable {
     public func hash(into hasher: inout Hasher) {
         for range in _indices.ranges {
             _guts.characterwiseHash(in: range, into: &hasher)
@@ -73,7 +73,7 @@ extension DiscontiguousAttributedSubstring : Hashable {
 }
 
 @available(FoundationPreview 6.2, *)
-extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
+extension DiscontiguousAttributedSubstring: AttributedStringAttributeMutation {
     internal mutating func ensureUniqueReference() {
         // Note: slices should never discard the data outside their bounds, so we must make a
         // copy of the entire base string here.
@@ -85,21 +85,21 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
             _guts = _guts.copy()
         }
     }
-    
+
     public mutating func setAttributes(_ attributes: AttributeContainer) {
         ensureUniqueReference()
         for range in _indices.ranges {
             _guts.setAttributes(attributes.storage, in: range)
         }
     }
-    
-    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) {
+
+    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
         for range in _indices.ranges {
             _guts.mergeAttributes(attributes, in: range, mergePolicy: mergePolicy)
         }
     }
-    
+
     public mutating func replaceAttributes(_ attributes: AttributeContainer, with others: AttributeContainer) {
         guard attributes != others else {
             return
@@ -125,7 +125,7 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
             _guts.enforceAttributeConstraintsAfterMutation(in: range, type: .attributes)
         }
     }
-    
+
     /// Returns a discontiguous substring of this discontiguous attributed string using a range to indicate the discontiguous substring bounds.
     /// - Parameter bounds: A range that indicates the bounds of the discontiguous substring to return.
     public subscript(bounds: some RangeExpression<AttributedString.Index>) -> DiscontiguousAttributedSubstring {
@@ -136,7 +136,7 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
         }
         preconditionFailure("Attributed string index range \(bounds) is out of bounds")
     }
-    
+
     /// Returns a discontiguous substring of this discontiguous attributed string using a set of ranges to indicate the discontiguous substring bounds.
     /// - Parameter bounds: A set of ranges that indicate the bounds of the discontiguous substring to return.
     public subscript(bounds: RangeSet<AttributedString.Index>) -> DiscontiguousAttributedSubstring {
@@ -144,11 +144,12 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
         if bounds.ranges.isEmpty {
             return DiscontiguousAttributedSubstring(_guts, in: bounds)
         } else if let first = _indices.ranges.first,
-                  let last = _indices.ranges.last,
-                  let firstBounds = bounds.ranges.first,
-                  let lastBounds = bounds.ranges.last,
-                  first.lowerBound <= firstBounds.lowerBound,
-                  last.upperBound >= lastBounds.upperBound {
+            let last = _indices.ranges.last,
+            let firstBounds = bounds.ranges.first,
+            let lastBounds = bounds.ranges.last,
+            first.lowerBound <= firstBounds.lowerBound,
+            last.upperBound >= lastBounds.upperBound
+        {
             return DiscontiguousAttributedSubstring(_guts, in: _indices.intersection(bounds))
         }
         preconditionFailure("Attributed string index range \(bounds) is out of bounds")
@@ -161,12 +162,12 @@ extension DiscontiguousAttributedSubstring {
     public var characters: DiscontiguousSlice<AttributedString.CharacterView> {
         AttributedString.CharacterView(_guts)[_indices._attributedStringIndices(version: _guts.version)]
     }
-    
+
     /// The Unicode scalars of the discontiguous attributed string, as a view into the underlying string.
     public var unicodeScalars: DiscontiguousSlice<AttributedString.UnicodeScalarView> {
         AttributedString.UnicodeScalarView(_guts)[_indices._attributedStringIndices(version: _guts.version)]
     }
-    
+
     /// The attributed runs of the discontiguous attributed string, as a view into the underlying string.
     public var runs: AttributedString.Runs {
         AttributedString.Runs(_guts, in: _indices)
@@ -179,7 +180,7 @@ extension DiscontiguousAttributedSubstring {
     ///
     /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire discontiguous attributed substring. To find portions of an attributed string with consistent attributes, use the `runs` property.
     /// Getting or setting stringwide attributes with this subscript has `O(n)` behavior in the worst case, where n is the number of runs.
-    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable {
         get {
             var result: AttributedString._AttributeValue?
             for range in _indices.ranges {
@@ -206,7 +207,7 @@ extension DiscontiguousAttributedSubstring {
             }
         }
     }
-    
+
     /// Returns an attribute value that a key path indicates.
     ///
     /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire discontiguous attributed substring. To find portions of an attributed string with consistent attributes, use the `runs` property.
@@ -214,11 +215,11 @@ extension DiscontiguousAttributedSubstring {
     @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
-    ) -> K.Value? where K.Value : Sendable {
+    ) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
-    
+
     /// Returns a scoped attribute container that a key path indicates.
     public subscript<S: AttributeScope>(
         dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>
@@ -242,7 +243,7 @@ extension DiscontiguousAttributedSubstring {
                 }
             }
             return ScopedAttributeContainer(attributes)
-            
+
         }
         _modify {
             ensureUniqueReference()
@@ -271,7 +272,7 @@ extension AttributedString {
         let created = AttributedString.Guts()
         for range in substring._indices.ranges {
             created.replaceSubrange(
-                created.string.endIndex ..< created.string.endIndex,
+                created.string.endIndex..<created.string.endIndex,
                 with: AttributedSubstring(substring._guts, in: range)
             )
         }
@@ -328,14 +329,14 @@ extension AttributedString {
                 guard let startIdx = other.unicodeScalars.index(idxInOther, offsetBy: -unicodeScalarLength, limitedBy: other.unicodeScalars.startIndex) else {
                     preconditionFailure("Cannot set a DiscontiguousAttributedSubstring on a discontiguous slice of a different size")
                 }
-                let content = other[startIdx ..< idxInOther]
+                let content = other[startIdx..<idxInOther]
                 _guts.replaceSubrange(range._bstringRange, with: content)
                 idxInOther = startIdx
             }
             precondition(idxInOther == other.unicodeScalars.startIndex, "Cannot set a DiscontiguousAttributedSubstring on a discontiguous slice of a different size")
         }
     }
-    
+
     /// Removes the elements at the given indices.
     /// - Parameter subranges: The indices of the elements to remove.
     public mutating func removeSubranges(_ subranges: RangeSet<Index>) {

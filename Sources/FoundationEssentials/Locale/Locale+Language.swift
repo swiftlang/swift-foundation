@@ -18,11 +18,11 @@ extension Locale {
 
     /// A type that represents a language, as used in a locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Language : Hashable, Codable, Sendable {
+    public struct Language: Hashable, Codable, Sendable {
 
         /// A type that identifies a language by its various components.
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-        public struct Components : Hashable, Codable, Sendable {
+        public struct Components: Hashable, Codable, Sendable {
             /// The language code that identifies this language.
             public var languageCode: Locale.LanguageCode?
             /// The written script used by this language.
@@ -59,20 +59,20 @@ extension Locale {
 
                 return result
             }
-            
-#if !FOUNDATION_FRAMEWORK
+
+            #if !FOUNDATION_FRAMEWORK
             @_spi(SwiftCorelibsFoundation) public var _identifier: String { identifier }
-#endif
+            #endif
         }
 
         package var components: Language.Components
-        
-#if !FOUNDATION_FRAMEWORK
+
+        #if !FOUNDATION_FRAMEWORK
         @_spi(SwiftCorelibsFoundation) public var _components: Language.Components {
             components
         }
-#endif
-        
+        #endif
+
         /// Creates a language from its component values.
         ///
         /// - Parameter components: A `Language.Components` instance that provides a custom language code, region, and script for the new `Language` instance.
@@ -94,15 +94,15 @@ extension Locale {
         ///
         /// The returned array includes the languages of all product localizations for the current platform.
         public static var systemLanguages: [Language] {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+            #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
             NSLocale.systemLanguages().map {
                 let comp = Components(identifier: $0 as! String)
                 return Language(components: comp)
             }
-#else
+            #else
             // TODO: Read language list for other platforms
             return []
-#endif
+            #endif
         }
     }
 }

@@ -51,7 +51,7 @@ extension URL {
     ///
     /// ```
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public struct ParseStrategy : Codable, Hashable, Sendable {
+    public struct ParseStrategy: Codable, Hashable, Sendable {
         /// The strategy to parse the `scheme` component.
         var scheme: ComponentParseStrategy<String>
         /// The strategy to parse the `user` component.
@@ -82,8 +82,8 @@ extension URL {
             return UInt(value)
         }
 
-        var defaultValues: [Int : String] {
-            var values: [Int : String] = [:]
+        var defaultValues: [Int: String] {
+            var values: [Int: String] = [:]
             if case .defaultValue(let value) = scheme {
                 values[Component.scheme.rawValue] = value
             }
@@ -129,15 +129,16 @@ extension URL {
             port: ComponentParseStrategy<Int> = .optional,
             path: ComponentParseStrategy<String> = .optional,
             query: ComponentParseStrategy<String> = .optional,
-            fragment: ComponentParseStrategy<String> = .optional) {
-                self.scheme = scheme
-                self.user = user
-                self.password = password
-                self.host = host
-                self.port = port
-                self.path = path
-                self.query = query
-                self.fragment = fragment
+            fragment: ComponentParseStrategy<String> = .optional
+        ) {
+            self.scheme = scheme
+            self.user = user
+            self.password = password
+            self.host = host
+            self.port = port
+            self.path = path
+            self.query = query
+            self.fragment = fragment
         }
 
         internal init(format: URL.FormatStyle, lenient: Bool) {
@@ -164,7 +165,7 @@ extension URL.ParseStrategy {
     /// The strategy used to parse one component of a URL.
     ///
     /// Use this type with the ``URL/ParseStrategy`` initializer and static accessors, or its modifier methods, to specify behavior for parsing components of a URL. This allows you to reject URL candidate strings that lack required components — such as a scheme, host, or path — or to fill in default values while parsing.
-    public enum ComponentParseStrategy<Component : Codable & Hashable & Sendable> : Codable, Hashable, CustomStringConvertible, Sendable {
+    public enum ComponentParseStrategy<Component: Codable & Hashable & Sendable>: Codable, Hashable, CustomStringConvertible, Sendable {
         /// Denotes that the component is required to exists in order to consider the URL valid
         case required
         /// Denotes that the component is optional
@@ -273,7 +274,7 @@ extension URL.ParseStrategy {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension URL.ParseStrategy : ParseStrategy {
+extension URL.ParseStrategy: ParseStrategy {
     fileprivate typealias Component = URL.FormatStyle.Component
 
     internal func formatStyle() -> URL.FormatStyle {
@@ -295,16 +296,9 @@ extension URL.ParseStrategy : ParseStrategy {
         func isRequired(_ component: Component) -> Bool {
             return requiredComponentsValue & UInt(component.rawValue) != 0
         }
-        let invalid = (
-            (isRequired(.scheme) && components.scheme == nil) ||
-            (isRequired(.user) && components.user == nil) ||
-            (isRequired(.password) && components.password == nil) ||
-            (isRequired(.host) && components.host == nil) ||
-            (isRequired(.port) && components.port == nil) ||
-            (isRequired(.path) && components.path.isEmpty) ||
-            (isRequired(.query) && components.query == nil) ||
-            (isRequired(.fragment) && components.fragment == nil)
-        )
+        let invalid =
+            ((isRequired(.scheme) && components.scheme == nil) || (isRequired(.user) && components.user == nil) || (isRequired(.password) && components.password == nil) || (isRequired(.host) && components.host == nil)
+                || (isRequired(.port) && components.port == nil) || (isRequired(.path) && components.path.isEmpty) || (isRequired(.query) && components.query == nil) || (isRequired(.fragment) && components.fragment == nil))
         return !invalid
     }
 
@@ -322,7 +316,8 @@ extension URL.ParseStrategy : ParseStrategy {
             component.host = defaultValues[Component.host.rawValue]
         }
         if component.port == nil,
-           let defaultPort = defaultValues[Component.port.rawValue] {
+            let defaultPort = defaultValues[Component.port.rawValue]
+        {
             component.port = Int(defaultPort)
         }
         if component.path.isEmpty {
@@ -397,20 +392,20 @@ extension URL {
     ///   - value: A representation of a URL. The type of the representation is specified
     ///     by `ParseStrategy.ParseInput`.
     ///   - strategy: The parse strategy to parse `value` whose `ParseInput` is `URL`.
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     public init<T: Foundation.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
         self = try strategy.parse(value)
     }
-#else
+    #else
     public init<T: FoundationEssentials.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
         self = try strategy.parse(value)
     }
-#endif
+    #endif
 }
 
 // MARK: - Regex
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension URL.ParseStrategy : CustomConsumingRegexComponent {
+extension URL.ParseStrategy: CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
     ///
     /// This strategy returns the ``URL`` type when performing regex capture.
@@ -430,7 +425,7 @@ extension URL.ParseStrategy : CustomConsumingRegexComponent {
         guard index < bounds.upperBound else {
             return nil
         }
-        let urlString = input[index ..< bounds.upperBound]
+        let urlString = input[index..<bounds.upperBound]
         var url: URL?
         let result = matchURL(in: urlString, url: &url)
         guard let result, let url else {
@@ -442,14 +437,16 @@ extension URL.ParseStrategy : CustomConsumingRegexComponent {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension RegexComponent where Self == URL.ParseStrategy {
-    public static func url(scheme: URL.ParseStrategy.ComponentParseStrategy<String> = .required,
-       user: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
-       password: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
-       host: URL.ParseStrategy.ComponentParseStrategy<String> = .required,
-       port: URL.ParseStrategy.ComponentParseStrategy<Int> = .optional,
-       path: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
-       query: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
-       fragment: URL.ParseStrategy.ComponentParseStrategy<String> = .optional) -> Self {
+    public static func url(
+        scheme: URL.ParseStrategy.ComponentParseStrategy<String> = .required,
+        user: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
+        password: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
+        host: URL.ParseStrategy.ComponentParseStrategy<String> = .required,
+        port: URL.ParseStrategy.ComponentParseStrategy<Int> = .optional,
+        path: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
+        query: URL.ParseStrategy.ComponentParseStrategy<String> = .optional,
+        fragment: URL.ParseStrategy.ComponentParseStrategy<String> = .optional
+    ) -> Self {
         return URL.ParseStrategy(
             scheme: scheme,
             user: user,

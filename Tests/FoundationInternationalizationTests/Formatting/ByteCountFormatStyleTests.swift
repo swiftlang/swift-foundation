@@ -47,65 +47,65 @@ private struct ByteCountFormatStyleTests {
 
     let localizedSingular: [Locale: [String]] = [
         Locale(identifier: "en_US"): [
-        "1 byte",
-        "1 kB",
-        "1 MB",
-        "1 GB",
-        "1 TB",
-        "1 PB",
+            "1 byte",
+            "1 kB",
+            "1 MB",
+            "1 GB",
+            "1 TB",
+            "1 PB",
         ],
         Locale(identifier: "fr_FR"): [
-        "1 octet",
-        "1 ko",
-        "1 Mo",
-        "1 Go",
-        "1 To",
-        "1 Po",
+            "1 octet",
+            "1 ko",
+            "1 Mo",
+            "1 Go",
+            "1 To",
+            "1 Po",
         ],
         Locale(identifier: "zh_TW"): [
-        "1 byte",
-        "1 kB",
-        "1 MB",
-        "1 GB",
-        "1 TB",
-        "1 PB",
+            "1 byte",
+            "1 kB",
+            "1 MB",
+            "1 GB",
+            "1 TB",
+            "1 PB",
         ],
         Locale(identifier: "zh_CN"): [
-        "1 byte",
-        "1 kB",
-        "1 MB",
-        "1 GB",
-        "1 TB",
-        "1 PB",
+            "1 byte",
+            "1 kB",
+            "1 MB",
+            "1 GB",
+            "1 TB",
+            "1 PB",
         ],
         Locale(identifier: "ar"): [
-        "١ بايت",
-        "١ كيلوبايت",
-        "١ ميغابايت",
-        "١ غيغابايت",
-        "١ تيرابايت",
-        "١ بيتابايت",
-        ]
+            "١ بايت",
+            "١ كيلوبايت",
+            "١ ميغابايت",
+            "١ غيغابايت",
+            "١ تيرابايت",
+            "١ بيتابايت",
+        ],
     ]
 
-#if FIXED_86386674
+    #if FIXED_86386674
     @Test(arguments: locales)
     func singularUnitsBinary(locale: Locale) {
         for i in 0...5 {
-            let value: Int64 = (1 << (i*10))
+            let value: Int64 = (1 << (i * 10))
             #expect((value).formatted(.byteCount(style: .memory).locale(locale)) == localizedSingular[locale]![i])
         }
     }
-#endif
+    #endif
 
-#if FIXED_86386684
+    #if FIXED_86386684
     @Test(arguments: locales)
     func singularUnitsDecimal(locale: Locale) {
         for i in 0...5 {
-            #expect(Int64(pow(10.0, Double(i*3))).formatted(.byteCount(style: .file).locale(locale)) == localizedSingular[locale]![i])
+            #expect(Int64(pow(10.0, Double(i * 3))).formatted(.byteCount(style: .file).locale(locale)) == localizedSingular[locale]![i])
         }
     }
-#endif
+    #endif
 
     @Test func localizedParens() {
         #expect(1024.formatted(.byteCount(style: ByteCountFormatStyle.Style.binary, includesActualByteCount: true).locale(.init(identifier: "zh_TW"))) == "1 kB（1,024 byte）")
@@ -127,14 +127,16 @@ private struct ByteCountFormatStyleTests {
         expected = [
             .init(string: "Zero", number: nil, symbol: nil, byteCount: .spelledOutValue),
             .space,
-            .init(string: "kB", number: nil, symbol: nil, byteCount: .unit(.kb))]
+            .init(string: "kB", number: nil, symbol: nil, byteCount: .unit(.kb)),
+        ]
         #expect(0.formatted(.byteCount(style: .file, spellsOutZero: true).locale(.init(identifier: "en_US")).attributed) == expected.attributedString)
 
         // 1 byte
         expected = [
             .init(string: "1", number: .integer, symbol: nil, byteCount: .value),
             .space,
-            .init(string: "byte", number: nil, symbol: nil, byteCount: .unit(.byte))]
+            .init(string: "byte", number: nil, symbol: nil, byteCount: .unit(.byte)),
+        ]
         #expect(1.formatted(.byteCount(style: .file).locale(.init(identifier: "en_US")).attributed) == expected.attributedString)
 
         // 1,000 bytes
@@ -143,7 +145,8 @@ private struct ByteCountFormatStyleTests {
             .init(string: ",", number: .integer, symbol: .groupingSeparator, byteCount: .value),
             .init(string: "000", number: .integer, symbol: nil, byteCount: .value),
             .space,
-            .init(string: "bytes", number: nil, symbol: nil, byteCount: .unit(.byte))]
+            .init(string: "bytes", number: nil, symbol: nil, byteCount: .unit(.byte)),
+        ]
         #expect(1000.formatted(.byteCount(style: .memory).locale(.init(identifier: "en_US")).attributed) == expected.attributedString)
 
         // 1,016 kB
@@ -152,7 +155,8 @@ private struct ByteCountFormatStyleTests {
             .init(string: ",", number: .integer, symbol: .groupingSeparator, byteCount: .value),
             .init(string: "016", number: .integer, symbol: nil, byteCount: .value),
             .space,
-            .init(string: "kB", number: nil, symbol: nil, byteCount: .unit(.kb))]
+            .init(string: "kB", number: nil, symbol: nil, byteCount: .unit(.kb)),
+        ]
         #expect(1_040_000.formatted(.byteCount(style: .memory).locale(.init(identifier: "en_US")).attributed) == expected.attributedString)
 
         // 1.1 MB
@@ -161,7 +165,8 @@ private struct ByteCountFormatStyleTests {
             .init(string: ".", number: nil, symbol: .decimalSeparator, byteCount: .value),
             .init(string: "1", number: .fraction, symbol: nil, byteCount: .value),
             .space,
-            .init(string: "MB", number: nil, symbol: nil, byteCount: .unit(.mb))]
+            .init(string: "MB", number: nil, symbol: nil, byteCount: .unit(.mb)),
+        ]
         #expect(1_100_000.formatted(.byteCount(style: .file).locale(.init(identifier: "en_US")).attributed) == expected.attributedString)
 
         // 4.2 GB (4,200,000 bytes)
@@ -182,7 +187,8 @@ private struct ByteCountFormatStyleTests {
             .init(string: "000", number: .integer, symbol: nil, byteCount: .actualByteCount),
             .space,
             .init(string: "bytes", number: nil, symbol: nil, byteCount: .unit(.byte)),
-            .closedParen]
+            .closedParen,
+        ]
         #expect(Int64(4_200_000_000).formatted(.byteCount(style: .file, includesActualByteCount: true).locale(.init(identifier: "en_US")).attributed) == expected.attributedString)
     }
 
@@ -198,7 +204,7 @@ private struct ByteCountFormatStyleTests {
         }
     }
 
-#if !_pointerBitWidth(_32)
+    #if !_pointerBitWidth(_32)
     @Test func testEveryAllowedUnit() {
         // 84270854: The largest unit supported currently is pb
         let expectations: [ByteCountFormatStyle.Units: String] = [
@@ -210,14 +216,14 @@ private struct ByteCountFormatStyleTests {
             .pb: "10 PB",
             .eb: "10 PB",
             .zb: "10 PB",
-            .ybOrHigher: "10 PB"
+            .ybOrHigher: "10 PB",
         ]
 
         for (units, expectation) in expectations {
             #expect(10_000_000_000_000_000.formatted(.byteCount(style: .file, allowedUnits: units).locale(Locale(identifier: "en_US"))) == expectation)
         }
     }
-#endif
+    #endif
 }
 
 fileprivate struct Segment {

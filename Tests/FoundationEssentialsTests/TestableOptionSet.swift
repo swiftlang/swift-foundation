@@ -58,12 +58,15 @@ extension TestableOptionSet {
 
                     // x.union(y).contains(e) implies x.contains(e) || y.contains(e)
                     if x.union(y).contains(e) {
-                        #expect(x.contains(e) || y.contains(e), "Invariant not held: x.union(y).contains(e) implies x.contains(e) || y.contains(e) for x = \(x._description), y = \(y._description), e = \(e._description)", sourceLocation: sourceLocation)
+                        #expect(
+                            x.contains(e) || y.contains(e), "Invariant not held: x.union(y).contains(e) implies x.contains(e) || y.contains(e) for x = \(x._description), y = \(y._description), e = \(e._description)", sourceLocation: sourceLocation)
                     }
 
                     // x.contains(e) && y.contains(e) if and only if x.intersection(y).contains(e)
                     if Self.supportsIntersectionContainsInvariant {
-                        #expect((x.contains(e) && y.contains(e)) == x.intersection(y).contains(e), "Invariant not held: x.contains(e) && y.contains(e) if and only if x.intersection(y).contains(e) for x = \(x._description), y = \(y._description), e = \(e._description)", sourceLocation: sourceLocation)
+                        #expect(
+                            (x.contains(e) && y.contains(e)) == x.intersection(y).contains(e),
+                            "Invariant not held: x.contains(e) && y.contains(e) if and only if x.intersection(y).contains(e) for x = \(x._description), y = \(y._description), e = \(e._description)", sourceLocation: sourceLocation)
                     }
                 }
 
@@ -81,10 +84,13 @@ extension TestableOptionSet {
                 #expect(x.isSubset(of: y) == y.isSuperset(of: x), "Invariant not held: x.isSubset(of: y) if and only if y.isSuperset(of: x) for x = \(x._description), y = \(y._description)", sourceLocation: sourceLocation)
 
                 // x.isStrictSuperset(of: y) if and only if x.isSuperset(of: y) && x != y
-                #expect(x.isStrictSuperset(of: y) == (x.isSuperset(of: y) && x != y), "Invariant not held: x.isStrictSuperset(of: y) if and only if x.isSuperset(of: y) && x != y for x = \(x._description), y = \(y._description)", sourceLocation: sourceLocation)
+                #expect(
+                    x.isStrictSuperset(of: y) == (x.isSuperset(of: y) && x != y), "Invariant not held: x.isStrictSuperset(of: y) if and only if x.isSuperset(of: y) && x != y for x = \(x._description), y = \(y._description)",
+                    sourceLocation: sourceLocation)
 
                 // x.isStrictSubset(of: y) if and only if x.isSubset(of: y) && x != y
-                #expect(x.isStrictSubset(of: y) == (x.isSubset(of: y) && x != y), "Invariant not held: x.isStrictSubset(of: y) if and only if x.isSubset(of: y) && x != y for x = \(x._description), y = \(y._description)", sourceLocation: sourceLocation)
+                #expect(
+                    x.isStrictSubset(of: y) == (x.isSubset(of: y) && x != y), "Invariant not held: x.isStrictSubset(of: y) if and only if x.isSubset(of: y) && x != y for x = \(x._description), y = \(y._description)", sourceLocation: sourceLocation)
             }
         }
     }

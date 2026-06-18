@@ -34,29 +34,33 @@ extension Data {
     // Inlinability strategy: everything here should be inlined for direct operation on the stack wherever possible.
     @usableFromInline
     @frozen
-    internal struct InlineData : Sendable {
-#if _pointerBitWidth(_64)
-        @usableFromInline typealias Buffer = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-                                              UInt8, UInt8, UInt8, UInt8, UInt8, UInt8) //len  //enum
+    internal struct InlineData: Sendable {
+        #if _pointerBitWidth(_64)
+        @usableFromInline typealias Buffer = (
+            UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+            UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
+        ) //len  //enum
         @usableFromInline var bytes: Buffer
-#elseif _pointerBitWidth(_32)
-        @usableFromInline typealias Buffer = (UInt8, UInt8, UInt8, UInt8,
-                                              UInt8, UInt8) //len  //enum
+        #elseif _pointerBitWidth(_32)
+        @usableFromInline typealias Buffer = (
+            UInt8, UInt8, UInt8, UInt8,
+            UInt8, UInt8
+        ) //len  //enum
         @usableFromInline var bytes: Buffer
-#else
-#error ("Unsupported architecture: a definition of Buffer needs to be made with N = (MemoryLayout<(Int, Int)>.size - 2) UInt8 members to a tuple")
-#endif
+        #else
+        #error("Unsupported architecture: a definition of Buffer needs to be made with N = (MemoryLayout<(Int, Int)>.size - 2) UInt8 members to a tuple")
+        #endif
         @usableFromInline var length: UInt8
-        
+
         @inlinable @inline(__always) // This is @inlinable as trivially computable.
         static func canStore(count: Int) -> Bool {
             return count <= MemoryLayout<Buffer>.size
         }
-        
+
         static var maximumCapacity: Int {
             return MemoryLayout<Buffer>.size
         }
-        
+
         @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ srcBuffer: UnsafeRawBufferPointer) {
             self.init(count: srcBuffer.count)
@@ -66,20 +70,20 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable @inline(__always) // This is @inlinable as a trivial initializer.
         init(count: Int = 0) {
             assert(count <= MemoryLayout<Buffer>.size)
-#if _pointerBitWidth(_64)
+            #if _pointerBitWidth(_64)
             bytes = (UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0))
-#elseif _pointerBitWidth(_32)
+            #elseif _pointerBitWidth(_32)
             bytes = (UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0))
-#else
-#error ("Unsupported architecture: initialization for Buffer is required for this architecture")
-#endif
+            #else
+            #error("Unsupported architecture: initialization for Buffer is required for this architecture")
+            #endif
             length = UInt8(count)
         }
-        
+
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient @inline(__always)
         init<E: Error>(
@@ -112,7 +116,7 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ slice: LargeSlice, count: Int) {
             self.init(count: count)
@@ -122,12 +126,12 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         var capacity: Int {
             return MemoryLayout<Buffer>.size
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         var count: Int {
             get {
@@ -136,18 +140,18 @@ extension Data {
             set(newValue) {
                 assert(newValue <= MemoryLayout<Buffer>.size)
                 if newValue > length {
-                    resetBytes(in: Int(length) ..< newValue) // Also extends length
+                    resetBytes(in: Int(length)..<newValue) // Also extends length
                 } else {
                     length = UInt8(newValue)
                 }
             }
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         var startIndex: Int {
             return 0
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         var endIndex: Int {
             return count
@@ -198,7 +202,7 @@ extension Data {
             Swift.withUnsafeMutableBytes(of: &bytes) { $0[count] = byte }
             self.length += 1
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
             guard !buffer.isEmpty else { return }
@@ -207,10 +211,10 @@ extension Data {
             _ = Swift.withUnsafeMutableBytes(of: &bytes) { rawBuffer in
                 rawBuffer.baseAddress?.advanced(by: cnt).copyMemory(from: buffer.baseAddress!, byteCount: buffer.count)
             }
-            
+
             length += UInt8(buffer.count)
         }
-        
+
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
@@ -250,7 +254,7 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         mutating func resetBytes(in range: Range<Index>) {
             assert(range.lowerBound <= MemoryLayout<Buffer>.size)
@@ -259,12 +263,12 @@ extension Data {
             if length < range.upperBound {
                 length = UInt8(range.upperBound)
             }
-            
+
             let _ = Swift.withUnsafeMutableBytes(of: &bytes) { rawBuffer in
                 memset(rawBuffer.baseAddress!.advanced(by: range.lowerBound), 0, range.upperBound - range.lowerBound)
             }
         }
-        
+
         @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
         mutating func replaceSubrange(_ subrange: Range<Index>, with replacementBytes: UnsafeRawPointer?, count replacementLength: Int) {
             assert(subrange.lowerBound <= MemoryLayout<Buffer>.size)
@@ -288,21 +292,21 @@ extension Data {
             }
             length = UInt8(resultingLength)
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         func copyBytes(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
             precondition(startIndex <= range.lowerBound, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             precondition(startIndex <= range.upperBound, "index \(range.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
             precondition(range.upperBound <= endIndex, "index \(range.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
-            
+
             Swift.withUnsafeBytes(of: bytes) {
                 let cnt = Swift.min($0.count, range.upperBound - range.lowerBound)
                 guard cnt > 0 else { return }
                 pointer.copyMemory(from: $0.baseAddress!.advanced(by: range.lowerBound), byteCount: cnt)
             }
         }
-        
+
         @inline(__always) // This should always be inlined into _Representation.hash(into:).
         func hash(into hasher: inout Hasher) {
             // **NOTE**: this uses `count` (an Int) and NOT `length` (a UInt8)
@@ -315,7 +319,7 @@ extension Data {
             //   assert(s == d)
             //   assert(s.hashValue == d.hashValue)
             hasher.combine(count)
-            
+
             Swift.withUnsafeBytes(of: bytes) {
                 // We have access to the full byte buffer here, but not all of it is meaningfully used (bytes past self.length may be garbage).
                 let bytes = UnsafeRawBufferPointer(start: $0.baseAddress, count: self.count)

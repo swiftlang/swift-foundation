@@ -22,11 +22,11 @@ internal final class _TimeZoneBridged: _TimeZoneProtocol, @unchecked Sendable {
     init?(secondsFromGMT: Int) {
         fatalError("Unexpected init")
     }
-    
+
     init?(identifier: String) {
         fatalError("Unexpected init")
     }
-    
+
     let _timeZone: NSTimeZone
 
     // MARK: -
@@ -35,7 +35,7 @@ internal final class _TimeZoneBridged: _TimeZoneProtocol, @unchecked Sendable {
     internal init(adoptingReference reference: NSTimeZone) {
         _timeZone = reference
     }
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(_timeZone)
     }

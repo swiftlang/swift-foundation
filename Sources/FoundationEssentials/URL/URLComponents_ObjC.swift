@@ -65,7 +65,8 @@ extension NSURLComponents {
 
         func parseStrategyForPort() -> URL.ParseStrategy.ComponentParseStrategy<Int> {
             if let portString = defaultValue(for: .port),
-               let port = Int(portString) {
+                let port = Int(portString)
+            {
                 return .defaultValue(port)
             } else if isRequired(.port) {
                 return .required
@@ -436,12 +437,12 @@ internal final class _NSSwiftURLQueryItem: _NSURLQueryItemBridge, @unchecked Sen
 
     required init?(coder: NSCoder) {
         guard coder.allowsKeyedCoding else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Cannot be decoded without keyed coding"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Cannot be decoded without keyed coding"]))
             return nil
         }
 
         guard let name = coder.decodeObject(of: NSString.self, forKey: "NS.name") as? String else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Identifier has been corrupted"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Identifier has been corrupted"]))
             return nil
         }
 

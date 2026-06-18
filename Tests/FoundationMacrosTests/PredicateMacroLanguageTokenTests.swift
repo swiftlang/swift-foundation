@@ -32,7 +32,7 @@ private struct PredicateMacroLanguageTokenTests {
             """
         )
     }
-    
+
     @Test func typeCheck() {
         AssertPredicateExpansion(
             """
@@ -49,7 +49,7 @@ private struct PredicateMacroLanguageTokenTests {
             """
         )
     }
-    
+
     @Test func conditionalCast() {
         AssertPredicateExpansion(
             """
@@ -68,7 +68,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -86,7 +86,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -105,7 +105,7 @@ private struct PredicateMacroLanguageTokenTests {
             """
         )
     }
-    
+
     @Test func ifExpressions() {
         AssertPredicateExpansion(
             """
@@ -132,7 +132,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { input, inputB in
@@ -180,7 +180,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -238,7 +238,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -251,7 +251,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["2:8: Availability conditions are not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { input in
@@ -280,7 +280,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { input in
@@ -315,7 +315,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -354,7 +354,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { input in
@@ -367,7 +367,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["2:8: Matching pattern conditions are not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { input in
@@ -381,7 +381,7 @@ private struct PredicateMacroLanguageTokenTests {
             diagnostics: ["2:8: Mixing optional bindings with other conditions is not supported in this predicate"]
         )
     }
-    
+
     @Test func nilLiterals() {
         AssertPredicateExpansion(
             """
@@ -399,7 +399,7 @@ private struct PredicateMacroLanguageTokenTests {
             """
         )
     }
-    
+
     @Test func diagnoseDeclarations() {
         AssertPredicateExpansion(
             """
@@ -410,7 +410,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["3:5: Predicate body may only contain one expression"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -420,7 +420,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["3:5: Predicate body may only contain one expression"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -430,7 +430,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["3:5: Predicate body may only contain one expression"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -440,7 +440,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["3:5: Predicate body may only contain one expression"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -450,7 +450,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["3:5: Predicate body may only contain one expression"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -461,7 +461,7 @@ private struct PredicateMacroLanguageTokenTests {
             diagnostics: ["3:5: Predicate body may only contain one expression"]
         )
     }
-    
+
     @Test func diagnoseMiscellaneousStatements() {
         AssertPredicateExpansion(
             """
@@ -473,7 +473,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["2:5: For-in loops are not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -484,7 +484,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["2:5: While loops are not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -495,7 +495,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["2:5: Repeat-while loops are not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -507,7 +507,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["4:9: Predicate body may only contain one expression"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -524,7 +524,7 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -535,7 +535,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["4:7: Predicate body may only contain one expression"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -546,7 +546,7 @@ private struct PredicateMacroLanguageTokenTests {
             """,
             diagnostics: ["2:5: Switch expressions are not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in

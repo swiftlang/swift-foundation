@@ -21,12 +21,12 @@ extension Data {
     @usableFromInline
     @frozen
     @_addressableForDependencies
-    internal enum _Representation : Sendable {
+    internal enum _Representation: Sendable {
         case empty
         case inline(InlineData)
         case slice(InlineSlice)
         case large(LargeSlice)
-        
+
         @inlinable // This is @inlinable as a trivial initializer.
         init(_ buffer: UnsafeRawBufferPointer) {
             if buffer.isEmpty {
@@ -39,7 +39,7 @@ extension Data {
                 self = .large(LargeSlice(buffer))
             }
         }
-        
+
         @inlinable // This is @inlinable as a trivial initializer.
         init(_ buffer: UnsafeRawBufferPointer, owner: AnyObject) {
             if buffer.isEmpty {
@@ -48,9 +48,11 @@ extension Data {
                 self = .inline(InlineData(buffer))
             } else {
                 let count = buffer.count
-                let storage = __DataStorage(bytes: UnsafeMutableRawPointer(mutating: buffer.baseAddress), length: count, copy: false, deallocator: { _, _ in
-                    _fixLifetime(owner)
-                }, offset: 0)
+                let storage = __DataStorage(
+                    bytes: UnsafeMutableRawPointer(mutating: buffer.baseAddress), length: count, copy: false,
+                    deallocator: { _, _ in
+                        _fixLifetime(owner)
+                    }, offset: 0)
                 if InlineSlice.canStore(count: count) {
                     self = .slice(InlineSlice(storage, count: count))
                 } else {
@@ -58,7 +60,7 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable // This is @inlinable as a trivial initializer.
         init(capacity: Int) {
             if capacity == 0 {
@@ -71,7 +73,7 @@ extension Data {
                 self = .large(LargeSlice(capacity: capacity))
             }
         }
-        
+
         @inlinable // This is @inlinable as a trivial initializer.
         init(count: Int) {
             if count == 0 {
@@ -84,7 +86,7 @@ extension Data {
                 self = .large(LargeSlice(count: count))
             }
         }
-        
+
         @inlinable // This is @inlinable as a trivial initializer.
         init(_ storage: __DataStorage, count: Int) {
             if count == 0 {
@@ -162,7 +164,7 @@ extension Data {
                 self = .large(slice)
             }
         }
-        
+
         @inlinable // This is @inlinable as reasonably small.
         var count: Int {
             get {
@@ -226,7 +228,7 @@ extension Data {
                         } else if slice.startIndex == 0 && InlineData.canStore(count: newValue) {
                             return .inline(InlineData(slice, count: newValue))
                         } else {
-                            guard slice.count != newValue else { return nil}
+                            guard slice.count != newValue else { return nil }
                             representation = .empty // TODO: remove this when mgottesman lands optimizations
                             slice.count = newValue
                             return .large(slice)
@@ -279,8 +281,8 @@ extension Data {
                     buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
                 case .inline(let inline):
                     buffer = unsafe UnsafeMutableRawBufferPointer(
-                      start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                      count: inline.count
+                        start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
+                        count: inline.count
                     )
                 case .large(var slice):
                     // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
@@ -288,7 +290,7 @@ extension Data {
                     slice.ensureUniqueReference()
                     self = .large(slice)
                     buffer = unsafe UnsafeMutableRawBufferPointer(
-                      start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                        start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
                     )
                 case .slice(var slice):
                     // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
@@ -296,7 +298,7 @@ extension Data {
                     slice.ensureUniqueReference()
                     self = .slice(slice)
                     buffer = unsafe UnsafeMutableRawBufferPointer(
-                      start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                        start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
                     )
                 }
                 let span = unsafe MutableRawSpan(_unsafeBytes: buffer)
@@ -384,7 +386,7 @@ extension Data {
                 slice.storage.enumerateBytes(in: slice.range, block)
             }
         }
-        
+
         @inlinable // This is @inlinable as reasonably small.
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
             switch self {
@@ -440,7 +442,7 @@ extension Data {
                     inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
                     var appendedCount = 0
                     defer {
-                        assert(inline.count+appendedCount == storage.length)
+                        assert(inline.count + appendedCount == storage.length)
                         let newCount = storage.length
                         if InlineSlice.canStore(count: newCount) {
                             self = .slice(InlineSlice(storage, count: newCount))
@@ -523,7 +525,7 @@ extension Data {
                 self = .large(slice)
             }
         }
-        
+
         @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
         mutating func replaceSubrange(_ subrange: Range<Index>, with bytes: UnsafeRawPointer?, count cnt: Int) {
             switch self {
@@ -604,7 +606,7 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable // This is @inlinable as trivially forwarding.
         subscript(index: Index) -> UInt8 {
             get {
@@ -632,7 +634,7 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable // This is @inlinable as reasonably small.
         subscript(bounds: Range<Index>) -> Data {
             get {
@@ -682,7 +684,7 @@ extension Data {
                 }
             }
         }
-        
+
         @inlinable // This is @inlinable as trivially forwarding.
         var startIndex: Int {
             switch self {
@@ -692,7 +694,7 @@ extension Data {
             case .large(let slice): return slice.startIndex
             }
         }
-        
+
         @inlinable // This is @inlinable as trivially forwarding.
         var endIndex: Int {
             switch self {
@@ -702,7 +704,7 @@ extension Data {
             case .large(let slice): return slice.endIndex
             }
         }
-        
+
         @inlinable // This is @inlinable as trivially forwarding.
         func copyBytes(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
             switch self {
@@ -717,7 +719,7 @@ extension Data {
                 slice.copyBytes(to: pointer, from: range)
             }
         }
-        
+
         @inline(__always) // This should always be inlined into Data.hash(into:).
         func hash(into hasher: inout Hasher) {
             switch self {

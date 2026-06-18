@@ -174,13 +174,7 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                 if v == slash {
                     // RFC 1808 says don't remove a leading "/../", and
                     // don't remove "<segment>/../" if <segment> == ".."
-                    let previousIsDotDot = (
-                        writeIndex >= 2 &&
-                        buffer[writeIndex - 1] == dot &&
-                        buffer[writeIndex - 2] == dot && (
-                            writeIndex == 2 || buffer[writeIndex - 3] == slash
-                        )
-                    )
+                    let previousIsDotDot = (writeIndex >= 2 && buffer[writeIndex - 1] == dot && buffer[writeIndex - 2] == dot && (writeIndex == 2 || buffer[writeIndex - 3] == slash))
                     if writeIndex == 0 || previousIsDotDot {
                         writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
                             fromContentsOf: [slash, dot, dot]
@@ -257,13 +251,7 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
         writeIndex += 1
     case .slashDotDot:
         guard !useRFC1808 else {
-            let previousIsDotDot = (
-                writeIndex >= 2 &&
-                buffer[writeIndex - 1] == dot &&
-                buffer[writeIndex - 2] == dot && (
-                    writeIndex == 2 || buffer[writeIndex - 3] == slash
-                )
-            )
+            let previousIsDotDot = (writeIndex >= 2 && buffer[writeIndex - 1] == dot && buffer[writeIndex - 2] == dot && (writeIndex == 2 || buffer[writeIndex - 3] == slash))
             if writeIndex == 0 || previousIsDotDot {
                 writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
                     fromContentsOf: [slash, dot, dot]
@@ -310,23 +298,23 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
 // MARK: - URL header types for resolution
 
 internal protocol _URLHeader {
-    var schemeRange:    Range<Int> { get }
-    var userRange:      Range<Int> { get }
-    var passwordRange:  Range<Int> { get }
-    var hostRange:      Range<Int> { get }
-    var portRange:      Range<Int> { get }
-    var pathRange:      Range<Int> { get }
-    var queryRange:     Range<Int> { get }
-    var fragmentRange:  Range<Int> { get }
+    var schemeRange: Range<Int> { get }
+    var userRange: Range<Int> { get }
+    var passwordRange: Range<Int> { get }
+    var hostRange: Range<Int> { get }
+    var portRange: Range<Int> { get }
+    var pathRange: Range<Int> { get }
+    var queryRange: Range<Int> { get }
+    var fragmentRange: Range<Int> { get }
 
-    var hasScheme:      Bool { get }
-    var hasUser:        Bool { get }
-    var hasPassword:    Bool { get }
-    var hasHost:        Bool { get }
-    var hasPort:        Bool { get }
-    var hasPath:        Bool { get }
-    var hasQuery:       Bool { get }
-    var hasFragment:    Bool { get }
+    var hasScheme: Bool { get }
+    var hasUser: Bool { get }
+    var hasPassword: Bool { get }
+    var hasHost: Bool { get }
+    var hasPort: Bool { get }
+    var hasPath: Bool { get }
+    var hasQuery: Bool { get }
+    var hasFragment: Bool { get }
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -338,23 +326,23 @@ private extension CFRange {
 }
 
 extension UnsafePointer<__CFURLHeader>: _URLHeader {
-    var schemeRange:    Range<Int> { __getSchemeRangeUnchecked(self).toIntRange() }
-    var userRange:      Range<Int> { __getUserRangeUnchecked(self).toIntRange() }
-    var passwordRange:  Range<Int> { __getPasswordRangeUnchecked(self).toIntRange() }
-    var hostRange:      Range<Int> { __getHostRangeUnchecked(self).toIntRange() }
-    var portRange:      Range<Int> { __getPortRangeUnchecked(self).toIntRange() }
-    var pathRange:      Range<Int> { __getPathRange(self).toIntRange() }
-    var queryRange:     Range<Int> { __getQueryRangeUnchecked(self).toIntRange() }
-    var fragmentRange:  Range<Int> { __getFragmentRangeUnchecked(self).toIntRange() }
+    var schemeRange: Range<Int> { __getSchemeRangeUnchecked(self).toIntRange() }
+    var userRange: Range<Int> { __getUserRangeUnchecked(self).toIntRange() }
+    var passwordRange: Range<Int> { __getPasswordRangeUnchecked(self).toIntRange() }
+    var hostRange: Range<Int> { __getHostRangeUnchecked(self).toIntRange() }
+    var portRange: Range<Int> { __getPortRangeUnchecked(self).toIntRange() }
+    var pathRange: Range<Int> { __getPathRange(self).toIntRange() }
+    var queryRange: Range<Int> { __getQueryRangeUnchecked(self).toIntRange() }
+    var fragmentRange: Range<Int> { __getFragmentRangeUnchecked(self).toIntRange() }
 
-    var hasScheme:      Bool { pointee._flags.contains(.hasScheme) }
-    var hasUser:        Bool { pointee._flags.contains(.hasUser) }
-    var hasPassword:    Bool { pointee._flags.contains(.hasPassword) }
-    var hasHost:        Bool { pointee._flags.contains(.hasHost) }
-    var hasPort:        Bool { pointee._flags.contains(.hasPort) }
-    var hasPath:        Bool { true } // Path always exists
-    var hasQuery:       Bool { pointee._flags.contains(.hasQuery) }
-    var hasFragment:    Bool { pointee._flags.contains(.hasFragment) }
+    var hasScheme: Bool { pointee._flags.contains(.hasScheme) }
+    var hasUser: Bool { pointee._flags.contains(.hasUser) }
+    var hasPassword: Bool { pointee._flags.contains(.hasPassword) }
+    var hasHost: Bool { pointee._flags.contains(.hasHost) }
+    var hasPort: Bool { pointee._flags.contains(.hasPort) }
+    var hasPath: Bool { true } // Path always exists
+    var hasQuery: Bool { pointee._flags.contains(.hasQuery) }
+    var hasFragment: Bool { pointee._flags.contains(.hasFragment) }
 }
 #endif
 
@@ -376,10 +364,9 @@ extension Slice {
     }
 }
 
-@_specialize(where T == UInt8,  Header == _URLInfo)
+@_specialize(where T == UInt8, Header == _URLInfo)
 #if FOUNDATION_FRAMEWORK
-@_specialize(where T == UInt8,  Header == UnsafePointer<__CFURLHeader>)
-@_specialize(where T == UInt16, Header == UnsafePointer<__CFURLHeader>)
+@_specialize(where T == UInt8, Header == UnsafePointer<__CFURLHeader>)@_specialize(where T == UInt16, Header == UnsafePointer<__CFURLHeader>)
 #endif
 internal func resolveURLBuffers<
     T: UnsignedInteger & FixedWidthInteger, Header: _URLHeader

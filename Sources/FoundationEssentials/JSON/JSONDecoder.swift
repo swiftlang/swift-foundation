@@ -29,7 +29,7 @@ private protocol _JSONStringDictionaryDecodableMarker {
     static var elementType: Decodable.Type { get }
 }
 
-extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String, Value: Decodable {
+extension Dictionary: _JSONStringDictionaryDecodableMarker where Key == String, Value: Decodable {
     static var elementType: Decodable.Type { return Value.self }
 }
 
@@ -75,7 +75,7 @@ open class JSONDecoder {
 
     #if !NO_JSON_FOUNDATION_SPECIALIZATION
     /// The strategies available for formatting dates when decoding them from JSON.
-    public enum DateDecodingStrategy : Sendable {
+    public enum DateDecodingStrategy: Sendable {
         /// Defer to `Date` for decoding. This is the default strategy.
         case deferredToDate
 
@@ -89,10 +89,10 @@ open class JSONDecoder {
         @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
         case iso8601
 
-#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
+        #if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         /// Decode the `Date` as a string parsed by the given formatter.
         case formatted(DateFormatter)
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
 
         /// Decode the `Date` as a custom value decoded by the given closure.
         @preconcurrency
@@ -101,7 +101,7 @@ open class JSONDecoder {
     #endif
 
     /// The strategies for decoding raw data.
-    public enum DataDecodingStrategy : Sendable {
+    public enum DataDecodingStrategy: Sendable {
         /// Defer to `Data` for decoding.
         case deferredToData
 
@@ -116,7 +116,7 @@ open class JSONDecoder {
     /// The strategies for encoding nonconforming floating-point numbers, also known as IEEE 754 exceptional values.
     ///
     /// The IEEE 754 floating-point specification defines exceptional values, which include <doc://com.apple.documentation/documentation/swift/floatingpoint/infinity> and <doc://com.apple.documentation/documentation/swift/floatingpoint/nan>.
-    public enum NonConformingFloatDecodingStrategy : Sendable {
+    public enum NonConformingFloatDecodingStrategy: Sendable {
         /// Throw upon encountering non-conforming values. This is the default strategy.
         case `throw`
 
@@ -128,7 +128,7 @@ open class JSONDecoder {
     ///
     /// > Note:
     /// > Key decoding strategies other than ``useDefaultKeys`` may have a noticeable performance cost because those strategies may inspect and transform each key.
-    public enum KeyDecodingStrategy : Sendable {
+    public enum KeyDecodingStrategy: Sendable {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
 
@@ -303,7 +303,7 @@ open class JSONDecoder {
 
     /// A dictionary you use to customize the decoding process by providing contextual information.
     @preconcurrency
-    open var userInfo: [CodingUserInfoKey : any Sendable] {
+    open var userInfo: [CodingUserInfoKey: any Sendable] {
         get {
             optionsLock._unsafeLock()
             defer { optionsLock._unsafeUnlock() }
@@ -361,7 +361,7 @@ open class JSONDecoder {
         var dataDecodingStrategy: DataDecodingStrategy = .base64
         var nonConformingFloatDecodingStrategy: NonConformingFloatDecodingStrategy = .throw
         var keyDecodingStrategy: KeyDecodingStrategy = .useDefaultKeys
-        var userInfo: [CodingUserInfoKey : any Sendable] = [:]
+        var userInfo: [CodingUserInfoKey: any Sendable] = [:]
         var json5: Bool = false
     }
 
@@ -374,11 +374,11 @@ open class JSONDecoder {
     /// Creates a new, reusable JSON decoder with the default formatting settings and decoding strategies.
     public init() {}
 
-    private var scannerOptions : JSONScanner.Options {
+    private var scannerOptions: JSONScanner.Options {
         .init(assumesTopLevelDictionary: self.assumesTopLevelDictionary)
     }
 
-    private var json5ScannerOptions : JSON5Scanner.Options {
+    private var json5ScannerOptions: JSON5Scanner.Options {
         .init(assumesTopLevelDictionary: self.assumesTopLevelDictionary)
     }
 
@@ -392,20 +392,22 @@ open class JSONDecoder {
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     /// - throws: An error if any value throws an error during decoding.
     open func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        try _decode({
-            try $0.unwrap($1, as: type, for: .root, _CodingKey?.none)
-        }, from: data)
+        try _decode(
+            {
+                try $0.unwrap($1, as: type, for: .root, _CodingKey?.none)
+            }, from: data)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
-        try _decode({
-            try $0.unwrap($1, as: type, configuration: configuration, for: .root, _CodingKey?.none)
-        }, from: data)
+        try _decode(
+            {
+                try $0.unwrap($1, as: type, configuration: configuration, for: .root, _CodingKey?.none)
+            }, from: data)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
+    open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T: DecodableWithConfiguration, C: DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, configuration: C.decodingConfiguration)
     }
 
@@ -451,7 +453,7 @@ open class JSONDecoder {
     // Output: The closure is invoked with a UInt8 buffer containing the valid UTF-8 representation. If the input contained a BOM, that BOM will be excluded in the resulting buffer.
     // If the input cannot be fully decoded by the detected encoding or cannot be converted to UTF-8, the function will throw a JSONError.cannotConvertEntireInputDataToUTF8 error.
     // If the input is detected to already be UTF-8, the Data's buffer will be passed through without copying.
-    static func withUTF8Representation<T>(of jsonData: Data, _ closure: (BufferView<UInt8>) throws -> T ) throws -> T {
+    static func withUTF8Representation<T>(of jsonData: Data, _ closure: (BufferView<UInt8>) throws -> T) throws -> T {
         return try jsonData.withBufferView {
             [length = jsonData.count] bytes in
             assert(bytes.count == length)
@@ -467,8 +469,8 @@ open class JSONDecoder {
 
             // Check for explicit BOM first, then check the first two bytes. Note that if there is a BOM, we have to create our string without it.
             // This isn't strictly part of the JSON spec but it's useful to do anyway.
-            let sourceEncoding : String.Encoding
-            let bomLength : Int
+            let sourceEncoding: String.Encoding
+            let bomLength: Int
             switch (byte0, byte1, byte2, byte3) {
             case (0, 0, 0xFE, 0xFF):
                 sourceEncoding = .utf32BigEndian
@@ -543,7 +545,7 @@ fileprivate class JSONDecoderImpl {
         codingPathNode.path
     }
 
-    var topValue : JSONMap.Value { self.values.last! }
+    var topValue: JSONMap.Value { self.values.last! }
     func push(value: __owned JSONMap.Value) {
         self.values.append(value)
     }
@@ -587,15 +589,19 @@ extension JSONDecoderImpl: Decoder {
             )
             return KeyedDecodingContainer(container)
         case .null:
-            throw DecodingError.valueNotFound([String: Any].self, DecodingError.Context(
-                codingPath: self.codingPath,
-                debugDescription: "Cannot get keyed decoding container -- found null value instead"
-            ))
+            throw DecodingError.valueNotFound(
+                [String: Any].self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get keyed decoding container -- found null value instead"
+                ))
         default:
-            throw DecodingError.typeMismatch([String: Any].self, DecodingError.Context(
-                codingPath: self.codingPath,
-                debugDescription: "Expected to decode \([String: Any].self) but found \(topValue.debugDataTypeDescription) instead."
-            ))
+            throw DecodingError.typeMismatch(
+                [String: Any].self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Expected to decode \([String: Any].self) but found \(topValue.debugDataTypeDescription) instead."
+                ))
         }
     }
 
@@ -608,15 +614,19 @@ extension JSONDecoderImpl: Decoder {
                 region: region
             )
         case .null:
-            throw DecodingError.valueNotFound([Any].self, DecodingError.Context(
-                codingPath: self.codingPath,
-                debugDescription: "Cannot get unkeyed decoding container -- found null value instead"
-            ))
+            throw DecodingError.valueNotFound(
+                [Any].self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get unkeyed decoding container -- found null value instead"
+                ))
         default:
-            throw DecodingError.typeMismatch([Any].self, DecodingError.Context(
-                codingPath: self.codingPath,
-                debugDescription: "Expected to decode \([Any].self) but found \(topValue.debugDataTypeDescription) instead."
-            ))
+            throw DecodingError.typeMismatch(
+                [Any].self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Expected to decode \([Any].self) but found \(topValue.debugDataTypeDescription) instead."
+                ))
         }
     }
 
@@ -629,10 +639,12 @@ extension JSONDecoderImpl: Decoder {
     @inline(__always)
     func checkNotNull<T>(_ value: JSONMap.Value, expectedType: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws {
         if case .null = value {
-            throw DecodingError.valueNotFound(expectedType, DecodingError.Context(
-                codingPath: codingPathNode.path(byAppending: additionalKey),
-                debugDescription: "Cannot get value of type \(expectedType) -- found null value instead"
-            ))
+            throw DecodingError.valueNotFound(
+                expectedType,
+                DecodingError.Context(
+                    codingPath: codingPathNode.path(byAppending: additionalKey),
+                    debugDescription: "Cannot get value of type \(expectedType) -- found null value instead"
+                ))
         }
     }
 
@@ -678,7 +690,7 @@ extension JSONDecoderImpl: Decoder {
             try type.init(from: self)
         }
     }
-    
+
     func unwrap<T: DecodableWithConfiguration>(_ mapValue: JSONMap.Value, as type: T.Type, configuration: T.DecodingConfiguration, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
         try self.with(value: mapValue, path: codingPathNode.appending(additionalKey)) {
             try type.init(from: self, configuration: configuration)
@@ -709,14 +721,14 @@ extension JSONDecoderImpl: Decoder {
             }
             return date
 
-#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
+        #if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         case .formatted(let formatter):
             let string = try self.unwrapString(from: mapValue, for: codingPathNode, additionalKey)
             guard let date = formatter.date(from: string) else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: codingPathNode.path(byAppending: additionalKey), debugDescription: "Date string does not match format expected by formatter."))
             }
             return date
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
         case .custom(let closure):
             return try self.with(value: mapValue, path: codingPathNode.appending(additionalKey)) {
                 try closure(self)
@@ -768,8 +780,10 @@ extension JSONDecoderImpl: Decoder {
 
         let string = try self.unwrapString(from: mapValue, for: codingPathNode, additionalKey)
         guard let url = URL(string: string) else {
-            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: codingPathNode.path(byAppending: additionalKey),
-                                                                    debugDescription: "Invalid URL string."))
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: codingPathNode.path(byAppending: additionalKey),
+                    debugDescription: "Invalid URL string."))
         }
         return url
     }
@@ -831,17 +845,19 @@ extension JSONDecoderImpl: Decoder {
     #endif
 
     private func unwrapDictionary<T: Decodable>(from mapValue: JSONMap.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
-        try checkNotNull(mapValue, expectedType: [String:Any].self, for: codingPathNode, additionalKey)
+        try checkNotNull(mapValue, expectedType: [String: Any].self, for: codingPathNode, additionalKey)
 
         guard let dictType = type as? (_JSONStringDictionaryDecodableMarker & Decodable).Type else {
             preconditionFailure("Must only be called if T implements __JSONStringDictionaryDecodableMarker")
         }
 
         guard case let .object(region) = mapValue else {
-            throw DecodingError.typeMismatch([String: Any].self, DecodingError.Context(
-                codingPath: codingPathNode.path(byAppending: additionalKey),
-                debugDescription: "Expected to decode \([String: Any].self) but found \(mapValue.debugDataTypeDescription) instead."
-            ))
+            throw DecodingError.typeMismatch(
+                [String: Any].self,
+                DecodingError.Context(
+                    codingPath: codingPathNode.path(byAppending: additionalKey),
+                    debugDescription: "Expected to decode \([String: Any].self) but found \(mapValue.debugDataTypeDescription) instead."
+                ))
         }
 
         var result = [String: Any]()
@@ -886,7 +902,7 @@ extension JSONDecoderImpl: Decoder {
         var remainingBuffer = buffer
 
         // Non-zero numbers are allowed after 'e'/'E'. Since the format is already validated at this stage, we can stop scanning as soon as we see one.
-        let nonZeroRange = UInt8(ascii: "1") ... UInt8(ascii: "9")
+        let nonZeroRange = UInt8(ascii: "1")...UInt8(ascii: "9")
 
         @inline(__always)
         func check(_ off: Int) -> Bool? {
@@ -928,8 +944,8 @@ extension JSONDecoderImpl: Decoder {
     private func unwrapFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>(
         from value: JSONMap.Value,
         as type: T.Type,
-        for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T
-    {
+        for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil
+    ) throws -> T {
         try checkNotNull(value, expectedType: type, for: codingPathNode, additionalKey)
 
         // We are always willing to return the number as a Double:
@@ -1000,8 +1016,8 @@ extension JSONDecoderImpl: Decoder {
         }
 
         if case .string(let region, let isSimple) = value, isSimple,
-           case .convertFromString(let posInfString, let negInfString, let nanString) =
-            self.options.nonConformingFloatDecodingStrategy
+            case .convertFromString(let posInfString, let negInfString, let nanString) =
+                self.options.nonConformingFloatDecodingStrategy
         {
             let result = withBuffer(for: region) { (stringBuffer, _) -> T? in
                 var posInfString = posInfString
@@ -1026,8 +1042,8 @@ extension JSONDecoderImpl: Decoder {
     private func unwrapFixedWidthInteger<T: FixedWidthInteger & Sendable>(
         from value: JSONMap.Value,
         as type: T.Type,
-        for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T
-    {
+        for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil
+    ) throws -> T {
         try checkNotNull(value, expectedType: type, for: codingPathNode, additionalKey)
 
         guard case .number(let region, let hasExponent) = value else {
@@ -1037,7 +1053,7 @@ extension JSONDecoderImpl: Decoder {
         return try withBuffer(for: region) { numberBuffer, fullSource in
             let digitBeginning: BufferViewIndex<UInt8>
             if json5 {
-                let isHex : Bool
+                let isHex: Bool
                 let isSpecialFloatValue: Bool
                 (digitBeginning, isHex, isSpecialFloatValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, fullSource: fullSource)
 
@@ -1063,7 +1079,9 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
-    static private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, json5: Bool, numberBuffer: BufferView<UInt8>, fullSource: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    static private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(
+        as type: T.Type, json5: Bool, numberBuffer: BufferView<UInt8>, fullSource: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?
+    ) throws -> T {
         // This is the slow path... If the fast path has failed. For example for "34.0" as an integer, we try to parse as either a Decimal or a Double and then convert back, losslessly.
         if let double = Double(prevalidatedBuffer: numberBuffer) {
             // T.init(exactly:) guards against non-integer Double(s), but the parser may
@@ -1100,10 +1118,12 @@ extension JSONDecoderImpl: Decoder {
     }
 
     private func createTypeMismatchError(type: Any.Type, for path: [CodingKey], value: JSONMap.Value) -> DecodingError {
-        return DecodingError.typeMismatch(type, .init(
-            codingPath: path,
-            debugDescription: "Expected to decode \(type) but found \(value.debugDataTypeDescription) instead."
-        ))
+        return DecodingError.typeMismatch(
+            type,
+            .init(
+                codingPath: path,
+                debugDescription: "Expected to decode \(type) but found \(value.debugDataTypeDescription) instead."
+            ))
     }
 }
 
@@ -1120,7 +1140,7 @@ extension FixedWidthInteger {
             }
         }
 
-        var d : UInt64 = 0
+        var d: UInt64 = 0
         for i in (0..<decimal._length).reversed() {
             let overflow1: Bool
             let overflow2: Bool
@@ -1139,7 +1159,7 @@ extension FixedWidthInteger {
                 }
             }
         } else {
-            for _ in 0 ..< decimal._exponent {
+            for _ in 0..<decimal._exponent {
                 let overflow: Bool
                 (d, overflow) = d.multipliedReportingOverflow(by: 10)
                 guard !overflow else {
@@ -1162,7 +1182,7 @@ extension FixedWidthInteger {
 }
 #endif
 
-extension JSONDecoderImpl : SingleValueDecodingContainer {
+extension JSONDecoderImpl: SingleValueDecodingContainer {
     func decodeNil() -> Bool {
         switch topValue {
         case .null:
@@ -1211,10 +1231,10 @@ extension JSONDecoderImpl : SingleValueDecodingContainer {
     func decode(_: Int64.Type) throws -> Int64 {
         try decodeFixedWidthInteger()
     }
-  
+
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     func decode(_: Int128.Type) throws -> Int128 {
-      try decodeFixedWidthInteger()
+        try decodeFixedWidthInteger()
     }
 
     func decode(_: UInt.Type) throws -> UInt {
@@ -1236,10 +1256,10 @@ extension JSONDecoderImpl : SingleValueDecodingContainer {
     func decode(_: UInt64.Type) throws -> UInt64 {
         try decodeFixedWidthInteger()
     }
-  
+
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     func decode(_: UInt128.Type) throws -> UInt128 {
-      try decodeFixedWidthInteger()
+        try decodeFixedWidthInteger()
     }
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
@@ -1261,10 +1281,10 @@ extension JSONDecoderImpl {
 
         let impl: JSONDecoderImpl
         let codingPathNode: _CodingPathNode
-        let dictionary: [String:JSONMap.Value]
+        let dictionary: [String: JSONMap.Value]
 
-        static func stringify(objectRegion: JSONMap.Region, using impl: JSONDecoderImpl, codingPathNode: _CodingPathNode, keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy) throws -> [String:JSONMap.Value] {
-            var result = [String:JSONMap.Value]()
+        static func stringify(objectRegion: JSONMap.Region, using impl: JSONDecoderImpl, codingPathNode: _CodingPathNode, keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy) throws -> [String: JSONMap.Value] {
+            var result = [String: JSONMap.Value]()
             result.reserveCapacity(objectRegion.count / 2)
 
             var iter = impl.jsonMap.makeObjectIterator(from: objectRegion.startOffset)
@@ -1290,7 +1310,7 @@ extension JSONDecoderImpl {
             case .custom(let converter):
                 let codingPathForCustomConverter = codingPathNode.path
                 while let (keyValue, value) = iter.next() {
-                    // We know these values are keys, but UTF-8 decoding could still fail. 
+                    // We know these values are keys, but UTF-8 decoding could still fail.
                     let key = try impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
 
                     var pathForKey = codingPathForCustomConverter
@@ -1308,7 +1328,7 @@ extension JSONDecoderImpl {
             self.dictionary = try Self.stringify(objectRegion: region, using: impl, codingPathNode: codingPathNode, keyDecodingStrategy: impl.options.keyDecodingStrategy)
         }
 
-        public var codingPath : [CodingKey] {
+        public var codingPath: [CodingKey] {
             codingPathNode.path
         }
 
@@ -1414,10 +1434,10 @@ extension JSONDecoderImpl {
         func decode(_: Int64.Type, forKey key: K) throws -> Int64 {
             try decodeFixedWidthInteger(key: key)
         }
-      
+
         @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
         func decode(_: Int128.Type, forKey key: K) throws -> Int128 {
-          try decodeFixedWidthInteger(key: key)
+            try decodeFixedWidthInteger(key: key)
         }
 
         func decodeIfPresent(_: Int64.Type, forKey key: K) throws -> Int64? {
@@ -1459,10 +1479,10 @@ extension JSONDecoderImpl {
         func decode(_: UInt64.Type, forKey key: K) throws -> UInt64 {
             try decodeFixedWidthInteger(key: key)
         }
-      
+
         @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
         func decode(_: UInt128.Type, forKey key: K) throws -> UInt128 {
-          try decodeFixedWidthInteger(key: key)
+            try decodeFixedWidthInteger(key: key)
         }
 
         func decodeIfPresent(_: UInt64.Type, forKey key: K) throws -> UInt64? {
@@ -1520,10 +1540,12 @@ extension JSONDecoderImpl {
 
         @inline(__always) private func getValue(forKey key: some CodingKey) throws -> JSONMap.Value {
             guard let value = dictionary[key.stringValue] else {
-                throw DecodingError.keyNotFound(key, .init(
-                    codingPath: self.codingPath,
-                    debugDescription: "No value associated with key \(key) (\"\(key.stringValue)\")."
-                ))
+                throw DecodingError.keyNotFound(
+                    key,
+                    .init(
+                        codingPath: self.codingPath,
+                        debugDescription: "No value associated with key \(key) (\"\(key.stringValue)\")."
+                    ))
             }
             return value
         }
@@ -1533,9 +1555,11 @@ extension JSONDecoderImpl {
         }
 
         private func createTypeMismatchError(type: Any.Type, forKey key: K, value: JSONMap.Value) -> DecodingError {
-            return DecodingError.typeMismatch(type, .init(
-                codingPath: self.codingPathNode.path(byAppending: key), debugDescription: "Expected to decode \(type) but found \(value.debugDataTypeDescription) instead."
-            ))
+            return DecodingError.typeMismatch(
+                type,
+                .init(
+                    codingPath: self.codingPathNode.path(byAppending: key), debugDescription: "Expected to decode \(type) but found \(value.debugDataTypeDescription) instead."
+                ))
         }
 
         @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger & Sendable>(key: Self.Key) throws -> T {
@@ -1593,7 +1617,7 @@ extension JSONDecoderImpl {
         }
 
         @inline(__always)
-        var currentIndexKey : _CodingKey {
+        var currentIndexKey: _CodingKey {
             .init(index: currentIndex)
         }
 
@@ -1632,11 +1656,12 @@ extension JSONDecoderImpl {
 
         mutating func decodeIfPresent(_ type: Bool.Type) throws -> Bool? {
             let value = self.peekNextValueIfPresent(ofType: Bool.self)
-            let result: Bool? = switch value {
-            case nil, .null: nil
-            case .bool(let bool): bool
-            default: throw impl.createTypeMismatchError(type: type, for: self.currentCodingPath, value: value!)
-            }
+            let result: Bool? =
+                switch value {
+                case nil, .null: nil
+                case .bool(let bool): bool
+                default: throw impl.createTypeMismatchError(type: type, for: self.currentCodingPath, value: value!)
+                }
             advanceToNextValue()
             return result
         }
@@ -1650,10 +1675,11 @@ extension JSONDecoderImpl {
 
         mutating func decodeIfPresent(_ type: String.Type) throws -> String? {
             let value = self.peekNextValueIfPresent(ofType: String.self)
-            let result: String? = switch value {
-            case nil, .null: nil
-            default: try impl.unwrapString(from: value.unsafelyUnwrapped, for: codingPathNode, currentIndexKey)
-            }
+            let result: String? =
+                switch value {
+                case nil, .null: nil
+                default: try impl.unwrapString(from: value.unsafelyUnwrapped, for: codingPathNode, currentIndexKey)
+                }
             advanceToNextValue()
             return result
         }
@@ -1709,10 +1735,10 @@ extension JSONDecoderImpl {
         mutating func decode(_: Int64.Type) throws -> Int64 {
             try decodeFixedWidthInteger()
         }
-      
+
         @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
         mutating func decode(_: Int128.Type) throws -> Int128 {
-          try decodeFixedWidthInteger()
+            try decodeFixedWidthInteger()
         }
 
         mutating func decodeIfPresent(_: Int64.Type) throws -> Int64? {
@@ -1754,10 +1780,10 @@ extension JSONDecoderImpl {
         mutating func decode(_: UInt64.Type) throws -> UInt64 {
             try decodeFixedWidthInteger()
         }
-      
+
         @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
         mutating func decode(_: UInt128.Type) throws -> UInt128 {
-          try decodeFixedWidthInteger()
+            try decodeFixedWidthInteger()
         }
 
         mutating func decodeIfPresent(_: UInt64.Type) throws -> UInt64? {
@@ -1774,10 +1800,11 @@ extension JSONDecoderImpl {
 
         mutating func decodeIfPresent<T: Decodable>(_ type: T.Type) throws -> T? {
             let value = self.peekNextValueIfPresent(ofType: type)
-            let result: T? = switch value {
-            case nil, .null: nil
-            default: try impl.unwrap(value.unsafelyUnwrapped, as: type, for: codingPathNode, currentIndexKey)
-            }
+            let result: T? =
+                switch value {
+                case nil, .null: nil
+                default: try impl.unwrap(value.unsafelyUnwrapped, as: type, for: codingPathNode, currentIndexKey)
+                }
             advanceToNextValue()
             return result
         }
@@ -1848,9 +1875,10 @@ extension JSONDecoderImpl {
 
                 throw DecodingError.valueNotFound(
                     type,
-                    .init(codingPath: path,
-                          debugDescription: message,
-                          underlyingError: nil))
+                    .init(
+                        codingPath: path,
+                        debugDescription: message,
+                        underlyingError: nil))
             }
             return nextValue
         }
@@ -1873,20 +1901,22 @@ extension JSONDecoderImpl {
 
         @inline(__always) private mutating func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger & Sendable>() throws -> T? {
             let value = self.peekNextValueIfPresent(ofType: T.self)
-            let result: T? = switch value {
-            case nil, .null: nil
-            default: try impl.unwrapFixedWidthInteger(from: value.unsafelyUnwrapped, as: T.self, for: codingPathNode, currentIndexKey)
-            }
+            let result: T? =
+                switch value {
+                case nil, .null: nil
+                default: try impl.unwrapFixedWidthInteger(from: value.unsafelyUnwrapped, as: T.self, for: codingPathNode, currentIndexKey)
+                }
             advanceToNextValue()
             return result
         }
 
         @inline(__always) private mutating func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint & Sendable>() throws -> T? {
             let value = self.peekNextValueIfPresent(ofType: T.self)
-            let result: T? = switch value {
-            case nil, .null: nil
-            default: try impl.unwrapFloatingPoint(from: value.unsafelyUnwrapped, as: T.self, for: codingPathNode, currentIndexKey)
-            }
+            let result: T? =
+                switch value {
+                case nil, .null: nil
+                default: try impl.unwrapFloatingPoint(from: value.unsafelyUnwrapped, as: T.self, for: codingPathNode, currentIndexKey)
+                }
             advanceToNextValue()
             return result
         }
@@ -1904,7 +1934,7 @@ extension EncodingError {
     /// - parameter value: The value that was invalid to encode.
     /// - parameter path: The path of `CodingKey`s taken to encode this value.
     /// - returns: An `EncodingError` with the appropriate path and debug description.
-    fileprivate static func _invalidFloatingPointValue<T : FloatingPoint>(_ value: T, at codingPath: [CodingKey]) -> EncodingError {
+    fileprivate static func _invalidFloatingPointValue<T: FloatingPoint>(_ value: T, at codingPath: [CodingKey]) -> EncodingError {
         let valueDescription: String
         if value == T.infinity {
             valueDescription = "\(T.self).infinity"
@@ -1920,12 +1950,12 @@ extension EncodingError {
 }
 
 // This is a workaround for the lack of a "set value only if absent" function for Dictionary.
- extension Optional {
-     fileprivate mutating func _setIfNil(to value: Wrapped) {
-         guard _fastPath(self == nil) else { return }
-         self = value
-     }
- }
+extension Optional {
+    fileprivate mutating func _setIfNil(to value: Wrapped) {
+        guard _fastPath(self == nil) else { return }
+        self = value
+    }
+}
 
 fileprivate extension JSONDecoder.KeyDecodingStrategy {
     var isDefault: Bool {
@@ -1941,4 +1971,4 @@ fileprivate extension JSONDecoder.KeyDecodingStrategy {
 #else
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 #endif
-extension JSONDecoder : @unchecked Sendable {}
+extension JSONDecoder: @unchecked Sendable {}

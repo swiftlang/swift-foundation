@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 extension Date {
-#if !FOUNDATION_FRAMEWORK
+    #if !FOUNDATION_FRAMEWORK
     /**
      Returns a string representation of the receiver using the given
      locale.
@@ -23,5 +23,5 @@ extension Date {
         // FIXME: Use DateFormatStyle once implemented
         return description
     }
-#endif // !FOUNDATION_FRAMEWORK
+    #endif // !FOUNDATION_FRAMEWORK
 }

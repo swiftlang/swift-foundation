@@ -19,7 +19,7 @@ internal import Foundation_Private
 internal import _FoundationICU
 
 #if !FOUNDATION_FRAMEWORK
-@_dynamicReplacement(for: _uidnaHook())
+@_dynamicReplacement(for:_uidnaHook())
 private func _uidnaHook_localized() -> UIDNAHook.Type? {
     return UIDNAHookICU.self
 }
@@ -27,7 +27,7 @@ private func _uidnaHook_localized() -> UIDNAHook.Type? {
 
 struct UIDNAHookICU: UIDNAHook {
     // `Sendable` notes: `UIDNA` from ICU is thread safe.
-    struct UIDNAPointer : @unchecked Sendable {
+    struct UIDNAPointer: @unchecked Sendable {
         init(_ ptr: OpaquePointer?) { self.idnaTranscoder = ptr }
         var idnaTranscoder: OpaquePointer?
     }
@@ -39,10 +39,7 @@ struct UIDNAHookICU: UIDNAHook {
     private static let idnaTranscoder: UIDNAPointer? = {
         var status = U_ZERO_ERROR
         let options = UInt32(
-            UIDNA_CHECK_BIDI                    |
-            UIDNA_CHECK_CONTEXTJ                |
-            UIDNA_NONTRANSITIONAL_TO_UNICODE    |
-            UIDNA_NONTRANSITIONAL_TO_ASCII
+            UIDNA_CHECK_BIDI | UIDNA_CHECK_CONTEXTJ | UIDNA_NONTRANSITIONAL_TO_UNICODE | UIDNA_NONTRANSITIONAL_TO_ASCII
         )
         let encoder = uidna_openUTS46(options, &status)
         guard U_SUCCESS(status.rawValue) else {
@@ -57,12 +54,7 @@ struct UIDNAHookICU: UIDNAHook {
             allowedErrors = 0
         } else {
             allowedErrors = UInt32(
-                UIDNA_ERROR_EMPTY_LABEL             |
-                UIDNA_ERROR_LABEL_TOO_LONG          |
-                UIDNA_ERROR_DOMAIN_NAME_TOO_LONG    |
-                UIDNA_ERROR_LEADING_HYPHEN          |
-                UIDNA_ERROR_TRAILING_HYPHEN         |
-                UIDNA_ERROR_HYPHEN_3_4
+                UIDNA_ERROR_EMPTY_LABEL | UIDNA_ERROR_LABEL_TOO_LONG | UIDNA_ERROR_DOMAIN_NAME_TOO_LONG | UIDNA_ERROR_LEADING_HYPHEN | UIDNA_ERROR_TRAILING_HYPHEN | UIDNA_ERROR_HYPHEN_3_4
             )
         }
         return errors & ~allowedErrors == 0
@@ -176,7 +168,8 @@ struct UIDNAHookICU: UIDNAHook {
                             continue
                         }
                         guard utf16Buffer[i] < 128,
-                              UInt8(utf16Buffer[i])._lowercased == outBuffer[i] else {
+                            UInt8(utf16Buffer[i])._lowercased == outBuffer[i]
+                        else {
                             hostsAreEqual = false
                             break
                         }
@@ -252,7 +245,8 @@ struct UIDNAHookICU: UIDNAHook {
                 var error = U_ZERO_ERROR
 
                 guard let inBufferPtr = inBuffer.baseAddress,
-                      let outBufferPtr = outBuffer.baseAddress else {
+                    let outBufferPtr = outBuffer.baseAddress
+                else {
                     return false
                 }
 

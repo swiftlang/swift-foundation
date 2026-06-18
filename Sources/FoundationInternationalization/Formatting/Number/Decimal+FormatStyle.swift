@@ -318,12 +318,12 @@ extension Decimal {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle : FormatStyle {}
+extension Decimal.FormatStyle: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal.FormatStyle {
     /// A format style that converts between decimal percentage values and their textual representations.
-    public struct Percent : Sendable {
+    public struct Percent: Sendable {
         public typealias Configuration = NumberFormatStyleConfiguration
 
         /// The locale of the format style.
@@ -454,7 +454,7 @@ extension Decimal.FormatStyle {
 
     /// A format style that converts between decimal currency values and their textual representations.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct Currency : Sendable {
+    public struct Currency: Sendable {
         public typealias Configuration = CurrencyFormatStyleConfiguration
 
         /// The locale of the format style.
@@ -612,12 +612,12 @@ extension Decimal.FormatStyle {
     /// ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use these
     /// attributes to determine which runs of the attributed string represent different parts of
     /// the formatted value.
-    public struct Attributed : Sendable {
-        enum Style : Hashable, Codable, Sendable {
+    public struct Attributed: Sendable {
+        enum Style: Hashable, Codable, Sendable {
             case decimal(Decimal.FormatStyle)
             case currency(Decimal.FormatStyle.Currency)
             case percent(Decimal.FormatStyle.Percent)
-            
+
             private typealias DecimalCodingKeys = DefaultAssociatedValueCodingKeys1
             private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
             private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
@@ -689,13 +689,13 @@ extension Decimal.FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle.Percent : FormatStyle {}
+extension Decimal.FormatStyle.Percent: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle.Currency : FormatStyle {}
+extension Decimal.FormatStyle.Currency: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle.Attributed : FormatStyle {}
+extension Decimal.FormatStyle.Attributed: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal.FormatStyle: ParseableFormatStyle {
@@ -783,7 +783,7 @@ extension Decimal {
         FormatStyle().format(self)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Formats the decimal using the provided format style.
     ///
     /// Use this method when you want to format a single decimal value with a specific
@@ -804,7 +804,7 @@ extension Decimal {
     public func formatted<S: Foundation.FormatStyle>(_ format: S) -> S.FormatOutput where Self == S.FormatInput {
         format.format(self)
     }
-#else
+    #else
     /// Formats the decimal using the provided format style.
     ///
     /// Use this method when you want to format a single decimal value with a specific
@@ -825,13 +825,13 @@ extension Decimal {
     public func formatted<S: FoundationEssentials.FormatStyle>(_ format: S) -> S.FormatOutput where Self == S.FormatInput {
         format.format(self)
     }
-#endif
+    #endif
 }
 
 // MARK: - Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Decimal.FormatStyle : CustomConsumingRegexComponent {
+extension Decimal.FormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Decimal
 
     /// Matches the input string within the specified bounds, beginning at the given index.
@@ -850,7 +850,7 @@ extension Decimal.FormatStyle : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Decimal.FormatStyle.Percent : CustomConsumingRegexComponent {
+extension Decimal.FormatStyle.Percent: CustomConsumingRegexComponent {
     public typealias RegexOutput = Decimal
 
     /// Matches the input string within the specified bounds, beginning at the given index.
@@ -869,7 +869,7 @@ extension Decimal.FormatStyle.Percent : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Decimal.FormatStyle.Currency : CustomConsumingRegexComponent {
+extension Decimal.FormatStyle.Currency: CustomConsumingRegexComponent {
     public typealias RegexOutput = Decimal
 
     /// Matches the input string within the specified bounds, beginning at the given index.

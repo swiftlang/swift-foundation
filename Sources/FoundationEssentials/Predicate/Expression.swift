@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-public struct Expression<each Input, Output> : Sendable {
-    public let expression : any StandardPredicateExpression<Output>
+public struct Expression<each Input, Output>: Sendable {
+    public let expression: any StandardPredicateExpression<Output>
     public let variable: (repeat PredicateExpressions.Variable<each Input>)
-    
+
     public init(_ builder: (repeat PredicateExpressions.Variable<each Input>) -> any StandardPredicateExpression<Output>) {
         self.variable = (repeat PredicateExpressions.Variable<each Input>())
         self.expression = builder(repeat each variable)
     }
-    
+
     public func evaluate(_ input: repeat each Input) throws -> Output {
         try expression.evaluate(
             .init(repeat (each variable, each input))

@@ -105,10 +105,10 @@ extension NotificationCenter {
         /// A type which you can optionally post and observe along with this `AsyncMessage`.
         associatedtype Subject
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         /// A optional name corresponding to this type, used to interoperate with notification posters and observers.
         static var name: Notification.Name { get }
-        
+
         /// Converts a posted notification into this asynchronous message type for any observers.
         ///
         /// To implement this method in your own `AsyncMessage` conformance, retrieve values from the ``Notification``'s ``Notification/userInfo`` and set them as properties on the message.
@@ -123,27 +123,27 @@ extension NotificationCenter {
         ///   - message: The posted `AsyncMessage`.
         /// - Returns: The converted ``Notification``.
         static func makeNotification(_ message: Self) -> Notification
-#endif
+        #endif
     }
 }
 
 @available(FoundationPreview 6.2, *)
 extension NotificationCenter.AsyncMessage {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     public static func makeMessage(_ notification: Notification) -> Self? { return nil }
     public static func makeNotification(_ message: Self) -> Notification { return Notification(name: Self.name) }
-    
+
     // Default Message name is the fully-qualified type name, suitable when Notification-compatibility isn't needed
     public static var name: Notification.Name {
         // Similar to String(describing:)
         return Notification.Name(rawValue: _typeName(Self.self))
     }
-#else
+    #else
     internal static var name: String {
         // Similar to String(describing:)
         return _typeName(Self.self)
     }
-#endif
+    #endif
 }
 
 @available(FoundationPreview 6.2, *)
@@ -157,13 +157,16 @@ extension NotificationCenter {
     public func addObserver<Identifier: MessageIdentifier, Message: AsyncMessage>(
         of subject: Message.Subject,
         for identifier: Identifier,
-        using observer: @escaping @Sendable (Message) async -> Void)
-    -> ObservationToken where Identifier.MessageType == Message,
-                              Message.Subject: AnyObject
+        using observer: @escaping @Sendable (Message) async -> Void
+    )
+        -> ObservationToken
+    where
+        Identifier.MessageType == Message,
+        Message.Subject: AnyObject
     {
         _addAsyncObserver(Identifier.MessageType.self, subject: subject, observer: observer)
     }
-    
+
     /// Adds an observer to a center for messages delivered asynchronously with a given subject and message type.
     /// - Parameters:
     ///   - subject: The metatype to observe all values for a given type.
@@ -173,11 +176,13 @@ extension NotificationCenter {
     public func addObserver<Identifier: MessageIdentifier, Message: AsyncMessage>(
         of subject: Message.Subject.Type,
         for identifier: Identifier,
-        using observer: @escaping @Sendable (Message) async -> Void)
-    -> ObservationToken where Identifier.MessageType == Message {
+        using observer: @escaping @Sendable (Message) async -> Void
+    )
+        -> ObservationToken where Identifier.MessageType == Message
+    {
         _addAsyncObserver(Identifier.MessageType.self, subject: nil, observer: observer)
     }
-    
+
     /// Adds an observer to a center for messages delivered asynchronously with a given subject and message type.
     /// - Parameters:
     ///   - subject: The subject to observe. Specify a metatype to observe all values for a given type.
@@ -187,8 +192,10 @@ extension NotificationCenter {
     public func addObserver<Message: AsyncMessage>(
         of subject: Message.Subject? = nil,
         for messageType: Message.Type,
-        using observer: @escaping @Sendable (Message) async -> Void)
-    -> ObservationToken where Message.Subject: AnyObject {
+        using observer: @escaping @Sendable (Message) async -> Void
+    )
+        -> ObservationToken where Message.Subject: AnyObject
+    {
         _addAsyncObserver(Message.self, subject: subject, observer: observer)
     }
 
@@ -214,19 +221,21 @@ extension NotificationCenter {
         subject: Message.Subject?,
         observer: @escaping @Sendable (Message) async -> Void
     ) -> ObservationToken {
-        ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { payload in
-#if FOUNDATION_FRAMEWORK
-            guard
-                let payload: Message = NotificationCenter._messageFromNotification(payload)
-            else { return }
-#endif
-            self.asyncObserverQueue.enqueue {
-                await observer(payload)
-            }
-        })
+        ObservationToken(
+            center: self,
+            token: _addObserver(Message.name, object: subject) { payload in
+                #if FOUNDATION_FRAMEWORK
+                guard
+                    let payload: Message = NotificationCenter._messageFromNotification(payload)
+                else { return }
+                #endif
+                self.asyncObserverQueue.enqueue {
+                    await observer(payload)
+                }
+            })
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     internal static func _messageFromNotification<Message: NotificationCenter.AsyncMessage>(_ notification: Notification) -> Message? {
         if let m = notification.userInfo?[NotificationMessageKey.key] as? Message {
             // Message posted, message observed
@@ -236,26 +245,29 @@ extension NotificationCenter {
             return m
         } else {
             // Notification posted, unable to make a message
-            os_log(.fault, log: _NSRuntimeIssuesLog(), "Unable to deliver Notification to Message observer because \(String(describing: Message.self)).makeMessage() returned nil. If this is unexpected, check or provide an implementation of makeMessage() which returns a non-nil value for this notification's payload.")
+            os_log(
+                .fault, log: _NSRuntimeIssuesLog(),
+                "Unable to deliver Notification to Message observer because \(String(describing: Message.self)).makeMessage() returned nil. If this is unexpected, check or provide an implementation of makeMessage() which returns a non-nil value for this notification's payload."
+            )
             return nil
         }
     }
-#endif
-    
+    #endif
+
     fileprivate func _post<M: AsyncMessage>(message: M, subject: M.Subject? = nil) {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         var notification = M.makeNotification(message)
 
         notification.name = M.name
         notification.object = subject
-        
+
         var userInfo = notification.userInfo.take() ?? [:]
         userInfo[NotificationMessageKey.key] = message
         notification.userInfo = userInfo
-        
+
         post(notification)
-#else
+        #else
         _post(M.name, subject: subject, message: message)
-#endif
+        #endif
     }
 }

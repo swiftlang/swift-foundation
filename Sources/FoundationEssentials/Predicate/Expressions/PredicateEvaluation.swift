@@ -15,28 +15,28 @@
 extension PredicateExpressions {
     @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
     public struct PredicateEvaluate<
-        Condition : PredicateExpression,
-        each Input : PredicateExpression
-    > : PredicateExpression
+        Condition: PredicateExpression,
+        each Input: PredicateExpression
+    >: PredicateExpression
     where
         Condition.Output == Predicate<repeat (each Input).Output>
     {
-        
+
         public typealias Output = Bool
-        
+
         public let predicate: Condition
         public let input: (repeat each Input)
-        
+
         public init(predicate: Condition, input: repeat each Input) {
             self.predicate = predicate
             self.input = (repeat each input)
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             try predicate.evaluate(bindings).evaluate(repeat try (each input).evaluate(bindings))
         }
     }
-    
+
     @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
     public static func build_evaluate<Condition, each Input>(_ predicate: Condition, _ input: repeat each Input) -> PredicateEvaluate<Condition, repeat each Input> {
         PredicateEvaluate<Condition, repeat each Input>(predicate: predicate, input: repeat each input)
@@ -44,23 +44,23 @@ extension PredicateExpressions {
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.PredicateEvaluate : CustomStringConvertible {
+extension PredicateExpressions.PredicateEvaluate: CustomStringConvertible {
     public var description: String {
         "PredicateEvaluate(predicate: \(predicate), input: \(input))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.PredicateEvaluate : StandardPredicateExpression where Condition : StandardPredicateExpression, repeat each Input : StandardPredicateExpression {}
+extension PredicateExpressions.PredicateEvaluate: StandardPredicateExpression where Condition: StandardPredicateExpression, repeat each Input: StandardPredicateExpression {}
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Codable, repeat each Input : Codable {
+extension PredicateExpressions.PredicateEvaluate: Codable where Condition: Codable, repeat each Input: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(predicate)
         repeat try container.encode(each input)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         self.predicate = try container.decode(Condition.self)
@@ -69,5 +69,5 @@ extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Cod
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.PredicateEvaluate : Sendable where Condition : Sendable, repeat each Input : Sendable {}
+extension PredicateExpressions.PredicateEvaluate: Sendable where Condition: Sendable, repeat each Input: Sendable {}
 #endif

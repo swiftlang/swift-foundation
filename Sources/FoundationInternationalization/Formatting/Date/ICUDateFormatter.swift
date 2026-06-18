@@ -29,13 +29,16 @@ import Darwin
 
 typealias UChar = UInt16
 
-final class ICUDateFormatter : @unchecked Sendable {
+final class ICUDateFormatter: @unchecked Sendable {
 
     /// `Sendable` notes: `UDateFormat` is safe to use from multiple threads after initialization. The `UCal` using API clones the calendar before using it.
     var udateFormat: UnsafeMutablePointer<UDateFormat?>
     var lenientParsing: Bool
 
-    private init?(localeIdentifier: String, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String, twoDigitStartDate: Date, lenientParsing: Bool) {
+    private init?(
+        localeIdentifier: String, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String, twoDigitStartDate: Date,
+        lenientParsing: Bool
+    ) {
         self.lenientParsing = lenientParsing
 
         // We failed to construct a locale with the given calendar; fall back to locale's identifier
@@ -204,9 +207,12 @@ final class ICUDateFormatter : @unchecked Sendable {
             return nil
         }
 
-        return (result, positer.fields.map { field -> AttributePosition in
-            return AttributePosition(field: UDateFormatField(CInt(field.field)), begin: field.begin, end: field.end)
-        })
+        return (
+            result,
+            positer.fields.map { field -> AttributePosition in
+                return AttributePosition(field: UDateFormatField(CInt(field.field)), begin: field.begin, end: field.end)
+            }
+        )
     }
 
     // MARK: - Getting symbols
@@ -214,7 +220,7 @@ final class ICUDateFormatter : @unchecked Sendable {
     func symbols(for key: UDateFormatSymbolType) -> [String] {
         let symbolCount = udat_countSymbols(udateFormat, key)
         var result = [String]()
-        for i in 0 ..< symbolCount {
+        for i in 0..<symbolCount {
             let s = _withResizingUCharBuffer { buffer, size, status in
                 udat_getSymbols(udateFormat, key, i, buffer, size, &status)
             }
@@ -243,7 +249,10 @@ final class ICUDateFormatter : @unchecked Sendable {
         var parseLenient: Bool
         var parseTwoDigitStartDate: Date
 
-        init(localeIdentifier: String?, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String, parseLenient: Bool = true, parseTwoDigitStartDate: Date = Date(timeIntervalSince1970: 0)) {
+        init(
+            localeIdentifier: String?, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String,
+            parseLenient: Bool = true, parseTwoDigitStartDate: Date = Date(timeIntervalSince1970: 0)
+        ) {
             if let localeIdentifier {
                 self.localeIdentifier = localeIdentifier
             } else {
@@ -263,15 +272,18 @@ final class ICUDateFormatter : @unchecked Sendable {
     }
 
     static let formatterCache = FormatterCache<DateFormatInfo, ICUDateFormatter?>()
-    static let patternCache = Mutex<[PatternCacheKey : String]>([:])
+    static let patternCache = Mutex<[PatternCacheKey: String]>([:])
 
     static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> ICUDateFormatter? {
         return Self.formatterCache.formatter(for: dateFormatInfo) {
-            ICUDateFormatter(localeIdentifier: dateFormatInfo.localeIdentifier, timeZoneIdentifier: dateFormatInfo.timeZoneIdentifier, calendarIdentifier: dateFormatInfo.calendarIdentifier, firstWeekday: dateFormatInfo.firstWeekday, minimumDaysInFirstWeek: dateFormatInfo.minimumDaysInFirstWeek, capitalizationContext: dateFormatInfo.capitalizationContext, pattern: dateFormatInfo.pattern, twoDigitStartDate: dateFormatInfo.parseTwoDigitStartDate, lenientParsing: dateFormatInfo.parseLenient)
+            ICUDateFormatter(
+                localeIdentifier: dateFormatInfo.localeIdentifier, timeZoneIdentifier: dateFormatInfo.timeZoneIdentifier, calendarIdentifier: dateFormatInfo.calendarIdentifier, firstWeekday: dateFormatInfo.firstWeekday,
+                minimumDaysInFirstWeek: dateFormatInfo.minimumDaysInFirstWeek, capitalizationContext: dateFormatInfo.capitalizationContext, pattern: dateFormatInfo.pattern, twoDigitStartDate: dateFormatInfo.parseTwoDigitStartDate,
+                lenientParsing: dateFormatInfo.parseLenient)
         }
     }
 
-    struct PatternCacheKey : Hashable {
+    struct PatternCacheKey: Hashable {
         var localeIdentifier: String
         var calendarIdentifier: Calendar.Identifier
         var symbols: Date.FormatStyle.DateFieldCollection
@@ -296,15 +308,15 @@ extension ICUDateFormatter.DateFormatInfo {
     init(_ format: Date.FormatStyle) {
         let calendarIdentifier = format.calendar.identifier
         let datePatternOverride: String?
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if let dateStyle = format._dateStyle {
             datePatternOverride = format.locale.customDateFormat(dateStyle)
         } else {
             datePatternOverride = nil
         }
-#else
+        #else
         datePatternOverride = nil
-#endif
+        #endif
 
         let key = ICUDateFormatter.PatternCacheKey(localeIdentifier: format.locale.identifierCapturingPreferences, calendarIdentifier: format.calendar.identifier, symbols: format.symbols, datePatternOverride: datePatternOverride)
         let pattern = ICUDateFormatter.patternCache.withLock { state in
@@ -317,7 +329,7 @@ extension ICUDateFormatter.DateFormatInfo {
                     let datePattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols.dateFields, locale: format.locale, calendar: format.calendar)
                     pattern.replace(datePattern, with: datePatternOverride)
                 }
-                
+
                 state[key] = pattern
                 return pattern
             }
@@ -330,18 +342,24 @@ extension ICUDateFormatter.DateFormatInfo {
             firstWeekday = format.calendar.firstWeekday
         }
 
-        self.init(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
+        self.init(
+            localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek,
+            capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
     }
 
     init(_ format: Date.VerbatimFormatStyle) {
-        self.init(localeIdentifier: format.locale?.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: format.calendar.identifier, firstWeekday: format.calendar.firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format.formatPattern)
+        self.init(
+            localeIdentifier: format.locale?.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: format.calendar.identifier, firstWeekday: format.calendar.firstWeekday,
+            minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format.formatPattern)
     }
 
     // Returns the info for as formatter to retrieve localized calendar symbols
     init(_ calendar: Calendar) {
         // Currently this always uses `.unknown` for capitalization. We should
         // consider allowing customization with rdar://71815286
-        self.init(localeIdentifier: calendar.locale?.identifier, timeZoneIdentifier: calendar.timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: "")
+        self.init(
+            localeIdentifier: calendar.locale?.identifier, timeZoneIdentifier: calendar.timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek,
+            capitalizationContext: .unknown, pattern: "")
     }
 }
 
@@ -486,7 +504,8 @@ extension Date.FormatStyle.DateFieldCollection {
                 return 9 - length
             case .milliseconds:
                 return 0
-            }}) {
+            }
+        }) {
             return .nanoseconds(magnitude: magnitude)
         }
         if second != nil {
@@ -545,7 +564,8 @@ extension String {
         // code, so we have to check at runtime what value corresponds to `nil`
         let failureField = udat_toCalendarDateField(.init(CInt.max))
 
-        return self
+        return
+            self
             .purgingStringLiterals()
             .utf16
             .map { udat_patternCharToDateFormatField($0) }
@@ -569,7 +589,8 @@ extension String {
                     let calendarField = udat_toCalendarDateField(field)
 
                     if calendarField != failureField,
-                       let component = Calendar.Component(calendarField) {
+                        let component = Calendar.Component(calendarField)
+                    {
                         schedule.reduce(with: .components(.init(single: component)))
                     }
                 }

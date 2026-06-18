@@ -27,7 +27,7 @@ private struct UUIDTests {
     @Test func equality() {
         let uuidA = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")
         let uuidB = UUID(uuidString: "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")
-        let uuidC = UUID(uuid: (0xe6,0x21,0xe1,0xf8,0xc3,0x6c,0x49,0x5a,0x93,0xfc,0x0c,0x24,0x7a,0x3e,0x6e,0x5f))
+        let uuidC = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         let uuidD = UUID()
 
         #expect(uuidA == uuidB, "String case must not matter.")
@@ -43,7 +43,7 @@ private struct UUIDTests {
     // `uuidString` should return an uppercase string
     // See: https://bugs.swift.org/browse/SR-865
     @Test func uuidString() {
-        let uuid = UUID(uuid: (0xe6,0x21,0xe1,0xf8,0xc3,0x6c,0x49,0x5a,0x93,0xfc,0x0c,0x24,0x7a,0x3e,0x6e,0x5f))
+        let uuid = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         #expect(uuid.uuidString == "E621E1F8-C36C-495A-93FC-0C247A3E6E5F", "The uuidString representation must be uppercase.")
     }
 
@@ -105,19 +105,19 @@ private struct UUIDTests {
         #expect(uuid1 < uuid2)
         #expect(uuid2 >= uuid1)
         #expect(uuid2 != uuid1)
-        
+
         uuid1 = try #require(UUID(uuidString: "9707CE8D-251F-4858-8BF9-C9EC3D690FCE"))
         uuid2 = try #require(UUID(uuidString: "9807CE8D-251F-4858-8BF9-C9EC3D690FCE"))
         #expect(uuid1 < uuid2)
         #expect(uuid2 >= uuid1)
         #expect(uuid2 != uuid1)
-        
+
         uuid1 = try #require(UUID(uuidString: "9707CE8D-261F-4858-8BF9-C9EC3D690FCE"))
         uuid2 = try #require(UUID(uuidString: "9707CE8D-251F-4858-8BF9-C9EC3D690FCE"))
         #expect(uuid1 > uuid2)
         #expect(uuid2 <= uuid1)
         #expect(uuid2 != uuid1)
-        
+
         uuid1 = try #require(UUID(uuidString: "9707CE8D-251F-4858-8BF9-C9EC3D690FCE"))
         uuid2 = try #require(UUID(uuidString: "9707CE8D-251F-4858-8BF9-C9EC3D690FCE"))
         #expect(uuid1 <= uuid2)
@@ -138,16 +138,16 @@ private struct UUIDTests {
     @available(FoundationPreview 6.3, *)
     @Test func deterministicRandomGeneration() {
         var generator = PCGRandomNumberGenerator(seed: 123456789)
-        
+
         let firstUUID = UUID.random(using: &generator)
-        #expect(firstUUID ==  UUID(uuidString: "9492BAC4-F353-49E7-ACBB-A40941CA65DE"))
-        
+        #expect(firstUUID == UUID(uuidString: "9492BAC4-F353-49E7-ACBB-A40941CA65DE"))
+
         let secondUUID = UUID.random(using: &generator)
         #expect(secondUUID == UUID(uuidString: "392C44E5-EB3E-4455-85A7-AF9556722B9A"))
-        
+
         let thirdUUID = UUID.random(using: &generator)
-        #expect(thirdUUID ==  UUID(uuidString: "9ABFCCE9-AA85-485C-9CBF-C62F0C8D1D1A"))
-        
+        #expect(thirdUUID == UUID(uuidString: "9ABFCCE9-AA85-485C-9CBF-C62F0C8D1D1A"))
+
         let fourthUUID = UUID.random(using: &generator)
         #expect(fourthUUID == UUID(uuidString: "2B29542E-F719-4D58-87B9-C6291ADD4541"))
     }
@@ -157,7 +157,7 @@ extension UUID {
     fileprivate var versionNumber: Int {
         Int(self.uuid.6 >> 4)
     }
-    
+
     fileprivate var varint: Int {
         Int(self.uuid.8 >> 6 & 0b11)
     }
@@ -186,4 +186,3 @@ fileprivate struct PCGRandomNumberGenerator: RandomNumberGenerator {
         (value &>> rotation) | value &<< ((~rotation &+ 1) & 63)
     }
 }
-

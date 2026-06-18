@@ -29,7 +29,7 @@ extension AttributedString.Runs {
 
         // FIXME: Remove this and update description to only print attribute values
         internal let _guts: AttributedString.Guts
-        
+
         internal init(
             _attributes attributes: _AttributeStorage,
             _ range: Range<BigString.Index>,
@@ -46,7 +46,7 @@ extension AttributedString.Runs {
 extension AttributedString.Runs.Run: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs._range._utf8OffsetRange.count == rhs._range._utf8OffsetRange.count
-        && lhs._attributes == rhs._attributes
+            && lhs._attributes == rhs._attributes
     }
 }
 

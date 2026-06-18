@@ -24,7 +24,7 @@ private struct ISO8601FormatStyleInternationalizationParsingTests {
     @Test func chileTimeZone() throws {
         var iso8601Chile = Date.ISO8601FormatStyle().year().month().day()
         iso8601Chile.timeZone = try #require(TimeZone(identifier: "America/Santiago"))
-        
+
         #expect(throws: Never.self) {
             try iso8601Chile.parse("2023-09-03")
         }

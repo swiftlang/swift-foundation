@@ -20,7 +20,7 @@ struct FoundationMacros: CompilerPlugin {
     var providingMacros: [Macro.Type] = [
         PredicateMacro.self,
         ExpressionMacro.self,
-        BundleMacro.self
+        BundleMacro.self,
     ]
 }
 

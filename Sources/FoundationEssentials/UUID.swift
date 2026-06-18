@@ -12,11 +12,13 @@
 internal import _FoundationCShims // uuid.h
 
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
-public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
+public typealias uuid_string_t = (
+    Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8
+)
 
 /// A universally unique value to identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
+public struct UUID: Hashable, Equatable, CustomStringConvertible, Sendable {
     /// Returns the UUID as bytes.
     public private(set) var uuid: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
@@ -81,7 +83,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
             hasher.combine(bytes: buffer)
         }
     }
-    
+
     /// Generates a new random UUID.
     ///
     /// - Parameter generator: The random number generator to use when creating the new random value.
@@ -99,7 +101,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         // Set the version to 4 (0100 in binary)
         firstBits &= 0b11111111_11111111_11111111_11111111_11111111_11111111_00001111_11111111 // Clear bits 48 through 51
         firstBits |= 0b00000000_00000000_00000000_00000000_00000000_00000000_01000000_00000000 // Set the version bits to '0100' at the correct position
-        
+
         // Set the variant to '10' (RFC9562 variant)
         secondBits &= 0b00111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111 // Clear the 2 most significant bits
         secondBits |= 0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 // Set the two MSB to '10'
@@ -134,7 +136,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         return description
     }
 
-    public static func ==(lhs: UUID, rhs: UUID) -> Bool {
+    public static func == (lhs: UUID, rhs: UUID) -> Bool {
         withUnsafeBytes(of: lhs) { lhsPtr in
             withUnsafeBytes(of: rhs) { rhsPtr in
                 let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
@@ -146,23 +148,25 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 }
 
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-extension UUID : CustomReflectable {
+extension UUID: CustomReflectable {
     public var customMirror: Mirror {
-        let c : [(label: String?, value: Any)] = []
-        let m = Mirror(self, children:c, displayStyle: .struct)
+        let c: [(label: String?, value: Any)] = []
+        let m = Mirror(self, children: c, displayStyle: .struct)
         return m
     }
 }
 
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-extension UUID : Codable {
+extension UUID: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let uuidString = try container.decode(String.self)
 
         guard let uuid = UUID(uuidString: uuidString) else {
-            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath,
-                                                                    debugDescription: "Attempted to decode UUID from invalid UUID string."))
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Attempted to decode UUID from invalid UUID string."))
         }
 
         self = uuid
@@ -175,7 +179,7 @@ extension UUID : Codable {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension UUID : Comparable {
+extension UUID: Comparable {
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public static func < (lhs: UUID, rhs: UUID) -> Bool {
         var leftUUID = lhs.uuid
@@ -184,9 +188,8 @@ extension UUID : Comparable {
         var diff: Int = 0
         withUnsafeBytes(of: &leftUUID) { leftPtr in
             withUnsafeBytes(of: &rightUUID) { rightPtr in
-                for offset in (0 ..< MemoryLayout<uuid_t>.size).reversed() {
-                    diff = Int(leftPtr.load(fromByteOffset: offset, as: UInt8.self)) -
-                        Int(rightPtr.load(fromByteOffset: offset, as: UInt8.self))
+                for offset in (0..<MemoryLayout<uuid_t>.size).reversed() {
+                    diff = Int(leftPtr.load(fromByteOffset: offset, as: UInt8.self)) - Int(rightPtr.load(fromByteOffset: offset, as: UInt8.self))
                     // Constant time, no branching equivalent of
                     // if (diff != 0) {
                     //     result = diff;

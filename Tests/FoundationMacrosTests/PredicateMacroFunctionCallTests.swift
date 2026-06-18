@@ -30,7 +30,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -47,7 +47,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input, input2, input3 in
@@ -77,7 +77,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -86,7 +86,7 @@ private struct PredicateMacroFunctionCallTests {
             """,
             diagnostics: ["2:10: The subscript(index:) function is not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -96,7 +96,7 @@ private struct PredicateMacroFunctionCallTests {
             diagnostics: ["2:10: The subscript(_:index:_:other:) function is not supported in this predicate"]
         )
     }
-    
+
     @Test func contains() {
         AssertPredicateExpansion(
             """
@@ -113,7 +113,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<String> { input in
@@ -130,7 +130,7 @@ private struct PredicateMacroFunctionCallTests {
             """
         )
     }
-    
+
     @Test func containsWhere() {
         AssertPredicateExpansion(
             """
@@ -153,7 +153,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -175,7 +175,7 @@ private struct PredicateMacroFunctionCallTests {
             """
         )
     }
-    
+
     @Test func allSatisfy() {
         AssertPredicateExpansion(
             """
@@ -198,7 +198,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -220,7 +220,7 @@ private struct PredicateMacroFunctionCallTests {
             """
         )
     }
-    
+
     @Test func filter() {
         AssertPredicateExpansion(
             """
@@ -243,7 +243,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -264,7 +264,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         // Ensure that keypath literals are correctly translated into closure arguments
         AssertPredicateExpansion(
             """
@@ -289,7 +289,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         // Ensure keypath literal to closure transformation only occurs when argument is a closure type
         // Note: starts(with:) explicitly does not take a closure as its argument
         AssertPredicateExpansion(
@@ -307,7 +307,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<[Object]> { inputA in
@@ -336,7 +336,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         // Key paths with anonymous closure arguments cannot be rewritten into nested closures automatically
         AssertPredicateExpansion(
             """
@@ -347,7 +347,7 @@ private struct PredicateMacroFunctionCallTests {
             diagnostics: ["2:19: This key path is not supported here in this predicate. Use an explicit closure instead."]
         )
     }
-    
+
     @Test func startsWith() {
         AssertPredicateExpansion(
             """
@@ -364,7 +364,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -378,15 +378,15 @@ private struct PredicateMacroFunctionCallTests {
                         DiagnosticTest.FixItTest(
                             "Use starts(with:)",
                             result: """
-                                    inputA.starts(with: "foo")
-                                    """
+                                inputA.starts(with: "foo")
+                                """
                         )
                     ]
                 )
             ]
         )
     }
-    
+
     @Test func min() {
         AssertPredicateExpansion(
             """
@@ -406,7 +406,7 @@ private struct PredicateMacroFunctionCallTests {
             """
         )
     }
-    
+
     @Test func max() {
         AssertPredicateExpansion(
             """
@@ -444,7 +444,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -463,7 +463,7 @@ private struct PredicateMacroFunctionCallTests {
             ]
         )
     }
-    
+
     @Test func localizedStandardCompare() {
         AssertPredicateExpansion(
             """
@@ -480,7 +480,7 @@ private struct PredicateMacroFunctionCallTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -498,7 +498,7 @@ private struct PredicateMacroFunctionCallTests {
                     ])
             ]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -517,7 +517,7 @@ private struct PredicateMacroFunctionCallTests {
             ]
         )
     }
-    
+
     @Test func caseInsensitiveCompare() {
         AssertPredicateExpansion(
             """
@@ -584,7 +584,7 @@ private struct PredicateMacroFunctionCallTests {
         )
     }
     #endif
-    
+
     @Test func diagnoseUnsupportedFunction() {
         AssertPredicateExpansion(
             """
@@ -594,7 +594,7 @@ private struct PredicateMacroFunctionCallTests {
             """,
             diagnostics: ["2:4: Global functions are not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -603,7 +603,7 @@ private struct PredicateMacroFunctionCallTests {
             """,
             diagnostics: ["2:11: The unsupportedFunction(_:) function is not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -612,7 +612,7 @@ private struct PredicateMacroFunctionCallTests {
             """,
             diagnostics: ["2:11: The unsupportedFunction(label:) function is not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -621,7 +621,7 @@ private struct PredicateMacroFunctionCallTests {
             """,
             diagnostics: ["2:11: The unsupportedFunction() function is not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -630,7 +630,7 @@ private struct PredicateMacroFunctionCallTests {
             """,
             diagnostics: ["2:11: The unsupportedFunction(_:) function is not supported in this predicate"]
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in

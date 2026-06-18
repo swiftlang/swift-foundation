@@ -16,14 +16,14 @@ import FoundationEssentials
 
 internal import _FoundationICU
 
-final class ICUDateIntervalFormatter : @unchecked Sendable {
-    struct Signature : Hashable {
+final class ICUDateIntervalFormatter: @unchecked Sendable {
+    struct Signature: Hashable {
         let localeComponents: Locale.Components
         let calendarIdentifier: Calendar.Identifier
         let timeZoneIdentifier: String
         let dateTemplate: String
     }
-    
+
     internal static let cache = FormatterCache<Signature, ICUDateIntervalFormatter?>()
 
     /// `Sendable` notes: After initialization, we only use the ICU `udtitvfmt_format` function, which does not mutate the underlying formatter and is thread-safe.
@@ -83,7 +83,7 @@ final class ICUDateIntervalFormatter : @unchecked Sendable {
         // This captures all of the special preferences that may be set on the locale
         let comps = Locale.Components(locale: style.locale)
         let signature = Signature(localeComponents: comps, calendarIdentifier: style.calendar.identifier, timeZoneIdentifier: style.timeZone.identifier, dateTemplate: template)
-        
+
         return Self.cache.formatter(for: signature) {
             ICUDateIntervalFormatter(signature: signature)
         }

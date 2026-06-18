@@ -27,20 +27,20 @@ private struct SortComparatorTests {
         let result = intDesc.compare(1000, -10)
         #expect(result == .orderedDescending)
     }
-    
-    
+
+
     @Test func order() {
         var intDesc: ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)
         #expect(intDesc.compare(0, 1) == .orderedDescending)
         #expect(intDesc.compare(1000, -10) == .orderedAscending)
         #expect(intDesc.compare(100, 100) == .orderedSame)
-        
+
         intDesc.order = .forward
         #expect(intDesc.compare(0, 1) == .orderedAscending)
         #expect(intDesc.compare(1000, -10) == .orderedDescending)
         #expect(intDesc.compare(100, 100) == .orderedSame)
     }
-    
+
     @Test func anySortComparatorEquality() {
         let a: ComparableComparator<Int> = ComparableComparator<Int>()
         let b: ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)

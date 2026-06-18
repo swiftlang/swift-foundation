@@ -49,7 +49,7 @@ internal struct JSON5Scanner {
                 let totalBytes = reader.bytes.count
                 let consumedBytes = reader.byteOffset(at: reader.readIndex)
                 let ratio = (Double(totalBytes) / Double(consumedBytes))
-                let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
+                let totalExpectedMapSize = Int(Double(mapData.count) * ratio)
                 if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
                     mapData.reserveCapacity(totalExpectedMapSize)
                     prevMapDataSize = totalExpectedMapSize
@@ -119,13 +119,13 @@ internal struct JSON5Scanner {
         } else {
             try self.scanValue()
         }
-#if DEBUG
+        #if DEBUG
         defer {
             guard self.depth == 0 else {
                 preconditionFailure("Expected to end parsing with a depth of 0")
             }
         }
-#endif
+        #endif
 
         // ensure only white space is remaining
         if let char = try reader.consumeWhitespace(allowingEOF: true) {
@@ -198,8 +198,7 @@ internal struct JSON5Scanner {
             partialMap.recordEndCollection(count: count, atStartOffset: startOffset, with: reader)
         }
 
-        ScanValues:
-        while true {
+        ScanValues: while true {
             try scanValue()
             count &+= 1
 
@@ -384,8 +383,8 @@ extension JSON5Scanner {
 
     struct DocumentReader {
         let bytes: BufferView<UInt8>
-        private(set) var readIndex : BufferViewIndex<UInt8>
-        private let endIndex : BufferViewIndex<UInt8>
+        private(set) var readIndex: BufferViewIndex<UInt8>
+        private let endIndex: BufferViewIndex<UInt8>
 
         @inline(__always)
         func checkRemainingBytes(_ count: Int) -> Bool {
@@ -399,7 +398,7 @@ extension JSON5Scanner {
             }
         }
 
-        var sourceLocation : JSONError.SourceLocation {
+        var sourceLocation: JSONError.SourceLocation {
             self.sourceLocation(atOffset: 0)
         }
 
@@ -414,7 +413,7 @@ extension JSON5Scanner {
 
         @inline(__always)
         func byteOffset(at index: BufferViewIndex<UInt8>) -> Int {
-            bytes.distance(from: bytes.startIndex, to:  index)
+            bytes.distance(from: bytes.startIndex, to: index)
         }
 
         init(bytes: BufferView<UInt8>) {
@@ -889,15 +888,15 @@ extension JSON5Scanner {
         precondition(!jsonBytes.isEmpty, "Scanning should have ensured that all escape sequences have a valid shape")
         let index = jsonBytes.startIndex
         switch jsonBytes[unchecked: index] {
-        case UInt8(ascii:"\""): string.append("\"")
-        case UInt8(ascii:"'"): string.append("'")
-        case UInt8(ascii:"\\"): string.append("\\")
-        case UInt8(ascii:"/"): string.append("/")
-        case UInt8(ascii:"b"): string.append("\u{08}") // \b
-        case UInt8(ascii:"f"): string.append("\u{0C}") // \f
-        case UInt8(ascii:"n"): string.append("\u{0A}") // \n
-        case UInt8(ascii:"r"): string.append("\u{0D}") // \r
-        case UInt8(ascii:"t"): string.append("\u{09}") // \t
+        case UInt8(ascii: "\""): string.append("\"")
+        case UInt8(ascii: "'"): string.append("'")
+        case UInt8(ascii: "\\"): string.append("\\")
+        case UInt8(ascii: "/"): string.append("/")
+        case UInt8(ascii: "b"): string.append("\u{08}") // \b
+        case UInt8(ascii: "f"): string.append("\u{0C}") // \f
+        case UInt8(ascii: "n"): string.append("\u{0A}") // \n
+        case UInt8(ascii: "r"): string.append("\u{0D}") // \r
+        case UInt8(ascii: "t"): string.append("\u{09}") // \t
         case ._newline: string.append("\n")
         case ._return:
             if jsonBytes.count > 1 && jsonBytes[uncheckedOffset: 1] == ._newline {
@@ -906,9 +905,9 @@ extension JSON5Scanner {
             } else {
                 string.append("\r")
             }
-        case UInt8(ascii:"u"):
+        case UInt8(ascii: "u"):
             return try JSONScanner.parseUnicodeSequence(from: jsonBytes.dropFirst(), into: &string, fullSource: fullSource, allowNulls: false)
-        case UInt8(ascii:"x"):
+        case UInt8(ascii: "x"):
             let (escapedByte, indexAfter) = try parseTwoByteUnicodeHexSequence(from: jsonBytes.dropFirst(), fullSource: fullSource)
             string.unicodeScalars.append(UnicodeScalar(escapedByte))
             return indexAfter
@@ -991,7 +990,7 @@ extension JSON5Scanner {
     }
 
     static func validateLeadingDecimal(
-      from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) throws {
         // Leading decimals MUST be followed by a number, unlike trailing decimals.
         guard !jsonBytes.isEmpty else {
@@ -1017,8 +1016,8 @@ extension JSON5Scanner {
         switch jsonBytes[uncheckedOffset: 0] {
         case UInt8(ascii: "0"):
             (firstDigitIndex, isHex) = try validateLeadingZero(in: jsonBytes.dropFirst(), zero: jsonBytes.startIndex, fullSource: fullSource)
-        case UInt8(ascii: "1") ... UInt8(ascii: "9"):
-          firstDigitIndex = jsonBytes.startIndex
+        case UInt8(ascii: "1")...UInt8(ascii: "9"):
+            firstDigitIndex = jsonBytes.startIndex
         case UInt8(ascii: "-"), UInt8(ascii: "+"):
             guard jsonBytes.count > 1 else {
                 throw JSONError.unexpectedCharacter(context: "at end of number", ascii: jsonBytes[offset: 0], location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
@@ -1027,7 +1026,7 @@ extension JSON5Scanner {
             switch jsonBytes[unchecked: second] {
             case UInt8(ascii: "0"):
                 (firstDigitIndex, isHex) = try validateLeadingZero(in: jsonBytes.dropFirst(2), zero: second, fullSource: fullSource)
-            case UInt8(ascii: "1") ... UInt8(ascii: "9"):
+            case UInt8(ascii: "1")...UInt8(ascii: "9"):
                 // Good, we need at least one digit following the '-'
                 firstDigitIndex = second
             case UInt8(ascii: "I"):
@@ -1079,7 +1078,7 @@ extension JSON5Scanner {
 
     // This function is intended to be called after prevalidateJSONNumber() (which provides the digitsBeginPtr) and after parsing fails. It will provide more useful information about the invalid input.
     static func validateNumber(
-      from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) -> JSONError {
         enum ControlCharacter {
             case operand
@@ -1170,12 +1169,12 @@ internal func _parseJSON5Integer<Result: FixedWidthInteger>(
     var digitsToParse = codeUnits
     switch codeUnits[uncheckedOffset: 0] {
     case _minus:
-      isNegative = true
-      fallthrough
+        isNegative = true
+        fallthrough
     case _plus:
-      digitsToParse = digitsToParse.dropFirst(1)
+        digitsToParse = digitsToParse.dropFirst(1)
     default:
-      break
+        break
     }
 
     // Trust the caller regarding whether this is valid hex data.
@@ -1189,7 +1188,7 @@ internal func _parseJSON5Integer<Result: FixedWidthInteger>(
 
 extension FixedWidthInteger {
     init?(prevalidatedJSON5Buffer buffer: BufferView<UInt8>, isHex: Bool) {
-        guard let val : Self = _parseJSON5Integer(buffer, isHex: isHex) else {
+        guard let val: Self = _parseJSON5Integer(buffer, isHex: isHex) else {
             return nil
         }
         self = val
@@ -1214,7 +1213,7 @@ var _json5NaN: StaticString { "NaN" }
 extension UnicodeScalar {
 
     @inline(__always)
-    var isJSON5UnquotedKeyStartingCharacter : Bool {
+    var isJSON5UnquotedKeyStartingCharacter: Bool {
         switch self.properties.generalCategory {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter, .letterNumber:
             return true
@@ -1224,7 +1223,7 @@ extension UnicodeScalar {
     }
 
     @inline(__always)
-    var isJSON5UnquotedKeyCharacter : Bool {
+    var isJSON5UnquotedKeyCharacter: Bool {
         switch self.properties.generalCategory {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter, .letterNumber:
             return true

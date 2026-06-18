@@ -115,10 +115,12 @@ extension _URL {
 
     @inline(__always)
     private convenience init?(_ string: String, relativeTo base: URL? = nil, encodingInvalidCharacters: Bool = true) {
-        guard let parseInfo = _URLInfo.parse(
-            string: string,
-            encodingInvalidCharacters: encodingInvalidCharacters
-        ) else {
+        guard
+            let parseInfo = _URLInfo.parse(
+                string: string,
+                encodingInvalidCharacters: encodingInvalidCharacters
+            )
+        else {
             return nil
         }
         self.init(info: parseInfo, relativeTo: base)
@@ -128,12 +130,12 @@ extension _URL {
         guard !string.isEmpty else { return nil }
         self.init(string)
     }
-    
+
     convenience init?(string: String, relativeTo base: URL?) {
         guard !string.isEmpty else { return nil }
         self.init(string, relativeTo: base)
     }
-    
+
     convenience init?(string: String, encodingInvalidCharacters: Bool) {
         guard !string.isEmpty else { return nil }
         self.init(string, encodingInvalidCharacters: encodingInvalidCharacters)
@@ -150,7 +152,7 @@ extension _URL {
             relativeTo: base
         )
     }
-    
+
     convenience init(fileURLWithPath path: String, relativeTo base: URL?) {
         self.init(
             filePath: path.isEmpty ? "." : path,
@@ -158,14 +160,14 @@ extension _URL {
             relativeTo: base
         )
     }
-    
+
     convenience init(fileURLWithPath path: String, isDirectory: Bool) {
         self.init(
             filePath: path.isEmpty ? "." : path,
             directoryHint: isDirectory ? .isDirectory : .notDirectory
         )
     }
-    
+
     convenience init(fileURLWithPath path: String) {
         self.init(
             filePath: path.isEmpty ? "." : path,
@@ -196,12 +198,13 @@ extension _URL {
             path.utf8.last == ._slash || (pathStyle == .windows && path.utf8.last == ._backslash)
         }
 
-        let isDirectory: Bool? = switch directoryHint {
-        case .isDirectory: true
-        case .notDirectory: false
-        case .checkFileSystem: nil
-        case .inferFromPath: hasTrailingSeparator(path)
-        }
+        let isDirectory: Bool? =
+            switch directoryHint {
+            case .isDirectory: true
+            case .notDirectory: false
+            case .checkFileSystem: nil
+            case .inferFromPath: hasTrailingSeparator(path)
+            }
 
         var (info, base) = _URLInfo.parse(
             filePath: path,
@@ -256,7 +259,7 @@ extension _URL {
             self.init(info: info, relativeTo: base)
         }
     }
-    
+
     convenience init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo base: URL?) {
         let (info, base) = _URLInfo.parse(
             fileSystemRepresentation: path,
@@ -359,13 +362,13 @@ extension _URL {
         }
         return percentEncoded ? user : URLEncoder.percentDecode(string: user)
     }
-    
+
     var password: String? {
         password(percentEncoded: true)
     }
 
     func password(percentEncoded: Bool) -> String? {
-        guard hasAuthority else  {
+        guard hasAuthority else {
             return _baseURL?.password(percentEncoded: percentEncoded)
         }
         guard let password = _info.password.map(String.init) else {
@@ -396,11 +399,7 @@ extension _URL {
         }
 
         let requestedHost: String? = {
-            let idnaEncoded = (
-                flags.contains([.didEncodeHost, .hasSpecialScheme]) &&
-                !flags.contains(.isIPLiteral) &&
-                _uidnaHook() != nil
-            )
+            let idnaEncoded = (flags.contains([.didEncodeHost, .hasSpecialScheme]) && !flags.contains(.isIPLiteral) && _uidnaHook() != nil)
             if percentEncoded {
                 if !idnaEncoded {
                     return encodedHost
@@ -459,14 +458,14 @@ extension _URL {
         flags.contains(.hasEncodedPath)
     }
 
-//    // Note: Doesn't work due to lifetime issues
-//    private var pathSpan: Span<UInt8> {
-//        @_lifetime(borrow self)
-//        borrowing get {
-//            let span = _info.pathSpan
-//            return _overrideLifetime(span, borrowing: self)
-//        }
-//    }
+    //    // Note: Doesn't work due to lifetime issues
+    //    private var pathSpan: Span<UInt8> {
+    //        @_lifetime(borrow self)
+    //        borrowing get {
+    //            let span = _info.pathSpan
+    //            return _overrideLifetime(span, borrowing: self)
+    //        }
+    //    }
 
     private func withPathSpan<R>(_ block: (borrowing Span<UInt8>) -> R) -> R {
         var s = _info.string
@@ -491,10 +490,12 @@ extension _URL {
             }
             let path = pathSpan
             return String(unsafeUninitializedCapacity: path.count) { buffer in
-                guard var pathLength = URLEncoder.percentDecodeUnchecked(
-                    input: path,
-                    output: buffer
-                ) else {
+                guard
+                    var pathLength = URLEncoder.percentDecodeUnchecked(
+                        input: path,
+                        output: buffer
+                    )
+                else {
                     return 0
                 }
                 // Don't check root length for non-file URLs
@@ -524,10 +525,12 @@ extension _URL {
         }
         return withAbsolutePathSpan { absolutePath in
             String(unsafeUninitializedCapacity: absolutePath.count) { buffer in
-                guard var pathLength = URLEncoder.percentDecodeUnchecked(
-                    input: absolutePath,
-                    output: buffer
-                ) else {
+                guard
+                    var pathLength = URLEncoder.percentDecodeUnchecked(
+                        input: absolutePath,
+                        output: buffer
+                    )
+                else {
                     return 0
                 }
                 while pathLength > 1 && buffer[pathLength - 1] == ._slash {
@@ -555,7 +558,7 @@ extension _URL {
         }
         return percentEncoded ? query : URLEncoder.percentDecode(string: query)
     }
-    
+
     var fragment: String? {
         fragment(percentEncoded: true)
     }
@@ -591,15 +594,16 @@ extension _URL {
             return ""
         }
         return String(unsafeUninitializedCapacity: urlPath.count) { outBuffer in
-            var pathLength = if isKnownUnencoded {
-                outBuffer.initialize(fromSpan: urlPath)
-            } else {
-                URLEncoder.percentDecodeUnchecked(
-                    input: urlPath,
-                    output: outBuffer,
-                    excludingASCII: .posixPath // Don't decode "%00" or "%2F"
-                ) ?? 0
-            }
+            var pathLength =
+                if isKnownUnencoded {
+                    outBuffer.initialize(fromSpan: urlPath)
+                } else {
+                    URLEncoder.percentDecodeUnchecked(
+                        input: urlPath,
+                        output: outBuffer,
+                        excludingASCII: .posixPath // Don't decode "%00" or "%2F"
+                    ) ?? 0
+                }
 
             if stripTrailingSlashes {
                 // Strip trailing slashes up to the root prefix
@@ -627,10 +631,11 @@ extension _URL {
             // "C:\" is standardized to "/C:/" on initialization.
             // Strip the leading slash to recover the drive letter root.
             if urlPath.count >= 4,
-               urlPath[0] == ._slash,
-               urlPath[1].isAlpha,
-               urlPath[2] == ._colon,
-               urlPath[3] == ._slash {
+                urlPath[0] == ._slash,
+                urlPath[1].isAlpha,
+                urlPath[2] == ._colon,
+                urlPath[3] == ._slash
+            {
                 rootLength = outBuffer[0...2].initialize(fromSpan: urlPath.extracting(1...3))
                 inputStart = 4
             }
@@ -642,14 +647,16 @@ extension _URL {
                 )
             } else {
                 // Percent-decode, excluding "%00", "%2F"
-                guard let decodedLength = URLEncoder.percentDecodeUnchecked(
-                    input: urlPath.extracting(inputStart...),
-                    output: .init(rebasing: outBuffer[rootLength...]),
-                    // Using .posixPath (not .windowsPath) because URL(string:)
-                    // percent-encodes "\" to "%5C", and clients may expect it
-                    // to return decoded.
-                    excludingASCII: .posixPath
-                ) else {
+                guard
+                    let decodedLength = URLEncoder.percentDecodeUnchecked(
+                        input: urlPath.extracting(inputStart...),
+                        output: .init(rebasing: outBuffer[rootLength...]),
+                        // Using .posixPath (not .windowsPath) because URL(string:)
+                        // percent-encodes "\" to "%5C", and clients may expect it
+                        // to return decoded.
+                        excludingASCII: .posixPath
+                    )
+                else {
                     return 0
                 }
                 pathLength = rootLength + decodedLength
@@ -878,7 +885,7 @@ extension _URL {
         let directoryHint: URL.DirectoryHint = isDirectory ? .isDirectory : .notDirectory
         return appending(path: pathComponent, directoryHint: directoryHint)
     }
-    
+
     func appendingPathComponent(_ pathComponent: String) -> URL? {
         appending(path: pathComponent, directoryHint: .checkFileSystem)
     }
@@ -919,20 +926,18 @@ extension _URL {
         return s.withUTF8 {
             let spanToAppend = $0.span
 
-            let isDirectory: Bool? = switch directoryHint {
-            case .isDirectory: true
-            case .notDirectory: false
-            case .checkFileSystem: nil
-            case .inferFromPath:
-                #if os(Windows)
-                spanToAppend.count > 0 && (
-                    spanToAppend[spanToAppend.count - 1] == ._backslash ||
-                    spanToAppend[spanToAppend.count - 1] == ._slash
-                )
-                #else
-                spanToAppend.count > 0 && spanToAppend[spanToAppend.count - 1] == ._slash
-                #endif
-            }
+            let isDirectory: Bool? =
+                switch directoryHint {
+                case .isDirectory: true
+                case .notDirectory: false
+                case .checkFileSystem: nil
+                case .inferFromPath:
+                    #if os(Windows)
+                    spanToAppend.count > 0 && (spanToAppend[spanToAppend.count - 1] == ._backslash || spanToAppend[spanToAppend.count - 1] == ._slash)
+                    #else
+                    spanToAppend.count > 0 && spanToAppend[spanToAppend.count - 1] == ._slash
+                    #endif
+                }
 
             if !encodingSlashes && strictValidate(path: spanToAppend) {
                 // If we're not encoding slashes and the appended component is
@@ -1089,17 +1094,18 @@ extension _URL {
         #if os(Windows)
         let path = fileSystemPath
         guard !path.isEmpty else { return nil }
-        return (try? path.withNTPathRepresentation { pwszPath in
-            // If path points to a symlink (reparse point), get a handle to
-            // the symlink itself using FILE_FLAG_OPEN_REPARSE_POINT.
-            let handle = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
-            guard handle != INVALID_HANDLE_VALUE else { return nil }
-            defer { CloseHandle(handle) }
-            var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
-            guard GetFileInformationByHandle(handle, &info) else { return nil }
-            if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT { return false }
-            return (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY
-        }) ?? nil
+        return
+            (try? path.withNTPathRepresentation { pwszPath in
+                // If path points to a symlink (reparse point), get a handle to
+                // the symlink itself using FILE_FLAG_OPEN_REPARSE_POINT.
+                let handle = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
+                guard handle != INVALID_HANDLE_VALUE else { return nil }
+                defer { CloseHandle(handle) }
+                var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
+                guard GetFileInformationByHandle(handle, &info) else { return nil }
+                if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT { return false }
+                return (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY
+            }) ?? nil
         #else
         // FileManager uses stat() to check if the file exists.
         // URL historically won't follow a symlink at the end
@@ -1193,8 +1199,9 @@ extension _URL {
             let component = path.extracting(componentRange)
 
             if component.count == 2,
-               component[0] == ._dot,
-               component[1] == ._dot {
+                component[0] == ._dot,
+                component[1] == ._dot
+            {
                 // ".." - append another "/../"
                 return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: componentRange.endIndex + 4) { buffer in
                     let writeIndex = buffer.initialize(
@@ -1381,10 +1388,7 @@ extension _URL {
     private var isDataURL: Bool {
         guard var scheme, scheme.utf8.count == 4 else { return false }
         return scheme.withUTF8 {
-            ($0[0] | 0x20) == UInt8(ascii: "d") &&
-            ($0[1] | 0x20) == UInt8(ascii: "a") &&
-            ($0[2] | 0x20) == UInt8(ascii: "t") &&
-            ($0[3] | 0x20) == UInt8(ascii: "a")
+            ($0[0] | 0x20) == UInt8(ascii: "d") && ($0[1] | 0x20) == UInt8(ascii: "a") && ($0[2] | 0x20) == UInt8(ascii: "t") && ($0[3] | 0x20) == UInt8(ascii: "a")
         }
     }
 

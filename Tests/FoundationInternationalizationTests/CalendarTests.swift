@@ -24,7 +24,9 @@ import TestSupport
 #endif // FOUNDATION_FRAMEWORK
 
 // Compare two date components like the original equality, but compares nanosecond within a reasonable epsilon, and optionally ignores quarter and calendar equality since they were often not supported in the original implementation
-private func expectEqual(_ first: DateComponents, _ second: DateComponents, within nanosecondAccuracy: Int = 5000, expectQuarter: Bool = true, expectCalendar: Bool = true, _ message: @autoclosure () -> Comment? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+private func expectEqual(
+    _ first: DateComponents, _ second: DateComponents, within nanosecondAccuracy: Int = 5000, expectQuarter: Bool = true, expectCalendar: Bool = true, _ message: @autoclosure () -> Comment? = nil, sourceLocation: SourceLocation = #_sourceLocation
+) {
     #expect(first.era == second.era, message(), sourceLocation: sourceLocation)
     #expect(first.year == second.year, message(), sourceLocation: sourceLocation)
     #expect(first.month == second.month, message(), sourceLocation: sourceLocation)
@@ -41,19 +43,19 @@ private func expectEqual(_ first: DateComponents, _ second: DateComponents, with
     if expectQuarter {
         #expect(first.quarter == second.quarter, message(), sourceLocation: sourceLocation)
     }
-    
+
     if let ns = first.nanosecond, let otherNS = second.nanosecond {
         #expect(abs(ns - otherNS) <= nanosecondAccuracy, message(), sourceLocation: sourceLocation)
     } else {
         #expect(first.nanosecond == second.nanosecond, message(), sourceLocation: sourceLocation)
     }
-    
+
     #expect(first.isLeapMonth == second.isLeapMonth, message(), sourceLocation: sourceLocation)
-    
+
     if expectCalendar {
         #expect(first.calendar == second.calendar, message(), sourceLocation: sourceLocation)
     }
-    
+
     #expect(first.timeZone == second.timeZone, message(), sourceLocation: sourceLocation)
 }
 
@@ -192,7 +194,7 @@ private struct CalendarTests {
         let values: [Calendar] = [
             Calendar(identifier: .gregorian),
             Calendar(identifier: .japanese),
-            Calendar(identifier: .japanese)
+            Calendar(identifier: .japanese),
         ]
         let anyHashables = values.map(AnyHashable.init)
         #expect(Calendar.self == type(of: anyHashables[0].base))
@@ -214,45 +216,45 @@ private struct CalendarTests {
             let current = Calendar.current
             let decodedCurrent = try decodeHelper(current)
             #expect(decodedCurrent == current)
-            
+
             let autoupdatingCurrent = Calendar.autoupdatingCurrent
             let decodedAutoupdatingCurrent = try decodeHelper(autoupdatingCurrent)
             #expect(decodedAutoupdatingCurrent == autoupdatingCurrent)
-            
+
             #expect(decodedCurrent != decodedAutoupdatingCurrent)
             #expect(current != autoupdatingCurrent)
             #expect(decodedCurrent != autoupdatingCurrent)
             #expect(current != decodedAutoupdatingCurrent)
-            
+
             // Calendar, unlike TimeZone and Locale, has some mutable properties
             var modified = Calendar.autoupdatingCurrent
             modified.firstWeekday = 6
             let decodedModified = try decodeHelper(modified)
             #expect(decodedModified != autoupdatingCurrent)
             #expect(modified == decodedModified)
-            
+
             do {
                 // Calendar does not decode the current as a sentinel value
                 var prefs = LocalePreferences()
                 prefs.languages = ["en-US"]
                 prefs.locale = "en_US"
-                prefs.minDaysInFirstWeek = [.gregorian : 5]
+                prefs.minDaysInFirstWeek = [.gregorian: 5]
                 LocaleCache.cache.resetCurrent(to: prefs)
                 CalendarCache.cache.reset()
-                
+
                 let encodedCurrent = try JSONEncoder().encode(Calendar.current)
                 let encodedAutoupdatingCurrent = try JSONEncoder().encode(Calendar.autoupdatingCurrent)
-                
+
                 prefs = LocalePreferences()
                 prefs.languages = ["es-ES"]
                 prefs.locale = "es_ES"
-                prefs.minDaysInFirstWeek = [.gregorian : 3]
+                prefs.minDaysInFirstWeek = [.gregorian: 3]
                 LocaleCache.cache.resetCurrent(to: prefs)
                 CalendarCache.cache.reset()
-                
+
                 let decodedCurrent = try JSONDecoder().decode(Calendar.self, from: encodedCurrent)
                 let decodedAutoupdatingCurrent = try JSONDecoder().decode(Calendar.self, from: encodedAutoupdatingCurrent)
-                
+
                 #expect(decodedCurrent.minimumDaysInFirstWeek == 5)
                 #expect(decodedCurrent.locale?.identifier == "en_US")
                 #expect(decodedAutoupdatingCurrent.minimumDaysInFirstWeek == 3)
@@ -330,7 +332,7 @@ private struct CalendarTests {
             /* weekOfMonth */ [nil, nil, nil, 2, 40, 2343, 140559, 2, nil, nil, nil, nil, nil, 140558712306977],
             /* weekOfYear */ [nil, nil, nil, 2, 40, 2343, 140559, 2, nil, nil, nil, nil, nil, 140558712306977],
             /* yearForWeekOfYear */ [nil, nil, nil, 240, 5737, 344161, 20649601, 35, 35, nil, nil, 35, nil, 20649600712306977],
-            /* nanosecond */ [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil]
+            /* nanosecond */ [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
         ]
 
         // An arbitrary date, for which we know the answers
@@ -356,7 +358,7 @@ private struct CalendarTests {
             /* weekOfMonth */ [nil, nil, nil, 1, 4, 183, 10929, 1, nil, nil, nil, nil, nil, 10928712000013],
             /* weekOfYear */ [nil, nil, nil, 1, 4, 183, 10929, 1, nil, nil, nil, nil, nil, 10928712000013],
             /* yearForWeekOfYear */ [nil, nil, nil, 78, 1849, 110881, 6652801, 12, 12, nil, nil, 12, nil, 6652800712000013],
-            /* nanosecond */ [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil]
+            /* nanosecond */ [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
         ]
 
         // A date which corresponds to a DST transition in Pacific Time
@@ -366,7 +368,7 @@ private struct CalendarTests {
         Self.validateOrdinality(expected, calendar: calendar, date: Date(timeIntervalSinceReferenceDate: 668858528.712))
     }
     #endif // _pointerBitWidth(_64)
-    
+
     // This test requires 64-bit integers
     #if _pointerBitWidth(_64) && FOUNDATION_FRAMEWORK
     @Test(.timeLimit(.minutes(1)))
@@ -386,7 +388,7 @@ private struct CalendarTests {
             /* weekOfMonth */ [nil, nil, nil, 2, 40, 2343, 140559, 2, nil, nil, nil, nil, nil, 140558712306977],
             /* weekOfYear */ [nil, nil, nil, 2, 40, 2343, 140559, 2, nil, nil, nil, nil, nil, 140558712306977],
             /* yearForWeekOfYear */ [nil, nil, nil, 240, 5737, 344161, 20649601, 35, 35, nil, nil, 35, nil, 20649600712306977],
-            /* nanosecond */ [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil]
+            /* nanosecond */ [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
         ]
 
         // An arbitrary date, for which we know the answers
@@ -399,7 +401,7 @@ private struct CalendarTests {
 
         let immutableCalendar = calendar
         await withDiscardingTaskGroup { group in
-            for _ in 1 ..< 10 {
+            for _ in 1..<10 {
                 group.addTask {
                     autoreleasepool {
                         Self.validateOrdinality(expected, calendar: immutableCalendar, date: date)
@@ -411,21 +413,23 @@ private struct CalendarTests {
     #endif // _pointerBitWidth(_64) && FOUNDATION_FRAMEWORK
 
     @Test func range() {
-        let expected : [[Range<Int>?]] =
-            [[nil, 1..<144684, 1..<13, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, 1..<5, 1..<7, 1..<54, nil, 0..<1_000_000_000],
-            [nil, nil, 1..<13, 1..<366, 0..<24, 0..<60, 0..<60, 1..<8, 1..<60, 1..<5, 1..<64, 1..<54, nil, 0..<1_000_000_000],
-            [nil, nil, nil, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, nil, 1..<6, 32..<37, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, nil, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
-            [nil, nil, 7..<10, 1..<93, 0..<24, 0..<60, 0..<60, 1..<8, 1..<16, nil, 1..<17, 27..<41, nil, 0..<1_000_000_000],
-            [nil, nil, nil, 21..<28, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, 1..<397, 0..<24, 0..<60, 0..<60, 1..<8, 1..<65, nil, nil, 1..<54, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil]]
+        let expected: [[Range<Int>?]] =
+            [
+                [nil, 1..<144684, 1..<13, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, 1..<5, 1..<7, 1..<54, nil, 0..<1_000_000_000],
+                [nil, nil, 1..<13, 1..<366, 0..<24, 0..<60, 0..<60, 1..<8, 1..<60, 1..<5, 1..<64, 1..<54, nil, 0..<1_000_000_000],
+                [nil, nil, nil, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, nil, 1..<6, 32..<37, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
+                [nil, nil, 7..<10, 1..<93, 0..<24, 0..<60, 0..<60, 1..<8, 1..<16, nil, 1..<17, 27..<41, nil, 0..<1_000_000_000],
+                [nil, nil, nil, 21..<28, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, 1..<397, 0..<24, 0..<60, 0..<60, 1..<8, 1..<65, nil, nil, 1..<54, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
+            ]
 
         // An arbitrary date, for which we know the answers
         // August 22, 2022 at 3:02:38 PM PDT
@@ -438,21 +442,23 @@ private struct CalendarTests {
     }
 
     @Test func range_dst() {
-        let expected : [[Range<Int>?]] =
-            [[nil, 1..<144684, 1..<13, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, 1..<5, 1..<7, 1..<54, nil, 0..<1_000_000_000],
-            [nil, nil, 1..<13, 1..<366, 0..<24, 0..<60, 0..<60, 1..<8, 1..<60, 1..<5, 1..<64, 1..<54, nil, 0..<1_000_000_000],
-            [nil, nil, nil, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, nil, 1..<6, 10..<15, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, nil, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
-            [nil, nil, 1..<4, 1..<91, 0..<24, 0..<60, 0..<60, 1..<8, 1..<15, nil, 1..<17, 1..<15, nil, 0..<1_000_000_000],
-            [nil, nil, nil, 13..<20, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
-            [nil, nil, nil, 1..<397, 0..<24, 0..<60, 0..<60, 1..<8, 1..<65, nil, nil, 1..<54, nil, 0..<1_000_000_000],
-             [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil]]
+        let expected: [[Range<Int>?]] =
+            [
+                [nil, 1..<144684, 1..<13, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, 1..<5, 1..<7, 1..<54, nil, 0..<1_000_000_000],
+                [nil, nil, 1..<13, 1..<366, 0..<24, 0..<60, 0..<60, 1..<8, 1..<60, 1..<5, 1..<64, 1..<54, nil, 0..<1_000_000_000],
+                [nil, nil, nil, 1..<32, 0..<24, 0..<60, 0..<60, 1..<8, 1..<6, nil, 1..<6, 10..<15, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, nil, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
+                [nil, nil, 1..<4, 1..<91, 0..<24, 0..<60, 0..<60, 1..<8, 1..<15, nil, 1..<17, 1..<15, nil, 0..<1_000_000_000],
+                [nil, nil, nil, 13..<20, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, 0..<24, 0..<60, 0..<60, 1..<8, nil, nil, nil, nil, nil, 0..<1_000_000_000],
+                [nil, nil, nil, 1..<397, 0..<24, 0..<60, 0..<60, 1..<8, 1..<65, nil, nil, 1..<54, nil, 0..<1_000_000_000],
+                [nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil],
+            ]
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
@@ -544,7 +550,7 @@ private struct CalendarTests {
         #expect(0..<60 == c.range(of: .second, in: .minute, for: d))
 
         var d1 = Date()
-        var ti : TimeInterval = 0
+        var ti: TimeInterval = 0
 
         #expect(c.dateInterval(of: .day, start: &d1, interval: &ti, for: d))
         #expect(Date(timeIntervalSince1970: 1468652400.0) == d1)
@@ -556,7 +562,7 @@ private struct CalendarTests {
         #expect(15 == c.ordinality(of: .hour, in: .day, for: d))
 
         #expect(Date(timeIntervalSince1970: 1468791993.2533731) == c.date(byAdding: .day, value: 1, to: d))
-        #expect(Date(timeIntervalSince1970: 1468791993.2533731) == c.date(byAdding: DateComponents(day: 1),  to: d))
+        #expect(Date(timeIntervalSince1970: 1468791993.2533731) == c.date(byAdding: DateComponents(day: 1), to: d))
 
         #expect(Date(timeIntervalSince1970: 946627200.0) == c.date(from: DateComponents(year: 1999, month: 12, day: 31)))
 
@@ -610,7 +616,7 @@ private struct CalendarTests {
         // Find the days numbered '31' after 'd', allowing the algorithm to move to the next day if required
         c.enumerateDates(startingAfter: d, matching: DateComponents(day: 31), matchingPolicy: .nextTime) { result, exact, stop in
             // Just stop some arbitrary time in the future
-            if result! > d + 86400*365 { stop = true }
+            if result! > d + 86400 * 365 { stop = true }
             count += 1
             if exact { exactCount += 1 }
         }
@@ -638,21 +644,21 @@ private struct CalendarTests {
         #expect(Date(timeIntervalSince1970: 1469948400.0) == c.nextDate(after: d, matching: DateComponents(day: 31), matchingPolicy: .nextTime))
 
 
-        #expect(Date(timeIntervalSince1970: 1468742400.0) ==  c.date(bySetting: .hour, value: 1, of: d))
+        #expect(Date(timeIntervalSince1970: 1468742400.0) == c.date(bySetting: .hour, value: 1, of: d))
 
         #expect(Date(timeIntervalSince1970: 1468656123.0) == c.date(bySettingHour: 1, minute: 2, second: 3, of: d, matchingPolicy: .nextTime))
 
         #expect(c.date(d, matchesComponents: DateComponents(month: 7)))
         #expect(!c.date(d, matchesComponents: DateComponents(month: 7, day: 31)))
     }
-    
+
     @Test func leapMonthProperty() throws {
         let c = Calendar(identifier: .chinese)
         /// 2023-02-20 08:00:00 +0000 -- non-leap month in the Chinese calendar
         let d1 = Date(timeIntervalSinceReferenceDate: 698572800.0)
         /// 2023-03-22 07:00:00 +0000 -- leap month in the Chinese calendar
         let d2 = Date(timeIntervalSinceReferenceDate: 701161200.0)
-        
+
         var components = DateComponents()
         components.isLeapMonth = true
         #expect(!c.date(d1, matchesComponents: components))
@@ -666,7 +672,7 @@ private struct CalendarTests {
         #expect(c.date(d2, matchesComponents: components))
     }
 
-#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+    #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
     @Test func test_isRepeatedDayProperty() throws {
         var c = Calendar(identifier: .vikram)
         c.timeZone = TimeZone(identifier: "GMT")!
@@ -677,7 +683,7 @@ private struct CalendarTests {
         // Gregorian 2025-04-15 is the second Vikram 2082-02-02 (repeated lunar day, a.k.a. "adhika tithi")
         let d1 = try Date("2025-04-14 12:00:00 GMT", strategy: .iso8601.dateTimeSeparator(.space))
         let d2 = try Date("2025-04-15 12:00:00 GMT", strategy: .iso8601.dateTimeSeparator(.space))
-        
+
         var components = DateComponents()
         components.isRepeatedDay = true
         #expect(!c.date(d1, matchesComponents: components))
@@ -692,7 +698,7 @@ private struct CalendarTests {
         cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
-        
+
         // Note that the Vikram dates are location dependent,
         // the dates below line up for London.
         let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
@@ -720,7 +726,7 @@ private struct CalendarTests {
         // Note that the Vikram dates are location dependent,
         // the dates below line up for London.
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
-        
+
         let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
 
         let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
@@ -743,7 +749,7 @@ private struct CalendarTests {
         cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
-        
+
         // Note that the Vikram dates are location dependent,
         // the dates below line up for London.
         let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
@@ -767,7 +773,7 @@ private struct CalendarTests {
         cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
-        
+
         // Note that the Vikram dates are location dependent,
         // the dates below line up for London.
         let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
@@ -785,7 +791,7 @@ private struct CalendarTests {
         cal.timeZone = TimeZone(identifier: "UTC")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
-        
+
         var comps = DateComponents()
         comps.isRepeatedDay = true
 
@@ -795,9 +801,9 @@ private struct CalendarTests {
 
     @Test func test_equality_with_isRepeatedDay() throws {
         var c1 = DateComponents()
-        c1.month = 1; c1.year = 2082; c1.day=2
+        c1.month = 1; c1.year = 2082; c1.day = 2
         var c = c1
-        
+
         // undefined == undefined?
         #expect(c == c1)
         #expect(c.hashValue == c1.hashValue)
@@ -831,7 +837,7 @@ private struct CalendarTests {
         #expect(c.hashValue != c1.hashValue)
     }
 
-#endif
+    #endif
 
     @Test func addingDeprecatedWeek() throws {
         let date = try Date("2024-02-24 01:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
@@ -841,7 +847,7 @@ private struct CalendarTests {
         let calendar = Calendar(identifier: .gregorian)
         let oneWeekAfter = calendar.date(byAdding: dc, to: date)
 
-        let expected = date.addingTimeInterval(86400*7)
+        let expected = date.addingTimeInterval(86400 * 7)
         #expect(oneWeekAfter == expected)
     }
 
@@ -880,48 +886,48 @@ private struct CalendarTests {
 
         #expect("AM" == c.amSymbol)
         #expect("PM" == c.pmSymbol)
-        #expect( [ "1st quarter", "2nd quarter", "3rd quarter", "4th quarter" ] == c.quarterSymbols)
-        #expect( [ "1st quarter", "2nd quarter", "3rd quarter", "4th quarter" ] == c.standaloneQuarterSymbols)
-        #expect( [ "AM" ] == c.eraSymbols)
-        #expect( [ "AM" ] == c.longEraSymbols)
-        #expect( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ] == c.veryShortMonthSymbols)
-        #expect( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ] == c.veryShortStandaloneMonthSymbols)
-        #expect( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II" ] == c.shortMonthSymbols)
-        #expect( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II" ] == c.shortStandaloneMonthSymbols)
-        #expect( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"  ] == c.monthSymbols)
-        #expect( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"  ] == c.standaloneMonthSymbols)
-        #expect( [ "Q1", "Q2", "Q3", "Q4" ] == c.shortQuarterSymbols)
-        #expect( [ "Q1", "Q2", "Q3", "Q4" ] == c.shortStandaloneQuarterSymbols)
-        #expect( [ "S", "M", "T", "W", "T", "F", "S" ] == c.veryShortStandaloneWeekdaySymbols)
-        #expect( [ "S", "M", "T", "W", "T", "F", "S" ] == c.veryShortWeekdaySymbols)
-        #expect( [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ] == c.shortStandaloneWeekdaySymbols)
-        #expect( [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ] == c.shortWeekdaySymbols)
-        #expect( [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ] == c.standaloneWeekdaySymbols)
-        #expect( [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ] == c.weekdaySymbols)
+        #expect(["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"] == c.quarterSymbols)
+        #expect(["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"] == c.standaloneQuarterSymbols)
+        #expect(["AM"] == c.eraSymbols)
+        #expect(["AM"] == c.longEraSymbols)
+        #expect(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7"] == c.veryShortMonthSymbols)
+        #expect(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7"] == c.veryShortStandaloneMonthSymbols)
+        #expect(["Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"] == c.shortMonthSymbols)
+        #expect(["Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"] == c.shortStandaloneMonthSymbols)
+        #expect(["Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"] == c.monthSymbols)
+        #expect(["Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"] == c.standaloneMonthSymbols)
+        #expect(["Q1", "Q2", "Q3", "Q4"] == c.shortQuarterSymbols)
+        #expect(["Q1", "Q2", "Q3", "Q4"] == c.shortStandaloneQuarterSymbols)
+        #expect(["S", "M", "T", "W", "T", "F", "S"] == c.veryShortStandaloneWeekdaySymbols)
+        #expect(["S", "M", "T", "W", "T", "F", "S"] == c.veryShortWeekdaySymbols)
+        #expect(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] == c.shortStandaloneWeekdaySymbols)
+        #expect(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] == c.shortWeekdaySymbols)
+        #expect(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] == c.standaloneWeekdaySymbols)
+        #expect(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] == c.weekdaySymbols)
 
         c.locale = Locale(identifier: "es_ES")
         #expect("a.\u{202f}m." == c.amSymbol)
         #expect("p.\u{202f}m." == c.pmSymbol)
-        #expect( [ "1.er trimestre", "2.\u{00ba} trimestre", "3.er trimestre", "4.\u{00ba} trimestre" ] == c.quarterSymbols)
-        #expect( [ "1.er trimestre", "2.\u{00ba} trimestre", "3.er trimestre", "4.\u{00ba} trimestre" ] == c.standaloneQuarterSymbols)
-        #expect( [ "AM" ] == c.eraSymbols)
-        #expect( [ "AM" ] == c.longEraSymbols)
-        #expect( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ] == c.veryShortMonthSymbols)
-        #expect( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ] == c.veryShortStandaloneMonthSymbols)
-        #expect( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ] == c.shortMonthSymbols)
-        #expect( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ] == c.shortStandaloneMonthSymbols)
-        #expect( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ] == c.monthSymbols)
-        #expect( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ] == c.standaloneMonthSymbols)
-        #expect( [ "T1", "T2", "T3", "T4" ] == c.shortQuarterSymbols)
-        #expect( [ "T1", "T2", "T3", "T4" ] == c.shortStandaloneQuarterSymbols)
-        #expect( [ "D", "L", "M", "X", "J", "V", "S" ] == c.veryShortStandaloneWeekdaySymbols)
-        #expect( [ "D", "L", "M", "X", "J", "V", "S" ] == c.veryShortWeekdaySymbols)
-        #expect( [ "dom", "lun", "mar", "mi\u{00e9}", "jue", "vie", "s\u{00e1}b" ] == c.shortStandaloneWeekdaySymbols)
-        #expect( [ "dom", "lun", "mar", "mi\u{00e9}", "jue", "vie", "s\u{00e1}b" ] == c.shortWeekdaySymbols)
-        #expect( [ "domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado" ] == c.standaloneWeekdaySymbols)
-        #expect( [ "domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado" ] == c.weekdaySymbols)
+        #expect(["1.er trimestre", "2.\u{00ba} trimestre", "3.er trimestre", "4.\u{00ba} trimestre"] == c.quarterSymbols)
+        #expect(["1.er trimestre", "2.\u{00ba} trimestre", "3.er trimestre", "4.\u{00ba} trimestre"] == c.standaloneQuarterSymbols)
+        #expect(["AM"] == c.eraSymbols)
+        #expect(["AM"] == c.longEraSymbols)
+        #expect(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7"] == c.veryShortMonthSymbols)
+        #expect(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7"] == c.veryShortStandaloneMonthSymbols)
+        #expect(["tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II"] == c.shortMonthSymbols)
+        #expect(["tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II"] == c.shortStandaloneMonthSymbols)
+        #expect(["tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II"] == c.monthSymbols)
+        #expect(["tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II"] == c.standaloneMonthSymbols)
+        #expect(["T1", "T2", "T3", "T4"] == c.shortQuarterSymbols)
+        #expect(["T1", "T2", "T3", "T4"] == c.shortStandaloneQuarterSymbols)
+        #expect(["D", "L", "M", "X", "J", "V", "S"] == c.veryShortStandaloneWeekdaySymbols)
+        #expect(["D", "L", "M", "X", "J", "V", "S"] == c.veryShortWeekdaySymbols)
+        #expect(["dom", "lun", "mar", "mi\u{00e9}", "jue", "vie", "s\u{00e1}b"] == c.shortStandaloneWeekdaySymbols)
+        #expect(["dom", "lun", "mar", "mi\u{00e9}", "jue", "vie", "s\u{00e1}b"] == c.shortWeekdaySymbols)
+        #expect(["domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado"] == c.standaloneWeekdaySymbols)
+        #expect(["domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado"] == c.weekdaySymbols)
     }
-    
+
     @Test func weekOfMonthLoop() {
         // This test simply needs to not hang or crash
         let date = Date(timeIntervalSinceReferenceDate: 2.4499581972890255e+18)
@@ -994,24 +1000,24 @@ private struct CalendarTests {
         var cal = Calendar(identifier: .gregorian)
         let tz = TimeZone(identifier: "America/Los_Angeles")!
         cal.timeZone = tz
-        
+
         // Purpose of this test is not to test the addition itself (we have others for that), but to smoke test the wrapping API
         let numberOfDays = Array(cal.dates(byAdding: .day, startingAt: startDate, in: startDate..<endDate)).count
         #expect(numberOfDays == 3)
     }
-    
+
     @Test func datesAdding_year() {
         // Verify that adding 12 months once is the same as adding 1 month 12 times
         let startDate = Date(timeIntervalSinceReferenceDate: 688946558.712307) // 2022-10-31 22:02:38 UTC
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone.gmt
-        
+
         let oneYearOnce = cal.date(byAdding: .month, value: 12, to: startDate)
         let oneYearTwelve = Array(cal.dates(byAdding: .month, value: 1, startingAt: startDate).prefix(12)).last!
-        
+
         #expect(oneYearOnce == oneYearTwelve)
     }
-    
+
     @Test func datesMatching_simpleExample() {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .gmt
@@ -1044,39 +1050,39 @@ private struct CalendarTests {
         // There should be 3 "hour 23"s in this range.
         let numberOfMatchesForward = Array(cal.dates(byMatching: dc, startingAt: startDate, in: startDate..<endDate)).count
         #expect(numberOfMatchesForward == 3)
-        
+
         let numberOfMatchesBackward = Array(cal.dates(byMatching: dc, startingAt: endDate, in: startDate..<endDate, direction: .backward)).count
         #expect(numberOfMatchesBackward == 3)
-        
+
         let unboundedForward = Array(cal.dates(byMatching: dc, startingAt: startDate).prefix(10))
         #expect(unboundedForward.count == 10)
-        
+
         // sanity check of results
         #expect(unboundedForward.first! < unboundedForward.last!)
-        
+
         let unboundedBackward = Array(cal.dates(byMatching: dc, startingAt: startDate, direction: .backward).prefix(10))
         #expect(unboundedForward.count == 10)
-        
+
         // sanity check of results
         #expect(unboundedBackward.first! > unboundedBackward.last!)
     }
-    
+
     @Test func dayOfYear_bounds() {
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307) // 2022-08-22 22:02:38 UTC, day 234
         var cal = Calendar(identifier: .gregorian)
         let tz = TimeZone.gmt
         cal.timeZone = tz
-        
+
         // Test some invalid day of years
         var dayOfYearComps = DateComponents()
         dayOfYearComps.dayOfYear = 0
         let zeroDay = cal.nextDate(after: date, matching: dayOfYearComps, matchingPolicy: .previousTimePreservingSmallerComponents)
         #expect(zeroDay == nil)
-        
+
         dayOfYearComps.dayOfYear = 400
         let futureDay = cal.nextDate(after: date, matching: dayOfYearComps, matchingPolicy: .nextTime)
         #expect(futureDay == nil)
-        
+
         // Test subtraction over a year boundary
         dayOfYearComps.dayOfYear = 1
         let firstDay = cal.nextDate(after: date, matching: dayOfYearComps, matchingPolicy: .nextTime, direction: .backward)
@@ -1084,7 +1090,7 @@ private struct CalendarTests {
         let firstDayComps = cal.dateComponents([.year], from: firstDay!)
         let expectationComps = DateComponents(year: 2022)
         #expect(firstDayComps == expectationComps)
-        
+
         var subtractMe = DateComponents()
         subtractMe.dayOfYear = -1
         let previousDay = cal.date(byAdding: subtractMe, to: firstDay!)
@@ -1095,7 +1101,7 @@ private struct CalendarTests {
         previousDayExpectationComps.dayOfYear = 365
         #expect(previousDayComps == previousDayExpectationComps)
     }
-    
+
     @Test func dayOfYear() {
         // An arbitrary date, for which we know the answers
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307) // 2022-08-22 22:02:38 UTC, day 234
@@ -1103,7 +1109,7 @@ private struct CalendarTests {
         var cal = Calendar(identifier: .gregorian)
         let tz = TimeZone.gmt
         cal.timeZone = tz
-        
+
         // Ordinality
         #expect(cal.ordinality(of: .dayOfYear, in: .year, for: date) == 234)
         #expect(cal.ordinality(of: .hour, in: .dayOfYear, for: date) == 23)
@@ -1117,23 +1123,23 @@ private struct CalendarTests {
         // Interval
         let interval = cal.dateInterval(of: .dayOfYear, for: date)
         #expect(interval == DateInterval(start: Date(timeIntervalSinceReferenceDate: 682819200), duration: 86400))
-        
+
         // Specific component values
         #expect(cal.dateComponents(in: .gmt, from: date).dayOfYear == 234)
         #expect(cal.component(.dayOfYear, from: date) == 234)
-        
+
         // Enumeration
         let beforeDate = date - (86400 * 3)
         let afterDate = date + (86400 * 3)
         let startOfDate = cal.startOfDay(for: date)
-        
+
         var matchingComps = DateComponents(); matchingComps.dayOfYear = 234
         var foundDate = cal.nextDate(after: beforeDate, matching: matchingComps, matchingPolicy: .nextTime)
         #expect(foundDate == startOfDate)
-        
+
         foundDate = cal.nextDate(after: afterDate, matching: matchingComps, matchingPolicy: .nextTime, direction: .backward)
         #expect(foundDate == startOfDate)
-        
+
         // Go over a leap year
         let nextFive = Array(cal.dates(byMatching: matchingComps, startingAt: beforeDate).prefix(5))
         let expected = [
@@ -1144,38 +1150,38 @@ private struct CalendarTests {
             Date(timeIntervalSinceReferenceDate: 809049600), // 2026-08-22 00:00:00 +0000
         ]
         #expect(nextFive == expected)
-        
+
         // Ranges
         let min = cal.minimumRange(of: .dayOfYear)
         let max = cal.maximumRange(of: .dayOfYear)
         #expect(min == 1..<366) // hard coded for gregorian
         #expect(max == 1..<367)
-        
+
         #expect(cal.range(of: .dayOfYear, in: .year, for: date) == 1..<366)
         #expect(cal.range(of: .dayOfYear, in: .year, for: leapYearDate) == 1..<367)
-        
+
         // Addition
         let d1 = cal.date(byAdding: .dayOfYear, value: 1, to: date)
         #expect(d1 == date + 86400)
-        
+
         // Using setting to go to Jan 1
         let jan1 = cal.date(bySetting: .dayOfYear, value: 1, of: date)!
         let jan1Comps = cal.dateComponents([.year, .month, .day], from: jan1)
         #expect(jan1Comps.year == 2023)
         #expect(jan1Comps.day == 1)
         #expect(jan1Comps.month == 1)
-        
+
         // Using setting to go to Jan 1
         let whatDay = cal.date(bySetting: .dayOfYear, value: 100, of: Date.now)!
         let _ = cal.component(.weekday, from: whatDay)
         let _ = Calendar.current.component(.weekday, from: Date.now - (86400 * 5))
 
-        
+
         // Comparison
         #expect(cal.compare(date, to: beforeDate, toGranularity: .dayOfYear) == .orderedDescending)
         #expect(cal.compare(date, to: afterDate, toGranularity: .dayOfYear) == .orderedAscending)
         #expect(cal.compare(date + 10, to: date, toGranularity: .dayOfYear) == .orderedSame)
-        
+
         // Nonsense day-of-year
         var nonsenseDayOfYear = DateComponents()
         nonsenseDayOfYear.dayOfYear = 500
@@ -1217,7 +1223,8 @@ private struct CalendarTests {
         calendar.timeZone = .gmt
 
         let startOfYearGMT = Date(timeIntervalSince1970: 1577836800) // January 1, 2020 00:00:00 GMT
-        var components = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: startOfYearGMT)
+        var components = calendar.dateComponents(
+            [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: startOfYearGMT)
         let roundtrip = calendar.date(from: components)
         #expect(roundtrip == startOfYearGMT)
 
@@ -1275,19 +1282,19 @@ private struct CalendarTests {
 
         // Unreasonable configuration
         // Month is ignored
-        test(.init(month: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -32140800.0))  // 1999-12-26
+        test(.init(month: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -32140800.0)) // 1999-12-26
         test(.init(month: 1, weekOfYear: 53, yearForWeekOfYear: 1998), Date(timeIntervalSinceReferenceDate: -63590400.0)) // 1998-12-27
 
         // year and yearForWeekOfYear
         test(.init(year: 2024, weekOfYear: 30, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 743212800.0)) // 2024-07-21 00:00:00 UTC
-        test(.init(year: 2023, weekOfYear: 1 ,yearForWeekOfYear: 2023), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
+        test(.init(year: 2023, weekOfYear: 1, yearForWeekOfYear: 2023), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
         test(.init(year: 2023, weekOfYear: 52, yearForWeekOfYear: 2023), Date(timeIntervalSinceReferenceDate: 725068800.0)) // 2023-12-24T00:00:00Z
         test(.init(year: 2023, weekOfYear: 53, yearForWeekOfYear: 2023), Date(timeIntervalSinceReferenceDate: 725673600.0)) // 2023-12-31T00:00:00Z
         test(.init(year: 2024, weekOfYear: 30, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 743212800.0)) // 2024-07-21T00:00:00Z
         test(.init(year: 2024, weekOfYear: 53, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
-        test(.init(year: 2025, weekOfYear: 1 ,yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
-        test(.init(year: 2024, weekOfYear: 1 ,yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
-        test(.init(year: 2025, weekOfYear: 1 ,yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 725673600.0)) // 2023-12-31T00:00:00Z
+        test(.init(year: 2025, weekOfYear: 1, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+        test(.init(year: 2024, weekOfYear: 1, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+        test(.init(year: 2025, weekOfYear: 1, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 725673600.0)) // 2023-12-31T00:00:00Z
         test(.init(year: 2024, weekOfYear: 52, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 787968000.0)) // 2025-12-21T00:00:00Z
         test(.init(year: 2025, weekOfYear: 52, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 756518400.0)) // 2024-12-22T00:00:00Z
         test(.init(year: 2024, weekOfYear: 53, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 788572800.0)) // 2025-12-28T00:00:00Z
@@ -1298,7 +1305,7 @@ private struct CalendarTests {
         test(.init(year: 2023, weekOfYear: 30), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
         test(.init(year: 2023, weekOfYear: 52), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
         test(.init(year: 2023, weekOfYear: 53), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
-        
+
         // weekOfYear and yearForWeekOfYear
         test(.init(weekOfYear: 1, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
         test(.init(weekOfYear: 52, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 787968000.0)) // 2025-12-21T00:00:00Z
@@ -1398,13 +1405,13 @@ private struct CalendarTests {
         let result = calendar.date(byAdding: dateComponents, to: date)
         #expect(date == result)
 
-        let allComponents : [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second]
+        let allComponents: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second]
         for component in allComponents {
             let res = calendar.date(byAdding: component, value: 0, to: date)
             #expect(res == date, "component: \(component)")
         }
     }
-    
+
 
     @Test func addingDaysAndWeeks() throws {
         let timeZone = TimeZone(identifier: "America/Los_Angeles")!
@@ -1450,7 +1457,7 @@ private struct CalendarTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
 
-        var components = DateComponents(year:2021, month: 6, day: 10, hour: 23, minute: 59, second: 59)
+        var components = DateComponents(year: 2021, month: 6, day: 10, hour: 23, minute: 59, second: 59)
         let tz = try #require(TimeZone(identifier: "UTC+9"))
         components.timeZone = tz
 
@@ -1458,7 +1465,7 @@ private struct CalendarTests {
         #expect(date.timeIntervalSinceReferenceDate == 645029999)
     }
 
-#if _pointerBitWidth(_64) // These tests assumes Int is Int64
+    #if _pointerBitWidth(_64) // These tests assumes Int is Int64
     @Test func dateFromComponentsOverflow() {
         let calendar = Calendar(identifier: .gregorian)
 
@@ -1497,7 +1504,7 @@ private struct CalendarTests {
             let added = calendar.date(byAdding: components, to: date)
             #expect(added == nil)
         }
-        
+
         do {
             let date = Date(timeIntervalSinceReferenceDate: 849248301.169329)
             let calendar = Calendar(identifier: .gregorian)
@@ -1527,7 +1534,7 @@ private struct CalendarTests {
             _ = calendar.date(from: dc)
         }
     }
-    
+
     @Test func fuzzingOverflow() throws {
         do {
             let date = Date(timeIntervalSinceReferenceDate: 794031595.396801)
@@ -1535,40 +1542,41 @@ private struct CalendarTests {
             let calendar = Calendar(identifier: .gregorian)
             let components = DateComponents(era: 792633534417207295, year: -1, month: -1, day: -1, hour: -1, minute: -1, second: -1, nanosecond: -1)
             let value = -1052266987521
-            
+
             _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
             _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
             _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
-            
+
             let allComponents: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
             for component in allComponents {
                 _ = calendar.date(byAdding: component, value: value, to: date)
                 _ = calendar.component(component, from: date)
                 _ = calendar.compare(date, to: date2, toGranularity: component)
             }
-            
+
             _ = calendar.date(from: components)
             _ = calendar.startOfDay(for: date)
             _ = calendar.dateComponents(allComponents, from: date)
             _ = calendar.dateComponents(allComponents, from: date, to: date2)
-            
+
             _ = calendar.isDateInWeekend(date)
             _ = calendar.dateIntervalOfWeekend(containing: date)
             _ = calendar.nextWeekend(startingAfter: date)
             _ = calendar.nextWeekend(startingAfter: date, direction: .backward)
         }
-        
+
         do {
             let date = Date(timeIntervalSinceReferenceDate: -81791149.49856305)
             let date2 = Date(timeIntervalSinceReferenceDate: 875823360.0)
             let calendar = Calendar(identifier: .gregorian)
-            let components = DateComponents(era: 3761688987579986996, year: 3761688987579986996, month: 3761688987579986996, day: 3761688987579987508, hour: 3761688987579986996, minute: 4698437710073050164, second: 3765348162277225524, nanosecond: 3761688987579986996)
+            let components = DateComponents(
+                era: 3761688987579986996, year: 3761688987579986996, month: 3761688987579986996, day: 3761688987579987508, hour: 3761688987579986996, minute: 4698437710073050164, second: 3765348162277225524, nanosecond: 3761688987579986996)
             let value = 14694359600739380
-            
+
             _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
             _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
             _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
-            
+
             let allComponents: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
             for component in allComponents {
                 _ = calendar.dateInterval(of: component, for: date)
@@ -1576,12 +1584,12 @@ private struct CalendarTests {
                 _ = calendar.component(component, from: date)
                 _ = calendar.compare(date, to: date2, toGranularity: component)
             }
-            
+
             _ = calendar.date(from: components)
             _ = calendar.startOfDay(for: date)
             _ = calendar.dateComponents(allComponents, from: date)
             _ = calendar.dateComponents(allComponents, from: date, to: date2)
-            
+
             _ = calendar.isDateInWeekend(date)
             _ = calendar.dateIntervalOfWeekend(containing: date)
             _ = calendar.nextWeekend(startingAfter: date)
@@ -1589,7 +1597,7 @@ private struct CalendarTests {
         }
     }
 
-#endif
+    #endif
 
 }
 
@@ -1718,7 +1726,7 @@ private struct GregorianCalendarCompatibilityTests {
         test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995))
         test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995))
         test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995))
-        
+
         test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, yearForWeekOfYear: 1995))
         test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995))
         test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995))
@@ -1806,10 +1814,10 @@ private struct GregorianCalendarCompatibilityTests {
             #expect(roundtrip_new.hour == roundtrip_old.hour, "dateComponents: \(dateComponents)", sourceLocation: sourceLocation)
         }
 
-         // In daylight saving time
+        // In daylight saving time
         test(.init(year: 2023, month: 10, day: 16))
         test(.init(year: 2023, month: 10, day: 16, hour: 1, minute: 34, second: 52))
-        
+
         // Not in daylight saving time
         test(.init(year: 2023, month: 11, day: 6))
 
@@ -1844,7 +1852,8 @@ private struct GregorianCalendarCompatibilityTests {
         }
 
         let dcCalendar = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: .init(secondsFromGMT: -25200), firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
-        let dc = DateComponents(calendar: nil, timeZone: nil, era: 1, year: 2022, month: 7, day: 9, hour: 10, minute: 2, second: 55, nanosecond: 891000032, weekday: 7, weekdayOrdinal: 2, quarter: 0, weekOfMonth: 2, weekOfYear: 28, yearForWeekOfYear: 2022)
+        let dc = DateComponents(
+            calendar: nil, timeZone: nil, era: 1, year: 2022, month: 7, day: 9, hour: 10, minute: 2, second: 55, nanosecond: 891000032, weekday: 7, weekdayOrdinal: 2, quarter: 0, weekOfMonth: 2, weekOfYear: 28, yearForWeekOfYear: 2022)
         var dc_customCalendarAndTimeZone = dc
         dc_customCalendarAndTimeZone.calendar = dcCalendar
         dc_customCalendarAndTimeZone.timeZone = .init(secondsFromGMT: 28800)
@@ -1896,7 +1905,8 @@ private struct GregorianCalendarCompatibilityTests {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: timeZone)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: timeZone)
             // The original implementation does not set quarter
-            expectEqual(gregResult, icuResult, expectQuarter: false, expectCalendar: false, "\(message())\ndate: \(date.timeIntervalSinceReferenceDate), \(date.formatted(.iso8601))\nnew:\n\(gregResult)\nold:\n\(icuResult)", sourceLocation: sourceLocation)
+            expectEqual(
+                gregResult, icuResult, expectQuarter: false, expectCalendar: false, "\(message())\ndate: \(date.timeIntervalSinceReferenceDate), \(date.formatted(.iso8601))\nnew:\n\(gregResult)\nold:\n\(icuResult)", sourceLocation: sourceLocation)
         }
 
         let testStrides = stride(from: -864000, to: 864000, by: 100)
@@ -1927,7 +1937,9 @@ private struct GregorianCalendarCompatibilityTests {
             let tz = TimeZone(identifier: "America/Los_Angeles")!
             #expect(tz.nextDaylightSavingTimeTransition(after: Date(timeIntervalSinceReferenceDate: 0)) != nil)
 
-            let intervalsAroundDSTTransition = [41418000.0, 41425200.0, 25689600.0, 73476000.0, 89197200.0, 57747600.0, 57744000.0, 9972000.0, 25693200.0, 9975600.0, 57751200.0, 25696800.0, 89193600.0, 41421600.0, 73479600.0, 89200800.0, 73472400.0, 9968400.0]
+            let intervalsAroundDSTTransition = [
+                41418000.0, 41425200.0, 25689600.0, 73476000.0, 89197200.0, 57747600.0, 57744000.0, 9972000.0, 25693200.0, 9975600.0, 57751200.0, 25696800.0, 89193600.0, 41421600.0, 73479600.0, 89200800.0, 73472400.0, 9968400.0,
+            ]
             for ti in intervalsAroundDSTTransition {
                 let date = Date(timeIntervalSince1970: TimeInterval(ti))
                 try test(date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, timeZone: tz)
@@ -1981,14 +1993,15 @@ private struct GregorianCalendarCompatibilityTests {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: tz)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: tz)
             // The original implementation does not set quarter
-            expectEqual(gregResult, icuResult, expectQuarter: false, expectCalendar: false, "\(message())\ndate: \(date.timeIntervalSinceReferenceDate), \(date.formatted(.iso8601))\nnew:\n\(gregResult)\nold:\n\(icuResult)", sourceLocation: sourceLocation)
+            expectEqual(
+                gregResult, icuResult, expectQuarter: false, expectCalendar: false, "\(message())\ndate: \(date.timeIntervalSinceReferenceDate), \(date.formatted(.iso8601))\nnew:\n\(gregResult)\nold:\n\(icuResult)", sourceLocation: sourceLocation)
         }
 
         let testStrides = stride(from: -864000, to: 864000, by: 100)
 
         for ti in testStrides {
             let date = Date(timeIntervalSince1970: TimeInterval(ti))
-                test(date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)
+            test(date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)
         }
 
         // test near gregorian start date
@@ -2003,7 +2016,9 @@ private struct GregorianCalendarCompatibilityTests {
 
         // test day light saving time
         do {
-            let intervalsAroundDSTTransition = [41418000.0, 41425200.0, 25689600.0, 73476000.0, 89197200.0, 57747600.0, 57744000.0, 9972000.0, 25693200.0, 9975600.0, 57751200.0, 25696800.0, 89193600.0, 41421600.0, 73479600.0, 89200800.0, 73472400.0, 9968400.0]
+            let intervalsAroundDSTTransition = [
+                41418000.0, 41425200.0, 25689600.0, 73476000.0, 89197200.0, 57747600.0, 57744000.0, 9972000.0, 25693200.0, 9975600.0, 57751200.0, 25696800.0, 89193600.0, 41421600.0, 73479600.0, 89200800.0, 73472400.0, 9968400.0,
+            ]
             for ti in intervalsAroundDSTTransition {
                 let date = Date(timeIntervalSince1970: TimeInterval(ti))
                 test(date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)
@@ -2054,7 +2069,10 @@ private struct GregorianCalendarCompatibilityTests {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: gregorianCalendar.timeZone)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: icuCalendar.timeZone)
             // The original implementation does not set quarter
-            expectEqual(gregResult, icuResult, expectQuarter: false, expectCalendar: false, "\(message())\ndate: \(date.timeIntervalSince1970), \(date.formatted(Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)))\nnew:\n\(gregResult)\nold:\n\(icuResult)\ndiff:\n\(DateComponents.differenceBetween(gregResult, icuResult, compareQuarter: false) ?? "nil")", sourceLocation: sourceLocation)
+            expectEqual(
+                gregResult, icuResult, expectQuarter: false, expectCalendar: false,
+                "\(message())\ndate: \(date.timeIntervalSince1970), \(date.formatted(Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)))\nnew:\n\(gregResult)\nold:\n\(icuResult)\ndiff:\n\(DateComponents.differenceBetween(gregResult, icuResult, compareQuarter: false) ?? "nil")",
+                sourceLocation: sourceLocation)
         }
 
         do {
@@ -2086,7 +2104,10 @@ private struct GregorianCalendarCompatibilityTests {
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: icuCalendar.timeZone)
             // The original implementation does not set quarter
 
-            expectEqual(gregResult, icuResult, expectQuarter: false, expectCalendar: false, "\(message())\ndate: \(date.timeIntervalSince1970), \(date.formatted(Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)))\nnew:\n\(gregResult)\nold:\n\(icuResult)\ndiff:\n\(DateComponents.differenceBetween(gregResult, icuResult, compareQuarter: false) ?? "")", sourceLocation: sourceLocation)
+            expectEqual(
+                gregResult, icuResult, expectQuarter: false, expectCalendar: false,
+                "\(message())\ndate: \(date.timeIntervalSince1970), \(date.formatted(Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)))\nnew:\n\(gregResult)\nold:\n\(icuResult)\ndiff:\n\(DateComponents.differenceBetween(gregResult, icuResult, compareQuarter: false) ?? "")",
+                sourceLocation: sourceLocation)
         }
 
         do {
@@ -2098,14 +2119,16 @@ private struct GregorianCalendarCompatibilityTests {
 
             date = Date(timeIntervalSinceReferenceDate: -1) // 2001-01-01 00:00:00 +0000
             test(date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)
-            
+
             date = Date(timeIntervalSinceReferenceDate: -1.0012654182354326e-43) // 2001-01-01 00:00:00 +0000
             test(date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)
         }
 
     }
     // MARK: - adding
-    func verifyAdding(_ components: DateComponents, to date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, wrap: Bool = false, _ message: @autoclosure () -> String = "", sourceLocation: SourceLocation = #_sourceLocation) throws {
+    func verifyAdding(_ components: DateComponents, to date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, wrap: Bool = false, _ message: @autoclosure () -> String = "", sourceLocation: SourceLocation = #_sourceLocation)
+        throws
+    {
         let added_icu = try #require(icuCalendar.date(byAdding: components, to: date, wrappingComponents: wrap), "\(message())", sourceLocation: sourceLocation)
         let added_greg = try #require(gregorianCalendar.date(byAdding: components, to: date, wrappingComponents: wrap), "\(message())", sourceLocation: sourceLocation)
         let tz = icuCalendar.timeZone
@@ -2142,11 +2165,11 @@ private struct GregorianCalendarCompatibilityTests {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
 
         // Wrap
-        try verify(Date(timeIntervalSince1970: 825638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 00:00
-        try verify(Date(timeIntervalSince1970: 825721200), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:00
-        try verify(Date(timeIntervalSince1970: 825723300), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:35
-        try verify(Date(timeIntervalSince1970: 825638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 5, Tue
-        try verify(Date(timeIntervalSince1970: 826588800), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 12, Tue
+        try verify(Date(timeIntervalSince1970: 825638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 1, Fri 00:00
+        try verify(Date(timeIntervalSince1970: 825721200), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 1, Fri 23:00
+        try verify(Date(timeIntervalSince1970: 825723300), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 1, Fri 23:35
+        try verify(Date(timeIntervalSince1970: 825638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 5, Tue
+        try verify(Date(timeIntervalSince1970: 826588800), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 12, Tue
 
         // Dates close to Gregorian cutover
         try verify(Date(timeIntervalSince1970: -12219638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 1
@@ -2156,11 +2179,11 @@ private struct GregorianCalendarCompatibilityTests {
         try verify(Date(timeIntervalSince1970: -62130067200), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // long time ago
 
         // No wrap
-        try verify(Date(timeIntervalSince1970: 825638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 00:00
-        try verify(Date(timeIntervalSince1970: 825721200), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:00
-        try verify(Date(timeIntervalSince1970: 825723300), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:35
-        try verify(Date(timeIntervalSince1970: 825638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 5, Tue
-        try verify(Date(timeIntervalSince1970: 826588800), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 12, Tue
+        try verify(Date(timeIntervalSince1970: 825638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 1, Fri 00:00
+        try verify(Date(timeIntervalSince1970: 825721200), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 1, Fri 23:00
+        try verify(Date(timeIntervalSince1970: 825723300), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 1, Fri 23:35
+        try verify(Date(timeIntervalSince1970: 825638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 5, Tue
+        try verify(Date(timeIntervalSince1970: 826588800), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1996 Mar 12, Tue
 
         // Dates close to Gregorian cutover
         try verify(Date(timeIntervalSince1970: -12219638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 1
@@ -2191,14 +2214,14 @@ private struct GregorianCalendarCompatibilityTests {
 
         for firstWeekday in [0, 1, 7] {
             for minimumDaysInFirstWeek in [0, 1, 4, 7] {
-                for tzOffset in [ 3600, 7200] {
+                for tzOffset in [3600, 7200] {
                     let timeZone = TimeZone(secondsFromGMT: tzOffset)!
                     let msg = "firstweekday: \(firstWeekday), minimumDaysInFirstWeek: \(minimumDaysInFirstWeek), timeZone: \(timeZone)"
                     let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
                     let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
                     // Wrap
-                    try verify(Date(timeIntervalSince1970: 825723300), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 1, Fri 23:35
-                    try verify(Date(timeIntervalSince1970: 826588800), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 12, Tue
+                    try verify(Date(timeIntervalSince1970: 825723300), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1996 Mar 1, Fri 23:35
+                    try verify(Date(timeIntervalSince1970: 826588800), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1996 Mar 12, Tue
 
                     // Dates close to Gregorian cutover
                     try verify(Date(timeIntervalSince1970: -12219638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 1
@@ -2211,8 +2234,8 @@ private struct GregorianCalendarCompatibilityTests {
                     // verify(Date.distantFuture, wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)
 
                     // No Wrap
-                    try verify(Date(timeIntervalSince1970: 825723300), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 1, Fri 23:35
-                    try verify(Date(timeIntervalSince1970: 826588800), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 12, Tue
+                    try verify(Date(timeIntervalSince1970: 825723300), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1996 Mar 1, Fri 23:35
+                    try verify(Date(timeIntervalSince1970: 826588800), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1996 Mar 12, Tue
 
                     // Dates close to Gregorian cutover
                     try verify(Date(timeIntervalSince1970: -12219638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 1
@@ -2236,25 +2259,25 @@ private struct GregorianCalendarCompatibilityTests {
 
         let march1_1996 = Date(timeIntervalSince1970: 825723300) // 1996 Mar 1, Fri 23:35
 
-        try verifyAdding(.init(day: -1, hour: 1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -1, hour: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(month: -1, hour: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(month: -1, day: 30), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(year: 4, day: -1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -1, hour: 24),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -1, weekday: 1),                     to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -7, weekOfYear: 1),                  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(year: 4, day: -1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -1, hour: 24), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -1, weekday: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
 
-        try verifyAdding(.init(day: -1, hour: 1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -1, hour: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(month: -1, hour: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(month: -1, day: 30), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(year: 4, day: -1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -1, hour: 24),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -1, weekday: 1),                     to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -7, weekOfYear: 1),                  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(year: 4, day: -1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -1, hour: 24), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -1, weekday: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
     }
 
     @Test func addComponentsCompatibility_DST() throws {
@@ -2266,39 +2289,39 @@ private struct GregorianCalendarCompatibilityTests {
 
         var date = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
 
-        try verifyAdding(.init(day: -1, hour: 1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -1, hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(month: -1, hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(month: -1, day: 30), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(year: 4, day: -1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -1, hour: 24),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -1, weekday: 1),                     to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -7, weekOfYear: 1),                  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(hour: 1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(hour: -1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(year: 4, day: -1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -1, hour: 24), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -1, weekday: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -7, weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(hour: 1, yearForWeekOfYear: -1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(hour: -1, yearForWeekOfYear: -1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(year: -1, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // result is also DST transition day
         try verifyAdding(.init(weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(month: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(month: -12, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
 
-        try verifyAdding(.init(day: -1, hour: 1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -1, hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(month: -1, hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(month: -1, day: 30), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(year: 4, day: -1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(year: 4, day: -1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(year: -1, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // result is also DST transition day
-        try verifyAdding(.init(day: -1, hour: 24),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -1, weekday: 1),                     to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -7, weekOfYear: 1),                  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(hour: 1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(hour: -1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -1, hour: 24), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -1, weekday: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -7, weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(hour: 1, yearForWeekOfYear: -1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(hour: -1, yearForWeekOfYear: -1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(month: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
@@ -2306,15 +2329,15 @@ private struct GregorianCalendarCompatibilityTests {
 
         date = Date(timeIntervalSince1970: 814953787.0) // 1995-10-29T01:03:07-0700
         try verifyAdding(.init(year: 1, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // result is also DST transition day
-        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
-        try verifyAdding(.init(weekOfYear: 43),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        try verifyAdding(.init(weekOfYear: 43), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
         try verifyAdding(.init(month: 12, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // Also DST
 
         try verifyAdding(.init(year: 1, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // result is also DST transition day
-        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
-        try verifyAdding(.init(weekOfYear: 43),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(hour: 1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(hour: -1, yearForWeekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        try verifyAdding(.init(weekOfYear: 43), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         try verifyAdding(.init(month: 12, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // Also DST
 
         date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
@@ -2338,7 +2361,7 @@ private struct GregorianCalendarCompatibilityTests {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
 
-        var date = Date(timeIntervalSinceReferenceDate:  -2976971168) // Some remote dates
+        var date = Date(timeIntervalSinceReferenceDate: -2976971168) // Some remote dates
         try verifyAdding(.init(weekday: -1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
 
         date = Date(timeIntervalSinceReferenceDate: -2977057568.0)
@@ -2350,7 +2373,7 @@ private struct GregorianCalendarCompatibilityTests {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        let date = Date(timeIntervalSinceReferenceDate:  -702180000) // 1978-10-01T23:00:00+0100
+        let date = Date(timeIntervalSinceReferenceDate: -702180000) // 1978-10-01T23:00:00+0100
         try verifyAdding(.init(hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
 
         // Expected
@@ -2382,7 +2405,6 @@ private struct GregorianCalendarCompatibilityTests {
     }
 
 
-
     // MARK: DateInterval
 
     @Test func dateIntervalCompatibility() throws {
@@ -2399,7 +2421,7 @@ private struct GregorianCalendarCompatibilityTests {
             Date(timeIntervalSince1970: 828838987.0), // 1996-04-07T01:03:07Z
             Date(timeIntervalSince1970: -62135765813.0), // 0001-01-01T01:03:07Z
             Date(timeIntervalSince1970: 825723300), // 1996-03-01
-            Date(timeIntervalSince1970: -12218515200.0),  // 1582-10-14
+            Date(timeIntervalSince1970: -12218515200.0), // 1582-10-14
         ]
 
         for date in dates {
@@ -2464,7 +2486,7 @@ private struct GregorianCalendarCompatibilityTests {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
 
-        let allComponents : [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
+        let allComponents: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
 
         let dates: [Date] = [
             Date(timeIntervalSinceReferenceDate: -211845067200.0), // 4713-01-01T12:00:00Z
@@ -2473,7 +2495,8 @@ private struct GregorianCalendarCompatibilityTests {
         ]
         for (i, date) in dates.enumerated() {
             let dc1 = icuCalendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date)
-            let dc2 = gregorianCalendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date)
+            let dc2 = gregorianCalendar.dateComponents(
+                [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date)
             expectEqual(dc1, dc2, expectQuarter: false, expectCalendar: false, "failure: \(i)")
             for component in allComponents {
                 let c1 = icuCalendar.dateInterval(of: component, for: date)
@@ -2496,7 +2519,7 @@ private struct GregorianCalendarCompatibilityTests {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
 
-        let allComponents : [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
+        let allComponents: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
 
         let dates: [Date] = [
             Date(timeIntervalSinceReferenceDate: -185185037675833.0).capped,
@@ -2525,7 +2548,7 @@ private struct GregorianCalendarCompatibilityTests {
 
         let allComponents: [Calendar.Component] = [.day]
         let dates: [Date] = [
-            Date(timeIntervalSinceReferenceDate: 15927175497600.0),
+            Date(timeIntervalSinceReferenceDate: 15927175497600.0)
         ]
         for date in dates {
             for component in allComponents {
@@ -2541,7 +2564,7 @@ private struct GregorianCalendarCompatibilityTests {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        let allComponents : [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
+        let allComponents: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
         let date = Date(timeIntervalSinceReferenceDate: -702180000.0) // 1978-10-01T23:00:00+0100 DST date, rewinding back one hour, so 25 hour in this day
         for component in allComponents {
             let c1 = icuCalendar.firstInstant(of: component, at: date)
@@ -2551,11 +2574,11 @@ private struct GregorianCalendarCompatibilityTests {
     }
 
     @Test func dateComponentsFromTo() {
-        let timeZone = TimeZone(secondsFromGMT: -8*3600)
+        let timeZone = TimeZone(secondsFromGMT: -8 * 3600)
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        let allComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
-        let d1 = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+        let allComponents: Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
+        let d1 = Date(timeIntervalSinceReferenceDate: 0) // 2000-12-31 16:00:00 PT
         let d2 = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
         let a = icuCalendar.dateComponents(allComponents, from: d1, to: d2)
         let b = gregorianCalendar.dateComponents(allComponents, from: d1, to: d2)
@@ -2563,16 +2586,16 @@ private struct GregorianCalendarCompatibilityTests {
     }
 
     @Test func difference() throws {
-        let timeZone = TimeZone(secondsFromGMT: -8*3600)
+        let timeZone = TimeZone(secondsFromGMT: -8 * 3600)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        let d1 = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+        let d1 = Date(timeIntervalSinceReferenceDate: 0) // 2000-12-31 16:00:00 PT
         let d2 = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
         let (_, newStart) = try gregorianCalendar.difference(inComponent: .month, from: d1, to: d2)
         #expect(newStart.timeIntervalSince1970 == 983404800) // 2001-03-01 00:00:00 UTC
     }
 
     @Test func add() throws {
-        let timeZone = TimeZone(secondsFromGMT: -8*3600)!
+        let timeZone = TimeZone(secondsFromGMT: -8 * 3600)!
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
@@ -2582,7 +2605,7 @@ private struct GregorianCalendarCompatibilityTests {
         #expect(old == new)
         #expect(old.timeIntervalSince1970 == 983404800)
 
-        let d1 = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+        let d1 = Date(timeIntervalSinceReferenceDate: 0) // 2000-12-31 16:00:00 PT
         let added = try gregorianCalendar.add(.month, to: d1, amount: 2, inTimeZone: timeZone)
         let gregResult = gregorianCalendar.date(byAdding: .init(month: 2), to: d1, wrappingComponents: false)!
         let icuResult = icuCalendar.date(byAdding: .init(month: 2), to: d1, wrappingComponents: false)!
@@ -2623,7 +2646,7 @@ private struct GregorianCalendarCompatibilityTests {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        let allComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
+        let allComponents: Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
         let tests: [(Double, Double)] = [ /*start, finish*/
             (0, 1.005),
             (0, 1.0005),

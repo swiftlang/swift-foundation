@@ -42,7 +42,7 @@ internal struct BufferView<Element> {
         guard let baseAddress = UnsafeRawPointer(buffer.baseAddress) else { return nil }
         self.init(unsafeBaseAddress: baseAddress, count: buffer.count)
     }
-    
+
     var bytes: RawSpan {
         @_lifetime(borrow self)
         borrowing get {
@@ -119,7 +119,8 @@ extension BufferView where Element: Equatable {
 extension BufferView:
     Collection,
     BidirectionalCollection,
-    RandomAccessCollection {
+    RandomAccessCollection
+{
 
     typealias Element = Element
     typealias Index = BufferViewIndex<Element>

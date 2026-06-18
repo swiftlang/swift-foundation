@@ -48,7 +48,7 @@ extension BidirectionalCollection {
 
         let beforeEnd = index(before: endIndex)
         guard startOfNonTrimmedRange < beforeEnd else {
-            return self[startOfNonTrimmedRange ..< endIndex]
+            return self[startOfNonTrimmedRange..<endIndex]
         }
 
         var backIdx = beforeEnd
@@ -56,7 +56,7 @@ extension BidirectionalCollection {
         while predicate(self[backIdx]) {
             formIndex(before: &backIdx)
         }
-        return self[startOfNonTrimmedRange ... backIdx]
+        return self[startOfNonTrimmedRange...backIdx]
     }
 
     // Equal to calling `index(&idx, offsetBy: -other.count)` with just one loop
@@ -74,7 +74,7 @@ extension BidirectionalCollection {
         return idx
     }
 
-    package func _range<S: BidirectionalCollection>(of other: S, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Element == Element, Element : Equatable {
+    package func _range<S: BidirectionalCollection>(of other: S, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Element == Element, Element: Equatable {
         var result: Range<Index>? = nil
         var fromLoc: Index
         var toLoc: Index

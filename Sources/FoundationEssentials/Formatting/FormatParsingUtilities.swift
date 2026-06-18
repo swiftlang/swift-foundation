@@ -17,7 +17,7 @@ package func parseError(_ value: String, exampleFormattedString: String?, extend
     } else {
         errorStr = "Cannot parse \(value)\(extendedDescription.map({ ": \($0)." }) ?? ".")"
     }
-    return CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: errorStr ])
+    return CocoaError(CocoaError.formatting, userInfo: [NSDebugDescriptionErrorKey: errorStr])
 }
 
 func isASCIIDigit(_ x: UInt8) -> Bool {
@@ -30,23 +30,23 @@ extension BufferViewIterator<UInt8> {
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
     }
-    
+
     mutating func expectOneOrMoreCharacters(_ expected: UInt8, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
         guard let parsed = next(), parsed == expected else {
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
-        
+
         while let parsed = peek(), parsed == expected {
             advance()
         }
     }
-    
+
     mutating func expectZeroOrMoreCharacters(_ expected: UInt8) {
         while let parsed = peek(), parsed == expected {
             advance()
         }
     }
-            
+
     mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
         // Consume all leading zeros, parse until we no longer see a digit
         var result = 0
@@ -61,17 +61,17 @@ extension BufferViewIterator<UInt8> {
             count += 1
             if count >= max { break }
         }
-        
+
         guard count > 0 else {
             // No digits actually found
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
-        
+
         if let minDigits, count < minDigits {
             // Too few digits found
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
-        
+
         if nanoseconds {
             // Keeps us in the land of integers
             if count == 1 { return result * 100_000_000 }
@@ -88,7 +88,7 @@ extension BufferViewIterator<UInt8> {
 
         return result
     }
-    
+
 
 }
 
@@ -99,19 +99,19 @@ extension OutputBuffer<CChar> {
     mutating func append(_ i: Int, zeroPad: Int) {
         if i < 10 {
             if zeroPad - 1 > 0 {
-                for _ in 0..<zeroPad-1 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad - 1 { appendElement(Self.asciiZero) }
             }
             appendElement(Self.asciiZero + CChar(i))
         } else if i < 100 {
             if zeroPad - 2 > 0 {
-                for _ in 0..<zeroPad-2 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad - 2 { appendElement(Self.asciiZero) }
             }
             let (tens, ones) = i.quotientAndRemainder(dividingBy: 10)
             appendElement(Self.asciiZero + CChar(tens))
             appendElement(Self.asciiZero + CChar(ones))
         } else if i < 1000 {
             if zeroPad - 3 > 0 {
-                for _ in 0..<zeroPad-3 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad - 3 { appendElement(Self.asciiZero) }
             }
             let (hundreds, remainder) = i.quotientAndRemainder(dividingBy: 100)
             let (tens, ones) = remainder.quotientAndRemainder(dividingBy: 10)
@@ -120,7 +120,7 @@ extension OutputBuffer<CChar> {
             appendElement(Self.asciiZero + CChar(ones))
         } else if i < 10000 {
             if zeroPad - 4 > 0 {
-                for _ in 0..<zeroPad-4 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad - 4 { appendElement(Self.asciiZero) }
             }
             let (thousands, remainder) = i.quotientAndRemainder(dividingBy: 1000)
             let (hundreds, remainder2) = remainder.quotientAndRemainder(dividingBy: 100)
@@ -140,6 +140,5 @@ extension OutputBuffer<CChar> {
         }
     }
 
-    
-}
 
+}

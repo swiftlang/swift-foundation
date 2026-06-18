@@ -18,25 +18,25 @@ internal import _ForSwiftFoundation
 ///
 /// Each index in an index path represents the index into an array of children from one node in the tree to another, deeper, node.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCollection, Comparable, ExpressibleByArrayLiteral, Sendable {
+public struct IndexPath: Equatable, Hashable, MutableCollection, RandomAccessCollection, Comparable, ExpressibleByArrayLiteral, Sendable {
     /// A type that represents one node of an index path.
     public typealias Element = Int
     /// A type that points to a particular node in an index path, similar to an array index.
     public typealias Index = Array<Int>.Index
     /// A type that represents a group of nodes in an index path.
     public typealias Indices = DefaultIndices<IndexPath>
-    
-    fileprivate enum Storage : ExpressibleByArrayLiteral {
+
+    fileprivate enum Storage: ExpressibleByArrayLiteral {
         typealias Element = Int
         case empty
         case single(Int)
         case pair(Int, Int)
         case array([Int])
-        
+
         init(arrayLiteral elements: Int...) {
             self.init(elements)
         }
-        
+
         init(_ elements: [Int]) {
             switch elements.count {
             case 0:
@@ -49,7 +49,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 self = .array(elements)
             }
         }
-        
+
         func dropLast() -> Storage {
             switch self {
             case .empty:
@@ -67,7 +67,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 }
             }
         }
-        
+
         mutating func append(_ other: Int) {
             switch self {
             case .empty:
@@ -80,7 +80,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 self = .array(indexes + [other])
             }
         }
-        
+
         mutating func append(contentsOf other: Storage) {
             switch self {
             case .empty:
@@ -133,7 +133,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 }
             }
         }
-        
+
         mutating func append(contentsOf other: __owned [Int]) {
             switch self {
             case .empty:
@@ -170,7 +170,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 self = .array(indexes + other)
             }
         }
-        
+
         subscript(_ index: Int) -> Int {
             get {
                 switch self {
@@ -207,7 +207,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 }
             }
         }
-        
+
         subscript(range: Range<Index>) -> Storage {
             get {
                 switch self {
@@ -221,7 +221,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 case .single(let index):
                     switch (range.lowerBound, range.upperBound) {
                     case (0, 0),
-                         (1, 1):
+                        (1, 1):
                         return .empty
                     case (0, 1):
                         return .single(index)
@@ -231,8 +231,8 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 case .pair(let first, let second):
                     switch (range.lowerBound, range.upperBound) {
                     case (0, 0),
-                         (1, 1),
-                         (2, 2):
+                        (1, 1),
+                        (2, 2):
                         return .empty
                     case (0, 1):
                         return .single(first)
@@ -265,7 +265,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 case .single(let index):
                     switch (range.lowerBound, range.upperBound, newValue) {
                     case (0, 0, .empty),
-                         (1, 1, .empty):
+                        (1, 1, .empty):
                         break
                     case (0, 0, .single(let other)):
                         self = .pair(other, index)
@@ -274,9 +274,9 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                     case (0, 0, .array(let other)):
                         self = .array(other + [index])
                     case (0, 1, .empty),
-                         (0, 1, .single),
-                         (0, 1, .pair),
-                         (0, 1, .array):
+                        (0, 1, .single),
+                        (0, 1, .pair),
+                        (0, 1, .array):
                         self = newValue
                     case (1, 1, .single(let other)):
                         self = .pair(index, other)
@@ -368,7 +368,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 }
             }
         }
-        
+
         var count: Int {
             switch self {
             case .empty:
@@ -381,11 +381,11 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 return indexes.count
             }
         }
-        
+
         var startIndex: Int {
             return 0
         }
-        
+
         var endIndex: Int {
             return count
         }
@@ -398,15 +398,15 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             case .array(let indexes): return indexes
             }
         }
-        
+
         func index(before i: Int) -> Int {
             return i - 1
         }
-        
+
         func index(after i: Int) -> Int {
             return i + 1
         }
-        
+
         var description: String {
             switch self {
             case .empty:
@@ -419,7 +419,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 return indexes.description
             }
         }
-        
+
         func withUnsafeBufferPointer<R>(_ body: (UnsafeBufferPointer<Int>) throws -> R) rethrows -> R {
             switch self {
             case .empty:
@@ -438,22 +438,22 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 return try indexes.withUnsafeBufferPointer(body)
             }
         }
-        
+
         var debugDescription: String { return description }
-        
-        static func +(lhs: Storage, rhs: Storage) -> Storage {
+
+        static func + (lhs: Storage, rhs: Storage) -> Storage {
             var res = lhs
             res.append(contentsOf: rhs)
             return res
         }
-        
-        static func +(lhs: Storage, rhs: [Int]) -> Storage {
+
+        static func + (lhs: Storage, rhs: [Int]) -> Storage {
             var res = lhs
             res.append(contentsOf: rhs)
             return res
         }
-        
-        static func ==(lhs: Storage, rhs: Storage) -> Bool {
+
+        static func == (lhs: Storage, rhs: Storage) -> Bool {
             switch (lhs, rhs) {
             case (.empty, .empty):
                 return true
@@ -468,76 +468,76 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             }
         }
     }
-    
-    fileprivate var _indexes : Storage
-    
+
+    fileprivate var _indexes: Storage
+
     /// Creates an empty index path.
     public init() {
         _indexes = []
     }
-    
+
     /// Creates an index path from a sequence of integers.
-    public init<ElementSequence : Sequence>(indexes: ElementSequence)
-        where ElementSequence.Iterator.Element == Element {
-            _indexes = Storage(indexes.map { $0 })
+    public init<ElementSequence: Sequence>(indexes: ElementSequence)
+    where ElementSequence.Iterator.Element == Element {
+        _indexes = Storage(indexes.map { $0 })
     }
-    
+
     /// Creates an index path from an array literal.
     public init(arrayLiteral indexes: Element...) {
         _indexes = Storage(indexes)
     }
-    
+
     /// Creates an index path from an array of elements.
     public init(indexes: Array<Element>) {
         _indexes = Storage(indexes)
     }
-    
+
     fileprivate init(storage: Storage) {
         _indexes = storage
     }
-    
+
     /// Creates an index path with a single element.
     public init(index: Element) {
         _indexes = [index]
     }
-    
+
     /// Returns a new index path containing all but the last element.
     public func dropLast() -> IndexPath {
         return IndexPath(storage: _indexes.dropLast())
     }
-    
+
     /// Appends the nodes of another index path to this one.
     public mutating func append(_ other: IndexPath) {
         _indexes.append(contentsOf: other._indexes)
     }
-    
+
     /// Appends a single element to this index path as a new node.
     public mutating func append(_ other: Element) {
         _indexes.append(other)
     }
-    
+
     /// Appends an array of elements to this index path as additional nodes.
     public mutating func append(_ other: Array<Element>) {
         _indexes.append(contentsOf: other)
     }
-    
+
     /// Returns a new index path containing the elements of this one plus the given element.
     public func appending(_ other: Element) -> IndexPath {
         var result = _indexes
         result.append(other)
         return IndexPath(storage: result)
     }
-    
+
     /// Returns a new index path containing the elements of this one plus those of another index path.
     public func appending(_ other: IndexPath) -> IndexPath {
         return IndexPath(storage: _indexes + other._indexes)
     }
-    
+
     /// Returns a new index path containing the elements of this one plus an array of additional elements.
     public func appending(_ other: Array<Element>) -> IndexPath {
         return IndexPath(storage: _indexes + other)
     }
-    
+
     /// Accesses one of the index path's nodes.
     public subscript(index: Index) -> Element {
         get {
@@ -547,7 +547,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             _indexes[index] = newValue
         }
     }
-    
+
     /// Accesses a contiguous subrange of the index path's nodes.
     public subscript(range: Range<Index>) -> IndexPath {
         get {
@@ -557,38 +557,38 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             _indexes[range] = newValue._indexes
         }
     }
-    
+
     /// Returns an iterator over the nodes of the index path.
     public func makeIterator() -> IndexingIterator<IndexPath> {
         return IndexingIterator(_elements: self)
     }
-    
+
     public var count: Int {
         return _indexes.count
     }
-    
+
     /// The index of the first node in the index path.
     public var startIndex: Index {
         return _indexes.startIndex
     }
-    
+
     /// One past the index of the last node in the index path.
     public var endIndex: Index {
         return _indexes.endIndex
     }
-    
+
     /// Returns the index that precedes the given index.
     public func index(before i: Index) -> Index {
         return _indexes.index(before: i)
     }
-    
+
     /// Returns the index that follows the given index.
     public func index(after i: Index) -> Index {
         return _indexes.index(after: i)
     }
-    
+
     /// Compares this index path to another in depth-first traversal order.
-    public func compare(_ other: IndexPath) -> ComparisonResult  {
+    public func compare(_ other: IndexPath) -> ComparisonResult {
         let thisLength = count
         let otherLength = other.count
         let length = Swift.min(thisLength, otherLength)
@@ -608,7 +608,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
         }
         return .orderedSame
     }
-    
+
     public func hash(into hasher: inout Hasher) {
         // Note: We compare all indices in ==, so for proper hashing, we must
         // also feed them all to the hasher.
@@ -633,58 +633,58 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             }
         }
     }
-    
-    public static func ==(lhs: IndexPath, rhs: IndexPath) -> Bool {
+
+    public static func == (lhs: IndexPath, rhs: IndexPath) -> Bool {
         return lhs._indexes == rhs._indexes
     }
-    
+
     /// Combines the elements of two index paths into a single index path.
-    public static func +(lhs: IndexPath, rhs: IndexPath) -> IndexPath {
+    public static func + (lhs: IndexPath, rhs: IndexPath) -> IndexPath {
         return lhs.appending(rhs)
     }
-    
+
     /// Appends the elements of another index path to this index path.
-    public static func +=(lhs: inout IndexPath, rhs: IndexPath) {
+    public static func += (lhs: inout IndexPath, rhs: IndexPath) {
         lhs.append(rhs)
     }
-    
-    public static func <(lhs: IndexPath, rhs: IndexPath) -> Bool {
+
+    public static func < (lhs: IndexPath, rhs: IndexPath) -> Bool {
         return lhs.compare(rhs) == ComparisonResult.orderedAscending
     }
-    
-    public static func <=(lhs: IndexPath, rhs: IndexPath) -> Bool {
+
+    public static func <= (lhs: IndexPath, rhs: IndexPath) -> Bool {
         let order = lhs.compare(rhs)
         return order == ComparisonResult.orderedAscending || order == ComparisonResult.orderedSame
     }
-    
-    public static func >(lhs: IndexPath, rhs: IndexPath) -> Bool {
+
+    public static func > (lhs: IndexPath, rhs: IndexPath) -> Bool {
         return lhs.compare(rhs) == ComparisonResult.orderedDescending
     }
-    
-    public static func >=(lhs: IndexPath, rhs: IndexPath) -> Bool {
+
+    public static func >= (lhs: IndexPath, rhs: IndexPath) -> Bool {
         let order = lhs.compare(rhs)
         return order == ComparisonResult.orderedDescending || order == ComparisonResult.orderedSame
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension IndexPath: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var description: String {
         return _indexes.description
     }
-    
+
     public var debugDescription: String {
         return _indexes.debugDescription
     }
-    
+
     public var customMirror: Mirror {
         return Mirror(self, unlabeledChildren: self, displayStyle: .collection)
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension IndexPath : Codable {
-    private enum CodingKeys : Int, CodingKey {
+extension IndexPath: Codable {
+    private enum CodingKeys: Int, CodingKey {
         case indexes
     }
 
@@ -725,12 +725,12 @@ extension IndexPath : Codable {
 #if FOUNDATION_FRAMEWORK
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension IndexPath : ReferenceConvertible {
+extension IndexPath: ReferenceConvertible {
     public typealias ReferenceType = NSIndexPath
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSIndexPath : _HasCustomAnyHashableRepresentation {
+extension NSIndexPath: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {
@@ -739,25 +739,25 @@ extension NSIndexPath : _HasCustomAnyHashableRepresentation {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension IndexPath : _ObjectiveCBridgeable {
+extension IndexPath: _ObjectiveCBridgeable {
     public static func _getObjectiveCType() -> Any.Type {
         return NSIndexPath.self
     }
-    
+
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSIndexPath {
         return makeReference()
     }
-    
+
     public static func _forceBridgeFromObjectiveC(_ x: NSIndexPath, result: inout IndexPath?) {
         result = IndexPath(nsIndexPath: x)
     }
-    
+
     public static func _conditionallyBridgeFromObjectiveC(_ x: NSIndexPath, result: inout IndexPath?) -> Bool {
         result = IndexPath(nsIndexPath: x)
         return true
     }
-    
+
     @_effects(readonly)
     public static func _unconditionallyBridgeFromObjectiveC(_ source: NSIndexPath?) -> IndexPath {
         guard let src = source else { return IndexPath() }
@@ -767,7 +767,7 @@ extension IndexPath : _ObjectiveCBridgeable {
 
 extension IndexPath {
     // MARK: - Bridging Helpers
-    
+
     fileprivate init(nsIndexPath: __shared ReferenceType) {
         let count = nsIndexPath.length
         switch count {
@@ -785,7 +785,7 @@ extension IndexPath {
             _indexes = .array(indexes)
         }
     }
-    
+
     fileprivate func makeReference() -> ReferenceType {
         switch _indexes {
         case .empty:
@@ -804,4 +804,3 @@ extension IndexPath {
 }
 
 #endif
-

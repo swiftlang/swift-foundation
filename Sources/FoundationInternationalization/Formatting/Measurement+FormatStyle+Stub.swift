@@ -18,8 +18,8 @@ public class Dimension {}
 public class UnitDuration: Dimension {}
 
 extension Measurement where UnitType: Dimension {
-    public struct FormatStyle : Sendable {
-        public struct UnitWidth : Codable, Hashable, Sendable {
+    public struct FormatStyle: Sendable {
+        public struct UnitWidth: Codable, Hashable, Sendable {
             /// A unit width that shows the full unit name.
             ///
             /// For example, `37.20 Calories` or `37,20 litres`.

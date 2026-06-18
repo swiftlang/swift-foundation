@@ -27,8 +27,8 @@ import CRT
 #endif
 
 private struct _ParseInfo {
-    let utf16 : String.UTF16View
-    var curr : String.UTF16View.Index
+    let utf16: String.UTF16View
+    var curr: String.UTF16View.Index
     var err: Error?
 
     mutating func advance() {
@@ -39,11 +39,11 @@ private struct _ParseInfo {
         curr = utf16.index(before: curr)
     }
 
-    var currChar : UInt16 {
+    var currChar: UInt16 {
         utf16[curr]
     }
 
-    var isAtEnd : Bool {
+    var isAtEnd: Bool {
         curr >= utf16.endIndex
     }
 }
@@ -57,7 +57,7 @@ internal func __ParseOldStylePropertyList(utf16: String.UTF16View) throws -> Any
     var parseInfo = _ParseInfo(utf16: utf16, curr: utf16.startIndex)
 
     guard advanceToNonSpace(&parseInfo) else {
-        return [String:Any]()
+        return [String: Any]()
     }
 
     var result = parsePlistObject(&parseInfo, requireObject: true, depth: 0)
@@ -113,7 +113,7 @@ private func parsePlistObject(_ pInfo: inout _ParseInfo, requireObject: Bool, de
     }
 }
 
-private func parsePlistDict(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String:Any]? {
+private func parsePlistDict(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String: Any]? {
     guard let dict = parsePlistDictContent(&pInfo, depth: depth) else {
         return nil
     }
@@ -125,8 +125,8 @@ private func parsePlistDict(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String
     return dict
 }
 
-private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String:Any]? {
-    var dict = [String:Any]()
+private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String: Any]? {
+    var dict = [String: Any]()
 
     while let key = parsePlistString(&pInfo, requireObject: false) {
         guard advanceToNonSpace(&pInfo) else {
@@ -134,7 +134,7 @@ private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32) -> 
             return nil
         }
 
-        var value : Any
+        var value: Any
         if pInfo.currChar == UInt16(ascii: ";") {
             /* This is a strings file using the shortcut format */
             /* although this check here really applies to all plists. */
@@ -219,7 +219,7 @@ private func parsePlistString(_ pInfo: inout _ParseInfo, requireObject: Bool) ->
 }
 
 private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) -> String? {
-    var result : String?
+    var result: String?
     let startMark = pInfo.curr
     var mark = startMark
     while !pInfo.isAtEnd {
@@ -231,14 +231,14 @@ private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) ->
             if result == nil {
                 result = String()
             }
-            result! += String(pInfo.utf16[mark ..< pInfo.curr])!
+            result! += String(pInfo.utf16[mark..<pInfo.curr])!
             pInfo.advance()
 
             if pInfo.isAtEnd {
                 pInfo.err = OpenStepPlistError("Unterminated backslash sequence on line \(lineNumberStrings(pInfo))")
                 return nil
             }
-            
+
             guard let slashedChar = getSlashedChar(&pInfo) else {
                 // Error set by getSlashedChar.
                 return nil
@@ -247,7 +247,7 @@ private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) ->
                 pInfo.err = OpenStepPlistError("Invalid character on line \(lineNumberStrings(pInfo))")
                 return nil
             }
-            
+
             result!.unicodeScalars.append(scalar)
             mark = pInfo.curr
         } else {
@@ -260,9 +260,9 @@ private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) ->
         return nil
     }
     if result == nil {
-        result = String(pInfo.utf16[mark ..< pInfo.curr])!
+        result = String(pInfo.utf16[mark..<pInfo.curr])!
     } else if mark != pInfo.curr {
-        result! += String(pInfo.utf16[mark ..< pInfo.curr])!
+        result! += String(pInfo.utf16[mark..<pInfo.curr])!
     }
 
     pInfo.advance() // Advance past the quote character before returning.
@@ -278,20 +278,20 @@ private func parseUnquotedPlistString(_ pInfo: inout _ParseInfo) -> String? {
         pInfo.advance()
     }
     if pInfo.curr != mark {
-        return String(pInfo.utf16[mark ..< pInfo.curr])!
+        return String(pInfo.utf16[mark..<pInfo.curr])!
     }
     pInfo.err = OpenStepPlistError("Unexpected EOF while parsing string")
     return nil
 }
 
-private let octalCharRange = UInt16(ascii: "0") ... UInt16(ascii: "7")
+private let octalCharRange = UInt16(ascii: "0")...UInt16(ascii: "7")
 
 private func parseOctal(startingWith ch: UInt16, _ pInfo: inout _ParseInfo) -> UInt16 {
-    var num = UInt8( ch &- octalCharRange.lowerBound )
+    var num = UInt8(ch &- octalCharRange.lowerBound)
 
     /* three digits maximum to avoid reading \000 followed by 5 as \5 ! */
     // We've already read the first character here, so repeat at most two more times.
-    for _ in 0 ..< 2 {
+    for _ in 0..<2 {
         // Hitting the end of the plist is not a meaningful error here.
         // We parse the characters we have and allow the parent context (parseQuotedPlistString, the only current call site of getSlashedChar) to produce a more meaningful error message (e.g. it will at least expect a close quote after this character).
         if pInfo.isAtEnd {
@@ -315,7 +315,7 @@ private func parseOctal(startingWith ch: UInt16, _ pInfo: inout _ParseInfo) -> U
 }
 
 private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16? {
-    var num : UInt16 = 0
+    var num: UInt16 = 0
     var numDigits = 4
     while !pInfo.isAtEnd && numDigits > 0 {
         let ch2 = pInfo.currChar
@@ -364,16 +364,16 @@ private func getSlashedChar(_ pInfo: inout _ParseInfo) -> UInt16? {
 
 private func isValidUnquotedStringCharacter(_ x: UInt16) -> Bool {
     switch x {
-        case UInt16(ascii: "a") ... UInt16(ascii: "z"):
-            return true
-        case UInt16(ascii: "A") ... UInt16(ascii: "Z"):
-            return true
-        case UInt16(ascii: "0") ... UInt16(ascii: "9"):
-            return true
-        case UInt16(ascii: "_"), UInt16(ascii: "$"), UInt16(ascii: "/"), UInt16(ascii: ":"), UInt16(ascii: "."), UInt16(ascii: "-"):
-            return true
-        default:
-            return false
+    case UInt16(ascii: "a")...UInt16(ascii: "z"):
+        return true
+    case UInt16(ascii: "A")...UInt16(ascii: "Z"):
+        return true
+    case UInt16(ascii: "0")...UInt16(ascii: "9"):
+        return true
+    case UInt16(ascii: "_"), UInt16(ascii: "$"), UInt16(ascii: "/"), UInt16(ascii: ":"), UInt16(ascii: "."), UInt16(ascii: "-"):
+        return true
+    default:
+        return false
     }
 }
 
@@ -385,7 +385,7 @@ private func parsePlistData(_ pInfo: inout _ParseInfo) -> Data? {
         let numBytesRead = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: NUM_BYTES) { buffer in
             let numBytesRead = getDataBytes(&pInfo, bytes: buffer)
             if numBytesRead > 0 {
-                let subBuffer = buffer[0 ..< numBytesRead]
+                let subBuffer = buffer[0..<numBytesRead]
                 result.append(contentsOf: subBuffer)
             }
             return numBytesRead
@@ -470,43 +470,43 @@ private func advanceToNonSpace(_ pInfo: inout _ParseInfo) -> Bool {
         pInfo.advance()
 
         switch ch2 {
-            case 0x9, 0xa, 0xb, 0xc, 0xd: continue // tab, newline, vt, form feed, carriage return
-            case UInt16(ascii: " "), 0x2028, 0x2029: continue // space and Unicode line sep, para sep
-            case UInt16(ascii: "/"):
-                if pInfo.isAtEnd {
-                    // whoops; back up and return
-                    pInfo.retreat()
-                    return true
-                } else if pInfo.currChar == UInt16(ascii: "/") {
-                    pInfo.advance()
-
-                    var atEndOfLine = false
-                    while !pInfo.isAtEnd && !atEndOfLine { // go to end of comment line
-                        switch pInfo.currChar {
-                            case UInt16(ascii: "\n"), UInt16(ascii: "\r"), 0x2028, 0x2029:
-                                atEndOfLine = true
-                            default:
-                                pInfo.advance()
-                        }
-                    }
-                } else if pInfo.currChar == UInt16(ascii: "*") { // handle /* ... */
-                    pInfo.advance()
-
-                    while !pInfo.isAtEnd {
-                        let ch3 = pInfo.currChar
-                        pInfo.advance()
-                        if ch3 == UInt16(ascii: "*") && !pInfo.isAtEnd && pInfo.currChar == UInt16(ascii: "/") {
-                            pInfo.advance() // advance past the '/'
-                            break
-                        }
-                    }
-                } else { // this looked like the start of a comment, but wasn't
-                    pInfo.retreat()
-                    return true
-                }
-            default: // this didn't look like a comment, we've found non-whitespace
+        case 0x9, 0xa, 0xb, 0xc, 0xd: continue // tab, newline, vt, form feed, carriage return
+        case UInt16(ascii: " "), 0x2028, 0x2029: continue // space and Unicode line sep, para sep
+        case UInt16(ascii: "/"):
+            if pInfo.isAtEnd {
+                // whoops; back up and return
                 pInfo.retreat()
                 return true
+            } else if pInfo.currChar == UInt16(ascii: "/") {
+                pInfo.advance()
+
+                var atEndOfLine = false
+                while !pInfo.isAtEnd && !atEndOfLine { // go to end of comment line
+                    switch pInfo.currChar {
+                    case UInt16(ascii: "\n"), UInt16(ascii: "\r"), 0x2028, 0x2029:
+                        atEndOfLine = true
+                    default:
+                        pInfo.advance()
+                    }
+                }
+            } else if pInfo.currChar == UInt16(ascii: "*") { // handle /* ... */
+                pInfo.advance()
+
+                while !pInfo.isAtEnd {
+                    let ch3 = pInfo.currChar
+                    pInfo.advance()
+                    if ch3 == UInt16(ascii: "*") && !pInfo.isAtEnd && pInfo.currChar == UInt16(ascii: "/") {
+                        pInfo.advance() // advance past the '/'
+                        break
+                    }
+                }
+            } else { // this looked like the start of a comment, but wasn't
+                pInfo.retreat()
+                return true
+            }
+        default: // this didn't look like a comment, we've found non-whitespace
+            pInfo.retreat()
+            return true
         }
     }
     return false
@@ -549,14 +549,16 @@ private extension UInt16 {
 }
 
 internal struct OpenStepPlistError: Swift.Error, Equatable {
-    var debugDescription : String
+    var debugDescription: String
     init(_ desc: String) {
         self.debugDescription = desc
     }
 
     var cocoaError: CocoaError {
-        .init(.propertyListReadCorrupt, userInfo: [
-            NSDebugDescriptionErrorKey : self.debugDescription
-        ])
+        .init(
+            .propertyListReadCorrupt,
+            userInfo: [
+                NSDebugDescriptionErrorKey: self.debugDescription
+            ])
     }
 }

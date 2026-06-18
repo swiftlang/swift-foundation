@@ -35,7 +35,7 @@ internal import Synchronization
 ///
 /// This allows callers to use a syntax like `myAttributedString.foregroundColor = .red`.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding, SendableMetatype {
+public protocol AttributeScope: DecodingConfigurationProviding, EncodingConfigurationProviding, SendableMetatype {
     /// The configuration for decoding the attribute scope.
     static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
     /// The configuration for encoding the attribute scope.
@@ -54,14 +54,14 @@ public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigu
 /// ```
 @frozen
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public enum AttributeScopes { }
+public enum AttributeScopes {}
 
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
-extension AttributeScopes : Sendable {}
+extension AttributeScopes: Sendable {}
 
 #if FOUNDATION_FRAMEWORK
 
@@ -69,21 +69,21 @@ import Darwin
 internal import MachO.dyld
 internal import ReflectionInternal
 
-fileprivate struct ScopeDescription : Sendable {
-    var attributes: [String : any AttributedStringKey.Type] = [:]
-    var markdownAttributes: [String : any MarkdownDecodableAttributedStringKey.Type] = [:]
-    
+fileprivate struct ScopeDescription: Sendable {
+    var attributes: [String: any AttributedStringKey.Type] = [:]
+    var markdownAttributes: [String: any MarkdownDecodableAttributedStringKey.Type] = [:]
+
     mutating func merge(_ other: Self) {
         attributes.merge(other.attributes, uniquingKeysWith: { current, new in new })
         markdownAttributes.merge(other.markdownAttributes, uniquingKeysWith: { current, new in new })
     }
 }
 
-fileprivate struct LoadedScopeCache : Sendable {
-    private enum ScopeType : Equatable {
+fileprivate struct LoadedScopeCache: Sendable {
+    private enum ScopeType: Equatable {
         case loaded(any AttributeScope.Type)
         case notLoaded
-        
+
         static func == (lhs: LoadedScopeCache.ScopeType, rhs: LoadedScopeCache.ScopeType) -> Bool {
             switch (lhs, rhs) {
             case (.notLoaded, .notLoaded): true
@@ -92,16 +92,16 @@ fileprivate struct LoadedScopeCache : Sendable {
             }
         }
     }
-    private var scopeMangledNames : [String : ScopeType]
+    private var scopeMangledNames: [String: ScopeType]
     private var lastImageCount: UInt32
-    private var scopeContents : [Type : ScopeDescription]
-    
+    private var scopeContents: [Type: ScopeDescription]
+
     init() {
         scopeMangledNames = [:]
         scopeContents = [:]
         lastImageCount = 0
     }
-    
+
     mutating func scopeType(
         for name: String,
         in path: String
@@ -122,13 +122,14 @@ fileprivate struct LoadedScopeCache : Sendable {
                 $0.value != .notLoaded
             }
         }
-        
+
         guard let handle = dlopen(path, RTLD_NOLOAD | RTLD_FIRST),
-             let symbol = dlsym(handle, name) else {
+            let symbol = dlsym(handle, name)
+        else {
             scopeMangledNames[name] = .notLoaded
             return nil
         }
-        
+
         guard let type = unsafeBitCast(symbol, to: Any.Type.self) as? any AttributeScope.Type else {
             // RTLD_NOLOAD means that dlopen will check the image list without taking the dlopen() lock
             // This means that it is possible the image is currently added to the image list (and a handle is returned), but static initializers have not finished and the image is not fully "loaded"
@@ -140,7 +141,7 @@ fileprivate struct LoadedScopeCache : Sendable {
         scopeMangledNames[name] = .loaded(type)
         return type
     }
-    
+
     subscript(_ type: any AttributeScope.Type) -> ScopeDescription? {
         get {
             scopeContents[Type(type)]
@@ -163,7 +164,7 @@ extension AttributeScopes {
     }
 }
 
-internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type] {
+internal func _loadDefaultAttributes() -> [String: any AttributedStringKey.Type] {
     // On native macOS, the UI framework that gets loaded is AppKit. On
     // macCatalyst however, we load a version of UIKit.
     #if !targetEnvironment(macCatalyst)
@@ -198,12 +199,12 @@ internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type
             (
                 "$s10Foundation15AttributeScopesO13AccessibilityE0D10AttributesVN",
                 "/System/Library/Frameworks/Accessibility.framework/Accessibility"
-            )
+            ),
         ].compactMap {
             cache.scopeType(for: $0.0, in: $0.1)
         }
     }
-    
+
     // Walk each scope (checking the cache) and gather each scope's attribute table
     let defaultAttributeTypes = (defaultScopes + [AttributeScopes.FoundationAttributes.self]).map {
         $0.attributeKeyTypes()
@@ -222,7 +223,7 @@ extension AttributeScope {
         if let cached = _loadedScopeCache.withLock({ $0[Self.self] }) {
             return cached
         }
-        
+
         var desc = ScopeDescription()
         for field in Type(Self.self).fields {
             switch field.type.swiftType {
@@ -242,15 +243,15 @@ extension AttributeScope {
         }
         return desc
     }
-    
-    internal static func attributeKeyTypes() -> [String : any AttributedStringKey.Type] {
+
+    internal static func attributeKeyTypes() -> [String: any AttributedStringKey.Type] {
         Self.scopeDescription.attributes
     }
-    
-    internal static func markdownKeyTypes() -> [String : any MarkdownDecodableAttributedStringKey.Type] {
+
+    internal static func markdownKeyTypes() -> [String: any MarkdownDecodableAttributedStringKey.Type] {
         Self.scopeDescription.markdownAttributes
     }
-    
+
     /// A list of all attribute keys contained within this scope and any sub-scopes.
     @available(FoundationPreview 6.2, *)
     public static var attributeKeys: some Sequence<any AttributedStringKey.Type> {

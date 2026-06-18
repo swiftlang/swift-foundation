@@ -24,7 +24,7 @@ package extension UTF8.CodeUnit {
     // Copied from std; see comment in String.swift _uppercaseASCII() and _lowercaseASCII()
     var _lowercased: Self {
         let _uppercaseTable: UInt64 =
-              0b0000_0000_0000_0000_0001_1111_1111_1111 &<< 32
+            0b0000_0000_0000_0000_0001_1111_1111_1111 &<< 32
         let isUpper = _uppercaseTable &>> UInt64(((self &- 1) & 0b0111_1111) &>> 1)
         let toAdd = (isUpper & 0x1) &<< 5
         return self &+ UInt8(truncatingIfNeeded: toAdd)
@@ -32,7 +32,7 @@ package extension UTF8.CodeUnit {
 
     var _uppercased: Self {
         let _lowercaseTable: UInt64 =
-              0b0001_1111_1111_1111_0000_0000_0000_0000 &<< 32
+            0b0001_1111_1111_1111_0000_0000_0000_0000 &<< 32
         let isLower = _lowercaseTable &>> UInt64(((self &- 1) & 0b0111_1111) &>> 1)
         let toSubtract = (isLower & 0x1) &<< 5
         return self &- UInt8(truncatingIfNeeded: toSubtract)
@@ -41,14 +41,14 @@ package extension UTF8.CodeUnit {
 
 // MARK: - _StringCompareOptionsIterable Methods
 // Internal protocols to share the implementation for iterating BidirectionalCollections of String family and process their elements according to String.CompareOptions.
-internal protocol _StringCompareOptionsConvertible : Comparable & Equatable {
+internal protocol _StringCompareOptionsConvertible: Comparable & Equatable {
     associatedtype IterableType: _StringCompareOptionsIterable
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> IterableType
     var intValue: Int? { get }
     var isExtendCharacter: Bool { get }
 }
 
-internal protocol _StringCompareOptionsIterable : BidirectionalCollection where Element: _StringCompareOptionsConvertible, Element.IterableType.SubSequence == Self.SubSequence, Element == SubSequence.Element {
+internal protocol _StringCompareOptionsIterable: BidirectionalCollection where Element: _StringCompareOptionsConvertible, Element.IterableType.SubSequence == Self.SubSequence, Element == SubSequence.Element {
     init()
     var first: Element? { get }
     func _consumeExtendCharacters(from i: inout Index)
@@ -114,7 +114,7 @@ extension _StringCompareOptionsIterable {
                 norm2.advance()
             }
 
-            if numeric, norm1.isEmpty, norm2.isEmpty, c1.intValue != nil,  c2.intValue != nil {
+            if numeric, norm1.isEmpty, norm2.isEmpty, c1.intValue != nil, c2.intValue != nil {
                 let value1 = self.consumeNumbers(from: &idx1, initialValue: 0)
                 let value2 = other.consumeNumbers(from: &idx2, initialValue: 0)
 
@@ -401,7 +401,7 @@ extension _StringCompareOptionsIterable {
     }
 }
 
-extension String : _StringCompareOptionsIterable {}
+extension String: _StringCompareOptionsIterable {}
 extension Substring: _StringCompareOptionsIterable {}
 extension String.UnicodeScalarView: _StringCompareOptionsIterable {}
 extension Substring.UnicodeScalarView: _StringCompareOptionsIterable {}
@@ -416,7 +416,7 @@ extension Substring.UTF8View: _StringCompareOptionsIterable {
     }
 }
 
-extension Unicode.UTF8.CodeUnit : _StringCompareOptionsConvertible {
+extension Unicode.UTF8.CodeUnit: _StringCompareOptionsConvertible {
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String.UTF8View {
         String(unsafeUninitializedCapacity: 1) {
             $0[0] = caseFolding ? self._lowercased : self
@@ -434,7 +434,7 @@ extension Unicode.UTF8.CodeUnit : _StringCompareOptionsConvertible {
     }
 }
 
-extension Character : _StringCompareOptionsConvertible {
+extension Character: _StringCompareOptionsConvertible {
 
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String {
         if isASCII {
@@ -482,7 +482,7 @@ extension Character : _StringCompareOptionsConvertible {
 
 }
 
-extension UnicodeScalar : _StringCompareOptionsConvertible {
+extension UnicodeScalar: _StringCompareOptionsConvertible {
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String.UnicodeScalarView {
 
         var new = self
@@ -585,13 +585,13 @@ extension Substring {
         return result
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     func _rangeOfCharacter(from set: CharacterSet, options: String.CompareOptions) -> Range<Index>? {
         guard !isEmpty else { return nil }
 
         return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
     }
-#endif
+    #endif
 
     func _rangeOfCharacter(from set: BuiltInUnicodeScalarSet, options: String.CompareOptions) -> Range<Index>? {
         guard !isEmpty else { return nil }
@@ -615,7 +615,7 @@ extension Substring {
             }
         }
         #endif
-        
+
         guard !isEmpty, !strToFind.isEmpty else {
             return nil
         }
@@ -653,7 +653,7 @@ extension Substring {
                 break
             }
 
-            block(self[searchStart ..< r.lowerBound], false)
+            block(self[searchStart..<r.lowerBound], false)
             searchStart = r.upperBound
         }
 

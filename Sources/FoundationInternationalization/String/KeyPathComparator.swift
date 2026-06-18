@@ -43,42 +43,43 @@ public struct KeyPathComparator<Compared>: SortComparator {
         }
         return withUnsafePointer(to: base) { pointer in
             let rawPointer = UnsafeRawPointer(pointer)
-            return rawPointer
+            return
+                rawPointer
                 .advanced(by: offset)
                 .assumingMemoryBound(to: fieldType)
                 .pointee
         }
     }
-    
+
     // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
     // Should be removed and the related functions should be made public when rdar://131764614 is resolved
     @_alwaysEmitIntoClient
     public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value> & Sendable, order: SortOrder = .forward) {
         self.init(keyPath as KeyPath<Compared, Value>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value?> & Sendable, order: SortOrder = .forward) {
         self.init(keyPath as KeyPath<Compared, Value?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value>, comparator: comparator)
     }
-    
+
     @_alwaysEmitIntoClient
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value?>, comparator: comparator)
     }
-    
+
     @_alwaysEmitIntoClient
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value>, comparator: comparator, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value?>, comparator: comparator, order: order)
     }
 
@@ -96,13 +97,13 @@ public struct KeyPathComparator<Compared>: SortComparator {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
         if Value.self is String.Type {
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             self.comparator = AnySortComparator(String.StandardComparator.localizedStandard)
-#else
+            #else
             // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, use the lexical default
             // https://github.com/apple/swift-foundation/issues/284
             self.comparator = AnySortComparator(String.StandardComparator.lexical)
-#endif
+            #endif
         } else {
             self.comparator = AnySortComparator(ComparableComparator<Value>())
         }
@@ -134,13 +135,13 @@ public struct KeyPathComparator<Compared>: SortComparator {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
         if Value.self is String.Type {
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             self.comparator = AnySortComparator(OptionalComparator(String.StandardComparator.localizedStandard))
-#else
+            #else
             // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, use the lexical default
             // https://github.com/apple/swift-foundation/issues/284
             self.comparator = AnySortComparator(OptionalComparator(String.StandardComparator.lexical))
-#endif
+            #endif
         } else {
             self.comparator = AnySortComparator(OptionalComparator(ComparableComparator<Value>()))
         }
@@ -164,7 +165,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /// - Parameters:
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
-    /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value>, comparator: Comparator) where Comparator.Compared == Value {
+    /*public*/ @usableFromInline init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value>, comparator: Comparator) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
         self.comparator = AnySortComparator(comparator)
@@ -190,7 +191,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /// - Parameters:
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
-    /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator) where Comparator.Compared == Value {
+    /*public*/ @usableFromInline init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
         self.comparator = AnySortComparator(OptionalComparator(comparator))
@@ -211,7 +212,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
     ///   - order: The initial order to use for comparison.
-    /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
+    /*public*/ @usableFromInline init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
         self.comparator = AnySortComparator(comparator)
@@ -236,7 +237,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
     ///   - order: The initial order to use for comparison.
-    /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
+    /*public*/ @usableFromInline init<Value, Comparator: SortComparator>(_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
         self.comparator = AnySortComparator(OptionalComparator(comparator))
@@ -265,7 +266,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
         return self.comparator.compare(lhsField, rhsField)
     }
 
-    public static func ==(lhs: Self, rhs: Self) -> Bool {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         return lhs.keyPath == rhs.keyPath && lhs.comparator == rhs.comparator
     }
 

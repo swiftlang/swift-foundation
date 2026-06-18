@@ -15,7 +15,7 @@ internal import _ForSwiftFoundation
 #endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : CustomStringConvertible {
+extension Decimal: CustomStringConvertible {
     /// Creates and initializes a decimal by parsing a string according to the provided locale's conventions.
     ///
     /// - Parameters:
@@ -23,11 +23,13 @@ extension Decimal : CustomStringConvertible {
     ///   - locale: A locale that indicates the formatting conventions used by `string`.
     public init?(string: __shared String, locale: __shared Locale? = nil) {
         let decimalSeparator = locale?.decimalSeparator ?? "."
-        guard case let .success(value, _) = Decimal._decimal(
-            from: string.utf8,
-            decimalSeparator: decimalSeparator.utf8,
-            matchEntireString: false
-        ) else {
+        guard
+            case let .success(value, _) = Decimal._decimal(
+                from: string.utf8,
+                decimalSeparator: decimalSeparator.utf8,
+                matchEntireString: false
+            )
+        else {
             return nil
         }
         self = value
@@ -261,7 +263,7 @@ extension Decimal /* : FloatingPoint */ {
 
     /// Creates a decimal initialized with the given sign, exponent, and significand.
     public init(sign: FloatingPointSign, exponent: Int, significand: Decimal) {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         // Compatibility path
         if Self.compatibility1 {
             self.init(
@@ -274,7 +276,7 @@ extension Decimal /* : FloatingPoint */ {
             )
             return
         }
-#endif
+        #endif
 
         self = significand
         do {
@@ -336,9 +338,10 @@ extension Decimal /* : FloatingPoint */ {
         if isZero {
             exponent = .min
         } else {
-            let shift = _powersOfTenDividingUInt128Max.firstIndex {
-                return significand > $0
-            } ?? _powersOfTenDividingUInt128Max.count
+            let shift =
+                _powersOfTenDividingUInt128Max.firstIndex {
+                    return significand > $0
+                } ?? _powersOfTenDividingUInt128Max.count
             exponent = _exponent &- Int32(shift)
         }
 
@@ -404,9 +407,7 @@ extension Decimal /* : FloatingPoint */ {
     /// The least representable value that is greater than this decimal.
     public var nextUp: Decimal {
         if _isNegative == 1 {
-            if _exponent > -128 &&
-               (_mantissa.0, _mantissa.1, _mantissa.2, _mantissa.3) == (0x999a, 0x9999, 0x9999, 0x9999) &&
-               (_mantissa.4, _mantissa.5, _mantissa.6, _mantissa.7) == (0x9999, 0x9999, 0x9999, 0x1999) {
+            if _exponent > -128 && (_mantissa.0, _mantissa.1, _mantissa.2, _mantissa.3) == (0x999a, 0x9999, 0x9999, 0x9999) && (_mantissa.4, _mantissa.5, _mantissa.6, _mantissa.7) == (0x9999, 0x9999, 0x9999, 0x1999) {
                 return Decimal(
                     _exponent: _exponent &- 1,
                     _length: 8,
@@ -417,9 +418,7 @@ extension Decimal /* : FloatingPoint */ {
                 )
             }
         } else {
-            if _exponent < 127 &&
-               (_mantissa.0, _mantissa.1, _mantissa.2, _mantissa.3) == (0xffff, 0xffff, 0xffff, 0xffff) &&
-               (_mantissa.4, _mantissa.5, _mantissa.6, _mantissa.7) == (0xffff, 0xffff, 0xffff, 0xffff) {
+            if _exponent < 127 && (_mantissa.0, _mantissa.1, _mantissa.2, _mantissa.3) == (0xffff, 0xffff, 0xffff, 0xffff) && (_mantissa.4, _mantissa.5, _mantissa.6, _mantissa.7) == (0xffff, 0xffff, 0xffff, 0xffff) {
                 return Decimal(
                     _exponent: _exponent &+ 1,
                     _length: 8,
@@ -472,7 +471,7 @@ extension Decimal /* : FloatingPoint */ {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : ExpressibleByFloatLiteral {
+extension Decimal: ExpressibleByFloatLiteral {
     /// Creates and initializes a decimal with the provided floating point value.
     public init(floatLiteral value: Double) {
         self.init(value)
@@ -480,7 +479,7 @@ extension Decimal : ExpressibleByFloatLiteral {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : ExpressibleByIntegerLiteral {
+extension Decimal: ExpressibleByIntegerLiteral {
     /// Creates and initializes a decimal with the provided integer value.
     public init(integerLiteral value: Int) {
         self.init(value)
@@ -528,37 +527,19 @@ extension Decimal: Hashable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : Equatable {
-    public static func ==(lhs: Decimal, rhs: Decimal) -> Bool {
-#if FOUNDATION_FRAMEWORK
+extension Decimal: Equatable {
+    public static func == (lhs: Decimal, rhs: Decimal) -> Bool {
+        #if FOUNDATION_FRAMEWORK
         let bitwiseEqual: Bool =
-            lhs._exponent == rhs._exponent &&
-            lhs._length == rhs._length &&
-            lhs._isNegative == rhs._isNegative &&
-            lhs._isCompact == rhs._isCompact &&
-            lhs._reserved == rhs._reserved &&
-            lhs._mantissa.0 == rhs._mantissa.0 &&
-            lhs._mantissa.1 == rhs._mantissa.1 &&
-            lhs._mantissa.2 == rhs._mantissa.2 &&
-            lhs._mantissa.3 == rhs._mantissa.3 &&
-            lhs._mantissa.4 == rhs._mantissa.4 &&
-            lhs._mantissa.5 == rhs._mantissa.5 &&
-            lhs._mantissa.6 == rhs._mantissa.6 &&
-            lhs._mantissa.7 == rhs._mantissa.7
-#else
+            lhs._exponent == rhs._exponent && lhs._length == rhs._length && lhs._isNegative == rhs._isNegative && lhs._isCompact == rhs._isCompact && lhs._reserved == rhs._reserved && lhs._mantissa.0 == rhs._mantissa.0
+            && lhs._mantissa.1 == rhs._mantissa.1 && lhs._mantissa.2 == rhs._mantissa.2 && lhs._mantissa.3 == rhs._mantissa.3 && lhs._mantissa.4 == rhs._mantissa.4 && lhs._mantissa.5 == rhs._mantissa.5 && lhs._mantissa.6 == rhs._mantissa.6
+            && lhs._mantissa.7 == rhs._mantissa.7
+        #else
         let bitwiseEqual: Bool =
-            lhs.storage.exponent == rhs.storage.exponent &&
-            lhs.storage.lengthFlagsAndReserved == rhs.storage.lengthFlagsAndReserved &&
-            lhs.storage.reserved == rhs.storage.reserved &&
-            lhs.storage.mantissa.0 == rhs.storage.mantissa.0 &&
-            lhs.storage.mantissa.1 == rhs.storage.mantissa.1 &&
-            lhs.storage.mantissa.2 == rhs.storage.mantissa.2 &&
-            lhs.storage.mantissa.3 == rhs.storage.mantissa.3 &&
-            lhs.storage.mantissa.4 == rhs.storage.mantissa.4 &&
-            lhs.storage.mantissa.5 == rhs.storage.mantissa.5 &&
-            lhs.storage.mantissa.6 == rhs.storage.mantissa.6 &&
-            lhs.storage.mantissa.7 == rhs.storage.mantissa.7
-#endif
+            lhs.storage.exponent == rhs.storage.exponent && lhs.storage.lengthFlagsAndReserved == rhs.storage.lengthFlagsAndReserved && lhs.storage.reserved == rhs.storage.reserved && lhs.storage.mantissa.0 == rhs.storage.mantissa.0
+            && lhs.storage.mantissa.1 == rhs.storage.mantissa.1 && lhs.storage.mantissa.2 == rhs.storage.mantissa.2 && lhs.storage.mantissa.3 == rhs.storage.mantissa.3 && lhs.storage.mantissa.4 == rhs.storage.mantissa.4
+            && lhs.storage.mantissa.5 == rhs.storage.mantissa.5 && lhs.storage.mantissa.6 == rhs.storage.mantissa.6 && lhs.storage.mantissa.7 == rhs.storage.mantissa.7
+        #endif
         if bitwiseEqual {
             return true
         }
@@ -567,15 +548,15 @@ extension Decimal : Equatable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : Comparable {
-    public static func <(lhs: Decimal, rhs: Decimal) -> Bool {
+extension Decimal: Comparable {
+    public static func < (lhs: Decimal, rhs: Decimal) -> Bool {
         return Decimal._compare(lhs: lhs, rhs: rhs) == .orderedAscending
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : Codable {
-    private enum CodingKeys : Int, CodingKey {
+extension Decimal: Codable {
+    private enum CodingKeys: Int, CodingKey {
         case exponent
         case length
         case isNegative
@@ -591,8 +572,11 @@ extension Decimal : Codable {
         let isCompact = try container.decode(Bool.self, forKey: .isCompact)
 
         var mantissaContainer = try container.nestedUnkeyedContainer(forKey: .mantissa)
-        var mantissa: (CUnsignedShort, CUnsignedShort, CUnsignedShort, CUnsignedShort,
-                       CUnsignedShort, CUnsignedShort, CUnsignedShort, CUnsignedShort) = (0,0,0,0,0,0,0,0)
+        var mantissa:
+            (
+                CUnsignedShort, CUnsignedShort, CUnsignedShort, CUnsignedShort,
+                CUnsignedShort, CUnsignedShort, CUnsignedShort, CUnsignedShort
+            ) = (0, 0, 0, 0, 0, 0, 0, 0)
         mantissa.0 = try mantissaContainer.decode(CUnsignedShort.self)
         mantissa.1 = try mantissaContainer.decode(CUnsignedShort.self)
         mantissa.2 = try mantissaContainer.decode(CUnsignedShort.self)
@@ -602,12 +586,13 @@ extension Decimal : Codable {
         mantissa.6 = try mantissaContainer.decode(CUnsignedShort.self)
         mantissa.7 = try mantissaContainer.decode(CUnsignedShort.self)
 
-        self = Decimal(_exponent: exponent,
-                       _length: length,
-                       _isNegative: CUnsignedInt(isNegative ? 1 : 0),
-                       _isCompact: CUnsignedInt(isCompact ? 1 : 0),
-                       _reserved: 0,
-                       _mantissa: mantissa)
+        self = Decimal(
+            _exponent: exponent,
+            _length: length,
+            _isNegative: CUnsignedInt(isNegative ? 1 : 0),
+            _isCompact: CUnsignedInt(isCompact ? 1 : 0),
+            _reserved: 0,
+            _mantissa: mantissa)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -631,7 +616,7 @@ extension Decimal : Codable {
 
 // MARK: - SignedNumeric
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : SignedNumeric {
+extension Decimal: SignedNumeric {
     /// The magnitude of this decimal.
     public var magnitude: Decimal {
         guard _length != 0 else { return self }
@@ -646,7 +631,7 @@ extension Decimal : SignedNumeric {
     /// If `source` isn't representable as a `Decimal` instance, the result is `nil`.
     ///
     /// - Parameter source: The integer to convert.
-    public init?<T : BinaryInteger>(exactly source: T) {
+    public init?<T: BinaryInteger>(exactly source: T) {
         let zero = 0 as T
 
         if source == zero {
@@ -692,14 +677,14 @@ extension Decimal : SignedNumeric {
         self = Decimal(_exponent: exponent, _length: UInt32(length), _isNegative: negative, _isCompact: 1, _reserved: 0, _mantissa: mantissaParts)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @usableFromInline internal static var __zeroForABI: Decimal {
         @_silgen_name("$sSo9NSDecimala10FoundationE4zeroABvgZ")
         get {
             return Decimal(0)
         }
     }
-#endif
+    #endif
 
     /// Adds two decimal numbers, storing the result in the first number.
     ///
@@ -711,7 +696,7 @@ extension Decimal : SignedNumeric {
     /// - Parameters:
     ///   - lhs: A value to add.
     ///   - rhs: Another value to add.
-    public static func +=(lhs: inout Decimal, rhs: Decimal) {
+    public static func += (lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._add(rhs: rhs, roundingMode: .plain)
             lhs = result.result
@@ -730,7 +715,7 @@ extension Decimal : SignedNumeric {
     /// - Parameters:
     ///   - lhs: The value to subtract from.
     ///   - rhs: The value to subtract.
-    public static func -=(lhs: inout Decimal, rhs: Decimal) {
+    public static func -= (lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._subtract(rhs: rhs, roundingMode: .plain)
             lhs = result
@@ -749,7 +734,7 @@ extension Decimal : SignedNumeric {
     /// - Parameters:
     ///   - lhs: A value to multiply.
     ///   - rhs: Another value to multiply.
-    public static func *=(lhs: inout Decimal, rhs: Decimal) {
+    public static func *= (lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._multiply(by: rhs, roundingMode: .plain)
             lhs = result
@@ -768,7 +753,7 @@ extension Decimal : SignedNumeric {
     /// - Parameters:
     ///   - lhs: The value to divide.
     ///   - rhs: The value to divide `lhs` by.
-    public static func /=(lhs: inout Decimal, rhs: Decimal) {
+    public static func /= (lhs: inout Decimal, rhs: Decimal) {
         do {
             let result = try lhs._divide(by: rhs, roundingMode: .plain)
             lhs = result
@@ -788,7 +773,7 @@ extension Decimal : SignedNumeric {
     ///   - lhs: A value to add.
     ///   - rhs: Another value to add.
     /// - Returns: The result of adding `lhs` and `rhs`.
-    public static func +(lhs: Decimal, rhs: Decimal) -> Decimal {
+    public static func + (lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer += rhs
         return answer
@@ -805,7 +790,7 @@ extension Decimal : SignedNumeric {
     ///   - lhs: The value to subtract from.
     ///   - rhs: The value to subtract.
     /// - Returns: The result of subtracting `rhs` from `lhs`.
-    public static func -(lhs: Decimal, rhs: Decimal) -> Decimal {
+    public static func - (lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer -= rhs
         return answer
@@ -822,7 +807,7 @@ extension Decimal : SignedNumeric {
     ///   - lhs: A value to multiply.
     ///   - rhs: Another value to multiply.
     /// - Returns: The result of multiplying `lhs` by `rhs`.
-    public static func *(lhs: Decimal, rhs: Decimal) -> Decimal {
+    public static func * (lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer *= rhs
         return answer
@@ -839,7 +824,7 @@ extension Decimal : SignedNumeric {
     ///   - lhs: The value to divide.
     ///   - rhs: The value to divide `lhs` by.
     /// - Returns: The result of dividing `lhs` by `rhs`.
-    public static func /(lhs: Decimal, rhs: Decimal) -> Decimal {
+    public static func / (lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
         answer /= rhs
         return answer
@@ -853,7 +838,7 @@ extension Decimal : SignedNumeric {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : Strideable {
+extension Decimal: Strideable {
     /// Returns the distance from this value to the specified value.
     public func distance(to other: Decimal) -> Decimal {
         return other - self
@@ -891,38 +876,38 @@ private let _powersOfTenDividingUInt128Max = [
     /* 10**02 */ Decimal(_length: 8, _isCompact: 1, _mantissa: (0xf5c2, 0x5c28, 0xc28f, 0x28f5, 0x8f5c, 0xf5c2, 0x5c28, 0x028f)),
     /* 10**03 */ Decimal(_length: 8, _isCompact: 1, _mantissa: (0x1893, 0x5604, 0x2d0e, 0x9db2, 0xa7ef, 0x4bc6, 0x8937, 0x0041)),
     /* 10**04 */ Decimal(_length: 8, _isCompact: 1, _mantissa: (0x0275, 0x089a, 0x9e1b, 0x295e, 0x10cb, 0xbac7, 0x8db8, 0x0006)),
-    /* 10**05 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x3372, 0x80dc, 0x0fcf, 0x8423, 0x1b47, 0xac47, 0xa7c5,0)),
-    /* 10**06 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x3858, 0xf349, 0xb4c7, 0x8d36, 0xb5ed, 0xf7a0, 0x10c6,0)),
-    /* 10**07 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0xec08, 0x6520, 0x787a, 0xf485, 0xabca, 0x7f29, 0x01ad,0)),
-    /* 10**08 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x4acd, 0x7083, 0xbf3f, 0x1873, 0xc461, 0xf31d, 0x002a,0)),
-    /* 10**09 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x5447, 0x8b40, 0x2cb9, 0xb5a5, 0xfa09, 0x4b82, 0x0004,0)),
-    /* 10**10 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0xa207, 0x5ab9, 0xeadf, 0x5ef6, 0x7f67, 0x6df3,0,0)),
-    /* 10**11 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0xf69a, 0xef78, 0x4aaf, 0xbcb2, 0xbff0, 0x0afe,0,0)),
-    /* 10**12 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0x7f0f, 0x97f2, 0xa111, 0x12de, 0x7998, 0x0119,0,0)),
-    /* 10**13 */ Decimal(_length: 6, _isCompact: 0, _mantissa: (0x0cb4, 0xc265, 0x7681, 0x6849, 0x25c2, 0x001c,0,0)),
-    /* 10**14 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0x4e12, 0x603d, 0x2573, 0x70d4, 0xd093, 0x0002,0,0)),
-    /* 10**15 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0x87ce, 0x566c, 0x9d58, 0xbe7b, 0x480e,0,0,0)),
-    /* 10**16 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0xda61, 0x6f0a, 0xf622, 0xaca5, 0x0734,0,0,0)),
-    /* 10**17 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0x4909, 0xa4b4, 0x3236, 0x77aa, 0x00b8,0,0,0)),
-    /* 10**18 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0xa0e7, 0x43ab, 0xd1d2, 0x725d, 0x0012,0,0,0)),
-    /* 10**19 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0xc34a, 0x6d2a, 0x94fb, 0xd83c, 0x0001,0,0,0)),
-    /* 10**20 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x46ba, 0x2484, 0x4219, 0x2f39,0,0,0,0)),
-    /* 10**21 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0xd3df, 0x83a6, 0xed02, 0x04b8,0,0,0,0)),
-    /* 10**22 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x7b96, 0x405d, 0xe480, 0x0078,0,0,0,0)),
-    /* 10**23 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x5928, 0xa009, 0x16d9, 0x000c,0,0,0,0)),
-    /* 10**24 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x88ea, 0x299a, 0x357c, 0x0001,0,0,0,0)),
-    /* 10**25 */ Decimal(_length: 3, _isCompact: 1, _mantissa: (0xda7d, 0xd0f5, 0x1ef2,0,0,0,0,0)),
-    /* 10**26 */ Decimal(_length: 3, _isCompact: 1, _mantissa: (0x95d9, 0x4818, 0x0318,0,0,0,0,0)),
-    /* 10**27 */ Decimal(_length: 3, _isCompact: 0, _mantissa: (0xdbc8, 0x3a68, 0x004f,0,0,0,0,0)),
-    /* 10**28 */ Decimal(_length: 3, _isCompact: 1, _mantissa: (0xaf94, 0xec3d, 0x0007,0,0,0,0,0)),
-    /* 10**29 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0xf7f5, 0xcad2,0,0,0,0,0,0)),
-    /* 10**30 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0x4bfe, 0x1448,0,0,0,0,0,0)),
-    /* 10**31 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0x3acc, 0x0207,0,0,0,0,0,0)),
-    /* 10**32 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0xec47, 0x0033,0,0,0,0,0,0)),
-    /* 10**33 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0x313a, 0x0005,0,0,0,0,0,0)),
-    /* 10**34 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x84ec,0,0,0,0,0,0,0)),
-    /* 10**35 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x0d4a,0,0,0,0,0,0,0)),
-    /* 10**36 */ Decimal(_length: 1, _isCompact: 0, _mantissa: (0x0154,0,0,0,0,0,0,0)),
-    /* 10**37 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x0022,0,0,0,0,0,0,0)),
-    /* 10**38 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x0003,0,0,0,0,0,0,0))
+    /* 10**05 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x3372, 0x80dc, 0x0fcf, 0x8423, 0x1b47, 0xac47, 0xa7c5, 0)),
+    /* 10**06 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x3858, 0xf349, 0xb4c7, 0x8d36, 0xb5ed, 0xf7a0, 0x10c6, 0)),
+    /* 10**07 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0xec08, 0x6520, 0x787a, 0xf485, 0xabca, 0x7f29, 0x01ad, 0)),
+    /* 10**08 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x4acd, 0x7083, 0xbf3f, 0x1873, 0xc461, 0xf31d, 0x002a, 0)),
+    /* 10**09 */ Decimal(_length: 7, _isCompact: 1, _mantissa: (0x5447, 0x8b40, 0x2cb9, 0xb5a5, 0xfa09, 0x4b82, 0x0004, 0)),
+    /* 10**10 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0xa207, 0x5ab9, 0xeadf, 0x5ef6, 0x7f67, 0x6df3, 0, 0)),
+    /* 10**11 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0xf69a, 0xef78, 0x4aaf, 0xbcb2, 0xbff0, 0x0afe, 0, 0)),
+    /* 10**12 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0x7f0f, 0x97f2, 0xa111, 0x12de, 0x7998, 0x0119, 0, 0)),
+    /* 10**13 */ Decimal(_length: 6, _isCompact: 0, _mantissa: (0x0cb4, 0xc265, 0x7681, 0x6849, 0x25c2, 0x001c, 0, 0)),
+    /* 10**14 */ Decimal(_length: 6, _isCompact: 1, _mantissa: (0x4e12, 0x603d, 0x2573, 0x70d4, 0xd093, 0x0002, 0, 0)),
+    /* 10**15 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0x87ce, 0x566c, 0x9d58, 0xbe7b, 0x480e, 0, 0, 0)),
+    /* 10**16 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0xda61, 0x6f0a, 0xf622, 0xaca5, 0x0734, 0, 0, 0)),
+    /* 10**17 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0x4909, 0xa4b4, 0x3236, 0x77aa, 0x00b8, 0, 0, 0)),
+    /* 10**18 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0xa0e7, 0x43ab, 0xd1d2, 0x725d, 0x0012, 0, 0, 0)),
+    /* 10**19 */ Decimal(_length: 5, _isCompact: 1, _mantissa: (0xc34a, 0x6d2a, 0x94fb, 0xd83c, 0x0001, 0, 0, 0)),
+    /* 10**20 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x46ba, 0x2484, 0x4219, 0x2f39, 0, 0, 0, 0)),
+    /* 10**21 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0xd3df, 0x83a6, 0xed02, 0x04b8, 0, 0, 0, 0)),
+    /* 10**22 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x7b96, 0x405d, 0xe480, 0x0078, 0, 0, 0, 0)),
+    /* 10**23 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x5928, 0xa009, 0x16d9, 0x000c, 0, 0, 0, 0)),
+    /* 10**24 */ Decimal(_length: 4, _isCompact: 1, _mantissa: (0x88ea, 0x299a, 0x357c, 0x0001, 0, 0, 0, 0)),
+    /* 10**25 */ Decimal(_length: 3, _isCompact: 1, _mantissa: (0xda7d, 0xd0f5, 0x1ef2, 0, 0, 0, 0, 0)),
+    /* 10**26 */ Decimal(_length: 3, _isCompact: 1, _mantissa: (0x95d9, 0x4818, 0x0318, 0, 0, 0, 0, 0)),
+    /* 10**27 */ Decimal(_length: 3, _isCompact: 0, _mantissa: (0xdbc8, 0x3a68, 0x004f, 0, 0, 0, 0, 0)),
+    /* 10**28 */ Decimal(_length: 3, _isCompact: 1, _mantissa: (0xaf94, 0xec3d, 0x0007, 0, 0, 0, 0, 0)),
+    /* 10**29 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0xf7f5, 0xcad2, 0, 0, 0, 0, 0, 0)),
+    /* 10**30 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0x4bfe, 0x1448, 0, 0, 0, 0, 0, 0)),
+    /* 10**31 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0x3acc, 0x0207, 0, 0, 0, 0, 0, 0)),
+    /* 10**32 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0xec47, 0x0033, 0, 0, 0, 0, 0, 0)),
+    /* 10**33 */ Decimal(_length: 2, _isCompact: 1, _mantissa: (0x313a, 0x0005, 0, 0, 0, 0, 0, 0)),
+    /* 10**34 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x84ec, 0, 0, 0, 0, 0, 0, 0)),
+    /* 10**35 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x0d4a, 0, 0, 0, 0, 0, 0, 0)),
+    /* 10**36 */ Decimal(_length: 1, _isCompact: 0, _mantissa: (0x0154, 0, 0, 0, 0, 0, 0, 0)),
+    /* 10**37 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x0022, 0, 0, 0, 0, 0, 0, 0)),
+    /* 10**38 */ Decimal(_length: 1, _isCompact: 1, _mantissa: (0x0003, 0, 0, 0, 0, 0, 0, 0)),
 ]

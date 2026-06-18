@@ -100,7 +100,7 @@ extension Locale.Components {
         if hourCycle == nil, let hc = locale.forceHourCycle {
             hourCycle = hc
         }
-        
+
         if measurementSystem == nil, let ms = locale.forceMeasurementSystem {
             measurementSystem = ms
         }
@@ -139,7 +139,7 @@ extension Locale.LanguageCode {
             return alpha3
         }
     }
-    
+
     /// A Boolean value that indicates whether the language is an ISO-639 language.
     public var isISOLanguage: Bool {
         if Locale.LanguageCode._isoLanguageCodeStrings.contains(_normalizedIdentifier) {
@@ -153,7 +153,7 @@ extension Locale.LanguageCode {
     public static var isoLanguageCodes: [Locale.LanguageCode] {
         return _isoLanguageCodeStrings.map { Locale.LanguageCode($0) }
     }
-    
+
     // This is sorted
     internal static let _isoLanguageCodeStrings: [String] = {
         var result: [String] = []
@@ -208,7 +208,7 @@ extension Locale.Region {
     /// | GL | Greenland |
     /// | PM | Saint Pierre and Miquelon |
     /// | US | United States |
-    public var subRegions : [Locale.Region] {
+    public var subRegions: [Locale.Region] {
         var status = U_ZERO_ERROR
         let icuRegion = uregion_getRegionFromCode(identifier, &status)
         guard status.isSuccess, let icuRegion else {
@@ -454,10 +454,10 @@ extension Locale.Region {
 
     /// An array of the sub-regions, matching the specified category of the region.
     @available(FoundationPreview 6.2, *)
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // Renamed in 6.2.1
     @abi(func subRegions(ofCategoy category: Category) -> [Locale.Region])
-#endif
+    #endif
     public func subRegions(ofCategory category: Category) -> [Locale.Region] {
         var status = U_ZERO_ERROR
         let icuRegion = uregion_getRegionFromCode(identifier, &status)
@@ -622,7 +622,7 @@ extension Locale.NumberingSystem {
             }
         }
 
-         // 3. Add `latn` (if required) which we support that for all languages.
+        // 3. Add `latn` (if required) which we support that for all languages.
         let latn = Locale.NumberingSystem("latn")
         if !result.contains(latn) {
             result.append(latn)
@@ -630,7 +630,7 @@ extension Locale.NumberingSystem {
 
         return result
     }
-    
+
     /// Create a `NumberingSystem` from a complete Locale identifier, or nil if does not explicitly specify one.
     internal init?(localeIdentifierIfSpecified localeIdentifier: String) {
         // Just verify it has a value at all, but pass the whole identifier to `NumberingSystem`
@@ -640,7 +640,7 @@ extension Locale.NumberingSystem {
 
         self = Locale.NumberingSystem(localeIdentifier: localeIdentifier)
     }
-    
+
     internal init(localeIdentifier: String) {
         var status = U_ZERO_ERROR
         let numberingSystem = unumsys_open(localeIdentifier, &status)
@@ -701,7 +701,7 @@ extension Locale.Language {
         }
 
     }
-    
+
     /// Returns a Boolean value that indicates if the given language shares a common parent with this language.
     ///
     /// - Parameter language: A language to compare parentage with.
@@ -743,7 +743,7 @@ extension Locale.Language {
     }
 
     /// Returns a BCP-47 identifier in a minimalist form. Script and region may be omitted. For example, "zh-TW", "en"
-    public var minimalIdentifier : String {
+    public var minimalIdentifier: String {
         let componentsIdentifier = components.identifier
 
         guard !componentsIdentifier.isEmpty else {
@@ -767,7 +767,7 @@ extension Locale.Language {
     }
 
     /// Returns a BCP-47 identifier that always includes the script: "zh-Hant-TW", "en-Latn-US"
-    public var maximalIdentifier : String {
+    public var maximalIdentifier: String {
         let id = components.identifier
         guard !id.isEmpty else {
             // Just return "" instead of trying to fill it up
@@ -788,7 +788,7 @@ extension Locale.Language {
 
         return tag
     }
-    
+
     // MARK: -
 
     /// The language code that identifies the language. Returns `nil` if it cannot be determined.
@@ -848,27 +848,30 @@ extension Locale.Language.Components {
             uloc_getCountry(identifier, buffer, size, &status)
         }
 
-        let lc: Locale.LanguageCode? = if let languageCode {
-            Locale.LanguageCode(languageCode)
-        } else {
-            nil
-        }
-        
-        let sc: Locale.Script? = if let scriptCode {
-            Locale.Script(scriptCode)
-        } else {
-            nil
-        }
-        
-        let rc: Locale.Region? = if let countryCode {
-            Locale.Region(countryCode)
-        } else {
-            nil
-        }
-        
+        let lc: Locale.LanguageCode? =
+            if let languageCode {
+                Locale.LanguageCode(languageCode)
+            } else {
+                nil
+            }
+
+        let sc: Locale.Script? =
+            if let scriptCode {
+                Locale.Script(scriptCode)
+            } else {
+                nil
+            }
+
+        let rc: Locale.Region? =
+            if let countryCode {
+                Locale.Region(countryCode)
+            } else {
+                nil
+            }
+
         self = Locale.Language.Components(languageCode: lc, script: sc, region: rc)
     }
-    
+
     /// Creates a language components instance from an existing language instance.
     ///
     /// - Parameter language: A `Locale.Language` instance. This initializer copies over the language code, script, and region from the provided language.

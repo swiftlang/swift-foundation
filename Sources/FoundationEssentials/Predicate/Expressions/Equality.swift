@@ -13,51 +13,51 @@
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Equal<
-        LHS : PredicateExpression,
-        RHS : PredicateExpression
-    > : PredicateExpression
+        LHS: PredicateExpression,
+        RHS: PredicateExpression
+    >: PredicateExpression
     where
         LHS.Output == RHS.Output,
-        LHS.Output : Equatable
+        LHS.Output: Equatable
     {
         public typealias Output = Bool
-        
+
         public let lhs: LHS
         public let rhs: RHS
-        
+
         public init(lhs: LHS, rhs: RHS) {
             self.lhs = lhs
             self.rhs = rhs
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Bool {
             try lhs.evaluate(bindings) == rhs.evaluate(bindings)
         }
     }
-    
+
     public static func build_Equal<LHS, RHS>(lhs: LHS, rhs: RHS) -> Equal<LHS, RHS> {
         Equal(lhs: lhs, rhs: rhs)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Equal : CustomStringConvertible {
+extension PredicateExpressions.Equal: CustomStringConvertible {
     public var description: String {
         "Equal(lhs: \(lhs), rhs: \(rhs))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Equal : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.Equal: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Equal : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.Equal: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(lhs)
         try container.encode(rhs)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         lhs = try container.decode(LHS.self)
@@ -66,4 +66,4 @@ extension PredicateExpressions.Equal : Codable where LHS : Codable, RHS : Codabl
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Equal : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.Equal: Sendable where LHS: Sendable, RHS: Sendable {}

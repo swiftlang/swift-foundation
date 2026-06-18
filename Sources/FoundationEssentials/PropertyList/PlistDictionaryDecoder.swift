@@ -12,7 +12,7 @@
 
 // MARK: - __PlistDictionaryDecoder
 
-internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtocol {
+internal class __PlistDictionaryDecoder: Decoder, _PlistDecoderEntryPointProtocol {
     // MARK: Properties
 
     /// The decoder's storage.
@@ -25,7 +25,7 @@ internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtoc
     fileprivate(set) public var codingPath: [CodingKey]
 
     /// Contextual user-provided information for use during encoding.
-    var userInfo: [CodingUserInfoKey : Any] {
+    var userInfo: [CodingUserInfoKey: Any] {
         return self.options.userInfo
     }
 
@@ -40,7 +40,7 @@ internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtoc
     }
 
     // MARK: - Decoder Methods
-    
+
     internal var topValueIsNull: Bool {
         if case Optional<Any>.none = self.storage.topContainer {
             return true
@@ -52,13 +52,15 @@ internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtoc
 
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         if topValueIsNull {
-            throw DecodingError.valueNotFound(KeyedDecodingContainer<Key>.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get keyed decoding container -- found null value instead."))
+            throw DecodingError.valueNotFound(
+                KeyedDecodingContainer<Key>.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get keyed decoding container -- found null value instead."))
         }
 
-        guard let topContainer = self.storage.topContainer as? [String : Any] else {
-            throw DecodingError._typeMismatch(at: self.codingPath, expectation: [String : Any].self, reality: self.storage.topContainer)
+        guard let topContainer = self.storage.topContainer as? [String: Any] else {
+            throw DecodingError._typeMismatch(at: self.codingPath, expectation: [String: Any].self, reality: self.storage.topContainer)
         }
 
         let container = _PlistDictionaryKeyedDecodingContainer<Key>(referencing: self, wrapping: topContainer)
@@ -67,9 +69,11 @@ internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtoc
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         if topValueIsNull {
-            throw DecodingError.valueNotFound(UnkeyedDecodingContainer.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get unkeyed decoding container -- found null value instead."))
+            throw DecodingError.valueNotFound(
+                UnkeyedDecodingContainer.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get unkeyed decoding container -- found null value instead."))
         }
 
         guard let topContainer = self.storage.topContainer as? [Any] else {
@@ -86,7 +90,7 @@ internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtoc
 
 // MARK: Decoding Containers
 
-fileprivate struct _PlistDictionaryKeyedDecodingContainer<K : CodingKey> : KeyedDecodingContainerProtocol {
+fileprivate struct _PlistDictionaryKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtocol {
     typealias Key = K
 
     // MARK: Properties
@@ -95,7 +99,7 @@ fileprivate struct _PlistDictionaryKeyedDecodingContainer<K : CodingKey> : Keyed
     private let decoder: __PlistDictionaryDecoder
 
     /// A reference to the container we're reading from.
-    private let container: [String : Any]
+    private let container: [String: Any]
 
     /// The path of coding keys taken to get to this point in decoding.
     private(set) public var codingPath: [CodingKey]
@@ -103,7 +107,7 @@ fileprivate struct _PlistDictionaryKeyedDecodingContainer<K : CodingKey> : Keyed
     // MARK: - Initialization
 
     /// Initializes `self` by referencing the given decoder and container.
-    fileprivate init(referencing decoder: __PlistDictionaryDecoder, wrapping container: [String : Any]) {
+    fileprivate init(referencing decoder: __PlistDictionaryDecoder, wrapping container: [String: Any]) {
         self.decoder = decoder
         self.container = container
         self.codingPath = decoder.codingPath
@@ -340,7 +344,7 @@ fileprivate struct _PlistDictionaryKeyedDecodingContainer<K : CodingKey> : Keyed
         return value
     }
 
-    public func decode<T : Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
+    public func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
         guard let entry = self.container[key.stringValue] else {
             throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "No value associated with key \(key) (\"\(key.stringValue)\")."))
         }
@@ -360,13 +364,15 @@ fileprivate struct _PlistDictionaryKeyedDecodingContainer<K : CodingKey> : Keyed
         defer { self.decoder.codingPath.removeLast() }
 
         guard let value = self.container[key.stringValue] else {
-            throw DecodingError.valueNotFound(KeyedDecodingContainer<NestedKey>.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get nested keyed container -- no value found for key \"\(key.stringValue)\""))
+            throw DecodingError.valueNotFound(
+                KeyedDecodingContainer<NestedKey>.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get nested keyed container -- no value found for key \"\(key.stringValue)\""))
         }
 
-        guard let dictionary = value as? [String : Any] else {
-            throw DecodingError._typeMismatch(at: self.codingPath, expectation: [String : Any].self, reality: value)
+        guard let dictionary = value as? [String: Any] else {
+            throw DecodingError._typeMismatch(at: self.codingPath, expectation: [String: Any].self, reality: value)
         }
 
         let container = _PlistDictionaryKeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: dictionary)
@@ -378,9 +384,11 @@ fileprivate struct _PlistDictionaryKeyedDecodingContainer<K : CodingKey> : Keyed
         defer { self.decoder.codingPath.removeLast() }
 
         guard let value = self.container[key.stringValue] else {
-            throw DecodingError.valueNotFound(UnkeyedDecodingContainer.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get nested unkeyed container -- no value found for key \"\(key.stringValue)\""))
+            throw DecodingError.valueNotFound(
+                UnkeyedDecodingContainer.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get nested unkeyed container -- no value found for key \"\(key.stringValue)\""))
         }
 
         guard let array = value as? [Any] else {
@@ -407,7 +415,7 @@ fileprivate struct _PlistDictionaryKeyedDecodingContainer<K : CodingKey> : Keyed
     }
 }
 
-fileprivate struct _PlistDictionaryUnkeyedDecodingContainer : UnkeyedDecodingContainer {
+fileprivate struct _PlistDictionaryUnkeyedDecodingContainer: UnkeyedDecodingContainer {
     // MARK: Properties
 
     /// A reference to the decoder we're reading from.
@@ -679,7 +687,7 @@ fileprivate struct _PlistDictionaryUnkeyedDecodingContainer : UnkeyedDecodingCon
         return decoded
     }
 
-    public mutating func decode<T : Decodable>(_ type: T.Type) throws -> T {
+    public mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
         guard !self.isAtEnd else {
             throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath + [_CodingKey(index: self.currentIndex)], debugDescription: "Unkeyed container is at end."))
         }
@@ -700,20 +708,24 @@ fileprivate struct _PlistDictionaryUnkeyedDecodingContainer : UnkeyedDecodingCon
         defer { self.decoder.codingPath.removeLast() }
 
         guard !self.isAtEnd else {
-            throw DecodingError.valueNotFound(KeyedDecodingContainer<NestedKey>.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get nested keyed container -- unkeyed container is at end."))
+            throw DecodingError.valueNotFound(
+                KeyedDecodingContainer<NestedKey>.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get nested keyed container -- unkeyed container is at end."))
         }
 
         let value = self.container[self.currentIndex]
         if _plistNullString == value as? String {
-            throw DecodingError.valueNotFound(KeyedDecodingContainer<NestedKey>.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get keyed decoding container -- found null value instead."))
+            throw DecodingError.valueNotFound(
+                KeyedDecodingContainer<NestedKey>.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get keyed decoding container -- found null value instead."))
         }
 
-        guard let dictionary = value as? [String : Any] else {
-            throw DecodingError._typeMismatch(at: self.codingPath, expectation: [String : Any].self, reality: value)
+        guard let dictionary = value as? [String: Any] else {
+            throw DecodingError._typeMismatch(at: self.codingPath, expectation: [String: Any].self, reality: value)
         }
 
         self.currentIndex += 1
@@ -726,16 +738,20 @@ fileprivate struct _PlistDictionaryUnkeyedDecodingContainer : UnkeyedDecodingCon
         defer { self.decoder.codingPath.removeLast() }
 
         guard !self.isAtEnd else {
-            throw DecodingError.valueNotFound(UnkeyedDecodingContainer.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get nested unkeyed container -- unkeyed container is at end."))
+            throw DecodingError.valueNotFound(
+                UnkeyedDecodingContainer.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get nested unkeyed container -- unkeyed container is at end."))
         }
 
         let value = self.container[self.currentIndex]
         if _plistNullString == value as? String {
-            throw DecodingError.valueNotFound(UnkeyedDecodingContainer.self,
-                                              DecodingError.Context(codingPath: self.codingPath,
-                                                      debugDescription: "Cannot get keyed decoding container -- found null value instead."))
+            throw DecodingError.valueNotFound(
+                UnkeyedDecodingContainer.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get keyed decoding container -- found null value instead."))
         }
 
         guard let array = value as? [Any] else {
@@ -751,8 +767,11 @@ fileprivate struct _PlistDictionaryUnkeyedDecodingContainer : UnkeyedDecodingCon
         defer { self.decoder.codingPath.removeLast() }
 
         guard !self.isAtEnd else {
-            throw DecodingError.valueNotFound(Decoder.self, DecodingError.Context(codingPath: self.codingPath,
-                                                                    debugDescription: "Cannot get superDecoder() -- unkeyed container is at end."))
+            throw DecodingError.valueNotFound(
+                Decoder.self,
+                DecodingError.Context(
+                    codingPath: self.codingPath,
+                    debugDescription: "Cannot get superDecoder() -- unkeyed container is at end."))
         }
 
         let value = self.container[self.currentIndex]
@@ -761,7 +780,7 @@ fileprivate struct _PlistDictionaryUnkeyedDecodingContainer : UnkeyedDecodingCon
     }
 }
 
-extension __PlistDictionaryDecoder : SingleValueDecodingContainer {
+extension __PlistDictionaryDecoder: SingleValueDecodingContainer {
     // MARK: SingleValueDecodingContainer Methods
 
     @inline(__always)
@@ -849,14 +868,14 @@ extension __PlistDictionaryDecoder : SingleValueDecodingContainer {
         return try self.unbox(self.storage.topContainer, as: String.self)!
     }
 
-    public func decode<T : Decodable>(_ type: T.Type) throws -> T {
+    public func decode<T: Decodable>(_ type: T.Type) throws -> T {
         try expectNonNull(type)
         return try self.unbox(self.storage.topContainer, as: type)!
     }
 }
 
 extension __PlistDictionaryDecoder {
-    internal func decode<T : DecodableWithConfiguration>(_ type: T.Type, configuration: T.DecodingConfiguration) throws -> T {
+    internal func decode<T: DecodableWithConfiguration>(_ type: T.Type, configuration: T.DecodingConfiguration) throws -> T {
         try expectNonNull(type)
         return try self.unbox(self.storage.topContainer, as: type, configuration: configuration)!
     }
@@ -1015,7 +1034,7 @@ extension __PlistDictionaryDecoder {
         return data
     }
 
-    internal func unbox<T : Decodable>(_ value: Any, as type: T.Type) throws -> T? {
+    internal func unbox<T: Decodable>(_ value: Any, as type: T.Type) throws -> T? {
         if type == Date.self {
             return try self.unbox(value, as: Date.self) as? T
         } else if type == Data.self {
@@ -1026,8 +1045,8 @@ extension __PlistDictionaryDecoder {
             return try type.init(from: self)
         }
     }
-    
-    internal func unbox<T : DecodableWithConfiguration>(_ value: Any, as type: T.Type, configuration: T.DecodingConfiguration) throws -> T? {
+
+    internal func unbox<T: DecodableWithConfiguration>(_ value: Any, as type: T.Type, configuration: T.DecodingConfiguration) throws -> T? {
         self.storage.push(container: value)
         defer { self.storage.popContainer() }
         return try type.init(from: self, configuration: configuration)

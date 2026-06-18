@@ -17,12 +17,12 @@ import FoundationEssentials
 internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class ICUListFormatter : @unchecked Sendable {
-    
+internal final class ICUListFormatter: @unchecked Sendable {
+
     /// `Sendable` notes: `UListFormatter` is thread safe for formatting, and we only use `ulistfmt_format` after init.
     let uformatter: OpaquePointer
 
-    struct Signature : Hashable {
+    struct Signature: Hashable {
         let localeIdentifier: String
         let listType: Int // format.listType.rawValue
         let width: Int // format.width.rawValue
@@ -32,9 +32,9 @@ internal final class ICUListFormatter : @unchecked Sendable {
 
     private init(signature: Signature) {
         var status = U_ZERO_ERROR
-        let uListFormatterTypes: [UListFormatterType] = [ .and, .or, .units ]
-        let uListFormatterWidths: [UListFormatterWidth] = [ .wide, .short, .narrow ]
-        
+        let uListFormatterTypes: [UListFormatterType] = [.and, .or, .units]
+        let uListFormatterWidths: [UListFormatterWidth] = [.wide, .short, .narrow]
+
         let type = uListFormatterTypes[signature.listType]
         let width = uListFormatterWidths[signature.width]
         let result = ulistfmt_openForType(signature.localeIdentifier, type, width, &status)

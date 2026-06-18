@@ -151,10 +151,11 @@ extension NSURL {
             let filePrefixSize = 7 // "file://"
             return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: buffer.count - filePrefixSize) { outputBuffer in
                 guard let baseAddress = outputBuffer.baseAddress,
-                      var pathLength = URLEncoder.percentDecode(
-                    input: UnsafeBufferPointer(rebasing: buffer[filePrefixSize...]),
-                    output: outputBuffer
-                ) else {
+                    var pathLength = URLEncoder.percentDecode(
+                        input: UnsafeBufferPointer(rebasing: buffer[filePrefixSize...]),
+                        output: outputBuffer
+                    )
+                else {
                     return nil
                 }
                 let rootLength = rootLength(
@@ -165,9 +166,11 @@ extension NSURL {
                     // Strip the trailing slash
                     pathLength -= 1
                 }
-                guard let result = CFStringCreateWithBytes(
-                    allocator, baseAddress, pathLength, CFStringBuiltInEncodings.UTF8.rawValue, false
-                ) else {
+                guard
+                    let result = CFStringCreateWithBytes(
+                        allocator, baseAddress, pathLength, CFStringBuiltInEncodings.UTF8.rawValue, false
+                    )
+                else {
                     return nil
                 }
                 return Unmanaged.passRetained(result)
@@ -193,10 +196,12 @@ extension NSURL {
             let filePrefixSize = 7 // "file://"
             let pathLength: Int
             if removePercentEscapes {
-                guard let decodedLength = URLEncoder.percentDecode(
-                    input: UnsafeBufferPointer(rebasing: buffer[filePrefixSize...]),
-                    output: outputBuffer
-                ) else {
+                guard
+                    let decodedLength = URLEncoder.percentDecode(
+                        input: UnsafeBufferPointer(rebasing: buffer[filePrefixSize...]),
+                        output: outputBuffer
+                    )
+                else {
                     outputBuffer[0] = 0
                     return false
                 }

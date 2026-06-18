@@ -12,7 +12,7 @@
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 package struct DebugStringConversionState {
-    private var variables: [PredicateExpressions.VariableID : String]
+    private var variables: [PredicateExpressions.VariableID: String]
     private var nextVariable = 1
     private var captures: [String] = []
     private var nextCapture = 1
@@ -22,9 +22,10 @@ package struct DebugStringConversionState {
     }
 
     init(_ variables: [PredicateExpressions.VariableID]) {
-        self.variables = Dictionary(uniqueKeysWithValues: variables.enumerated().map {
-            ($1, "input\($0 + 1)")
-        })
+        self.variables = Dictionary(
+            uniqueKeysWithValues: variables.enumerated().map {
+                ($1, "input\($0 + 1)")
+            })
     }
 
     subscript(_ variable: PredicateExpressions.VariableID) -> String {
@@ -37,16 +38,17 @@ package struct DebugStringConversionState {
     }
 
     mutating func addCapture(_ value: Any) -> String {
-        let valueConstruction = switch value as Any {
-        case Optional<Any>.none: "nil"
-        case let b as Bool: "\(b)"
-        case let i as any Numeric: "\(i)"
-        case let s as String: "\"\(s.replacing("\"", with: "\\\""))\""
-        case let d as Date: "<Date \(d.timeIntervalSince1970)>"
-        case let d as Data: "<Data \(d.base64EncodedString())>"
-        case let u as UUID: "<UUID \(u.uuidString)>"
-        default: "<\(_typeName(type(of: value))): \(String(describing: value).replacing("\n", with: ", "))>"
-        }
+        let valueConstruction =
+            switch value as Any {
+            case Optional<Any>.none: "nil"
+            case let b as Bool: "\(b)"
+            case let i as any Numeric: "\(i)"
+            case let s as String: "\"\(s.replacing("\"", with: "\\\""))\""
+            case let d as Date: "<Date \(d.timeIntervalSince1970)>"
+            case let d as Data: "<Data \(d.base64EncodedString())>"
+            case let u as UUID: "<UUID \(u.uuidString)>"
+            default: "<\(_typeName(type(of: value))): \(String(describing: value).replacing("\n", with: ", "))>"
+            }
         captures.append("capture\(nextCapture) (\(_typeName(type(of: value)))): \(valueConstruction)")
         defer { nextCapture += 1 }
         return "capture\(nextCapture)"
@@ -63,7 +65,7 @@ extension String {
         if self.hasSuffix(")") {
             self.formIndex(before: &endIndex)
         }
-        return String(self[startIndex ..< endIndex].replacing("\n", with: "\n    "))
+        return String(self[startIndex..<endIndex].replacing("\n", with: "\n    "))
     }
 }
 
@@ -79,121 +81,123 @@ extension AnyKeyPath {
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-package protocol DebugStringConvertiblePredicateExpression : StandardPredicateExpression {
+package protocol DebugStringConvertiblePredicateExpression: StandardPredicateExpression {
     func debugString(state: inout DebugStringConversionState) -> String
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Variable : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Variable: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         state[self.key]
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.KeyPath : DebugStringConvertiblePredicateExpression where Root : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.KeyPath: DebugStringConvertiblePredicateExpression where Root: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         root.debugString(state: &state) + keyPath.debugStringWithoutType
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Value : DebugStringConvertiblePredicateExpression where Self : StandardPredicateExpression {
+extension PredicateExpressions.Value: DebugStringConvertiblePredicateExpression where Self: StandardPredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         state.addCapture(value)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Conjunction : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Conjunction: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) && \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Disjunction : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Disjunction: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) || \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Equal : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Equal: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) == \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.NotEqual : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.NotEqual: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) != \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Arithmetic : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Arithmetic: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
-        let op = switch self.op {
-        case .add: "+"
-        case .multiply: "*"
-        case .subtract: "-"
-        }
+        let op =
+            switch self.op {
+            case .add: "+"
+            case .multiply: "*"
+            case .subtract: "-"
+            }
         return "(\(lhs.debugString(state: &state)) \(op) \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Comparison : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Comparison: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
-        let op = switch self.op {
-        case .greaterThan: ">"
-        case .greaterThanOrEqual: ">="
-        case .lessThan: "<"
-        case .lessThanOrEqual: "<="
-        }
+        let op =
+            switch self.op {
+            case .greaterThan: ">"
+            case .greaterThanOrEqual: ">="
+            case .lessThan: "<"
+            case .lessThanOrEqual: "<="
+            }
         return "(\(lhs.debugString(state: &state)) \(op) \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.UnaryMinus : DebugStringConvertiblePredicateExpression where Wrapped : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.UnaryMinus: DebugStringConvertiblePredicateExpression where Wrapped: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "-\(wrapped.debugString(state: &state))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.SequenceMinimum : DebugStringConvertiblePredicateExpression where Elements : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.SequenceMinimum: DebugStringConvertiblePredicateExpression where Elements: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(elements.debugString(state: &state)).min()"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.SequenceMaximum : DebugStringConvertiblePredicateExpression where Elements : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.SequenceMaximum: DebugStringConvertiblePredicateExpression where Elements: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(elements.debugString(state: &state)).max()"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.ClosedRange : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.ClosedRange: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lower.debugString(state: &state)) ... \(upper.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Range : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Range: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lower.debugString(state: &state)) ..< \(upper.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Conditional : DebugStringConvertiblePredicateExpression where Test : DebugStringConvertiblePredicateExpression, If : DebugStringConvertiblePredicateExpression, Else : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Conditional: DebugStringConvertiblePredicateExpression where Test: DebugStringConvertiblePredicateExpression, If: DebugStringConvertiblePredicateExpression, Else: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         """
         if \(test.debugString(state: &state)) {
@@ -206,56 +210,56 @@ extension PredicateExpressions.Conditional : DebugStringConvertiblePredicateExpr
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.CollectionIndexSubscript : DebugStringConvertiblePredicateExpression where Wrapped : DebugStringConvertiblePredicateExpression, Index : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.CollectionIndexSubscript: DebugStringConvertiblePredicateExpression where Wrapped: DebugStringConvertiblePredicateExpression, Index: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(wrapped.debugString(state: &state))[\(index.debugString(state: &state))]"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.CollectionRangeSubscript : DebugStringConvertiblePredicateExpression where Wrapped : DebugStringConvertiblePredicateExpression, Range : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.CollectionRangeSubscript: DebugStringConvertiblePredicateExpression where Wrapped: DebugStringConvertiblePredicateExpression, Range: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(wrapped.debugString(state: &state))[\(range.debugString(state: &state))]"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.CollectionContainsCollection : DebugStringConvertiblePredicateExpression where Base : DebugStringConvertiblePredicateExpression, Other : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.CollectionContainsCollection: DebugStringConvertiblePredicateExpression where Base: DebugStringConvertiblePredicateExpression, Other: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(base.debugString(state: &state)).contains(\(other.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.ConditionalCast : DebugStringConvertiblePredicateExpression where Input : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.ConditionalCast: DebugStringConvertiblePredicateExpression where Input: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(input.debugString(state: &state)) as? \(_typeName(Desired.self)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.ForceCast : DebugStringConvertiblePredicateExpression where Input : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.ForceCast: DebugStringConvertiblePredicateExpression where Input: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(input.debugString(state: &state)) as! \(_typeName(Desired.self)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.TypeCheck : DebugStringConvertiblePredicateExpression where Input : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.TypeCheck: DebugStringConvertiblePredicateExpression where Input: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(input.debugString(state: &state)) is \(_typeName(Desired.self)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.ForcedUnwrap : DebugStringConvertiblePredicateExpression where Inner : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.ForcedUnwrap: DebugStringConvertiblePredicateExpression where Inner: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(inner.debugString(state: &state))!"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.OptionalFlatMap : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.OptionalFlatMap: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         state.setupVariable(variable.key)
         return """
@@ -267,84 +271,85 @@ extension PredicateExpressions.OptionalFlatMap : DebugStringConvertiblePredicate
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.DictionaryKeySubscript : DebugStringConvertiblePredicateExpression where Wrapped : DebugStringConvertiblePredicateExpression, Key : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.DictionaryKeySubscript: DebugStringConvertiblePredicateExpression where Wrapped: DebugStringConvertiblePredicateExpression, Key: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(wrapped.debugString(state: &state))[\(key.debugString(state: &state))]"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : DebugStringConvertiblePredicateExpression where Wrapped : DebugStringConvertiblePredicateExpression, Key : DebugStringConvertiblePredicateExpression, Default : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.DictionaryKeyDefaultValueSubscript: DebugStringConvertiblePredicateExpression
+where Wrapped: DebugStringConvertiblePredicateExpression, Key: DebugStringConvertiblePredicateExpression, Default: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(wrapped.debugString(state: &state))[\(key.debugString(state: &state)), default: \(self.default.debugString(state: &state))]"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.FloatDivision : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.FloatDivision: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) / \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.IntDivision : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.IntDivision: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) / \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.IntRemainder : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.IntRemainder: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) % \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Negation : DebugStringConvertiblePredicateExpression where Wrapped : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Negation: DebugStringConvertiblePredicateExpression where Wrapped: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "!\(wrapped.debugString(state: &state))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.NilCoalesce : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.NilCoalesce: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "(\(lhs.debugString(state: &state)) ?? \(rhs.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.NilLiteral : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.NilLiteral: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "nil"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.RangeExpressionContains : DebugStringConvertiblePredicateExpression where RangeExpression : DebugStringConvertiblePredicateExpression, Element : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.RangeExpressionContains: DebugStringConvertiblePredicateExpression where RangeExpression: DebugStringConvertiblePredicateExpression, Element: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(range.debugString(state: &state)).contains(\(element.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.SequenceContains : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.SequenceContains: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(sequence.debugString(state: &state)).contains(\(element.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.SequenceStartsWith : DebugStringConvertiblePredicateExpression where Base : DebugStringConvertiblePredicateExpression, Prefix : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.SequenceStartsWith: DebugStringConvertiblePredicateExpression where Base: DebugStringConvertiblePredicateExpression, Prefix: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(base.debugString(state: &state)).starts(with: \(prefix.debugString(state: &state)))"
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.SequenceContainsWhere : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.SequenceContainsWhere: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         state.setupVariable(variable.key)
         return """
@@ -356,7 +361,7 @@ extension PredicateExpressions.SequenceContainsWhere : DebugStringConvertiblePre
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.SequenceAllSatisfy : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.SequenceAllSatisfy: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         state.setupVariable(variable.key)
         return """
@@ -368,7 +373,7 @@ extension PredicateExpressions.SequenceAllSatisfy : DebugStringConvertiblePredic
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Filter : DebugStringConvertiblePredicateExpression where LHS : DebugStringConvertiblePredicateExpression, RHS : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.Filter: DebugStringConvertiblePredicateExpression where LHS: DebugStringConvertiblePredicateExpression, RHS: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         state.setupVariable(variable.key)
         return """
@@ -381,7 +386,7 @@ extension PredicateExpressions.Filter : DebugStringConvertiblePredicateExpressio
 
 #if compiler(>=5.11)
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension PredicateExpressions.StringContainsRegex : DebugStringConvertiblePredicateExpression where Subject : DebugStringConvertiblePredicateExpression, Regex : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.StringContainsRegex: DebugStringConvertiblePredicateExpression where Subject: DebugStringConvertiblePredicateExpression, Regex: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(subject.debugString(state: &state)).contains(\(regex.debugString(state: &state)))"
     }
@@ -389,7 +394,7 @@ extension PredicateExpressions.StringContainsRegex : DebugStringConvertiblePredi
 #endif
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension PredicateExpressions.ExpressionEvaluate : DebugStringConvertiblePredicateExpression where Transformation : DebugStringConvertiblePredicateExpression, repeat each Input : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.ExpressionEvaluate: DebugStringConvertiblePredicateExpression where Transformation: DebugStringConvertiblePredicateExpression, repeat each Input: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         var inputStrings: [String] = []
         repeat inputStrings.append((each input).debugString(state: &state))
@@ -400,7 +405,7 @@ extension PredicateExpressions.ExpressionEvaluate : DebugStringConvertiblePredic
 #if FOUNDATION_FRAMEWORK
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.PredicateEvaluate : DebugStringConvertiblePredicateExpression where Condition : DebugStringConvertiblePredicateExpression, repeat each Input : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.PredicateEvaluate: DebugStringConvertiblePredicateExpression where Condition: DebugStringConvertiblePredicateExpression, repeat each Input: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         var inputStrings: [String] = []
         repeat inputStrings.append((each input).debugString(state: &state))
@@ -409,7 +414,7 @@ extension PredicateExpressions.PredicateEvaluate : DebugStringConvertiblePredica
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.StringCaseInsensitiveCompare : DebugStringConvertiblePredicateExpression where Root : DebugStringConvertiblePredicateExpression, Other : DebugStringConvertiblePredicateExpression {
+extension PredicateExpressions.StringCaseInsensitiveCompare: DebugStringConvertiblePredicateExpression where Root: DebugStringConvertiblePredicateExpression, Other: DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(root.debugString(state: &state)).caseInsensitiveCompare(\(other.debugString(state: &state)))"
     }
@@ -439,16 +444,17 @@ private func createDescription<each Input, Output>(variable: repeat PredicateExp
     if outputType != Void.self {
         outputTypeName = ", \(_typeName(outputType))"
     }
-    result.append("""
-                    \(typeName)<\(inputTypeNames)\(outputTypeName)> { \(variableNames) in
-                        \(converted.indentedWithinClosure())
-                    }
-                    """)
+    result.append(
+        """
+        \(typeName)<\(inputTypeNames)\(outputTypeName)> { \(variableNames) in
+            \(converted.indentedWithinClosure())
+        }
+        """)
     return result
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension Predicate : CustomStringConvertible {
+extension Predicate: CustomStringConvertible {
     @_optimize(none) // Work around swift optimizer crash (rdar://124533887)
     public var description: String {
         createDescription(variable: repeat each variable, expression: expression, typeName: "Predicate")
@@ -456,14 +462,14 @@ extension Predicate : CustomStringConvertible {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Expression : CustomStringConvertible {
+extension Expression: CustomStringConvertible {
     public var description: String {
         createDescription(variable: repeat each variable, expression: expression, typeName: "Expression", outputType: Output.self)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension Predicate : CustomDebugStringConvertible {
+extension Predicate: CustomDebugStringConvertible {
     public var debugDescription: String {
         var variableDesc: [String] = []
         repeat variableDesc.append((each variable).description)
@@ -472,7 +478,7 @@ extension Predicate : CustomDebugStringConvertible {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Expression : CustomDebugStringConvertible {
+extension Expression: CustomDebugStringConvertible {
     public var debugDescription: String {
         var variableDesc: [String] = []
         repeat variableDesc.append((each variable).description)

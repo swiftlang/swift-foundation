@@ -134,7 +134,7 @@ extension OutputBuffer<UInt8> /* where T: BitwiseCopyable */ {
         of value: borrowing Value, as: Value.Type
     ) {
         precondition(_isPOD(Value.self))
-        let (q,r) = MemoryLayout<Value>.stride.quotientAndRemainder(
+        let (q, r) = MemoryLayout<Value>.stride.quotientAndRemainder(
             dividingBy: MemoryLayout<T>.stride
         )
         precondition(

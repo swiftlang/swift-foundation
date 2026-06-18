@@ -13,21 +13,21 @@
 internal import _FoundationCShims
 internal import Synchronization
 
-private let plistBytes : StaticString = "plist"
-private let arrayBytes : StaticString = "array"
-private let dictBytes : StaticString = "dict"
-private let keyBytes : StaticString = "key"
-private let stringBytes : StaticString = "string"
-private let dataBytes : StaticString = "data"
-private let dateBytes : StaticString = "date"
-private let realBytes : StaticString = "real"
-private let integerBytes : StaticString = "integer"
-private let trueBytes : StaticString = "true"
-private let falseBytes : StaticString = "false"
+private let plistBytes: StaticString = "plist"
+private let arrayBytes: StaticString = "array"
+private let dictBytes: StaticString = "dict"
+private let keyBytes: StaticString = "key"
+private let stringBytes: StaticString = "string"
+private let dataBytes: StaticString = "data"
+private let dateBytes: StaticString = "date"
+private let realBytes: StaticString = "real"
+private let integerBytes: StaticString = "integer"
+private let trueBytes: StaticString = "true"
+private let falseBytes: StaticString = "false"
 
-private let docType : StaticString = "DOCTYPE"
-private let cdSect : StaticString = "<![CDATA["
-private let cfuid : StaticString = "CF$UID"
+private let docType: StaticString = "DOCTYPE"
+private let cdSect: StaticString = "<![CDATA["
+private let cfuid: StaticString = "CF$UID"
 
 enum XMLPlistTag {
     case plist
@@ -43,90 +43,90 @@ enum XMLPlistTag {
     case `false`
 
     @inline(__always)
-    func withTagUTF8<T>( _ handler: (_ bytePtr: UnsafePointer<UInt8>, _ length: Int) -> T ) -> T {
+    func withTagUTF8<T>(_ handler: (_ bytePtr: UnsafePointer<UInt8>, _ length: Int) -> T) -> T {
         switch self {
-            case .plist:
-                return handler(plistBytes.utf8Start, plistBytes.utf8CodeUnitCount)
-            case .array:
-                return handler(arrayBytes.utf8Start, arrayBytes.utf8CodeUnitCount)
-            case .dict:
-                return handler(dictBytes.utf8Start, dictBytes.utf8CodeUnitCount)
-            case .key:
-                return handler(keyBytes.utf8Start, keyBytes.utf8CodeUnitCount)
-            case .string:
-                return handler(stringBytes.utf8Start, stringBytes.utf8CodeUnitCount)
-            case .data:
-                return handler(dataBytes.utf8Start, dataBytes.utf8CodeUnitCount)
-            case .date:
-                return handler(dateBytes.utf8Start, dateBytes.utf8CodeUnitCount)
-            case .real:
-                return handler(realBytes.utf8Start, realBytes.utf8CodeUnitCount)
-            case .integer:
-                return handler(integerBytes.utf8Start, integerBytes.utf8CodeUnitCount)
-            case .true:
-                return handler(trueBytes.utf8Start, trueBytes.utf8CodeUnitCount)
-            case .false:
-                return handler(falseBytes.utf8Start, falseBytes.utf8CodeUnitCount)
+        case .plist:
+            return handler(plistBytes.utf8Start, plistBytes.utf8CodeUnitCount)
+        case .array:
+            return handler(arrayBytes.utf8Start, arrayBytes.utf8CodeUnitCount)
+        case .dict:
+            return handler(dictBytes.utf8Start, dictBytes.utf8CodeUnitCount)
+        case .key:
+            return handler(keyBytes.utf8Start, keyBytes.utf8CodeUnitCount)
+        case .string:
+            return handler(stringBytes.utf8Start, stringBytes.utf8CodeUnitCount)
+        case .data:
+            return handler(dataBytes.utf8Start, dataBytes.utf8CodeUnitCount)
+        case .date:
+            return handler(dateBytes.utf8Start, dateBytes.utf8CodeUnitCount)
+        case .real:
+            return handler(realBytes.utf8Start, realBytes.utf8CodeUnitCount)
+        case .integer:
+            return handler(integerBytes.utf8Start, integerBytes.utf8CodeUnitCount)
+        case .true:
+            return handler(trueBytes.utf8Start, trueBytes.utf8CodeUnitCount)
+        case .false:
+            return handler(falseBytes.utf8Start, falseBytes.utf8CodeUnitCount)
         }
     }
 
     @inline(__always)
-    var tagLength : Int {
+    var tagLength: Int {
         switch self {
-            case .plist: return plistBytes.utf8CodeUnitCount
-            case .array: return arrayBytes.utf8CodeUnitCount
-            case .dict: return dictBytes.utf8CodeUnitCount
-            case .key: return keyBytes.utf8CodeUnitCount
-            case .string: return stringBytes.utf8CodeUnitCount
-            case .data: return dataBytes.utf8CodeUnitCount
-            case .date: return dateBytes.utf8CodeUnitCount
-            case .real: return realBytes.utf8CodeUnitCount
-            case .integer: return integerBytes.utf8CodeUnitCount
-            case .true: return trueBytes.utf8CodeUnitCount
-            case .false: return falseBytes.utf8CodeUnitCount
+        case .plist: return plistBytes.utf8CodeUnitCount
+        case .array: return arrayBytes.utf8CodeUnitCount
+        case .dict: return dictBytes.utf8CodeUnitCount
+        case .key: return keyBytes.utf8CodeUnitCount
+        case .string: return stringBytes.utf8CodeUnitCount
+        case .data: return dataBytes.utf8CodeUnitCount
+        case .date: return dateBytes.utf8CodeUnitCount
+        case .real: return realBytes.utf8CodeUnitCount
+        case .integer: return integerBytes.utf8CodeUnitCount
+        case .true: return trueBytes.utf8CodeUnitCount
+        case .false: return falseBytes.utf8CodeUnitCount
         }
     }
 
     var tagName: StaticString {
         switch self {
-            case .plist: return plistBytes
-            case .array: return arrayBytes
-            case .dict: return dictBytes
-            case .key: return keyBytes
-            case .string: return stringBytes
-            case .data: return dataBytes
-            case .date: return dateBytes
-            case .real: return realBytes
-            case .integer: return integerBytes
-            case .true: return trueBytes
-            case .false: return falseBytes
+        case .plist: return plistBytes
+        case .array: return arrayBytes
+        case .dict: return dictBytes
+        case .key: return keyBytes
+        case .string: return stringBytes
+        case .data: return dataBytes
+        case .date: return dateBytes
+        case .real: return realBytes
+        case .integer: return integerBytes
+        case .true: return trueBytes
+        case .false: return falseBytes
         }
     }
 }
 
 typealias XMLPlistMapOffset = Int
 
-class XMLPlistMap : PlistDecodingMap {
-    enum TypeDescriptor : Int {
-        case string  // [marker, count, sourceByteOffset]
-        case key     // [marker, count, sourceByteOffset]
-        case real    // [marker, count, sourceByteOffset]
+class XMLPlistMap: PlistDecodingMap {
+    enum TypeDescriptor: Int {
+        case string // [marker, count, sourceByteOffset]
+        case key // [marker, count, sourceByteOffset]
+        case real // [marker, count, sourceByteOffset]
         case integer // [marker, count, sourceByteOffset]
-        case data    // [marker, count, sourceByteOffset]
-        case date    // [marker, count, sourceByteOffset]
-        case `true`  // [marker]
+        case data // [marker, count, sourceByteOffset]
+        case date // [marker, count, sourceByteOffset]
+        case `true` // [marker]
         case `false` // [marker]
 
-        case array   // [marker, nextSiblingOffset, count, <keys and values>, .collectionEnd]
-        case dict    // [marker, nextSiblingOffset, count, <values>, .collectionEnd]
+        case array // [marker, nextSiblingOffset, count, <keys and values>, .collectionEnd]
+        case dict // [marker, nextSiblingOffset, count, <values>, .collectionEnd]
         case collectionEnd
 
         case nullSentinel // [marker]
         case simpleString // [marker, count, sourceByteOffset]
-        case simpleKey    // [marker, count, sourceByteOffset]
+        case simpleKey // [marker, count, sourceByteOffset]
 
         @inline(__always)
-        var mapMarker : Int {
+        var mapMarker: Int {
             rawValue
         }
 
@@ -157,7 +157,7 @@ class XMLPlistMap : PlistDecodingMap {
         case real(Region)
         case integer(Region)
         case null
-        
+
         case uid // UNUSED by PropertyListDecoder.
     }
 
@@ -165,12 +165,12 @@ class XMLPlistMap : PlistDecodingMap {
         let startOffset: Int
         let count: Int
     }
-    
+
     @inline(__always)
     static var nullValue: Value { .null }
 
-    let mapBuffer : [Int]
-    let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
+    let mapBuffer: [Int]
+    let dataLock: Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
     init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
         self.mapBuffer = mapBuffer
@@ -186,10 +186,10 @@ class XMLPlistMap : PlistDecodingMap {
         }
     }
 
-    var topObject : Value {
+    var topObject: Value {
         loadValue(at: 0)!
     }
-    
+
     @inline(__always)
     func value(from reference: Value) throws -> Value {
         return reference
@@ -197,7 +197,7 @@ class XMLPlistMap : PlistDecodingMap {
 
     @inline(__always)
     func withBuffer<T: ~Copyable, E>(
-      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+        for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
     ) throws(E) -> sending T {
         try dataLock.withLock { state throws(E) in
             return try closure(state.buffer[region], state.buffer)
@@ -213,10 +213,10 @@ class XMLPlistMap : PlistDecodingMap {
             // Allocate an additional byte to ensure we have a trailing NUL byte which is important for cases like a floating point number fragment.
             let (p, c) = state.buffer.withUnsafeRawPointer {
                 pointer, capacity -> (UnsafeRawPointer, Int) in
-                let raw = UnsafeMutableRawPointer.allocate(byteCount: capacity+1, alignment: 1)
+                let raw = UnsafeMutableRawPointer.allocate(byteCount: capacity + 1, alignment: 1)
                 raw.copyMemory(from: pointer, byteCount: capacity)
                 raw.storeBytes(of: UInt8.zero, toByteOffset: capacity, as: UInt8.self)
-                return (.init(raw), capacity+1)
+                return (.init(raw), capacity + 1)
             }
 
             state = (buffer: .init(unsafeBaseAddress: p, count: c), allocation: p)
@@ -233,12 +233,12 @@ class XMLPlistMap : PlistDecodingMap {
         case .dict:
             let count = mapBuffer[mapOffset + 2]
             let objsOffset = mapOffset + 3
-            
+
             // NSKeyedArchiver UIDs are encoded as single element dictionaries with a key of "CF$UID". This is the best time to detect those and return the correct value so that clients aren't tricked into decoding these as [String:Int32].
             if detectUID(dictionaryReferenceCount: count, objectOffset: objsOffset) {
                 return .uid
             }
-            
+
             return .dict(startOffset: objsOffset, count: count)
         case .key, .string, .simpleKey, .simpleString:
             let length = mapBuffer[mapOffset + 1]
@@ -274,12 +274,13 @@ class XMLPlistMap : PlistDecodingMap {
             fatalError("Invalid plist tag value in mapping: \(marker))")
         }
     }
-    
+
     private func detectUID(dictionaryReferenceCount count: Int, objectOffset objsOffset: XMLPlistMapOffset) -> Bool {
         if count == 2,
-           mapBuffer[objsOffset] == TypeDescriptor.simpleKey.mapMarker,
-           mapBuffer[objsOffset + 1] == cfuid.utf8CodeUnitCount {
-            
+            mapBuffer[objsOffset] == TypeDescriptor.simpleKey.mapMarker,
+            mapBuffer[objsOffset + 1] == cfuid.utf8CodeUnitCount
+        {
+
             // OK, we've peeked enough into this first key to justify loading and examining the entire value.
             if case let .string(region, _, _) = loadValue(at: objsOffset) {
                 return self.withBuffer(for: region) { bufferView, _ in
@@ -314,7 +315,7 @@ class XMLPlistMap : PlistDecodingMap {
 
     struct ArrayIterator: PlistArrayIterator {
         var currentOffset: Int
-        let map : XMLPlistMap
+        let map: XMLPlistMap
 
         mutating func next() -> XMLPlistMap.Value? {
             guard let next = peek() else {
@@ -342,7 +343,7 @@ class XMLPlistMap : PlistDecodingMap {
 
     struct DictionaryIterator: PlistDictionaryIterator {
         var currentOffset: Int
-        let map : XMLPlistMap
+        let map: XMLPlistMap
 
         mutating func next() -> (key: XMLPlistMap.Value, value: XMLPlistMap.Value)? {
             let keyOffset = currentOffset
@@ -364,24 +365,24 @@ class XMLPlistMap : PlistDecodingMap {
 }
 
 internal let dataDecodeTable =
-[
-    /* 000 */ -1, -1, -1, -1, -1, -1, -1, -1,
-    /* 010 */ -1, -1, -1, -1, -1, -1, -1, -1,
-    /* 020 */ -1, -1, -1, -1, -1, -1, -1, -1,
-    /* 030 */ -1, -1, -1, -1, -1, -1, -1, -1,
-    /* ' ' */ -1, -1, -1, -1, -1, -1, -1, -1,
-    /* '(' */ -1, -1, -1, 62, -1, -1, -1, 63,
-    /* '0' */ 52, 53, 54, 55, 56, 57, 58, 59,
-    /* '8' */ 60, 61, -1, -1, -1,  0, -1, -1,
-    /* '@' */ -1,  0,  1,  2,  3,  4,  5,  6,
-    /* 'H' */  7,  8,  9, 10, 11, 12, 13, 14,
-    /* 'P' */ 15, 16, 17, 18, 19, 20, 21, 22,
-    /* 'X' */ 23, 24, 25, -1, -1, -1, -1, -1,
-    /* '`' */ -1, 26, 27, 28, 29, 30, 31, 32,
-    /* 'h' */ 33, 34, 35, 36, 37, 38, 39, 40,
-    /* 'p' */ 41, 42, 43, 44, 45, 46, 47, 48,
-    /* 'x' */ 49, 50, 51, -1, -1, -1, -1, -1
-]
+    [
+        /* 000 */ -1, -1, -1, -1, -1, -1, -1, -1,
+        /* 010 */ -1, -1, -1, -1, -1, -1, -1, -1,
+        /* 020 */ -1, -1, -1, -1, -1, -1, -1, -1,
+        /* 030 */ -1, -1, -1, -1, -1, -1, -1, -1,
+        /* ' ' */ -1, -1, -1, -1, -1, -1, -1, -1,
+        /* '(' */ -1, -1, -1, 62, -1, -1, -1, 63,
+        /* '0' */ 52, 53, 54, 55, 56, 57, 58, 59,
+        /* '8' */ 60, 61, -1, -1, -1, 0, -1, -1,
+        /* '@' */ -1, 0, 1, 2, 3, 4, 5, 6,
+        /* 'H' */ 7, 8, 9, 10, 11, 12, 13, 14,
+        /* 'P' */ 15, 16, 17, 18, 19, 20, 21, 22,
+        /* 'X' */ 23, 24, 25, -1, -1, -1, -1, -1,
+        /* '`' */ -1, 26, 27, 28, 29, 30, 31, 32,
+        /* 'h' */ 33, 34, 35, 36, 37, 38, 39, 40,
+        /* 'p' */ 41, 42, 43, 44, 45, 46, 47, 48,
+        /* 'x' */ 49, 50, 51, -1, -1, -1, -1, -1,
+    ]
 
 extension XMLPlistMap.Value {
     func dataValue(in map: XMLPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Data {
@@ -456,7 +457,8 @@ extension XMLPlistMap.Value {
                 reader.advance(2)
 
                 guard let dig1 = ch1.digitValue,
-                      let dig2 = ch2.digitValue else {
+                    let dig2 = ch2.digitValue
+                else {
                     return nil
                 }
 
@@ -470,7 +472,8 @@ extension XMLPlistMap.Value {
 
             var year = 0
             while let ch = reader.peek(),
-                  let curDigit = ch.digitValue {
+                let curDigit = ch.digitValue
+            {
                 let overflow: Bool
                 let overflow2: Bool
                 (year, overflow) = year.multipliedReportingOverflow(by: 10)
@@ -488,7 +491,7 @@ extension XMLPlistMap.Value {
                 reader.advance()
             }
 
-            let month : Int
+            let month: Int
             if !badForm, let m = read2DigitNumber(), reader.peek() == ._minus {
                 month = m
             } else {
@@ -497,7 +500,7 @@ extension XMLPlistMap.Value {
             }
             if !badForm { reader.advance() }
 
-            let day : Int
+            let day: Int
             if !badForm, let d = read2DigitNumber(), reader.peek() == UInt8(ascii: "T") {
                 day = d
             } else {
@@ -506,7 +509,7 @@ extension XMLPlistMap.Value {
             }
             if !badForm { reader.advance() }
 
-            let hour : Int
+            let hour: Int
             if !badForm, let h = read2DigitNumber(), reader.peek() == ._colon {
                 hour = h
             } else {
@@ -515,7 +518,7 @@ extension XMLPlistMap.Value {
             }
             if !badForm { reader.advance() }
 
-            let minute : Int
+            let minute: Int
             if !badForm, let m = read2DigitNumber(), reader.peek() == ._colon {
                 minute = m
             } else {
@@ -524,7 +527,7 @@ extension XMLPlistMap.Value {
             }
             if !badForm { reader.advance() }
 
-            let second : Int
+            let second: Int
             if !badForm, let s = read2DigitNumber(), reader.peek() == UInt8(ascii: "Z") {
                 second = s
             } else {
@@ -636,13 +639,14 @@ extension XMLPlistMap.Value {
             return value
         }
     }
-    
+
     private static func parseSpecialRealValue<T: BinaryFloatingPoint>(_ bytes: BufferView<UInt8>, fullSource: BufferView<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T? {
         let specialValue: T? = try bytes.withUnsafeBufferPointer { buf in
             switch (buf.first, buf.count) {
             case (UInt8(ascii: "n"), 3), (UInt8(ascii: "N"), 3):
                 if (buf[1] == UInt8(ascii: "a") || buf[1] == UInt8(ascii: "A")),
-                   (buf[2] == UInt8(ascii: "n") || buf[2] == UInt8(ascii: "N")) {
+                    (buf[2] == UInt8(ascii: "n") || buf[2] == UInt8(ascii: "N"))
+                {
                     return .nan
                 }
             case (UInt8(ascii: "+"), 9):
@@ -651,8 +655,9 @@ extension XMLPlistMap.Value {
                 }
             case (UInt8(ascii: "+"), 4):
                 if (buf[1] == UInt8(ascii: "i") || buf[1] == UInt8(ascii: "I")),
-                   (buf[2] == UInt8(ascii: "n") || buf[2] == UInt8(ascii: "N")),
-                   (buf[3] == UInt8(ascii: "f") || buf[3] == UInt8(ascii: "F")) {
+                    (buf[2] == UInt8(ascii: "n") || buf[2] == UInt8(ascii: "N")),
+                    (buf[3] == UInt8(ascii: "f") || buf[3] == UInt8(ascii: "F"))
+                {
                     return .infinity
                 }
             case (UInt8(ascii: "-"), 9):
@@ -661,8 +666,9 @@ extension XMLPlistMap.Value {
                 }
             case (UInt8(ascii: "-"), 4):
                 if (buf[1] == UInt8(ascii: "i") || buf[1] == UInt8(ascii: "I")),
-                   (buf[2] == UInt8(ascii: "n") || buf[2] == UInt8(ascii: "N")),
-                   (buf[3] == UInt8(ascii: "f") || buf[3] == UInt8(ascii: "F")) {
+                    (buf[2] == UInt8(ascii: "n") || buf[2] == UInt8(ascii: "N")),
+                    (buf[3] == UInt8(ascii: "f") || buf[3] == UInt8(ascii: "F"))
+                {
                     return .infinity * -1
                 }
             case (UInt8(ascii: "i"), 8), (UInt8(ascii: "I"), 8):
@@ -679,11 +685,10 @@ extension XMLPlistMap.Value {
         }
         return specialValue
     }
-    
+
     private static func rejectHexadecimalValues(_ bytes: BufferView<UInt8>, fullSource: BufferView<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws {
         var looksLikeHex = false
-        Loop:
-        for byte in bytes {
+        Loop: for byte in bytes {
             switch byte {
             case ._plus, ._minus, ._space, ._tab, ._newline, ._return, UInt8(ascii: "0"): // Skip all these.
                 continue
@@ -700,7 +705,7 @@ extension XMLPlistMap.Value {
             throw DecodingError._dataCorrupted("Encountered misformatted real on line \(reader.lineNumber)", for: codingPathNode, additionalKey)
         }
     }
-    
+
     func realValue<T: BinaryFloatingPoint & Sendable>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         if case .integer = self {
             if let uintValue = try? self.integerValue(in: map, as: UInt64.self, for: codingPathNode, additionalKey) {
@@ -713,10 +718,10 @@ extension XMLPlistMap.Value {
         guard case let .real(region) = self else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: type, reality: self)
         }
-        
+
         return try map.withBuffer(for: region) { bytes, fullSource in
             // NOTE: The historical XML plist parsing code used to parse the contents of a <real> tag exactly like a string, CDATA sections and all, and then convert that parsed string to a real value. We no longer do that, because it's wrong.
-            
+
             // Try parsing special values that XML plist accepts that strto* does not.
             if let specialValue: T = try Self.parseSpecialRealValue(bytes, fullSource: fullSource, for: codingPathNode, additionalKey) {
                 return specialValue
@@ -724,10 +729,10 @@ extension XMLPlistMap.Value {
 
             // strto* accepts hexadecimal values, where are not valid in plist. We check for and reject these.
             try Self.rejectHexadecimalValues(bytes, fullSource: fullSource, for: codingPathNode, additionalKey)
-            
+
             return try bytes.withUnsafePointer { ptr, count in
-                var parseEndPtr : UnsafeMutablePointer<CChar>?
-                let res : T
+                var parseEndPtr: UnsafeMutablePointer<CChar>?
+                let res: T
                 if MemoryLayout<T>.size == MemoryLayout<Float>.size {
                     res = T(Platform.strtof_clocale(ptr, &parseEndPtr))
                 } else if MemoryLayout<T>.size == MemoryLayout<Double>.size {
@@ -763,11 +768,11 @@ extension XMLPlistMap.Value: DecodingErrorValueTypeDebugStringConvertible {
 }
 
 internal struct XMLPlistScanner {
-    var reader : BufferReader
+    var reader: BufferReader
     var partialMapData = PartialMapData()
 
     struct PartialMapData {
-        var mapData : [Int] = []
+        var mapData: [Int] = []
         var prevMapDataSize = 0
 
         mutating func resizeIfNecessary(with reader: BufferReader) {
@@ -778,7 +783,7 @@ internal struct XMLPlistScanner {
                 let totalBytes = reader.bytes.count
                 let consumedBytes = reader.byteOffset(at: reader.readIndex)
                 let ratio = (Double(totalBytes) / Double(consumedBytes))
-                let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
+                let totalExpectedMapSize = Int(Double(mapData.count) * ratio)
                 if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
                     mapData.reserveCapacity(totalExpectedMapSize)
                     prevMapDataSize = totalExpectedMapSize
@@ -848,7 +853,7 @@ internal struct XMLPlistScanner {
             guard shouldBeOpenAngle == ._openangle else {
                 throw XMLPlistError.unexpectedCharacter(shouldBeOpenAngle, line: reader.lineNumber, context: "while looking for open tag")
             }
-            
+
             switch reader.peek() {
             case .none:
                 throw XMLPlistError.unexpectedEndOfFile()
@@ -902,13 +907,13 @@ internal struct XMLPlistScanner {
     }
 
     @inline(__always)
-    func matches(tag: XMLPlistTag, at location: BufferViewIndex<UInt8>, until endIdx : BufferViewIndex<UInt8>) -> Bool {
+    func matches(tag: XMLPlistTag, at location: BufferViewIndex<UInt8>, until endIdx: BufferViewIndex<UInt8>) -> Bool {
         tag.withTagUTF8 { ptr, len in
             if location.distance(to: endIdx) < len { return false }
             return reader.string(at: location, matches: ptr, length: len)
         }
     }
-    
+
     mutating func readTag() throws -> XMLPlistTag? {
         let marker = reader.readIndex
         var tag: XMLPlistTag?
@@ -956,11 +961,11 @@ internal struct XMLPlistScanner {
         default:
             break
         }
-        
+
         guard let tag else {
             return nil
         }
-        
+
         // Tag names must be delimited either by whitespace or a '>' or `/` character to be valid.
         reader.advance(tag.tagLength)
         switch reader.peek() {
@@ -981,9 +986,9 @@ internal struct XMLPlistScanner {
             let markerStr = String._tryFromUTF8(reader.fullBuffer[tagStart..<idx]) ?? "<unparseable>"
             throw XMLPlistError.other("Encountered unknown tag \(markerStr) on line \(reader.lineNumber)")
         }
-        
+
         // Skip past any characters (whitespace or attributes) that may follow a valid tag name.
-        while let ch = reader.read(), ch != ._closeangle { }
+        while let ch = reader.read(), ch != ._closeangle {}
         if reader.isAtEnd {
             throw XMLPlistError.malformedTag(line: reader.lineNumber)
         }
@@ -1115,14 +1120,14 @@ internal struct XMLPlistScanner {
         }
 
         var mark = start
-        var accumulatedString : String?
+        var accumulatedString: String?
 
-        ReadLoop:
-        while let ch = reader.peek() {
+        ReadLoop: while let ch = reader.peek() {
             switch ch {
             case ._openangle:
                 guard let (_, couldBeExclamation) = reader.peek(),
-                      couldBeExclamation == ._exclamation else {
+                    couldBeExclamation == ._exclamation
+                else {
                     // This is either EOF, which is handled later, or the close tag of the string.
                     break ReadLoop
                 }
@@ -1132,13 +1137,13 @@ internal struct XMLPlistScanner {
                 // Accumulate enumerated section so far.
                 if accumulatedString == nil {
                     if generate {
-                        accumulatedString = String._tryFromUTF8(reader.fullBuffer[mark ..< reader.readIndex])
+                        accumulatedString = String._tryFromUTF8(reader.fullBuffer[mark..<reader.readIndex])
                         if accumulatedString == nil {
                             throw XMLPlistError.cannotConvertToUTF8
                         }
                     }
                 } else {
-                    guard let newSubstring = String._tryFromUTF8(reader.fullBuffer[mark ..< reader.readIndex]) else {
+                    guard let newSubstring = String._tryFromUTF8(reader.fullBuffer[mark..<reader.readIndex]) else {
                         throw XMLPlistError.cannotConvertToUTF8
                     }
                     accumulatedString! += newSubstring
@@ -1151,13 +1156,13 @@ internal struct XMLPlistScanner {
                 // Accumulate enumerated section so far.
                 if accumulatedString == nil {
                     if generate {
-                        accumulatedString = String._tryFromUTF8(reader.fullBuffer[mark ..< reader.readIndex])
+                        accumulatedString = String._tryFromUTF8(reader.fullBuffer[mark..<reader.readIndex])
                         if accumulatedString == nil {
                             throw XMLPlistError.cannotConvertToUTF8
                         }
                     }
                 } else {
-                    guard let newSubstring = String._tryFromUTF8(reader.fullBuffer[mark ..< reader.readIndex]) else {
+                    guard let newSubstring = String._tryFromUTF8(reader.fullBuffer[mark..<reader.readIndex]) else {
                         throw XMLPlistError.cannotConvertToUTF8
                     }
                     accumulatedString! += newSubstring
@@ -1172,13 +1177,13 @@ internal struct XMLPlistScanner {
 
         if generate {
             if accumulatedString == nil {
-                guard let string = String._tryFromUTF8(reader.fullBuffer[start ..< reader.readIndex]) else {
+                guard let string = String._tryFromUTF8(reader.fullBuffer[start..<reader.readIndex]) else {
                     throw XMLPlistError.cannotConvertToUTF8
                 }
                 return (start, reader.readIndex, string, isNull: false, isSimple: true)
             } else {
                 if reader.readIndex > mark {
-                    guard let newSubstring = String._tryFromUTF8(reader.fullBuffer[mark ..< reader.readIndex]) else {
+                    guard let newSubstring = String._tryFromUTF8(reader.fullBuffer[mark..<reader.readIndex]) else {
                         throw XMLPlistError.cannotConvertToUTF8
                     }
                     accumulatedString! += newSubstring
@@ -1233,7 +1238,7 @@ internal struct XMLPlistScanner {
                 // Found the end!
                 // TODO: CDATA sections should only contain valid XML character values. The original implementation allowed arbitrary data interpreted as UTF-8, as does this. Control characters and other arbitrary binary data (which might be interpreted successfully as UTF-8) is supposed to be rejected.
                 if string != nil {
-                    guard let sectionString = String._tryFromUTF8(reader.fullBuffer[begin ..< reader.readIndex]) else {
+                    guard let sectionString = String._tryFromUTF8(reader.fullBuffer[begin..<reader.readIndex]) else {
                         throw XMLPlistError.cannotConvertToUTF8
                     }
                     string!.append(sectionString)
@@ -1256,11 +1261,12 @@ internal struct XMLPlistScanner {
             throw XMLPlistError.unexpectedEndOfFile()
         }
 
-        var parsedScalar : UnicodeScalar
+        var parsedScalar: UnicodeScalar
         switch reader.peek() {
         case UInt8(ascii: "l"), UInt8(ascii: "g"): // "lt", "gt"
             guard let (ch1, ch2, ch3) = reader.peek(),
-                  ch2 == UInt8(ascii: "t"), ch3 == ._semicolon else {
+                ch2 == UInt8(ascii: "t"), ch3 == ._semicolon
+            else {
                 throw XMLPlistError.unknownEscape(line: reader.lineNumber)
             }
             parsedScalar = UnicodeScalar((ch1 == UInt8(ascii: "l")) ? ._openangle : ._closeangle)
@@ -1293,7 +1299,7 @@ internal struct XMLPlistScanner {
         }
         string?.unicodeScalars.append(parsedScalar)
     }
-    
+
     static func parseNumericEntityReference(reader: inout BufferReader, string: inout String?) throws -> UnicodeScalar {
         var isHex = false
         if reader.peek() == UInt8(ascii: "x") {
@@ -1335,8 +1341,8 @@ internal struct XMLPlistScanner {
         }
         throw XMLPlistError.unexpectedEndOfFile()
     }
-        
-    mutating func scanArray() throws  {
+
+    mutating func scanArray() throws {
         var count = 0
         let startOffset = partialMapData.recordStartCollection(tagType: .array, with: reader)
         defer {
@@ -1395,8 +1401,9 @@ internal struct XMLPlistScanner {
             case UInt8._exclamation:
                 // Comment or DTD
                 if let (_, ch2, ch3) = reader.peek(),
-                   ch2 == ._minus,
-                   ch3 == ._minus {
+                    ch2 == ._minus,
+                    ch3 == ._minus
+                {
                     // Skip `--` and set the cursor 1 past the two dashes
                     reader.advance(3)
                     try skipXMLComment()
@@ -1463,7 +1470,7 @@ enum XMLPlistError: Swift.Error, Equatable {
     case cannotConvertToUTF8
     case other(String)
 
-    var debugDescription : String {
+    var debugDescription: String {
         switch self {
         case .unexpectedEndOfFile(let context):
             if let context {
@@ -1491,9 +1498,11 @@ enum XMLPlistError: Swift.Error, Equatable {
     }
 
     var cocoaError: CocoaError {
-        .init(.propertyListReadCorrupt, userInfo: [
-            NSDebugDescriptionErrorKey : self.debugDescription
-        ])
+        .init(
+            .propertyListReadCorrupt,
+            userInfo: [
+                NSDebugDescriptionErrorKey: self.debugDescription
+            ])
     }
 }
 

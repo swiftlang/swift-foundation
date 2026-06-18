@@ -27,7 +27,7 @@ import CRT
 // MARK: - BinaryInteger + Numeric string representation
 
 extension BinaryInteger {
-    
+
     /// Formats `self` in "Numeric string" format (https://speleotrove.com/decimal/daconvs.html)
     /// which is the required input form for certain ICU functions (e.g. `unum_formatDecimal`).
     ///
@@ -53,11 +53,11 @@ internal func numericStringRepresentationForBinaryInteger(words: some Collection
     withUnsafeTemporaryAllocation(of: UInt.self, capacity: words.count) {
         let initializedEndIndex = $0.initialize(fromContentsOf: words)
         let initialized = UnsafeMutableBufferPointer(rebasing: $0[..<initializedEndIndex])
-        
+
         defer {
             initialized.deinitialize()
         }
-        
+
         return numericStringRepresentationForMutableBinaryInteger(words: initialized, isSigned: isSigned)
     }
 }
@@ -77,10 +77,10 @@ private func numericStringRepresentationForMutableBinaryInteger(words: UnsafeMut
     //  Note that negative values are in two's complement form.
     let isLessThanZero = isSigned && Int(bitPattern: magnitude.last ?? .zero) < .zero
     //  The **unsigned** magnitude is formed when the words represent a negative value.
-    if  isLessThanZero {
+    if isLessThanZero {
         formTwosComplementForBinaryInteger(words: magnitude)
     }
-    
+
     let capacity = maxDecimalDigitCountForUnsignedInteger(bitWidth: magnitude.count * UInt.bitWidth) + (isLessThanZero ? 1 : 0)
     return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: capacity) {
         // We rebase $0 because capacity <= $0.count.
@@ -91,28 +91,28 @@ private func numericStringRepresentationForMutableBinaryInteger(words: UnsafeMut
         defer {
             ascii.deinitialize()
         }
-        
+
         // We get decimal digits in chunks as we divide the magnitude by pow(10,radix.exponent).
         // We then extract the decimal digits from each chunk by repeatedly dividing them by 10.
         let radix: (exponent: Int, power: UInt) = maxDecimalExponentAndPowerForUnsignedIntegerWord()
-        
+
         var chunkIndex = ascii.endIndex // The index of the current iteration's chunk.
         var writeIndex = ascii.endIndex // The index of the last character we encoded.
-        
+
         dividing: while true {
             // Mutating division prevents unnecessary big integer allocations.
             var chunk = formQuotientWithRemainderForUnsignedInteger(words: magnitude, dividingBy: radix.power)
             // We trim the magnitude's most significant zeros for flexible-width performance and to end the loop.
-            magnitude = .init(rebasing: magnitude[..<magnitude[...].reversed().drop(while:{ $0 == .zero }).startIndex.base])
+            magnitude = .init(rebasing: magnitude[..<magnitude[...].reversed().drop(while: { $0 == .zero }).startIndex.base])
             // We write the chunk's decimal digits to the buffer. Note that chunk < radix.power.
             repeat {
-                
+
                 let digit: UInt
-                (chunk,digit) = chunk.quotientAndRemainder(dividingBy: 10)
+                (chunk, digit) = chunk.quotientAndRemainder(dividingBy: 10)
                 precondition(writeIndex > ascii.startIndex, "the buffer must accommodate the magnitude's decimal digits")
                 ascii.formIndex(before: &writeIndex)
                 ascii[writeIndex] = UInt8(ascii: "0") &+ UInt8(truncatingIfNeeded: digit)
-                
+
             } while chunk != .zero
             // We break the loop when every decimal digit has been encoded.
             if magnitude.isEmpty { break }
@@ -121,17 +121,19 @@ private func numericStringRepresentationForMutableBinaryInteger(words: UnsafeMut
             // Set the next iterations's index in case this one ended in zeros. Note that zeros are pre-initialized.
             writeIndex = chunkIndex
         }
-        
+
         //  Add a minus sign to negative values.
-        if  isLessThanZero {
+        if isLessThanZero {
             precondition(writeIndex > ascii.startIndex, "must add 1 to the buffer's capacity for integers less than zero")
             ascii.formIndex(before: &writeIndex)
             ascii[writeIndex] = UInt8(ascii: "-")
         }
-        
+
         // We copy the sequence from the last character we encoded.
         let result = UnsafeBufferPointer(rebasing: ascii[writeIndex...])
-        return String(unsafeUninitializedCapacity: result.count) { _ = $0.initialize(fromContentsOf: result); return result.count }
+        return String(unsafeUninitializedCapacity: result.count) {
+            _ = $0.initialize(fromContentsOf: result); return result.count
+        }
     }
 }
 
@@ -170,15 +172,15 @@ private func maxDecimalDigitCountForUnsignedInteger(bitWidth: Int) -> Int {
 ///
 private func maxDecimalExponentAndPowerForUnsignedIntegerWord() -> (exponent: Int, power: UInt) {
     var exponent: Int = 1, power: UInt = 10
-    
+
     while true {
         let next = power.multipliedReportingOverflow(by: 10)
-        if  next.overflow { break }
-        
+        if next.overflow { break }
+
         exponent += 1
         power = next.partialValue
     }
-    
+
     return (exponent: exponent, power: power)
 }
 
@@ -187,7 +189,7 @@ private func maxDecimalExponentAndPowerForUnsignedIntegerWord() -> (exponent: In
 /// - Parameter words: A binary integer's mutable words.
 ///
 private func formTwosComplementForBinaryInteger(words: UnsafeMutableBufferPointer<UInt>) {
-    var carry =  true
+    var carry = true
     for index in words.indices {
         (words[index], carry) = (~words[index]).addingReportingOverflow(carry ? 1 : 0)
     }
@@ -203,11 +205,10 @@ private func formTwosComplementForBinaryInteger(words: UnsafeMutableBufferPointe
 ///
 private func formQuotientWithRemainderForUnsignedInteger(words dividend: UnsafeMutableBufferPointer<UInt>, dividingBy divisor: UInt) -> UInt {
     var remainder = UInt.zero
-    
+
     for index in dividend.indices.reversed() {
         (dividend[index], remainder) = divisor.dividingFullWidth((high: remainder, low: dividend[index]))
     }
-    
+
     return remainder
 }
-

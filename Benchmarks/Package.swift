@@ -15,20 +15,20 @@ enum UsePackage {
 
     var description: String {
         switch self {
-            case .useGitHubPackage:
-                return "Using GitHub package"
-            case .useLocalPackage(let root):
-                #if os(macOS)
-                    return "Using local package checkout at \(root)/swift-foundation"
-                #else
-                    return "Using local package checkout at \(root)/swift-corelibs-foundation"
-                #endif
-            case .useToolchain:
-                #if os(macOS)
-                    return "Using system Foundation.framework"
-                #else
-                    return "Using toolchain Foundation"
-                #endif
+        case .useGitHubPackage:
+            return "Using GitHub package"
+        case .useLocalPackage(let root):
+            #if os(macOS)
+            return "Using local package checkout at \(root)/swift-foundation"
+            #else
+            return "Using local package checkout at \(root)/swift-corelibs-foundation"
+            #endif
+        case .useToolchain:
+            #if os(macOS)
+            return "Using system Foundation.framework"
+            #else
+            return "Using toolchain Foundation"
+            #endif
         }
     }
 }
@@ -51,42 +51,42 @@ print("swift-foundation benchmarks: \(usePackage.description)")
 
 // ------------
 
-var packageDependency : [Package.Dependency] = [
+var packageDependency: [Package.Dependency] = [
     Context.environment["BENCHMARK_DISABLE_JEMALLOC"] != nil
         ? .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1", traits: [])
         : .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1")
 ]
-var targetDependency : [Target.Dependency] = [.product(name: "Benchmark", package: "package-benchmark")]
-var i18nTargetDependencies : [Target.Dependency] = []
-var swiftSettings : [SwiftSetting] = [.unsafeFlags(["-Rmodule-loading"]), .enableUpcomingFeature("MemberImportVisibility")]
+var targetDependency: [Target.Dependency] = [.product(name: "Benchmark", package: "package-benchmark")]
+var i18nTargetDependencies: [Target.Dependency] = []
+var swiftSettings: [SwiftSetting] = [.unsafeFlags(["-Rmodule-loading"]), .enableUpcomingFeature("MemberImportVisibility")]
 
 switch usePackage {
-    case .useLocalPackage(let root):
-        #if os(macOS)
-            packageDependency.append(.package(name: "foundation-local", path: "\(root)/swift-foundation"))
-            targetDependency.append(.product(name: "FoundationEssentials", package: "foundation-local"))
-            targetDependency.append(.product(name: "FoundationInternationalization", package: "foundation-local"))
-        #else
-            packageDependency.append(.package(name: "foundation-local", path: "\(root)/swift-corelibs-foundation"))
-            // Foundation re-exports FoundationEssentials and FoundationInternationalization
-            targetDependency.append(.product(name: "Foundation", package: "foundation-local"))
-        #endif
-        swiftSettings.append(.define("USE_PACKAGE"))
+case .useLocalPackage(let root):
+    #if os(macOS)
+    packageDependency.append(.package(name: "foundation-local", path: "\(root)/swift-foundation"))
+    targetDependency.append(.product(name: "FoundationEssentials", package: "foundation-local"))
+    targetDependency.append(.product(name: "FoundationInternationalization", package: "foundation-local"))
+    #else
+    packageDependency.append(.package(name: "foundation-local", path: "\(root)/swift-corelibs-foundation"))
+    // Foundation re-exports FoundationEssentials and FoundationInternationalization
+    targetDependency.append(.product(name: "Foundation", package: "foundation-local"))
+    #endif
+    swiftSettings.append(.define("USE_PACKAGE"))
 
-    case .useGitHubPackage:
-        #if os(macOS)
-            packageDependency.append(.package(url: "https://github.com/apple/swift-foundation", branch: "main"))
-            targetDependency.append(.product(name: "FoundationEssentials", package: "swift-foundation"))
-            targetDependency.append(.product(name: "FoundationInternationalization", package: "swift-foundation"))
-        #else
-            packageDependency.append(.package(url: "https://github.com/apple/swift-corelibs-foundation", branch: "main"))
-            targetDependency.append(.product(name: "Foundation", package: "swift-corelibs-foundation"))
-        #endif
+case .useGitHubPackage:
+    #if os(macOS)
+    packageDependency.append(.package(url: "https://github.com/apple/swift-foundation", branch: "main"))
+    targetDependency.append(.product(name: "FoundationEssentials", package: "swift-foundation"))
+    targetDependency.append(.product(name: "FoundationInternationalization", package: "swift-foundation"))
+    #else
+    packageDependency.append(.package(url: "https://github.com/apple/swift-corelibs-foundation", branch: "main"))
+    targetDependency.append(.product(name: "Foundation", package: "swift-corelibs-foundation"))
+    #endif
 
-        swiftSettings.append(.define("USE_PACKAGE"))
+    swiftSettings.append(.define("USE_PACKAGE"))
 
-    case .useToolchain:
-        break
+case .useToolchain:
+    break
 }
 
 
@@ -215,4 +215,3 @@ let package = Package(
         ),
     ]
 )
-

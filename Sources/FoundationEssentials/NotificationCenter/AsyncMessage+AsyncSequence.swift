@@ -38,7 +38,7 @@ extension NotificationCenter {
     ) -> some AsyncSequence<Message, Never> & Sendable where Identifier.MessageType == Message, Message.Subject: AnyObject {
         return AsyncMessageSequence<Message>(self, subject, limit)
     }
-    
+
     /// Returns an asynchronous sequence of messages produced by this center for a given subject type and identifier.
     /// - Parameters:
     ///   - subject: The metatype to observe all values for a given type.
@@ -52,7 +52,7 @@ extension NotificationCenter {
     ) -> some AsyncSequence<Message, Never> & Sendable where Identifier.MessageType == Message {
         return AsyncMessageSequence<Message>(self, nil, limit)
     }
-    
+
     /// Returns an asynchronous sequence of messages produced by this center for a given subject and message type.
     /// - Parameters:
     ///   - subject: The subject to observe. Specify a metatype to observe all values for a given type.
@@ -73,13 +73,13 @@ extension NotificationCenter {
         let center: NotificationCenter
         nonisolated(unsafe) weak var object: AnyObject?
         let bufferSize: Int
-        
+
         init(_ center: NotificationCenter, _ object: AnyObject?, _ bufferSize: Int) {
             self.center = center
             self.object = object
             self.bufferSize = bufferSize
         }
-        
+
         func makeAsyncIterator() -> AsyncMessageSequenceIterator<Message> {
             return AsyncMessageSequenceIterator(center: center, object: object, bufferSize: bufferSize)
         }
@@ -90,59 +90,59 @@ extension NotificationCenter {
     fileprivate final class AsyncMessageSequenceIterator<Message: NotificationCenter.AsyncMessage>: AsyncIteratorProtocol, Sendable {
         typealias Element = Message
         typealias Failure = Never
-        
+
         struct State {
             var observer: NotificationCenter.ObservationToken?
             var continuations: [UnsafeContinuation<Message?, Never>] = []
             var buffer = Deque<Message>(minimumCapacity: 1)
             let bufferSize: Int
         }
-        
+
         struct Resumption {
             let message: Message?
             let continuations: [UnsafeContinuation<Message?, Never>]
-            
+
             init(message: Message?, continuation: UnsafeContinuation<Message?, Never>) {
                 self.message = message
                 self.continuations = [continuation]
             }
-            
+
             init(cancelling: [UnsafeContinuation<Message?, Never>]) {
                 self.message = nil
                 self.continuations = cancelling
             }
-            
+
             func resume() {
                 for continuation in continuations {
                     continuation.resume(returning: message)
                 }
             }
         }
-        
+
         let state: Mutex<State>
-        
+
         init(center: NotificationCenter, object: AnyObject?, bufferSize: Int) {
             self.state = Mutex(State(bufferSize: bufferSize))
-            
-#if FOUNDATION_FRAMEWORK
-            let observerBlock: @Sendable (Notification) -> Void =  { [weak self] notification in
+
+            #if FOUNDATION_FRAMEWORK
+            let observerBlock: @Sendable (Notification) -> Void = { [weak self] notification in
                 guard let message: Message = NotificationCenter._messageFromNotification(notification) else { return }
-                
+
                 self?.observationCallback(message)
             }
-#else
-            let observerBlock: @Sendable (Message) -> Void =  { [weak self] message in
+            #else
+            let observerBlock: @Sendable (Message) -> Void = { [weak self] message in
                 self?.observationCallback(message)
             }
-#endif
-            
+            #endif
+
             let token = center._addObserver(Message.name, object: object, using: observerBlock)
 
             self.state.withLock { _state in
                 _state.observer = ObservationToken(center: center, token: token)
             }
         }
-        
+
         deinit {
             teardown()
         }
@@ -155,24 +155,24 @@ extension NotificationCenter {
                 defer { _state.continuations.removeAll(keepingCapacity: false) }
                 return (observer, Resumption(cancelling: _state.continuations))
             }
-            
+
             resumption.resume()
-            
+
             if let observer {
                 observer.remove()
             }
         }
-        
+
         func observationCallback(_ message: Message) {
             state.withLock { _state -> Resumption? in
                 if _state.buffer.count + 1 > _state.bufferSize {
                     _state.buffer.removeFirst()
-#if canImport(os)
+                    #if canImport(os)
                     NotificationCenter.logger.fault("Notification center message dropped due to buffer limit. Check sequence iterator frequently or increase buffer size. Message: \(String(describing: Message.self))")
-#endif
+                    #endif
                 }
                 _state.buffer.append(message)
-                
+
                 if _state.continuations.isEmpty {
                     return nil
                 } else {
@@ -180,7 +180,7 @@ extension NotificationCenter {
                 }
             }?.resume()
         }
-        
+
         func next() async -> Message? {
             await withTaskCancellationHandler {
                 return await withUnsafeContinuation { (continuation: UnsafeContinuation<Message?, Never>) in

@@ -99,18 +99,18 @@ extension NotificationCenter {
     public protocol MainActorMessage: SendableMetatype {
         /// A type which you can optionally post and observe along with this `MainActorMessage`.
         associatedtype Subject
-        
-#if FOUNDATION_FRAMEWORK
+
+        #if FOUNDATION_FRAMEWORK
         /// A optional name corresponding to this type, used to interoperate with notification posters and observers.
         static var name: Notification.Name { get }
-        
+
         /// Converts a posted notification into this main actor message type for any observers.
         ///
         /// To implement this method in your own `MainActorMessage` conformance, retrieve values from the ``Notification``'s ``Notification/userInfo`` and set them as properties on the message.
         /// - Parameter notification: The posted ``Notification``.
         /// - Returns: The converted `MainActorMessage` or `nil` if conversion is not possible.
         @MainActor static func makeMessage(_ notification: Notification) -> Self?
-        
+
         /// Converts a posted main actor message into a notification for any observers.
         ///
         /// To implement this method in your own `MainActorMessage` conformance, use the properties defined by the message to populate the ``Notification``'s ``Notification/userInfo``.
@@ -118,27 +118,27 @@ extension NotificationCenter {
         ///   - message: The posted `MainActorMessage`.
         /// - Returns: The converted ``Notification``.
         @MainActor static func makeNotification(_ message: Self) -> Notification
-#endif
+        #endif
     }
 }
 
 @available(FoundationPreview 6.2, *)
 extension NotificationCenter.MainActorMessage {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @MainActor public static func makeMessage(_ notification: Notification) -> Self? { return nil }
     @MainActor public static func makeNotification(_ message: Self) -> Notification { return Notification(name: Self.name) }
-    
+
     // Default Message name is the fully-qualified type name, suitable when Notification-compatibility isn't needed
     public static var name: Notification.Name {
         // Similar to String(describing:)
         return Notification.Name(rawValue: _typeName(Self.self))
     }
-#else
+    #else
     internal static var name: String {
         // Similar to String(describing:)
         return _typeName(Self.self)
     }
-#endif
+    #endif
 }
 
 @available(FoundationPreview 6.2, *)
@@ -153,12 +153,16 @@ extension NotificationCenter {
     public func addObserver<Identifier: MessageIdentifier, Message: MainActorMessage>(
         of subject: Message.Subject,
         for identifier: Identifier,
-        using observer: @escaping @MainActor (Message) -> Void)
-    -> ObservationToken where Identifier.MessageType == Message,
-                              Message.Subject: AnyObject {
+        using observer: @escaping @MainActor (Message) -> Void
+    )
+        -> ObservationToken
+    where
+        Identifier.MessageType == Message,
+        Message.Subject: AnyObject
+    {
         _addMainActorObserver(subject: subject, observer: observer)
     }
-    
+
     /// Adds an observer to a center for messages delivered on the main actor with a given subject and identifier.
     ///
     /// - Parameters:
@@ -169,11 +173,13 @@ extension NotificationCenter {
     public func addObserver<Identifier: MessageIdentifier, Message: MainActorMessage>(
         of subject: Message.Subject.Type,
         for identifier: Identifier,
-        using observer: @escaping @MainActor (Message) -> Void)
-    -> ObservationToken where Identifier.MessageType == Message {
+        using observer: @escaping @MainActor (Message) -> Void
+    )
+        -> ObservationToken where Identifier.MessageType == Message
+    {
         _addMainActorObserver(subject: nil, observer: observer)
     }
-    
+
     /// Adds an observer to a center for messages delivered on the main actor with a given subject and message type.
     /// - Parameters:
     ///   - subject: The subject to be observed. Specify a metatype to observe all values for a given type.
@@ -183,11 +189,13 @@ extension NotificationCenter {
     public func addObserver<Message: MainActorMessage>(
         of subject: Message.Subject? = nil,
         for messageType: Message.Type,
-        using observer: @escaping @MainActor (Message) -> Void)
-    -> ObservationToken where Message.Subject: AnyObject {
+        using observer: @escaping @MainActor (Message) -> Void
+    )
+        -> ObservationToken where Message.Subject: AnyObject
+    {
         _addMainActorObserver(subject: subject, observer: observer)
     }
-    
+
     /// Posts a given main actor message to the notification center.
     /// - Parameters:
     ///   - message: The message to post.
@@ -198,7 +206,7 @@ extension NotificationCenter {
         MainActor.assertIsolated()
         _post(message: message, subject: subject)
     }
-    
+
     /// Posts a given main actor message to the notification center.
     /// - Parameters:
     ///   - message: The message to post.
@@ -214,22 +222,24 @@ extension NotificationCenter {
         subject: Message.Subject?,
         observer: @escaping @MainActor (Message) -> Void
     ) -> ObservationToken {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         nonisolated(unsafe) let observer = observer
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { notification in
-            nonisolated(unsafe) let notification = notification
-            MainActor.assumeIsolated {
-                if let message: Message = NotificationCenter._messageFromNotification(notification) {
-                    observer(message)
+        return ObservationToken(
+            center: self,
+            token: _addObserver(Message.name, object: subject) { notification in
+                nonisolated(unsafe) let notification = notification
+                MainActor.assumeIsolated {
+                    if let message: Message = NotificationCenter._messageFromNotification(notification) {
+                        observer(message)
+                    }
                 }
-            }
-        })
-#else
+            })
+        #else
         return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: observer))
-#endif
+        #endif
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @MainActor
     fileprivate static func _messageFromNotification<Message: NotificationCenter.MainActorMessage>(_ notification: Notification) -> Message? {
         if let m = notification.userInfo?[NotificationMessageKey.key] as? Message {
@@ -240,27 +250,30 @@ extension NotificationCenter {
             return m
         } else {
             // Notification posted, unable to make a message
-            os_log(.fault, log: _NSRuntimeIssuesLog(), "Unable to deliver Notification to Message observer because \(String(describing: Message.self)).makeMessage() returned nil. If this is unexpected, check or provide an implementation of makeMessage() which returns a non-nil value for this notification's payload.")
+            os_log(
+                .fault, log: _NSRuntimeIssuesLog(),
+                "Unable to deliver Notification to Message observer because \(String(describing: Message.self)).makeMessage() returned nil. If this is unexpected, check or provide an implementation of makeMessage() which returns a non-nil value for this notification's payload."
+            )
             return nil
         }
     }
-#endif
-    
+    #endif
+
     @MainActor
     fileprivate func _post<M: MainActorMessage>(message: M, subject: M.Subject? = nil) {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         var notification = M.makeNotification(message)
 
         notification.name = M.name
         notification.object = subject
-        
+
         var userInfo = notification.userInfo.take() ?? [:]
         userInfo[NotificationMessageKey.key] = message
         notification.userInfo = userInfo
-        
+
         post(notification)
-#else
+        #else
         _post(M.name, subject: subject, message: message)
-#endif
+        #endif
     }
 }

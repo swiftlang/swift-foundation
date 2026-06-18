@@ -21,7 +21,7 @@ extension __DataStorage {
         if range.isEmpty {
             return NSData() // zero length data can be optimized as a singleton
         }
-        
+
         return __NSSwiftData(backing: self, range: range)
     }
 }
@@ -29,10 +29,10 @@ extension __DataStorage {
 // NOTE: older overlays called this _NSSwiftData. The two must
 // coexist, so it was renamed. The old name must not be used in the new
 // runtime.
-internal final class __NSSwiftData : NSData {
+internal final class __NSSwiftData: NSData {
     var _backing: __DataStorage!
     var _range: Range<Data.Index>!
-    
+
     convenience init(backing: __DataStorage, range: Range<Data.Index>) {
         self.init()
         _backing = backing
@@ -41,7 +41,7 @@ internal final class __NSSwiftData : NSData {
     @objc override var length: Int {
         return _range.upperBound - _range.lowerBound
     }
-    
+
     @objc override var bytes: UnsafeRawPointer {
         // NSData's byte pointer methods are not annotated for nullability correctly
         // (but assume non-null by the wrapping macro guards). This placeholder value
@@ -53,30 +53,34 @@ internal final class __NSSwiftData : NSData {
         guard let bytes = _backing.bytes else {
             return UnsafeRawPointer(bitPattern: 0xBAD0)!
         }
-        
+
         return bytes.advanced(by: _range.lowerBound)
     }
-    
+
     @objc override func copy(with zone: NSZone? = nil) -> Any {
         if _backing._copyWillRetain {
             return self
         } else {
             return NSData(bytes: bytes, length: length)
         }
-        
+
     }
-    
+
     @objc override func mutableCopy(with zone: NSZone? = nil) -> Any {
         return NSMutableData(bytes: bytes, length: length)
     }
-    
-    @objc override
-    func _isCompact() -> Bool {
+
+    @objc
+    override
+        func _isCompact() -> Bool
+    {
         return true
     }
-    
-    @objc override
-    func _bridgingCopy(_ bytes: UnsafeMutablePointer<UnsafeRawPointer?>, length: UnsafeMutablePointer<Int>) -> Data? {
+
+    @objc
+    override
+        func _bridgingCopy(_ bytes: UnsafeMutablePointer<UnsafeRawPointer?>, length: UnsafeMutablePointer<Int>) -> Data?
+    {
         fatalError("Unexpected call to __NSSwiftData._bridgingCopy(_:length:)")
     }
 }
@@ -99,14 +103,14 @@ extension Data {
         return _representation._storage.bridgedReference(_representation._slice)
         #endif
     }
-    
+
     internal static func _bridgeFromObjectiveCAdoptingNativeStorageOf(_ source: AnyObject) -> Data? {
         guard object_getClass(source) == __NSSwiftData.self else { return nil }
-        
+
         let swiftData = unsafeDowncast(source, to: __NSSwiftData.self)
         let range = swiftData._range!
         let originalBacking = swiftData._backing!
-        
+
         // (rdar://121865256) We need to make sure that we don't create a new __DataStorage that holds on to the original via the deallocator. If a value is double bridged repeatedly (as is the case in some clients), unwinding in the dealloc can cause a stack overflow. This requires either using the existing __DataStorage, or creating a new one with a copy of the bytes to avoid a deallocator chain.
 
         if range.lowerBound == 0 {

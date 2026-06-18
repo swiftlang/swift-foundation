@@ -51,12 +51,14 @@ private struct DateRelativeFormatStyleTests {
             let tomorrow = Date(timeInterval: oneDay + oneHour * 2, since: now)
             let future = Date(timeInterval: oneDay * 14 + oneHour * 3, since: now)
             let past = Date(timeInterval: -(oneDay * 14 + oneHour * 2), since: now)
-            
+
             #expect(past.formatted(.relative(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named, unitsStyle: .wide).locale(enUSLocale).format(past))
             #expect(tomorrow.formatted(.relative(presentation: .numeric).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .wide).locale(enUSLocale).format(tomorrow))
             #expect(tomorrow.formatted(Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale).format(tomorrow))
-            
-            #expect(past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale).format(past))
+
+            #expect(
+                past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale))
+                    == Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale).format(past))
             #expect(future.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .abbreviated).locale(enUSLocale).format(future))
         }
     }
@@ -127,46 +129,46 @@ private struct DateRelativeFormatStyleTests {
         // "2021-04-30 23:59:59" -> "2021-06-10 12:00:00"
         _verifyStyle(641519999.0, relativeTo: 645019200.0, expected: "2 months ago")
         // "2021-05-01 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(641520000.0, relativeTo: 645019200.0, expected: "last month")  // first moment of the previous month
+        _verifyStyle(641520000.0, relativeTo: 645019200.0, expected: "last month") // first moment of the previous month
         // "2021-05-30 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(644111999.0, relativeTo: 645019200.0, expected: "last week")   // first moment of the previous week, different month
+        _verifyStyle(644111999.0, relativeTo: 645019200.0, expected: "last week") // first moment of the previous week, different month
 
         // "2021-06-01 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644198400.0, relativeTo: 645019200.0, expected: "last week")   // first moment of the previous week, same month
+        _verifyStyle(644198400.0, relativeTo: 645019200.0, expected: "last week") // first moment of the previous week, same month
         // "2021-06-05 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(644630399.0, relativeTo: 645019200.0, expected: "5 days ago")  // last moment of the previous week, but less than 7 days apart, so formatted with day
+        _verifyStyle(644630399.0, relativeTo: 645019200.0, expected: "5 days ago") // last moment of the previous week, but less than 7 days apart, so formatted with day
         // "2021-06-06 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644630400.0, relativeTo: 645019200.0, expected: "4 days ago")  // first moment of this week
+        _verifyStyle(644630400.0, relativeTo: 645019200.0, expected: "4 days ago") // first moment of this week
         // "2021-06-08 10:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644839200.0, relativeTo: 645019200.0, expected: "2 days ago")  // the day before yesterday, but more than 48 hours apart
+        _verifyStyle(644839200.0, relativeTo: 645019200.0, expected: "2 days ago") // the day before yesterday, but more than 48 hours apart
         // "2021-06-08 13:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644850000.0, relativeTo: 645019200.0, expected: "2 days ago")  // the day before yesterday, but less than 48 hours apart
+        _verifyStyle(644850000.0, relativeTo: 645019200.0, expected: "2 days ago") // the day before yesterday, but less than 48 hours apart
         // "2021-06-09 11:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644929200.0, relativeTo: 645019200.0, expected: "yesterday")   // yesterday, but more than 24 hours apart
+        _verifyStyle(644929200.0, relativeTo: 645019200.0, expected: "yesterday") // yesterday, but more than 24 hours apart
         // "2021-06-09 13:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(644936400.0, relativeTo: 645019200.0, expected: "23 hours ago") // yesterday, but less than 24 hours apart
         // "2021-06-11 07:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(645087600.0, relativeTo: 645019200.0, expected: "in 19 hours")  // tomorrow, but less than 24 hours apart
+        _verifyStyle(645087600.0, relativeTo: 645019200.0, expected: "in 19 hours") // tomorrow, but less than 24 hours apart
         // "2021-06-11 23:00:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645145259.0, relativeTo: 645019200.0, expected: "tomorrow")    // tomorrow, but more than 24 hours apart
+        _verifyStyle(645145259.0, relativeTo: 645019200.0, expected: "tomorrow") // tomorrow, but more than 24 hours apart
         // "2021-06-12 11:00:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645188459.0, relativeTo: 645019200.0, expected: "in 2 days")   // the day after tomorrow, but less than 48 hours apart
+        _verifyStyle(645188459.0, relativeTo: 645019200.0, expected: "in 2 days") // the day after tomorrow, but less than 48 hours apart
         // "2021-06-12 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645235199.0, relativeTo: 645019200.0, expected: "in 2 days")   //  the day after tomorrow, but more than 48 hours apart
+        _verifyStyle(645235199.0, relativeTo: 645019200.0, expected: "in 2 days") //  the day after tomorrow, but more than 48 hours apart
         // "2021-06-13 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(645235200.0, relativeTo: 645019200.0, expected: "in 3 days")   // the first moment of the next week, but less than 7 days apart, so formatted with day
+        _verifyStyle(645235200.0, relativeTo: 645019200.0, expected: "in 3 days") // the first moment of the next week, but less than 7 days apart, so formatted with day
         // "2021-06-19 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645839999.0, relativeTo: 645019200.0, expected: "next week")   // the last moment of the next week
+        _verifyStyle(645839999.0, relativeTo: 645019200.0, expected: "next week") // the last moment of the next week
         // "2021-06-20 00:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(645840000.0, relativeTo: 645019200.0, expected: "in 2 weeks")
         // "2021-06-26 23:59:59" -> "2021-06-10 12:00:00"
         _verifyStyle(646444799.0, relativeTo: 645019200.0, expected: "in 2 weeks")
         // "2021-06-30 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(646790399.0, relativeTo: 645019200.0, expected: "in 3 weeks")  // last moment of in the same month
+        _verifyStyle(646790399.0, relativeTo: 645019200.0, expected: "in 3 weeks") // last moment of in the same month
         // "2021-07-01 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(646790400.0, relativeTo: 645019200.0, expected: "in 3 weeks")  // first moment of the next month, but than 4 weeks apart, so it's formatted with week
+        _verifyStyle(646790400.0, relativeTo: 645019200.0, expected: "in 3 weeks") // first moment of the next month, but than 4 weeks apart, so it's formatted with week
         // "2021-07-31 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(649468799.0, relativeTo: 645019200.0, expected: "next month")  // last moment of the next month
+        _verifyStyle(649468799.0, relativeTo: 645019200.0, expected: "next month") // last moment of the next month
         // "2021-08-01 00:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(649468800.0, relativeTo: 645019200.0, expected: "in 2 months")
         // "2021-08-31 23:59:59" -> "2021-06-10 12:00:00"
@@ -229,7 +231,7 @@ private struct DateRelativeFormatStyleTests {
         // "2020-01-01 00:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(599529600.0, relativeTo: 645019200.0, expected: "1 year ago")
         // "2020-06-10 12:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(613483200.0, relativeTo: 645019200.0, expected: "1 year ago")   // exact one year
+        _verifyStyle(613483200.0, relativeTo: 645019200.0, expected: "1 year ago") // exact one year
         // "2020-12-06 12:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(628948800.0, relativeTo: 645019200.0, expected: "6 months ago") // last year, but less than 12 months apart, so formatted with month
         // "2021-01-01 00:00:00" -> "2021-06-10 12:00:00"
@@ -245,45 +247,45 @@ private struct DateRelativeFormatStyleTests {
         // "2021-04-30 23:59:59" -> "2021-06-10 12:00:00"
         _verifyStyle(641519999.0, relativeTo: 645019200.0, expected: "2 months ago")
         // "2021-05-01 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(641520000.0, relativeTo: 645019200.0, expected: "1 month ago")  // first moment of the previous month
+        _verifyStyle(641520000.0, relativeTo: 645019200.0, expected: "1 month ago") // first moment of the previous month
         // "2021-05-30 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(644111999.0, relativeTo: 645019200.0, expected: "1 week ago")   // first moment of the previous week, different month
+        _verifyStyle(644111999.0, relativeTo: 645019200.0, expected: "1 week ago") // first moment of the previous week, different month
         // "2021-06-01 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644198400.0, relativeTo: 645019200.0, expected: "1 week ago")   // first moment of the previous week, same month
+        _verifyStyle(644198400.0, relativeTo: 645019200.0, expected: "1 week ago") // first moment of the previous week, same month
         // "2021-06-05 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(644630399.0, relativeTo: 645019200.0, expected: "5 days ago")  // last moment of the previous week, but less than 7 days apart, so formatted with day
+        _verifyStyle(644630399.0, relativeTo: 645019200.0, expected: "5 days ago") // last moment of the previous week, but less than 7 days apart, so formatted with day
         // "2021-06-06 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644630400.0, relativeTo: 645019200.0, expected: "4 days ago")  // first moment of this week
+        _verifyStyle(644630400.0, relativeTo: 645019200.0, expected: "4 days ago") // first moment of this week
         // "2021-06-08 10:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644839200.0, relativeTo: 645019200.0, expected: "2 days ago")  // the day before yesterday, but more than 48 hours apart
+        _verifyStyle(644839200.0, relativeTo: 645019200.0, expected: "2 days ago") // the day before yesterday, but more than 48 hours apart
         // "2021-06-08 13:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644850000.0, relativeTo: 645019200.0, expected: "2 days ago")  // the day before yesterday, but less than 48 hours apart
+        _verifyStyle(644850000.0, relativeTo: 645019200.0, expected: "2 days ago") // the day before yesterday, but less than 48 hours apart
         // "2021-06-09 11:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(644929200.0, relativeTo: 645019200.0, expected: "1 day ago")   // yesterday, but more than 24 hours apart
+        _verifyStyle(644929200.0, relativeTo: 645019200.0, expected: "1 day ago") // yesterday, but more than 24 hours apart
         // "2021-06-09 13:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(644936400.0, relativeTo: 645019200.0, expected: "23 hours ago") // yesterday, but less than 24 hours apart
         // "2021-06-11 07:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(645087600.0, relativeTo: 645019200.0, expected: "in 19 hours")  // tomorrow, but less than 24 hours apart
+        _verifyStyle(645087600.0, relativeTo: 645019200.0, expected: "in 19 hours") // tomorrow, but less than 24 hours apart
         // "2021-06-11 23:00:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645145259.0, relativeTo: 645019200.0, expected: "in 1 day")    // tomorrow, but more than 24 hours apart
+        _verifyStyle(645145259.0, relativeTo: 645019200.0, expected: "in 1 day") // tomorrow, but more than 24 hours apart
         // "2021-06-12 11:00:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645188459.0, relativeTo: 645019200.0, expected: "in 2 days")   // the day after tomorrow, but less than 48 hours apart
+        _verifyStyle(645188459.0, relativeTo: 645019200.0, expected: "in 2 days") // the day after tomorrow, but less than 48 hours apart
         // "2021-06-12 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645235199.0, relativeTo: 645019200.0, expected: "in 2 days")   // the day after tomorrow, but more than 48 hours apart
+        _verifyStyle(645235199.0, relativeTo: 645019200.0, expected: "in 2 days") // the day after tomorrow, but more than 48 hours apart
         // "2021-06-13 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(645235200.0, relativeTo: 645019200.0, expected: "in 3 days")   // the first moment of the next week, but less than 7 days apart, so formatted with day
+        _verifyStyle(645235200.0, relativeTo: 645019200.0, expected: "in 3 days") // the first moment of the next week, but less than 7 days apart, so formatted with day
         // "2021-06-19 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(645839999.0, relativeTo: 645019200.0, expected: "in 1 week")   // the last moment of the next week
+        _verifyStyle(645839999.0, relativeTo: 645019200.0, expected: "in 1 week") // the last moment of the next week
         // "2021-06-20 00:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(645840000.0, relativeTo: 645019200.0, expected: "in 2 weeks")
         // "2021-06-26 23:59:59" -> "2021-06-10 12:00:00"
         _verifyStyle(646444799.0, relativeTo: 645019200.0, expected: "in 2 weeks")
         // "2021-06-30 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(646790399.0, relativeTo: 645019200.0, expected: "in 3 weeks")  // last moment of in the same month
+        _verifyStyle(646790399.0, relativeTo: 645019200.0, expected: "in 3 weeks") // last moment of in the same month
         // "2021-07-01 00:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(646790400.0, relativeTo: 645019200.0, expected: "in 3 weeks")  // first moment of the next month, but than 4 weeks apart, so it's formatted with week
+        _verifyStyle(646790400.0, relativeTo: 645019200.0, expected: "in 3 weeks") // first moment of the next month, but than 4 weeks apart, so it's formatted with week
         // "2021-07-31 23:59:59" -> "2021-06-10 12:00:00"
-        _verifyStyle(649468799.0, relativeTo: 645019200.0, expected: "in 1 month")  // last moment of the next month
+        _verifyStyle(649468799.0, relativeTo: 645019200.0, expected: "in 1 month") // last moment of the next month
         // "2021-08-01 00:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(649468800.0, relativeTo: 645019200.0, expected: "in 2 months")
         // "2021-08-31 23:59:59" -> "2021-06-10 12:00:00"
@@ -291,7 +293,7 @@ private struct DateRelativeFormatStyleTests {
         // "2022-01-01 00:00:00" -> "2021-06-10 12:00:00"
         _verifyStyle(662688000.0, relativeTo: 645019200.0, expected: "in 7 months") // next year, but less than 12 months apart, so formatted with month
         // "2022-06-10 12:00:00" -> "2021-06-10 12:00:00"
-        _verifyStyle(676555200.0, relativeTo: 645019200.0, expected: "in 1 year")   // exact one year
+        _verifyStyle(676555200.0, relativeTo: 645019200.0, expected: "in 1 year") // exact one year
         // "2022-12-31 23:59:59" -> "2021-06-10 12:00:00"
         _verifyStyle(694223999.0, relativeTo: 645019200.0, expected: "in 1 year")
         // "2023-01-01 00:00:00" -> "2021-06-10 12:00:00"
@@ -300,12 +302,12 @@ private struct DateRelativeFormatStyleTests {
         _verifyStyle(725759999.0, relativeTo: 645019200.0, expected: "in 2 years")
 
     }
-    
+
     @Test func autoupdatingCurrentChangesFormatResults() async {
         await usingCurrentInternationalizationPreferences {
             let locale = Locale.autoupdatingCurrent
             let date = Date.now + 3600
-            
+
             // Get a formatted result from es-ES
             var prefs = LocalePreferences()
             prefs.languages = ["es-ES"]
@@ -313,18 +315,18 @@ private struct DateRelativeFormatStyleTests {
             LocaleCache.cache.resetCurrent(to: prefs)
             CalendarCache.cache.reset()
             let formattedSpanish = date.formatted(.relative(presentation: .named).locale(locale))
-            
+
             // Get a formatted result from en-US
             prefs.languages = ["en-US"]
             prefs.locale = "en_US"
             LocaleCache.cache.resetCurrent(to: prefs)
             CalendarCache.cache.reset()
             let formattedEnglish = date.formatted(.relative(presentation: .named).locale(locale))
-            
+
             // Reset to current preferences before any possibility of failing this test
             LocaleCache.cache.reset()
             CalendarCache.cache.reset()
-            
+
             // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
             #expect(formattedSpanish != formattedEnglish)
         }
@@ -444,7 +446,6 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         #expect(style.format(date("2021-06-10 11:56:30Z").addingTimeInterval(0.5)) == "in 4 minutes")
 
 
-
         #expect(style.discreteInput(before: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5)) == date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown)
         #expect(style.discreteInput(after: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown) == date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5))
         #expect(style.format(date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown) == "1 minute ago")
@@ -462,11 +463,14 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
     }
 
     @Test func counting() {
-        func assertEvaluation(of style: Date.AnchoredRelativeFormatStyle,
-                              in range: ClosedRange<Date>,
-                              includes expectedExcerpts: [String]...,
-                              sourceLocation: SourceLocation = #_sourceLocation) {
-            var style = style
+        func assertEvaluation(
+            of style: Date.AnchoredRelativeFormatStyle,
+            in range: ClosedRange<Date>,
+            includes expectedExcerpts: [String]...,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
+            var style =
+                style
                 .locale(enUSLocale)
             style.calendar = calendar
 
@@ -478,7 +482,8 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
 
             verify(
                 sequence: style.evaluate(from: range.upperBound, to: range.lowerBound).lazy.map(\.output),
-                contains: expectedExcerpts
+                contains:
+                    expectedExcerpts
                     .reversed()
                     .map { $0.reversed() },
                 "(upperbound to lowerbound)",
@@ -946,7 +951,7 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436))) <= Date(timeIntervalSinceReferenceDate: 725398549.919868))
     }
 
-#if FIXME_RANDOMIZED_SAMPLES_123465054
+    #if FIXME_RANDOMIZED_SAMPLES_123465054
     @Test func randomSamples() throws {
         var style: Date.AnchoredRelativeFormatStyle
         let now = Date.now
@@ -988,5 +993,5 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
         style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
     }
-#endif
+    #endif
 }

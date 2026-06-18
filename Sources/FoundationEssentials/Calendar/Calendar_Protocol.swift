@@ -12,9 +12,9 @@
 
 // Required to be `AnyObject` because it optimizes the call sites in the `struct` wrapper for efficient function dispatch.
 package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConvertible {
-    
+
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?)
-    
+
     var identifier: Calendar.Identifier { get }
     var locale: Locale? { get }
     var localeIdentifier: String { get }
@@ -28,22 +28,22 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     var gregorianStartDate: Date? { get }
     var isAutoupdating: Bool { get }
     var isBridged: Bool { get }
-    
+
     var debugDescription: String { get }
-    
+
     func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> any _CalendarProtocol
-    
+
     func hash(into hasher: inout Hasher)
-    
+
     func minimumRange(of component: Calendar.Component) -> Range<Int>?
     func maximumRange(of component: Calendar.Component) -> Range<Int>?
     func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>?
     func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int?
-    
+
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval?
-    
+
     func isDateInWeekend(_ date: Date) -> Bool
-   
+
     func date(from components: DateComponents) -> Date?
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents
@@ -55,28 +55,27 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     /// implementations may override for patterns they can answer in O(1).
     func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date?
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     func bridgeToNSCalendar() -> NSCalendar
-#endif
+    #endif
 }
 
 extension _CalendarProtocol {
     package func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date? {
-        nil   // default — fall through to Calendar's enumerate-based implementation
+        nil // default — fall through to Calendar's enumerate-based implementation
     }
 
     package var preferredFirstWeekday: Int? { nil }
     package var preferredMinimumDaysInFirstweek: Int? { nil }
-    
+
     package var isAutoupdating: Bool { false }
     package var isBridged: Bool { false }
-    
+
     package var gregorianStartDate: Date? { nil }
     package var debugDescription: String { "\(identifier)" }
-    
+
     package var localeIdentifier: String {
         // We use this to provide a consistent answer for hashing and equality -- null is equal to an empty string
         locale?.identifier ?? ""
     }
 }
-

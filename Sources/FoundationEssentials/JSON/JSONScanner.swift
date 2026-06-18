@@ -64,15 +64,15 @@ internal import Synchronization
 #endif
 
 internal class JSONMap {
-    enum TypeDescriptor : Int {
-        case string  // [marker, count, sourceByteOffset]
-        case number  // [marker, count, sourceByteOffset]
-        case null    // [marker]
-        case `true`  // [marker]
+    enum TypeDescriptor: Int {
+        case string // [marker, count, sourceByteOffset]
+        case number // [marker, count, sourceByteOffset]
+        case null // [marker]
+        case `true` // [marker]
         case `false` // [marker]
 
-        case object  // [marker, nextSiblingOffset, count, <keys and values>, .collectionEnd]
-        case array   // [marker, nextSiblingOffset, count, <values>, .collectionEnd]
+        case object // [marker, nextSiblingOffset, count, <keys and values>, .collectionEnd]
+        case array // [marker, nextSiblingOffset, count, <values>, .collectionEnd]
         case collectionEnd
 
         case simpleString // [marker, count, sourceByteOffset]
@@ -99,8 +99,8 @@ internal class JSONMap {
         case array(Region)
     }
 
-    let mapBuffer : [Int]
-    let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
+    let mapBuffer: [Int]
+    let dataLock: Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
     init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
         self.mapBuffer = mapBuffer
@@ -116,10 +116,10 @@ internal class JSONMap {
             // Allocate an additional byte to ensure we have a trailing NUL byte which is important for cases like a floating point number fragment.
             let (p, c) = state.buffer.withUnsafeRawPointer {
                 pointer, capacity -> (UnsafeRawPointer, Int) in
-                let raw = UnsafeMutableRawPointer.allocate(byteCount: capacity+1, alignment: 1)
+                let raw = UnsafeMutableRawPointer.allocate(byteCount: capacity + 1, alignment: 1)
                 raw.copyMemory(from: pointer, byteCount: capacity)
                 raw.storeBytes(of: UInt8.zero, toByteOffset: capacity, as: UInt8.self)
-                return (.init(raw), capacity+1)
+                return (.init(raw), capacity + 1)
             }
 
             state = (buffer: .init(unsafeBaseAddress: p, count: c), allocation: p)
@@ -129,7 +129,7 @@ internal class JSONMap {
 
     @inline(__always)
     func withBuffer<T: ~Copyable, E>(
-      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+        for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
     ) throws(E) -> sending T {
         try dataLock.withLock { state throws(E) in
             return try closure(state.buffer[region], state.buffer)
@@ -198,7 +198,7 @@ internal class JSONMap {
 
     struct ArrayIterator {
         var currentOffset: Int
-        let map : JSONMap
+        let map: JSONMap
 
         mutating func next() -> JSONMap.Value? {
             guard let next = peek() else {
@@ -226,7 +226,7 @@ internal class JSONMap {
 
     struct ObjectIterator {
         var currentOffset: Int
-        let map : JSONMap
+        let map: JSONMap
 
         mutating func next() -> (key: JSONMap.Value, value: JSONMap.Value)? {
             let keyOffset = currentOffset
@@ -248,7 +248,7 @@ internal class JSONMap {
 }
 
 extension JSONMap.Value {
-    var debugDataTypeDescription : String {
+    var debugDataTypeDescription: String {
         switch self {
         case .string: return "a string"
         case .number: return "number"
@@ -259,7 +259,6 @@ extension JSONMap.Value {
         }
     }
 }
-
 
 
 internal struct JSONScanner {
@@ -284,7 +283,7 @@ internal struct JSONScanner {
                 let totalBytes = reader.bytes.count
                 let consumedBytes = reader.byteOffset(at: reader.readIndex)
                 let ratio = (Double(totalBytes) / Double(consumedBytes))
-                let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
+                let totalExpectedMapSize = Int(Double(mapData.count) * ratio)
                 if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
                     mapData.reserveCapacity(totalExpectedMapSize)
                     prevMapDataSize = totalExpectedMapSize
@@ -354,13 +353,13 @@ internal struct JSONScanner {
         } else {
             try self.scanValue()
         }
-#if DEBUG
+        #if DEBUG
         defer {
             guard self.depth == 0 else {
                 preconditionFailure("Expected to end parsing with a depth of 0")
             }
         }
-#endif
+        #endif
 
         // ensure only white space is remaining
         var whitespace = 0
@@ -438,8 +437,7 @@ internal struct JSONScanner {
             partialMap.recordEndCollection(count: count, atStartOffset: startOffset, with: reader)
         }
 
-        ScanValues:
-        while true {
+        ScanValues: while true {
             try scanValue()
             count += 1
 
@@ -599,12 +597,12 @@ extension JSONScanner {
 
     struct DocumentReader {
         let bytes: BufferView<UInt8>
-        private(set) var readIndex : BufferViewIndex<UInt8>
-        private let endIndex : BufferViewIndex<UInt8>
+        private(set) var readIndex: BufferViewIndex<UInt8>
+        private let endIndex: BufferViewIndex<UInt8>
 
         @inline(__always)
         func checkRemainingBytes(_ count: Int) -> Bool {
-          bytes.distance(from: readIndex, to: endIndex) >= count
+            bytes.distance(from: readIndex, to: endIndex) >= count
         }
 
         @inline(__always)
@@ -614,7 +612,7 @@ extension JSONScanner {
             }
         }
 
-        var sourceLocation : JSONError.SourceLocation {
+        var sourceLocation: JSONError.SourceLocation {
             self.sourceLocation(atOffset: 0)
         }
 
@@ -663,7 +661,7 @@ extension JSONScanner {
 
         @inline(__always)
         mutating func moveReaderIndex(forwardBy offset: Int) {
-          bytes.formIndex(&readIndex, offsetBy: offset)
+            bytes.formIndex(&readIndex, offsetBy: offset)
         }
 
         @inline(__always)
@@ -950,17 +948,17 @@ extension JSONScanner {
     private static func parseEscapeSequence(
         from jsonBytes: BufferView<UInt8>, into string: inout String, fullSource: BufferView<UInt8>
     ) throws -> BufferViewIndex<UInt8> {
-      precondition(!jsonBytes.isEmpty, "Scanning should have ensured that all escape sequences are valid shape")
+        precondition(!jsonBytes.isEmpty, "Scanning should have ensured that all escape sequences are valid shape")
         switch jsonBytes[unchecked: jsonBytes.startIndex] {
-        case UInt8(ascii:"\""): string.append("\"")
-        case UInt8(ascii:"\\"): string.append("\\")
-        case UInt8(ascii:"/"): string.append("/")
-        case UInt8(ascii:"b"): string.append("\u{08}") // \b
-        case UInt8(ascii:"f"): string.append("\u{0C}") // \f
-        case UInt8(ascii:"n"): string.append("\u{0A}") // \n
-        case UInt8(ascii:"r"): string.append("\u{0D}") // \r
-        case UInt8(ascii:"t"): string.append("\u{09}") // \t
-        case UInt8(ascii:"u"):
+        case UInt8(ascii: "\""): string.append("\"")
+        case UInt8(ascii: "\\"): string.append("\\")
+        case UInt8(ascii: "/"): string.append("/")
+        case UInt8(ascii: "b"): string.append("\u{08}") // \b
+        case UInt8(ascii: "f"): string.append("\u{0C}") // \f
+        case UInt8(ascii: "n"): string.append("\u{0A}") // \n
+        case UInt8(ascii: "r"): string.append("\u{0D}") // \r
+        case UInt8(ascii: "t"): string.append("\u{09}") // \t
+        case UInt8(ascii: "u"):
             return try parseUnicodeSequence(from: jsonBytes.dropFirst(), into: &string, fullSource: fullSource)
         case let ascii: // default
             throw JSONError.unexpectedEscapedCharacter(ascii: ascii, location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
@@ -984,15 +982,15 @@ extension JSONScanner {
                 throw JSONError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(location: .sourceLocation(at: index1, fullSource: fullSource))
             }
             guard trailingBytes[uncheckedOffset: 0] == ._backslash,
-                  trailingBytes[uncheckedOffset: 1] == UInt8(ascii: "u")
+                trailingBytes[uncheckedOffset: 1] == UInt8(ascii: "u")
             else {
                 throw JSONError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(location: .sourceLocation(at: index1, fullSource: fullSource))
             }
             trailingBytes = trailingBytes.dropFirst(2)
 
-          let (trailingSurrogateBitPattern, index2) = try parseUnicodeHexSequence(from: trailingBytes, fullSource: fullSource, allowNulls: true)
+            let (trailingSurrogateBitPattern, index2) = try parseUnicodeHexSequence(from: trailingBytes, fullSource: fullSource, allowNulls: true)
             guard UTF16.isTrailSurrogate(trailingSurrogateBitPattern) else {
-              throw JSONError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(location: .sourceLocation(at: trailingBytes.startIndex, fullSource: fullSource))
+                throw JSONError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(location: .sourceLocation(at: trailingBytes.startIndex, fullSource: fullSource))
             }
 
             let encodedScalar = UTF16.EncodedScalar([leadingSurrogateBitPattern, trailingSurrogateBitPattern])
@@ -1049,17 +1047,17 @@ extension JSONScanner {
     // Returns the pointer at which the number's digits begin. If there are no digits, the function throws.
     static func prevalidateJSONNumber(
         from jsonBytes: BufferView<UInt8>, hasExponent: Bool, fullSource: BufferView<UInt8>
-    ) throws -> BufferViewIndex <UInt8> {
+    ) throws -> BufferViewIndex<UInt8> {
         // Just make sure we (A) don't have a leading zero, and (B) We have at least one digit.
         guard !jsonBytes.isEmpty else {
             preconditionFailure("Why was this function called, if there is no 0...9 or -")
         }
-        let firstDigitIndex : BufferViewIndex<UInt8>
+        let firstDigitIndex: BufferViewIndex<UInt8>
         switch jsonBytes[uncheckedOffset: 0] {
         case UInt8(ascii: "0"):
             try validateLeadingZero(in: jsonBytes.dropFirst(1), fullSource: fullSource)
             firstDigitIndex = jsonBytes.startIndex
-        case UInt8(ascii: "1") ... UInt8(ascii: "9"):
+        case UInt8(ascii: "1")...UInt8(ascii: "9"):
             firstDigitIndex = jsonBytes.startIndex
         case UInt8(ascii: "-"):
             guard jsonBytes.count > 1 else {
@@ -1068,7 +1066,7 @@ extension JSONScanner {
             switch jsonBytes[uncheckedOffset: 1] {
             case UInt8(ascii: "0"):
                 try validateLeadingZero(in: jsonBytes.dropFirst(2), fullSource: fullSource)
-            case UInt8(ascii: "1") ... UInt8(ascii: "9"):
+            case UInt8(ascii: "1")...UInt8(ascii: "9"):
                 // Good, we need at least one digit following the '-'
                 break
             case let byte: // default
@@ -1110,7 +1108,7 @@ extension JSONScanner {
     }
 
     // This function is intended to be called after prevalidateJSONNumber() (which provides the digitsBeginPtr) and after parsing fails. It will provide more useful information about the invalid input.
-  static func validateNumber(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) -> JSONError {
+    static func validateNumber(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) -> JSONError {
         enum ControlCharacter {
             case operand
             case decimalPoint
@@ -1144,7 +1142,7 @@ extension JSONScanner {
 
             case UInt8(ascii: "e"), UInt8(ascii: "E"):
                 guard digitsSinceControlChar > 0,
-                      pastControlChar == .operand || pastControlChar == .decimalPoint
+                    pastControlChar == .operand || pastControlChar == .decimalPoint
                 else {
                     return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, fullSource: fullSource))
                 }
@@ -1177,7 +1175,7 @@ protocol PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>)
 }
 
-extension Double : PrevalidatedJSONNumberBufferConvertible {
+extension Double: PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Double? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
@@ -1193,7 +1191,7 @@ extension Double : PrevalidatedJSONNumberBufferConvertible {
     }
 }
 
-extension Float : PrevalidatedJSONNumberBufferConvertible {
+extension Float: PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Float? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
@@ -1227,7 +1225,7 @@ internal func _parseInteger<Result: FixedWidthInteger>(_ codeUnits: BufferView<U
 
 extension FixedWidthInteger {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>) {
-        guard let val : Self = _parseInteger(buffer) else {
+        guard let val: Self = _parseInteger(buffer) else {
             return nil
         }
         self = val
@@ -1241,7 +1239,7 @@ enum JSONError: Swift.Error, Equatable {
         let index: Int
 
         static func sourceLocation(
-          at location: BufferViewIndex<UInt8>, fullSource: BufferView<UInt8>
+            at location: BufferViewIndex<UInt8>, fullSource: BufferView<UInt8>
         ) -> SourceLocation {
             precondition(fullSource.startIndex <= location && location <= fullSource.endIndex)
             var index = fullSource.startIndex
@@ -1290,7 +1288,7 @@ enum JSONError: Swift.Error, Equatable {
 
     case unterminatedBlockComment
 
-    var debugDescription : String {
+    var debugDescription: String {
         switch self {
         case .cannotConvertEntireInputDataToUTF8:
             return "Unable to convert data to a string using the detected encoding. The data may be corrupt."
@@ -1377,15 +1375,15 @@ enum JSONError: Swift.Error, Equatable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     var nsError: NSError {
-        var userInfo : [String: Any] = [
-            NSDebugDescriptionErrorKey : self.debugDescription
+        var userInfo: [String: Any] = [
+            NSDebugDescriptionErrorKey: self.debugDescription
         ]
         if let location = self.sourceLocation {
             userInfo["NSJSONSerializationErrorIndex"] = location.index
         }
         return .init(domain: NSCocoaErrorDomain, code: CocoaError.propertyListReadCorrupt.rawValue, userInfo: userInfo)
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 }

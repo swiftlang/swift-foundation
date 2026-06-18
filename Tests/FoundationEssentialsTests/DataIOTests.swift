@@ -26,31 +26,33 @@ private func generateTestData(count: Int = 16_777_216) -> Data {
             buf[j * 1024 + i] = UInt8.random(in: 1..<42)
         }
     }
-    
-    return Data(bytesNoCopy: buf.baseAddress!, count: count, deallocator: .custom({ ptr, _ in
-        ptr.deallocate()
-    }))
+
+    return Data(
+        bytesNoCopy: buf.baseAddress!, count: count,
+        deallocator: .custom({ ptr, _ in
+            ptr.deallocate()
+        }))
 }
 
 @Suite("Data I/O")
 private final class DataIOTests {
-    
+
     // MARK: - Helpers
-    
+
     let url: URL
-    
+
     init() {
         // Generate a random file name
         url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
     }
-            
+
     func writeAndVerifyTestData(to url: URL, writeOptions: Data.WritingOptions = [], readOptions: Data.ReadingOptions = [], sourceLocation: SourceLocation = #_sourceLocation) throws {
         let data = generateTestData()
         try data.write(to: url, options: writeOptions)
         let readData = try Data(contentsOf: url, options: readOptions)
         #expect(data == readData, sourceLocation: sourceLocation)
     }
-    
+
     deinit {
         do {
             try FileManager.default.removeItem(at: url)
@@ -58,26 +60,26 @@ private final class DataIOTests {
             // Ignore
         }
     }
-    
+
     // MARK: - Tests
-    
+
     @Test func basicReadWrite() throws {
         try writeAndVerifyTestData(to: url)
     }
-    
+
     @Test func slicedReadWrite() throws {
         // Be sure to use progress reporting so we get tests of the chunking
         let data = generateTestData()
         let slice = data[data.startIndex.advanced(by: 1 * 1024 * 1024)..<data.startIndex.advanced(by: 8 * 1024 * 1024)]
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         let p = Progress(totalUnitCount: 1)
         p.becomeCurrent(withPendingUnitCount: 1)
-#endif
+        #endif
         try slice.write(to: url, options: [])
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         p.resignCurrent()
-#endif
+        #endif
         let readData = try Data(contentsOf: url, options: [])
         #expect(readData == slice)
     }
@@ -100,72 +102,72 @@ private final class DataIOTests {
     @Test func writeFailure() throws {
         let data = Data()
         try data.write(to: url)
-        
+
         #expect {
             try data.write(to: url, options: [.withoutOverwriting])
         } throws: {
             ($0 as? CocoaError)?.code == .fileWriteFileExists
         }
-        
+
         try FileManager.default.removeItem(at: url)
 
         // Make sure clearing the error condition allows the write to succeed
         try data.write(to: url, options: [.withoutOverwriting])
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     // Progress is currently stubbed out for FoundationPreview
     @Test func writeWithProgress() throws {
         let p = Progress(totalUnitCount: 1)
         p.becomeCurrent(withPendingUnitCount: 1)
         try writeAndVerifyTestData(to: url)
         p.resignCurrent()
-        
+
         #expect(p.completedUnitCount == 1)
         #expect(abs(p.fractionCompleted - 1.0) <= 0.1)
     }
-#endif
-    
-#if FOUNDATION_FRAMEWORK
+    #endif
+
+    #if FOUNDATION_FRAMEWORK
     @Test func writeWithAttributes() throws {
         let writeData = generateTestData()
-        
+
         // Data doesn't have a direct API to write with attributes, but our I/O code has it. Use it via @testable interface here.
-        
-        let writeAttrs: [String : Data] = [FileAttributeKey.hfsCreatorCode.rawValue : "abcd".data(using: .ascii)!]
+
+        let writeAttrs: [String: Data] = [FileAttributeKey.hfsCreatorCode.rawValue: "abcd".data(using: .ascii)!]
         try writeToFile(path: url, buffer: writeData.bytes, options: [], attributes: writeAttrs)
-        
+
         // Verify attributes
-        var readAttrs: [String : Data] = [:]
+        var readAttrs: [String: Data] = [:]
         let readData = try readDataFromFile(path: url, reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
-        
+
         #expect(writeData == readData)
         #expect(writeAttrs == readAttrs)
     }
-#endif
-        
+    #endif
+
     @Test func emptyFile() throws {
         let data = Data()
         try data.write(to: url)
         let read = try Data(contentsOf: url, options: [])
         #expect(data == read)
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     // String(contentsOf:) is not available outside the framework yet
     @available(*, deprecated)
     @Test func emptyFileString() throws {
         let data = Data()
-        
+
         try data.write(to: url)
         let readString = try String(contentsOf: url)
         #expect(readString == "")
-        
+
         let readStringWithEncoding = try String(contentsOf: url, encoding: .utf8)
         #expect(readStringWithEncoding == "")
     }
-#endif
-    
+    #endif
+
     #if os(Linux) || os(Windows)
     @Test
     #else
@@ -181,7 +183,7 @@ private final class DataIOTests {
             try Data("Output to STDOUT\n".utf8).write(to: path)
         }
     }
-    
+
     #if os(Linux) || os(Android)
     @Test
     #else
@@ -199,7 +201,7 @@ private final class DataIOTests {
         let data = generateTestData()
 
         await withThrowingTaskGroup(of: Void.self) { group in
-            for _ in 0 ..< 8 {
+            for _ in 0..<8 {
                 group.addTask { [url] in
                     #expect(throws: Never.self) {
                         try data.write(to: url, options: [.atomic])
@@ -230,13 +232,13 @@ private final class DataIOTests {
         let read = try Data(contentsOf: url)
         #expect(read == next)
 
-#if !FOUNDATION_FRAMEWORK
+        #if !FOUNDATION_FRAMEWORK
         // The path now resolves to the new temp file (the rename operation detached the old destination). Confirm it's writable by performing a subsequent non-atomic write.
         // Skipped for FOUNDATION_FRAMEWORK: that path preserves and reapplies the destination's pre-rename mode on the new file, so the new file would still be read-only.
         // TODO: Preserve the destination's mode across platforms.
         let later = Data("later".utf8)
         try later.write(to: url)
-#endif
+        #endif
     }
 }
 
@@ -247,20 +249,19 @@ extension LargeDataTests {
         defer { try? FileManager.default.removeItem(at: url) }
         // More than 2 GB
         let size = 0x80010000
-        
+
         let data = generateTestData(count: size)
-        
+
         try data.write(to: url)
         let read = try Data(contentsOf: url, options: .mappedIfSafe)
-        
+
         // No need to compare the contents, but do compare the size
         #expect(data.count == read.count)
-        
-#if FOUNDATION_FRAMEWORK
+
+        #if FOUNDATION_FRAMEWORK
         // Try the NSData path
         let readNS = try NSData(contentsOf: url, options: .mappedIfSafe) as Data
         #expect(data.count == readNS.count)
-#endif
+        #endif
     }
 }
-

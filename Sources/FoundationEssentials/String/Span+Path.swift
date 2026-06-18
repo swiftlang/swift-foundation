@@ -205,10 +205,7 @@ extension Span<UInt8> {
         componentStart += 1
         let stemLength = lastDot - componentStart
         // Guard against "." and ".." file names
-        let badFileName = (
-            (stemLength == 1 && self[componentStart] == ._dot) ||
-            (stemLength == 2 && self[componentStart] == ._dot && self[componentStart + 1] == ._dot)
-        )
+        let badFileName = ((stemLength == 1 && self[componentStart] == ._dot) || (stemLength == 2 && self[componentStart] == ._dot && self[componentStart + 1] == ._dot))
         guard !badFileName else {
             return nil
         }

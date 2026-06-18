@@ -22,9 +22,9 @@
 @globalActor
 private actor CurrentInternationalizationPreferencesActor: GlobalActor {
     static let shared = CurrentInternationalizationPreferencesActor()
-    
+
     private init() {}
-    
+
     private static func resetCaches() {
         LocaleCache.cache.reset()
         CalendarCache.cache.reset()
@@ -32,16 +32,16 @@ private actor CurrentInternationalizationPreferencesActor: GlobalActor {
         _ = TimeZone.resetSystemTimeZone()
         TimeZoneCache.cache.setDefault(nil)
     }
-    
+
     @CurrentInternationalizationPreferencesActor
     static func usingCurrentInternationalizationPreferences(
         body: () throws -> Void // Must be synchronous to prevent suspension points within body which could introduce a change in the preferences
     ) rethrows {
         // Reset caches before the test to clean up any lingering, eagerly realized values
         resetCaches()
-        
+
         try body()
-        
+
         // Reset everything after the test runs to ensure custom values don't persist
         resetCaches()
     }

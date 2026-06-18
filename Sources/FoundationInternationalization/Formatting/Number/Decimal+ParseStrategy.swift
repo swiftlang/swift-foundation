@@ -16,9 +16,9 @@ import FoundationEssentials
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// A parse strategy for creating decimal values from formatted strings.
-    public struct ParseStrategy<Format> : Foundation.ParseStrategy, Codable, Hashable where Format : Foundation.FormatStyle, Format.FormatInput == Decimal {
+    public struct ParseStrategy<Format>: Foundation.ParseStrategy, Codable, Hashable where Format: Foundation.FormatStyle, Format.FormatInput == Decimal {
         /// The format style describing the expected format of the string to parse.
         public var formatStyle: Format
         /// A Boolean value that indicates whether the parse strategy permits some discrepancies when parsing.
@@ -28,9 +28,9 @@ extension Decimal {
             self.lenient = lenient
         }
     }
-#else
+    #else
     /// A parse strategy for creating decimal values from formatted strings.
-    public struct ParseStrategy<Format> : FoundationEssentials.ParseStrategy, Codable, Hashable where Format : FoundationEssentials.FormatStyle, Format.FormatInput == Decimal {
+    public struct ParseStrategy<Format>: FoundationEssentials.ParseStrategy, Codable, Hashable where Format: FoundationEssentials.FormatStyle, Format.FormatInput == Decimal {
         /// The format style describing the expected format of the string to parse.
         public var formatStyle: Format
         /// A Boolean value that indicates whether the parse strategy permits some discrepancies when parsing.
@@ -40,7 +40,7 @@ extension Decimal {
             self.lenient = lenient
         }
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -98,31 +98,34 @@ extension Decimal.ParseStrategy {
         } else {
             let exampleString1 = formatStyle.format(3.14)
             let exampleString2 = formatStyle.format(-12345)
-            throw CocoaError(CocoaError.formatting, userInfo: [
-                NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \"\(exampleString1)\" or \"\(exampleString2)\"" ])
+            throw CocoaError(
+                CocoaError.formatting,
+                userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \"\(exampleString1)\" or \"\(exampleString2)\""
+                ])
         }
     }
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.ParseStrategy : Sendable where Format : Sendable {}
+extension Decimal.ParseStrategy: Sendable where Format: Sendable {}
 
 // MARK: - Decimal extension entry point
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Decimal {
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Initialize an instance by parsing `value` with the given `strategy`.
     init<S: Foundation.ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput == Self {
         self = try strategy.parse(value)
     }
-#else
+    #else
     /// Initialize an instance by parsing `value` with the given `strategy`.
     init<S: FoundationEssentials.ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput == Self {
         self = try strategy.parse(value)
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     init(_ value: String, format: Decimal.FormatStyle, lenient: Bool = true) throws {
         self = try Decimal(value, strategy: ParseStrategy(formatStyle: format, lenient: lenient))
@@ -179,5 +182,3 @@ public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle.Curre
         self.lenient = lenient
     }
 }
-
-

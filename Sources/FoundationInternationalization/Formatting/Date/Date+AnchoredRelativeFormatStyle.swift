@@ -22,7 +22,7 @@ internal import _FoundationICU
 extension Date {
     /// A relative format style that is detached from the system time, and instead
     /// formats an anchor date relative to the format input.
-    public struct AnchoredRelativeFormatStyle : Codable, Hashable, Sendable {
+    public struct AnchoredRelativeFormatStyle: Codable, Hashable, Sendable {
         public typealias Presentation = Date.RelativeFormatStyle.Presentation
         public typealias UnitsStyle = Date.RelativeFormatStyle.UnitsStyle
         public typealias Field = Date.RelativeFormatStyle.Field
@@ -86,7 +86,9 @@ extension Date {
         /// formats an anchor date relative to the format input.
         ///
         /// - Parameter anchor: The date the formatted output is referring to.
-        public init(anchor: Date, presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
+        public init(
+            anchor: Date, presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown
+        ) {
             self.anchor = anchor
             self.innerStyle = .init(presentation: presentation, unitsStyle: unitsStyle, locale: locale, calendar: calendar, capitalizationContext: capitalizationContext)
         }
@@ -95,7 +97,10 @@ extension Date {
         /// formats an anchor date relative to the format input.
         ///
         /// - Parameter anchor: The date the formatted output is referring to.
-        public init(anchor: Date, allowedFields: Set<Field>, presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
+        public init(
+            anchor: Date, allowedFields: Set<Field>, presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent,
+            capitalizationContext: FormatStyleCapitalizationContext = .unknown
+        ) {
             self.anchor = anchor
             self.innerStyle = .init(allowedFields: allowedFields, presentation: presentation, unitsStyle: unitsStyle, locale: locale, calendar: calendar, capitalizationContext: capitalizationContext)
         }
@@ -115,7 +120,7 @@ extension Date {
 // MARK: DiscreteFormatStyle Conformance
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
+extension Date.AnchoredRelativeFormatStyle: DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         guard let (bound, isIncluded) = bound(for: input, relativeTo: anchor, movingDown: true, countingTowardZero: input > anchor) else {
             return nil
@@ -133,8 +138,8 @@ extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
     }
 
     public func input(before input: Date) -> Date? {
-        let conversionLoss = abs(input.timeIntervalSince(input.nextDown)) + abs(input.timeIntervalSince(Date(udate: input.udate.nextDown))) +
-            abs(anchor.timeIntervalSince(anchor.nextDown)) + abs(anchor.timeIntervalSince(Date(udate: anchor.udate.nextDown)))
+        let conversionLoss =
+            abs(input.timeIntervalSince(input.nextDown)) + abs(input.timeIntervalSince(Date(udate: input.udate.nextDown))) + abs(anchor.timeIntervalSince(anchor.nextDown)) + abs(anchor.timeIntervalSince(Date(udate: anchor.udate.nextDown)))
         let inaccuracy = 2 * conversionLoss
         let result = input - inaccuracy
 
@@ -142,8 +147,8 @@ extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
     }
 
     public func input(after input: Date) -> Date? {
-        let conversionLoss = abs(input.timeIntervalSince(input.nextDown)) + abs(input.timeIntervalSince(Date(udate: input.udate.nextDown))) +
-            abs(anchor.timeIntervalSince(anchor.nextDown)) + abs(anchor.timeIntervalSince(Date(udate: anchor.udate.nextDown)))
+        let conversionLoss =
+            abs(input.timeIntervalSince(input.nextDown)) + abs(input.timeIntervalSince(Date(udate: input.udate.nextDown))) + abs(anchor.timeIntervalSince(anchor.nextDown)) + abs(anchor.timeIntervalSince(Date(udate: anchor.udate.nextDown)))
         let inaccuracy = 2 * conversionLoss
         let result = input + inaccuracy
 
@@ -156,11 +161,12 @@ extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
         }
 
         let currentLargestField = Date.RelativeFormatStyle.Field.Option(component: currentLargest.component)!
-        
+
         let largestField: Date.ComponentsFormatStyle.Field.Option
 
         if countingTowardZero && abs(currentLargest.value) == 1,
-           let nextLargest = self.usableFields().filter({ $0 < currentLargestField }).first {
+            let nextLargest = self.usableFields().filter({ $0 < currentLargestField }).first
+        {
             largestField = nextLargest
         } else {
             largestField = currentLargestField
@@ -170,24 +176,26 @@ extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
 
         let largest: (component: Calendar.Component, value: Int)
         if largestField != currentLargestField,
-           let range = self.innerStyle.calendar.range(of: largestField.component, in: currentLargest.component, for: destination),
-           let lastDateRoundedToLargest = self.innerStyle.calendar.date(byAdding: currentLargest.component, value: movingDown ? 1 : -1, to: destination) {
+            let range = self.innerStyle.calendar.range(of: largestField.component, in: currentLargest.component, for: destination),
+            let lastDateRoundedToLargest = self.innerStyle.calendar.date(byAdding: currentLargest.component, value: movingDown ? 1 : -1, to: destination)
+        {
 
-            let truncatedNextLargestCount = (0...range.count+1).lazy.reversed().compactMap { count in
-                guard let date = self.innerStyle.calendar.date(byAdding: largestField.component, value: -currentLargest.value * count, to: destination) else {
-                    return nil
-                }
+            let truncatedNextLargestCount =
+                (0...range.count + 1).lazy.reversed().compactMap { count in
+                    guard let date = self.innerStyle.calendar.date(byAdding: largestField.component, value: -currentLargest.value * count, to: destination) else {
+                        return nil
+                    }
 
-                guard movingDown ? date <= lastDateRoundedToLargest : date >= lastDateRoundedToLargest && date > referenceDate else {
-                    return nil
-                }
-                
-                if count < range.count+1 && !movingDown && date > lastDateRoundedToLargest {
-                    return count + 1
-                } else {
-                    return count
-                }
-            }.first ?? range.count
+                    guard movingDown ? date <= lastDateRoundedToLargest : date >= lastDateRoundedToLargest && date > referenceDate else {
+                        return nil
+                    }
+
+                    if count < range.count + 1 && !movingDown && date > lastDateRoundedToLargest {
+                        return count + 1
+                    } else {
+                        return count
+                    }
+                }.first ?? range.count
 
             largest = (largestField.component, currentLargest.value * truncatedNextLargestCount)
         } else {
@@ -213,13 +221,14 @@ extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
 
         let roundingComponents: [Calendar.Component]
         if !alignReferenceDateToBoundsOfLargest,
-           let secondLargestComponent = ICURelativeDateFormatter.sortedAllowedComponents.first(where: { component in
-            guard let field = Date.RelativeFormatStyle.Field.Option(component: component) else {
-                return false
-            }
+            let secondLargestComponent = ICURelativeDateFormatter.sortedAllowedComponents.first(where: { component in
+                guard let field = Date.RelativeFormatStyle.Field.Option(component: component) else {
+                    return false
+                }
 
-            return field < largestField
-        }) {
+                return field < largestField
+            })
+        {
             roundingComponents = [secondLargestComponent, .nanosecond]
         } else {
             roundingComponents = [.nanosecond]
@@ -236,7 +245,8 @@ extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
             }
 
             guard let coefficient = self.innerStyle.calendar.range(of: roundingComponent, in: largest.component, for: destination)?.count,
-                  let realignedReferenceDate = self.innerStyle.calendar.date(byAdding: roundingComponent, value: roundingDirection * coefficient / 2, to: alignedReferenceDate) else {
+                let realignedReferenceDate = self.innerStyle.calendar.date(byAdding: roundingComponent, value: roundingDirection * coefficient / 2, to: alignedReferenceDate)
+            else {
                 return (alignedReferenceDate, true)
             }
 

@@ -19,7 +19,7 @@ internal import _FoundationCollections
 #endif
 
 extension AttributedString {
-    internal final class Guts : @unchecked Sendable {
+    internal final class Guts: @unchecked Sendable {
         typealias Index = AttributedString.Index
         typealias Runs = AttributedString.Runs
         typealias AttributeMergePolicy = AttributedString.AttributeMergePolicy
@@ -110,7 +110,7 @@ extension AttributedString.Guts {
 
         guard left.count == right.count else { return false }
         guard !left.isEmpty else { return true }
-        
+
         if !left._isPartial && !right._isPartial {
             // For a full BigString, we can get the grapheme cluster count in constant time since
             // the grapheme cluster count is cached at the node level in the tree. It is not
@@ -130,14 +130,13 @@ extension AttributedString.Guts {
                 return false
             }
         }
-        
+
 
         guard var leftIndex = left._strBounds.ranges.first?.lowerBound, var rightIndex = right._strBounds.ranges.first?.lowerBound else { return false }
 
         var it1 = left.makeIterator()
         var it2 = right.makeIterator()
-    loop:
-        while true {
+        loop: while true {
             switch (it1.next(), it2.next()) {
             case let (leftRun?, rightRun?):
                 guard leftRun.attributes == rightRun.attributes else { return false }
@@ -147,7 +146,7 @@ extension AttributedString.Guts {
 
                 // FIXME: This doesn't handle sub-character runs correctly.
                 guard
-                    left._guts.string[leftIndex ..< leftNext] == right._guts.string[rightIndex ..< rightNext]
+                    left._guts.string[leftIndex..<leftNext] == right._guts.string[rightIndex..<rightNext]
                 else {
                     return false
                 }
@@ -195,7 +194,7 @@ extension AttributedString.Guts {
     internal func description(in range: Range<BigString.Index>) -> String {
         self.description(in: RangeSet(range))
     }
-    
+
     internal func description(in ranges: RangeSet<BigString.Index>) -> String {
         Self._description(in: Runs(self, in: ranges))
     }
@@ -217,7 +216,7 @@ extension AttributedString.Guts {
     }
 
     var utf8OffsetRange: Range<Int> {
-        0 ..< string.utf8.count
+        0..<string.utf8.count
     }
 
     func utf8Index(at offset: Int) -> BigString.Index {
@@ -396,7 +395,7 @@ extension AttributedString.Guts {
 
     func setAttributeValue<K: AttributedStringKey>(
         _ value: K.Value, forKey key: K.Type, in range: Range<BigString.Index>
-    ) where K.Value : Sendable {
+    ) where K.Value: Sendable {
         let value = _AttributeValue(value, for: K.self)
         self.setAttributeValue(value, forKey: K.name, in: range)
     }
@@ -476,7 +475,7 @@ extension AttributedString.Guts {
         let lower = state.invalidationRange.lowerBound
         let upper = state.invalidationRange.upperBound + utf8Delta
         self.enforceAttributeConstraintsAfterMutation(
-            in: lower ..< upper,
+            in: lower..<upper,
             type: .attributesAndCharacters)
     }
 
@@ -494,10 +493,11 @@ extension AttributedString.Guts {
         // Note: this is intentionally not comparing actual string data.
         let hasStringChanges = !replacementScalars.isIdentical(to: string.unicodeScalars[range])
 
-        let utf8SourceRange = Range(uncheckedBounds: (
-            replacementScalars.startIndex.utf8Offset,
-            replacementScalars.endIndex.utf8Offset
-        ))
+        let utf8SourceRange = Range(
+            uncheckedBounds: (
+                replacementScalars.startIndex.utf8Offset,
+                replacementScalars.endIndex.utf8Offset
+            ))
         let replacementRuns = replacement.__guts.runs(in: utf8SourceRange)
 
         let utf8TargetRange = range._utf8OffsetRange

@@ -27,18 +27,18 @@ extension Decimal {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : _ObjectiveCBridgeable {
+extension Decimal: _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSDecimalNumber {
         return NSDecimalNumber(decimal: self)
     }
-    
+
     public static func _forceBridgeFromObjectiveC(_ x: NSDecimalNumber, result: inout Decimal?) {
         if !_conditionallyBridgeFromObjectiveC(x, result: &result) {
             fatalError("Unable to bridge \(_ObjectiveCType.self) to \(self)")
         }
     }
-    
+
     public static func _conditionallyBridgeFromObjectiveC(_ input: NSDecimalNumber, result: inout Decimal?) -> Bool {
         result = input.decimalValue
         return true
@@ -363,11 +363,12 @@ private func __NSDecimalString(
 ) -> String {
     var decimalSeparator = "."
     if let useLocale = locale as? Locale,
-       let separator = useLocale.decimalSeparator {
+        let separator = useLocale.decimalSeparator
+    {
         decimalSeparator = separator
     }
-#if FOUNDATION_FRAMEWORK
-    if let dictionary = locale as? [AnyHashable : Any] {
+    #if FOUNDATION_FRAMEWORK
+    if let dictionary = locale as? [AnyHashable: Any] {
         // NSDecimal favored NSLocale.Key.decimalSeparator if
         // both keys are present.
         if let separator = dictionary["NSDecimalSeparator"] as? String {
@@ -377,7 +378,7 @@ private func __NSDecimalString(
             decimalSeparator = separator
         }
     }
-#endif
+    #endif
     return decimal.pointee._toString(withDecimalSeparator: decimalSeparator)
 }
 

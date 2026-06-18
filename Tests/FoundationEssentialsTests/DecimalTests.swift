@@ -25,15 +25,14 @@ import CRT
 #endif
 
 #if canImport(FoundationEssentials)
-@_spi(SwiftCorelibsFoundation)
-@testable import FoundationEssentials
+@_spi(SwiftCorelibsFoundation) @testable import FoundationEssentials
 #else
 @testable import Foundation
 #endif
 
 @Suite("Decimal")
 private struct DecimalTests {
-#if !FOUNDATION_FRAMEWORK // These tests tests the stub implementations
+    #if !FOUNDATION_FRAMEWORK // These tests tests the stub implementations
     func assertMantissaEquals(lhs: Decimal, rhs: Decimal.Mantissa, sourceLocation: SourceLocation = #_sourceLocation) {
         #expect(lhs[0] == rhs.0, "Mantissa.0 does not equal: \(lhs[0]) vs \(rhs.0)", sourceLocation: sourceLocation)
         #expect(lhs[1] == rhs.1, "Mantissa.1 does not equal: \(lhs[1]) vs \(rhs.1)", sourceLocation: sourceLocation)
@@ -45,27 +44,27 @@ private struct DecimalTests {
         #expect(lhs[7] == rhs.7, "Mantissa.7 does not equal: \(lhs[7]) vs \(rhs.7)", sourceLocation: sourceLocation)
     }
 
-    @Test(arguments: 0 ..< 100)
+    @Test(arguments: 0..<100)
     func roundtripFuzzing(iteration: Int) {
         // Exponent is only 8 bits long
-        let exponent: CInt = CInt(Int8.random(in: Int8.min ..< Int8.max))
+        let exponent: CInt = CInt(Int8.random(in: Int8.min..<Int8.max))
         // Length is only 4 bits long
-        var length: CUnsignedInt = .random(in: 0 ..< 0xF)
-        let isNegative: CUnsignedInt = .random(in: 0 ..< 1)
-        let isCompact: CUnsignedInt = .random(in: 0 ..< 1)
+        var length: CUnsignedInt = .random(in: 0..<0xF)
+        let isNegative: CUnsignedInt = .random(in: 0..<1)
+        let isCompact: CUnsignedInt = .random(in: 0..<1)
         // Reserved is 18 bits long
-        let reserved: CUnsignedInt = .random(in: 0 ..< 0x3FFFF)
+        let reserved: CUnsignedInt = .random(in: 0..<0x3FFFF)
         let mantissa: Decimal.Mantissa = (
-            .random(in: 0 ..< UInt16.max),
-            .random(in: 0 ..< UInt16.max),
-            .random(in: 0 ..< UInt16.max),
-            .random(in: 0 ..< UInt16.max),
-            .random(in: 0 ..< UInt16.max),
-            .random(in: 0 ..< UInt16.max),
-            .random(in: 0 ..< UInt16.max),
-            .random(in: 0 ..< UInt16.max)
+            .random(in: 0..<UInt16.max),
+            .random(in: 0..<UInt16.max),
+            .random(in: 0..<UInt16.max),
+            .random(in: 0..<UInt16.max),
+            .random(in: 0..<UInt16.max),
+            .random(in: 0..<UInt16.max),
+            .random(in: 0..<UInt16.max),
+            .random(in: 0..<UInt16.max)
         )
-        
+
         var decimal = Decimal(
             _exponent: exponent,
             _length: length,
@@ -74,7 +73,7 @@ private struct DecimalTests {
             _reserved: reserved,
             _mantissa: mantissa
         )
-        
+
         #expect(decimal._exponent == exponent)
         #expect(decimal._length == length)
         #expect(decimal._isNegative == isNegative)
@@ -84,13 +83,13 @@ private struct DecimalTests {
             lhs: decimal,
             rhs: mantissa
         )
-        
+
         // Update invidividual values
-        length = .random(in: 0 ..< 0xF)
+        length = .random(in: 0..<0xF)
         decimal._length = length
         #expect(decimal._length == length)
     }
-#endif
+    #endif
 
     @Test func abusiveCompact() {
         var decimal = Decimal()
@@ -105,7 +104,7 @@ private struct DecimalTests {
         #expect("0" == Decimal(0).description)
         #expect("10" == Decimal(_exponent: 1, _length: 1, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (1, 0, 0, 0, 0, 0, 0, 0)).description)
         #expect("10" == Decimal(10).description)
-        #expect("123.458" == Decimal(_exponent: -3, _length: 2, _isNegative: 0, _isCompact:1, _reserved: 0, _mantissa: (57922, 1, 0, 0, 0, 0, 0, 0)).description)
+        #expect("123.458" == Decimal(_exponent: -3, _length: 2, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (57922, 1, 0, 0, 0, 0, 0, 0)).description)
         #expect("123.458" == Decimal(123.458).description)
         #expect("123" == Decimal(UInt8(123)).description)
         #expect("45" == Decimal(Int8(45)).description)
@@ -156,7 +155,7 @@ private struct DecimalTests {
             _length: 0xff,
             _isNegative: 3,
             _isCompact: 4,
-            _reserved: UInt32(1<<18 + 1<<17 + 1),
+            _reserved: UInt32(1 << 18 + 1 << 17 + 1),
             _mantissa: (6, 7, 8, 9, 10, 11, 12, 13)
         )
         #expect(0x7f == explicit._exponent)
@@ -166,7 +165,7 @@ private struct DecimalTests {
         #expect(FloatingPointSign.minus == explicit.sign)
         #expect(explicit.isSignMinus)
         #expect(0 == explicit._isCompact)
-        #expect(UInt32(1<<17 + 1) == explicit._reserved)
+        #expect(UInt32(1 << 17 + 1) == explicit._reserved)
         let (m0, m1, m2, m3, m4, m5, m6, m7) = explicit._mantissa
         #expect(6 == m0)
         #expect(7 == m1)
@@ -205,15 +204,15 @@ private struct DecimalTests {
     @Test func scanDecimal() throws {
         let testCases = [
             // expected, value
-            ( 123.456e78, "123.456e78", "123456000000000000000000000000000000000000000000000000000000000000000000000000000" ),
-            ( -123.456e78, "-123.456e78", "-123456000000000000000000000000000000000000000000000000000000000000000000000000000" ),
-            ( 123.456, " 123.456 ", "123.456" ),
-            ( 3.14159, " 3.14159e0", "3.14159" ),
-            ( 3.14159, " 3.14159e-0", "3.14159" ),
-            ( 0.314159, " 3.14159e-1", "0.314159" ),
-            ( 3.14159, " 3.14159e+0", "3.14159"),
-            ( 31.4159, " 3.14159e+1", "31.4159"),
-            ( 12.34, " 01234e-02", "12.34"),
+            (123.456e78, "123.456e78", "123456000000000000000000000000000000000000000000000000000000000000000000000000000"),
+            (-123.456e78, "-123.456e78", "-123456000000000000000000000000000000000000000000000000000000000000000000000000000"),
+            (123.456, " 123.456 ", "123.456"),
+            (3.14159, " 3.14159e0", "3.14159"),
+            (3.14159, " 3.14159e-0", "3.14159"),
+            (0.314159, " 3.14159e-1", "0.314159"),
+            (3.14159, " 3.14159e+0", "3.14159"),
+            (31.4159, " 3.14159e+1", "31.4159"),
+            (12.34, " 01234e-02", "12.34"),
         ]
         for testCase in testCases {
             let (expected, string, _) = testCase
@@ -221,8 +220,8 @@ private struct DecimalTests {
             let aboutOne = Decimal(expected) / decimal
             #expect(aboutOne >= Decimal(0.99999) && aboutOne <= Decimal(1.00001), "\(expected) ~= \(decimal)")
         }
-        let answer = try #require(Decimal(string:"12345679012345679012345679012345679012.3"))
-        let ones = try #require(Decimal(string:"111111111111111111111111111111111111111"))
+        let answer = try #require(Decimal(string: "12345679012345679012345679012345679012.3"))
+        let ones = try #require(Decimal(string: "111111111111111111111111111111111111111"))
         let num = ones / Decimal(9)
         #expect(answer == num, "\(ones) / 9 = \(answer) \(num)")
 
@@ -338,7 +337,7 @@ private struct DecimalTests {
         #expect(bNormalized._mantissa.6 == 1066)
         #expect(bNormalized._length == 7)
         #expect(a == aNormalized)
-        #expect(b != bNormalized)   // b had a loss Of Precision when normalising
+        #expect(b != bNormalized) // b had a loss Of Precision when normalising
     }
 
     @Test func additionWithNormalization() throws {
@@ -409,9 +408,9 @@ private struct DecimalTests {
         expected._exponent = 3
         expected._length = 1
 
-        for i in 1 ..< UInt8.max {
+        for i in 1..<UInt8.max {
             multiplicand._mantissa.0 = UInt16(i)
-            for j in 1 ..< UInt8.max {
+            for j in 1..<UInt8.max {
                 multiplier._mantissa.0 = UInt16(j)
                 expected._mantissa.0 = UInt16(i) * UInt16(j)
 
@@ -456,8 +455,10 @@ private struct DecimalTests {
             _isNegative: 0,
             _isCompact: 0,
             _reserved: 0,
-            _mantissa: (0xffff, 0xffff, 0xffff, 0xffff,
-                        0xffff, 0xffff, 0xffff, 0xffff)
+            _mantissa: (
+                0xffff, 0xffff, 0xffff, 0xffff,
+                0xffff, 0xffff, 0xffff, 0xffff
+            )
         )
         var multiplier = Decimal(1)
         multiplier._mantissa.0 = 2
@@ -542,7 +543,7 @@ private struct DecimalTests {
         #expect(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
     }
 
-#if _pointerBitWidth(_64)
+    #if _pointerBitWidth(_64)
     // This test require Int to be Int64
     @Test func crashingDivision() throws {
         // This test makes sure the following division
@@ -569,7 +570,7 @@ private struct DecimalTests {
         )
         #expect(result == expected)
     }
-#endif
+    #endif
 
     @Test func power() throws {
         var a = Decimal(1234)
@@ -585,18 +586,18 @@ private struct DecimalTests {
         #expect(Decimal._compare(lhs: result, rhs: Decimal(1)) == .orderedSame)
         // Positive base
         let six = Decimal(6)
-        for exponent in 1 ..< 10 {
+        for exponent in 1..<10 {
             result = try six._power(exponent: exponent, roundingMode: .plain)
             #expect(result.doubleValue == pow(6.0, Double(exponent)))
         }
         // Negative base
         let negativeSix = Decimal(-6)
-        for exponent in 1 ..< 10 {
+        for exponent in 1..<10 {
             result = try negativeSix._power(exponent: exponent, roundingMode: .plain)
             #expect(result.doubleValue == pow(-6.0, Double(exponent)))
         }
-        for i in -2 ... 10 {
-            for j in 0 ... 5 {
+        for i in -2...10 {
+            for j in 0...5 {
                 let actual = Decimal(i)
                 let result = try actual._power(
                     exponent: j, roundingMode: .plain
@@ -687,23 +688,23 @@ private struct DecimalTests {
     @Test func roundBankers() throws {
         let onePointTwo = Decimal(1.2)
         var result = try onePointTwo._round(scale: 1, roundingMode: .bankers)
-        #expect((1.1009 ... 1.2001).contains(result.doubleValue))
+        #expect((1.1009...1.2001).contains(result.doubleValue))
 
         let onePointTwoOne = Decimal(1.21)
         result = try onePointTwoOne._round(scale: 1, roundingMode: .bankers)
-        #expect((1.1009 ... 1.2001).contains(result.doubleValue))
+        #expect((1.1009...1.2001).contains(result.doubleValue))
 
         let onePointTwoFive = Decimal(1.25)
         result = try onePointTwoFive._round(scale: 1, roundingMode: .bankers)
-        #expect((1.1009 ... 1.2001).contains(result.doubleValue))
+        #expect((1.1009...1.2001).contains(result.doubleValue))
 
         let onePointThreeFive = Decimal(1.35)
         result = try onePointThreeFive._round(scale: 1, roundingMode: .bankers)
-        #expect((1.3009 ... 1.4001).contains(result.doubleValue))
+        #expect((1.3009...1.4001).contains(result.doubleValue))
 
         let onePointTwoSeven = Decimal(1.27)
         result = try onePointTwoSeven._round(scale: 1, roundingMode: .bankers)
-        #expect((1.2009 ... 3.2001).contains(result.doubleValue))
+        #expect((1.2009...3.2001).contains(result.doubleValue))
 
         let minusEightPointFourFive = Decimal(-8.45)
         result = try minusEightPointFourFive._round(scale: 1, roundingMode: .bankers)
@@ -717,25 +718,25 @@ private struct DecimalTests {
     @Test func round() throws {
         let testCases: [(Double, Double, Int, Decimal.RoundingMode)] = [
             // expected, start, scale, round
-            ( 0, 0.5, 0, .down ),
-            ( 1, 0.5, 0, .up ),
-            ( 2, 2.5, 0, .bankers ),
-            ( 4, 3.5, 0, .bankers ),
-            ( 5, 5.2, 0, .plain ),
-            ( 4.5, 4.5, 1, .down ),
-            ( 5.5, 5.5, 1, .up ),
-            ( 6.5, 6.5, 1, .plain ),
-            ( 7.5, 7.5, 1, .bankers ),
+            (0, 0.5, 0, .down),
+            (1, 0.5, 0, .up),
+            (2, 2.5, 0, .bankers),
+            (4, 3.5, 0, .bankers),
+            (5, 5.2, 0, .plain),
+            (4.5, 4.5, 1, .down),
+            (5.5, 5.5, 1, .up),
+            (6.5, 6.5, 1, .plain),
+            (7.5, 7.5, 1, .bankers),
 
-            ( -1, -0.5, 0, .down ),
-            ( -2, -2.5, 0, .up ),
-            ( -2, -2.5, 0, .bankers ),
-            ( -4, -3.5, 0, .bankers ),
-            ( -5, -5.2, 0, .plain ),
-            ( -4.5, -4.5, 1, .down ),
-            ( -5.5, -5.5, 1, .up ),
-            ( -6.5, -6.5, 1, .plain ),
-            ( -7.5, -7.5, 1, .bankers ),
+            (-1, -0.5, 0, .down),
+            (-2, -2.5, 0, .up),
+            (-2, -2.5, 0, .bankers),
+            (-4, -3.5, 0, .bankers),
+            (-5, -5.2, 0, .plain),
+            (-4.5, -4.5, 1, .down),
+            (-5.5, -5.5, 1, .up),
+            (-6.5, -6.5, 1, .plain),
+            (-7.5, -7.5, 1, .bankers),
         ]
         for testCase in testCases {
             let (expected, start, scale, mode) = testCase
@@ -748,11 +749,11 @@ private struct DecimalTests {
     @Test func maths() {
         for i in -2...10 {
             for j in 0...5 {
-                #expect(Decimal(i*j) == Decimal(i) * Decimal(j), "\(Decimal(i*j)) == \(i) * \(j)")
-                #expect(Decimal(i+j) == Decimal(i) + Decimal(j), "\(Decimal(i+j)) == \(i)+\(j)")
-                #expect(Decimal(i-j) == Decimal(i) - Decimal(j), "\(Decimal(i-j)) == \(i)-\(j)")
+                #expect(Decimal(i * j) == Decimal(i) * Decimal(j), "\(Decimal(i*j)) == \(i) * \(j)")
+                #expect(Decimal(i + j) == Decimal(i) + Decimal(j), "\(Decimal(i+j)) == \(i)+\(j)")
+                #expect(Decimal(i - j) == Decimal(i) - Decimal(j), "\(Decimal(i-j)) == \(i)-\(j)")
                 if j != 0 {
-                    let approximation = Decimal(Double(i)/Double(j))
+                    let approximation = Decimal(Double(i) / Double(j))
                     let answer = Decimal(i) / Decimal(j)
                     let answerDescription = answer.description
                     let approximationDescription = approximation.description
@@ -784,10 +785,10 @@ private struct DecimalTests {
         #expect(Decimal(string: "5538.0")! - Decimal(string: "2880.4")! == Decimal(string: "2657.6")!)
         #expect(Decimal(string: "2880.4")! - Decimal(5538) == Decimal(string: "-2657.6")!)
         #expect(Decimal(0x10000) - Decimal(0x1000) == Decimal(0xf000))
-#if !os(watchOS)
+        #if !os(watchOS)
         #expect(Decimal(0x1_0000_0000) - Decimal(0x1000) == Decimal(0xFFFFF000))
         #expect(Decimal(0x1_0000_0000_0000) - Decimal(0x1000) == Decimal(0xFFFFFFFFF000))
-#endif
+        #endif
         #expect(Decimal(1234_5678_9012_3456_7899 as UInt64) - Decimal(1234_5678_9012_3456_7890 as UInt64) == Decimal(9))
         #expect(Decimal(0xffdd_bb00_8866_4422 as UInt64) - Decimal(0x7777_7777) == Decimal(0xFFDD_BB00_10EE_CCAB as UInt64))
 
@@ -1020,7 +1021,7 @@ private struct DecimalTests {
         var x = -42 as Decimal
         #expect(x.significand.sign == .plus)
         var y = Decimal(sign: .plus, exponent: 0, significand: x)
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if Decimal.compatibility1 {
             #expect(y == 42)
             y = Decimal(sign: .minus, exponent: 0, significand: x)
@@ -1030,11 +1031,11 @@ private struct DecimalTests {
             y = Decimal(sign: .minus, exponent: 0, significand: x)
             #expect(y == 42)
         }
-#else
+        #else
         #expect(y == -42)
         y = Decimal(sign: .minus, exponent: 0, significand: x)
         #expect(y == 42)
-#endif
+        #endif
 
         x = 42 as Decimal
         #expect(x.significand.sign == .plus)
@@ -1132,8 +1133,8 @@ private struct DecimalTests {
         #expect(Decimal(UInt64.max).uint64Value == UInt64.max)
         #expect((Decimal(UInt64.max) + 1).uint64Value == 0)
         #expect(Decimal(Int64.max).int64Value == Int64.max)
-        #expect((Decimal(Int64.max) + 1 ).int64Value == Int64.min)
-        #expect((Decimal(Int64.max) + 1 ).uint64Value == UInt64(Int64.max) + 1)
+        #expect((Decimal(Int64.max) + 1).int64Value == Int64.min)
+        #expect((Decimal(Int64.max) + 1).uint64Value == UInt64(Int64.max) + 1)
         #expect(Decimal(Int64.min).int64Value == Int64.min)
 
         #expect(Decimal(Int.min).int64Value == Int64(Int.min))
@@ -1151,11 +1152,11 @@ private struct DecimalTests {
         #expect(Decimal.nan.doubleValue.isNaN)
         #expect(Decimal(UInt64.max).doubleValue == Double(1.8446744073709552e+19))
     }
-    
+
     @Test func decimalFromString() {
         let string = "x123x"
         let scanLocation = 1
-        
+
         let start = string.index(string.startIndex, offsetBy: scanLocation, limitedBy: string.endIndex)!
         let substring = string[start..<string.endIndex]
         let view = String(substring).utf8
@@ -1168,35 +1169,32 @@ private struct DecimalTests {
     @Test func negativePower() throws {
         func test(withBase base: Decimal, power: Int, sourceLocation: SourceLocation = #_sourceLocation) throws {
             #expect(
-                try base._power(exponent: -power, roundingMode: .plain) ==
-                Decimal(1)/base._power(exponent: power, roundingMode: .plain),
+                try base._power(exponent: -power, roundingMode: .plain) == Decimal(1) / base._power(exponent: power, roundingMode: .plain),
                 "Base: \(base), Power: \(power)",
                 sourceLocation: sourceLocation
             )
         }
         // Negative Exponent Rule
         // x^-n = 1/(x^n)
-        for power in 2 ..< 10 {
+        for power in 2..<10 {
             // Positive Integer base
-            try test(withBase: Decimal(Int.random(in: 1 ..< 10)), power: power)
+            try test(withBase: Decimal(Int.random(in: 1..<10)), power: power)
 
             // Negative Integer base
             try test(withBase: Decimal(Int.random(in: -10 ..< -1)), power: power)
 
             // Postive Double base
-            try test(withBase: Decimal(Double.random(in: 0 ..< 1.0)), power: power)
+            try test(withBase: Decimal(Double.random(in: 0..<1.0)), power: power)
 
             // Negative Double base
-            try test(withBase: Decimal(Double.random(in: -1.0 ..< 0.0)), power: power)
+            try test(withBase: Decimal(Double.random(in: -1.0..<0.0)), power: power)
 
             // For zero base: 0^n = 0; 0^(-n) = nan
             #expect(
-                try Decimal(0)._power(exponent: power, roundingMode: .plain) ==
-                Decimal(0)
+                try Decimal(0)._power(exponent: power, roundingMode: .plain) == Decimal(0)
             )
             #expect(
-                try Decimal(0)._power(exponent: -power, roundingMode: .plain) ==
-                Decimal.nan
+                try Decimal(0)._power(exponent: -power, roundingMode: .plain) == Decimal.nan
             )
         }
 

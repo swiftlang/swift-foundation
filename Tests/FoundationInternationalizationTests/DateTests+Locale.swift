@@ -22,7 +22,7 @@ import Foundation
 // TODO: Reenable these tests once DateFormatStyle has been ported
 @Suite("Date (Locale)")
 private struct DateLocaleTests {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     func dateWithString(_ str: String) -> Date {
         let formatter = DateFormatter()
         // Note: Calendar(identifier:) is OSX 10.9+ and iOS 8.0+ whereas the CF version has always been available
@@ -95,5 +95,5 @@ private struct DateLocaleTests {
         #expect(anyHashables[0] != anyHashables[1])
         #expect(anyHashables[1] == anyHashables[2])
     }
-#endif
+    #endif
 }

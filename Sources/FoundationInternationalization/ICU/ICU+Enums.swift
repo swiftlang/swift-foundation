@@ -22,8 +22,7 @@ extension UBool {
     static let `true` = UBool(1)
     static let `false` = UBool(0)
     var boolValue: Bool {
-        if self == 0 { return false }
-        else { return true }
+        if self == 0 { return false } else { return true }
     }
 }
 
@@ -196,9 +195,9 @@ extension UDateFormatField {
 }
 
 extension UDateFormatField {
-  internal init(_ rawValue: CInt) {
-    self.init(rawValue: EnumRawType(rawValue))
-  }
+    internal init(_ rawValue: CInt) {
+        self.init(rawValue: EnumRawType(rawValue))
+    }
 }
 
 extension UCalendarAttribute {
@@ -237,9 +236,9 @@ extension UNumberFormatFields {
 }
 
 extension UNumberFormatFields {
-  internal init(_ rawValue: CInt) {
-    self.init(rawValue: EnumRawType(rawValue))
-  }
+    internal init(_ rawValue: CInt) {
+        self.init(rawValue: EnumRawType(rawValue))
+    }
 }
 
 extension UDateFormatHourCycle {

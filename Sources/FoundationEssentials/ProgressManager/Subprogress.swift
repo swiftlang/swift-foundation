@@ -19,48 +19,48 @@ public struct Subprogress: ~Copyable, Sendable {
     internal var parent: ProgressManager
     internal var assignedCount: Int
     internal var isInitializedToProgressReporter: Bool
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     internal var subprogressBridge: SubprogressBridge?
-#endif
-     
-#if FOUNDATION_FRAMEWORK
+    #endif
+
+    #if FOUNDATION_FRAMEWORK
     internal init(parent: ProgressManager, assignedCount: Int, subprogressBridge: SubprogressBridge? = nil) {
         self.parent = parent
         self.assignedCount = assignedCount
         self.isInitializedToProgressReporter = false
         self.subprogressBridge = subprogressBridge
     }
-#else
+    #else
     internal init(parent: ProgressManager, assignedCount: Int) {
         self.parent = parent
         self.assignedCount = assignedCount
         self.isInitializedToProgressReporter = false
     }
-#endif
-    
+    #endif
+
     /// Instantiates a ProgressManager which is a child to the parent from which `self` is returned.
     /// - Parameter totalCount: Total count of returned child `ProgressManager` instance.
     /// - Returns: A `ProgressManager` instance.
     public consuming func start(totalCount: Int?) -> ProgressManager {
         isInitializedToProgressReporter = true
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         let childManager = ProgressManager(
             total: totalCount,
             completed: nil,
             subprogressBridge: subprogressBridge
         )
-        
+
         guard subprogressBridge == nil else {
             subprogressBridge?.manager.setInteropChild(interopMirror: childManager)
             return childManager
         }
-#else
+        #else
         let childManager = ProgressManager(
             total: totalCount,
             completed: nil
         )
-#endif
+        #endif
 
         let position = parent.addChild(
             childManager: childManager,
@@ -71,10 +71,10 @@ public struct Subprogress: ~Copyable, Sendable {
             parentManager: parent,
             positionInParent: position
         )
-        
+
         return childManager
     }
-    
+
     deinit {
         if !self.isInitializedToProgressReporter {
             parent.complete(count: assignedCount)

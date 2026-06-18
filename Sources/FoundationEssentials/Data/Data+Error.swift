@@ -18,10 +18,10 @@ internal import _FoundationCShims
 #endif
 
 internal func logFileIOErrno(_ err: Int32, at place: String) {
-#if FOUNDATION_FRAMEWORK
-#if !os(bridgeOS)
+    #if FOUNDATION_FRAMEWORK
+    #if !os(bridgeOS)
     let errnoDesc = String(cString: strerror(err))
     Logger(_NSOSLog()).error("Encountered \(place) failure \(err) \(errnoDesc)")
-#endif
-#endif
+    #endif
+    #endif
 }

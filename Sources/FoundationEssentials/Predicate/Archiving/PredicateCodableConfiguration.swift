@@ -20,7 +20,7 @@ internal import ReflectionInternal
 public protocol PredicateCodableKeyPathProviding {
     /// The allowed key paths.
     @preconcurrency
-    static var predicateCodableKeyPaths : [String : PartialKeyPath<Self> & Sendable] { get }
+    static var predicateCodableKeyPaths: [String: PartialKeyPath<Self> & Sendable] { get }
 }
 
 /// A specification of the expected types and key paths found in an archived predicate.
@@ -51,21 +51,21 @@ public protocol PredicateCodableKeyPathProviding {
 /// ```
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConvertible {
-    enum AllowListType : Equatable, Sendable {
+    enum AllowListType: Equatable, Sendable {
         case concrete(Type)
         case partial(PartialType)
-        
+
         static func concrete(for type: Any.Type) -> Self {
             .concrete(Type(type))
         }
-        
+
         static func partial(for type: Any.Type) -> Self? {
             guard let partial = Type(type).partial else {
                 return nil
             }
             return .partial(partial)
         }
-        
+
         var description: String {
             switch self {
             case .concrete(let type):
@@ -75,13 +75,13 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
             }
         }
     }
-    
-    enum AllowListKeyPath : Equatable, Sendable {
+
+    enum AllowListKeyPath: Equatable, Sendable {
         typealias Constructor = @Sendable (GenericArguments) -> (AnyKeyPath & Sendable)?
-        
+
         case concrete(AnyKeyPath & Sendable)
         case partial(PartialType, Constructor, String)
-        
+
         var description: String {
             switch self {
             case .concrete(let keyPath):
@@ -90,8 +90,8 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
                 return "\\\(partialType.name).\(property)"
             }
         }
-        
-        static func ==(lhs: Self, rhs: Self) -> Bool {
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
             switch (lhs, rhs) {
             case (.concrete(let lhsKP), .concrete(let rhsKP)):
                 return lhsKP == rhsKP
@@ -102,13 +102,13 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
             }
         }
     }
-    
-    private var allowedKeyPaths: [String : AllowListKeyPath] = [:]
-    private var allowedTypes: [String : AllowListType] = [:]
+
+    private var allowedKeyPaths: [String: AllowListKeyPath] = [:]
+    private var allowedTypes: [String: AllowListType] = [:]
     internal var shouldAddInputTypes = true
-    
+
     public init() {}
-    
+
     public var debugDescription: String {
         let types = allowedTypes.map {
             "\($0.value.description) (\($0.key))"
@@ -118,11 +118,11 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         }.joined(separator: ", ")
         return "PredicateCodableConfiguration(allowedTypes: [\(types)], allowedKeyPaths: [\(keypaths)])"
     }
-    
+
     public mutating func allowType(_ type: Any.Type, identifier: String? = nil) {
         _allowType(type, identifier: identifier, preferNewIdentifier: true)
     }
-    
+
     mutating func _allowType(_ type: Any.Type, identifier: String? = nil, preferNewIdentifier: Bool) {
         let identifier = identifier ?? _typeName(type, qualified: true)
         for (id, value) in allowedTypes {
@@ -135,7 +135,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
                     return // The type is already allowed with this identifier
                 }
             }
-            
+
             if case let .concrete(concreteType) = value, concreteType.swiftType == type {
                 if preferNewIdentifier {
                     // This type was previously allowed with a different identifier, remove the older entry
@@ -145,10 +145,10 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
                 }
             }
         }
-        
+
         allowedTypes[identifier] = .concrete(for: type)
     }
-    
+
     public mutating func disallowType(_ type: Any.Type) {
         allowedTypes = allowedTypes.filter {
             switch $0.value {
@@ -159,12 +159,12 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
             }
         }
     }
-    
+
     public mutating func allowPartialType(_ type: Any.Type, identifier: String) {
         guard let newPartialType = Type(type).partial else { return }
         _allowPartialType(newPartialType, identifier: identifier)
     }
-    
+
     private mutating func _allowPartialType(_ type: PartialType, identifier: String) {
         for (id, existingType) in allowedTypes {
             if id == identifier {
@@ -176,7 +176,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
                     return // The type is already allowed with this identifier
                 }
             }
-            
+
             if case let .partial(partialType) = existingType, type == partialType {
                 // This type was previously allowed with a different identifier, remove the older entry
                 allowedTypes[id] = nil
@@ -184,7 +184,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         }
         allowedTypes[identifier] = .partial(type)
     }
-    
+
     public mutating func disallowPartialType(_ type: Any.Type) {
         guard let partial = Type(type).partial else { return }
         allowedTypes = allowedTypes.filter {
@@ -196,17 +196,17 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
             }
         }
     }
-    
+
     @_alwaysEmitIntoClient
     public mutating func allowKeyPath(_ keyPath: AnyKeyPath & Sendable, identifier: String) {
         self.allowKeyPath(keyPath as AnyKeyPath, identifier: identifier)
     }
-    
+
     @_alwaysEmitIntoClient
     public mutating func disallowKeyPath(_ keyPath: AnyKeyPath & Sendable) {
         self.disallowKeyPath(keyPath as AnyKeyPath)
     }
-    
+
     /*public*/ @usableFromInline mutating func allowKeyPath(_ keyPath: AnyKeyPath, identifier: String) {
         keyPath._validateForPredicateUsage()
         for (id, existingKeyPath) in allowedKeyPaths {
@@ -219,7 +219,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
                     return // The keypath is already allowed with this identifier
                 }
             }
-            
+
             if case let .concrete(concreteKeyPath) = existingKeyPath, concreteKeyPath == keyPath {
                 // This keypath was previously allowed with a different identifier, remove the older entry
                 allowedKeyPaths[id] = nil
@@ -229,14 +229,14 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         _allowType(type(of: keyPath).rootType, preferNewIdentifier: false)
         _allowType(type(of: keyPath).valueType, preferNewIdentifier: false)
     }
-    
+
     /*public*/ @usableFromInline mutating func disallowKeyPath(_ keyPath: AnyKeyPath) {
         keyPath._validateForPredicateUsage()
         allowedKeyPaths = allowedKeyPaths.filter {
             $0.value != .concrete(keyPath._unsafeAssumeSendableAnyKeyPath)
         }
     }
-    
+
     internal mutating func _allowPartialKeyPath(_ root: PartialType, identifier: String, name: String, constructor: @escaping AllowListKeyPath.Constructor) {
         let newValue = AllowListKeyPath.partial(root, constructor, name)
         for (id, existingKeyPath) in allowedKeyPaths {
@@ -249,7 +249,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
                     return // The keypath is already allowed with this identifier
                 }
             }
-            
+
             if case let .partial(existingPartial, _, existingName) = existingKeyPath, existingPartial == root, existingName == name {
                 // This keypath was previously allowed with a different identifier, remove the older entry
                 allowedKeyPaths[id] = nil
@@ -257,7 +257,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         }
         allowedKeyPaths[identifier] = newValue
     }
-    
+
     public mutating func allowKeyPathsForPropertiesProvided<T: PredicateCodableKeyPathProviding>(by type: T.Type, recursive: Bool = false) {
         for (identifier, keyPath) in type.predicateCodableKeyPaths {
             allowKeyPath(keyPath, identifier: identifier)
@@ -266,7 +266,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
             }
         }
     }
-    
+
     public mutating func disallowKeyPathsForPropertiesProvided<T: PredicateCodableKeyPathProviding>(by type: T.Type, recursive: Bool = false) {
         for (_, keyPath) in type.predicateCodableKeyPaths {
             disallowKeyPath(keyPath)
@@ -275,7 +275,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
             }
         }
     }
-    
+
     public mutating func allow(_ other: Self) {
         for (identifier, type) in other.allowedTypes {
             switch type {
@@ -302,12 +302,12 @@ extension PredicateCodableConfiguration {
         let concreteIdentifier = allowedKeyPaths.first {
             $0.value == .concrete(keyPath)
         }?.key
-        
+
         if let concreteIdentifier {
             return concreteIdentifier
         }
-        
-        let inputRoot =  Type(type(of: keyPath).rootType)
+
+        let inputRoot = Type(type(of: keyPath).rootType)
         if let inputPartialRoot = inputRoot.partial {
             let partialIdentifier = allowedKeyPaths.first {
                 if case let .partial(root, constructor, _) = $0.value, root == inputPartialRoot, let constructed = constructor(inputRoot.genericArguments) {
@@ -316,20 +316,20 @@ extension PredicateCodableConfiguration {
                     return false
                 }
             }?.key
-            
+
             if let partialIdentifier {
                 return partialIdentifier
             }
         }
-        
+
         return nil
     }
-    
+
     func _keyPath(for identifier: String, rootType: Any.Type) -> (AnyKeyPath & Sendable)? {
         guard let value = allowedKeyPaths[identifier] else {
             return nil
         }
-        
+
         switch value {
         case .concrete(let keyPath):
             return keyPath
@@ -342,29 +342,29 @@ extension PredicateCodableConfiguration {
             return constructed
         }
     }
-    
+
     func _identifier(for type: Type) -> (identifier: String, isConcrete: Bool)? {
         let concreteIdentifier = allowedTypes.first {
             $0.value == .concrete(type)
         }?.key
-        
+
         if let concreteIdentifier {
             return (concreteIdentifier, true)
         }
-        
+
         if let partial = type.partial {
             let partialIdentifier = allowedTypes.first {
                 $0.value == .partial(partial)
             }?.key
-            
+
             if let partialIdentifier {
                 return (partialIdentifier, false)
             }
         }
-        
+
         return nil
     }
-    
+
     func _type(for identifier: String) -> AllowListType? {
         return allowedTypes[identifier]
     }
@@ -374,7 +374,7 @@ extension PredicateCodableConfiguration {
 extension PredicateCodableConfiguration {
     public static let standardConfiguration: Self = {
         var configuration = Self()
-        
+
         // Basic types
         configuration.allowType(Int.self)
         configuration.allowType(Bool.self)
@@ -389,10 +389,10 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(Slice<String>.self, identifier: "Swift.Slice")
         configuration.allowPartialType(Predicate<Int>.self, identifier: "Foundation.Predicate")
         configuration.allowPartialType(Expression<Int, Int>.self, identifier: "Foundation.Expression")
-        
+
         // Foundation-defined operator helper types
         configuration.allowType(PredicateExpressions.PredicateRegex.self)
-        
+
         // Foundation-defined PredicateExpression types
         configuration.allowPartialType(PredicateExpressions.Arithmetic<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Arithmetic")
         configuration.allowPartialType(PredicateExpressions.ClosedRange<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.ClosedRange")
@@ -403,8 +403,10 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.Comparison<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Comparison")
         configuration.allowPartialType(PredicateExpressions.Conditional<PredicateExpressions.Value<Bool>, PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Conditional")
         configuration.allowPartialType(PredicateExpressions.Conjunction<PredicateExpressions.Value<Bool>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.Conjunction")
-        configuration.allowPartialType(PredicateExpressions.DictionaryKeyDefaultValueSubscript<PredicateExpressions.Value<[Int:Int]>, PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.DictionaryKeyDefaultValueSubscript")
-        configuration.allowPartialType(PredicateExpressions.DictionaryKeySubscript<PredicateExpressions.Value<[Int:Int]>, PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.DictionaryKeySubscript")
+        configuration.allowPartialType(
+            PredicateExpressions.DictionaryKeyDefaultValueSubscript<PredicateExpressions.Value<[Int: Int]>, PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self,
+            identifier: "PredicateExpressions.DictionaryKeyDefaultValueSubscript")
+        configuration.allowPartialType(PredicateExpressions.DictionaryKeySubscript<PredicateExpressions.Value<[Int: Int]>, PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.DictionaryKeySubscript")
         configuration.allowPartialType(PredicateExpressions.Disjunction<PredicateExpressions.Value<Bool>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.Disjunction")
         configuration.allowPartialType(PredicateExpressions.IntDivision<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.IntDivision")
         configuration.allowPartialType(PredicateExpressions.IntRemainder<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.IntRemainder")
@@ -430,17 +432,17 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.NilLiteral<Int>.self, identifier: "PredicateExpressions.NilLiteral")
         configuration.allowPartialType(PredicateExpressions.PredicateEvaluate<PredicateExpressions.Value<Predicate<Int>>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.PredicateEvaluate")
         configuration.allowPartialType(PredicateExpressions.StringContainsRegex<PredicateExpressions.Value<String>, PredicateExpressions.Value<PredicateExpressions.PredicateRegex>>.self, identifier: "PredicateExpressions.StringContainsRegex")
-        
+
         #if FOUNDATION_FRAMEWORK
         configuration.allowPartialType(PredicateExpressions.StringCaseInsensitiveCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringCaseInsensitiveCompare")
         configuration.allowPartialType(PredicateExpressions.StringLocalizedCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringLocalizedCompare")
         configuration.allowPartialType(PredicateExpressions.StringLocalizedStandardContains<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringLocalizedStandardContains")
         #endif
-        
+
         configuration.allowPartialType(PredicateExpressions.KeyPath<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.KeyPath")
         configuration.allowPartialType(PredicateExpressions.Variable<Int>.self, identifier: "PredicateExpressions.Variable")
         configuration.allowPartialType(PredicateExpressions.Value<Int>.self, identifier: "PredicateExpressions.Value")
-        
+
         // Basic keypaths
         configuration.allowKeyPath(\String.count, identifier: "Swift.String.count")
         configuration.allowKeyPath(\Substring.count, identifier: "Swift.Substring.count")
@@ -450,13 +452,13 @@ extension PredicateCodableConfiguration {
         configuration.allowKeyPath(\Substring.first, identifier: "Swift.Substring.first")
         configuration.allowKeyPath(\String.last, identifier: "Swift.String.last")
         configuration.allowKeyPath(\Substring.last, identifier: "Swift.Substring.last")
-        
+
         // Basic Array keypaths
         configuration._allowPartialKeyPath(Type(Array<Int>.self).partial!, identifier: "Swift.Array.count", name: "count") { genericArgs in
             guard let elementType = genericArgs.first else {
                 return nil
             }
-            
+
             func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
                 \Array<E>.count
             }
@@ -466,7 +468,7 @@ extension PredicateCodableConfiguration {
             guard let elementType = genericArgs.first else {
                 return nil
             }
-            
+
             func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
                 \Array<E>.isEmpty
             }
@@ -476,7 +478,7 @@ extension PredicateCodableConfiguration {
             guard let elementType = genericArgs.first else {
                 return nil
             }
-            
+
             func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
                 \Array<E>.first
             }
@@ -486,19 +488,19 @@ extension PredicateCodableConfiguration {
             guard let elementType = genericArgs.first else {
                 return nil
             }
-            
+
             func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
                 \Array<E>.last
             }
             return _openExistential(elementType.swiftType, do: project)
         }
-        
+
         // Basic Set keypaths
         configuration._allowPartialKeyPath(Type(Set<Int>.self).partial!, identifier: "Swift.Set.count", name: "count") { genericArgs in
             guard let elementType = genericArgs.first?.swiftType as? any Hashable.Type else {
                 return nil
             }
-            
+
             func project<E: Hashable>(_: E.Type) -> AnyKeyPath & Sendable {
                 \Set<E>.count
             }
@@ -508,19 +510,19 @@ extension PredicateCodableConfiguration {
             guard let elementType = genericArgs.first?.swiftType as? any Hashable.Type else {
                 return nil
             }
-            
+
             func project<E: Hashable>(_: E.Type) -> AnyKeyPath & Sendable {
                 \Set<E>.isEmpty
             }
             return project(elementType)
         }
-        
+
         // Basic Dictionary keypaths
         configuration._allowPartialKeyPath(Type(Dictionary<Int, Int>.self).partial!, identifier: "Swift.Dictionary.count", name: "count") { genericArgs in
             guard genericArgs.count == 2, let keyType = genericArgs[0].swiftType as? any Hashable.Type else {
                 return nil
             }
-            
+
             func project<K: Hashable>(_: K.Type) -> AnyKeyPath & Sendable {
                 func project2<V>(_: V.Type) -> AnyKeyPath & Sendable {
                     \Dictionary<K, V>.count
@@ -533,7 +535,7 @@ extension PredicateCodableConfiguration {
             guard genericArgs.count == 2, let keyType = genericArgs[0].swiftType as? any Hashable.Type else {
                 return nil
             }
-            
+
             func project<K: Hashable>(_: K.Type) -> AnyKeyPath & Sendable {
                 func project2<V>(_: V.Type) -> AnyKeyPath & Sendable {
                     \Dictionary<K, V>.isEmpty
@@ -542,7 +544,7 @@ extension PredicateCodableConfiguration {
             }
             return project(keyType)
         }
-        
+
         return configuration
     }()
 }

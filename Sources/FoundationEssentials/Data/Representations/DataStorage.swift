@@ -35,7 +35,7 @@ import stdlib_h
 // The old name must not be used in the new runtime.
 @usableFromInline
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-internal final class __DataStorage : @unchecked Sendable {
+internal final class __DataStorage: @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
 
@@ -44,7 +44,7 @@ internal final class __DataStorage : @unchecked Sendable {
     #endif
 
     static func allocate(_ size: Int, _ clear: Bool) -> UnsafeMutableRawPointer? {
-#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+        #if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         if clear {
@@ -52,25 +52,25 @@ internal final class __DataStorage : @unchecked Sendable {
         } else {
             return malloc_type_malloc(size, typeDesc.type_id);
         }
-#else
+        #else
         if clear {
             return calloc(1, size)
         } else {
             return malloc(size)
         }
-#endif
+        #endif
     }
-    
+
     static func reallocate(_ ptr: UnsafeMutableRawPointer, _ newSize: Int) -> UnsafeMutableRawPointer? {
-#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS)  && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+        #if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         return malloc_type_realloc(ptr, newSize, typeDesc.type_id);
-#else
+        #else
         return realloc(ptr, newSize)
-#endif
+        #endif
     }
-    
+
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     static func move(_ dest_: UnsafeMutableRawPointer, _ source_: UnsafeRawPointer?, _ num_: Int) {
         var dest = dest_
@@ -87,7 +87,7 @@ internal final class __DataStorage : @unchecked Sendable {
             memmove(dest, source!, num)
         }
     }
-    
+
     @inlinable // This is @inlinable as trivially forwarding, and does not escape the _DataStorage boundary layer.
     static func shouldAllocateCleared(_ size: Int) -> Bool {
         return (size > (128 * 1024))
@@ -186,7 +186,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI
     @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -197,7 +197,7 @@ internal final class __DataStorage : @unchecked Sendable {
     func __legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
         try withUnsafeBytes(in: range, apply: apply)
     }
-#endif // DATA_LEGACY_ABI
+    #endif // DATA_LEGACY_ABI
 
     @inline(__always)
     @_alwaysEmitIntoClient
@@ -212,7 +212,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI
     @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -223,7 +223,7 @@ internal final class __DataStorage : @unchecked Sendable {
     internal func __legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
         try withUnsafeMutableBytes(in: range, apply: apply)
     }
-#endif // DATA_LEGACY_ABI
+    #endif // DATA_LEGACY_ABI
 
     /// A pointer to the mutable referenced byte allocation, relative to the slice offsets
     ///
@@ -234,30 +234,30 @@ internal final class __DataStorage : @unchecked Sendable {
     var mutableBytes: UnsafeMutableRawPointer? {
         return _bytes?.advanced(by: _offset &* -1) // _offset is guaranteed to be non-negative, so it can never overflow when negating
     }
-    
+
     @inlinable
     static var copyWillRetainMask: Int {
-#if _pointerBitWidth(_64)
+        #if _pointerBitWidth(_64)
         return Int(bitPattern: 0x8000000000000000)
-#elseif _pointerBitWidth(_32)
+        #elseif _pointerBitWidth(_32)
         return Int(bitPattern: 0x80000000)
-#endif
+        #endif
     }
-    
+
     @inlinable
     static var capacityMask: Int {
-#if _pointerBitWidth(_64)
+        #if _pointerBitWidth(_64)
         return Int(bitPattern: 0x7FFFFFFFFFFFFFFF)
-#elseif _pointerBitWidth(_32)
+        #elseif _pointerBitWidth(_32)
         return Int(bitPattern: 0x7FFFFFFF)
-#endif
+        #endif
     }
-    
+
     @inlinable // This is @inlinable as trivially computable.
     var capacity: Int {
         return _capacity & __DataStorage.capacityMask
     }
-    
+
     @inlinable
     var _copyWillRetain: Bool {
         get {
@@ -271,7 +271,7 @@ internal final class __DataStorage : @unchecked Sendable {
             }
         }
     }
-    
+
     @inlinable // This is @inlinable as trivially computable.
     var length: Int {
         get {
@@ -281,18 +281,18 @@ internal final class __DataStorage : @unchecked Sendable {
             setLength(newValue)
         }
     }
-    
+
     @inlinable // This is inlinable as trivially computable.
     var isExternallyOwned: Bool {
         // all __DataStorages will have some sort of capacity, because empty cases hit the .empty enum _Representation
         // anything with 0 capacity means that we have not allocated this pointer and consequently mutation is not ours to make.
         return _capacity == 0
     }
-    
+
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     func ensureUniqueBufferReference(growingTo newLength: Int = 0, clear: Bool = false) {
         guard isExternallyOwned || newLength > _capacity else { return }
-        
+
         if newLength == 0 {
             if isExternallyOwned {
                 let newCapacity = malloc_good_size(_length)
@@ -369,18 +369,18 @@ internal final class __DataStorage : @unchecked Sendable {
                     }
                 }
             }
-            
+
             if newBytes == nil {
                 /* Could not allocate bytes */
                 // At this point if the allocation cannot occur the process is likely out of memory
                 // and Bad-Things™ are going to happen anyhow
                 fatalError("unable to allocate memory for length (\(newLength))")
             }
-            
+
             if origLength < newLength && clear && !allocateCleared {
                 _ = memset(newBytes!.advanced(by: origLength), 0, newLength - origLength)
             }
-            
+
             /* _length set by caller */
             _bytes = newBytes
             _capacity = newCapacity
@@ -388,7 +388,7 @@ internal final class __DataStorage : @unchecked Sendable {
             _needToZero = !allocateCleared
         }
     }
-    
+
     func _freeBytes() {
         if let bytes = _bytes {
             if let dealloc = _deallocator {
@@ -399,14 +399,14 @@ internal final class __DataStorage : @unchecked Sendable {
         }
         _deallocator = nil
     }
-    
+
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
     func enumerateBytes(in range: Range<Int>, _ block: (_ buffer: UnsafeBufferPointer<UInt8>, _ byteIndex: Data.Index, _ stop: inout Bool) -> Void) {
         var stopv: Bool = false
         let buffer = UnsafeRawBufferPointer(start: _bytes, count: Swift.min(range.upperBound - range.lowerBound, _length))
         buffer.withMemoryRebound(to: UInt8.self) { block($0, 0, &stopv) }
     }
-    
+
     @inlinable // This is @inlinable as it does not escape the _DataStorage boundary layer.
     func setLength(_ length: Int) {
         let origLength = _length
@@ -420,7 +420,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
         _length = newLength
     }
-    
+
     @inlinable // This is @inlinable as it does not escape the _DataStorage boundary layer.
     func append(_ bytes: UnsafeRawPointer, length: Int) {
         precondition(length >= 0, "Length of appending bytes must not be negative")
@@ -432,11 +432,11 @@ internal final class __DataStorage : @unchecked Sendable {
         _length = newLength
         __DataStorage.move(_bytes!.advanced(by: origLength), bytes, length)
     }
-    
+
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     func withUninitializedBytes<Result: ~Copyable, E: Error>(
-      extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
+        extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
         // We use the requested capacity to build the `OutputRawSpan`. The requested capacity may be less than the actual capacity.
         assert((_length + extraCapacity) <= capacity)
@@ -455,20 +455,20 @@ internal final class __DataStorage : @unchecked Sendable {
         // index must have already been validated by the caller
         return _bytes.unsafelyUnwrapped.load(fromByteOffset: index &- _offset, as: UInt8.self)
     }
-    
+
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
     func set(_ index: Int, to value: UInt8) {
         // index must have already been validated by the caller
         ensureUniqueBufferReference()
         _bytes.unsafelyUnwrapped.storeBytes(of: value, toByteOffset: index &- _offset, as: UInt8.self)
     }
-    
+
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
     func copyBytes(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
         let offsetPointer = UnsafeRawBufferPointer(start: _bytes?.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length))
         UnsafeMutableRawBufferPointer(start: pointer, count: range.upperBound - range.lowerBound).copyMemory(from: offsetPointer)
     }
-    
+
     // This was an ABI entrypoint added in macOS 14-aligned releases in an attempt to work around the original declaration using NSRange instead of Range<Int>
     // Using this entrypoint from existing inlinable code required an availability check, and that check has proved to be extremely expensive
     // This entrypoint is left to preserve ABI compatibility, but inlinable code has since switched back to calling the original entrypoint using a tuple that is layout-compatible with NSRange
@@ -478,7 +478,7 @@ internal final class __DataStorage : @unchecked Sendable {
         // Call through to the main implementation
         self.replaceBytes(in: (range_.lowerBound, range_.upperBound &- range_.lowerBound), with: replacementBytes, length: replacementLength)
     }
-    
+
     // This utility function was originally written in terms of NSRange instead of Range<Int>. On Darwin platforms, it is also an ABI entry point so we need to continue accepting NSRange values from code that has been inlined into callers.
     // To avoid requiring the use of NSRange in source, we instead use a tuple that is layout-compatible with NSRange. On Darwin platforms, we can use `@_silgen_name to preserve the original symbol name that refers to NSRange.
     @usableFromInline
@@ -511,15 +511,15 @@ internal final class __DataStorage : @unchecked Sendable {
                 _ = memset(mutableBytes + start, 0, replacementLength)
             }
         }
-        
+
         if resultingLength < currentLength {
             setLength(resultingLength)
         }
     }
-    
+
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     func resetBytes(in range_: Range<Int>) {
-        let range = range_.lowerBound - _offset ..< range_.upperBound - _offset
+        let range = range_.lowerBound - _offset..<range_.upperBound - _offset
         if range.upperBound - range.lowerBound == 0 { return }
         if _length < range.upperBound {
             if capacity <= range.upperBound {
@@ -531,7 +531,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
         _ = memset(_bytes!.advanced(by: range.lowerBound), 0, range.upperBound - range.lowerBound)
     }
-    
+
     @usableFromInline // This is not @inlinable as a non-trivial, non-convenience initializer.
     init(length: Int) {
         precondition(length < __DataStorage.maxSize)
@@ -539,7 +539,7 @@ internal final class __DataStorage : @unchecked Sendable {
         if __DataStorage.vmOpsThreshold <= capacity {
             capacity = Platform.roundUpToMultipleOfPageSize(capacity)
         }
-        
+
         let clear = __DataStorage.shouldAllocateCleared(length)
         _bytes = __DataStorage.allocate(capacity, clear)!
         _capacity = capacity
@@ -548,7 +548,7 @@ internal final class __DataStorage : @unchecked Sendable {
         _offset = 0
         setLength(length)
     }
-    
+
     @usableFromInline // This is not @inlinable as a non-convenience initializer.
     init(capacity capacity_: Int = 0) {
         var capacity = capacity_
@@ -562,7 +562,7 @@ internal final class __DataStorage : @unchecked Sendable {
         _needToZero = true
         _offset = 0
     }
-    
+
     @usableFromInline // This is not @inlinable as a non-convenience initializer.
     init(bytes: UnsafeRawPointer?, length: Int) {
         precondition(length < __DataStorage.maxSize)
@@ -590,7 +590,7 @@ internal final class __DataStorage : @unchecked Sendable {
             __DataStorage.move(_bytes!, bytes, length)
         }
     }
-    
+
     @usableFromInline // This is not @inlinable as a non-convenience initializer.
     init(bytes: UnsafeMutableRawPointer?, length: Int, copy: Bool, deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?, offset: Int) {
         precondition(length < __DataStorage.maxSize)
@@ -601,7 +601,8 @@ internal final class __DataStorage : @unchecked Sendable {
             _needToZero = false
             _bytes = nil
             if let dealloc = deallocator,
-               let bytes_ = bytes {
+                let bytes_ = bytes
+            {
                 dealloc(bytes_, length)
             }
         } else if !copy {
@@ -634,7 +635,7 @@ internal final class __DataStorage : @unchecked Sendable {
             }
         }
     }
-    
+
     @usableFromInline
     init(offset: Int, bytes: UnsafeMutableRawPointer, capacity: Int, needToZero: Bool, length: Int, deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?) {
         _offset = offset
@@ -644,11 +645,11 @@ internal final class __DataStorage : @unchecked Sendable {
         _length = length
         _deallocator = deallocator
     }
-    
+
     deinit {
         _freeBytes()
     }
-    
+
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func mutableCopy(_ range: Range<Int>) -> __DataStorage {
         return __DataStorage(bytes: _bytes?.advanced(by: range.lowerBound - _offset), length: range.upperBound - range.lowerBound, copy: true, deallocator: nil, offset: range.lowerBound)

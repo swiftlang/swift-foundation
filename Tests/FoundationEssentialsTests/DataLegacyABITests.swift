@@ -204,14 +204,14 @@ private final class FoundationLegacyABITests {
             #expect($0[0] == 3)
             return $0.count
         }
-        #expect(count9 == 40-count7)
+        #expect(count9 == 40 - count7)
 
         let countA = try storage.__testable_withUnsafeMutableBytes(in: count7..<40) {
             $0[0] = 31
             return ($0.count, Double($0.count.leadingZeroBitCount))
         }
         #expect(slice[count7] == 31)
-        #expect(countA.0 == 40-count7)
+        #expect(countA.0 == 40 - count7)
     }
 
     @Test func validateContiguousBytesLegacyABI() throws {
@@ -263,12 +263,12 @@ extension LargeDataTests {
         let countA = try slice.__testable_withUnsafeBytes { $0.count }
         #expect(countA == largeCount)
 
-        #expect(slice[largeCount/2] == 0)
+        #expect(slice[largeCount / 2] == 0)
         let countB = try slice.__testable_withUnsafeMutableBytes {
-            $0[largeCount/2] = 10
+            $0[largeCount / 2] = 10
             return ($0.count, $0.count)
         }
-        #expect(slice[largeCount/2] == 10)
+        #expect(slice[largeCount / 2] == 10)
         #expect(countB.0 == largeCount)
 
         #expect(slice.capacity >= largeCount)

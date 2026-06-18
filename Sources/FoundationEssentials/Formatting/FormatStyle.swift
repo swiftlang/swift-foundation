@@ -102,7 +102,7 @@
 ///   formatted string with the initializer `Decimal.init(_:format:lenient:)`.
 /// - Create a parse strategy and call its `parse(_:)` method on one or more formatted instances.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public protocol FormatStyle<FormatInput, FormatOutput> : Codable, Hashable {
+public protocol FormatStyle<FormatInput, FormatOutput>: Codable, Hashable {
 
     /// The type this format style accepts as input.
     ///

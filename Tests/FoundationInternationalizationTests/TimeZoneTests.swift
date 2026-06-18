@@ -35,11 +35,11 @@ private struct TimeZoneTests {
         await usingCurrentInternationalizationPreferences {
             let autoupdating = TimeZone.autoupdatingCurrent
             let autoupdating2 = TimeZone.autoupdatingCurrent
-            
+
             #expect(autoupdating == autoupdating2)
-            
+
             let current = TimeZone.current
-            
+
             #expect(autoupdating != current)
         }
     }
@@ -79,24 +79,24 @@ private struct TimeZoneTests {
         }
 
         test("America/Los_Angeles", "en_US", .generic, "Pacific Time", "Pacific Time")
-        test("Europe/Paris",       "en_US", .generic, "Central European Time", "Central European Time")
-        test("Antarctica/Vostok",   "en_US", .generic, "Vostok Time", "Vostok Time")
-        test("Asia/Chongqing",      "en_US", .generic, "China Standard Time", "China Standard Time")
-        test("America/Sao_Paulo",   "en_US", .generic, "Brasilia Standard Time", "Brasilia Standard Time")
+        test("Europe/Paris", "en_US", .generic, "Central European Time", "Central European Time")
+        test("Antarctica/Vostok", "en_US", .generic, "Vostok Time", "Vostok Time")
+        test("Asia/Chongqing", "en_US", .generic, "China Standard Time", "China Standard Time")
+        test("America/Sao_Paulo", "en_US", .generic, "Brasilia Standard Time", "Brasilia Standard Time")
 
         test("America/Los_Angeles", "zh_TW", .shortStandard, "PST", "PST")
 
-        test("Europe/Paris",       "zh_TW", .shortStandard, "GMT+1", "GMT+1")
-        test("Europe/Paris",       "zh_TW", .shortDaylightSaving, "GMT+1", "GMT+2")
+        test("Europe/Paris", "zh_TW", .shortStandard, "GMT+1", "GMT+1")
+        test("Europe/Paris", "zh_TW", .shortDaylightSaving, "GMT+1", "GMT+2")
 
-        test("Antarctica/Davis",   "zh_TW", .shortStandard, "GMT+7", "GMT+7")
-        test("Asia/Chongqing",      "zh_TW", .shortStandard, "GMT+8", "GMT+8")
-        test("America/Sao_Paulo",   "zh_TW", .shortStandard, "GMT-3", "GMT-3")
+        test("Antarctica/Davis", "zh_TW", .shortStandard, "GMT+7", "GMT+7")
+        test("Asia/Chongqing", "zh_TW", .shortStandard, "GMT+8", "GMT+8")
+        test("America/Sao_Paulo", "zh_TW", .shortStandard, "GMT-3", "GMT-3")
 
         // abbreviation
-        test("GMT",     "en_US", .standard, "Greenwich Mean Time", "Greenwich Mean Time")
-        test("GMT+8",   "en_US", .standard, "GMT+08:00", "GMT+08:00")
-        test("PST",     "en_US", .standard, "Pacific Standard Time", "Pacific Standard Time")
+        test("GMT", "en_US", .standard, "Greenwich Mean Time", "Greenwich Mean Time")
+        test("GMT+8", "en_US", .standard, "GMT+08:00", "GMT+08:00")
+        test("PST", "en_US", .standard, "Pacific Standard Time", "Pacific Standard Time")
 
         // invalid names
         test("XYZ", "en_US", .standard, nil, nil)
@@ -154,30 +154,31 @@ private struct TimeZoneTests {
             #expect(tz.nextDaylightSavingTimeTransition == nil)
         }
 
-        try testName("GMT+8", 8*3600)
-        try testName("GMT+08", 8*3600)
-        try testName("GMT+0800", 8*3600)
-        try testName("GMT+08:00", 8*3600)
-        try testName("GMT+8:00", 8*3600)
-        try testName("UTC+9", 9*3600)
-        try testName("UTC+09", 9*3600)
-        try testName("UTC+0900", 9*3600)
-        try testName("UTC+09:00", 9*3600)
-        try testName("UTC+9:00", 9*3600)
+        try testName("GMT+8", 8 * 3600)
+        try testName("GMT+08", 8 * 3600)
+        try testName("GMT+0800", 8 * 3600)
+        try testName("GMT+08:00", 8 * 3600)
+        try testName("GMT+8:00", 8 * 3600)
+        try testName("UTC+9", 9 * 3600)
+        try testName("UTC+09", 9 * 3600)
+        try testName("UTC+0900", 9 * 3600)
+        try testName("UTC+09:00", 9 * 3600)
+        try testName("UTC+9:00", 9 * 3600)
     }
 
     @Test(arguments: ["en_001", "en_US", "ja_JP"])
     func timeZoneGMTOffset_localizedNames(localeIdentifier: String) throws {
         let locale = Locale(identifier: localeIdentifier)
         func testNames(
-        _ names: [String],
-        _ expectedStandardName: String,
-        _ expectedShortStandardName: String,
-        _ expectedDaylightSavingName: String,
-        _ expectedShortDaylightSavingName: String,
-        _ expectedGenericName: String,
-        _ expectedShortGenericName: String,
-        sourceLocation: SourceLocation = #_sourceLocation) throws {
+            _ names: [String],
+            _ expectedStandardName: String,
+            _ expectedShortStandardName: String,
+            _ expectedDaylightSavingName: String,
+            _ expectedShortDaylightSavingName: String,
+            _ expectedGenericName: String,
+            _ expectedShortGenericName: String,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) throws {
             for name in names {
                 let tz = try #require(TimeZone(identifier: name))
                 let standardName = tz.localizedName(for: .standard, locale: locale)
@@ -196,10 +197,12 @@ private struct TimeZoneTests {
             }
         }
 
-        try testNames(["GMT+8", "GMT+08", "GMT+0800", "GMT+08:00", "GMT+8:00"],
-                      "GMT+08:00", "GMT+8", "GMT+08:00", "GMT+8", "GMT+08:00", "GMT+8")
-        try testNames(["UTC+9", "UTC+09", "UTC+0900", "UTC+09:00", "UTC+9:00"],
-                     "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9")
+        try testNames(
+            ["GMT+8", "GMT+08", "GMT+0800", "GMT+08:00", "GMT+8:00"],
+            "GMT+08:00", "GMT+8", "GMT+08:00", "GMT+8", "GMT+08:00", "GMT+8")
+        try testNames(
+            ["UTC+9", "UTC+09", "UTC+0900", "UTC+09:00", "UTC+9:00"],
+            "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9")
     }
 
     @Test func secondsFromGMT_RemoteDates() {
@@ -208,41 +211,41 @@ private struct TimeZoneTests {
         let secondsFromGMT = europeRome.secondsFromGMT(for: date)
         #expect(secondsFromGMT == 2996) //  Before 1893 the time zone is UTC+00:49:56
     }
-    
+
     func decodeHelper(_ l: TimeZone) throws -> TimeZone {
         let je = JSONEncoder()
         let data = try je.encode(l)
         let jd = JSONDecoder()
         return try jd.decode(TimeZone.self, from: data)
     }
-    
+
     @Test func serializationOfCurrent() async throws {
         try await usingCurrentInternationalizationPreferences {
             let current = TimeZone.current
             let decodedCurrent = try decodeHelper(current)
             #expect(decodedCurrent == current)
-            
+
             let autoupdatingCurrent = TimeZone.autoupdatingCurrent
             let decodedAutoupdatingCurrent = try decodeHelper(autoupdatingCurrent)
             #expect(decodedAutoupdatingCurrent == autoupdatingCurrent)
-            
+
             #expect(decodedCurrent != decodedAutoupdatingCurrent)
             #expect(current != autoupdatingCurrent)
             #expect(decodedCurrent != autoupdatingCurrent)
             #expect(current != decodedAutoupdatingCurrent)
-            
+
             do {
                 // TimeZone does not decode the current as a sentinel value
                 TimeZoneCache.cache.resetCurrent(to: .gmt)
-                
+
                 let encodedCurrent = try JSONEncoder().encode(TimeZone.current)
                 let encodedAutoupdatingCurrent = try JSONEncoder().encode(TimeZone.autoupdatingCurrent)
-                
+
                 TimeZoneCache.cache.resetCurrent(to: TimeZone(identifier: "America/Los_Angeles")!)
-                
+
                 let decodedCurrent = try JSONDecoder().decode(TimeZone.self, from: encodedCurrent)
                 let decodedAutoupdatingCurrent = try JSONDecoder().decode(TimeZone.self, from: encodedAutoupdatingCurrent)
-                
+
                 #expect(decodedCurrent.identifier == "GMT")
                 #expect(decodedAutoupdatingCurrent.identifier == "America/Los_Angeles")
             }
@@ -255,7 +258,7 @@ private struct TimeZoneGMTTests {
     var tz: TimeZone {
         TimeZone(identifier: "GMT")!
     }
-    
+
     @Test func identifier() {
         #expect(tz.identifier == "GMT")
     }
@@ -269,19 +272,19 @@ private struct TimeZoneGMTTests {
         #expect(tz.secondsFromGMT(for: Date.distantFuture) == 0)
         #expect(tz.secondsFromGMT(for: Date.distantPast) == 0)
     }
-    
+
     @Test func abbreviationForDate() {
         #expect(tz.abbreviation(for: Date.now) == "GMT")
         #expect(tz.abbreviation(for: Date.distantFuture) == "GMT")
         #expect(tz.abbreviation(for: Date.distantPast) == "GMT")
     }
-    
+
     @Test func daylightSavingTimeOffsetForDate() {
         #expect(tz.daylightSavingTimeOffset(for: Date.now) == 0)
         #expect(tz.daylightSavingTimeOffset(for: Date.distantFuture) == 0)
         #expect(tz.daylightSavingTimeOffset(for: Date.distantPast) == 0)
     }
-    
+
     @Test func nextDaylightSavingTimeTransitionAfterDate() {
         #expect(tz.nextDaylightSavingTimeTransition(after: Date.now) == nil)
         #expect(tz.nextDaylightSavingTimeTransition(after: Date.distantFuture) == nil)
@@ -301,17 +304,21 @@ private struct TimeZoneGMTTests {
         #expect(tz.localizedName(for: .shortDaylightSaving, locale: Locale(identifier: "en_US")) == "GMT")
         #expect(tz.localizedName(for: .generic, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
         #expect(tz.localizedName(for: .shortGeneric, locale: Locale(identifier: "en_US")) == "GMT")
-        
+
         // TODO: In non-framework, no FoundationInternationalization cases, return nil for all of tehse
     }
-    
+
     @Test func equal() {
         #expect(TimeZone(identifier: "UTC") == TimeZone(identifier: "UTC"))
     }
-    
+
     @Test func abbreviated() throws {
         // A sampling of expected values for abbreviated GMT names
-        let expected : [(Int, String)] = [(-64800, "GMT-18"), (-64769, "GMT-17:59"), (-64709, "GMT-17:58"),  (-61769, "GMT-17:09"), (-61229, "GMT-17"), (-36029, "GMT-10"), (-35969, "GMT-9:59"), (-35909, "GMT-9:58"), (-32489, "GMT-9:01"), (-32429, "GMT-9"), (-3629, "GMT-1"), (-1829, "GMT-0:30"), (-89, "GMT-0:01"), (-29, "GMT"), (-1, "GMT"), (0, "GMT"), (29, "GMT"), (30, "GMT+0:01"), (90, "GMT+0:02"), (1770, "GMT+0:30"), (3570, "GMT+1"), (3630, "GMT+1:01"), (34170, "GMT+9:30"), (35910, "GMT+9:59"), (35970, "GMT+10"), (36030, "GMT+10:01"), (64650, "GMT+17:58"), (64710, "GMT+17:59"), (64770, "GMT+18")]
+        let expected: [(Int, String)] = [
+            (-64800, "GMT-18"), (-64769, "GMT-17:59"), (-64709, "GMT-17:58"), (-61769, "GMT-17:09"), (-61229, "GMT-17"), (-36029, "GMT-10"), (-35969, "GMT-9:59"), (-35909, "GMT-9:58"), (-32489, "GMT-9:01"), (-32429, "GMT-9"), (-3629, "GMT-1"),
+            (-1829, "GMT-0:30"), (-89, "GMT-0:01"), (-29, "GMT"), (-1, "GMT"), (0, "GMT"), (29, "GMT"), (30, "GMT+0:01"), (90, "GMT+0:02"), (1770, "GMT+0:30"), (3570, "GMT+1"), (3630, "GMT+1:01"), (34170, "GMT+9:30"), (35910, "GMT+9:59"),
+            (35970, "GMT+10"), (36030, "GMT+10:01"), (64650, "GMT+17:58"), (64710, "GMT+17:59"), (64770, "GMT+18"),
+        ]
 
         for (offset, expect) in expected {
             let tz = try #require(TimeZone(secondsFromGMT: offset))
@@ -341,7 +348,7 @@ private struct TimeZoneICUTests {
         try test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 00, second: 00, nanosecond: 1), expectedRawOffset: -28800, expectedDSTOffset: 0)
         try test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 00, second: 01), expectedRawOffset: -28800, expectedDSTOffset: 0)
         try test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 59, second: 59), expectedRawOffset: -28800, expectedDSTOffset: 0)
-        
+
         // These times do not exist; we treat it as if in the previous time zone, i.e. not in DST
         try test(.init(year: 2023, month: 3, day: 12, hour: 2, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
         try test(.init(year: 2023, month: 3, day: 12, hour: 2, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 0)
@@ -354,7 +361,7 @@ private struct TimeZoneICUTests {
         // These times happen twice; we treat it as if in the previous time zone, i.e. still in DST
         try test(.init(year: 2023, month: 11, day: 5, hour: 1, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 3600)
         try test(.init(year: 2023, month: 11, day: 5, hour: 1, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 3600)
-        
+
         // Clock should turn right back as this moment, so if we insist on being at this point, then we've moved past the transition point -- hence not DST
         try test(.init(year: 2023, month: 11, day: 5, hour: 2, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
 
@@ -418,13 +425,14 @@ private struct TimeZone_ICUResourceTests {
     }()
 
     @Test func singleDSTRuleTimeZone() throws {
-        let t = try _TimeZoneSingleDSTRule(offsetSeconds: -28800, dstSavingsSeconds: 3600, startMonth: 2, startDay: 8, startDayOfWeek: -1, startTime: 7200, startTimeMode: .wallTime, endMonth: 10, endDay: 1, endDayOfWeek: -1, endTime: 7200, endTimeMode: .wallTime, startYear: 2008)
+        let t = try _TimeZoneSingleDSTRule(
+            offsetSeconds: -28800, dstSavingsSeconds: 3600, startMonth: 2, startDay: 8, startDayOfWeek: -1, startTime: 7200, startTimeMode: .wallTime, endMonth: 10, endDay: 1, endDayOfWeek: -1, endTime: 7200, endTimeMode: .wallTime, startYear: 2008)
         let truth = try #require(_TimeZoneICU(identifier: "America/Los_Angeles"))
         let options: [(TimeZone.DaylightSavingTimePolicy, TimeZone.DaylightSavingTimePolicy)] = [
             (.former, .former),
             (.former, .latter),
             (.latter, .former),
-            (.latter, .latter)
+            (.latter, .latter),
         ]
 
         for d in finalTimeZoneDates {
@@ -460,13 +468,13 @@ private struct TimeZone_ICUResourceTests {
 
         }
 
-        let testDates = buildTestDates( [
+        let testDates = buildTestDates([
             Date(timeIntervalSince1970: 1647165728.7119999) /*year 2022*/,
             Date(timeIntervalSince1970: 0),
             Date.now,
             Date(timeIntervalSince1970: -3389673178),
-            Date(timeIntervalSince1970: 1196467622)
-        ] )
+            Date(timeIntervalSince1970: 1196467622),
+        ])
 
         for name in TimeZone.knownTimeZoneIdentifiers {
             let t = try _TimeZoneICUResource(identifier: name)
@@ -606,12 +614,12 @@ private struct TimeZoneBridgingTests {
         #expect(anyHashables[0] != anyHashables[1])
         #expect(anyHashables[1] == anyHashables[2])
     }
-    
+
     @Test func customNSTimeZoneAsDefault() async {
         await usingCurrentInternationalizationPreferences {
             // Set a custom subclass of NSTimeZone as the default time zone
             setCustomTimeZoneAsDefault()
-            
+
             // Calendar uses the default time zone
             let defaultTZ = Calendar.current.timeZone
             #expect(defaultTZ.identifier == "MyCustomTimeZone")

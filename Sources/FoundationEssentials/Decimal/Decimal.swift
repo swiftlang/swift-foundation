@@ -62,7 +62,7 @@ public struct Decimal: Sendable {
             self.storage.lengthFlagsAndReserved |= newLength // set the new length
         }
     }
-    
+
     // Bool
     internal var _isNegative: UInt32 {
         get {
@@ -76,7 +76,7 @@ public struct Decimal: Sendable {
             }
         }
     }
-    
+
     // Bool
     internal var _isCompact: UInt32 {
         get {
@@ -90,7 +90,7 @@ public struct Decimal: Sendable {
             }
         }
     }
-    
+
     // Only 18 bits
     internal var _reserved: UInt32 {
         get {
@@ -187,20 +187,21 @@ extension Decimal {
 
 // MARK: - String
 extension Decimal {
-#if FOUNDATION_FRAMEWORK
-#else
+    #if FOUNDATION_FRAMEWORK
+    #else
     @_spi(SwiftCorelibsFoundation)
     public func toString(with locale: Locale? = nil) -> String {
         let separator: String
         if let locale = locale,
-           let localizedSeparator = locale.decimalSeparator {
+            let localizedSeparator = locale.decimalSeparator
+        {
             separator = localizedSeparator
         } else {
             separator = "."
         }
         return _toString(withDecimalSeparator: separator)
     }
-    
+
     @_spi(SwiftCorelibsFoundation)
     public static func decimal(
         from stringView: String.UTF8View,
@@ -209,7 +210,7 @@ extension Decimal {
     ) -> (result: Decimal?, processedLength: Int) {
         _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString).asOptional
     }
-#endif
+    #endif
     internal func _toString(withDecimalSeparator separator: String) -> String {
         if self.isNaN {
             return "NaN"
@@ -289,8 +290,7 @@ extension Decimal {
 
         func skipWhiteSpaces(from index: UTF8Collection.Index) -> UTF8Collection.Index {
             var i = index
-            while i != utf8View.endIndex &&
-                Character(utf8Scalar: utf8View[i]).isWhitespace {
+            while i != utf8View.endIndex && Character(utf8Scalar: utf8View[i]).isWhitespace {
                 utf8View.formIndex(after: &i)
             }
             return i
@@ -317,9 +317,7 @@ extension Decimal {
         var index = utf8View.startIndex
         index = skipWhiteSpaces(from: index)
         // Get the sign
-        if index != utf8View.endIndex &&
-            (utf8View[index] == UInt8._plus ||
-             utf8View[index] == UInt8._minus) {
+        if index != utf8View.endIndex && (utf8View[index] == UInt8._plus || utf8View[index] == UInt8._minus) {
             result._isNegative = (utf8View[index] == UInt8._minus) ? 1 : 0
             // Advance over the sign
             utf8View.formIndex(after: &index)
@@ -328,7 +326,8 @@ extension Decimal {
         var tooBigToFit = false
 
         while index != utf8View.endIndex,
-            let digitValue = utf8View[index].digitValue {
+            let digitValue = utf8View[index].digitValue
+        {
             defer {
                 utf8View.formIndex(after: &index)
             }
@@ -350,8 +349,11 @@ extension Decimal {
                 }
                 continue
             }
-            guard let product = try? result._multiplyBy10AndAdd(number: UInt16(digitValue)
-            ) else {
+            guard
+                let product = try? result._multiplyBy10AndAdd(
+                    number: UInt16(digitValue)
+                )
+            else {
                 tooBigToFit = true
                 incrementExponent(&result)
                 if result.isNaN {
@@ -366,15 +368,19 @@ extension Decimal {
             utf8View.formIndex(&index, offsetBy: decimalSeparator.count)
             // Continue to build the mantissa
             while index != utf8View.endIndex,
-                  let digitValue = utf8View[index].digitValue {
+                let digitValue = utf8View[index].digitValue
+            {
                 defer {
                     utf8View.formIndex(after: &index)
                 }
                 guard !tooBigToFit else {
                     continue
                 }
-                guard let product = try? result._multiplyBy10AndAdd(number: UInt16(digitValue)
-                ) else {
+                guard
+                    let product = try? result._multiplyBy10AndAdd(
+                        number: UInt16(digitValue)
+                    )
+                else {
                     tooBigToFit = true
                     continue
                 }
@@ -412,7 +418,8 @@ extension Decimal {
             }
             // Build the exponent
             while index != utf8View.endIndex,
-                  let digitValue = utf8View[index].digitValue {
+                let digitValue = utf8View[index].digitValue
+            {
                 exponent = 10 * exponent + digitValue
                 if exponent > 2 * Int(Int8.max) {
                     // Too big to fit

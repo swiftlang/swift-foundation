@@ -17,14 +17,14 @@
 /// replace attributes in existing attributed strings.
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributeContainer : Sendable {
-    internal var storage : AttributedString._AttributeStorage
-    
+public struct AttributeContainer: Sendable {
+    internal var storage: AttributedString._AttributeStorage
+
     /// Creates an empty attribute container.
     public init() {
         storage = .init()
     }
-    
+
     internal init(_ storage: AttributedString._AttributeStorage) {
         self.storage = storage
     }
@@ -34,7 +34,7 @@ public struct AttributeContainer : Sendable {
 extension AttributeContainer {
     /// Returns the attribute that corresponds to a specified key.
     @preconcurrency
-    public subscript<T: AttributedStringKey>(_: T.Type) -> T.Value? where T.Value : Sendable {
+    public subscript<T: AttributedStringKey>(_: T.Type) -> T.Value? where T.Value: Sendable {
         get { storage[T.self] }
         set { storage[T.self] = newValue }
     }
@@ -42,7 +42,7 @@ extension AttributeContainer {
     /// Returns the attribute that corresponds to a specified key path.
     @preconcurrency
     @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
@@ -113,11 +113,11 @@ extension AttributeContainer {
     /// returns a new ``AttributeContainer`` with this attribute set. Then the `backgroundColor(.yellow)` creates
     /// a second builder to modify the just-returned ``AttributeContainer`` by adding the `backgroundColor`
     /// attribute. The result is an ``AttributeContainer`` with both attributes set.
-    public struct Builder<T: AttributedStringKey> : Sendable {
-        var container : AttributeContainer
+    public struct Builder<T: AttributedStringKey>: Sendable {
+        var container: AttributeContainer
 
         @preconcurrency
-        public func callAsFunction(_ value: T.Value) -> AttributeContainer where T.Value : Sendable {
+        public func callAsFunction(_ value: T.Value) -> AttributeContainer where T.Value: Sendable {
             var new = container
             new[T.self] = value
             return new
@@ -139,9 +139,9 @@ extension AttributeContainer {
     ///   - other: The attribute container with the attributes to merge.
     ///   - mergePolicy: A policy to use when resolving conflicts between this string's attributes and those in `other`.
     /// - Returns: An attribute container created by merging the source container's attributes with those in another attribute container.
-    public func merging(_ other: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) -> AttributeContainer {
+    public func merging(_ other: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy = .keepNew) -> AttributeContainer {
         var copy = self
-        copy.merge(other, mergePolicy:  mergePolicy)
+        copy.merge(other, mergePolicy: mergePolicy)
         return copy
     }
 }
@@ -180,7 +180,7 @@ extension AttributeContainer {
         }
         return AttributeContainer(storage)
     }
-    
+
     /// Returns a copy of the attribute container with only attributes that have the provided run boundaries.
     /// - Parameter runBoundaries: The required `runBoundaries` value of the filtered attributes. If `nil` is provided, only attributes not bound to any specific boundary will be returned.
     /// - Returns: A copy of the attribute container with only attributes whose `runBoundaries` property matches the provided value.

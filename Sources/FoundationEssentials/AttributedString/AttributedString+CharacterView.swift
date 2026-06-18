@@ -21,7 +21,7 @@ internal import _FoundationCollections
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     /// A view into the underlying storage of the attributed string, as Unicode characters.
-    public struct CharacterView : Sendable {
+    public struct CharacterView: Sendable {
         /// The guts of the base attributed string.
         internal var _guts: Guts
 
@@ -50,7 +50,7 @@ extension AttributedString {
             let substring = _guts.string[range]
             _range = Range(uncheckedBounds: (substring.startIndex, substring.endIndex))
         }
-        
+
         public init() {
             self.init(Guts())
         }
@@ -85,7 +85,7 @@ extension AttributedString {
         }
         set {
             // FIXME: Why is this allowed if _modify traps on replacement?
-            self.characters.replaceSubrange(startIndex ..< endIndex, with: newValue)
+            self.characters.replaceSubrange(startIndex..<endIndex, with: newValue)
         }
     }
 }
@@ -133,11 +133,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     /// - Complexity: O(*n*)
     @_alwaysEmitIntoClient
     public var count: Int {
-    #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _count
         }
-    #endif
+        #endif
         return _defaultCount
     }
 
@@ -163,11 +163,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public func index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
-    #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }
-    #endif
+        #endif
         return _defaultIndex(i, offsetBy: distance)
     }
 
@@ -186,11 +186,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         offsetBy distance: Int,
         limitedBy limit: AttributedString.Index
     ) -> AttributedString.Index? {
-    #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance, limitedBy: limit)
         }
-    #endif
+        #endif
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
@@ -203,23 +203,26 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     ) -> AttributedString.Index? {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
         precondition(limit >= startIndex && limit <= endIndex, "AttributedString index out of bounds")
-        guard let j = _guts.string.index(
-            i._value, offsetBy: distance, limitedBy: limit._value
-        ) else {
+        guard
+            let j = _guts.string.index(
+                i._value, offsetBy: distance, limitedBy: limit._value
+            )
+        else {
             return nil
         }
-        precondition(j >= startIndex._value && j <= endIndex._value,
-                     "AttributedString index out of bounds")
+        precondition(
+            j >= startIndex._value && j <= endIndex._value,
+            "AttributedString index out of bounds")
         return Index(j, version: _guts.version)
     }
 
     @_alwaysEmitIntoClient
     public func distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
-    #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _distance(from: start, to: end)
         }
-    #endif
+        #endif
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
         precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
         return _defaultDistance(from: start, to: end)
@@ -243,10 +246,10 @@ extension AttributedString.CharacterView: BidirectionalCollection {
             precondition(index >= startIndex && index < endIndex, "AttributedString index out of bounds")
             let i = _guts.string.index(roundingDown: index._value)
             let j = _guts.string.index(after: i)
-            self._replaceSubrange(i ..< j, with: String(newValue))
+            self._replaceSubrange(i..<j, with: String(newValue))
         }
     }
-    
+
     // Note: This subscript returning a Slice is a bug; unfortunately, this is ABI.
     public subscript(bounds: Range<AttributedString.Index>) -> Slice<AttributedString.CharacterView> {
         get {
@@ -310,9 +313,9 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         precondition(
             subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex,
             "AttributedString index range out of bounds")
-        
+
         let subrange = _guts.characterRange(roundingDown: subrange._bstringRange)
-        
+
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
         if let newElements = _specialize(newElements, for: Self.self) {
             _replaceSubrange(subrange, with: newElements._characters)
@@ -334,7 +337,8 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         // a full edit.
         var hasStringChanges = true
         if let newElements = _specialize(newElements, for: BigSubstring.self),
-           newElements.isIdentical(to: _characters[subrange]) {
+            newElements.isIdentical(to: _characters[subrange])
+        {
             hasStringChanges = false
         }
 

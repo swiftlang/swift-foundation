@@ -204,13 +204,13 @@ let benchmarks: @Sendable () -> Void = {
     let validQueryItems = [
         URLQueryItem(name: "querywithoutspace", value: "valuewithoutspace"),
         URLQueryItem(name: "myfavoriteletters", value: "abcdabcdabcdabcd"),
-        URLQueryItem(name: "namewithnovalueorspace", value: nil)
+        URLQueryItem(name: "namewithnovalueorspace", value: nil),
     ]
 
     let encodableQueryItems = [
         URLQueryItem(name: "query with space", value: "value with space"),
         URLQueryItem(name: "my favorite emojis", value: "😂😂😂"),
-        URLQueryItem(name: "name with no value", value: nil)
+        URLQueryItem(name: "name with no value", value: nil),
     ]
 
     Benchmark("URLComponents.SetQueryItems") { benchmark in
@@ -454,13 +454,21 @@ let benchmarks: @Sendable () -> Void = {
 
     Benchmark("URL.ParseBigFilePath") { benchmark in
         for _ in benchmark.scaledIterations {
-            blackHole(URL(filePath: "/Lorem/ipsum/dolor/sit/amet,/consectetur/adipiscing/elit./Aliquam/aliquam/a/libero/sit/amet/eleifend./Nulla/sapien/mi,/eleifend/quis/accumsan/id,/sollicitudin/in/nulla./Fusce/non/sodales/dolor./Morbi/luctus/consequat/felis/vitae/elementum./Nam/id/ex/in/sapien/congue/varius/nec/quis/eros./Proin/ut/turpis/eu/nisl/efficitur/tempus./Donec/mattis/congue/arcu/vel/convallis./Integer/sit/amet/nunc/sagittis,/gravida/ligula/eu,/varius/quam./Phasellus/sodales/ut/libero/id/ultrices./Mauris/tristique/risus/quis/massa/porta,/vel/ornare/libero/pharetra./Phasellus/id/suscipit/magna./Etiam/porta/nunc/ut/dolor/sollicitudin/commodo./Praesent/consequat/elit/a/ipsum/sodales/rhoncus./Fusce/malesuada/sed/diam/eget/rhoncus./Mauris/et/interdum/nulla./Sed/egestas/egestas/turpis/nec/imperdiet."))
+            blackHole(
+                URL(
+                    filePath:
+                        "/Lorem/ipsum/dolor/sit/amet,/consectetur/adipiscing/elit./Aliquam/aliquam/a/libero/sit/amet/eleifend./Nulla/sapien/mi,/eleifend/quis/accumsan/id,/sollicitudin/in/nulla./Fusce/non/sodales/dolor./Morbi/luctus/consequat/felis/vitae/elementum./Nam/id/ex/in/sapien/congue/varius/nec/quis/eros./Proin/ut/turpis/eu/nisl/efficitur/tempus./Donec/mattis/congue/arcu/vel/convallis./Integer/sit/amet/nunc/sagittis,/gravida/ligula/eu,/varius/quam./Phasellus/sodales/ut/libero/id/ultrices./Mauris/tristique/risus/quis/massa/porta,/vel/ornare/libero/pharetra./Phasellus/id/suscipit/magna./Etiam/porta/nunc/ut/dolor/sollicitudin/commodo./Praesent/consequat/elit/a/ipsum/sodales/rhoncus./Fusce/malesuada/sed/diam/eget/rhoncus./Mauris/et/interdum/nulla./Sed/egestas/egestas/turpis/nec/imperdiet."
+                ))
         }
     }
 
     Benchmark("URL.ParseAndEncodeBigFilePath") { benchmark in
         for _ in benchmark.scaledIterations {
-            blackHole(URL(filePath: "/Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquam a libero sit amet eleifend. Nulla sapien mi, eleifend quis accumsan id, sollicitudin in nulla. Fusce non sodales dolor. Morbi luctus consequat felis vitae elementum. Nam id ex in sapien congue varius nec quis eros. Proin ut turpis eu nisl efficitur tempus. Donec mattis congue arcu vel convallis. Integer sit amet nunc sagittis, gravida ligula eu, varius quam. Phasellus sodales ut libero id ultrices. Mauris tristique risus quis massa porta, vel ornare libero pharetra. Phasellus id suscipit magna. Etiam porta nunc ut dolor sollicitudin commodo. Praesent consequat elit a ipsum sodales rhoncus. Fusce malesuada sed diam eget rhoncus. Mauris et interdum nulla. Sed egestas egestas turpis nec imperdiet."))
+            blackHole(
+                URL(
+                    filePath:
+                        "/Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquam a libero sit amet eleifend. Nulla sapien mi, eleifend quis accumsan id, sollicitudin in nulla. Fusce non sodales dolor. Morbi luctus consequat felis vitae elementum. Nam id ex in sapien congue varius nec quis eros. Proin ut turpis eu nisl efficitur tempus. Donec mattis congue arcu vel convallis. Integer sit amet nunc sagittis, gravida ligula eu, varius quam. Phasellus sodales ut libero id ultrices. Mauris tristique risus quis massa porta, vel ornare libero pharetra. Phasellus id suscipit magna. Etiam porta nunc ut dolor sollicitudin commodo. Praesent consequat elit a ipsum sodales rhoncus. Fusce malesuada sed diam eget rhoncus. Mauris et interdum nulla. Sed egestas egestas turpis nec imperdiet."
+                ))
         }
     }
 }

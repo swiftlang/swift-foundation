@@ -34,7 +34,7 @@ public struct URLResourceValues {
         _keys = []
     }
 
-#if !NO_FILESYSTEM
+    #if !NO_FILESYSTEM
 
     fileprivate init(keys: Set<URLResourceKey>, values: [URLResourceKey: Any]) {
         _values = values
@@ -145,11 +145,11 @@ public struct URLResourceValues {
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var isApplication: Bool? { return _get(.isApplicationKey) }
 
-#if os(macOS)
+    #if os(macOS)
     /// True if the resource is scriptable. Only applies to applications.
     @available(macOS 10.11, *)
     public var applicationIsScriptable: Bool? { return _get(.applicationIsScriptableKey) }
-#endif
+    #endif
 
     /// True for system-immutable resources.
     public var isSystemImmutable: Bool? { return _get(.isSystemImmutableKey) }
@@ -240,7 +240,7 @@ public struct URLResourceValues {
     /// The file system's internal inode identifier for the item. This value is not stable for all file systems or
     /// across all mounts, so it should be used sparingly and not persisted. It is useful, for example, to match URLs from
     /// the URL enumerator with paths from FSEvents.
-    @available( macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
+    @available(macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
     public var fileIdentifier: UInt64? { return _get(.fileIdentifierKey) }
 
     /// A 64-bit value assigned by APFS that identifies a file's content data stream. Only cloned files and their originals can have the same identifier.
@@ -273,14 +273,14 @@ public struct URLResourceValues {
         set { _set(.isExcludedFromBackupKey, newValue: newValue) }
     }
 
-#if os(macOS)
+    #if os(macOS)
     /// The array of Tag names.
     public var tagNames: [String]? {
         get { return _get(.tagNamesKey) }
         @available(macOS 26.0, *)
         set { _set(.tagNamesKey, newValue: newValue) }
     }
-#endif
+    #endif
 
     /// The URL's path as a file system path.
     public var path: String? { return _get(.pathKey) }
@@ -308,7 +308,7 @@ public struct URLResourceValues {
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public var addedToDirectoryDate: Date? { return _get(.addedToDirectoryDateKey) }
 
-#if os(macOS)
+    #if os(macOS)
     /// The quarantine properties as defined in LSQuarantine.h. To remove quarantine information from a file, pass `nil` as the value when setting this property.
     @available(macOS 10.10, *)
     public var quarantineProperties: [String: Any]? {
@@ -326,7 +326,7 @@ public struct URLResourceValues {
             _set(.quarantinePropertiesKey, newValue: newValue ?? NSNull())
         }
     }
-#endif // os(macOS)
+    #endif // os(macOS)
 
     /// True if the file may have extended attributes. False guarantees there are none.
     @available(macOS 10.16, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
@@ -348,7 +348,7 @@ public struct URLResourceValues {
     public var fileResourceType: URLFileResourceType? { return _get(.fileResourceTypeKey) }
 
     /// Returns the count of file system objects contained in the directory. If the URL is not a directory or the file system cannot cheaply compute the value, `nil` is returned.
-    @available( macOS 14.0, iOS 17.0, tvOS 17.0, watchOS 10.0, *)
+    @available(macOS 14.0, iOS 17.0, tvOS 17.0, watchOS 10.0, *)
     public var directoryEntryCount: Int? { return _get(.directoryEntryCountKey) }
 
     /// The user-visible volume format.
@@ -360,7 +360,7 @@ public struct URLResourceValues {
     /// Total free space in bytes.
     public var volumeAvailableCapacity: Int? { return _get(.volumeAvailableCapacityKey) }
 
-#if os(macOS) || os(iOS)
+    #if os(macOS) || os(iOS)
     /// Total available capacity in bytes for "Important" resources, including space expected to be cleared by purging non-essential and cached resources.
     ///
     /// "Important" means something that the user or application clearly expects to be present on the local system, but is ultimately replaceable. This would include items that the user has explicitly requested via the UI, and resources that an application requires in order to provide functionality.
@@ -375,7 +375,7 @@ public struct URLResourceValues {
     /// Examples: A background download of a newly available episode of a TV series that a user has been recently watching, a piece of content explicitly requested on another device, and a new document saved to a network server by the current user from another device.
     @available(macOS 10.13, iOS 11.0, *) @available(tvOS, unavailable) @available(watchOS, unavailable)
     public var volumeAvailableCapacityForOpportunisticUsage: Int64? { return _get(.volumeAvailableCapacityForOpportunisticUsageKey) }
-#endif // os(macOS) || os(iOS)
+    #endif // os(macOS) || os(iOS)
 
     /// Total number of resources on the volume.
     public var volumeResourceCount: Int? { return _get(.volumeResourceCountKey) }
@@ -497,15 +497,15 @@ public struct URLResourceValues {
     public var volumeSupportsAccessPermissions: Bool? { return _get(.volumeSupportsAccessPermissionsKey) }
 
     /// Returns the name of the file system type.
-    @available( macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
+    @available(macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
     public var volumeTypeName: String? { return _get(.volumeTypeNameKey) }
 
     /// Returns the file system subtype.
-    @available( macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
+    @available(macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
     public var volumeSubtype: Int? { return _get(.volumeSubtypeKey) }
 
     /// Returns the file system device location.
-    @available( macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
+    @available(macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4, *)
     public var volumeMountFromLocation: String? { return _get(.volumeMountFromLocationKey) }
 
     /// True if this item is synced to the cloud, false if it is only a local file.
@@ -547,7 +547,7 @@ public struct URLResourceValues {
         set { _set(.ubiquitousItemIsExcludedFromSyncKey, newValue: newValue) }
     }
 
-#if os(macOS) || os(iOS)
+    #if os(macOS) || os(iOS)
     /// True if ubiquitous item is shared.
     @available(macOS 10.13, iOS 11.0, *) @available(tvOS, unavailable) @available(watchOS, unavailable)
     public var ubiquitousItemIsShared: Bool? { return _get(.ubiquitousItemIsSharedKey) }
@@ -567,7 +567,7 @@ public struct URLResourceValues {
     /// The name components for the most recent editor, or nil if not shared.
     @available(macOS 10.13, iOS 11.0, *) @available(tvOS, unavailable) @available(watchOS, unavailable)
     public var ubiquitousSharedItemMostRecentEditorNameComponents: PersonNameComponents? { return _get(.ubiquitousSharedItemMostRecentEditorNameComponentsKey) }
-#endif // os(macOS) || os(iOS)
+    #endif // os(macOS) || os(iOS)
 
     /// The protection level for this file
     @available(macOS 10.16, iOS 9.0, *)
@@ -598,7 +598,7 @@ public struct URLResourceValues {
     /// - note: Only applicable to regular files.
     public var isAliasFile: Bool? { return _get(.isAliasFileKey) }
 
-#endif // !NO_FILESYSTEM
+    #endif // !NO_FILESYSTEM
 }
 
 @available(macOS, unavailable, introduced: 10.10)
@@ -606,7 +606,7 @@ public struct URLResourceValues {
 @available(tvOS, unavailable, introduced: 9.0)
 @available(watchOS, unavailable, introduced: 2.0)
 @available(*, unavailable)
-extension URLResourceValues : Sendable {}
+extension URLResourceValues: Sendable {}
 #endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK
@@ -650,13 +650,13 @@ internal import os
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {
 
-#if canImport(os)
+    #if canImport(os)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "url")
     }()
-#endif
+    #endif
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     internal typealias _Impl = any _URLProtocol & AnyObject
 
     private static var _type: any _URLProtocol.Type {
@@ -670,29 +670,29 @@ public struct URL: Equatable, Sendable, Hashable {
             _BridgedURL.self
         }
     }
-#else
+    #else
     internal typealias _Impl = _URL
     private static let _type = _Impl.self
-#endif
+    #endif
 
     internal let _url: _Impl
     internal init(_ url: _Impl) {
         _url = url
     }
 
-#if os(Linux)
+    #if os(Linux)
     // Workaround to fix a Linux-only crash in swift_release.
     // Add padding to return struct URL to its original size
     // before the _SwiftURL refactor.
     private var _padding: URLParseInfo?
-#endif
+    #endif
 
-#if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
+    #if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
     /// An alias for the bookmark resolution options type.
     public typealias BookmarkResolutionOptions = NSURL.BookmarkResolutionOptions
     /// An alias for bookmark creation options.
     public typealias BookmarkCreationOptions = NSURL.BookmarkCreationOptions
-#endif
+    #endif
 
     internal static let fileIDPrefix = Array("/.file/id=".utf8)
 
@@ -835,7 +835,7 @@ public struct URL: Equatable, Sendable, Hashable {
     public init(fileURLWithPath path: __shared String) {
         _url = URL._type.init(fileURLWithPath: path).convertingFileReference()
     }
-    
+
     // NSURL(fileURLWithPath:) can return nil incorrectly for some malformed paths
     // This is only to be used by FileManager when dealing with potentially malformed paths, and only when truly necessary
     internal init?(_fileManagerFailableFileURLWithPath path: __shared String) {
@@ -864,7 +864,7 @@ public struct URL: Equatable, Sendable, Hashable {
         _url = inner.convertingFileReference()
     }
 
-#if !NO_FILESYSTEM && FOUNDATION_FRAMEWORK
+    #if !NO_FILESYSTEM && FOUNDATION_FRAMEWORK
 
     /// Initializes a URL that refers to a location specified by resolving bookmark data.
     @available(swift, obsoleted: 4.2)
@@ -906,7 +906,7 @@ public struct URL: Equatable, Sendable, Hashable {
         self.init(reference: try NSURL(resolvingAliasFileAt: url, options: options))
     }
 
-#endif // !NO_FILESYSTEM && FOUNDATION_FRAMEWORK
+    #endif // !NO_FILESYSTEM && FOUNDATION_FRAMEWORK
 
     /// Initializes a newly created URL referencing the local file or directory at the file system representation of the path.
     ///
@@ -1360,7 +1360,7 @@ public struct URL: Equatable, Sendable, Hashable {
         self = self.standardized
     }
 
-#if !NO_FILESYSTEM
+    #if !NO_FILESYSTEM
 
     /// A standardized version of the path of a file URL.
     ///
@@ -1383,7 +1383,7 @@ public struct URL: Equatable, Sendable, Hashable {
         self = self.resolvingSymlinksInPath()
     }
 
-#if FOUNDATION_FRAMEWORK // These APIs will eventually be available in swift-foundation.
+    #if FOUNDATION_FRAMEWORK // These APIs will eventually be available in swift-foundation.
 
     // MARK: - Reachability
 
@@ -1485,9 +1485,9 @@ public struct URL: Equatable, Sendable, Hashable {
         return URLResourceValues(keys: keys, values: try ns.promisedItemResourceValues(forKeys: Array(keys)))
     }
 
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
-#if FOUNDATION_FRAMEWORK // These APIs are Darwin-specific.
+    #if FOUNDATION_FRAMEWORK // These APIs are Darwin-specific.
 
     // MARK: - Bookmarks and Alias Files
 
@@ -1526,10 +1526,10 @@ public struct URL: Equatable, Sendable, Hashable {
         ns.stopAccessingSecurityScopedResource()
     }
 
-#endif // FOUNDATION_FRAMEWORK
-#endif // !NO_FILESYSTEM
+    #endif // FOUNDATION_FRAMEWORK
+    #endif // !NO_FILESYSTEM
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
 
     // MARK: - Bridging Support
 
@@ -1546,7 +1546,7 @@ public struct URL: Equatable, Sendable, Hashable {
         return _SwiftURL(stringOrEmpty: _url.relativeString, relativeTo: _url.baseURL)
     }
 
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(relativeString)
@@ -1560,7 +1560,7 @@ public struct URL: Equatable, Sendable, Hashable {
 }
 
 extension URL {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Initialize a URL with a String literal. This initializer **requires** the
     /// string literal contains a URL scheme such as `file://` or `https://` to correctly
     /// interpret the URL. For web addresses (URLs that doesn't start with the `file` scheme),
@@ -1579,7 +1579,7 @@ extension URL {
             self = webAddress!
         }
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     internal enum PathStyle: Sendable {
         case posix
@@ -1613,11 +1613,10 @@ extension URL {
             let second = utf8[secondIndex]
             let thirdIndex = utf8.index(after: secondIndex)
             let third = utf8[thirdIndex]
-            let isAbsolute = (
-                first.isAlpha
-                && (second == ._colon || second == ._pipe)
-                && third == ._slash
-            )
+            let isAbsolute =
+                (first.isAlpha
+                    && (second == ._colon || second == ._pipe)
+                    && third == ._slash)
             if isAbsolute {
                 // Standardize to "/[drive-letter]:/..."
                 if second == ._pipe {
@@ -1821,7 +1820,7 @@ extension URL {
         return FileManager.default.temporaryDirectory
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// The standard directory for discardable cache files.
     /// Complexity: O(n) where n is the number of significant directories
     /// specified by `FileManager.SearchPathDirectory`
@@ -1940,7 +1939,7 @@ extension URL {
         #endif
         return FileManager.default.urls(for: directory, in: domain).first!
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 }
 #endif // !NO_FILESYSTEM
 
@@ -2048,8 +2047,10 @@ extension URL: Codable {
         let base = try container.decodeIfPresent(URL.self, forKey: .base)
 
         guard let url = URL(string: relative, relativeTo: base) else {
-            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath,
-                                                                    debugDescription: "Invalid URL string."))
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Invalid URL string."))
         }
 
         self = url

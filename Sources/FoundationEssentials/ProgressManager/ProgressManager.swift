@@ -25,7 +25,7 @@ internal import _FoundationCollections
 @available(FoundationPreview 6.4, *)
 @dynamicMemberLookup
 @Observable public final class ProgressManager: Sendable {
-    
+
     internal let state: Mutex<State>
     // These are "fake" keypaths used for registering observations of values and summaries of custom properties declared by developers.
     internal let customPropertiesInt: Void
@@ -49,7 +49,7 @@ internal import _FoundationCollections
     internal let completedByteCountSummary: Void
     internal let throughputSummary: Void
     internal let estimatedTimeRemainingSummary: Void
-    
+
     /// The total units of work.
     public var totalCount: Int? {
         self.access(keyPath: \.totalCount)
@@ -57,62 +57,63 @@ internal import _FoundationCollections
             state.totalCount
         }
     }
-    
+
     /// The completed units of work.
     public var completedCount: Int {
         self.access(keyPath: \.completedCount)
-        
+
         // Get information about dirty children (Acquire and release self's lock)
         let (children, completedCount, pendingUpdates) = state.withLock { state in
             let (completedCount, pendingUpdates) = state.completedCountInfo()
             return (state.children.compactMap { $0.manager }, completedCount, pendingUpdates)
         }
-        
+
         guard let updates = pendingUpdates else {
             for child in children {
                 child.access(keyPath: \.completedCount)
             }
             return completedCount
         }
-        
+
         // Get updated information for each dirty child (Acquire and release each child's lock)
         var childrenUpdates: [PendingChildUpdate] = []
-        
+
         for update in updates {
             let updatedFraction = update.manager.updatedProgressFraction()
-            childrenUpdates.append(PendingChildUpdate(
-                index: update.index,
-                updatedFraction: updatedFraction,
-                assignedCount: update.assignedCount
-            ))
+            childrenUpdates.append(
+                PendingChildUpdate(
+                    index: update.index,
+                    updatedFraction: updatedFraction,
+                    assignedCount: update.assignedCount
+                ))
         }
-        
+
         // Apply updated information of dirty child in self's children array (Acquire and release self's lock)
         let updatedCompletedCount = state.withLock { state in
             state.updateChildrenProgressFraction(updates: childrenUpdates)
             return state.selfFraction.completed
         }
-        
+
         for child in children {
             child.access(keyPath: \.completedCount)
         }
-        
+
         return updatedCompletedCount
     }
-    
+
     /// The proportion of work completed.
     /// This takes into account the fraction completed in its children instances if children are present.
     /// If `self` is indeterminate, the value will be 0.0.
     public var fractionCompleted: Double {
         self.access(keyPath: \.totalCount)
         self.access(keyPath: \.completedCount)
-        
+
         // Get information about dirty children (Acquire and release self's lock)
         let (children, fractionCompleted, pendingUpdates) = state.withLock { state in
             let (fractionCompleted, pendingUpdates) = state.fractionCompletedInfo()
             return (state.children.compactMap { $0.manager }, fractionCompleted, pendingUpdates)
         }
-                
+
         guard let updates = pendingUpdates else {
             for child in children {
                 child.access(keyPath: \.totalCount)
@@ -120,33 +121,34 @@ internal import _FoundationCollections
             }
             return fractionCompleted
         }
-        
+
         // Get updated information for each dirty child (Acquire and release each child's lock)
         var childrenUpdates: [PendingChildUpdate] = []
-        
+
         for update in updates {
             let updatedFraction = update.manager.updatedProgressFraction()
-            childrenUpdates.append(PendingChildUpdate(
-                index: update.index,
-                updatedFraction: updatedFraction,
-                assignedCount: update.assignedCount
-            ))
+            childrenUpdates.append(
+                PendingChildUpdate(
+                    index: update.index,
+                    updatedFraction: updatedFraction,
+                    assignedCount: update.assignedCount
+                ))
         }
-        
+
         // Apply updated information of dirty child in self's children array (Acquire and release self's lock)
         let updatedFractionCompleted = state.withLock { state in
             state.updateChildrenProgressFraction(updates: childrenUpdates)
             return state.overallFraction.fractionCompleted
         }
-        
+
         for child in children {
             child.access(keyPath: \.totalCount)
             child.access(keyPath: \.completedCount)
         }
-        
+
         return updatedFractionCompleted
     }
-    
+
     /// The state of initialization of `totalCount`.
     /// If `totalCount` is `nil`, the value will be `true`.
     public var isIndeterminate: Bool {
@@ -155,19 +157,19 @@ internal import _FoundationCollections
             state.isIndeterminate
         }
     }
-    
+
     /// The state of completion of work.
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool {
         self.access(keyPath: \.totalCount)
         self.access(keyPath: \.completedCount)
-        
+
         // Get information about dirty children (Acquire and release self's lock)
         let (children, isFinished, pendingUpdates) = state.withLock { state in
             let (isFinished, pendingUpdates) = state.isFinishedInfo()
             return (state.children.compactMap { $0.manager }, isFinished, pendingUpdates)
         }
-        
+
         guard let updates = pendingUpdates else {
             for child in children {
                 child.access(keyPath: \.totalCount)
@@ -175,38 +177,39 @@ internal import _FoundationCollections
             }
             return isFinished
         }
-        
+
         // Get updated information for each dirty child (Acquire and release each child's lock)
         var childrenUpdates: [PendingChildUpdate] = []
-        
+
         for update in updates {
             let updatedFraction = update.manager.updatedProgressFraction()
-            childrenUpdates.append(PendingChildUpdate(
-                index: update.index,
-                updatedFraction: updatedFraction,
-                assignedCount: update.assignedCount
-            ))
+            childrenUpdates.append(
+                PendingChildUpdate(
+                    index: update.index,
+                    updatedFraction: updatedFraction,
+                    assignedCount: update.assignedCount
+                ))
         }
-        
+
         // Apply updated information of dirty child in self's children array (Acquire and release self's lock)
         let updatedIsFinished = state.withLock { state in
             state.updateChildrenProgressFraction(updates: childrenUpdates)
             return state.selfFraction.isFinished
         }
-        
+
         for child in children {
             child.access(keyPath: \.completedCount)
         }
-        
+
         return updatedIsFinished
     }
-    
+
     /// A `ProgressReporter` instance, used for providing read-only observation of progress updates or composing into other `ProgressManager`s.
     public var reporter: ProgressReporter {
         return .init(manager: self)
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     internal init(total: Int?, completed: Int?, subprogressBridge: SubprogressBridge?) {
         let state = State(
             selfFraction: ProgressFraction(completed: completed ?? 0, total: total),
@@ -230,7 +233,7 @@ internal import _FoundationCollections
         )
         self.state = Mutex(state)
     }
-#else
+    #else
     internal init(total: Int?, completed: Int?) {
         let state = State(
             selfFraction: ProgressFraction(completed: completed ?? 0, total: total),
@@ -252,8 +255,8 @@ internal import _FoundationCollections
         )
         self.state = Mutex(state)
     }
-#endif
-    
+    #endif
+
     /// Initializes `self` with `totalCount`.
     ///
     /// If `totalCount` is set to `nil`, `self` is indeterminate.
@@ -272,7 +275,7 @@ internal import _FoundationCollections
         )
         #endif
     }
-    
+
     /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
     ///
     /// If the `Subprogress` is not converted into a `ProgressManager` (for example, due to an error or early return),
@@ -285,7 +288,7 @@ internal import _FoundationCollections
         let subprogress = Subprogress(parent: self, assignedCount: portionOfParentTotal)
         return subprogress
     }
-    
+
     /// Adds a `ProgressReporter` as a child, with its progress representing a portion of `self`'s progress.
     ///
     /// If a cycle is detected, this will cause a crash at runtime.
@@ -295,13 +298,13 @@ internal import _FoundationCollections
     ///   - reporter: A `ProgressReporter` instance.
     public func assign(count: Int, to reporter: ProgressReporter) {
         precondition(isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
-        
+
         let actualManager = reporter.manager
-        
+
         let position = self.addChild(childManager: actualManager, assignedCount: count, childFraction: actualManager.getProgressFraction())
         actualManager.addParent(parentManager: self, positionInParent: position)
     }
-    
+
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
@@ -310,9 +313,9 @@ internal import _FoundationCollections
                 guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
                     return nil
                 }
-                
+
                 state.complete(by: count)
-                
+
                 return state.parents
             }
             if let parents = parents {
@@ -320,38 +323,38 @@ internal import _FoundationCollections
             }
         }
     }
-    
+
     public func setCounts(_ counts: (_ completed: inout Int, _ total: inout Int?) -> Void) {
         self.withMutation(keyPath: \.completedCount) {
             self.withMutation(keyPath: \.totalCount) {
                 let parents: [Parent]? = state.withLock { state in
                     var completed = state.selfFraction.completed
                     var total = state.selfFraction.total
-                    
+
                     counts(&completed, &total)
-                    
+
                     guard state.selfFraction.completed != completed || state.selfFraction.total != total else {
                         return nil
                     }
-                    
+
                     state.selfFraction.completed = completed
                     state.selfFraction.total = total
-                    
+
                     return state.parents
                 }
-                
+
                 if let parents = parents {
                     markSelfDirty(parents: parents)
                 }
             }
         }
     }
-    
+
     //MARK: Observation Methods
     internal func willSet<T>(keyPath: KeyPath<ProgressManager, T>) {
         _$observationRegistrar.willSet(self, keyPath: keyPath)
     }
-    
+
     internal func didSet<T>(keyPath: KeyPath<ProgressManager, T>) {
         _$observationRegistrar.didSet(self, keyPath: keyPath)
     }
@@ -362,7 +365,7 @@ internal import _FoundationCollections
             return state.selfFraction
         }
     }
-    
+
     //MARK: Fractional Calculation methods
     internal func markSelfDirty() {
         let parents = state.withLock { state in
@@ -370,7 +373,7 @@ internal import _FoundationCollections
         }
         markSelfDirty(parents: parents)
     }
-    
+
     internal func markSelfDirty(parents: [Parent]) {
         if parents.count > 0 {
             for parent in parents {
@@ -378,7 +381,7 @@ internal import _FoundationCollections
             }
         }
     }
-    
+
     private func markChildDirty(at position: Int) {
         let parents: [Parent]? = state.withLock { state in
             state.markChildDirty(at: position)
@@ -391,32 +394,33 @@ internal import _FoundationCollections
         notifyInteropObserversOfChildUpdate()
         #endif
     }
-    
+
     internal func updatedProgressFraction() -> ProgressFraction {
         // Get information about dirty children (Acquire and release self's lock)
         let pendingUpdates = state.withLock { state in
             state.pendingChildrenUpdates()
         }
-        
+
         guard let updates = pendingUpdates else {
             // No pending updates, just return the overall fraction
             return state.withLock { state in
                 state.overallFraction
             }
         }
-        
+
         // Get updated information for each dirty child (Acquire and release each child's lock)
         var childrenUpdates: [PendingChildUpdate] = []
-        
+
         for update in updates {
             let updatedFraction = update.manager.updatedProgressFraction()
-            childrenUpdates.append(PendingChildUpdate(
-                index: update.index,
-                updatedFraction: updatedFraction,
-                assignedCount: update.assignedCount
-            ))
+            childrenUpdates.append(
+                PendingChildUpdate(
+                    index: update.index,
+                    updatedFraction: updatedFraction,
+                    assignedCount: update.assignedCount
+                ))
         }
-        
+
         // Apply updated information of dirty child in self's children array (Acquire and release self's lock)
         return state.withLock { state in
             state.updateChildrenProgressFraction(updates: childrenUpdates)
@@ -424,27 +428,28 @@ internal import _FoundationCollections
         }
     }
 
-    
+
     //MARK: Parent - Child Relationship Methods
     internal func addChild(childManager: ProgressManager, assignedCount: Int, childFraction: ProgressFraction) -> Int {
         let (index, parents) = state.withLock { state in
-            let child = Child(manager: childManager,
-                              assignedCount: assignedCount,
-                              fraction: childFraction,
-                              isFractionDirty: true,
-                              totalFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
-                              completedFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
-                              totalByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
-                              completedByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
-                              throughputSummary: PropertyStateUInt64Array(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
-                              estimatedTimeRemainingSummary: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
-                              customPropertiesIntSummary: [:],
-                              customPropertiesUInt64Summary: [:],
-                              customPropertiesDoubleSummary: [:],
-                              customPropertiesStringSummary: [:],
-                              customPropertiesURLSummary: [:],
-                              customPropertiesUInt64ArraySummary: [:],
-                              customPropertiesDurationSummary: [:])
+            let child = Child(
+                manager: childManager,
+                assignedCount: assignedCount,
+                fraction: childFraction,
+                isFractionDirty: true,
+                totalFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
+                completedFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
+                totalByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
+                completedByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
+                throughputSummary: PropertyStateUInt64Array(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
+                estimatedTimeRemainingSummary: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
+                customPropertiesIntSummary: [:],
+                customPropertiesUInt64Summary: [:],
+                customPropertiesDoubleSummary: [:],
+                customPropertiesStringSummary: [:],
+                customPropertiesURLSummary: [:],
+                customPropertiesUInt64ArraySummary: [:],
+                customPropertiesDurationSummary: [:])
             state.children.append(child)
             return (state.children.count - 1, state.parents)
         }
@@ -452,14 +457,14 @@ internal import _FoundationCollections
         markSelfDirty(parents: parents)
         return index
     }
-    
+
     internal func addParent(parentManager: ProgressManager, positionInParent: Int) {
         state.withLock { state in
             let parent = Parent(manager: parentManager, positionInParent: positionInParent)
             state.parents.append(parent)
         }
     }
-    
+
     // MARK: Cycle Detection Methods
     internal func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
         if reporter.manager === self {
@@ -479,7 +484,7 @@ internal import _FoundationCollections
         }
         return false
     }
-    
+
     internal func isCycleInterop(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
         let parents = state.withLock { state in
             return state.parents
@@ -494,13 +499,13 @@ internal import _FoundationCollections
         }
         return false
     }
-    
+
     deinit {
         // Custom Properties directly updates parents' entries so it should not be marked dirty.
         let (finalSummary, parents) = state.withLock { state in
             state.customPropertiesCleanup()
         }
-        
+
         for parent in parents {
             parent.manager.setChildDeclaredAdditionalProperties(
                 at: parent.positionInParent,
@@ -519,22 +524,22 @@ internal import _FoundationCollections
                 propertiesDuration: finalSummary.customPropertiesDurationSummary
             )
         }
-        
+
         // Fractional property does not update parents' entries so it should be marked dirty. If fraction is not finished when deinit, mark the path dirty so that parents have an opportunity to check and complete the portion that is unfinished. The parent will later complete the portion when trying to clear the dirty bit in state.updateChildrenProgressFraction().
         if !isFinished {
             markSelfDirty(parents: parents)
         }
     }
 }
-    
+
 @available(FoundationPreview 6.4, *)
 extension ProgressManager: Hashable, Equatable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(self))
     }
-    
+
     /// Returns `true` if pointer of `lhs` is equal to pointer of `rhs`.
-    public static func ==(lhs: ProgressManager, rhs: ProgressManager) -> Bool {
+    public static func == (lhs: ProgressManager, rhs: ProgressManager) -> Bool {
         return ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
     }
 }
@@ -544,22 +549,22 @@ extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible
     /// A description.
     public var description: String {
         return """
-        Class Name: ProgressManager
-        Object Identifier: \(ObjectIdentifier(self))
-        totalCount: \(String(describing: totalCount))
-        completedCount: \(completedCount)
-        fractionCompleted: \(fractionCompleted)
-        isIndeterminate: \(isIndeterminate)
-        isFinished: \(isFinished)
-        totalFileCount: \(summary(of: \.totalFileCount))
-        completedFileCount: \(summary(of: \.completedFileCount))
-        totalByteCount: \(summary(of: \.totalByteCount))
-        completedByteCount: \(summary(of: \.completedByteCount))
-        throughput: \(summary(of: \.throughput))
-        estimatedTimeRemaining: \(summary(of: \.estimatedTimeRemaining))
-        """
+            Class Name: ProgressManager
+            Object Identifier: \(ObjectIdentifier(self))
+            totalCount: \(String(describing: totalCount))
+            completedCount: \(completedCount)
+            fractionCompleted: \(fractionCompleted)
+            isIndeterminate: \(isIndeterminate)
+            isFinished: \(isFinished)
+            totalFileCount: \(summary(of: \.totalFileCount))
+            completedFileCount: \(summary(of: \.completedFileCount))
+            totalByteCount: \(summary(of: \.totalByteCount))
+            completedByteCount: \(summary(of: \.completedByteCount))
+            throughput: \(summary(of: \.throughput))
+            estimatedTimeRemaining: \(summary(of: \.estimatedTimeRemaining))
+            """
     }
-    
+
     /// A debug description.
     public var debugDescription: String {
         return self.description

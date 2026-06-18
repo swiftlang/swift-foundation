@@ -13,8 +13,8 @@
 // IMPORTANT: Any changes to __PlistEncoderBPlist and its related types should be repeated for __PlistEncoderXML.
 // This code is duplicate for performance reasons, as use of `@_specialize` has not been able to completely replicate the benefits of manual duplication.
 
-private protocol _BPlistStringDictionaryEncodableMarker { }
-extension Dictionary : _BPlistStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
+private protocol _BPlistStringDictionaryEncodableMarker {}
+extension Dictionary: _BPlistStringDictionaryEncodableMarker where Key == String, Value: Encodable {}
 
 internal import _FoundationCShims
 #if canImport(CollectionsInternal)
@@ -27,7 +27,7 @@ internal import _FoundationCollections
 
 // MARK: - __PlistEncoder
 
-internal class __PlistEncoderBPlist : Encoder {
+internal class __PlistEncoderBPlist: Encoder {
     // MARK: Properties
 
     /// The encoder's storage.
@@ -35,10 +35,10 @@ internal class __PlistEncoderBPlist : Encoder {
 
     /// Options set on the top-level encoder.
     fileprivate let options: PropertyListEncoder._Options
-    
+
     internal var encoderCodingPathNode: _CodingPathNode
     fileprivate var codingPathDepth: Int
-    
+
     internal var format: _BPlistEncodingFormat
 
     /// The path to the current point in encoding.
@@ -47,7 +47,7 @@ internal class __PlistEncoderBPlist : Encoder {
     }
 
     /// Contextual user-provided information for use during encoding.
-    var userInfo: [CodingUserInfoKey : Any] {
+    var userInfo: [CodingUserInfoKey: Any] {
         return self.options.userInfo
     }
 
@@ -114,7 +114,7 @@ internal class __PlistEncoderBPlist : Encoder {
     func singleValueContainer() -> SingleValueEncodingContainer {
         return self
     }
-    
+
     // Instead of creating a new __PlistEncoder for passing to methods that take Encoder arguments, wrap the access in this method, which temporarily mutates this __PlistEncoder instance with the additional nesting depth and its coding path.
     @inline(__always)
     func with<T>(path: _CodingPathNode?, perform closure: () throws -> T) rethrows -> T {
@@ -179,7 +179,7 @@ private struct _PlistEncodingStorageBPlist {
 
 // MARK: - Encoding Containers
 
-private struct _PlistKeyedEncodingContainerBPlist<K : CodingKey> : KeyedEncodingContainerProtocol {
+private struct _PlistKeyedEncodingContainerBPlist<K: CodingKey>: KeyedEncodingContainerProtocol {
     typealias Key = K
 
     // MARK: Properties
@@ -189,7 +189,7 @@ private struct _PlistKeyedEncodingContainerBPlist<K : CodingKey> : KeyedEncoding
 
     /// A reference to the container we're writing to.
     private let reference: _BPlistEncodingFormat.Reference
-    
+
     private let codingPathNode: _CodingPathNode
 
     /// The path of coding keys taken to get to this point in encoding.
@@ -254,7 +254,7 @@ private struct _PlistKeyedEncodingContainerBPlist<K : CodingKey> : KeyedEncoding
         self.reference.insert(encoder.wrap(value), for: encoder.wrap(key.stringValue))
     }
 
-    mutating func encode<T : Encodable>(_ value: T, forKey key: Key) throws {
+    mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
         let wrapped = try self.encoder.wrap(value, for: self.encoder.encoderCodingPathNode, key)
         reference.insert(wrapped, for: encoder.wrap(key.stringValue))
     }
@@ -272,7 +272,7 @@ private struct _PlistKeyedEncodingContainerBPlist<K : CodingKey> : KeyedEncoding
             nestedRef = .emptyDictionary
             self.reference.insert(nestedRef, for: containerKey)
         }
-        
+
         let container = _PlistKeyedEncodingContainerBPlist<NestedKey>(referencing: self.encoder, codingPathNode: self.codingPathNode.appending(key), wrapping: nestedRef)
         return KeyedEncodingContainer(container)
     }
@@ -303,7 +303,7 @@ private struct _PlistKeyedEncodingContainerBPlist<K : CodingKey> : KeyedEncoding
     }
 }
 
-private struct _PlistUnkeyedEncodingContainerBPlist : UnkeyedEncodingContainer {
+private struct _PlistUnkeyedEncodingContainerBPlist: UnkeyedEncodingContainer {
     // MARK: Properties
 
     /// A reference to the encoder we're writing to.
@@ -334,23 +334,23 @@ private struct _PlistUnkeyedEncodingContainerBPlist : UnkeyedEncodingContainer {
 
     // MARK: - UnkeyedEncodingContainer Methods
 
-    mutating func encodeNil()             throws { self.reference.insert(encoder.format.null) }
-    mutating func encode(_ value: Bool)   throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: Int)    throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: Int8)   throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: Int16)  throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: Int32)  throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: Int64)  throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: UInt)   throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: UInt8)  throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encodeNil() throws { self.reference.insert(encoder.format.null) }
+    mutating func encode(_ value: Bool) throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: Int) throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: Int8) throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: Int16) throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: Int32) throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: Int64) throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: UInt) throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: UInt8) throws { self.reference.insert(self.encoder.wrap(value)) }
     mutating func encode(_ value: UInt16) throws { self.reference.insert(self.encoder.wrap(value)) }
     mutating func encode(_ value: UInt32) throws { self.reference.insert(self.encoder.wrap(value)) }
     mutating func encode(_ value: UInt64) throws { self.reference.insert(self.encoder.wrap(value)) }
-    mutating func encode(_ value: Float)  throws { self.reference.insert(self.encoder.wrap(value)) }
+    mutating func encode(_ value: Float) throws { self.reference.insert(self.encoder.wrap(value)) }
     mutating func encode(_ value: Double) throws { self.reference.insert(self.encoder.wrap(value)) }
     mutating func encode(_ value: String) throws { self.reference.insert(self.encoder.wrap(value)) }
 
-    mutating func encode<T : Encodable>(_ value: T) throws {
+    mutating func encode<T: Encodable>(_ value: T) throws {
         let wrapped = try self.encoder.wrap(value, for: self.encoder.encoderCodingPathNode, _CodingKey(index: self.count))
         self.reference.insert(wrapped)
     }
@@ -375,7 +375,7 @@ private struct _PlistUnkeyedEncodingContainerBPlist : UnkeyedEncodingContainer {
     }
 }
 
-extension __PlistEncoderBPlist : SingleValueEncodingContainer {
+extension __PlistEncoderBPlist: SingleValueEncodingContainer {
     // MARK: - SingleValueEncodingContainer Methods
 
     private func assertCanEncodeNewValue() {
@@ -457,7 +457,7 @@ extension __PlistEncoderBPlist : SingleValueEncodingContainer {
         self.storage.push(reference: wrap(value))
     }
 
-    public func encode<T : Encodable>(_ value: T) throws {
+    public func encode<T: Encodable>(_ value: T) throws {
         assertCanEncodeNewValue()
         try self.storage.push(reference: wrap(value, for: self.encoderCodingPathNode))
     }
@@ -468,46 +468,48 @@ extension __PlistEncoderBPlist : SingleValueEncodingContainer {
 extension __PlistEncoderBPlist {
 
     /// Returns the given value boxed in a container appropriate for pushing onto the container stack.
-    @inline(__always) internal func wrap(_ value: Bool)   -> _BPlistEncodingFormat.Reference { format.bool(value) }
-    @inline(__always) internal func wrap(_ value: Int)    -> _BPlistEncodingFormat.Reference { format.number(from: value) }
-    @inline(__always) internal func wrap(_ value: Int8)   -> _BPlistEncodingFormat.Reference { format.number(from: value) }
-    @inline(__always) internal func wrap(_ value: Int16)  -> _BPlistEncodingFormat.Reference { format.number(from: value) }
-    @inline(__always) internal func wrap(_ value: Int32)  -> _BPlistEncodingFormat.Reference { format.number(from: value) }
-    @inline(__always) internal func wrap(_ value: Int64)  -> _BPlistEncodingFormat.Reference { format.number(from: value) }
-    @inline(__always) internal func wrap(_ value: UInt)   -> _BPlistEncodingFormat.Reference { format.number(from: value) }
-    @inline(__always) internal func wrap(_ value: UInt8)  -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: Bool) -> _BPlistEncodingFormat.Reference { format.bool(value) }
+    @inline(__always) internal func wrap(_ value: Int) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: Int8) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: Int16) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: Int32) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: Int64) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: UInt) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: UInt8) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
     @inline(__always) internal func wrap(_ value: UInt16) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
     @inline(__always) internal func wrap(_ value: UInt32) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
     @inline(__always) internal func wrap(_ value: UInt64) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
-    @inline(__always) internal func wrap(_ value: Float)  -> _BPlistEncodingFormat.Reference { format.number(from: value) }
+    @inline(__always) internal func wrap(_ value: Float) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
     @inline(__always) internal func wrap(_ value: Double) -> _BPlistEncodingFormat.Reference { format.number(from: value) }
     @inline(__always) internal func wrap(_ value: String) -> _BPlistEncodingFormat.Reference { format.string(value) }
 
     func wrap(_ value: Encodable, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> _BPlistEncodingFormat.Reference {
         return try self.wrapGeneric(value, for: codingPathNode, additionalKey) ?? .emptyDictionary
     }
-    
-    func wrapGeneric<T : Encodable>(_ value: T, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> _BPlistEncodingFormat.Reference? {
+
+    func wrapGeneric<T: Encodable>(_ value: T, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> _BPlistEncodingFormat.Reference? {
         switch T.self {
         case is Date.Type:
             return format.date(value as! Date)
         case is Data.Type:
             return format.data(value as! Data)
         case is _BPlistStringDictionaryEncodableMarker.Type:
-            return try self.wrap(value as! [String : Encodable], for: node, additionalKey)
+            return try self.wrap(value as! [String: Encodable], for: node, additionalKey)
         default:
-            return try _wrapGeneric({
-                try value.encode(to: $0)
-            }, for: node, additionalKey)
+            return try _wrapGeneric(
+                {
+                    try value.encode(to: $0)
+                }, for: node, additionalKey)
         }
     }
-    
+
     func wrapGeneric<T: EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> _BPlistEncodingFormat.Reference? {
-        try _wrapGeneric({
-            try value.encode(to: $0, configuration: configuration)
-        }, for: node, additionalKey)
+        try _wrapGeneric(
+            {
+                try value.encode(to: $0, configuration: configuration)
+            }, for: node, additionalKey)
     }
-    
+
     func _wrapGeneric(_ encode: (__PlistEncoderBPlist) throws -> Void, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> _BPlistEncodingFormat.Reference? {
         // The value should request a container from the __PlistENcoder.
         let depth = self.storage.count
@@ -531,8 +533,8 @@ extension __PlistEncoderBPlist {
 
         return self.storage.popReference()
     }
-    
-    func wrap(_ dict: [String : Encodable], for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> _BPlistEncodingFormat.Reference? {
+
+    func wrap(_ dict: [String: Encodable], for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> _BPlistEncodingFormat.Reference? {
         let depth = self.storage.count
         let result = self.storage.pushKeyedContainer()
         let rootPath = codingPathNode.appending(additionalKey)
@@ -570,7 +572,7 @@ extension __PlistEncoderBPlist {
 // NOTE: older overlays called this class _PlistReferencingEncoder.
 // The two must coexist without a conflicting ObjC class name, so it
 // was renamed. The old name must not be used in the new runtime.
-private class __PlistReferencingEncoderBPlist : __PlistEncoderBPlist {
+private class __PlistReferencingEncoderBPlist: __PlistEncoderBPlist {
     // MARK: Reference types.
 
     /// The type of container we're referencing.
@@ -609,7 +611,8 @@ private class __PlistReferencingEncoderBPlist : __PlistEncoderBPlist {
     // MARK: - Coding Path Operations
 
     override
-    fileprivate var canEncodeNewValue: Bool {
+        fileprivate var canEncodeNewValue: Bool
+    {
         // With a regular encoder, the storage and coding path grow together.
         // A referencing encoder, however, inherits its parents coding path, as well as the key it was created for.
         // We have to take this into account.
@@ -639,39 +642,39 @@ private class __PlistReferencingEncoderBPlist : __PlistEncoderBPlist {
 
 // MARK: - Format
 
-struct _BPlistEncodingFormat : PlistEncodingFormat {
+struct _BPlistEncodingFormat: PlistEncodingFormat {
     final class Reference: PlistEncodingReference {
         enum Backing {
             case string(String, hash: Int, isASCII: Bool)
             case `true`
             case `false`
             case null
-            
+
             // UInt64s have a different representation than other integers.
             case uint64(UInt64)
             case shorterOrSignedInteger(Int64)
-            
+
             // Doubles and Floats also have different representations.
             case double(Double)
             case float(Float)
 
             case array(ContiguousArray<Reference>)
             // Ordered, because some clients are expecting some level of stability from binary plist encoding
-#if canImport(CollectionsInternal) || canImport(OrderedCollections) || canImport(_FoundationCollections)
-            case dictionary(OrderedDictionary<Reference,Reference>)
-#else
-            case dictionary(Dictionary<Reference,Reference>)
-#endif
+            #if canImport(CollectionsInternal) || canImport(OrderedCollections) || canImport(_FoundationCollections)
+            case dictionary(OrderedDictionary<Reference, Reference>)
+            #else
+            case dictionary(Dictionary<Reference, Reference>)
+            #endif
 
             case dateAsTimeInterval(Double)
             case data(Data)
         }
-        
+
         var backing: Backing
-        
+
         // To avoid additional hash table lookups, we'll cheat and store the binary plist objectRef index right in line with the reference.
-        var bplistObjectIdx : Int
-        
+        var bplistObjectIdx: Int
+
         init(_ backing: Backing) {
             self.backing = backing
             self.bplistObjectIdx = -1
@@ -680,11 +683,11 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
         static var emptyArray: Reference {
             .init(.array([]))
         }
-        
+
         static var emptyDictionary: Reference {
             .init(.dictionary([:]))
         }
-        
+
         func insert(_ ref: Reference, for key: Reference) {
             guard case .dictionary(var dict) = backing else {
                 preconditionFailure("Wrong underlying plist reference type")
@@ -693,7 +696,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             dict[key] = ref
             backing = .dictionary(dict)
         }
-        
+
         func insert(_ ref: Reference, at index: Int) {
             guard case .array(var array) = backing else {
                 preconditionFailure("Wrong underlying plist reference type")
@@ -702,7 +705,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             array.insert(ref, at: index)
             backing = .array(array)
         }
-        
+
         func insert(_ ref: Reference) {
             guard case .array(var array) = backing else {
                 preconditionFailure("Wrong underlying plist reference type")
@@ -711,7 +714,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             array.append(ref)
             backing = .array(array)
         }
-        
+
         var count: Int {
             switch backing {
             case .array(let array): return array.count
@@ -719,21 +722,21 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             default: preconditionFailure("Wrong underlying plist reference type")
             }
         }
-        
+
         subscript(key: Reference) -> Reference? {
             guard case .dictionary(let dict) = backing else {
                 preconditionFailure("Wrong underlying plist reference type")
             }
             return dict[key]
         }
-        
+
         var isBool: Bool {
             switch backing {
             case .true, .false: return true
             default: return false
             }
         }
-        
+
         var isString: Bool {
             switch backing {
             case .string: return true
@@ -741,7 +744,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             default: return false
             }
         }
-        
+
         var isNumber: Bool {
             switch backing {
             case .double, .float, .uint64, .shorterOrSignedInteger:
@@ -750,25 +753,25 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 return false
             }
         }
-        
+
         var isDate: Bool {
             guard case .dateAsTimeInterval = backing else { return false }
             return true
         }
-        
+
         var isDictionary: Bool {
             guard case .dictionary = backing else { return false }
             return true
         }
-        
+
         var isArray: Bool {
             guard case .array = backing else { return false }
             return true
         }
     }
-    
-    struct Writer : PlistWriting {
-        enum Marker : UInt8 {
+
+    struct Writer: PlistWriting {
+        enum Marker: UInt8 {
             case `false` = 0x08
             case `true` = 0x09
             case int = 0x10
@@ -780,45 +783,45 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             case array = 0xA0
             case dict = 0xD0
         }
-        
+
         var objectOffsets = [Int]()
         var objectRefSize: UInt8 = 0
-        
+
         static let scratchBufferSize = 8192
         var scratchBuffer: UnsafeMutableBufferPointer<UInt8>
         var scratchUsed: Int = 0
-        
+
         var data = Data()
-        
+
         init() {
             scratchBuffer = UnsafeMutableBufferPointer.allocate(capacity: Self.scratchBufferSize)
         }
-        
+
         mutating func serializePlist(_ ref: Reference) throws -> Data {
             defer {
                 scratchBuffer.deallocate()
             }
-            
+
             var objectCount = 0
             flattenPlist(ref, &objectCount)
-            
+
             // The objectRefSize is always exactly small enough to hold to the index of the last object.
             objectRefSize = objectCount.minimumRepresentableByteSize
-            
+
             write("bplist00")
             append(ref)
-            
+
             // Similarly, the offsetIntSize is always exactly small enough to hold the offset to the last object.
             let lengthSoFar = currentOffset
             let tableOffset = UInt64(lengthSoFar)
             let offsetIntSize = lengthSoFar.minimumRepresentableByteSize
-            
+
             for offset in objectOffsets {
                 write(offset, byteSize: offsetIntSize)
             }
-            
+
             let trailer = BPlistTrailer(
-                _unused: (0,0,0,0,0),
+                _unused: (0, 0, 0, 0, 0),
                 _sortVersion: 0,
                 _offsetIntSize: offsetIntSize,
                 _objectRefSize: objectRefSize,
@@ -832,10 +835,10 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 }
             }
             flush()
-            
+
             return data
         }
-        
+
         // The goal of this function is to assign pre-order reference indexes to each object. We have to do this pass before actually writing out all the values because directories and arrays contents are encoded with the indexes of objects that are persisted *after* them (unless they were uniqued previously).
         private mutating func flattenPlist(_ ref: Reference, _ objectCount: inout Int) {
             switch ref.backing {
@@ -849,7 +852,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             case .dictionary(let dict):
                 ref.bplistObjectIdx = objectCount
                 objectCount += 1
-                
+
                 for key in dict.keys {
                     flattenPlist(key, &objectCount)
                 }
@@ -864,11 +867,11 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 }
             }
         }
-        
-        var currentOffset : Int {
+
+        var currentOffset: Int {
             data.count + scratchUsed
         }
-        
+
         mutating func append(_ ref: Reference) {
             // Is it this reference's turn to be written? We may see references that were already written in the past, but we should never see future references.
             guard ref.bplistObjectIdx == objectOffsets.count else {
@@ -876,7 +879,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 return
             }
             objectOffsets.append(currentOffset)
-            
+
             switch ref.backing {
             case .null: append(_plistNullString, isASCII: true)
             case let .string(val, _, isASCII): append(val, isASCII: isASCII)
@@ -892,17 +895,17 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             case let .array(array): append(array)
             }
         }
-        
+
         mutating func write(_ buf: UnsafeBufferPointer<UInt8>) {
             let bufCount = buf.count
             guard bufCount > 0 else { return }
-            
+
             if bufCount >= Self.scratchBufferSize {
                 flush()
                 data.append(buf)
                 return
             }
-            
+
             let copyCount = min(bufCount, Self.scratchBufferSize - scratchUsed)
             if copyCount == bufCount {
                 let ptr = scratchBuffer.baseAddress!.advanced(by: scratchUsed)
@@ -912,11 +915,11 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 scratchUsed += copyCount
                 return
             }
-            
+
             flush()
             data.append(buf)
         }
-        
+
         mutating func write(_ byte: UInt8) {
             if scratchUsed == Self.scratchBufferSize {
                 flush()
@@ -924,13 +927,13 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             scratchBuffer[scratchUsed] = byte
             scratchUsed += 1
         }
-        
+
         mutating func flush() {
             guard scratchUsed > 0 else { return }
             data.append(UnsafeBufferPointer(rebasing: scratchBuffer[..<scratchUsed]))
             scratchUsed = 0
         }
-        
+
         mutating func write<T: FixedWidthInteger>(sizedInteger: T) {
             let bigEndian = sizedInteger.bigEndian
             withUnsafeBytes(of: bigEndian) { buf in
@@ -939,7 +942,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 }
             }
         }
-        
+
         mutating func write<T: FixedWidthInteger>(_ integer: T, byteSize: UInt8) {
             let bigEndian = integer.bigEndian
             withUnsafeBytes(of: bigEndian) { buf in
@@ -949,20 +952,20 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 }
             }
         }
-        
+
         mutating func write(objectRef: UInt32) {
             write(objectRef, byteSize: objectRefSize)
         }
-        
+
         mutating func write(_ str: StaticString) {
             str.withUTF8Buffer { buf in
                 self.write(buf)
             }
         }
-        
+
         mutating func append(_ marker: Marker, count: Int) {
             var markerByte = marker.rawValue
-            let separateCountInteger : Bool
+            let separateCountInteger: Bool
             if count < 15 {
                 separateCountInteger = false
                 markerByte |= UInt8(count)
@@ -975,13 +978,13 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 append(count)
             }
         }
-        
+
         mutating func write(_ marker: Marker, subtype: UInt8 = 0) {
             var markerByte = marker.rawValue
             markerByte |= subtype
             write(markerByte)
         }
-        
+
         mutating func append(_ str: String, isASCII: Bool) {
             if isASCII {
                 var mutableStr = str
@@ -991,7 +994,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 }
                 return
             }
-            
+
             let utf16BEData = str.data(using: .utf16BigEndian)!
             append(.utf16String, count: utf16BEData.count / MemoryLayout<UInt16>.size)
             utf16BEData.withUnsafeBytes { buf in
@@ -1000,14 +1003,14 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 }
             }
         }
-        
+
         mutating func append(_ uint: UInt64) {
             // UInt64s were derived from kCFNumberSInt128Type CFNumbers, where the high bits always ended up 0.
             write(.int, subtype: 4)
             write(sizedInteger: UInt64(0))
             write(sizedInteger: uint)
         }
-        
+
         mutating func append(_ int: Int64) {
             let asUnsigned = UInt64(bitPattern: int)
             if asUnsigned <= 0xff {
@@ -1024,29 +1027,29 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 write(sizedInteger: asUnsigned)
             }
         }
-        
+
         mutating func append(_ float: Float) {
             write(.real, subtype: 2)
             write(sizedInteger: float.bitPattern)
         }
-        
+
         mutating func append(_ double: Double) {
             write(.real, subtype: 3)
             write(sizedInteger: double.bitPattern)
         }
-        
+
         mutating func append(_ int: Int) {
             append(Int64(int))
         }
-        
+
         mutating func appendTrue() {
             write(Marker.true)
         }
-        
+
         mutating func appendFalse() {
             write(Marker.false)
         }
-        
+
         mutating func append(_ data: Data) {
             append(.data, count: data.count)
             data.withUnsafeBytes { buf in
@@ -1055,34 +1058,14 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 }
             }
         }
-        
+
         mutating func append(date dateAsTimeInterval: Double) {
             write(.date)
             write(sizedInteger: dateAsTimeInterval.bitPattern)
         }
 
-#if canImport(CollectionsInternal) || canImport(OrderedCollections) || canImport(_FoundationCollections)
-        mutating func append(_ dictionary: OrderedDictionary<Reference,Reference>) {
-            // First write the indexes of the dictionary contents, then write the actual contents to the output in a pre-order traversal.
-            append(.dict, count: dictionary.count)
-            for key in dictionary.keys {
-                let keyIdx = key.bplistObjectIdx
-                write(objectRef: UInt32(keyIdx))
-            }
-            for val in dictionary.values {
-                let valIdx = val.bplistObjectIdx
-                write(objectRef: UInt32(valIdx))
-            }
-            
-            for key in dictionary.keys {
-                append(key)
-            }
-            for val in dictionary.values {
-                append(val)
-            }
-        }
-#else
-        mutating func append(_ dictionary: Dictionary<Reference,Reference>) {
+        #if canImport(CollectionsInternal) || canImport(OrderedCollections) || canImport(_FoundationCollections)
+        mutating func append(_ dictionary: OrderedDictionary<Reference, Reference>) {
             // First write the indexes of the dictionary contents, then write the actual contents to the output in a pre-order traversal.
             append(.dict, count: dictionary.count)
             for key in dictionary.keys {
@@ -1101,7 +1084,27 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 append(val)
             }
         }
-#endif
+        #else
+        mutating func append(_ dictionary: Dictionary<Reference, Reference>) {
+            // First write the indexes of the dictionary contents, then write the actual contents to the output in a pre-order traversal.
+            append(.dict, count: dictionary.count)
+            for key in dictionary.keys {
+                let keyIdx = key.bplistObjectIdx
+                write(objectRef: UInt32(keyIdx))
+            }
+            for val in dictionary.values {
+                let valIdx = val.bplistObjectIdx
+                write(objectRef: UInt32(valIdx))
+            }
+
+            for key in dictionary.keys {
+                append(key)
+            }
+            for val in dictionary.values {
+                append(val)
+            }
+        }
+        #endif
 
         mutating func append(_ array: ContiguousArray<Reference>) {
             // First write the indexes of the array contents, the write the actual contents to the output in a pre-order traversal.
@@ -1110,23 +1113,23 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 let valIdx = val.bplistObjectIdx
                 write(objectRef: UInt32(valIdx))
             }
-            
+
             for val in array {
                 append(val)
             }
         }
     }
-    
+
     let null = Reference(.null)
     let `true` = Reference(.true)
     let `false` = Reference(.false)
-    
+
     var uniquingSet = Set<Reference>()
     var uniquingTester = Reference(.null)
     init() {
-        
+
     }
-    
+
     @inline(__always)
     private mutating func unique(_ backing: Reference.Backing) -> Reference {
         uniquingTester.backing = backing
@@ -1137,7 +1140,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
         }
         return member
     }
-    
+
     mutating func string(_ str: String) -> Reference {
         // TODO: Having the ability to quickly determine if a string contains all ASCII content (especially if stored as a property of the string) would greatly improve encoding performance.
         // TODO: The string's hash code is computed up front here because otherwise it is recomputed very often while uniquing values. There might be a better way to do this.
@@ -1147,17 +1150,17 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
         if allASCII {
             backing = .string(str, hash: str.hashValue, isASCII: true)
         } else {
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             // NSString-backed Strings are only present on Darwin in the framework build
             backing = .string(str, hash: (str as NSString).hash, isASCII: false)
-#else
+            #else
             backing = .string(str, hash: str.hashValue, isASCII: false)
-#endif
+            #endif
         }
-        
+
         return unique(backing)
     }
-       
+
     mutating func number<T: FixedWidthInteger>(from num: T) -> Reference {
         let backing: Reference.Backing
         if T.isSigned || T.bitWidth < UInt64.bitWidth {
@@ -1165,10 +1168,10 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
         } else {
             backing = .uint64(UInt64(num))
         }
-        
+
         return unique(backing)
     }
-    
+
     mutating func number<T: BinaryFloatingPoint>(from num: T) -> Reference {
         let backing: Reference.Backing
         if T.self == Float.self {
@@ -1176,32 +1179,32 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
         } else {
             backing = .double(Double(num))
         }
-        
+
         return unique(backing)
     }
-    
+
     mutating func date(_ date: Date) -> Reference {
         return unique(.dateAsTimeInterval(date.timeIntervalSinceReferenceDate))
     }
-    
+
     mutating func data(_ data: Data) -> Reference {
         return unique(.data(data))
     }
 }
 
-extension _BPlistEncodingFormat.Reference : Hashable {
+extension _BPlistEncodingFormat.Reference: Hashable {
     static func == (lhs: _BPlistEncodingFormat.Reference, rhs: _BPlistEncodingFormat.Reference) -> Bool {
         switch (lhs.backing, rhs.backing) {
         case let (.string(lh, _, lhIsASCII), .string(rh, _, rhIsASCII)):
             if lhIsASCII, rhIsASCII {
                 return lh == rh
             } else if !lhIsASCII && !rhIsASCII {
-#if FOUNDATION_FRAMEWORK
-            // NSString-backed Strings are only present on Darwin in the framework build
+                #if FOUNDATION_FRAMEWORK
+                // NSString-backed Strings are only present on Darwin in the framework build
                 return (lh as NSString) == (rh as NSString)
-#else
+                #else
                 return lh == rh
-#endif                
+                #endif
             } else {
                 return false
             }
@@ -1222,7 +1225,7 @@ extension _BPlistEncodingFormat.Reference : Hashable {
             return false
         }
     }
-    
+
     func hash(into hasher: inout Hasher) {
         switch backing {
         case let .string(_, hash, _):
@@ -1246,8 +1249,8 @@ extension _BPlistEncodingFormat.Reference : Hashable {
 }
 
 extension FixedWidthInteger {
-    fileprivate var minimumRepresentableByteSize : UInt8 {
+    fileprivate var minimumRepresentableByteSize: UInt8 {
         let leadingZeroBytes = self.leadingZeroBitCount / 8
-        return UInt8(self.bitWidth/8 - leadingZeroBytes)
+        return UInt8(self.bitWidth / 8 - leadingZeroBytes)
     }
 }

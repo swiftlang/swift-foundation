@@ -110,20 +110,20 @@ extension NSTimeZone {
 
     @objc
     static func _knownTimeZoneIdentifiers() -> [String] {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         TimeZone.knownTimeZoneIdentifiers
-#else
+        #else
         []
-#endif
+        #endif
     }
 
     @objc
     static func _timeZoneDataVersion() -> String {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         TimeZone.timeZoneDataVersion
-#else
+        #else
         ""
-#endif
+        #endif
     }
 }
 
@@ -144,13 +144,13 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge, @unchecked Sendable {
         lock = Mutex(State(data: data))
         super.init()
     }
-    
+
     // MARK: - Coding
-    
+
     override var classForCoder: AnyClass {
         NSTimeZone.self
     }
-    
+
     // Even though we do not expect init(coder:) to be called, we have to implement it per the DI rules - and if we implement it, we are required to override this method to prove that we support secure coding.
     override static var supportsSecureCoding: Bool { true }
 
@@ -158,7 +158,7 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge, @unchecked Sendable {
         // TODO: If we intend to implement this in Swift, we will need to remove the placeholder TimeZone in CoreFoundation
         fatalError("Only NSTimeZone should be encoded in an archive")
     }
-    
+
     override func replacementObject(for archiver: NSKeyedArchiver) -> Any? {
         if timeZone == TimeZone.autoupdatingCurrent {
             return __NSLocalTimeZone()
@@ -184,7 +184,7 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge, @unchecked Sendable {
             if let data = $0.data {
                 return data
             }
-            
+
             let data = TimeZone.dataFromTZFile(name)
             $0.data = data
             return data
@@ -237,4 +237,3 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge, @unchecked Sendable {
 }
 
 #endif
-

@@ -12,13 +12,13 @@
 
 internal import Synchronization
 
-package struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sendable>: Sendable, ~Copyable {
+package struct FormatterCache<Format: Hashable & Sendable, FormattingType: Sendable>: Sendable, ~Copyable {
     let countLimit = 100
 
     private let _lock: Mutex<[Format: FormattingType]>
     package func formatter(for config: Format, creator: () throws -> FormattingType) rethrows -> FormattingType {
         let existed = _lock.withLock { cache in
-            return cache [config]
+            return cache[config]
         }
 
         if let existed {

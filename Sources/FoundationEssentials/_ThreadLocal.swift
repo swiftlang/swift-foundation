@@ -26,66 +26,66 @@ internal import threads
 #endif
 
 struct _ThreadLocal {
-#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+    #if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
     fileprivate typealias PlatformKey = pthread_key_t
-#elseif USE_TSS
+    #elseif USE_TSS
     fileprivate typealias PlatformKey = tss_t
-#elseif canImport(WinSDK)
+    #elseif canImport(WinSDK)
     fileprivate typealias PlatformKey = DWORD
-#elseif os(WASI)
+    #elseif os(WASI)
     fileprivate typealias PlatformKey = UnsafeMutablePointer<UnsafeMutableRawPointer?>
-#endif
-    
+    #endif
+
     struct Key<Value> {
         fileprivate let key: PlatformKey
-        
+
         init() {
-#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+            #if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             var key = PlatformKey()
             pthread_key_create(&key, nil)
             self.key = key
-#elseif USE_TSS
+            #elseif USE_TSS
             var key = PlatformKey()
             tss_create(&key, nil)
             self.key = key
-#elseif canImport(WinSDK)
+            #elseif canImport(WinSDK)
             key = FlsAlloc(nil)
-#elseif os(WASI)
+            #elseif os(WASI)
             key = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: 1)
-#endif
+            #endif
         }
     }
-    
+
     private static subscript(_ key: PlatformKey) -> UnsafeMutableRawPointer? {
         get {
-#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+            #if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_getspecific(key)
-#elseif USE_TSS
+            #elseif USE_TSS
             tss_get(key)
-#elseif canImport(WinSDK)
+            #elseif canImport(WinSDK)
             FlsGetValue(key)
-#elseif os(WASI)
+            #elseif os(WASI)
             key.pointee
-#endif
+            #endif
         }
-        
+
         set {
-#if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
+            #if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_setspecific(key, newValue)
-#elseif USE_TSS
+            #elseif USE_TSS
             tss_set(key, newValue)
-#elseif canImport(WinSDK)
+            #elseif canImport(WinSDK)
             FlsSetValue(key, newValue)
-#elseif os(WASI)
+            #elseif os(WASI)
             key.pointee = newValue
-#endif
+            #endif
         }
     }
-    
+
     static subscript<Value>(_ key: Key<Value>) -> Value? {
         self[key.key]?.load(as: Value.self)
     }
-    
+
     static func withValue<Value, R>(_ value: inout Value, for key: Key<Value>, _ block: () throws -> R) rethrows -> R {
         precondition(Self[key.key] == nil, "Not allowed to set the value for a key within the subscope of that key")
         return try withUnsafeMutablePointer(to: &value) {

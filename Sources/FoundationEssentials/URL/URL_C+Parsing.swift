@@ -21,15 +21,17 @@ extension NSURL {
     static func __swiftParseSmall(_ string: Unmanaged<CFString>, into impl: UnsafeMutablePointer<__CFSmallURLImpl>, allowEncoding: Bool) -> Bool {
         var flags = __CFURLFlags(type: .small)
         let string = string.takeUnretainedValue()
-        guard _withURLSpan(
-            string: string,
-            blockIfASCII: {
-                URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
-            },
-            blockIfUTF16: {
-                URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
-            }
-        ) else {
+        guard
+            _withURLSpan(
+                string: string,
+                blockIfASCII: {
+                    URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+                },
+                blockIfUTF16: {
+                    URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+                }
+            )
+        else {
             return false
         }
         impl.pointee._header._flags = flags
@@ -42,15 +44,17 @@ extension NSURL {
     static func __swiftParseBig(_ string: Unmanaged<CFString>, into impl: UnsafeMutablePointer<__CFBigURLImpl>, allowEncoding: Bool) -> Bool {
         var flags = __CFURLFlags(type: .big)
         let string = string.takeUnretainedValue()
-        guard _withURLSpan(
-            string: string,
-            blockIfASCII: {
-                URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
-            },
-            blockIfUTF16: {
-                URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
-            }
-        ) else {
+        guard
+            _withURLSpan(
+                string: string,
+                blockIfASCII: {
+                    URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+                },
+                blockIfUTF16: {
+                    URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+                }
+            )
+        else {
             return false
         }
         impl.pointee._header._flags = flags
@@ -63,11 +67,13 @@ extension NSURL {
     static func __swiftParseSmallNSURL(_ string: Unmanaged<CFString>, into impl: UnsafeMutablePointer<__CFSmallURLImpl>) -> Bool {
         var flags = __CFURLFlags(type: .small)
         let string = string.takeUnretainedValue()
-        guard _withURLSpan(
-            string: string,
-            blockIfASCII: { URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
-            blockIfUTF16: { URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
-        ) else {
+        guard
+            _withURLSpan(
+                string: string,
+                blockIfASCII: { URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
+                blockIfUTF16: { URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
+            )
+        else {
             return false
         }
         impl.pointee._header._flags = flags
@@ -77,11 +83,13 @@ extension NSURL {
     static func __swiftParseBigNSURL(_ string: Unmanaged<CFString>, into impl: UnsafeMutablePointer<__CFBigURLImpl>) -> Bool {
         var flags = __CFURLFlags(type: .big)
         let string = string.takeUnretainedValue()
-        guard _withURLSpan(
-            string: string,
-            blockIfASCII: { URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
-            blockIfUTF16: { URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
-        ) else {
+        guard
+            _withURLSpan(
+                string: string,
+                blockIfASCII: { URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
+                blockIfUTF16: { URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
+            )
+        else {
             return false
         }
         impl.pointee._header._flags = flags

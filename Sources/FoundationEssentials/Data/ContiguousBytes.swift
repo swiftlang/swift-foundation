@@ -30,7 +30,7 @@
 ///     }
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public protocol ContiguousBytes: ~Escapable, ~Copyable {
-#if !hasFeature(Embedded)
+    #if !hasFeature(Embedded)
     /// Calls the given closure with the contents of underlying storage.
     ///
     /// - note: Calling `withUnsafeBytes` multiple times does not guarantee that
@@ -42,7 +42,7 @@ public protocol ContiguousBytes: ~Escapable, ~Copyable {
     /// `withBytes` uses the non-escapable type `RawSpan` to ensure that the
     /// buffer argument is not stored outside of the closure.
     func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
-#else
+    #else
     /// Calls the given closure with the contents of underlying storage.
     ///
     /// - note: Calling `withUnsafeBytes` multiple times does not guarantee that
@@ -54,7 +54,7 @@ public protocol ContiguousBytes: ~Escapable, ~Copyable {
     /// `withBytes` uses the non-escapable type `RawSpan` to ensure that the
     /// buffer argument is not stored outside of the closure.
     func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R
-#endif
+    #endif
 
     /*
      TODO: For now, this is not a protocol requirement because adding it can be a source breaking change for clients with MemberImportVisibility enabled (such as swift-crypto): https://github.com/swiftlang/swift/issues/87227
@@ -75,7 +75,7 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
-#if !hasFeature(Embedded)
+        #if !hasFeature(Embedded)
         do {
             return try withUnsafeBytes { (buffer) in
                 try body(buffer.bytes)
@@ -84,11 +84,11 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
             // Note: withUnsafeBytes is rethrowing, so we have an "any Error" here that needs casting.
             throw error as! E
         }
-#else
+        #else
         return try withUnsafeBytes { (buffer) throws(E) in
             try body(buffer.bytes)
         }
-#endif
+        #endif
     }
 }
 
@@ -96,7 +96,7 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Array : ContiguousBytes where Element == UInt8 {
+extension Array: ContiguousBytes where Element == UInt8 {
     // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
@@ -109,7 +109,7 @@ extension Array : ContiguousBytes where Element == UInt8 {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension ArraySlice : ContiguousBytes where Element == UInt8 {
+extension ArraySlice: ContiguousBytes where Element == UInt8 {
     // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
@@ -122,7 +122,7 @@ extension ArraySlice : ContiguousBytes where Element == UInt8 {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension ContiguousArray : ContiguousBytes where Element == UInt8 {
+extension ContiguousArray: ContiguousBytes where Element == UInt8 {
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {
@@ -131,12 +131,12 @@ extension ContiguousArray : ContiguousBytes where Element == UInt8 {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : ContiguousBytes { }
+extension Data: ContiguousBytes {}
 
 //===--- Pointer Conformances ---------------------------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension UnsafeRawBufferPointer : ContiguousBytes {
+extension UnsafeRawBufferPointer: ContiguousBytes {
     #if DATA_LEGACY_ABI
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -163,7 +163,7 @@ extension UnsafeRawBufferPointer : ContiguousBytes {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension UnsafeMutableRawBufferPointer : ContiguousBytes {
+extension UnsafeMutableRawBufferPointer: ContiguousBytes {
     #if DATA_LEGACY_ABI
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -191,7 +191,7 @@ extension UnsafeMutableRawBufferPointer : ContiguousBytes {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
+extension UnsafeBufferPointer: ContiguousBytes where Element == UInt8 {
     #if DATA_LEGACY_ABI
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -219,7 +219,7 @@ extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
+extension UnsafeMutableBufferPointer: ContiguousBytes where Element == UInt8 {
     #if DATA_LEGACY_ABI
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -247,7 +247,7 @@ extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension EmptyCollection : ContiguousBytes where Element == UInt8 {
+extension EmptyCollection: ContiguousBytes where Element == UInt8 {
     #if DATA_LEGACY_ABI
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -275,7 +275,7 @@ extension EmptyCollection : ContiguousBytes where Element == UInt8 {
 
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
+extension CollectionOfOne: ContiguousBytes where Element == UInt8 {
     #if DATA_LEGACY_ABI
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -311,7 +311,7 @@ extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
 //===--- Conditional Conformances -----------------------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Slice : ContiguousBytes where Base : ContiguousBytes {
+extension Slice: ContiguousBytes where Base: ContiguousBytes {
     #if DATA_LEGACY_ABI
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -352,7 +352,7 @@ extension Slice : ContiguousBytes where Base : ContiguousBytes {
 //===--- Span Conformances -----------------------------------------===//
 
 @available(FoundationPreview 6.4, *)
-extension RawSpan: ContiguousBytes { }
+extension RawSpan: ContiguousBytes {}
 
 extension RawSpan {
     @_alwaysEmitIntoClient
@@ -362,7 +362,7 @@ extension RawSpan {
 }
 
 @available(FoundationPreview 6.4, *)
-extension MutableRawSpan: ContiguousBytes { }
+extension MutableRawSpan: ContiguousBytes {}
 
 extension MutableRawSpan {
     @_alwaysEmitIntoClient
@@ -372,7 +372,7 @@ extension MutableRawSpan {
 }
 
 @available(FoundationPreview 6.4, *)
-extension OutputRawSpan: ContiguousBytes { }
+extension OutputRawSpan: ContiguousBytes {}
 
 extension OutputRawSpan {
     @_alwaysEmitIntoClient
@@ -387,7 +387,7 @@ extension OutputRawSpan {
 }
 
 @available(FoundationPreview 6.4, *)
-extension UTF8Span: ContiguousBytes { }
+extension UTF8Span: ContiguousBytes {}
 
 extension UTF8Span {
     @_alwaysEmitIntoClient
@@ -402,7 +402,7 @@ extension UTF8Span {
 }
 
 @available(FoundationPreview 6.4, *)
-extension Span: ContiguousBytes where Element == UInt8 { }
+extension Span: ContiguousBytes where Element == UInt8 {}
 
 extension Span where Element == UInt8 {
     @_alwaysEmitIntoClient
@@ -412,7 +412,7 @@ extension Span where Element == UInt8 {
 }
 
 @available(FoundationPreview 6.4, *)
-extension MutableSpan: ContiguousBytes where Element == UInt8 { }
+extension MutableSpan: ContiguousBytes where Element == UInt8 {}
 
 extension MutableSpan where Element == UInt8 {
     @_alwaysEmitIntoClient
@@ -422,7 +422,7 @@ extension MutableSpan where Element == UInt8 {
 }
 
 @available(FoundationPreview 6.4, *)
-extension OutputSpan: ContiguousBytes where Element == UInt8 { }
+extension OutputSpan: ContiguousBytes where Element == UInt8 {}
 
 extension OutputSpan where Element == UInt8 {
     @_alwaysEmitIntoClient
@@ -437,7 +437,7 @@ extension OutputSpan where Element == UInt8 {
 }
 
 @available(FoundationPreview 6.4, *)
-extension InlineArray: ContiguousBytes where Element == UInt8 { }
+extension InlineArray: ContiguousBytes where Element == UInt8 {}
 
 extension InlineArray where Element == UInt8 {
     @_alwaysEmitIntoClient

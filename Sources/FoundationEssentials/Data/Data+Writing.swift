@@ -47,19 +47,19 @@ private func openFileDescriptorProtected(path: UnsafePointer<UInt16>, flags: Int
 }
 #else
 private func openFileDescriptorProtected(path: UnsafePointer<CChar>, flags: Int32, options: Data.WritingOptions) -> Int32 {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // Use file protection on this platform
     return _NSOpenFileDescriptor_Protected(path, Int(flags), options, 0o666)
-#else
+    #else
     return open(path, flags, 0o666)
-#endif
+    #endif
 }
 #endif
 
 private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, reportProgress: Bool) throws -> Int {
     // Fetch this once
     let length = buffer.byteCount
-    
+
     let preferredChunkSize: Int
     let localProgress: Progress?
     if reportProgress && Progress.current() != nil {
@@ -77,7 +77,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, rep
         if let localProgress, localProgress.isCancelled {
             throw CocoaError(.userCancelled)
         }
-        
+
         // Don't ever attempt to write more than (2GB - 1 byte). Some platforms will return an error over that amount.
         let numBytesRequested = CInt(clamping: min(preferredChunkSize, Int(CInt.max)))
         let smallestAmountToRead = min(Int(numBytesRequested), remaining.byteCount)
@@ -88,13 +88,13 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, rep
                 throw CocoaError(.userCancelled)
             }
             numBytesWritten = chunk.withUnsafeBytes { buf in
-#if os(Windows)
+                #if os(Windows)
                 _write(fd, buf.baseAddress, CUnsignedInt(buf.count))
-#else
+                #else
                 CInt(clamping: write(fd, buf.baseAddress!, buf.count))
-#endif
+                #endif
             }
-            
+
             if numBytesWritten < 0 {
                 let savedErrno = errno
                 logFileIOErrno(savedErrno, at: "write")
@@ -116,7 +116,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, rep
             }
         } while numBytesWritten < 0 && errno == EINTR
     }
-    
+
     let bytesWritten = length - remaining.byteCount
     return bytesWritten
 }
@@ -138,20 +138,20 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
 private func createTemporaryFile(at destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, prefix: String, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String) {
-#if os(WASI)
+    #if os(WASI)
     // WASI does not have temp directories
     throw CocoaError(.featureUnsupported)
-#else
+    #else
     var directoryPath = destinationPath
     if !directoryPath.isEmpty && directoryPath.last! != "/" {
         directoryPath.append("/")
     }
-    
+
     let pidString = String(ProcessInfo.processInfo.processIdentifier, radix: 16, uppercase: true)
     let template = directoryPath + prefix + pidString + ".XXXXXX"
     let maxCount = 7
-    for _ in 0 ..< maxCount {
-#if FOUNDATION_FRAMEWORK
+    for _ in 0..<maxCount {
+        #if FOUNDATION_FRAMEWORK
         let (sandboxResult, amkrErrno) = inPath.withFileSystemRepresentation { inPathFileSystemRep -> ((Int32, String)?, Int32?) in
             guard let inPathFileSystemRep else {
                 return (nil, nil)
@@ -168,49 +168,49 @@ private func createTemporaryFile(at destinationPath: String, inPath: borrowing s
             }
             return (nil, errno)
         }
-        
+
         // If _amkrtemp succeeded, return its result
         if let sandboxResult {
             return sandboxResult
         }
-        
+
         // If we have no result and also no errno, just fail immediately because we failed to produce a file system representation for the path
         guard let amkrErrno else {
             throw CocoaError.errorWithFilePath(.fileReadInvalidFileName, inPath.path)
         }
-        
+
         // If _amkrtemp failed with EEXIST, just retry
         if amkrErrno == EEXIST {
             continue
         }
         // Otherwise, fall through to mktemp below
-#endif
-        
+        #endif
+
         let result = try template.withMutableFileSystemRepresentation { templateFileSystemRep -> (Int32, String)? in
             guard let templateFileSystemRep else {
                 throw CocoaError(.fileWriteInvalidFileName)
             }
-            
+
             // The warning diligently tells us we shouldn't be using mktemp() because blindly opening the returned path opens us up to a TOCTOU race. However, in this case, we're being careful by doing O_CREAT|O_EXCL and repeating, just like the implementation of mkstemp.
             // Furthermore, we can't compatibly switch to mkstemp() until we have the ability to set fchmod correctly, which requires the ability to query the current umask, which we don't have. (22033100)
-#if os(Windows)
+            #if os(Windows)
             guard _mktemp_s(templateFileSystemRep, strlen(templateFileSystemRep) + 1) == 0 else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
             let fd = try String(cString: templateFileSystemRep).withNTPathRepresentation {
                 openFileDescriptorProtected(path: $0, flags: _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR, options: options)
             }
-#else
+            #else
             guard mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
             let fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
-#endif
+            #endif
             if fd >= 0 {
                 // Got a good fd
                 return (fd, String(cString: templateFileSystemRep))
             }
-            
+
             // If the file exists, we repeat. Otherwise throw the error.
             if errno != EEXIST {
                 #if FOUNDATION_FRAMEWORK
@@ -224,14 +224,14 @@ private func createTemporaryFile(at destinationPath: String, inPath: borrowing s
             // Try again
             return nil
         }
-        
+
         if let result {
             return result
         }
     }
     // We hit max count, prevent an infinite loop; even if the error is obscure
     throw CocoaError(.fileWriteUnknown)
-#endif // os(WASI)
+    #endif // os(WASI)
 }
 
 /// Returns `(file descriptor, temporary file path, temporary directory path)`
@@ -240,11 +240,11 @@ private func createTemporaryFile(at destinationPath: String, inPath: borrowing s
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
 private func createProtectedTemporaryFile(at destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String, String?) {
-#if os(WASI)
+    #if os(WASI)
     // WASI does not have temp directories
     throw CocoaError(.featureUnsupported)
-#else
-#if FOUNDATION_FRAMEWORK
+    #else
+    #if FOUNDATION_FRAMEWORK
     if _foundation_sandbox_check(getpid(), nil) != 0 {
         // Convert the path back into a string
         let url = URL(fileURLWithPath: destinationPath, isDirectory: false)
@@ -256,15 +256,15 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: bo
                 let code = cocoaError.code
                 var userInfo = cocoaError.userInfo
                 userInfo[NSUserStringVariantErrorKey] = variant
-                
+
                 throw CocoaError(code, userInfo: userInfo)
             } else {
                 throw error
             }
         }
-        
+
         let updatedOptions = _NSDataWritingOptionsForRelocatedAtomicWrite(options, destinationPath)
-        
+
         let auxFile = temporaryDirectoryPath.appendingPathComponent(destinationPath.lastPathComponent)
         return try auxFile.withFileSystemRepresentation { auxFileFileSystemRep in
             guard let auxFileFileSystemRep else {
@@ -280,12 +280,12 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: bo
             }
         }
     }
-#endif
-    
+    #endif
+
     let temporaryDirectoryPath = destinationPath.deletingLastPathComponent()
     let (fd, auxFile) = try createTemporaryFile(at: temporaryDirectoryPath, inPath: inPath, prefix: ".dat.nosync", options: options, variant: variant)
     return (fd, auxFile, nil)
-#endif // os(WASI)
+    #endif // os(WASI)
 }
 
 private func write(buffer: RawSpan, toFileDescriptor fd: Int32, path: borrowing some FileSystemRepresentable & ~Copyable, parentProgress: Progress?) throws {
@@ -294,27 +294,28 @@ private func write(buffer: RawSpan, toFileDescriptor fd: Int32, path: borrowing 
     defer {
         parentProgress?.resignCurrent()
     }
-    
+
     if count > 0 {
         let result = try writeToFileDescriptorWithProgress(fd, buffer: buffer, reportProgress: parentProgress != nil)
         if result != count {
             throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
         }
     }
-    
+
     if !buffer.isEmpty {
-#if os(Windows)
+        #if os(Windows)
         let hFile: HANDLE? = HANDLE(bitPattern: _get_osfhandle(fd))
         // On Windows, only call _commit if the fd corresponds to an actual file
         // on disk.
-        let res: CInt = if let hFile, GetFileType(hFile) == FILE_TYPE_DISK {
-            _commit(fd)
-        } else {
-            0
-        }
-#else
+        let res: CInt =
+            if let hFile, GetFileType(hFile) == FILE_TYPE_DISK {
+                _commit(fd)
+            } else {
+                0
+            }
+        #else
         let res = fsync(fd)
-#endif
+        #endif
         if res < 0 {
             let savedErrno = errno
             let error = CocoaError.errorWithFilePath(path, errno: savedErrno, reading: false)
@@ -342,43 +343,43 @@ extension NSData {
             try writeToFile(path: path, buffer: span, options: options, attributes: [:], reportProgress: reportProgress)
         }
     }
-    
+
     @objc(_writeDataToPath:data:options:stringEncodingAttributeData:reportProgress:error:)
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, stringEncodingAttributeData: Data, reportProgress: Bool) throws {
         try autoreleasepool {
             let span = RawSpan(_unsafeStart: data.bytes, byteCount: data.count)
-            try writeToFile(path: path, buffer: span, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
+            try writeToFile(path: path, buffer: span, options: options, attributes: [NSFileAttributeStringEncoding: stringEncodingAttributeData], reportProgress: reportProgress)
         }
     }
 }
 #endif
 
-internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
-#if os(WASI) // `.atomic` is unavailable on WASI
+internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String: Data] = [:], reportProgress: Bool = false) throws {
+    #if os(WASI) // `.atomic` is unavailable on WASI
     try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
-#else
+    #else
     if options.contains(.atomic) {
         try writeToFileAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
     } else {
         try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
     }
-#endif
+    #endif
 }
 
 /// Create a new file out of `Data` at a path, using atomic writing.
 #if os(WASI)
 @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
 #endif
-private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
-#if os(WASI)
+private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String: Data], reportProgress: Bool) throws {
+    #if os(WASI)
     // `.atomic` is unavailable on WASI
     throw CocoaError(.featureUnsupported)
-#else
+    #else
     assert(options.contains(.atomic))
-    
+
     // TODO: Somehow avoid copying back and forth to a String to hold the path
 
-#if os(Windows)
+    #if os(Windows)
     var (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: inPath.path, inPath: inPath, options: options, variant: "Folder")
 
     // Cleanup temporary directory
@@ -414,11 +415,12 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
     try auxPath.withNTPathRepresentation { pwszAuxiliaryPath in
         defer { _ = DeleteFileW(pwszAuxiliaryPath) }
 
-        var hFile = CreateFileW(pwszAuxiliaryPath, DELETE,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                nil, OPEN_EXISTING,
-                                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-                                nil)
+        var hFile = CreateFileW(
+            pwszAuxiliaryPath, DELETE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nil, OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            nil)
         if hFile == INVALID_HANDLE_VALUE {
             throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
         }
@@ -436,16 +438,18 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
             let cchLength = wcslen(pwszPath)
             let cbSize = cchLength * MemoryLayout<WCHAR>.size
             let dwSize = DWORD(MemoryLayout<FILE_RENAME_INFO>.size + cbSize + MemoryLayout<WCHAR>.size)
-            try withUnsafeTemporaryAllocation(byteCount: Int(dwSize),
-                                              alignment: MemoryLayout<FILE_RENAME_INFO>.alignment) { pBuffer in
+            try withUnsafeTemporaryAllocation(
+                byteCount: Int(dwSize),
+                alignment: MemoryLayout<FILE_RENAME_INFO>.alignment
+            ) { pBuffer in
                 var pInfo = pBuffer.baseAddress?.bindMemory(to: FILE_RENAME_INFO.self, capacity: 1)
                 pInfo?.pointee.Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS
                 pInfo?.pointee.RootDirectory = nil
                 pInfo?.pointee.FileNameLength = DWORD(cbSize)
                 pBuffer.baseAddress?.advanced(by: MemoryLayout<FILE_RENAME_INFO>.offset(of: \.FileName)!)
-                                    .withMemoryRebound(to: WCHAR.self, capacity: cchLength + 1) {
-                    wcscpy_s($0, cchLength + 1, pwszPath)
-                }
+                    .withMemoryRebound(to: WCHAR.self, capacity: cchLength + 1) {
+                        wcscpy_s($0, cchLength + 1, pwszPath)
+                    }
 
                 var renameOk = SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize)
 
@@ -479,10 +483,12 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                         return
                     }
 
-                    guard dwError == ERROR_NOT_SAME_DEVICE
-                        || dwError == ERROR_NOT_SUPPORTED
-                        || dwError == ERROR_FILE_SYSTEM_LIMITATION
-                        || dwError == ERROR_INVALID_PARAMETER else {
+                    guard
+                        dwError == ERROR_NOT_SAME_DEVICE
+                            || dwError == ERROR_NOT_SUPPORTED
+                            || dwError == ERROR_FILE_SYSTEM_LIMITATION
+                            || dwError == ERROR_INVALID_PARAMETER
+                    else {
                         throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
                     }
 
@@ -494,18 +500,20 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
             }
         }
     }
-#else
+    #else
     try inPath.withFileSystemRepresentation { inPathFileSystemRep in
         guard let inPathFileSystemRep else {
             throw CocoaError(.fileWriteInvalidFileName)
         }
-        
+
         var mode: mode_t?
-        
-#if FOUNDATION_FRAMEWORK
+
+        #if FOUNDATION_FRAMEWORK
         var newPath = inPath.path
         var preRenameAttributes = PreRenameAttributes()
-        var attrs = attrlist(bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_OBJTYPE | ATTR_CMN_ACCESSMASK | ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(ATTR_FILE_LINKCOUNT), forkattr: .init())
+        var attrs = attrlist(
+            bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_OBJTYPE | ATTR_CMN_ACCESSMASK | ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(ATTR_FILE_LINKCOUNT),
+            forkattr: .init())
         // Provide FSOPT_UNIQUE to ensure that the file is a regular file with a single hard link (so that we can rely on ATTR_CMN_FULLPATH)
         let result = getattrlist(inPathFileSystemRep, &attrs, &preRenameAttributes, MemoryLayout<PreRenameAttributes>.size, .init(FSOPT_NOFOLLOW | FSOPT_UNIQUE))
         if result == 0 {
@@ -523,41 +531,41 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         } else if (errno != ENOENT) && (errno != ENAMETOOLONG) && (errno != ENOTCAPABLE) {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
-#else
+        #else
         let newPath = inPath.path
-#endif
-        
+        #endif
+
         var (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: newPath, inPath: inPath, options: options, variant: "Folder")
-        
+
         guard fd >= 0 else {
             let savedErrno = errno
             // Cleanup temporary directory
             cleanupTemporaryDirectory(at: temporaryDirectoryPath)
             throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
         }
-        
+
         defer { close(fd) }
-        
+
         let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
-        
+
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
         } catch {
             let savedError = errno
-            
+
             auxPath.withFileSystemRepresentation { pathFileSystemRep in
                 guard let pathFileSystemRep else { return }
                 unlink(pathFileSystemRep)
             }
             cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-            
+
             if parentProgress?.isCancelled ?? false {
                 throw CocoaError(.userCancelled)
             } else {
                 throw CocoaError.errorWithFilePath(inPath, errno: savedError, reading: false)
             }
         }
-        
+
         writeExtendedAttributes(fd: fd, attributes: attributes)
 
         try auxPath.withFileSystemRepresentation { auxPathFileSystemRep in
@@ -565,19 +573,19 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                 // The aux path is not a valid file name
                 throw CocoaError(.fileWriteInvalidFileName)
             }
-            
+
             try newPath.withFileSystemRepresentation { newPathFileSystemRep in
                 guard let newPathFileSystemRep else {
                     // The new path is not a valid file name
                     throw CocoaError(.fileWriteInvalidFileName)
                 }
-                
+
                 if rename(auxPathFileSystemRep, newPathFileSystemRep) != 0 {
                     if errno == EINVAL {
                         // rename() fails on DOS file systems if newname already exists.
                         // Makes "atomically" next to meaningless, but...
                         // We try a little harder but this is not thread-safe nor atomic
-                        
+
                         let (fd2, auxPath2, temporaryDirectoryPath2) = try createProtectedTemporaryFile(at: newPath, inPath: inPath, options: options)
                         close(fd2)
                         try auxPath2.withFileSystemRepresentation { auxPath2FileSystemRep in
@@ -585,9 +593,9 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                                 // The aux path (2) is not a valid file name
                                 throw CocoaError(.fileWriteInvalidFileName)
                             }
-                            
+
                             unlink(auxPath2FileSystemRep)
-                            
+
                             if rename(newPathFileSystemRep, auxPath2FileSystemRep) != 0 || rename(auxPathFileSystemRep, newPathFileSystemRep) != 0 {
                                 // Swap failed
                                 let savedErrno = errno
@@ -597,16 +605,16 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                                 cleanupTemporaryDirectory(at: temporaryDirectoryPath2)
                                 throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
                             }
-                            
+
                             unlink(auxPath2FileSystemRep)
                             cleanupTemporaryDirectory(at: temporaryDirectoryPath2)
                         }
-                        
+
                     } else if errno == EBUSY {
                         // EBUSY may mean it was an HFS+ file system and something (perhaps another process) still had a reference to resources (vm pages, fd) associated with the file. Try again, non-atomically.
                         unlink(auxPathFileSystemRep)
                         cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-                        
+
                         // We also throw away any other options, and do not report progress. This may or may not be a bug.
                         return try writeToFile(path: inPath, buffer: buffer, options: [], attributes: attributes, reportProgress: false)
                     } else {
@@ -616,12 +624,12 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                         throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
                     }
                 }
-                
+
                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-                
+
                 if let mode {
                     // Try to change the mode if the path has not changed. Do our best, but don't report an error.
-#if FOUNDATION_FRAMEWORK
+                    #if FOUNDATION_FRAMEWORK
                     var attrs = attrlist(bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(), forkattr: .init())
                     var buffer = FullPathAttributes()
                     let result = fgetattrlist(fd, &attrs, &buffer, MemoryLayout<FullPathAttributes>.size, .init(FSOPT_NOFOLLOW | FSOPT_UNIQUE))
@@ -638,24 +646,24 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                             }
                         }
                     }
-#else
+                    #else
                     fchmod(fd, mode)
-#endif
+                    #endif
                 }
             }
         }
     }
-#endif
-#endif // os(WASI)
+    #endif
+    #endif // os(WASI)
 }
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
-private func writeToFileNoAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
+private func writeToFileNoAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String: Data], reportProgress: Bool) throws {
+    #if !os(WASI) // `.atomic` is unavailable on WASI
     assert(!options.contains(.atomic))
-#endif
+    #endif
 
-#if os(Windows)
+    #if os(Windows)
     try inPath.path.withNTPathRepresentation { pwszPath in
         let hFile = CreateFileW(pwszPath, GENERIC_WRITE, FILE_SHARE_READ, nil, options.contains(.withoutOverwriting) ? CREATE_NEW : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nil)
         if hFile == INVALID_HANDLE_VALUE {
@@ -682,28 +690,28 @@ private func writeToFileNoAux(path inPath: borrowing some FileSystemRepresentabl
 
         writeExtendedAttributes(fd: fd, attributes: attributes)
     }
-#else
+    #else
     try inPath.withFileSystemRepresentation { pathFileSystemRep in
-        guard let pathFileSystemRep else { 
+        guard let pathFileSystemRep else {
             throw CocoaError(.fileWriteInvalidFileName)
         }
-                
+
         var flags: Int32 = O_WRONLY | O_CREAT | O_TRUNC
         if options.contains(.withoutOverwriting) {
             flags = flags | O_EXCL
         }
-            
+
         let fd = openFileDescriptorProtected(path: pathFileSystemRep, flags: flags, options: options)
-        
+
         guard fd >= 0 else {
             let savedErrno = errno
             throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
         }
-        
+
         defer { close(fd) }
-        
+
         let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.byteCount)) : nil
-        
+
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
         } catch {
@@ -718,26 +726,26 @@ private func writeToFileNoAux(path inPath: borrowing some FileSystemRepresentabl
                 throw CocoaError.errorWithFilePath(inPath, errno: savedError, reading: false)
             }
         }
-        
+
         writeExtendedAttributes(fd: fd, attributes: attributes)
     }
-#endif
+    #endif
 }
 
-private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
+private func writeExtendedAttributes(fd: Int32, attributes: [String: Data]) {
     // Write extended attributes
     for (key, value) in attributes {
         value.withUnsafeBytes { valueBuf in
             // Returns non-zero on error, but we ignore them
-#if canImport(Darwin)
+            #if canImport(Darwin)
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0, 0)
-#elseif os(FreeBSD)
+            #elseif os(FreeBSD)
             _ = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, key, valueBuf.baseAddress!, valueBuf.count)
-#elseif os(OpenBSD)
+            #elseif os(OpenBSD)
             return
-#elseif canImport(Glibc) || canImport(Musl)
+            #elseif canImport(Glibc) || canImport(Musl)
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0)
-#endif
+            #endif
         }
     }
 }
@@ -745,63 +753,63 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Options to control the writing of data to a URL.
     public typealias WritingOptions = NSData.WritingOptions
-#else
-    
+    #else
+
     // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
     /// Options to control the writing of data to a URL.
-    public struct WritingOptions : OptionSet, Sendable {
+    public struct WritingOptions: OptionSet, Sendable {
         public let rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
-        
+
         /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
-#if os(WASI)
+        #if os(WASI)
         @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
-#endif
+        #endif
         public static let atomic = WritingOptions(rawValue: 1 << 0)
-        
+
         /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
         public static let withoutOverwriting = WritingOptions(rawValue: 1 << 1)
-        
+
         /// An option to not encrypt the file when writing it out.
         public static let noFileProtection = WritingOptions(rawValue: 0x10000000)
-        
+
         /// An option to make the file accessible only while the device is unlocked.
         public static let completeFileProtection = WritingOptions(rawValue: 0x20000000)
-        
+
         /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
         public static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
-        
+
         /// An option to allow the file to be accessible after a user first unlocks the device.
         public static let completeFileProtectionUntilFirstUserAuthentication = WritingOptions(rawValue: 0x40000000)
-        
+
         /// An option the system uses when determining the file protection options that the system assigns to the data.
         public static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
     }
-#endif
-    
+    #endif
+
     /// Writes the contents of the data buffer to a location.
     ///
     /// - parameter url: The location to write the data into.
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
+        #if !os(WASI) // `.atomic` is unavailable on WASI
         if options.contains(.withoutOverwriting) && options.contains(.atomic) {
             fatalError("withoutOverwriting is not supported with atomic")
         }
-#endif
-        
+        #endif
+
         guard url.isFileURL else {
             throw CocoaError(.fileWriteUnsupportedScheme)
         }
-        
-#if !NO_FILESYSTEM
+
+        #if !NO_FILESYSTEM
         try writeToFile(path: url, buffer: self.bytes, options: options, reportProgress: true)
-#else
+        #else
         throw CocoaError(.featureUnsupported)
-#endif
+        #endif
     }
 }

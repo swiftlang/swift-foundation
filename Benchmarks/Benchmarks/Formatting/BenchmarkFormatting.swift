@@ -26,7 +26,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
-        
+
     let date = Date(timeIntervalSinceReferenceDate: 665076946.0)
 
     // ISO8601FormatStyle is only available in Swift 6 or newer, macOS 12 or newer
@@ -43,7 +43,7 @@ let benchmarks: @Sendable () -> Void = {
         iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon),
         iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon),
     ]
-    
+
     let preformatted = formats.map { ($0, $0.format(date)) }
 
     Benchmark("iso8601-format", configuration: .init(scalingFactor: .kilo)) { benchmark in

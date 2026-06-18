@@ -14,12 +14,12 @@
 
 internal import Synchronization
 
-    /// Values representing a file's type attribute.
-    ///
-    /// ## Discussion
-    ///
-    /// These strings are the possible values for the ``FileAttributeKey/type`` attribute key contained in the dictionary object returned by ``FileManager/attributesOfItem(atPath:)``.
-public struct FileAttributeType : Hashable, RawRepresentable, Sendable {
+/// Values representing a file's type attribute.
+///
+/// ## Discussion
+///
+/// These strings are the possible values for the ``FileAttributeKey/type`` attribute key contained in the dictionary object returned by ``FileManager/attributesOfItem(atPath:)``.
+public struct FileAttributeType: Hashable, RawRepresentable, Sendable {
     public let rawValue: String
     /// Creates a file attribute type value.
     public init(rawValue: String) {
@@ -118,7 +118,7 @@ public struct FileAttributeKey: Hashable, RawRepresentable, Sendable {
 /// Protection level values that can be associated with a file attribute key.
 ///
 /// These values are associated with the ``FileAttributeKey/protectionKey`` key.
-public struct FileProtectionType : RawRepresentable, Sendable {
+public struct FileProtectionType: RawRepresentable, Sendable {
     public let rawValue: String
 
     /// Creates a file protection type value.
@@ -140,32 +140,32 @@ public struct FileProtectionType : RawRepresentable, Sendable {
 }
 
 extension FileManager {
-    public struct UnmountOptions : OptionSet, Sendable {
+    public struct UnmountOptions: OptionSet, Sendable {
         public let rawValue: UInt
-        
+
         public init(rawValue: UInt) {
             self.rawValue = rawValue
         }
-        
+
         public static let allPartitionsAndEjectDisk = Self(rawValue: 1 << 0)
         public static let withoutUI = Self(rawValue: 1 << 1)
     }
-    
-    public struct DirectoryEnumerationOptions : OptionSet, Sendable {
+
+    public struct DirectoryEnumerationOptions: OptionSet, Sendable {
         public let rawValue: UInt
-        
+
         public init(rawValue: UInt) {
             self.rawValue = rawValue
         }
-        
+
         public static let skipsSubdirectoryDescendants = Self(rawValue: 1 << 0)
         public static let skipsPackageDescendants = Self(rawValue: 1 << 1)
         public static let skipsHiddenFiles = Self(rawValue: 1 << 2)
         public static let includesDirectoriesPostOrder = Self(rawValue: 1 << 3)
         public static let producesRelativePathURLs = Self(rawValue: 1 << 4)
     }
-    
-    public enum SearchPathDirectory : UInt, Sendable {
+
+    public enum SearchPathDirectory: UInt, Sendable {
         // The following are Darwin-only and will not produce directories on non-Darwin
         case applicationDirectory = 1
         case demoApplicationDirectory = 2
@@ -181,10 +181,10 @@ extension FileManager {
         case allLibrariesDirectory = 101
         case itemReplacementDirectory = 99
         case printerDescriptionDirectory = 20
-        
+
         // The following will not produce paths in swift-foundation because it requires the code signing identifier
         case applicationScriptsDirectory = 23
-        
+
         // The following are cross-platform and may produce valid paths on non-Darwin
         case userDirectory = 7
         case documentDirectory = 9
@@ -199,10 +199,10 @@ extension FileManager {
         case sharedPublicDirectory = 21
         case trashDirectory = 102
     }
-    
-    public struct SearchPathDomainMask : OptionSet, Sendable {
+
+    public struct SearchPathDomainMask: OptionSet, Sendable {
         public let rawValue: UInt
-        
+
         public init(rawValue: UInt) {
             self.rawValue = rawValue
         }
@@ -213,36 +213,36 @@ extension FileManager {
         public static let systemDomainMask = Self(rawValue: 1 << 3)
         public static let allDomainsMask = Self(rawValue: 0xFFFF)
     }
-    
-    public enum URLRelationship : Int, Sendable {
+
+    public enum URLRelationship: Int, Sendable {
         case contains = 0
         case same = 1
         case other = 2
     }
-    
-    public struct ItemReplacementOptions : OptionSet, Sendable {
+
+    public struct ItemReplacementOptions: OptionSet, Sendable {
         public let rawValue: UInt
-        
+
         public init(rawValue: UInt) {
             self.rawValue = rawValue
         }
-        
+
         public static let usingNewMetadataOnly = Self(rawValue: 1 << 0)
         public static let withoutDeletingBackupItem = Self(rawValue: 1 << 1)
     }
 }
 
-open class FileManager : @unchecked Sendable {
+open class FileManager: @unchecked Sendable {
     // Sendable note: _impl may only be mutated in `init`
     private var _impl: _FileManagerImpl
     private let _lock = Mutex(State(delegate: nil))
     private let isDefault: Bool
-    
+
     private static let _default = FileManager(default: true)
     open class var `default`: FileManager {
         _default
     }
-    
+
     private struct State {
         weak var delegate: (any FileManagerDelegate)?
     }
@@ -256,28 +256,28 @@ open class FileManager : @unchecked Sendable {
             _lock.withLock { $0.delegate = newValue }
         }
     }
-    
+
     public init() {
         isDefault = false
         _impl = _FileManagerImpl()
         _impl._manager = self
     }
-    
+
     private init(default: Bool) {
         isDefault = `default`
         _impl = _FileManagerImpl()
         _impl._manager = self
     }
 
-    open func setAttributes(_ attributes: [FileAttributeKey : Any], ofItemAtPath path: String) throws {
+    open func setAttributes(_ attributes: [FileAttributeKey: Any], ofItemAtPath path: String) throws {
         try _impl.setAttributes(attributes, ofItemAtPath: path)
     }
 
-    open func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
+    open func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey: Any]? = nil) throws {
         try _impl.createDirectory(at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
-    open func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
+    open func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey: Any]? = nil) throws {
         try _impl.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
@@ -288,27 +288,27 @@ open class FileManager : @unchecked Sendable {
     open func subpathsOfDirectory(atPath path: String) throws -> [String] {
         try _impl.subpathsOfDirectory(atPath: path)
     }
-    
+
     open func urls(for directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
         _impl.urls(for: directory, in: domainMask)
     }
-    
+
     open func url(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
         try _impl.url(for: directory, in: domain, appropriateFor: url, create: shouldCreate)
     }
 
-    open func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
+    open func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
         try _impl.attributesOfItem(atPath: path)
     }
 
-    open func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey : Any] {
+    open func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey: Any] {
         try _impl.attributesOfFileSystem(forPath: path)
     }
 
     open func createSymbolicLink(atPath path: String, withDestinationPath destPath: String) throws {
         try _impl.createSymbolicLink(atPath: path, withDestinationPath: destPath)
     }
-    
+
     open func createSymbolicLink(at url: URL, withDestinationURL destURL: URL) throws {
         try _impl.createSymbolicLink(at: url, withDestinationURL: destURL)
     }
@@ -384,19 +384,19 @@ open class FileManager : @unchecked Sendable {
     open func contentsEqual(atPath path1: String, andPath path2: String) -> Bool {
         _impl.contentsEqual(atPath: path1, andPath: path2)
     }
-    
+
     open func contents(atPath path: String) -> Data? {
         _impl.contents(atPath: path)
     }
 
-    open func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey : Any]? = nil) -> Bool {
+    open func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey: Any]? = nil) -> Bool {
         _impl.createFile(atPath: path, contents: data, attributes: attr)
     }
 
     open func string(withFileSystemRepresentation str: UnsafePointer<CChar>, length len: Int) -> String {
         _impl.string(withFileSystemRepresentation: str, length: len)
     }
-    
+
     open func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
         try path.withFileSystemRepresentation(body)
     }
@@ -404,7 +404,7 @@ open class FileManager : @unchecked Sendable {
     open var temporaryDirectory: URL {
         _impl.temporaryDirectory
     }
-    
+
     @available(iOS, unavailable)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)

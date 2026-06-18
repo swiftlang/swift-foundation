@@ -54,8 +54,7 @@ private struct DateFormatStyleTests {
             #expect(
                 Date.VerbatimFormatStyle(format: format, timeZone: .gmt, calendar: .init(identifier: .gregorian))
                     .locale(.init(identifier: "en_US"))
-                    .format(date) ==
-                formattedExpectation,
+                    .format(date) == formattedExpectation,
                 "formatted expectation failed",
                 sourceLocation: sourceLocation
             )
@@ -127,8 +126,8 @@ private struct DateFormatStyleTests {
 
     @Test(.timeLimit(.minutes(2)))
     func createFormatStyleMultithread() async throws {
-        let testLocales: [String] = [ "en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"]
-        let expectations: [String : String] = [
+        let testLocales: [String] = ["en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"]
+        let expectations: [String: String] = [
             "en_US": "Dec 31, 1969",
             "en_GB": "31 Dec 1969",
             "es_SP": "31 dic 1969",
@@ -142,10 +141,10 @@ private struct DateFormatStyleTests {
                 group.addTask {
                     let locale = Locale(identifier: localeIdentifier)
                     let timeZone = try #require(TimeZone(secondsFromGMT: -3600))
-                    
+
                     let formatStyle = Date.FormatStyle(date: .abbreviated, locale: locale, timeZone: timeZone)
                     let formatterFromCache = try #require(ICUDateFormatter.cachedFormatter(for: formatStyle))
-                    
+
                     let expected = try #require(expectations[localeIdentifier])
                     let result = formatterFromCache.format(date)
                     #expect(result == expected)
@@ -156,8 +155,8 @@ private struct DateFormatStyleTests {
 
     @Test(.timeLimit(.minutes(2)))
     func createPatternMultithread() async {
-        let testLocales = [ "en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"].map { Locale(identifier: $0) }
-        let expectations: [String : String] = [
+        let testLocales = ["en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"].map { Locale(identifier: $0) }
+        let expectations: [String: String] = [
             "en_US": "MMM d, y",
             "en_GB": "d MMM y",
             "es_SP": "d MMM y",
@@ -171,7 +170,7 @@ private struct DateFormatStyleTests {
             for testLocale in testLocales {
                 group.addTask {
                     let pattern = ICUPatternGenerator.localizedPattern(symbols: symbols, locale: testLocale, calendar: gregorian)
-                    
+
                     let expected = expectations[testLocale.identifier]
                     #expect(pattern == expected)
                 }
@@ -199,14 +198,14 @@ private struct DateFormatStyleTests {
                         .month()
                         .year()
                         .locale(locale)
-                ) ==
-                date.formatted(
-                    Date.FormatStyle()
-                        .day()
-                        .month()
-                        .year()
-                        .locale(locale)
                 )
+                    == date.formatted(
+                        Date.FormatStyle()
+                            .day()
+                            .month()
+                            .year()
+                            .locale(locale)
+                    )
             )
         }
     }
@@ -293,8 +292,8 @@ private struct DateFormatStyleTests {
         #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))) == "4:00:00 p. m.")
         #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force24Hour: true)))) == "16:00:00")
     }
-    
-#if !os(watchOS) && FOUNDATION_FRAMEWORK // 99504292 && 155484008
+
+    #if !os(watchOS) && FOUNDATION_FRAMEWORK // 99504292 && 155484008
     @Test func nsICUDateFormatterCache() async throws {
         await usingCurrentInternationalizationPreferences {
             // This test can only be run with the system set to the en_US language
@@ -303,25 +302,25 @@ private struct DateFormatStyleTests {
             prefs.locale = "en_US"
             LocaleCache.cache.resetCurrent(to: prefs)
             CalendarCache.cache.reset() // The current calendar caches the current locale
-            
+
             let fixedTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
             let fixedCalendar = Calendar(identifier: Calendar.current.identifier)
-            
+
             let dateStyle = Date.FormatStyle.DateStyle.complete
             let timeStyle = Date.FormatStyle.TimeStyle.standard
-            
+
             let style = Date.FormatStyle(date: dateStyle, time: timeStyle)
             let styleUsingFixedTimeZone = Date.FormatStyle(date: dateStyle, time: timeStyle, timeZone: fixedTimeZone)
             let styleUsingFixedCalendar = Date.FormatStyle(date: dateStyle, time: timeStyle, calendar: fixedCalendar)
-            
+
             #expect(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedTimeZone))
             #expect(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedCalendar))
         }
     }
-#endif
+    #endif
 
-// Only Foundation framework supports the DateStyle override
-#if FOUNDATION_FRAMEWORK
+    // Only Foundation framework supports the DateStyle override
+    #if FOUNDATION_FRAMEWORK
     @Test func formattingWithPrefsOverride() throws {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
@@ -341,16 +340,16 @@ private struct DateFormatStyleTests {
             .abbreviated: "'<short>' yyyy-MMM-dd",
             .numeric: "'<numeric>' yyyy-MMM-dd",
             .long: "'<long>' yyyy-MMM-dd",
-            .complete: "'<complete>' yyyy-MMM-dd"
+            .complete: "'<complete>' yyyy-MMM-dd",
         ]
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         let expectTimeString = "4:00:00\u{202F}PM"
         let expectedShortTimeString = "4:00\u{202F}PM"
-#else
+        #else
         let expectTimeString = "4:00:00 PM"
         let expectedShortTimeString = "4:00 PM"
-#endif
+        #endif
 
         try test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "12/31/1969, \(expectedShortTimeString)") // Ignoring override since there's no match for the specific style
         try test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31")
@@ -365,16 +364,16 @@ private struct DateFormatStyleTests {
         try test(dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31 at \(expectTimeString) PST")
 
     }
-#endif
+    #endif
 
     @Test func formattingWithPrefsOverride_firstweekday() {
         let date = Date(timeIntervalSince1970: 0)
-        let locale = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(firstWeekday: [.gregorian : 5]))
+        let locale = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(firstWeekday: [.gregorian: 5]))
         let style = Date.FormatStyle(date: .complete, time: .omitted, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone).week()
         #expect(style.format(date) == "Wednesday, December 31, 1969 (week: 53)") // First day is Thursday, so `date`, which is Wednesday, falls into the 53th week of the previous year.
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @Test func encodingDecodingWithPrefsOverride() throws {
         let date = Date(timeIntervalSince1970: 0)
         let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
@@ -395,7 +394,7 @@ private struct DateFormatStyleTests {
         decoded.locale = localeWithOverride
         #expect(decoded.format(date) == "<complete> 1969-Dec-31")
     }
-#endif
+    #endif
 
     @Test func conversationalDayPeriodsOverride() throws {
         let middleOfNight = try Date("2001-01-01T03:50:00Z", strategy: .iso8601)
@@ -513,7 +512,7 @@ private struct DateFormatStyleTests {
             verifyWithFormat(evening, expected: "晚上09:50:00")
         }
 
-#if FIXED_HOUR_OMITTED_AMPM
+        #if FIXED_HOUR_OMITTED_AMPM
         // Test for not showing day period
         do {
             locale = Locale(identifier: "zh_TW")
@@ -525,7 +524,7 @@ private struct DateFormatStyleTests {
             verifyWithFormat(afternoon, expected: "3")
             verifyWithFormat(evening, expected: "9")
         }
-#endif
+        #endif
 
         do {
             locale = Locale(identifier: "zh_TW@hours=h24") // using 24-hour time
@@ -622,16 +621,18 @@ private struct DateAttributedFormatStyleTests {
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
 
-        let expectations: [Date.FormatStyle : [Segment]] = [
-            baseStyle.month().day().hour().minute(): [("Apr", .month),
-                                                      (" ", nil),
-                                                      ("12", .day),
-                                                      (" at ", nil),
-                                                      ("3", .hour),
-                                                      (":", nil),
-                                                      ("04", .minute),
-                                                      (" ", nil),
-                                                      ("PM", .amPM)],
+        let expectations: [Date.FormatStyle: [Segment]] = [
+            baseStyle.month().day().hour().minute(): [
+                ("Apr", .month),
+                (" ", nil),
+                ("12", .day),
+                (" at ", nil),
+                ("3", .hour),
+                (":", nil),
+                ("04", .minute),
+                (" ", nil),
+                ("PM", .amPM),
+            ]
         ]
 
         for (style, expectation) in expectations {
@@ -639,25 +640,25 @@ private struct DateAttributedFormatStyleTests {
             #expect(formatted == expectation.attributedString)
         }
     }
-    
+
     @Test func individualFields() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, calendar: Calendar(identifier: .gregorian), timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
-        let expectations: [Date.FormatStyle : [Segment]] = [
-            baseStyle.era(): [ ("AD", .era) ],
-            baseStyle.year(.defaultDigits): [ ("2021", .year) ],
-            baseStyle.quarter(): [ ("Q2", .quarter) ],
-            baseStyle.month(.defaultDigits): [ ("4", .month) ],
-            baseStyle.week(): [ ("16", .weekOfYear) ],
-            baseStyle.week(.weekOfMonth): [ ("3", .weekOfMonth) ],
-            baseStyle.day(): [ ("12", .day) ],
-            baseStyle.dayOfYear(): [ ("102", .dayOfYear) ],
-            baseStyle.weekday(): [ ("Mon", .weekday) ],
-            baseStyle.hour(): [ ("3", .hour), (" ", nil), ("PM", .amPM) ],
-            baseStyle.minute(): [ ("4", .minute) ],
-            baseStyle.second(): [ ("32", .second) ],
-            baseStyle.timeZone(): [ ("GMT", .timeZone) ],
+        let expectations: [Date.FormatStyle: [Segment]] = [
+            baseStyle.era(): [("AD", .era)],
+            baseStyle.year(.defaultDigits): [("2021", .year)],
+            baseStyle.quarter(): [("Q2", .quarter)],
+            baseStyle.month(.defaultDigits): [("4", .month)],
+            baseStyle.week(): [("16", .weekOfYear)],
+            baseStyle.week(.weekOfMonth): [("3", .weekOfMonth)],
+            baseStyle.day(): [("12", .day)],
+            baseStyle.dayOfYear(): [("102", .dayOfYear)],
+            baseStyle.weekday(): [("Mon", .weekday)],
+            baseStyle.hour(): [("3", .hour), (" ", nil), ("PM", .amPM)],
+            baseStyle.minute(): [("4", .minute)],
+            baseStyle.second(): [("32", .second)],
+            baseStyle.timeZone(): [("GMT", .timeZone)],
         ]
 
         for (style, expectation) in expectations {
@@ -670,7 +671,9 @@ private struct DateAttributedFormatStyleTests {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
 
-        let fields: [AttributeScopes.FoundationAttributes.DateFieldAttribute.Field] = [.era, .year, .relatedGregorianYear, .quarter, .month, .weekOfYear, .weekOfMonth, .weekday, .weekdayOrdinal, .day, .dayOfYear, .amPM, .hour, .minute, .second, .secondFraction, .timeZone]
+        let fields: [AttributeScopes.FoundationAttributes.DateFieldAttribute.Field] = [
+            .era, .year, .relatedGregorianYear, .quarter, .month, .weekOfYear, .weekOfMonth, .weekday, .weekdayOrdinal, .day, .dayOfYear, .amPM, .hour, .minute, .second, .secondFraction, .timeZone,
+        ]
         for field in fields {
             let encoded = try encoder.encode(field)
 
@@ -695,10 +698,10 @@ private struct DateAttributedFormatStyleTests {
         test(date.formatted(format.weekday().locale(zhTW).attributedStyle), [("週一", .weekday)])
 
         test(date.formatted(format.weekday().attributedStyle.locale(enUSLocale)), [("Mon", .weekday)])
-        test(date.formatted(format.weekday().attributedStyle.locale(zhTW)),  [("週一", .weekday)])
+        test(date.formatted(format.weekday().attributedStyle.locale(zhTW)), [("週一", .weekday)])
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @Test func formattingWithPrefsOverride() {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
@@ -713,148 +716,168 @@ private struct DateAttributedFormatStyleTests {
             .abbreviated: "'<short>' yyyy-MMM-dd",
             .numeric: "'<numeric>' yyyy-MMM-dd",
             .long: "'<long>' yyyy-MMM-dd",
-            .complete: "'<complete>' yyyy-MMM-dd"
+            .complete: "'<complete>' yyyy-MMM-dd",
         ]
 
-        test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
-            ("12", .month),
-            ("/", nil),
-            ("31", .day),
-            ("/", nil),
-            ("1969", .year),
-            (", ", nil),
-            ("4", .hour),
-            (":", nil),
-            ("00", .minute),
-            (" ", nil),
-            ("PM", .amPM),
-        ]) // Ignoring override since there's no match for the specific style
+        test(
+            dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("12", .month),
+                ("/", nil),
+                ("31", .day),
+                ("/", nil),
+                ("1969", .year),
+                (", ", nil),
+                ("4", .hour),
+                (":", nil),
+                ("00", .minute),
+                (" ", nil),
+                ("PM", .amPM),
+            ]) // Ignoring override since there's no match for the specific style
 
-        test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
-            ("<short> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-        ])
+        test(
+            dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<short> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+            ])
 
-        test(dateStyle: .numeric, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
-            ("<numeric> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-        ])
+        test(
+            dateStyle: .numeric, timeStyle: .omitted, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<numeric> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+            ])
 
-        test(dateStyle: .long, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
-            ("<long> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-        ])
+        test(
+            dateStyle: .long, timeStyle: .omitted, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<long> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+            ])
 
-        test(dateStyle: .complete, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
-            ("<complete> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-        ])
+        test(
+            dateStyle: .complete, timeStyle: .omitted, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<complete> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+            ])
 
-        test(dateStyle: .omitted, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
-            ("4", .hour),
-            (":", nil),
-            ("00", .minute),
-            (":", nil),
-            ("00", .second),
-            (" ", nil),
-            ("PM", .amPM),
-            (" ", nil),
-            ("PST", .timeZone),
-        ])
+        test(
+            dateStyle: .omitted, timeStyle: .complete, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("4", .hour),
+                (":", nil),
+                ("00", .minute),
+                (":", nil),
+                ("00", .second),
+                (" ", nil),
+                ("PM", .amPM),
+                (" ", nil),
+                ("PST", .timeZone),
+            ])
 
-        test(dateStyle: .abbreviated, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
-            ("<short> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-            (" at ", nil),
-            ("4", .hour),
-            (":", nil),
-            ("00", .minute),
-            (":", nil),
-            ("00", .second),
-            (" ", nil),
-            ("PM", .amPM),
-            (" ", nil),
-            ("PST", .timeZone),
-        ])
+        test(
+            dateStyle: .abbreviated, timeStyle: .complete, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<short> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+                (" at ", nil),
+                ("4", .hour),
+                (":", nil),
+                ("00", .minute),
+                (":", nil),
+                ("00", .second),
+                (" ", nil),
+                ("PM", .amPM),
+                (" ", nil),
+                ("PST", .timeZone),
+            ])
 
-        test(dateStyle: .numeric, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
-            ("<numeric> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-            (", ", nil),
-            ("4", .hour),
-            (":", nil),
-            ("00", .minute),
-            (":", nil),
-            ("00", .second),
-            (" ", nil),
-            ("PM", .amPM),
-            (" ", nil),
-            ("PST", .timeZone),
-        ])
+        test(
+            dateStyle: .numeric, timeStyle: .complete, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<numeric> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+                (", ", nil),
+                ("4", .hour),
+                (":", nil),
+                ("00", .minute),
+                (":", nil),
+                ("00", .second),
+                (" ", nil),
+                ("PM", .amPM),
+                (" ", nil),
+                ("PST", .timeZone),
+            ])
 
-        test(dateStyle: .long, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
-            ("<long> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-            (" at ", nil),
-            ("4", .hour),
-            (":", nil),
-            ("00", .minute),
-            (":", nil),
-            ("00", .second),
-            (" ", nil),
-            ("PM", .amPM),
-            (" ", nil),
-            ("PST", .timeZone),
-        ])
+        test(
+            dateStyle: .long, timeStyle: .complete, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<long> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+                (" at ", nil),
+                ("4", .hour),
+                (":", nil),
+                ("00", .minute),
+                (":", nil),
+                ("00", .second),
+                (" ", nil),
+                ("PM", .amPM),
+                (" ", nil),
+                ("PST", .timeZone),
+            ])
 
-        test(dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
-            ("<complete> ", nil),
-            ("1969", .year),
-            ("-", nil),
-            ("Dec", .month),
-            ("-", nil),
-            ("31", .day),
-            (" at ", nil),
-            ("4", .hour),
-            (":", nil),
-            ("00", .minute),
-            (":", nil),
-            ("00", .second),
-            (" ", nil),
-            ("PM", .amPM),
-            (" ", nil),
-            ("PST", .timeZone),
-        ])
+        test(
+            dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride,
+            expected: [
+                ("<complete> ", nil),
+                ("1969", .year),
+                ("-", nil),
+                ("Dec", .month),
+                ("-", nil),
+                ("31", .day),
+                (" at ", nil),
+                ("4", .hour),
+                (":", nil),
+                ("00", .minute),
+                (":", nil),
+                ("00", .second),
+                (" ", nil),
+                ("PM", .amPM),
+                (" ", nil),
+                ("PST", .timeZone),
+            ])
     }
-#endif
+    #endif
 }
 
 @Suite("Verbatim Date.FormatStyle")
@@ -898,9 +921,13 @@ private struct DateVerbatimFormatStyleTests {
         // dateFormatter.date(from: "2021-01-23 00:00:00")!
         try verify("\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)", expectedString: "21_1_23", expectedDate: Date(timeIntervalSinceReferenceDate: 633052800.0))
         // dateFormatter.date(from: "2021-01-23 02:00:00")!
-        try verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)) o'clock", expectedString: "2021_1_23 at 2 o'clock", expectedDate: Date(timeIntervalSinceReferenceDate: 633060000.0))
+        try verify(
+            "\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)) o'clock", expectedString: "2021_1_23 at 2 o'clock",
+            expectedDate: Date(timeIntervalSinceReferenceDate: 633060000.0))
         // dateFormatter.date(from: "2021-01-23 14:00:00")!
-        try verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased))", expectedString: "2021_1_23 at 14", expectedDate: Date(timeIntervalSinceReferenceDate: 633103200.0))
+        try verify(
+            "\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased))", expectedString: "2021_1_23 at 14",
+            expectedDate: Date(timeIntervalSinceReferenceDate: 633103200.0))
     }
 
     // Test parsing strings containing `abbreviated` names
@@ -942,13 +969,14 @@ private struct DateVerbatimFormatStyleTests {
         verify("\(weekday: .abbreviated)", localeID: "en_GB", calendarID: .gregorian, expectedString: "Thu")
 
         // Day period: formatting
-#if FIXED_ICU_74_DAYPERIOD
+        #if FIXED_ICU_74_DAYPERIOD
         verify("\(hour: .twoDigits(clock: .twelveHour, hourCycle: .zeroBased)) \(dayPeriod: .standard(.abbreviated))", localeID: "en_GB", calendarID: .gregorian, expectedString: "00 AM")
-#endif // FIXED_ICU_74_DAYPERIOD
+        #endif // FIXED_ICU_74_DAYPERIOD
     }
 
     @Test func issue95845290() throws {
-        let formatString: Date.FormatString = "\(weekday: .abbreviated) \(month: .abbreviated) \(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) \(timeZone: .iso8601(.short)) \(year: .defaultDigits)"
+        let formatString: Date.FormatString =
+            "\(weekday: .abbreviated) \(month: .abbreviated) \(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) \(timeZone: .iso8601(.short)) \(year: .defaultDigits)"
         let enGB = Locale(identifier: "en_GB")
         let verbatim = Date.VerbatimFormatStyle(format: formatString, locale: enGB, timeZone: .init(secondsFromGMT: .zero)!, calendar: Calendar(identifier: .gregorian))
 
@@ -959,7 +987,7 @@ private struct DateVerbatimFormatStyleTests {
         }
 
         do {
-            let date = try Date("Sat Jun 18 16:10:00 +0000 2022", strategy: .fixed(format: formatString, timeZone: .gmt,  locale: enGB))
+            let date = try Date("Sat Jun 18 16:10:00 +0000 2022", strategy: .fixed(format: formatString, timeZone: .gmt, locale: enGB))
             // dateFormatter.date(from: "2022-06-18 16:10:00")!
             #expect(date == Date(timeIntervalSinceReferenceDate: 677261400.0))
         }
@@ -971,23 +999,29 @@ private struct DateVerbatimFormatStyleTests {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
         func verify(_ f: Date.FormatString, expected: [Segment], file: StaticString = #filePath, sourceLocation: SourceLocation = #_sourceLocation) {
-            let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale:Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributedStyle)
+            let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale: Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributedStyle)
             #expect(s == expected.attributedString, sourceLocation: sourceLocation)
         }
-        verify("\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)", expected:
-                [("21", .year),
-                 ("_", nil),
-                 ("1", .month),
-                 ("_", nil),
-                 ("23", .day)])
-        verify("\(weekday: .wide) at \(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased))😜\(minute: .twoDigits)🏄🏽‍♂️\(second: .defaultDigits)", expected:
-                [("Saturday", .weekday),
-                 (" at ", nil),
-                 ("14", .hour),
-                 ("😜", nil),
-                 ("51", .minute),
-                 ("🏄🏽‍♂️", nil),
-                 ("20", .second)])
+        verify(
+            "\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)",
+            expected: [
+                ("21", .year),
+                ("_", nil),
+                ("1", .month),
+                ("_", nil),
+                ("23", .day),
+            ])
+        verify(
+            "\(weekday: .wide) at \(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased))😜\(minute: .twoDigits)🏄🏽‍♂️\(second: .defaultDigits)",
+            expected: [
+                ("Saturday", .weekday),
+                (" at ", nil),
+                ("14", .hour),
+                ("😜", nil),
+                ("51", .minute),
+                ("🏄🏽‍♂️", nil),
+                ("20", .second),
+            ])
     }
 
     @Test func storedVar() {
@@ -1070,7 +1104,8 @@ private struct MatchConsumerAndSearcherTests {
         let lower = string.index(string.startIndex, offsetBy: range.lowerBound)
         let upper = string.index(string.startIndex, offsetBy: range.upperBound)
 
-        _verifyString(string, matches: format, start: lower, in: lower..<upper, expectedUpperBound: (expectedUpperBound != nil) ? string.index(string.startIndex, offsetBy: expectedUpperBound!) : nil, expectedDate: expectedDate, sourceLocation: sourceLocation)
+        _verifyString(
+            string, matches: format, start: lower, in: lower..<upper, expectedUpperBound: (expectedUpperBound != nil) ? string.index(string.startIndex, offsetBy: expectedUpperBound!) : nil, expectedDate: expectedDate, sourceLocation: sourceLocation)
     }
 
     func _verifyString(_ string: String, matches format: Date.FormatString, start: String.Index, in range: Range<String.Index>, expectedUpperBound: String.Index?, expectedDate: Date?, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -1089,16 +1124,16 @@ private struct MatchConsumerAndSearcherTests {
     @Test func matchFullRanges() {
         func verify(_ string: String, matches format: Date.FormatString, expectedDate: TimeInterval?, sourceLocation: SourceLocation = #_sourceLocation) {
             let targetDate: Date? = (expectedDate != nil) ? Date(timeIntervalSinceReferenceDate: expectedDate!) : nil
-            _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: (expectedDate != nil) ? string.endIndex: nil, expectedDate: targetDate, sourceLocation: sourceLocation)
+            _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: (expectedDate != nil) ? string.endIndex : nil, expectedDate: targetDate, sourceLocation: sourceLocation)
         }
 
 
         // Year: default digits
-        verify("2022-02-12", matches: "\(year: .defaultDigits)-\(month: .defaultDigits)-\(day: .defaultDigits)",  expectedDate: 666316800.0) // "2022-02-12 00:00:00"
-        verify("2022-2-12", matches: "\(year: .defaultDigits)-\(month: .defaultDigits)-\(day: .defaultDigits)",  expectedDate: 666316800.0) // "2022-02-12 00:00:00"
-        verify("2022-2-1", matches: "\(year: .defaultDigits)-\(month: .defaultDigits)-\(day: .defaultDigits)",  expectedDate: 665366400.0) // "2022-02-01 00:00:00"
-        verify("2022-02-30", matches: "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)",  expectedDate: nil)
-        verify("2020-02-29", matches: "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)",  expectedDate: 604627200.0) // "2020-02-29 00:00:00"
+        verify("2022-02-12", matches: "\(year: .defaultDigits)-\(month: .defaultDigits)-\(day: .defaultDigits)", expectedDate: 666316800.0) // "2022-02-12 00:00:00"
+        verify("2022-2-12", matches: "\(year: .defaultDigits)-\(month: .defaultDigits)-\(day: .defaultDigits)", expectedDate: 666316800.0) // "2022-02-12 00:00:00"
+        verify("2022-2-1", matches: "\(year: .defaultDigits)-\(month: .defaultDigits)-\(day: .defaultDigits)", expectedDate: 665366400.0) // "2022-02-01 00:00:00"
+        verify("2022-02-30", matches: "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)", expectedDate: nil)
+        verify("2020-02-29", matches: "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)", expectedDate: 604627200.0) // "2020-02-29 00:00:00"
         verify("2022👩‍🦳2👨‍🦲28", matches: "\(year: .defaultDigits)👩‍🦳\(month: .defaultDigits)👨‍🦲\(day: .defaultDigits)", expectedDate: 667699200.0) // "2022-02-28 00:00:00"
         verify("2022/2/2", matches: "\(year: .defaultDigits)/\(month: .defaultDigits)/\(day: .defaultDigits)", expectedDate: 665452800.0) // "2022-02-02 00:00:00"
         verify("22/2/2", matches: "\(year: .defaultDigits)/\(month: .defaultDigits)/\(day: .defaultDigits)", expectedDate: 665452800.0) // "2022-02-02 00:00:00"
@@ -1124,18 +1159,20 @@ private struct MatchConsumerAndSearcherTests {
         verify("Nan_48", matches: "\(month: .abbreviated)_\(day: .defaultDigits)", expectedDate: nil)
 
         // Time
-        verify("10:48", matches: "\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)):\(minute: .defaultDigits)", expectedDate:  -978268320.0) // "1970-01-01 10:48:00"
+        verify("10:48", matches: "\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)):\(minute: .defaultDigits)", expectedDate: -978268320.0) // "1970-01-01 10:48:00"
         verify("10:61", matches: "\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)):\(minute: .defaultDigits)", expectedDate: nil)
         verify("15:35", matches: "\(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .defaultDigits)", expectedDate: -978251100.0) // "1970-01-01 15:35:00"
         verify("15:35", matches: "\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)):\(minute: .defaultDigits)", expectedDate: nil)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // Disabled in package because _range is imported twice, once from Essentials, once from Internationalization
     @Test func matchPartialRangesFromBeginning() {
         func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) {
             let occurrenceRange = string._range(of: expectedMatch, anchored: false, backwards: false)!
-            _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), sourceLocation: sourceLocation)
+            _verifyString(
+                string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate),
+                sourceLocation: sourceLocation)
         }
 
         verify("2022/2/28(some_other_texts)", matches: "\(year: .defaultDigits)/\(month: .defaultDigits)/\(day: .defaultDigits)", expectedMatch: "2022/2/28", expectedDate: 667699200.0) // "2022-02-28 00:00:00"
@@ -1146,10 +1183,10 @@ private struct MatchConsumerAndSearcherTests {
         verify("Feb_28Mar_30Apr_2", matches: "\(month: .abbreviated)_\(day: .defaultDigits)", expectedMatch: "Feb_28", expectedDate: -973296000.0) // "1970-02-28 00:00:00"
         verify("Feb_28_Mar_30_Apr_2", matches: "\(month: .abbreviated)_\(day: .defaultDigits)", expectedMatch: "Feb_28", expectedDate: -973296000.0)
     }
-#endif
+    #endif
 
     @Test func matchPartialRangesWithinLegitimateString() {
-        func verify(_ string: String, in range: Range<Int>,  matches format: Date.FormatString, expectedDate: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) {
+        func verify(_ string: String, in range: Range<Int>, matches format: Date.FormatString, expectedDate: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) {
             _verifyUTF16String(string, matches: format, in: range, expectedUpperBound: range.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), sourceLocation: sourceLocation)
         }
 
@@ -1185,8 +1222,8 @@ private struct MatchConsumerAndSearcherTests {
 
 
             let embeddedMiddleDates = [
-                " \(formattedDate)" : 1,
-                "__\(formattedDate)trailing_text" : 2,
+                " \(formattedDate)": 1,
+                "__\(formattedDate)trailing_text": 2,
                 "🥹💩\(formattedDate)   🥹💩trailing text with space": 2,
             ]
 
@@ -1210,12 +1247,14 @@ private struct MatchConsumerAndSearcherTests {
     @Test func matchPartialRangesFromMiddle() {
         func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) {
             let occurrenceRange = string.firstRange(of: expectedMatch)!
-            _verifyString(string, matches: format, start: occurrenceRange.lowerBound, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), sourceLocation: sourceLocation)
+            _verifyString(
+                string, matches: format, start: occurrenceRange.lowerBound, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate),
+                sourceLocation: sourceLocation)
         }
 
         verify("(some_other_texts)2022/2/28(some_other_texts)", matches: "\(year: .defaultDigits)/\(month: .defaultDigits)/\(day: .defaultDigits)", expectedMatch: "2022/2/28", expectedDate: 667699200.0) // "2022-02-28 00:00:00"
         verify("(some_other_texts)2022/2/28/2023/3/13/2024/4/14", matches: "\(year: .defaultDigits)/\(month: .defaultDigits)/\(day: .defaultDigits)", expectedMatch: "2022/2/28", expectedDate: 667699200.0) // "2022-02-28 00:00:00", returns the first found date
-        verify("(some_other_texts)2223", matches: "\(year: .defaultDigits)\(month: .defaultDigits)\(day: .defaultDigits)", expectedMatch: "222", expectedDate:  -63079776000.0) // "0002-02-02 00:00:00"
+        verify("(some_other_texts)2223", matches: "\(year: .defaultDigits)\(month: .defaultDigits)\(day: .defaultDigits)", expectedMatch: "222", expectedDate: -63079776000.0) // "0002-02-02 00:00:00"
         verify("(some_other_texts)2223", matches: "\(year: .twoDigits)\(month: .defaultDigits)\(day: .defaultDigits)", expectedMatch: "2223", expectedDate: 665539200.0) // "2022-02-03 00:00:00"
 
         verify("(some_other_texts)Feb_28Mar_30Apr_2", matches: "\(month: .abbreviated)_\(day: .defaultDigits)", expectedMatch: "Feb_28", expectedDate: -973296000.0) // "1970-02-28 00:00:00"
@@ -1300,17 +1339,19 @@ extension DateFormatStyleTests {
         dateFormatter.locale = locale
         dateFormatter.timeZone = timezone
         dateFormatter.setLocalizedDateFormatFromTemplate("yyyyMMMddjmm")
-        #expect(referenceDate.formatted(Date.FormatStyle(time: .shortened, locale: locale, timeZone: timezone)
-                                                .year(.padded(4))
-                                                .month(.abbreviated)
-                                                .day(.twoDigits)) ==
-                       dateFormatter.string(from: referenceDate))
+        #expect(
+            referenceDate.formatted(
+                Date.FormatStyle(time: .shortened, locale: locale, timeZone: timezone)
+                    .year(.padded(4))
+                    .month(.abbreviated)
+                    .day(.twoDigits)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("yyyyyyMMMMd")
-        #expect(referenceDate.formatted(Date.FormatStyle(date: .numeric, locale: locale, timeZone: timezone)
-                                                .year(.padded(6))
-                                                .month(.wide)) ==
-                       dateFormatter.string(from: referenceDate))
+        #expect(
+            referenceDate.formatted(
+                Date.FormatStyle(date: .numeric, locale: locale, timeZone: timezone)
+                    .year(.padded(6))
+                    .month(.wide)) == dateFormatter.string(from: referenceDate))
 
 
     }
@@ -1335,14 +1376,14 @@ extension DateFormatStyleTests {
         _verify(.dateTime.hour(.conversationalDefaultDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
         _verify(.dateTime.hour(.conversationalTwoDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
 
-#if FIXED_HOUR_SYMBOL_175541251
+        #if FIXED_HOUR_SYMBOL_175541251
         let enGB = Locale(identifier: "en_GB")
         _verify(.dateTime.hour(.defaultDigits(amPM: .abbreviated)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.defaultDigits(amPM: .omitted)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.twoDigits(amPM: .omitted)), expectedFormat: "HH", locale: enGB)
         _verify(.dateTime.hour(.conversationalDefaultDigits(amPM: .omitted)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.conversationalTwoDigits(amPM: .omitted)), expectedFormat: "HH", locale: enGB)
-#endif
+        #endif
     }
 }
 #endif
@@ -1379,10 +1420,12 @@ private struct TestDateStyleDiscreteConformance {
     }
 
     @Test func evaluation() {
-        func assertEvaluation(of style: Date.FormatStyle,
-                              in range: ClosedRange<Date>,
-                              includes expectedExcerpts: [String]...,
-                              sourceLocation: SourceLocation = #_sourceLocation) {
+        func assertEvaluation(
+            of style: Date.FormatStyle,
+            in range: ClosedRange<Date>,
+            includes expectedExcerpts: [String]...,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             var style = style.locale(Locale(identifier: "en_US"))
             style.calendar = calendar
             style.timeZone = calendar.timeZone
@@ -1407,7 +1450,8 @@ private struct TestDateStyleDiscreteConformance {
                         return bound
                     }
                 }.lazy.map(\.output),
-                contains: expectedExcerpts
+                contains:
+                    expectedExcerpts
                     .reversed()
                     .map { $0.reversed() },
                 "(upperbound to lowerbound)",
@@ -1416,7 +1460,7 @@ private struct TestDateStyleDiscreteConformance {
 
         let now = date("2023-05-15 08:47:20Z")
 
-#if FOUNDATION_FRAMEWORK // 155526268
+        #if FOUNDATION_FRAMEWORK // 155526268
         assertEvaluation(
             of: .init(date: .complete, time: .complete).secondFraction(.fractional(2)),
             in: (now - 0.1)...(now + 0.1),
@@ -1457,7 +1501,7 @@ private struct TestDateStyleDiscreteConformance {
                 "Monday, May 15, 2023 at 8:47:22 AM GMT",
                 "Monday, May 15, 2023 at 8:47:23 AM GMT",
             ])
-#endif
+        #endif
 
         assertEvaluation(
             of: .init().hour(.twoDigits(amPM: .abbreviated)).minute(),
@@ -1570,7 +1614,7 @@ private struct TestDateStyleDiscreteConformance {
         Date.FormatStyle(date: .complete, time: .complete),
         Date.FormatStyle().hour(.twoDigits(amPM: .abbreviated)).minute(),
         Date.FormatStyle(date: .omitted, time: .omitted).year().month(),
-        Date.FormatStyle(date: .omitted, time: .omitted).year().month().era()
+        Date.FormatStyle(date: .omitted, time: .omitted).year().month().era(),
     ])
     func randomSamples(style: Date.FormatStyle) throws {
         var style = style
@@ -1613,10 +1657,12 @@ private struct TestDateVerbatimStyleDiscreteConformance {
     }
 
     @Test func counting() {
-        func assertEvaluation(of style: Date.VerbatimFormatStyle,
-                              in range: ClosedRange<Date>,
-                              includes expectedExcerpts: [String]...,
-                              sourceLocation: SourceLocation = #_sourceLocation) {
+        func assertEvaluation(
+            of style: Date.VerbatimFormatStyle,
+            in range: ClosedRange<Date>,
+            includes expectedExcerpts: [String]...,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             var style = style.locale(enUSLocale)
             style.calendar = calendar
             style.timeZone = calendar.timeZone
@@ -1641,7 +1687,8 @@ private struct TestDateVerbatimStyleDiscreteConformance {
                         return bound
                     }
                 }.lazy.map(\.output),
-                contains: expectedExcerpts
+                contains:
+                    expectedExcerpts
                     .reversed()
                     .map { $0.reversed() },
                 "(upperbound to lowerbound)",
@@ -1651,7 +1698,10 @@ private struct TestDateVerbatimStyleDiscreteConformance {
         let now = date("2023-05-15 08:47:20Z")
 
         assertEvaluation(
-            of: .init(format: "\(weekday: .wide), \(month: .wide) \(day: .defaultDigits), \(year: .extended()) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits).\(secondFraction: .fractional(2)) \(dayPeriod: .standard(.abbreviated)) \(timeZone: .genericName(.short))", timeZone: calendar.timeZone, calendar: calendar),
+            of: .init(
+                format:
+                    "\(weekday: .wide), \(month: .wide) \(day: .defaultDigits), \(year: .extended()) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits).\(secondFraction: .fractional(2)) \(dayPeriod: .standard(.abbreviated)) \(timeZone: .genericName(.short))",
+                timeZone: calendar.timeZone, calendar: calendar),
             in: now.addingTimeInterval(-0.1)...now.addingTimeInterval(0.1),
             includes: [
                 "Monday, May 15, 2023 at 8:47:19.90 AM GMT",
@@ -1678,7 +1728,10 @@ private struct TestDateVerbatimStyleDiscreteConformance {
             ])
 
         assertEvaluation(
-            of: .init(format: "'\(weekday: .wide),' '\(month: .wide)'' ss\(day: .defaultDigits), \(year: .extended()) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits) \(dayPeriod: .standard(.abbreviated)) \(timeZone: .genericName(.short))", timeZone: calendar.timeZone, calendar: calendar),
+            of: .init(
+                format:
+                    "'\(weekday: .wide),' '\(month: .wide)'' ss\(day: .defaultDigits), \(year: .extended()) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits) \(dayPeriod: .standard(.abbreviated)) \(timeZone: .genericName(.short))",
+                timeZone: calendar.timeZone, calendar: calendar),
             in: now.addingTimeInterval(-3)...now.addingTimeInterval(3),
             includes: [
                 "'Monday,' 'May'' ss15, 2023 at 8:47:17 AM GMT",

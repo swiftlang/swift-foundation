@@ -24,7 +24,7 @@ extension Data {
             Data(buffer: $0)
         }
     }
-    
+
     func withBufferView<ResultType>(
         _ body: (BufferView<UInt8>) throws -> ResultType
     ) rethrows -> ResultType {
@@ -43,12 +43,12 @@ extension BufferView<UInt8> {
         )
         return uncheckedSlice(from: startOffset, count: sliceCount)
     }
-    
+
     internal func uncheckedSlice(from startOffset: Int, count sliceCount: Int) -> BufferView {
         let address = startIndex.advanced(by: startOffset)
         return BufferView(start: address, count: sliceCount)
     }
-    
+
     internal subscript(region: JSONMap.Region) -> BufferView {
         slice(from: region.startOffset, count: region.count)
     }

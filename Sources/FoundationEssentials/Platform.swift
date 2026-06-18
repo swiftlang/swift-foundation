@@ -77,17 +77,18 @@ package struct Platform {
     }
 
     static func copyMemoryPages(_ source: UnsafeRawPointer, _ dest: UnsafeMutableRawPointer, _ length: Int) {
-#if canImport(Darwin)
+        #if canImport(Darwin)
         if vm_copy(
             _platform_mach_task_self(),
             vm_address_t(UInt(bitPattern: source)),
             vm_size_t(length),
-            vm_address_t(UInt(bitPattern: dest))) != KERN_SUCCESS {
+            vm_address_t(UInt(bitPattern: dest))) != KERN_SUCCESS
+        {
             memmove(dest, source, length)
         }
-#else
+        #else
         memmove(dest, source, length)
-#endif // canImport(Darwin)
+        #endif // canImport(Darwin)
     }
 }
 
@@ -149,13 +150,13 @@ extension Platform {
         }
         return result
     }
-    
+
     #if canImport(Darwin)
     typealias Operation<Input, Output> = (Input, UnsafeMutablePointer<Output>?, UnsafeMutablePointer<CChar>?, Int, UnsafeMutablePointer<UnsafeMutablePointer<Output>?>?) -> Int32
     #else
     typealias Operation<Input, Output> = (Input, UnsafeMutablePointer<Output>, UnsafeMutablePointer<CChar>, Int, UnsafeMutablePointer<UnsafeMutablePointer<Output>?>) -> Int32
     #endif
-    
+
     private static func withUserGroupBuffer<Input, Output, R>(_ input: Input, _ output: Output, sizeProperty: Int32, operation: Operation<Input, Output>, block: (Output) throws -> R?) rethrows -> R? {
         var bufferLen = sysconf(sizeProperty)
         if bufferLen == -1 {
@@ -171,19 +172,19 @@ extension Platform {
             return try block(result)
         }
     }
-    
+
     static func uid(forName name: String) -> uid_t? {
         withUserGroupBuffer(name, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwnam_r) {
             $0.pw_uid
         }
     }
-    
+
     static func gid(forName name: String) -> gid_t? {
         withUserGroupBuffer(name, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: _filemanager_shims_getgrnam_r) {
             $0.gr_gid
         }
     }
-    
+
     static func name(forUID uid: uid_t) -> String? {
         withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
             // Android's pw_name `char *`` is nullable when it should be non-null.
@@ -192,21 +193,21 @@ extension Platform {
             return pw_name.flatMap { String(cString: $0) }
         }
     }
-    
+
     static func fullName(forUID uid: uid_t) -> String? {
         withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
-#if os(Android) && _pointerBitWidth(_32)
+            #if os(Android) && _pointerBitWidth(_32)
             // pw_gecos isn't available on 32-bit Android.
             let pw_gecos: UnsafeMutablePointer<CChar>? = nil
-#else
+            #else
             // Android's pw_gecos `char *`` is nullable, so always coerce to a nullable pointer
             // in order to be compatible with Android.
             let pw_gecos: UnsafeMutablePointer<CChar>? = $0.pw_gecos
-#endif
+            #endif
             return pw_gecos.flatMap { String(cString: $0) }
         }
     }
-    
+
     static func name(forGID gid: gid_t) -> String? {
         withUserGroupBuffer(gid, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: _filemanager_shims_getgrgid_r) {
             // Android's gr_name `char *`` is nullable when it should be non-null.
@@ -215,7 +216,7 @@ extension Platform {
             return gr_name.flatMap { String(cString: $0) }
         }
     }
-    
+
     static func homeDirectory(forUserName userName: String) -> String? {
         withUserGroupBuffer(userName, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwnam_r) {
             // Android's pw_dir `char *`` is nullable when it should be non-null.
@@ -224,7 +225,7 @@ extension Platform {
             return pw_dir.flatMap { String(cString: $0) }
         }
     }
-    
+
     static func homeDirectory(forUID uid: uid_t) -> String? {
         withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
             // Android's pw_dir `char *`` is nullable when it should be non-null.
@@ -273,9 +274,9 @@ extension Platform {
         // FIXME: bionic implements this as `return 0;` and does not expose the
         // function via headers. We should be able to shim this and use the call
         // if it is available.
-#if !canImport(Android) && !os(WASI)
+        #if !canImport(Android) && !os(WASI)
         guard issetugid() == 0 else { return nil }
-#endif
+        #endif
         if let value = getenv(name) {
             return String(cString: value)
         } else {
@@ -309,41 +310,41 @@ extension Platform {
 
 // MARK: - Hostname
 extension Platform {
-#if !FOUNDATION_FRAMEWORK
+    #if !FOUNDATION_FRAMEWORK
     static func getHostname() -> String {
-#if os(Windows)
+        #if os(Windows)
         var dwLength: DWORD = 0
         _ = GetComputerNameExW(ComputerNameDnsHostname, nil, &dwLength)
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
-          dwLength -= 1 // null-terminator reservation
-          guard GetComputerNameExW(ComputerNameDnsHostname, $0.baseAddress!, &dwLength) else {
-            return "localhost"
-          }
-          return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+            dwLength -= 1 // null-terminator reservation
+            guard GetComputerNameExW(ComputerNameDnsHostname, $0.baseAddress!, &dwLength) else {
+                return "localhost"
+            }
+            return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
-#elseif os(WASI) || targetEnvironment(exclaveCore) // WASI does not have uname
+        #elseif os(WASI) || targetEnvironment(exclaveCore) // WASI does not have uname
         return "localhost"
-#else
+        #else
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
             guard gethostname($0.baseAddress!, numericCast(Platform.MAX_HOSTNAME_LENGTH)) == 0 else {
                 return "localhost"
             }
             return String(cString: $0.baseAddress!)
         }
-#endif
+        #endif
     }
-#endif // !FOUNDATION_FRAMEWORK
+    #endif // !FOUNDATION_FRAMEWORK
 }
 
 // MARK: - Executable Path
 extension Platform {
     static func getFullExecutablePath() -> String? {
-#if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
+        #if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
         guard let cPath = _CFProcessPath() else {
             return nil
         }
         return String(cString: cPath).standardizingPath
-#elseif canImport(Darwin)
+        #elseif canImport(Darwin)
         // Apple platforms, first check for env override
         #if os(macOS)
         if let override = Self.getEnvSecure("CFProcessPath") {
@@ -365,11 +366,12 @@ extension Platform {
             return String(cString: buffer.baseAddress!).standardizingPath
             #endif
         }
-#elseif os(Linux) || os(Android)
+        #elseif os(Linux) || os(Android)
         // For Linux, read /proc/self/exe
         return try? FileManager.default.destinationOfSymbolicLink(
-            atPath: "/proc/self/exe").standardizingPath
-#elseif os(Windows)
+            atPath: "/proc/self/exe"
+        ).standardizingPath
+        #elseif os(Windows)
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(MAX_PATH)) { lpBuffer in
             let actualLength = GetModuleFileNameW(nil, lpBuffer.baseAddress!, DWORD(lpBuffer.count))
             // Windows Documentation:
@@ -380,14 +382,14 @@ extension Platform {
             }
             return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
         }
-#elseif !NO_FILESYSTEM
+        #elseif !NO_FILESYSTEM
         if let processPath = CommandLine.arguments.first {
             return processPath
         }
         return nil
-#else
+        #else
         return nil
-#endif
+        #endif
     }
 }
 

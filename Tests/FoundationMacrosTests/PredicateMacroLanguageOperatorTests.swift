@@ -31,7 +31,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func equalExplicitReturn() {
         AssertPredicateExpansion(
             """
@@ -49,7 +49,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func notEqual() {
         AssertPredicateExpansion(
             """
@@ -67,7 +67,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func comparison() {
         AssertPredicateExpansion(
             """
@@ -85,7 +85,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -102,7 +102,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -119,7 +119,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -137,7 +137,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func conjunction() {
         AssertPredicateExpansion(
             """
@@ -155,7 +155,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func disjunction() {
         AssertPredicateExpansion(
             """
@@ -173,7 +173,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func arithmetic() {
         AssertPredicateExpansion(
             """
@@ -191,7 +191,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -208,7 +208,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -226,7 +226,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func division() {
         AssertPredicateExpansion(
             """
@@ -244,7 +244,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func remainder() {
         AssertPredicateExpansion(
             """
@@ -262,7 +262,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func negation() {
         AssertPredicateExpansion(
             """
@@ -279,7 +279,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func unaryMinus() {
         AssertPredicateExpansion(
             """
@@ -296,7 +296,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func nilCoalesce() {
         AssertPredicateExpansion(
             """
@@ -314,7 +314,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func ranges() {
         AssertPredicateExpansion(
             """
@@ -331,7 +331,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -348,7 +348,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func optionalChaining() {
         AssertPredicateExpansion(
             """
@@ -369,7 +369,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { inputA in
@@ -391,7 +391,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -414,7 +414,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { inputA in
@@ -441,7 +441,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -464,7 +464,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> {
@@ -473,7 +473,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """,
             diagnostics: ["2:11: Optional chaining is not supported here in this predicate. Use the flatMap(_:) function explicitly instead."]
         )
-        
+
         // Ensure that operators that become nested in a flatMap due to optional chaining are folded correctly
         AssertPredicateExpansion(
             """
@@ -503,7 +503,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<[Object?]> { objects in
@@ -533,7 +533,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func forceUnwrap() {
         AssertPredicateExpansion(
             """
@@ -552,7 +552,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -573,7 +573,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { inputA in
@@ -596,7 +596,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -617,7 +617,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { inputA in
@@ -642,7 +642,7 @@ private struct PredicateMacroLanguageOperatorTests {
             })
             """
         )
-        
+
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { inputA in
@@ -668,7 +668,7 @@ private struct PredicateMacroLanguageOperatorTests {
             """
         )
     }
-    
+
     @Test func diagnoseUnknownOperator() {
         AssertPredicateExpansion(
             """

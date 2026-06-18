@@ -32,7 +32,7 @@ private struct AttributedStringDiscontiguousTests {
         #expect(slice.characters.startIndex == slice.characters.endIndex)
         #expect(slice.unicodeScalars.startIndex == slice.unicodeScalars.endIndex)
         #expect(AttributedString("abc")[RangeSet()] == AttributedString("def")[RangeSet()])
-        
+
         for r in slice.runs {
             Issue.record("Enumerating empty runs should not have produced \(r)")
         }
@@ -43,43 +43,43 @@ private struct AttributedStringDiscontiguousTests {
             Issue.record("Enumerating empty unicode scalars should not have produced \(s)")
         }
     }
-    
+
     @Test
     func characters() {
         let str = AttributedString("abcdefgabc")
-        let fullSlice = str[str.startIndex ..< str.endIndex].characters
-        let fullDiscontiguousSlice = str[RangeSet(str.startIndex ..< str.endIndex)].characters
+        let fullSlice = str[str.startIndex..<str.endIndex].characters
+        let fullDiscontiguousSlice = str[RangeSet(str.startIndex..<str.endIndex)].characters
         #expect(fullSlice.elementsEqual(fullDiscontiguousSlice))
-        
-        let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 3)
-        let rangeB = str.index(str.endIndex, offsetByCharacters: -3) ..< str.endIndex
+
+        let rangeA = str.startIndex..<str.index(str.startIndex, offsetByCharacters: 3)
+        let rangeB = str.index(str.endIndex, offsetByCharacters: -3)..<str.endIndex
         let rangeSet = RangeSet([rangeA, rangeB])
         let slice = str[rangeSet].characters
         #expect(Array(slice) == ["a", "b", "c", "a", "b", "c"])
     }
-    
+
     @Test
     func unicodeScalars() {
         let str = AttributedString("abcdefgabc")
-        let fullSlice = str[str.startIndex ..< str.endIndex].unicodeScalars
-        let fullDiscontiguousSlice = str[RangeSet(str.startIndex ..< str.endIndex)].unicodeScalars
+        let fullSlice = str[str.startIndex..<str.endIndex].unicodeScalars
+        let fullDiscontiguousSlice = str[RangeSet(str.startIndex..<str.endIndex)].unicodeScalars
         #expect(fullSlice.elementsEqual(fullDiscontiguousSlice))
-        
-        let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByUnicodeScalars: 3)
-        let rangeB = str.index(str.endIndex, offsetByUnicodeScalars: -3) ..< str.endIndex
+
+        let rangeA = str.startIndex..<str.index(str.startIndex, offsetByUnicodeScalars: 3)
+        let rangeB = str.index(str.endIndex, offsetByUnicodeScalars: -3)..<str.endIndex
         let rangeSet = RangeSet([rangeA, rangeB])
         let slice = str[rangeSet].unicodeScalars
         #expect(Array(slice) == ["a", "b", "c", "a", "b", "c"])
     }
-    
+
     @Test
     func attributes() {
         let str = AttributedString("abcdefg")
-        let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
-        let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
-        let rangeC = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 5)
+        let rangeA = str.startIndex..<str.index(str.startIndex, offsetByCharacters: 1)
+        let rangeB = str.index(str.startIndex, offsetByCharacters: 2)..<str.index(str.startIndex, offsetByCharacters: 3)
+        let rangeC = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 5)
         let ranges = RangeSet([rangeA, rangeB, rangeC])
-        
+
         do {
             var a = str
             a[ranges].testInt = 2
@@ -89,7 +89,7 @@ private struct AttributedStringDiscontiguousTests {
             }
             #expect(a == b)
         }
-        
+
         do {
             var a = str
             a[ranges].test.testInt = 2
@@ -99,7 +99,7 @@ private struct AttributedStringDiscontiguousTests {
             }
             #expect(a == b)
         }
-        
+
         do {
             var a = str
             a[ranges][AttributeScopes.TestAttributes.TestIntAttribute.self] = 2
@@ -109,7 +109,7 @@ private struct AttributedStringDiscontiguousTests {
             }
             #expect(a == b)
         }
-        
+
         do {
             var a = str
             a.testInt = 3
@@ -121,7 +121,7 @@ private struct AttributedStringDiscontiguousTests {
             }
             #expect(a == b)
         }
-        
+
         do {
             var a = str
             a.testInt = 2
@@ -129,7 +129,7 @@ private struct AttributedStringDiscontiguousTests {
             a[rangeA].testInt = 3
             #expect(a[ranges].testInt == nil)
         }
-        
+
         do {
             var a = str
             a.testString = "foo"
@@ -141,7 +141,7 @@ private struct AttributedStringDiscontiguousTests {
             }
             #expect(a == b)
         }
-        
+
         do {
             var a = str
             a.testString = "foo"
@@ -153,7 +153,7 @@ private struct AttributedStringDiscontiguousTests {
             }
             #expect(a == b)
         }
-        
+
         do {
             var a = str
             a.testString = "foo"
@@ -165,7 +165,7 @@ private struct AttributedStringDiscontiguousTests {
             }
             #expect(a == b)
         }
-        
+
         do {
             var a = str
             a.testString = "foo"
@@ -178,36 +178,36 @@ private struct AttributedStringDiscontiguousTests {
             #expect(a == b)
         }
     }
-    
+
     @Test
     func reinitialization() {
         var str = AttributedString("abcdefg")
-        let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
-        let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
-        let rangeC = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 5)
+        let rangeA = str.startIndex..<str.index(str.startIndex, offsetByCharacters: 1)
+        let rangeB = str.index(str.startIndex, offsetByCharacters: 2)..<str.index(str.startIndex, offsetByCharacters: 3)
+        let rangeC = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 5)
         let ranges = RangeSet([rangeA, rangeB, rangeC])
         str[ranges].testInt = 2
-        
+
         let reinitialized = AttributedString(str[ranges])
         #expect(reinitialized == AttributedString("ace", attributes: AttributeContainer.testInt(2)))
     }
-    
+
     @Test
     func reslicing() {
         var str = AttributedString("abcdefg")
-        let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
-        let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
-        let rangeC = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 5)
+        let rangeA = str.startIndex..<str.index(str.startIndex, offsetByCharacters: 1)
+        let rangeB = str.index(str.startIndex, offsetByCharacters: 2)..<str.index(str.startIndex, offsetByCharacters: 3)
+        let rangeC = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 5)
         let ranges = RangeSet([rangeA, rangeB, rangeC])
         str[ranges].testInt = 2
-        
+
         #expect(str[ranges] == str[ranges][ranges])
         #expect(AttributedString(str[ranges][RangeSet([rangeA, rangeB])]) == AttributedString("ac", attributes: AttributeContainer.testInt(2)))
-        #expect(AttributedString(str[ranges][rangeA.lowerBound ..< rangeB.upperBound]) == AttributedString("ac", attributes: AttributeContainer.testInt(2)))
-        
+        #expect(AttributedString(str[ranges][rangeA.lowerBound..<rangeB.upperBound]) == AttributedString("ac", attributes: AttributeContainer.testInt(2)))
+
         #expect(str[RangeSet()][RangeSet()] == str[RangeSet()])
     }
-    
+
     @Test
     func runs() {
         var str = AttributedString("AAA", attributes: AttributeContainer.testInt(2))
@@ -215,17 +215,17 @@ private struct AttributedStringDiscontiguousTests {
         str += AttributedString("CC", attributes: AttributeContainer.testInt(3).testString("bar"))
         str += AttributedString("D", attributes: AttributeContainer.testInt(3).testString("baz"))
         str += AttributedString("EEEEEEEE")
-        
-        let rangeA = str.index(str.startIndex, offsetByCharacters: 1) ..< str.index(str.startIndex, offsetByCharacters: 2) // A
-        let rangeB = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 7) // BBC (2 runs)
-        let rangeC = str.index(str.startIndex, offsetByCharacters: 8) ..< str.index(str.startIndex, offsetByCharacters: 9) // D
-        let rangeD = str.index(str.startIndex, offsetByCharacters: 10) ..< str.index(str.startIndex, offsetByCharacters: 11) // E
-        let rangeE = str.index(str.startIndex, offsetByCharacters: 12) ..< str.index(str.startIndex, offsetByCharacters: 13) // E
+
+        let rangeA = str.index(str.startIndex, offsetByCharacters: 1)..<str.index(str.startIndex, offsetByCharacters: 2) // A
+        let rangeB = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 7) // BBC (2 runs)
+        let rangeC = str.index(str.startIndex, offsetByCharacters: 8)..<str.index(str.startIndex, offsetByCharacters: 9) // D
+        let rangeD = str.index(str.startIndex, offsetByCharacters: 10)..<str.index(str.startIndex, offsetByCharacters: 11) // E
+        let rangeE = str.index(str.startIndex, offsetByCharacters: 12)..<str.index(str.startIndex, offsetByCharacters: 13) // E
         let rangeSet = RangeSet([rangeA, rangeB, rangeC, rangeD, rangeE])
-        
-        let rangeB_first = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 6)
-        let rangeB_second = str.index(str.startIndex, offsetByCharacters: 6) ..< str.index(str.startIndex, offsetByCharacters: 7)
-        
+
+        let rangeB_first = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 6)
+        let rangeB_second = str.index(str.startIndex, offsetByCharacters: 6)..<str.index(str.startIndex, offsetByCharacters: 7)
+
         let runs = str[rangeSet].runs
         let expectedRanges = [rangeA, rangeB_first, rangeB_second, rangeC, rangeD, rangeE]
         #expect(runs.count == expectedRanges.count)
@@ -233,22 +233,22 @@ private struct AttributedStringDiscontiguousTests {
         #expect(runs.map(\.range) == expectedRanges)
         #expect(runs.reversed().map(\.range) == expectedRanges.reversed())
     }
-    
+
     @Test
     func coalescedRuns() {
         struct EquatableBox<T: Equatable, U: Equatable>: Equatable, CustomStringConvertible {
             let t: T
             let u: U
-            
+
             var description: String {
                 "(\(String(describing: t)), \(String(describing: u)))"
             }
-            
+
             init(_ values: (T, U)) {
                 self.t = values.0
                 self.u = values.1
             }
-            
+
             init(_ t: T, _ u: U) {
                 self.t = t
                 self.u = u
@@ -259,90 +259,90 @@ private struct AttributedStringDiscontiguousTests {
         str += AttributedString("CC", attributes: AttributeContainer.testInt(3).testString("bar"))
         str += AttributedString("D", attributes: AttributeContainer.testInt(3).testString("baz"))
         str += AttributedString("EEEEEEEE")
-        
-        let rangeA = str.index(str.startIndex, offsetByCharacters: 1) ..< str.index(str.startIndex, offsetByCharacters: 2) // A
-        let rangeB = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 7) // BBC (2 runs)
-        let rangeC = str.index(str.startIndex, offsetByCharacters: 8) ..< str.index(str.startIndex, offsetByCharacters: 9) // D
-        let rangeD = str.index(str.startIndex, offsetByCharacters: 10) ..< str.index(str.startIndex, offsetByCharacters: 11) // E
-        let rangeE = str.index(str.startIndex, offsetByCharacters: 12) ..< str.index(str.startIndex, offsetByCharacters: 13) // E
+
+        let rangeA = str.index(str.startIndex, offsetByCharacters: 1)..<str.index(str.startIndex, offsetByCharacters: 2) // A
+        let rangeB = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 7) // BBC (2 runs)
+        let rangeC = str.index(str.startIndex, offsetByCharacters: 8)..<str.index(str.startIndex, offsetByCharacters: 9) // D
+        let rangeD = str.index(str.startIndex, offsetByCharacters: 10)..<str.index(str.startIndex, offsetByCharacters: 11) // E
+        let rangeE = str.index(str.startIndex, offsetByCharacters: 12)..<str.index(str.startIndex, offsetByCharacters: 13) // E
         let rangeSet = RangeSet([rangeA, rangeB, rangeC, rangeD, rangeE])
-        
-        let rangeB_first = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 6)
-        let rangeB_second = str.index(str.startIndex, offsetByCharacters: 6) ..< str.index(str.startIndex, offsetByCharacters: 7)
-        
+
+        let rangeB_first = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 6)
+        let rangeB_second = str.index(str.startIndex, offsetByCharacters: 6)..<str.index(str.startIndex, offsetByCharacters: 7)
+
         let runs = str[rangeSet].runs
-        
+
         let testIntExpectation = [EquatableBox(2, rangeA), EquatableBox(3, rangeB), EquatableBox(3, rangeC), EquatableBox(nil, rangeD), EquatableBox(nil, rangeE)]
         #expect(runs[\.testInt].map(EquatableBox.init) == testIntExpectation)
         #expect(runs[\.testInt].reversed().map(EquatableBox.init) == testIntExpectation.reversed())
-        
+
         let testStringExpectation = [EquatableBox(nil, rangeA), EquatableBox("foo", rangeB_first), EquatableBox("bar", rangeB_second), EquatableBox("baz", rangeC), EquatableBox(nil, rangeD), EquatableBox(nil, rangeE)]
         #expect(runs[\.testString].map(EquatableBox.init) == testStringExpectation)
         #expect(runs[\.testString].reversed().map(EquatableBox.init) == testStringExpectation.reversed())
     }
-    
+
     @Test
     func removeSubranges() {
         var str = AttributedString("abcdefg")
-        let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
-        let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
-        let rangeC = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 5)
+        let rangeA = str.startIndex..<str.index(str.startIndex, offsetByCharacters: 1)
+        let rangeB = str.index(str.startIndex, offsetByCharacters: 2)..<str.index(str.startIndex, offsetByCharacters: 3)
+        let rangeC = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 5)
         let ranges = RangeSet([rangeA, rangeB, rangeC])
         str[ranges].testInt = 2
         str.testBool = true
         str[rangeA].testString = "foo"
-        
+
         str.removeSubranges(ranges)
         let result = AttributedString("bdfg", attributes: AttributeContainer.testBool(true))
         #expect(str == result)
     }
-    
+
     @Test
     func sliceSetter() {
         var str = AttributedString("abcdefg")
-        let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
-        let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
-        let rangeC = str.index(str.startIndex, offsetByCharacters: 4) ..< str.index(str.startIndex, offsetByCharacters: 5)
+        let rangeA = str.startIndex..<str.index(str.startIndex, offsetByCharacters: 1)
+        let rangeB = str.index(str.startIndex, offsetByCharacters: 2)..<str.index(str.startIndex, offsetByCharacters: 3)
+        let rangeC = str.index(str.startIndex, offsetByCharacters: 4)..<str.index(str.startIndex, offsetByCharacters: 5)
         let ranges = RangeSet([rangeA, rangeB, rangeC])
         str[ranges].testInt = 2
         str.testBool = true
         str[rangeA].testString = "foo"
-        
+
         do {
             var copy = str
             copy[ranges] = copy[ranges]
             #expect(copy == str)
         }
-        
+
         do {
             var copy = str
             copy[ranges] = str[ranges]
             #expect(copy == str)
         }
-        
+
         do {
             let str2 = AttributedString("Z_Y_X__")
-            let rangeA2 = str2.startIndex ..< str2.index(str2.startIndex, offsetByCharacters: 1)
-            let rangeB2 = str2.index(str.startIndex, offsetByCharacters: 2) ..< str2.index(str2.startIndex, offsetByCharacters: 3)
-            let rangeC2 = str2.index(str.startIndex, offsetByCharacters: 4) ..< str2.index(str2.startIndex, offsetByCharacters: 5)
+            let rangeA2 = str2.startIndex..<str2.index(str2.startIndex, offsetByCharacters: 1)
+            let rangeB2 = str2.index(str.startIndex, offsetByCharacters: 2)..<str2.index(str2.startIndex, offsetByCharacters: 3)
+            let rangeC2 = str2.index(str.startIndex, offsetByCharacters: 4)..<str2.index(str2.startIndex, offsetByCharacters: 5)
             let ranges2 = RangeSet([rangeA2, rangeB2, rangeC2])
             var copy = str
             copy[ranges] = str2[ranges2]
             #expect(String(copy.characters) == "ZbYdXfg")
         }
     }
-    
+
     @Test
     func graphemesAcrossDiscontiguousRanges() {
         let str = "a\n\u{301}"
         let attrStr = AttributedString(str)
-        let strRangeA = str.startIndex ..< str.index(after: str.startIndex) // Range of 'a'
-        let strRangeB = str.index(before: str.endIndex) ..< str.endIndex // Range of '\u{301}'
-        let attrStrRangeA = attrStr.startIndex ..< attrStr.index(afterCharacter: attrStr.startIndex) // Range of 'a'
-        let attrStrRangeB = attrStr.index(beforeCharacter: attrStr.endIndex) ..< attrStr.endIndex // Range of '\u{301}'
+        let strRangeA = str.startIndex..<str.index(after: str.startIndex) // Range of 'a'
+        let strRangeB = str.index(before: str.endIndex)..<str.endIndex // Range of '\u{301}'
+        let attrStrRangeA = attrStr.startIndex..<attrStr.index(afterCharacter: attrStr.startIndex) // Range of 'a'
+        let attrStrRangeB = attrStr.index(beforeCharacter: attrStr.endIndex)..<attrStr.endIndex // Range of '\u{301}'
         let strRanges = RangeSet([strRangeA, strRangeB])
         let attrStrRanges = RangeSet([attrStrRangeA, attrStrRangeB])
-        
+
         // These discontiguous slices represent subranges that include the scalar 'a' followed by \u{301}
         // Unicode grapheme breaking rules dictate that these two unicode scalars form one grapheme cluster
         // While it may be considered unexpected, DiscontiguousSlice<String> nor DiscontiguousSlice<AttributedString.CharacterView> today will not combine these together and instead produce two Character elements

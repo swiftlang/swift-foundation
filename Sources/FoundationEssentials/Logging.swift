@@ -14,7 +14,7 @@
 internal import os
 
 /// Wrapper for OSLog until it is marked as Sendable.
-package struct SendableOSLog : @unchecked Sendable {
+package struct SendableOSLog: @unchecked Sendable {
     init(_ log: OSLog) { self.log = log }
     let log: OSLog
 }

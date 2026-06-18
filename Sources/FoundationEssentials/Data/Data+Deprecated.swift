@@ -17,17 +17,17 @@ extension Data {
     public init<S: Sequence>(bytes elements: S) where S.Iterator.Element == UInt8 {
         self.init(elements)
     }
-    
+
     @available(swift, obsoleted: 4.2)
     public init(bytes: Array<UInt8>) {
         self.init(bytes)
     }
-    
+
     @available(swift, obsoleted: 4.2)
     public init(bytes: ArraySlice<UInt8>) {
         self.init(bytes)
     }
-    
+
     /// Access the bytes in the data.
     ///
     /// - warning: The byte pointer argument should not be stored and used outside of the lifetime of the call to the closure.
@@ -37,7 +37,7 @@ extension Data {
             return try body($0.baseAddress?.assumingMemoryBound(to: ContentType.self) ?? UnsafePointer<ContentType>(bitPattern: 0xBAD0)!)
         }
     }
-    
+
     /// Mutate the bytes in the data.
     ///
     /// This function assumes that you are mutating the contents.
@@ -48,7 +48,7 @@ extension Data {
             return try body($0.baseAddress?.assumingMemoryBound(to: ContentType.self) ?? UnsafeMutablePointer<ContentType>(bitPattern: 0xBAD0)!)
         }
     }
-    
+
     /// Enumerates the contents of the data's buffer.
     ///
     /// In some cases, (for example, a `Data` backed by a `dispatch_data_t`, the bytes may be stored discontinuously. In those cases, this function invokes the closure for each contiguous region of bytes.

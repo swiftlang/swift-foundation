@@ -68,7 +68,8 @@ private struct LocaleTests {
             S(identifier: "en_US@calendar=hebrew", countryCode: "US", languageCode: "en", script: nil, calendar: .hebrew, currency: .init("USD"), collation: .standard),
             S(identifier: "hi_AU@collation=standard;currency=CHF;calendar=islamic", countryCode: "AU", languageCode: "hi", script: nil, calendar: .islamic, currency: .init("CHF"), collation: .init("standard")),
             S(identifier: "yue-Hans@collation=phonebook", countryCode: nil, languageCode: "yue", script: "Hans", calendar: .gregorian, currency: nil, collation: Locale.Collation("phonebook")),
-            S(identifier: "en_GB@numbers=hanidec", countryCode: "GB", languageCode: "en", script: nil, calendar: .gregorian, currency: .init("GBP"), collation: .standard)]
+            S(identifier: "en_GB@numbers=hanidec", countryCode: "GB", languageCode: "en", script: nil, calendar: .gregorian, currency: .init("GBP"), collation: .standard),
+        ]
 
         for t in tests {
             let l = Locale(identifier: t.identifier)
@@ -107,38 +108,38 @@ private struct LocaleTests {
             let current = Locale.current
             let decodedCurrent = try decodeHelper(current)
             #expect(decodedCurrent == current)
-            
+
             let autoupdatingCurrent = Locale.autoupdatingCurrent
             let decodedAutoupdatingCurrent = try decodeHelper(autoupdatingCurrent)
             #expect(decodedAutoupdatingCurrent == autoupdatingCurrent)
-            
+
             #expect(decodedCurrent != decodedAutoupdatingCurrent)
             #expect(current != autoupdatingCurrent)
             #expect(decodedCurrent != autoupdatingCurrent)
             #expect(current != decodedAutoupdatingCurrent)
-            
+
             do {
                 // Locale does not decode the current as a sentinel value
                 var prefs = LocalePreferences()
                 prefs.languages = ["en-US"]
                 prefs.locale = "en_US"
-                prefs.minDaysInFirstWeek = [.gregorian : 5]
+                prefs.minDaysInFirstWeek = [.gregorian: 5]
                 LocaleCache.cache.resetCurrent(to: prefs)
                 CalendarCache.cache.reset()
-                
+
                 let encodedCurrent = try JSONEncoder().encode(Locale.current)
                 let encodedAutoupdatingCurrent = try JSONEncoder().encode(Locale.autoupdatingCurrent)
-                
+
                 prefs = LocalePreferences()
                 prefs.languages = ["es-ES"]
                 prefs.locale = "es_ES"
-                prefs.minDaysInFirstWeek = [.gregorian : 3]
+                prefs.minDaysInFirstWeek = [.gregorian: 3]
                 LocaleCache.cache.resetCurrent(to: prefs)
                 CalendarCache.cache.reset()
-                
+
                 let decodedCurrent = try JSONDecoder().decode(Locale.self, from: encodedCurrent)
                 let decodedAutoupdatingCurrent = try JSONDecoder().decode(Locale.self, from: encodedAutoupdatingCurrent)
-                
+
                 #expect(decodedCurrent.identifier == "en_US")
                 #expect(decodedCurrent.prefs?.minDaysInFirstWeek?[.gregorian] == 5)
                 #expect(decodedAutoupdatingCurrent.identifier == "es_ES")
@@ -197,7 +198,7 @@ private struct LocaleTests {
         }
 
         verify(cldr: "und_US", bcp47: "und-US", icu: "und_US") {
-            return Locale.Components(languageCode: .unidentified ,languageRegion: .unitedStates)
+            return Locale.Components(languageCode: .unidentified, languageRegion: .unitedStates)
         }
 
         verify(cldr: "und_Latn_DE", bcp47: "und-Latn-DE", icu: "_Latn_DE") {
@@ -273,7 +274,7 @@ private struct LocaleTests {
             #expect(loc.identifier(type) == expected[idx], "type: \(type)", sourceLocation: sourceLocation)
         }
     }
-    
+
     func comps(language: String? = nil, script: String? = nil, country: String? = nil, variant: String? = nil) -> [String: String] {
         var result: [String: String] = [:]
         if let language { result["kCFLocaleLanguageCodeKey"] = language }
@@ -285,10 +286,10 @@ private struct LocaleTests {
 
     @Test func identifierFromComponents() {
         var c: [String: String] = [:]
-        
+
         c = comps(language: "zh", script: "Hans", country: "TW")
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW")
-        
+
         // Set some keywords
         c["CuRrEnCy"] = "qqq"
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@currency=qqq")
@@ -297,15 +298,15 @@ private struct LocaleTests {
         c["d"] = "d"
         c["0"] = "0"
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d")
-        
+
         // Add some non-ASCII keywords
         c["ê"] = "ê"
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d")
-        
+
         // And some non-ASCII values
         c["n"] = "ñ"
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d")
-        
+
         // And some values with other letters
         c["z"] = "Ab09_-+/"
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
@@ -317,15 +318,15 @@ private struct LocaleTests {
         // And some really short values
         c["q"] = ""
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
-        
+
         // All the valid stuff
         c["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/"
         #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/;currency=qqq;d=d;z=Ab09_-+/")
-        
+
         // POSIX
         let p = comps(language: "en", script: nil, country: "US", variant: "POSIX")
         #expect(Locale.identifier(fromComponents: p) == "en_US_POSIX")
-        
+
         // Odd combos
         #expect(Locale.identifier(fromComponents: comps(language: "en", variant: "POSIX")) == "en__POSIX")
 
@@ -336,16 +337,16 @@ private struct LocaleTests {
         #expect(Locale.identifier(fromComponents: comps(language: "en")) == "en")
         #expect(Locale.identifier(fromComponents: comps(country: "US", variant: "POSIX")) == "_US_POSIX")
     }
-    
+
     #if FOUNDATION_FRAMEWORK
     @Test func identifierFromAnyComponents() {
         // This internal Foundation-specific version allows for a Calendar entry
         let comps = comps(language: "zh", script: "Hans", country: "TW")
         #expect(Locale.identifier(fromComponents: comps) == "zh_Hans_TW")
 
-        var anyComps : [String : Any] = [:]
+        var anyComps: [String: Any] = [:]
         anyComps.merge(comps) { a, b in a }
-        
+
         anyComps["kCFLocaleCalendarKey"] = Calendar(identifier: .gregorian)
         #expect(Locale.identifier(fromAnyComponents: anyComps) == "zh_Hans_TW@calendar=gregorian")
 
@@ -355,7 +356,7 @@ private struct LocaleTests {
 
         anyComps["currency"] = "xyz"
         #expect(Locale.identifier(fromAnyComponents: anyComps) == "zh_Hans_TW@calendar=gregorian;currency=xyz")
-        
+
         anyComps["AaA"] = "bBb"
         #expect(Locale.identifier(fromAnyComponents: anyComps) == "zh_Hans_TW@aaa=bBb;calendar=gregorian;currency=xyz")
     }
@@ -368,38 +369,38 @@ private struct LocaleTests {
             prefs.languages = ["en-US"]
             prefs.locale = "en_US"
             LocaleCache.cache.resetCurrent(to: prefs)
-            
+
             func expectIdentifier(_ localeIdentifier: String, preferences: LocalePreferences, expectedFullIdentifier: String, sourceLocation: SourceLocation = #_sourceLocation) {
                 let locale = Locale.localeAsIfCurrent(name: localeIdentifier, overrides: preferences)
                 #expect(locale.identifier == localeIdentifier, sourceLocation: sourceLocation)
                 #expect(locale.identifierCapturingPreferences == expectedFullIdentifier, sourceLocation: sourceLocation)
             }
-            
+
             expectIdentifier("en_US", preferences: .init(metricUnits: true, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=metric")
             expectIdentifier("en_US", preferences: .init(metricUnits: true, measurementUnits: .inches), expectedFullIdentifier: "en_US@measure=uksystem")
             expectIdentifier("en_US", preferences: .init(metricUnits: false, measurementUnits: .inches), expectedFullIdentifier: "en_US@measure=ussystem")
             // We treat it as US system as long as `metricUnits` is false
             expectIdentifier("en_US", preferences: .init(metricUnits: false, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=ussystem")
-            
+
             // 112778892: Country pref is intentionally ignored
             expectIdentifier("en_US", preferences: .init(country: "GB"), expectedFullIdentifier: "en_US")
             expectIdentifier("en_US", preferences: .init(country: "US"), expectedFullIdentifier: "en_US")
-            
-            expectIdentifier("en_US", preferences: .init(firstWeekday: [.gregorian : 3]), expectedFullIdentifier: "en_US@fw=tue")
+
+            expectIdentifier("en_US", preferences: .init(firstWeekday: [.gregorian: 3]), expectedFullIdentifier: "en_US@fw=tue")
             // en_US locale doesn't use islamic calendar; preference is ignored
-            expectIdentifier("en_US", preferences: .init(firstWeekday: [.islamic : 3]), expectedFullIdentifier: "en_US")
-            
+            expectIdentifier("en_US", preferences: .init(firstWeekday: [.islamic: 3]), expectedFullIdentifier: "en_US")
+
             expectIdentifier("en_US", preferences: .init(force24Hour: true), expectedFullIdentifier: "en_US@hours=h23")
             expectIdentifier("en_US", preferences: .init(force12Hour: true), expectedFullIdentifier: "en_US@hours=h12")
-            
+
             // Preferences not representable by locale identifier are ignored
             expectIdentifier("en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 7]), expectedFullIdentifier: "en_US")
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             expectIdentifier("en_US", preferences: .init(dateFormats: [.abbreviated: "custom style"]), expectedFullIdentifier: "en_US")
-#endif
+            #endif
         }
     }
-    
+
     @Test func badWindowsLocaleID() {
         // Negative values are invalid
         let result = Locale.identifier(fromWindowsLocaleCode: -1)
@@ -514,7 +515,11 @@ private struct LocaleTests {
 @Suite("Locale Properties")
 private struct LocalePropertiesTests {
 
-    func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+    func _verify(
+        locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil,
+        measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil,
+        numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation
+    ) {
         #expect(locale.language.languageCode == language, "languageCode should be equal", sourceLocation: sourceLocation)
         #expect(locale.language.script == script, "script should be equal", sourceLocation: sourceLocation)
         #expect(locale.language.region == languageRegion, "language region should be equal", sourceLocation: sourceLocation)
@@ -531,16 +536,25 @@ private struct LocalePropertiesTests {
         #expect(locale.variant == variant, "variant should be equal", sourceLocation: sourceLocation)
     }
 
-    func verify(_ identifier: String, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+    func verify(
+        _ identifier: String, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil,
+        measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil,
+        numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation
+    ) {
         let loc = Locale(identifier: identifier)
-        _verify(locale: loc, expectedLanguage: language, script: script, languageRegion: languageRegion, region: region, subdivision: subdivision, measurementSystem: measurementSystem, calendar: calendar, hourCycle: hourCycle, currency: currency, numberingSystem: numberingSystem, numberingSystems: numberingSystems, firstDayOfWeek: firstDayOfWeek, collation: collation, variant: variant, sourceLocation: sourceLocation)
+        _verify(
+            locale: loc, expectedLanguage: language, script: script, languageRegion: languageRegion, region: region, subdivision: subdivision, measurementSystem: measurementSystem, calendar: calendar, hourCycle: hourCycle, currency: currency,
+            numberingSystem: numberingSystem, numberingSystems: numberingSystems, firstDayOfWeek: firstDayOfWeek, collation: collation, variant: variant, sourceLocation: sourceLocation)
     }
 
     @Test func localeComponentsAndLocale() {
         func verify(components: Locale.Components, identifier: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let locFromComponents = Locale(components: components)
             let locFromIdentifier = Locale(identifier: identifier)
-            _verify(locale: locFromComponents, expectedLanguage: locFromIdentifier.language.languageCode, script: locFromIdentifier.language.script, languageRegion: locFromIdentifier.language.region, region: locFromIdentifier.region, measurementSystem: locFromIdentifier.measurementSystem, calendar: locFromIdentifier.calendar.identifier, hourCycle: locFromIdentifier.hourCycle, currency: locFromIdentifier.currency, numberingSystem: locFromIdentifier.numberingSystem, numberingSystems: Set(locFromIdentifier.availableNumberingSystems), firstDayOfWeek: locFromIdentifier.firstDayOfWeek, collation: locFromIdentifier.collation, variant: locFromIdentifier.variant, sourceLocation: sourceLocation)
+            _verify(
+                locale: locFromComponents, expectedLanguage: locFromIdentifier.language.languageCode, script: locFromIdentifier.language.script, languageRegion: locFromIdentifier.language.region, region: locFromIdentifier.region,
+                measurementSystem: locFromIdentifier.measurementSystem, calendar: locFromIdentifier.calendar.identifier, hourCycle: locFromIdentifier.hourCycle, currency: locFromIdentifier.currency, numberingSystem: locFromIdentifier.numberingSystem,
+                numberingSystems: Set(locFromIdentifier.availableNumberingSystems), firstDayOfWeek: locFromIdentifier.firstDayOfWeek, collation: locFromIdentifier.collation, variant: locFromIdentifier.variant, sourceLocation: sourceLocation)
         }
 
 
@@ -570,14 +584,16 @@ private struct LocalePropertiesTests {
         custom.collation = "Phonebook"
         custom.hourCycle = .zeroToEleven
         let customLoc = Locale(components: custom)
-        _verify(locale: customLoc, expectedLanguage: "en", script: "Latn", languageRegion: "US", region: "HK", measurementSystem: .metric, calendar: .japanese, hourCycle: .zeroToEleven, currency: "GBP", numberingSystem: "Arab", numberingSystems: [ "Arab", "Latn" ], firstDayOfWeek: .tuesday, collation: "Phonebook", variant: nil)
+        _verify(
+            locale: customLoc, expectedLanguage: "en", script: "Latn", languageRegion: "US", region: "HK", measurementSystem: .metric, calendar: .japanese, hourCycle: .zeroToEleven, currency: "GBP", numberingSystem: "Arab",
+            numberingSystems: ["Arab", "Latn"], firstDayOfWeek: .tuesday, collation: "Phonebook", variant: nil)
     }
 
     // Test retrieving user's preference values as set in the system settings
     @Test func userPreferenceOverride_hourCycle() {
         func verifyHourCycle(_ localeID: String, _ expectDefault: Locale.HourCycle, shouldRespectUserPref: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
             let loc = Locale(identifier: localeID)
-            #expect(loc.hourCycle == expectDefault,  "default did not match", sourceLocation: sourceLocation)
+            #expect(loc.hourCycle == expectDefault, "default did not match", sourceLocation: sourceLocation)
 
             let defaultLoc = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
             #expect(defaultLoc.hourCycle == expectDefault, "explicit no override did not match", sourceLocation: sourceLocation)
@@ -649,9 +665,9 @@ private struct LocalePropertiesTests {
         #expect("HK" == locale.regionCode)
         #expect("Hant" == locale.scriptCode)
         #expect("POSIX" == Locale(identifier: "en_POSIX").variantCode)
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         #expect(locale.exemplarCharacterSet != nil)
-#endif
+        #endif
         // The calendar we get back from Locale has the locale set, but not the one we create with Calendar(identifier:). So we configure our comparison calendar first.
         var c = Calendar(identifier: .gregorian)
         c.locale = Locale(identifier: "en_US")
@@ -688,34 +704,50 @@ private struct LocalePropertiesTests {
         // Need to find a good test case for collator identifier
         // #expect("something" == locale.collatorIdentifier)
     }
-    
+
     @Test func customizedProperties() {
-        let localePrefs = LocalePreferences(numberSymbols: [0 : "*", 1: "-"])
+        let localePrefs = LocalePreferences(numberSymbols: [0: "*", 1: "-"])
         let customizedLocale = Locale.localeAsIfCurrent(name: "en_US", overrides: localePrefs)
         #expect(customizedLocale.decimalSeparator == "*")
         #expect(customizedLocale.groupingSeparator == "-")
     }
 
     @Test func defaultValue() {
-        verify("en_US", expectedLanguage: "en", script: "Latn", languageRegion: "US", region: "US", measurementSystem: .us, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "USD", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
+        verify(
+            "en_US", expectedLanguage: "en", script: "Latn", languageRegion: "US", region: "US", measurementSystem: .us, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "USD", numberingSystem: "latn", numberingSystems: ["latn"],
+            firstDayOfWeek: .sunday, collation: .standard, variant: nil)
 
-        verify("en_GB", expectedLanguage: "en", script: "Latn", languageRegion: "GB", region: "GB", measurementSystem: .uk, calendar: .gregorian, hourCycle: .zeroToTwentyThree, currency: "GBP", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .monday, collation: .standard, variant: nil)
+        verify(
+            "en_GB", expectedLanguage: "en", script: "Latn", languageRegion: "GB", region: "GB", measurementSystem: .uk, calendar: .gregorian, hourCycle: .zeroToTwentyThree, currency: "GBP", numberingSystem: "latn", numberingSystems: ["latn"],
+            firstDayOfWeek: .monday, collation: .standard, variant: nil)
 
-        verify("zh_TW", expectedLanguage: "zh", script: "Hant", languageRegion: "TW", region: "TW", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "TWD", numberingSystem: "latn", numberingSystems: [ "latn", "hantfin", "hanidec", "hant" ], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
+        verify(
+            "zh_TW", expectedLanguage: "zh", script: "Hant", languageRegion: "TW", region: "TW", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "TWD", numberingSystem: "latn",
+            numberingSystems: ["latn", "hantfin", "hanidec", "hant"], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
 
-        verify("ar_EG", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "arab", numberingSystems: [ "latn", "arab" ], firstDayOfWeek: .saturday, collation: .standard, variant: nil)
+        verify(
+            "ar_EG", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "arab", numberingSystems: ["latn", "arab"],
+            firstDayOfWeek: .saturday, collation: .standard, variant: nil)
     }
 
     @Test func keywordOverrides() {
 
-        verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
+        verify(
+            "ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk,
+            calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: ["traditio", "latn", "arab"], firstDayOfWeek: .friday, collation: "dict")
 
         // With legacy values
-        verify("ar_EG@calendar=ethiopic-amete-alem;collation=dictionary;measure=imperial;numbers=traditional", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "traditional", numberingSystems: [ "traditional", "latn", "arab" ], firstDayOfWeek: .saturday, collation: "dictionary", variant: nil)
+        verify(
+            "ar_EG@calendar=ethiopic-amete-alem;collation=dictionary;measure=imperial;numbers=traditional", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .uk, calendar: .ethiopicAmeteAlem,
+            hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "traditional", numberingSystems: ["traditional", "latn", "arab"], firstDayOfWeek: .saturday, collation: "dictionary", variant: nil)
 
-        verify("ar-EG-u-ca-ethioaa-co-dict-cu-frf-fw-fri-hc-h11-ms-uksystem-nu-traditio-rg-uszzzz",expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditional", numberingSystems: [ "traditional", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dictionary")
+        verify(
+            "ar-EG-u-ca-ethioaa-co-dict-cu-frf-fw-fri-hc-h11-ms-uksystem-nu-traditio-rg-uszzzz", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem,
+            hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditional", numberingSystems: ["traditional", "latn", "arab"], firstDayOfWeek: .friday, collation: "dictionary")
 
-        verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz;sd=usca", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: "usca", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
+        verify(
+            "ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz;sd=usca", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: "usca",
+            measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: ["traditio", "latn", "arab"], firstDayOfWeek: .friday, collation: "dict")
     }
 
     @Test func longLocaleKeywordValues() {
@@ -729,7 +761,7 @@ private struct LocalePropertiesTests {
 
 @Suite("Locale Bridging")
 private struct LocaleBridgingTests {
-    
+
     @available(macOS, deprecated: 13)
     @available(iOS, deprecated: 16)
     @available(tvOS, deprecated: 16)
@@ -780,7 +812,7 @@ private struct LocaleBridgingTests {
         #expect(anyHashables[0] != anyHashables[1])
         #expect(anyHashables[1] == anyHashables[2])
     }
-    
+
     @Test func autoupdatingBridge() {
         let s1 = Locale.autoupdatingCurrent
         let s2 = Locale.autoupdatingCurrent
@@ -789,7 +821,7 @@ private struct LocaleBridgingTests {
         // Verify that we don't create a new instance each time this is converted to NSLocale
         #expect(ns1 === ns2)
     }
-    
+
     @Test func bridgingTwice() {
         let s1 = NSLocale.system
         let l1 = s1 as Locale
@@ -797,7 +829,7 @@ private struct LocaleBridgingTests {
         let l2 = s2 as Locale
         #expect((l1 as NSLocale) === (l2 as NSLocale))
     }
-    
+
     @Test func bridgingFixedTwice() {
         let s1 = Locale(identifier: "en_US")
         let ns1 = s1 as NSLocale
@@ -805,7 +837,7 @@ private struct LocaleBridgingTests {
         let ns2 = s2 as NSLocale
         #expect(ns1 === ns2)
     }
-    
+
     @Test func bridgingCurrentWithPrefs() {
         // Verify that 'current with prefs' locales (which have identical identifiers but differing prefs) are correctly cached
         let s1 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(metricUnits: true), disableBundleMatching: false)
@@ -814,7 +846,7 @@ private struct LocaleBridgingTests {
         let ns2 = s2 as NSLocale
         let s3 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(measurementUnits: .centimeters), disableBundleMatching: false)
         let ns3 = s3 as NSLocale
-        
+
         #expect(ns1 === ns2)
         #expect(ns1 !== ns3)
         #expect(ns2 !== ns3)
@@ -831,10 +863,10 @@ extension LocaleTests {
             let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [:]))
             #expect(localeNoPref.firstDayOfWeek == expected, sourceLocation: sourceLocation)
 
-            let wed = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.gregorian : 4]))
+            let wed = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.gregorian: 4]))
             #expect(wed.firstDayOfWeek == (shouldRespectUserPrefForGregorian ? .wednesday : expected), sourceLocation: sourceLocation)
 
-            let fri_islamic = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.islamic : 6]))
+            let fri_islamic = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.islamic: 6]))
             #expect(fri_islamic.firstDayOfWeek == (shouldRespectUserPrefForIslamic ? .friday : expected), sourceLocation: sourceLocation)
         }
 
@@ -875,7 +907,9 @@ extension LocaleTests {
         verify("@x=elmer;a=exta", cldr: "und_a_exta_x_elmer", bcp47: "und-a-exta-x-elmer", icu: "@a=exta;x=elmer")
         verify("th@numbers=thai;z=extz;x=priv-use;a=exta", cldr: "th_a_exta_u_nu_thai_z_extz_x_priv_use", bcp47: "th-a-exta-u-nu-thai-z-extz-x-priv-use", icu: "th@a=exta;numbers=thai;x=priv-use;z=extz")
 
-        verify("en_Hant_IL_FOO_BAR@ currency = EUR; calendar = Japanese ;", cldr: "en_Hant_IL_u_ca_japanese_cu_eur_x_lvariant_foo_bar", bcp47: "en-Hant-IL-u-ca-japanese-cu-eur-x-lvariant-foo-bar", icu: "en_Hant_IL_BAR_FOO@calendar=Japanese;currency=EUR")
+        verify(
+            "en_Hant_IL_FOO_BAR@ currency = EUR; calendar = Japanese ;", cldr: "en_Hant_IL_u_ca_japanese_cu_eur_x_lvariant_foo_bar", bcp47: "en-Hant-IL-u-ca-japanese-cu-eur-x-lvariant-foo-bar",
+            icu: "en_Hant_IL_BAR_FOO@calendar=Japanese;currency=EUR")
     }
 
     // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
@@ -927,7 +961,7 @@ extension LocaleTests {
     @Test func asIfCurrentWithBundleLocalizations() async {
         await usingCurrentInternationalizationPreferences {
             let currentLanguage = Locale.current.language.languageCode!
-            var localizations = Set([ "zh", "fr", "en" ])
+            var localizations = Set(["zh", "fr", "en"])
             localizations.insert(currentLanguage.identifier) // We're not sure what the current locale is when test runs. Ensure that it's always in the list of available localizations
             // Foundation framework-only test
             let fakeCurrent = Locale.localeAsIfCurrentWithBundleLocalizations(Array(localizations), allowsMixedLocalizations: false)
@@ -945,7 +979,7 @@ extension LocaleTests {
     }
 
     @Test func localeBundleMatching_en_US() {
-        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(["de", "en", "es", "fr", "zh-Hans"], preferredLanguages: ["en-US", ], preferredLocaleID: "en_US")
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(["de", "en", "es", "fr", "zh-Hans"], preferredLanguages: ["en-US"], preferredLocaleID: "en_US")
         #expect(actual == "en_US", "`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.")
     }
 
@@ -963,7 +997,7 @@ extension LocaleTests {
         let localizations = ["de", "en", "es", "fr", "zh_CN", "zh_TW"]
         let preferredLanguages = ["zh-Hant-MO"]
         let preferredLocaleID = "zh_MO"
-        
+
         let expected = preferredLocaleID
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         #expect(actual == expected, "`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.")
@@ -973,7 +1007,7 @@ extension LocaleTests {
         let localizations = ["de", "en", "es", "fr", "zh_CN", "zh_TW"]
         let preferredLanguages = ["th-TH"]
         let preferredLocaleID = "th_TH"
-        
+
         let expected = "en_TH"
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         #expect(actual == expected, "Since `th` is not in `localizations`, the locale should be an `en` locale based on `en` being in `localizations` and being hard-coded as a default for such cases.")
@@ -983,7 +1017,7 @@ extension LocaleTests {
         let localizations = ["fr", "en", "de"]
         let preferredLanguages = ["pa-IN", "hi-IN"]
         let preferredLocaleID = "pa_IN"
-        
+
         let expected = "en_IN"
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         #expect(actual == expected, "Since neither `pa` nor `hi` are in `localizations`, the locale should be an `en` locale based on `en` being in `localizations` and being hard-coded as a default for such cases.")
@@ -993,7 +1027,7 @@ extension LocaleTests {
         let localizations = ["fr", "de"]
         let preferredLanguages = ["pa-IN", "hi-IN"]
         let preferredLocaleID = "pa_IN"
-        
+
         let expected = "fr_IN"
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         #expect(actual == expected, "Since neither `pa` nor `hi` are in `localizations`, the locale should be an `fr` locale based on `fr` being #1 in `localizations` and `en` (the hard-coded default) not being present.")
@@ -1003,7 +1037,7 @@ extension LocaleTests {
         let localizations: [String] = []
         let preferredLanguages = ["pa-IN", "en-IN"]
         let preferredLocaleID = "pa_IN"
-        
+
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         #expect(actual == nil, "Empty localizations should return nil")
     }
@@ -1012,7 +1046,7 @@ extension LocaleTests {
         let localizations: [String] = []
         let preferredLanguages: [String] = []
         let preferredLocaleID = ""
-        
+
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         #expect(actual == nil, "Empty arrays should return nil")
     }
@@ -1021,7 +1055,7 @@ extension LocaleTests {
         let localizations = ["en", "fr", "de"]
         let preferredLanguages = ["pa-IN", "hi-IN"]
         let preferredLocaleID = ""
-        
+
         let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         #expect(actual == nil, "Empty preferred locale ID should return nil")
     }

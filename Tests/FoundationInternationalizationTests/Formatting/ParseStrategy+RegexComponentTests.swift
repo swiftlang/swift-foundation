@@ -21,7 +21,7 @@ private struct ParseStrategyMatchTests {
     let enUS = Locale(identifier: "en_US")
     let enGB = Locale(identifier: "en_GB")
     let gmt = TimeZone(secondsFromGMT: 0)!
-    let pst = TimeZone(secondsFromGMT: -3600*8)!
+    let pst = TimeZone(secondsFromGMT: -3600 * 8)!
 
     @Test func date() throws {
         let regex = Regex {
@@ -40,13 +40,13 @@ private struct ParseStrategyMatchTests {
     @Test func apiHTTPHeader() throws {
 
         let header = """
-        HTTP/1.1 301 Redirect
-        Date: Wed, 16 Feb 2022 23:53:19 GMT
-        Connection: close
-        Location: https://www.apple.com/
-        Content-Type: text/html
-        Content-Language: en
-        """
+            HTTP/1.1 301 Redirect
+            Date: Wed, 16 Feb 2022 23:53:19 GMT
+            Connection: close
+            Location: https://www.apple.com/
+            Content-Type: text/html
+            Content-Language: en
+            """
 
         let regex = Regex {
             Capture {
@@ -62,20 +62,20 @@ private struct ParseStrategyMatchTests {
         #expect(res.output.1 == expectedDate)
     }
 
-// https://github.com/apple/swift-foundation/issues/60
-#if FOUNDATION_FRAMEWORK
+    // https://github.com/apple/swift-foundation/issues/60
+    #if FOUNDATION_FRAMEWORK
     @Test func apiStatement() {
 
         let statement = """
-CREDIT    04/06/2020    Paypal transfer        $4.99
-DSLIP    04/06/2020    REMOTE ONLINE DEPOSIT  $3,020.85
-CREDIT    04/03/2020    PAYROLL                $69.73
-DEBIT    04/02/2020    ACH TRNSFR             ($38.25)
-DEBIT    03/31/2020    Payment to BoA card    ($27.44)
-DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
-"""
+            CREDIT    04/06/2020    Paypal transfer        $4.99
+            DSLIP    04/06/2020    REMOTE ONLINE DEPOSIT  $3,020.85
+            CREDIT    04/03/2020    PAYROLL                $69.73
+            DEBIT    04/02/2020    ACH TRNSFR             ($38.25)
+            DEBIT    03/31/2020    Payment to BoA card    ($27.44)
+            DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
+            """
 
-        let expectedDateStrings :[Substring] = ["04/06/2020", "04/06/2020", "04/03/2020", "04/02/2020", "03/31/2020", "03/24/2020"]
+        let expectedDateStrings: [Substring] = ["04/06/2020", "04/06/2020", "04/03/2020", "04/02/2020", "03/31/2020", "03/24/2020"]
         let expectedDates = [
             Date(timeIntervalSinceReferenceDate: 607824000.0), // "2020-04-06 00:00:00.000"
             Date(timeIntervalSinceReferenceDate: 607824000.0), // "2020-04-06 00:00:00.000"
@@ -84,7 +84,7 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
             Date(timeIntervalSinceReferenceDate: 607305600.0), // "2020-03-31 00:00:00.000"
             Date(timeIntervalSinceReferenceDate: 606700800.0), // "2020-03-24 00:00:00.000"
         ]
-        let expectedAmounts = [Decimal(string:"4.99")!, Decimal(string:"3020.85")!, Decimal(string:"69.73")!, Decimal(string:"-38.25")!, Decimal(string:"-27.44")!, Decimal(string:"-52249.98")!]
+        let expectedAmounts = [Decimal(string: "4.99")!, Decimal(string: "3020.85")!, Decimal(string: "69.73")!, Decimal(string: "-38.25")!, Decimal(string: "-27.44")!, Decimal(string: "-52249.98")!]
 
         let regex = Regex {
             Capture {
@@ -99,7 +99,7 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
 
         let dateRegex = Regex {
             Capture {
-                .date(format:"\(month: .twoDigits)/\(day: .twoDigits)/\(year: .defaultDigits)", locale: enUS, timeZone: gmt)
+                .date(format: "\(month: .twoDigits)/\(day: .twoDigits)/\(year: .defaultDigits)", locale: enUS, timeZone: gmt)
             }
         }
         let dateMatches = statement.matches(of: dateRegex)
@@ -109,7 +109,7 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
         let dot = try! Regex(#"."#)
         let dateCurrencyRegex = Regex {
             Capture {
-                .date(format:"\(month: .twoDigits)/\(day: .twoDigits)/\(year: .defaultDigits)", locale: enUS, timeZone: gmt)
+                .date(format: "\(month: .twoDigits)/\(day: .twoDigits)/\(year: .defaultDigits)", locale: enUS, timeZone: gmt)
             }
             "    "
             OneOrMore(dot)
@@ -120,21 +120,23 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
         }
 
         let matches = statement.matches(of: dateCurrencyRegex)
-        #expect(matches.map(\.output.0) == [
-            "04/06/2020    Paypal transfer        $4.99",
-            "04/06/2020    REMOTE ONLINE DEPOSIT  $3,020.85",
-            "04/03/2020    PAYROLL                $69.73",
-            "04/02/2020    ACH TRNSFR             ($38.25)",
-            "03/31/2020    Payment to BoA card    ($27.44)",
-            "03/24/2020    IRX tax payment        ($52,249.98)",
-        ])
+        #expect(
+            matches.map(\.output.0) == [
+                "04/06/2020    Paypal transfer        $4.99",
+                "04/06/2020    REMOTE ONLINE DEPOSIT  $3,020.85",
+                "04/03/2020    PAYROLL                $69.73",
+                "04/02/2020    ACH TRNSFR             ($38.25)",
+                "03/31/2020    Payment to BoA card    ($27.44)",
+                "03/24/2020    IRX tax payment        ($52,249.98)",
+            ])
         #expect(matches.map(\.output.1) == expectedDates)
         #expect(matches.map(\.output.2) == expectedAmounts)
 
 
-        let numericMatches = statement.matches(of: Regex {
-            Capture(.date(.numeric, locale: enUS, timeZone: gmt))
-        })
+        let numericMatches = statement.matches(
+            of: Regex {
+                Capture(.date(.numeric, locale: enUS, timeZone: gmt))
+            })
         #expect(numericMatches.map(\.output.0) == expectedDateStrings)
         #expect(numericMatches.map(\.output.1) == expectedDates)
     }
@@ -142,17 +144,17 @@ DEBIT    03/24/2020    IRX tax payment        ($52,249.98)
     @Test func apiStatements2() {
         // Test dates and numbers appearing in unexpected places
         let statement = """
-CREDIT   Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11
-DSLIP    Apr 06/20    GMT gain                     USD 3,020.85
-CREDIT   Apr 03/20    PAYROLL 03/29/20-04/02/20    USD 69.73
-DEBIT    Apr 02/20    ACH TRNSFR Apr 02/20         -USD 38.25
-DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
-"""
+            CREDIT   Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11
+            DSLIP    Apr 06/20    GMT gain                     USD 3,020.85
+            CREDIT   Apr 03/20    PAYROLL 03/29/20-04/02/20    USD 69.73
+            DEBIT    Apr 02/20    ACH TRNSFR Apr 02/20         -USD 38.25
+            DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
+            """
 
         let dot = try! Regex(#"."#)
         let dateCurrencyRegex = Regex {
             Capture {
-                .date(format:"\(month: .abbreviated) \(day: .twoDigits)/\(year: .twoDigits)", locale: enUS, timeZone: gmt)
+                .date(format: "\(month: .abbreviated) \(day: .twoDigits)/\(year: .twoDigits)", locale: enUS, timeZone: gmt)
             }
             "    "
             Capture(OneOrMore(dot))
@@ -169,16 +171,17 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
             Date(timeIntervalSinceReferenceDate: 607478400.0), // "2020-04-02 00:00:00.000"
             Date(timeIntervalSinceReferenceDate: 607305600.0), // "2020-03-31 00:00:00.000"
         ]
-        let expectedAmounts = [Decimal(string:"21.11")!, Decimal(string:"3020.85")!, Decimal(string:"69.73")!, Decimal(string:"-38.25")!, Decimal(string:"-52249.98")!]
+        let expectedAmounts = [Decimal(string: "21.11")!, Decimal(string: "3020.85")!, Decimal(string: "69.73")!, Decimal(string: "-38.25")!, Decimal(string: "-52249.98")!]
 
         let matches = statement.matches(of: dateCurrencyRegex)
-        #expect(matches.map(\.output.0) == [
-            "Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11",
-            "Apr 06/20    GMT gain                     USD 3,020.85",
-            "Apr 03/20    PAYROLL 03/29/20-04/02/20    USD 69.73",
-            "Apr 02/20    ACH TRNSFR Apr 02/20         -USD 38.25",
-            "Mar 31/20    March Payment to BoA         -USD 52,249.98",
-        ])
+        #expect(
+            matches.map(\.output.0) == [
+                "Apr 06/20    Zombie 5.29lb@$3.99/lb       USD 21.11",
+                "Apr 06/20    GMT gain                     USD 3,020.85",
+                "Apr 03/20    PAYROLL 03/29/20-04/02/20    USD 69.73",
+                "Apr 02/20    ACH TRNSFR Apr 02/20         -USD 38.25",
+                "Mar 31/20    March Payment to BoA         -USD 52,249.98",
+            ])
         #expect(matches.map(\.output.1) == expectedDates)
         #expect(matches.map(\.output.3) == expectedAmounts)
     }
@@ -191,7 +194,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
             Capture(OneOrMore(.any, .reluctant)) // name
             "' "
             TryCapture {
-                ChoiceOf {    // status
+                ChoiceOf { // status
                     "started"
                     "passed"
                     "failed"
@@ -200,9 +203,11 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
                 String($0)
             }
             " at "
-            Capture(.iso8601(timeZone: gmt,
-                             includingFractionalSeconds: true,
-                             dateTimeSeparator: .space)) // date
+            Capture(
+                .iso8601(
+                    timeZone: gmt,
+                    includingFractionalSeconds: true,
+                    dateTimeSeparator: .space)) // date
             Optionally(".")
         }
 
@@ -215,7 +220,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         // dateFormatter.date(from: "2021-07-08 10:19:35.418")!
         #expect(match.output.3 == Date(timeIntervalSinceReferenceDate: 647432375.418))
     }
-#endif
+    #endif
 
     @Test func variousDatesAndTimes() {
         func verify(_ str: String, _ strategy: Date.ParseStrategy, _ expected: String?, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -268,7 +273,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
                 guard let match else {
                     var message = ""
                     do {
-                        let result = try strategy.consuming(str, startingAt: str.startIndex, in: str.startIndex ..< str.endIndex)
+                        let result = try strategy.consuming(str, startingAt: str.startIndex, in: str.startIndex..<str.endIndex)
                         if let result {
                             message = "upperBound: \(result.0.utf16Offset(in: str)), output: \(result.1)"
                         } else {
@@ -301,21 +306,21 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         verify("2020-03-05T16:29:24", .iso8601WithTimeZone(), nil) // This function requires time zone to be present in the string, so it doesn't match
         verify("2020-03-05T16:29:24-08:00", .iso8601WithTimeZone(), "2020-03-05T16:29:24-08:00")
 
-        verify("20200305T16:29:24-08:00",   .iso8601WithTimeZone(dateSeparator: .omitted), "2020-03-05T16:29:24-08:00")
+        verify("20200305T16:29:24-08:00", .iso8601WithTimeZone(dateSeparator: .omitted), "2020-03-05T16:29:24-08:00")
         verify("2020-03-05T16:29:24-08:00", .iso8601WithTimeZone(dateSeparator: .omitted), nil) // Does not match "-" in "2020-03-05"
 
-        verify("2020-03-05 16:29:24-08:00", .iso8601WithTimeZone(dateTimeSeparator: .space),    "2020-03-05T16:29:24-08:00")
-        verify("2020-03-05T16:29:24-08:00", .iso8601WithTimeZone(dateTimeSeparator: .space),    nil) // Does not match "T"
+        verify("2020-03-05 16:29:24-08:00", .iso8601WithTimeZone(dateTimeSeparator: .space), "2020-03-05T16:29:24-08:00")
+        verify("2020-03-05T16:29:24-08:00", .iso8601WithTimeZone(dateTimeSeparator: .space), nil) // Does not match "T"
         verify("2020-03-05 16:29:24-08:00", .iso8601WithTimeZone(dateTimeSeparator: .standard), nil) // Does not match " "
 
-        verify("2020-03-05T162924-08:00",   .iso8601WithTimeZone(timeSeparator: .omitted), "2020-03-05T16:29:24-08:00")
+        verify("2020-03-05T162924-08:00", .iso8601WithTimeZone(timeSeparator: .omitted), "2020-03-05T16:29:24-08:00")
         verify("2020-03-05T16:29:24-08:00", .iso8601WithTimeZone(timeSeparator: .omitted), nil) // Does not match ":" in "16:29:24"
-        verify("2020-03-05T162924-08:00",   .iso8601WithTimeZone(timeSeparator: .colon),   nil) // Does not match "162924"
+        verify("2020-03-05T162924-08:00", .iso8601WithTimeZone(timeSeparator: .colon), nil) // Does not match "162924"
 
         // FIXME 94663783: This passes but shouldn't since the time zone separator doesn't match
         verify("2020-03-05T16:29:24-08:00", .iso8601WithTimeZone(timeZoneSeparator: .omitted), "2020-03-05T16:29:24-08:00")
 
-        verify("2020-03-05",          .iso8601Date(timeZone: gmt), "2020-03-05T00:00:00+00:00")
+        verify("2020-03-05", .iso8601Date(timeZone: gmt), "2020-03-05T00:00:00+00:00")
         verify("2020-03-05T16:29:24", .iso8601Date(timeZone: pst), nil) // Does not match the time part fully
 
         verify("2020-03-05", .iso8601Date(timeZone: pst), "2020-03-05T00:00:00-08:00")

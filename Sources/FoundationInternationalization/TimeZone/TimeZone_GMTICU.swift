@@ -17,13 +17,13 @@ import FoundationEssentials
 internal import _FoundationICU
 
 #if !FOUNDATION_FRAMEWORK
-@_dynamicReplacement(for: _timeZoneGMTClass())
+@_dynamicReplacement(for:_timeZoneGMTClass())
 private func _timeZoneGMTClass_localized() -> _TimeZoneProtocol.Type {
     return _TimeZoneGMTICU.self
 }
 #endif
 
-internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
+internal final class _TimeZoneGMTICU: _TimeZoneProtocol, @unchecked Sendable {
     let offset: Int
     let name: String
 
@@ -36,7 +36,7 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
         self.name = offsetName
         self.offset = offset
     }
-    
+
     init?(secondsFromGMT: Int) {
         guard let name = TimeZone.nameForSecondsFromGMT(secondsFromGMT) else {
             return nil
@@ -49,27 +49,27 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
     var identifier: String {
         self.name
     }
-    
+
     func secondsFromGMT(for date: Date) -> Int {
         offset
     }
-    
+
     func abbreviation(for date: Date) -> String? {
         _TimeZoneGMT.abbreviation(for: offset)
     }
-    
+
     func isDaylightSavingTime(for date: Date) -> Bool {
         false
     }
-    
+
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
         0.0
     }
-    
+
     func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         nil
     }
-    
+
     func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         (offset, 0)
     }
@@ -77,14 +77,15 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
     var debugDescription: String {
         "GMT (\(offset))"
     }
-    
+
     package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         // The GMT localized name is always the 'generic' one, as there is no variation for daylight vs standard time. Short or not depends on the style.
-        let isShort = switch style {
-        case .shortStandard, .shortDaylightSaving, .shortGeneric: true
-        default: false
-        }
-        
+        let isShort =
+            switch style {
+            case .shortStandard, .shortDaylightSaving, .shortGeneric: true
+            default: false
+            }
+
         // TODO: Consider implementing this ourselves
         let timeZoneIdentifier = Array(name.utf16)
         let result: String? = timeZoneIdentifier.withUnsafeBufferPointer {
@@ -99,7 +100,7 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
             }
 
             let result: String? = _withResizingUCharBuffer { buffer, size, status in
-                uatimezone_getDisplayName(tz, isShort ? UTIMEZONE_SHORT: UTIMEZONE_LONG, locale?.identifier ?? "", buffer, size, &status)
+                uatimezone_getDisplayName(tz, isShort ? UTIMEZONE_SHORT : UTIMEZONE_LONG, locale?.identifier ?? "", buffer, size, &status)
             }
             return result
         }

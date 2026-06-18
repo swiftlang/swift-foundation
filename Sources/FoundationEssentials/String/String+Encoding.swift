@@ -21,7 +21,7 @@ public var kCFStringEncodingASCII: CFStringEncoding { return 0x0600 }
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
 
-    public struct Encoding : RawRepresentable, Sendable, Equatable {
+    public struct Encoding: RawRepresentable, Sendable, Equatable {
         public var rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
 
@@ -50,14 +50,14 @@ extension String {
         public static let utf32LittleEndian = Encoding(rawValue: 0x9c000100)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     public typealias EncodingConversionOptions = NSString.EncodingConversionOptions
     public typealias EnumerationOptions = NSString.EnumerationOptions
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension String.Encoding : Hashable {
+extension String.Encoding: Hashable {
     public var hashValue: Int {
         // Note: This is effectively the same hashValue definition that
         // RawRepresentable provides on its own. We only need to keep this to
@@ -79,7 +79,7 @@ extension String.Encoding : Hashable {
         hasher.combine(rawValue)
     }
 
-    public static func ==(lhs: String.Encoding, rhs: String.Encoding) -> Bool {
+    public static func == (lhs: String.Encoding, rhs: String.Encoding) -> Bool {
         // Note: This is effectively the same == definition that
         // RawRepresentable provides on its own. We only need to keep this to
         // ensure ABI compatibility with 5.0.
@@ -88,38 +88,38 @@ extension String.Encoding : Hashable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension String.Encoding : CustomStringConvertible {
+extension String.Encoding: CustomStringConvertible {
     public var description: String {
-#if FOUNDATION_FRAMEWORK && !NO_LOCALIZATION
+        #if FOUNDATION_FRAMEWORK && !NO_LOCALIZATION
         return String.localizedName(of: self)
-#else
+        #else
         // swift-corelibs-foundation never returned an actually localized name here, but there does exist some test code which depends on these values.
         switch self {
-            case .ascii: return "Western (ASCII)"
-            case .nextstep: return "Western (NextStep)"
-            case .japaneseEUC: return "Japanese (EUC)"
-            case .utf8: return "Unicode (UTF-8)"
-            case .isoLatin1: return "Western (ISO Latin 1)"
-            case .symbol: return "Symbol (Mac OS)"
-            case .nonLossyASCII: return "Non-lossy ASCII"
-            case .shiftJIS: return "Japanese (Windows, DOS)"
-            case .isoLatin2: return "Central European (ISO Latin 2)"
-            case .unicode: return "Unicode (UTF-16)"
-            case .windowsCP1251: return "Cyrillic (Windows)"
-            case .windowsCP1252: return "Western (Windows Latin 1)"
-            case .windowsCP1253: return "Greek (Windows)"
-            case .windowsCP1254: return "Turkish (Windows Latin 5)"
-            case .windowsCP1250: return "Central European (Windows Latin 2)"
-            case .iso2022JP: return "Japanese (ISO 2022-JP)"
-            case .macOSRoman: return "Western (Mac OS Roman)"
-            case .utf16: return "Unicode (UTF-16)"
-            case .utf16BigEndian: return "Unicode (UTF-16BE)"
-            case .utf16LittleEndian: return "Unicode (UTF-16LE)"
-            case .utf32: return "Unicode (UTF-32)"
-            case .utf32BigEndian: return "Unicode (UTF-32BE)"
-            case .utf32LittleEndian: return "Unicode (UTF-32LE)"
-            default: return "\(self.rawValue)"
+        case .ascii: return "Western (ASCII)"
+        case .nextstep: return "Western (NextStep)"
+        case .japaneseEUC: return "Japanese (EUC)"
+        case .utf8: return "Unicode (UTF-8)"
+        case .isoLatin1: return "Western (ISO Latin 1)"
+        case .symbol: return "Symbol (Mac OS)"
+        case .nonLossyASCII: return "Non-lossy ASCII"
+        case .shiftJIS: return "Japanese (Windows, DOS)"
+        case .isoLatin2: return "Central European (ISO Latin 2)"
+        case .unicode: return "Unicode (UTF-16)"
+        case .windowsCP1251: return "Cyrillic (Windows)"
+        case .windowsCP1252: return "Western (Windows Latin 1)"
+        case .windowsCP1253: return "Greek (Windows)"
+        case .windowsCP1254: return "Turkish (Windows Latin 5)"
+        case .windowsCP1250: return "Central European (Windows Latin 2)"
+        case .iso2022JP: return "Japanese (ISO 2022-JP)"
+        case .macOSRoman: return "Western (Mac OS Roman)"
+        case .utf16: return "Unicode (UTF-16)"
+        case .utf16BigEndian: return "Unicode (UTF-16BE)"
+        case .utf16LittleEndian: return "Unicode (UTF-16LE)"
+        case .utf32: return "Unicode (UTF-32)"
+        case .utf32BigEndian: return "Unicode (UTF-32BE)"
+        case .utf32LittleEndian: return "Unicode (UTF-32LE)"
+        default: return "\(self.rawValue)"
         }
-#endif
+        #endif
     }
 }

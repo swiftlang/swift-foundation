@@ -44,12 +44,12 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         guard !string.isEmpty, let inner = NSURL(string: string) else { return nil }
         _url = inner
     }
-    
+
     init?(string: String, relativeTo url: URL?) {
         guard !string.isEmpty, let inner = NSURL(string: string, relativeTo: url) else { return nil }
         _url = inner
     }
-    
+
     init?(string: String, encodingInvalidCharacters: Bool) {
         guard !string.isEmpty, let inner = NSURL(string: string, encodingInvalidCharacters: encodingInvalidCharacters) else { return nil }
         _url = inner
@@ -63,19 +63,19 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     init(fileURLWithPath path: String, isDirectory: Bool, relativeTo base: URL?) {
         _url = NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: isDirectory, relativeTo: base)
     }
-    
+
     init(fileURLWithPath path: String, relativeTo base: URL?) {
         _url = NSURL(fileURLWithPath: path.isEmpty ? "." : path, relativeTo: base)
     }
-    
+
     init(fileURLWithPath path: String, isDirectory: Bool) {
         _url = NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: isDirectory)
     }
-    
+
     init(fileURLWithPath path: String) {
         _url = NSURL(fileURLWithPath: path.isEmpty ? "." : path)
     }
-    
+
     init(filePath path: String, directoryHint: URL.DirectoryHint, relativeTo base: URL?) {
         let filePath = path.isEmpty ? "./" : path
         switch directoryHint {
@@ -90,20 +90,21 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
             _url = NSURL(fileURLWithPath: filePath, isDirectory: isDirectory, relativeTo: base)
         }
     }
-    
+
     init?(dataRepresentation: Data, relativeTo base: URL?, isAbsolute: Bool) {
         guard !dataRepresentation.isEmpty else { return nil }
-        _url = if isAbsolute {
-            NSURL(absoluteURLWithDataRepresentation: dataRepresentation, relativeTo: base)
-        } else {
-            NSURL(dataRepresentation: dataRepresentation, relativeTo: base)
-        }
+        _url =
+            if isAbsolute {
+                NSURL(absoluteURLWithDataRepresentation: dataRepresentation, relativeTo: base)
+            } else {
+                NSURL(dataRepresentation: dataRepresentation, relativeTo: base)
+            }
     }
-    
+
     init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo base: URL?) {
         _url = NSURL(fileURLWithFileSystemRepresentation: path, isDirectory: isDirectory, relativeTo: base)
     }
-    
+
     var dataRepresentation: Data {
         return _url.dataRepresentation
     }
@@ -149,7 +150,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         }
         return nil
     }
-    
+
     var password: String? {
         return _url.password
     }
@@ -161,7 +162,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         }
         return nil
     }
-    
+
     var host: String? {
         return _url.host
     }
@@ -173,7 +174,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         }
         return nil
     }
-    
+
     var port: Int? {
         return _url.port?.intValue
     }
@@ -181,7 +182,8 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     var relativePath: String {
         let path = _url.relativePath ?? ""
         if __NSURLSupportDeprecatedParameterComponent(),
-           let parameterString = _url._parameterString {
+            let parameterString = _url._parameterString
+        {
             return path + ";" + parameterString
         }
         return path
@@ -202,7 +204,8 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     var path: String {
         let path = _url.path ?? ""
         if __NSURLSupportDeprecatedParameterComponent(),
-           let parameterString = _url._parameterString {
+            let parameterString = _url._parameterString
+        {
             return path + ";" + parameterString
         }
         return path
@@ -214,7 +217,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         }
         return relativePath(percentEncoded: percentEncoded)
     }
-    
+
     var query: String? {
         return _url.query
     }
@@ -226,7 +229,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         }
         return nil
     }
-    
+
     var fragment: String? {
         return _url.fragment
     }
@@ -247,7 +250,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     func withUnsafeFileSystemRepresentation<ResultType>(_ block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType {
         return try block(_url.fileSystemRepresentation)
     }
-    
+
     var hasDirectoryPath: Bool {
         return _url.hasDirectoryPath
     }
@@ -275,7 +278,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         c.path = isDirectory ? path + "/" : path
         return c.url
     }
-    
+
     func appendingPathComponent(_ pathComponent: String) -> URL? {
         if let result = _url.appendingPathComponent(pathComponent) {
             return result
@@ -286,23 +289,23 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         c.path = (c.path as NSString).appendingPathComponent(pathComponent)
         return c.url
     }
-    
+
     func deletingLastPathComponent() -> URL? {
         guard !path.isEmpty else { return nil }
         return _url.deletingLastPathComponent
     }
-    
+
     func appendingPathExtension(_ pathExtension: String) -> URL? {
         guard !path.isEmpty else { return nil }
         return _url.appendingPathExtension(pathExtension)
     }
-    
+
     func deletingPathExtension() -> URL? {
         guard !path.isEmpty else { return nil }
         return _url.deletingPathExtension
     }
-    
-    func appending<S>(path: S, directoryHint: URL.DirectoryHint) -> URL? where S : StringProtocol {
+
+    func appending<S>(path: S, directoryHint: URL.DirectoryHint) -> URL? where S: StringProtocol {
         let path = String(path)
         let hasTrailingSlash = (path.utf8.last == ._slash)
         let isDirectory: Bool?
@@ -323,12 +326,13 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
             isDirectory = hasTrailingSlash
         }
 
-        let result = if let isDirectory {
-            _url.appendingPathComponent(path, isDirectory: isDirectory)
-        } else {
-            // This method consults the file system
-            _url.appendingPathComponent(path)
-        }
+        let result =
+            if let isDirectory {
+                _url.appendingPathComponent(path, isDirectory: isDirectory)
+            } else {
+                // This method consults the file system
+                _url.appendingPathComponent(path)
+            }
 
         if let result {
             return result
@@ -344,8 +348,8 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         c.path = newPath
         return c.url
     }
-    
-    func appending<S>(component: S, directoryHint: URL.DirectoryHint) -> URL? where S : StringProtocol {
+
+    func appending<S>(component: S, directoryHint: URL.DirectoryHint) -> URL? where S: StringProtocol {
         let pathComponent = String(component)
         let hasTrailingSlash = (pathComponent.utf8.last == ._slash)
         let isDirectory: Bool?
@@ -376,7 +380,8 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         let url = self.appending(component: component, directoryHint: .notDirectory) ?? URL(self)
         // See if it refers to a directory
         if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey]),
-           let isDirectoryValue = resourceValues.isDirectory {
+            let isDirectoryValue = resourceValues.isDirectory
+        {
             return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, isDirectoryValue).takeRetainedValue() as URL
         }
         #endif
@@ -384,12 +389,12 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         // Fall back to inferring from the trailing slash
         return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, hasTrailingSlash).takeRetainedValue() as URL
     }
-    
+
     var standardized: URL? {
         return _url.standardized
     }
 
-#if !NO_FILESYSTEM
+    #if !NO_FILESYSTEM
     var standardizedFileURL: URL? {
         return _url.standardizingPath
     }
@@ -397,7 +402,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     func resolvingSymlinksInPath() -> URL? {
         return _url.resolvingSymlinksInPath
     }
-#endif
+    #endif
 
     override var description: String {
         return _url.description

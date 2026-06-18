@@ -14,27 +14,27 @@ import Testing
 
 @Suite("Predicate (Internationalization)")
 private struct PredicateInternationalizationTests {
-    
+
     struct Object {
         var string: String = ""
     }
-    
+
     #if FOUNDATION_FRAMEWORK
-    
+
     @Test(arguments: [
         ("ABC", "ABC", ComparisonResult.orderedSame),
         ("ABC", "abc", .orderedDescending),
         ("abc", "ABC", .orderedAscending),
-        ("ABC", "ÁḄÇ", .orderedAscending)
+        ("ABC", "ÁḄÇ", .orderedAscending),
     ])
     func testLocalizedCompare(input: (String, String, ComparisonResult)) throws {
         let predicate = #Predicate<String, String, ComparisonResult> {
             $0.localizedCompare($1) == $2
         }
-        
+
         #expect(try predicate.evaluate(input.0, input.1, input.2), "Comparison failed for inputs '\(input.0)', '\(input.1)' - expected \(input.2.rawValue)")
     }
-    
+
     @Test(arguments: ["ABCDEF", "abcdef", "ÁḄÇDEF"])
     func testLocalizedStandardContains(value: String) throws {
         let predicate = #Predicate<Object> {
@@ -42,7 +42,7 @@ private struct PredicateInternationalizationTests {
         }
         #expect(try predicate.evaluate(Object(string: value)))
     }
-    
+
     #endif
-    
+
 }

@@ -18,7 +18,7 @@ internal import _FoundationICU
 internal import Synchronization
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class ICULegacyNumberFormatter : @unchecked Sendable {
+internal final class ICULegacyNumberFormatter: @unchecked Sendable {
 
     // `Sendable` notes: `UNumberFormat` backed by ICU's `DecimalFormat` is safe to use from multiple threads after initialization and configuration. However, `RuleBasedNumberFormat`is not thread-safe. See https://github.com/unicode-org/icu/pull/3928
     let uformatter: UnsafeMutablePointer<UNumberFormat?>
@@ -142,7 +142,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
 
     // MARK: - Cache utilities
 
-    enum NumberFormatType : Hashable, Codable {
+    enum NumberFormatType: Hashable, Codable {
         case number(NumberFormatStyleConfiguration.Collection)
         case percent(NumberFormatStyleConfiguration.Collection)
         case currency(CurrencyFormatStyleConfiguration.Collection, currencyCode: String)
@@ -153,7 +153,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
         private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
     }
 
-    private struct Signature : Hashable {
+    private struct Signature: Hashable {
         let type: NumberFormatType
         let localeIdentifier: String
         let lenient: Bool
@@ -221,12 +221,12 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
                         break
                     }
                 }
-                
+
             case .descriptive(let config):
                 if let capitalizationContext = config.capitalizationContext {
                     setCapitalizationContext(capitalizationContext, formatter: formatter)
                 }
-                
+
                 switch config.presentation.option {
                 case .spellOut:
                     break

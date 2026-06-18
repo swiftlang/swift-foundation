@@ -132,10 +132,12 @@ extension Duration {
             let remainder = absSelf - (absDiv * count)
             let remainderCount = Int64(remainder / absDiv)
 
-            absCount = .init(secondsComponent: 0, attosecondsComponent: 1) * count
-                     + .init(secondsComponent: 0, attosecondsComponent: 1) * remainderCount
-            absValue = absDiv * count
-                     + absDiv * remainderCount
+            absCount =
+                .init(secondsComponent: 0, attosecondsComponent: 1) * count
+                + .init(secondsComponent: 0, attosecondsComponent: 1) * remainderCount
+            absValue =
+                absDiv * count
+                + absDiv * remainderCount
         }
 
         if (self < Self.zero) != (divisor < Self.zero) {

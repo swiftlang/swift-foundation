@@ -18,17 +18,17 @@ import FoundationEssentials
 #endif
 
 extension ICU {
-    final class CaseMap : @unchecked Sendable {
+    final class CaseMap: @unchecked Sendable {
         let casemap: OpaquePointer?
-        
+
         let lock: Mutex<Void>
-        
+
         // Empty locale ("") means root locale
         init(localeID: String) throws {
             var status = U_ZERO_ERROR
             casemap = ucasemap_open(localeID, UInt32(), &status)
             try status.checkSuccess()
-            
+
             lock = Mutex(())
         }
 
@@ -36,24 +36,24 @@ extension ICU {
             ucasemap_close(casemap)
         }
 
-        private static let _cache: Mutex<[String : CaseMap]> = Mutex([:])
+        private static let _cache: Mutex<[String: CaseMap]> = Mutex([:])
 
         // Create and cache a new case mapping object for the specified locale
         internal static func caseMappingForLocale(_ localeID: String?) -> CaseMap? {
             let localeID = localeID ?? ""
-            
+
             if let cached = _cache.withLock({ cache in cache[localeID] }) {
                 return cached
             }
-            
+
             guard let new = try? CaseMap(localeID: localeID) else {
                 return nil
             }
-            
+
             _cache.withLock { cache in
                 cache[localeID] = new
             }
-            
+
             return new
         }
 
@@ -78,7 +78,7 @@ extension ICU {
                 }
             }
         }
-        
+
         func titlecase(_ s: Substring) -> String? {
             lock.withLock { _ in
                 var s = s

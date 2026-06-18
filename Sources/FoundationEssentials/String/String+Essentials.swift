@@ -13,11 +13,11 @@
 // MARK: - Exported Types
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     public typealias CompareOptions = NSString.CompareOptions
-#else
+    #else
     /// These options apply to the various search/find and comparison methods (except where noted).
-    public struct CompareOptions : OptionSet, Sendable {
+    public struct CompareOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -30,11 +30,11 @@ extension String {
         /// Search from end of source string
         public static let backwards = CompareOptions(rawValue: 4)
         /// Search is limited to start (or end, if `.backwards`) of source string
-        public static let anchored  = CompareOptions(rawValue: 8)
+        public static let anchored = CompareOptions(rawValue: 8)
         /// Numbers within strings are compared using numeric value, that is,
         /// Foo2.txt < Foo7.txt < Foo25.txt;
         /// only applies to compare methods, not find
-        public static let numeric   = CompareOptions(rawValue: 64)
+        public static let numeric = CompareOptions(rawValue: 64)
         /// If specified, ignores diacritics (o-umlaut == o)
         public static let diacriticInsensitive = CompareOptions(rawValue: 128)
         /// If specified, ignores width differences ('a' == UFF41)
@@ -47,7 +47,7 @@ extension String {
         /// if set, no other options can apply except `.caseInsensitive` and `.anchored`
         public static let regularExpression = CompareOptions(rawValue: 1024)
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)

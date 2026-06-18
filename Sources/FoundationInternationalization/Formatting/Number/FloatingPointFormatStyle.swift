@@ -244,7 +244,7 @@ public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Has
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointFormatStyle {
     /// A format style that converts between floating-point percentage values and their textual representations.
-    public struct Percent : Codable, Hashable, Sendable {
+    public struct Percent: Codable, Hashable, Sendable {
         /// The locale of the format style.
         ///
         /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
@@ -354,7 +354,7 @@ extension FloatingPointFormatStyle {
 
     /// A format style that converts between floating-point currency values and their textual representations.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct Currency : Codable, Hashable, Sendable {
+    public struct Currency: Codable, Hashable, Sendable {
         /// The locale of the format style.
         ///
         /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
@@ -484,7 +484,7 @@ extension FloatingPointFormatStyle {
 // MARK: - FormatStyle conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointFormatStyle : FormatStyle {
+extension FloatingPointFormatStyle: FormatStyle {
     /// Formats a floating-point value, using this style.
     ///
     /// Use this method when you want to create a single style instance and use it to format multiple
@@ -525,7 +525,7 @@ extension FloatingPointFormatStyle : FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointFormatStyle.Percent : FormatStyle {
+extension FloatingPointFormatStyle.Percent: FormatStyle {
     /// Formats a floating-point value as a percentage, using this style.
     ///
     /// - Parameter value: The floating-point value to format.
@@ -549,7 +549,7 @@ extension FloatingPointFormatStyle.Percent : FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointFormatStyle.Currency : FormatStyle {
+extension FloatingPointFormatStyle.Currency: FormatStyle {
     /// Formats a floating-point value as a currency string, using this style.
     ///
     /// - Parameter value: The floating-point value to format.
@@ -706,12 +706,12 @@ extension FloatingPointFormatStyle {
     /// ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use these
     /// attributes to determine which runs of the attributed string represent different parts of
     /// the formatted value.
-    public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
-        enum Style : Codable, Hashable, Sendable {
+    public struct Attributed: Codable, Hashable, FormatStyle, Sendable {
+        enum Style: Codable, Hashable, Sendable {
             case floatingPoint(FloatingPointFormatStyle)
             case currency(FloatingPointFormatStyle.Currency)
             case percent(FloatingPointFormatStyle.Percent)
-            
+
             private typealias FloatingPointCodingKeys = DefaultAssociatedValueCodingKeys1
             private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
             private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
@@ -796,7 +796,7 @@ extension FloatingPointFormatStyle {
 // MARK: Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension FloatingPointFormatStyle : CustomConsumingRegexComponent {
+extension FloatingPointFormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
 
     /// Matches the input string within the specified bounds, beginning at the given index.
@@ -815,7 +815,7 @@ extension FloatingPointFormatStyle : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension FloatingPointFormatStyle.Percent : CustomConsumingRegexComponent {
+extension FloatingPointFormatStyle.Percent: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
 
     /// Matches the input string within the specified bounds, beginning at the given index.
@@ -834,7 +834,7 @@ extension FloatingPointFormatStyle.Percent : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension FloatingPointFormatStyle.Currency : CustomConsumingRegexComponent {
+extension FloatingPointFormatStyle.Currency: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
 
     /// Matches the input string within the specified bounds, beginning at the given index.

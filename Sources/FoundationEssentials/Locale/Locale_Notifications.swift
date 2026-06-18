@@ -15,15 +15,15 @@ internal import Synchronization
 /// Keeps a global generation count for updated Locale information, including locale, time zone, and calendar preferences.
 /// If any of those preferences change, then `count` will update to a new value. Compare that to a cached value to see if your cached `Locale.current`, `TimeZone.current`, or `Calendar.current` to see if it is out of date.
 /// If any cached values need to be recalculated process-wide, call `reset`.
-struct LocaleNotifications : Sendable, ~Copyable {
+struct LocaleNotifications: Sendable, ~Copyable {
     static let cache = LocaleNotifications()
 
     let _count = Atomic<Int>(1)
-    
+
     func count() -> Int {
         _count.load(ordering: .relaxed)
     }
-    
+
     /// Make a new generation current, but no associated Locale.
     func reset() {
         LocaleCache.cache.reset()
@@ -39,4 +39,3 @@ func _localeNotificationCount() -> Int {
     LocaleNotifications.cache.count()
 }
 #endif
-

@@ -28,10 +28,10 @@ extension Duration {
     /// For example, one hour and ten minutes is displayed as “1:10:00” in
     /// the U.S. English locale, or “1.10.00” in the Finnish locale.
     @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-    public struct TimeFormatStyle : FormatStyle, Sendable {
+    public struct TimeFormatStyle: FormatStyle, Sendable {
 
         /// The units to display a Duration with and configurations for the units.
-        public struct Pattern : Hashable, Codable, Sendable {
+        public struct Pattern: Hashable, Codable, Sendable {
             enum Fields: Hashable, Codable {
                 case hourMinute(roundSeconds: FloatingPointRoundingRule)
                 case hourMinuteSecond(fractionalSecondsLength: Int, roundFractionalSeconds: FloatingPointRoundingRule)
@@ -44,8 +44,8 @@ extension Duration {
             var roundingRule: FloatingPointRoundingRule {
                 switch fields {
                 case .hourMinute(roundSeconds: let rule),
-                     .hourMinuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule),
-                     .minuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule):
+                    .hourMinuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule),
+                    .minuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule):
                     return rule
                 }
             }
@@ -177,7 +177,7 @@ extension Duration.TimeFormatStyle {
     /// ```
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     @dynamicMemberLookup
-    public struct Attributed : FormatStyle, Sendable {
+    public struct Attributed: FormatStyle, Sendable {
 
         typealias Pattern = Duration.TimeFormatStyle.Pattern
 
@@ -241,15 +241,15 @@ extension Duration.TimeFormatStyle {
             let lastUnitFractionalLen: Int
             switch pattern.fields {
             case .hourMinute(let roundSeconds):
-                units = [ .hours, .minutes ]
+                units = [.hours, .minutes]
                 rounding = roundSeconds
                 lastUnitFractionalLen = 0
             case .hourMinuteSecond(let fractionalSecondsLength, let roundFractionalSeconds):
-                units = [ .hours, .minutes, .seconds ]
+                units = [.hours, .minutes, .seconds]
                 rounding = roundFractionalSeconds
                 lastUnitFractionalLen = fractionalSecondsLength
             case .minuteSecond(let fractionalSecondsLength, let roundFractionalSeconds):
-                units = [ .minutes, .seconds ]
+                units = [.minutes, .seconds]
                 rounding = roundFractionalSeconds
                 lastUnitFractionalLen = fractionalSecondsLength
             }
@@ -258,7 +258,7 @@ extension Duration.TimeFormatStyle {
             assert(units.count == values.count)
             let unitValues = Dictionary(uniqueKeysWithValues: zip(units, values))
 
-            let patternComponents = Self.componentsFromPatternString(patternString, patternSet: [ hourSymbol, minuteSymbol, secondSymbol ])
+            let patternComponents = Self.componentsFromPatternString(patternString, patternSet: [hourSymbol, minuteSymbol, secondSymbol])
 
             return formatWithPatternComponents(patternComponents, hour: unitValues[.hours] ?? 0, minute: unitValues[.minutes] ?? 0, second: unitValues[.seconds] ?? 0)
         }
@@ -394,10 +394,13 @@ extension Duration.TimeFormatStyle {
                             value = -0.1
                         }
 
-                        substring = numberFormatStyle
-                            .sign(strategy: showNegativeSign
-                                                ? .always(includingZero: true)
-                                                : .never)
+                        substring =
+                            numberFormatStyle
+                            .sign(
+                                strategy: showNegativeSign
+                                    ? .always(includingZero: true)
+                                    : .never
+                            )
                             .format(value)
                     } else {
                         substring = String(component.symbols)
@@ -478,7 +481,7 @@ extension Duration.TimeFormatStyle.Attributed {
 // MARK: DiscreteFormatStyle Conformance
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
+extension Duration.TimeFormatStyle.Attributed: DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         Duration.TimeFormatStyle(pattern: pattern, locale: locale).discreteInput(before: input)
     }
@@ -489,7 +492,7 @@ extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Duration.TimeFormatStyle : DiscreteFormatStyle {
+extension Duration.TimeFormatStyle: DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         let (bound, isIncluded) = Duration.bound(for: input, in: interval(for: input), countingDown: true, roundingRule: self.pattern.roundingRule)
 

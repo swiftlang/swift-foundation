@@ -28,21 +28,26 @@ fileprivate func _blackHoleExplicitInput(_ predicate: Predicate<Int>) {}
 @Suite("#Predicate Macro Usage")
 private struct PredicateMacroUsageTests {
     @Test func usage() {
-        _blackHole(#Predicate<Bool> {
-            return $0
-        })
-        _blackHole(#Predicate<Bool> { input in
-            return true
-        })
-        _blackHole(#Predicate<Bool> { input in
-            return input
-        })
-        _blackHole(#Predicate<Bool> { input in
-            return input && input
-        })
-        _blackHoleExplicitInput(#Predicate { input in
-            return true
-        })
+        _blackHole(
+            #Predicate<Bool> {
+                return $0
+            })
+        _blackHole(
+            #Predicate<Bool> { input in
+                return true
+            })
+        _blackHole(
+            #Predicate<Bool> { input in
+                return input
+            })
+        _blackHole(
+            #Predicate<Bool> { input in
+                return input && input
+            })
+        _blackHoleExplicitInput(
+            #Predicate { input in
+                return true
+            })
     }
 }
 

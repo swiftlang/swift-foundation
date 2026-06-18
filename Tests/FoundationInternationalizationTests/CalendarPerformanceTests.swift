@@ -18,7 +18,7 @@ final class TestCalendarPerformance: XCTestCase {
 
     var metrics: [XCTMetric] {
         // XCTMemoryMetric is randomly reporting 0kb for memory usage.
-        [/*XCTMemoryMetric(),*/ XCTCPUMetric()]
+        [ /*XCTMemoryMetric(),*/XCTCPUMetric()]
     }
 
     var options: XCTMeasureOptions {

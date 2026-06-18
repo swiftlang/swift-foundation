@@ -13,7 +13,7 @@
 enum Endianness {
     case little
     case big
-    
+
     init?(_ ns: String.Encoding) {
         switch ns {
         case .utf16, .utf32: return nil
@@ -22,21 +22,21 @@ enum Endianness {
         default: fatalError("Unexpected encoding")
         }
     }
-    
+
     static var host: Endianness {
-#if _endian(little)
+        #if _endian(little)
         return .little
-#else
+        #else
         return .big
-#endif
+        #endif
     }
 }
 
-/// Converts a sequence of UInt8 containing big-endian or little-endian UInt16 elements into host order. 
+/// Converts a sequence of UInt8 containing big-endian or little-endian UInt16 elements into host order.
 /// If the bytes contain a BOM and the endianness on initialization is `nil` then it will honor the BOM to swap the bytes if appropriate.
-struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
+struct UTF16EndianAdaptor<S: Sequence>: Sequence where S.Element == UInt8 {
     typealias Element = UInt16
-    
+
     let underlying: S
     let endianness: Endianness?
 
@@ -44,21 +44,21 @@ struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
         underlying = sequence
         self.endianness = endianness
     }
-    
+
     func makeIterator() -> Iterator {
         Iterator(underlying, endianness: endianness)
     }
-    
-    struct Iterator : IteratorProtocol {
+
+    struct Iterator: IteratorProtocol {
         var i: S.Iterator
         var endianness: Endianness?
         var bomCheck = false
-        
+
         init(_ sequence: S, endianness: Endianness?) {
             i = sequence.makeIterator()
             self.endianness = endianness
         }
-        
+
         func swap(_ b1: UInt8, _ b2: UInt8) -> UInt16 {
             let uint16 = UInt16(b1) | UInt16(b2) << 8
             switch endianness {
@@ -69,7 +69,7 @@ struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
                 return UInt16(bigEndian: uint16)
             }
         }
-        
+
         mutating func next() -> UInt16? {
             // First check for the BOM.
             // If the encoding was unspecified (`.utf16`), then we detect the BOM here, specify the encoding, and remove the BOM.
@@ -78,18 +78,18 @@ struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
             if !bomCheck {
                 // Only do this once
                 bomCheck = true
-                                
+
                 guard let bom1 = i.next() else { return nil }
-                
+
                 if bom1 == 0xFF || bom1 == 0xFE {
                     // A BOM is probably present.
-                    
+
                     // Check for BOM byte 2
                     guard let bom2 = i.next() else {
                         // Only 1 byte - return nil
                         return nil
                     }
-                    
+
                     if bom1 == 0xFF && bom2 == 0xFE {
                         if endianness == nil {
                             // 0xFF FE is little endian
@@ -119,19 +119,19 @@ struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
                         return swap(bom1, bom2)
                     }
                 } else {
-                    // Not a BOM. 
+                    // Not a BOM.
                     // Get 2nd byte and return it
                     guard let b2 = i.next() else { return nil }
                     return swap(bom1, b2)
                 }
             }
-            
+
             // Check for end
             guard let b1 = i.next() else { return nil }
-            
+
             // Check for 2nd byte
             guard let b2 = i.next() else { return nil }
-            
+
             return swap(b1, b2)
         }
     }
@@ -139,9 +139,9 @@ struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
 
 /// Converts a sequence of UInt8 containing big-endian or little-endian UInt32 elements into host order.
 /// If the bytes contain a BOM and the endianness on initialization is `nil` then it will honor the BOM to swap the bytes if appropriate.
-struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
+struct UTF32EndianAdaptor<S: Sequence>: Sequence where S.Element == UInt8 {
     typealias Element = UInt32
-    
+
     let underlying: S
     let endianness: Endianness?
 
@@ -149,21 +149,21 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
         underlying = sequence
         self.endianness = endianness
     }
-    
+
     func makeIterator() -> Iterator {
         Iterator(underlying, endianness: endianness)
     }
-    
-    struct Iterator : IteratorProtocol {
+
+    struct Iterator: IteratorProtocol {
         var i: S.Iterator
         var endianness: Endianness?
         var bomCheck = false
-        
+
         init(_ sequence: S, endianness: Endianness?) {
             i = sequence.makeIterator()
             self.endianness = endianness
         }
-        
+
         func swap(_ b1: UInt8, _ b2: UInt8, _ b3: UInt8, _ b4: UInt8) -> UInt32 {
             // We use big endianness if none has been specified and no BOM was detected.
             let uint32 = UInt32(b1) | UInt32(b2) << 8 | UInt32(b3) << 16 | UInt32(b4) << 24
@@ -174,7 +174,7 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
                 return UInt32(bigEndian: uint32)
             }
         }
-        
+
         mutating func next() -> UInt32? {
             // First check for the BOM.
             // If the encoding was unspecified (`.utf32`), then we detect the BOM here, specify the encoding, and remove the BOM.
@@ -183,12 +183,12 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
             if !bomCheck {
                 // Only do this once
                 bomCheck = true
-                                
+
                 guard let bom1 = i.next() else { return nil }
-                
+
                 if bom1 == 0xFF || bom1 == 0x00 {
                     // A BOM is probably present.
-                    
+
                     // Check for remaining BOM bytes
                     guard let bom2 = i.next() else { return nil }
                     guard let bom3 = i.next() else { return nil }
@@ -230,10 +230,10 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
                     return swap(bom1, b2, b3, b4)
                 }
             }
-            
+
             // Check for end
             guard let b1 = i.next() else { return nil }
-            
+
             // Check for remaining bytes
             guard let b2 = i.next() else { return nil }
             guard let b3 = i.next() else { return nil }
@@ -244,10 +244,10 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
     }
 }
 
-struct UnicodeScalarToDataAdaptor : Sequence {
+struct UnicodeScalarToDataAdaptor: Sequence {
     typealias Element = UInt8
     typealias S = String.UnicodeScalarView
-    
+
     let underlying: S
     let endianness: Endianness
 
@@ -255,28 +255,28 @@ struct UnicodeScalarToDataAdaptor : Sequence {
         underlying = sequence
         self.endianness = endianness
     }
-    
+
     func makeIterator() -> Iterator {
         Iterator(i: underlying.makeIterator(), endianness: endianness)
     }
-    
-    struct Iterator : IteratorProtocol {
+
+    struct Iterator: IteratorProtocol {
         var u32: UInt32
         var nextByte = 0
         var i: S.Iterator
         var endianness: Endianness
         var done: Bool
-        
+
         init(i: S.Iterator, endianness: Endianness) {
             u32 = 0
             done = false
             self.i = i
             self.endianness = endianness
         }
-        
+
         mutating func next() -> Element? {
             guard !done else { return nil }
-            
+
             if nextByte > 0 {
                 // We have a value already, return next byte
                 let result = withUnsafeBytes(of: &u32) {
@@ -293,14 +293,15 @@ struct UnicodeScalarToDataAdaptor : Sequence {
                     done = true
                     return nil
                 }
-                
-                var value = switch endianness {
-                case .little:
-                    u32.value.littleEndian
-                case .big:
-                    u32.value.bigEndian
-                }
-                
+
+                var value =
+                    switch endianness {
+                    case .little:
+                        u32.value.littleEndian
+                    case .big:
+                        u32.value.bigEndian
+                    }
+
                 self.u32 = value
                 nextByte = 1
                 return withUnsafeBytes(of: &value) {

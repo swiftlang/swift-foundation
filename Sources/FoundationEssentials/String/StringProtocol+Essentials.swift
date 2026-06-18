@@ -30,7 +30,7 @@ extension UInt8 {
             }
         }
     }
-    
+
     var macRomanNonASCIIAsUTF8: some Collection<UInt8> {
         assert(!Unicode.ASCII.isASCII(self))
         return Self.withMacRomanMap { map in
@@ -42,19 +42,19 @@ extension UInt8 {
             }
         }
     }
-    
+
     init?(macRomanFor scalar: UnicodeScalar) {
         guard !scalar.isASCII else {
             self.init(scalar.value)
             return
         }
-        
+
         let utf8 = Array(scalar.utf8)
         guard utf8.count <= 3 else {
             return nil
         }
         let tuple = (utf8[0], utf8[1], utf8.count == 2 ? 0 : utf8[2])
-        
+
         let value: UInt8? = Self.withMacRomanMap { map in
             if let found = map.firstIndex(where: { $0 == tuple }) {
                 return UInt8(found) + 128
@@ -62,7 +62,7 @@ extension UInt8 {
                 return nil
             }
         }
-        
+
         guard let value else { return nil }
         self = value
     }
@@ -140,38 +140,38 @@ extension String {
         case .utf16BigEndian, .utf16LittleEndian, .utf16:
             let bom: UInt16?
             let swap: Bool
-            
+
             if encoding == .utf16 {
                 swap = false
                 bom = 0xFEFF
             } else if encoding == .utf16BigEndian {
-#if _endian(little)
+                #if _endian(little)
                 swap = true
-#else
+                #else
                 swap = false
-#endif
+                #endif
                 bom = nil
             } else if encoding == .utf16LittleEndian {
-#if _endian(little)
+                #if _endian(little)
                 swap = false
-#else
+                #else
                 swap = true
-#endif
+                #endif
                 bom = nil
             } else {
                 fatalError("Unreachable")
             }
-            
+
             // Grab this value once, as it requires doing a calculation over String's UTF8 storage
             let inputCount = self.utf16.count
-            
+
             // The output may have 1 additional UTF16 character, if it has a BOM
             let outputCount = bom == nil ? inputCount : inputCount + 1
-            
+
             // Allocate enough memory to hold the UTF16 bytes after conversion. We will pass this off to Data.
             let utf16Pointer = calloc(outputCount, MemoryLayout<UInt16>.size)!.assumingMemoryBound(to: UInt16.self)
             let utf16Buffer = UnsafeMutableBufferPointer<UInt16>(start: utf16Pointer, count: outputCount)
-            
+
             if let bom {
                 // Put the BOM in, then copy the UTF16 bytes to the buffer after it.
                 utf16Buffer[0] = bom
@@ -187,22 +187,22 @@ extension String {
                 } else {
                     _ = utf16Buffer.initialize(fromContentsOf: self.utf16)
                 }
-            }            
-            
+            }
+
             // If we need to swap endianness, we do it as a second pass over the data
             if swap {
-#if _endian(little)
+                #if _endian(little)
                 // Swap, including the BOM if it is there
                 for u in utf16Buffer.enumerated() {
                     utf16Buffer[u.0] = u.1.bigEndian
                 }
-#else
+                #else
                 for u in utf16Buffer.enumerated() {
                     utf16Buffer[u.0] = u.1.littleEndian
                 }
-#endif
+                #endif
             }
-            
+
             return Data(bytesNoCopy: utf16Buffer.baseAddress!, count: utf16Buffer.count * 2, deallocator: .free)
 
         case .utf32BigEndian, .utf32LittleEndian:
@@ -213,27 +213,27 @@ extension String {
                 return Data(utf32Buffer)
             }
         case .utf32:
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             // Only the CoreFoundation code currently handles the rare case of allowing lossy conversion for UTF32
             if allowLossyConversion {
                 return _ns.data(
                     using: encoding.rawValue,
                     allowLossyConversion: allowLossyConversion)
             }
-#endif
-#if _endian(little)
+            #endif
+            #if _endian(little)
             let data = Data([0xFF, 0xFE, 0x00, 0x00])
-            let hostEncoding : String.Encoding = .utf32LittleEndian
-#else
+            let hostEncoding: String.Encoding = .utf32LittleEndian
+            #else
             let data = Data([0x00, 0x00, 0xFE, 0xFF])
-            let hostEncoding : String.Encoding = .utf32BigEndian
-#endif
+            let hostEncoding: String.Encoding = .utf32BigEndian
+            #endif
             guard let swapped = self.data(using: hostEncoding, allowLossyConversion: allowLossyConversion) else {
                 return nil
             }
-            
+
             return data + swapped
-#if !FOUNDATION_FRAMEWORK
+        #if !FOUNDATION_FRAMEWORK
         case .isoLatin1:
             // ISO Latin 1 encodes code points 0x0 through 0xFF (a maximum of 2 UTF-8 scalars per ISO Latin 1 Scalar)
             // The UTF-8 count is a cheap, reasonable starting capacity as it is precise for the all-ASCII case and it will only over estimate by 1 byte per non-ASCII character
@@ -259,15 +259,15 @@ extension String {
             // but are not supported by corelibs-foundation.
             // We delegate conversion to ICU.
             return _icuStringEncodingConvert(string: self, using: encoding, allowLossyConversion: allowLossyConversion)
-#endif
+        #endif
         default:
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             // Other encodings, defer to the CoreFoundation implementation
             return _ns.data(using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
-#else
+            #else
             // Attempt an up-call into swift-corelibs-foundation, which can defer to the CoreFoundation implementation
             return _cfStringEncodingConvert(string: self, using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
-#endif
+            #endif
         }
     }
 }
@@ -297,7 +297,7 @@ extension StringProtocol {
         String(self)._capitalized()
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Finds and returns the range in the `String` of the first
     /// character from a given character set found in a given range with
     /// given options.
@@ -309,7 +309,7 @@ extension StringProtocol {
         }
         return subStr._rangeOfCharacter(from: aSet, options: mask)
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     /// Returns a `Data` containing a representation of
     /// the `String` encoded using a given encoding.
@@ -319,15 +319,15 @@ extension StringProtocol {
         case .utf8:
             return Data(self.utf8)
         default:
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             // TODO: Implement data(using:allowLossyConversion:) in Swift
             return _ns.data(
                 using: encoding.rawValue,
                 allowLossyConversion: allowLossyConversion)
-#else
+            #else
             // Get a String, use the concrete implementation there
             return String(self).data(using: encoding, allowLossyConversion: allowLossyConversion)
-#endif
+            #endif
         }
     }
 
@@ -360,8 +360,8 @@ extension StringProtocol {
     /// - Returns: An array containing substrings that have been divided from the
     ///   string using `separator`.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public func components<T : StringProtocol>(separatedBy separator: T) -> [String] {
-#if FOUNDATION_FRAMEWORK
+    public func components<T: StringProtocol>(separatedBy separator: T) -> [String] {
+        #if FOUNDATION_FRAMEWORK
         if let contiguousSubstring = _asContiguousUTF8Substring(from: startIndex..<endIndex) {
             let options: String.CompareOptions
             if separator == "\n" {
@@ -380,13 +380,13 @@ extension StringProtocol {
         }
 
         return _ns.components(separatedBy: separator._ephemeralString)
-#else
+        #else
         do {
             return try Substring(self)._components(separatedBy: Substring(separator), options: [])
         } catch {
             return [String(self)]
         }
-#endif
+        #endif
     }
 
     /// Returns the range of characters representing the line or lines
@@ -394,7 +394,7 @@ extension StringProtocol {
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func lineRange(for range: some RangeExpression<Index>) -> Range<Index> {
         let r = _lineBounds(around: range)
-        return r.start ..< r.end
+        return r.start..<r.end
     }
 
     /// Returns the range of characters representing the
@@ -402,7 +402,7 @@ extension StringProtocol {
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func paragraphRange(for range: some RangeExpression<Index>) -> Range<Index> {
         let r = _paragraphBounds(around: range)
-        return r.start ..< r.end
+        return r.start..<r.end
     }
 }
 
@@ -433,16 +433,18 @@ extension StringProtocol {
             let s = Substring(self)
             let start = s.utf8.index(s.startIndex, offsetBy: startUTF8Offset)
             let end = s.utf8.index(start, offsetBy: utf8Count)
-            let r = s.utf8._lineBounds(around: start ..< end)
+            let r = s.utf8._lineBounds(around: start..<end)
 
             let resultUTF8Offsets = (
                 start: s.utf8.distance(from: s.startIndex, to: r.start),
                 end: s.utf8.distance(from: s.startIndex, to: r.end),
-                contentsEnd: s.utf8.distance(from: s.startIndex, to: r.contentsEnd))
+                contentsEnd: s.utf8.distance(from: s.startIndex, to: r.contentsEnd)
+            )
             return (
                 start: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.start),
                 end: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.end),
-                contentsEnd: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.contentsEnd))
+                contentsEnd: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.contentsEnd)
+            )
         }
     }
 
@@ -472,17 +474,18 @@ extension StringProtocol {
             let s = Substring(self)
             let start = s.utf8.index(s.startIndex, offsetBy: startUTF8Offset)
             let end = s.utf8.index(start, offsetBy: utf8Count)
-            let r = s.utf8._paragraphBounds(around: start ..< end)
+            let r = s.utf8._paragraphBounds(around: start..<end)
 
             let resultUTF8Offsets = (
                 start: s.utf8.distance(from: s.startIndex, to: r.start),
                 end: s.utf8.distance(from: s.startIndex, to: r.end),
-                contentsEnd: s.utf8.distance(from: s.startIndex, to: r.contentsEnd))
+                contentsEnd: s.utf8.distance(from: s.startIndex, to: r.contentsEnd)
+            )
             return (
                 start: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.start),
                 end: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.end),
-                contentsEnd: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.contentsEnd))
+                contentsEnd: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.contentsEnd)
+            )
         }
     }
 }
-

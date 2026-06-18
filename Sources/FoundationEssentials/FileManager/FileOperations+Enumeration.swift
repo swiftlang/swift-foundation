@@ -147,7 +147,7 @@ struct _FTSSequence: Sequence {
                     return _overrideLifetime(span, borrowing: self)
                 }
             }
-            
+
             init(_ ptr: UnsafeMutablePointer<FTSENT>) {
                 self.ptr = ptr
             }
@@ -159,7 +159,7 @@ struct _FTSSequence: Sequence {
         case entry(SwiftFTSENT)
         case error(errno: Int32, path: String)
     }
-    
+
     final class Iterator: IteratorProtocol {
         enum State {
             case stream(UnsafeMutablePointer<FTS>)
@@ -168,14 +168,14 @@ struct _FTSSequence: Sequence {
         }
         var state: State
         var path: UnsafePointer<CChar>
-        
+
         #if canImport(Darwin)
         var lastDeviceInode: dev_t = 0
         var deviceNumbers: [dev_t] = []
         var deviceEntryPoints: [ino_t] = []
         var shouldFilterUnderbars = false
         #endif
-        
+
         init(_ path: UnsafePointer<CChar>, _ opts: Int32) {
             self.path = path
             var statBuf = stat()
@@ -191,18 +191,18 @@ struct _FTSSequence: Sequence {
                 return .stream(stream)
             }
         }
-        
+
         deinit {
             _close()
         }
-        
+
         private func _close() {
             if case .stream(let fts) = state {
                 fts_close(fts)
             }
             state = .ended
         }
-        
+
         #if canImport(Darwin)
         private func _shouldFilter(_ swiftEnt: Element.SwiftFTSENT) -> Bool {
             let ent = swiftEnt.ftsEnt
@@ -213,10 +213,10 @@ struct _FTSSequence: Sequence {
             if lastDeviceInode == 0 && nameStartsWithDotUnderscore {
                 return false
             }
-            
+
             // Instead of asking fts to stat every file just to get the fts_statp->st_dev, we can trust the already-gathered fts_dev info, which is present for at least every FTS_D and FTS_DP entry. 8740034.
             // Don't worry. Even if someone uses FTS_SKIP, FTS always balances FTS_D with FTS_DP.
-            
+
             var currentDev = deviceNumbers.last ?? 0
             if ent.fts_info == FTS_D {
                 if deviceNumbers.last != ent.fts_dev {
@@ -230,14 +230,14 @@ struct _FTSSequence: Sequence {
                     deviceNumbers.removeLast()
                 }
             }
-            
+
             if currentDev != lastDeviceInode {
                 // We've crossed a mount point (i.e. the device is different than the last time we looked).
                 var fileSystemInfo = statfs()
                 shouldFilterUnderbars = statfs(ent.fts_path, &fileSystemInfo) == 0 && ((fileSystemInfo.f_flags & UInt32(MNT_DOVOLFS)) == 0)
                 lastDeviceInode = currentDev
             }
-            
+
             if shouldFilterUnderbars && nameStartsWithDotUnderscore {
                 // Don't report ._ files on filesystems that require them.
                 return true
@@ -249,7 +249,7 @@ struct _FTSSequence: Sequence {
             false
         }
         #endif
-        
+
         func next() -> Element? {
             switch state {
             case .stream(let fts):
@@ -275,7 +275,7 @@ struct _FTSSequence: Sequence {
                 return nil
             }
         }
-        
+
         func skipDescendants(of entry: Element.SwiftFTSENT, skipPostProcessing: Bool = false) {
             guard case .stream(let fts) = state else { return }
             entry.skip(in: fts)
@@ -285,15 +285,15 @@ struct _FTSSequence: Sequence {
             }
         }
     }
-    
+
     let path: UnsafePointer<CChar>
     let opts: Int32
-    
+
     init(_ path: UnsafePointer<CChar>, _ opts: Int32) {
         self.path = path
         self.opts = opts
     }
-    
+
     func makeIterator() -> Iterator {
         Iterator(path, opts)
     }
@@ -312,21 +312,21 @@ extension Sequence<_FTSSequence.Element> {
             case .entry(let ent):
                 switch Int32(ent.ftsEnt.fts_info) {
                 // Do the action
-                case FTS_D: fallthrough         // Directory being visited in pre-order.
-                case FTS_DEFAULT: fallthrough   // Something not defined anywhere else.
-                case FTS_F: fallthrough         // Regular file.
-                case FTS_NSOK: fallthrough      // No stat(2) information was requested, but that's OK.
-                case FTS_SL: fallthrough        // Symlink.
-                case FTS_SLNONE:                // Symlink with no target.
+                case FTS_D: fallthrough // Directory being visited in pre-order.
+                case FTS_DEFAULT: fallthrough // Something not defined anywhere else.
+                case FTS_F: fallthrough // Regular file.
+                case FTS_NSOK: fallthrough // No stat(2) information was requested, but that's OK.
+                case FTS_SL: fallthrough // Symlink.
+                case FTS_SLNONE: // Symlink with no target.
                     return .entry(String(cString: ent.ftsEnt.fts_path!))
-                    
+
                 // Error returns
-                case FTS_DNR: fallthrough   // Directory cannot be read.
-                case FTS_ERR: fallthrough   // Some error occurred, but we don't know what.
-                case FTS_NS:                // No stat(2) information is available.
+                case FTS_DNR: fallthrough // Directory cannot be read.
+                case FTS_ERR: fallthrough // Some error occurred, but we don't know what.
+                case FTS_NS: // No stat(2) information is available.
                     let path = String(cString: ent.ftsEnt.fts_path!)
                     return .error(ent.ftsEnt.fts_errno, path)
-                    
+
                 default: return nil
                 }
             }
@@ -340,7 +340,7 @@ struct _POSIXDirectoryContentsSequence: Sequence {
     #elseif canImport(Android) || canImport(Glibc) || canImport(Musl) || os(WASI)
     typealias DirectoryEntryPtr = OpaquePointer
     #endif
-    
+
     final class Iterator: IteratorProtocol {
         func next() -> Element? {
             guard let dirp else { return nil }
@@ -428,7 +428,7 @@ struct _POSIXDirectoryContentsSequence: Sequence {
         private let directoryPath: String
         private let prefix: String
         private let appendSlash: Bool
-        
+
         var error: CocoaError?
 
         init(path: String, appendSlashForDirectory: Bool = false, prefix: [String] = []) {

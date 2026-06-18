@@ -21,7 +21,7 @@ import FoundationEssentials
 extension URL {
     /// A structure that converts between URL instances and their textual representations.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public struct FormatStyle : Codable, Hashable, Sendable {
+    public struct FormatStyle: Codable, Hashable, Sendable {
         /// The strategy to display the `scheme` component.
         var scheme: ComponentDisplayOption
         /// The strategy to display the `user` component.
@@ -57,15 +57,16 @@ extension URL {
             port: ComponentDisplayOption = .omitIfHTTPFamily,
             path: ComponentDisplayOption = .always,
             query: ComponentDisplayOption = .never,
-            fragment: ComponentDisplayOption = .never) {
-                self.scheme = scheme
-                self.user = user
-                self.password = password
-                self.host = host
-                self.port = port
-                self.path = path
-                self.query = query
-                self.fragment = fragment
+            fragment: ComponentDisplayOption = .never
+        ) {
+            self.scheme = scheme
+            self.user = user
+            self.password = password
+            self.host = host
+            self.port = port
+            self.path = path
+            self.query = query
+            self.fragment = fragment
         }
     }
 }
@@ -75,22 +76,22 @@ extension URL.FormatStyle {
     /// An enumeration of the components of a URL, for use in creating format style options that depend on a component's value.
     ///
     /// You use this type with style-modifying methods like ``URL/FormatStyle/ComponentDisplayOption/displayWhen(_:matches:)`` in ``URL/FormatStyle/ComponentDisplayOption`` and ``URL/FormatStyle/HostDisplayOption/omitWhen(_:matches:)`` in ``URL/FormatStyle/HostDisplayOption``.
-    public enum Component : Int, Codable, Hashable, Sendable, CustomStringConvertible {
+    public enum Component: Int, Codable, Hashable, Sendable, CustomStringConvertible {
         // These raw values MUST match _CFURLRequiredComponents
         /// The URL format style scheme component.
-        case scheme   = 0b00000001 // 1 << 0
+        case scheme = 0b00000001 // 1 << 0
         /// The URL format style user component.
-        case user     = 0b00000010 // 1 << 1
+        case user = 0b00000010 // 1 << 1
         /// The URL format style password component.
         case password = 0b00000100 // 1 << 2
         /// The URL format style host component.
-        case host     = 0b00001000 // 1 << 3
+        case host = 0b00001000 // 1 << 3
         /// The URL format style port component.
-        case port     = 0b00010000 // 1 << 4
+        case port = 0b00010000 // 1 << 4
         /// The URL format style path component.
-        case path     = 0b00100000 // 1 << 5
+        case path = 0b00100000 // 1 << 5
         /// The URL format style query component.
-        case query    = 0b01000000 // 1 << 6
+        case query = 0b01000000 // 1 << 6
         /// The URL format style fragment component.
         case fragment = 0b10000000 // 1 << 7
 
@@ -138,7 +139,7 @@ extension URL.FormatStyle {
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension URL.FormatStyle {
     /// Specifies the condition to display a component
-    internal struct ComponentDisplayCondition : Codable, Hashable, CustomStringConvertible, Sendable {
+    internal struct ComponentDisplayCondition: Codable, Hashable, CustomStringConvertible, Sendable {
         let component: URL.FormatStyle.Component
         let requirements: Set<String>
 
@@ -149,8 +150,8 @@ extension URL.FormatStyle {
 
     /// Specifies the display option for a component, including whether to display or omit the
     /// component and the condition to do so.
-    public struct ComponentDisplayOption : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Int, Codable, Hashable {
+    public struct ComponentDisplayOption: Codable, Hashable, CustomStringConvertible, Sendable {
+        enum Option: Int, Codable, Hashable {
             case omitted
             case displayed
         }
@@ -201,8 +202,8 @@ extension URL.FormatStyle {
     }
 
     /// Specifies the display option for displaying the host component
-    public struct HostDisplayOption : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Codable, Hashable, Sendable {
+    public struct HostDisplayOption: Codable, Hashable, CustomStringConvertible, Sendable {
+        enum Option: Codable, Hashable, Sendable {
             case omitted
             case displayed
 
@@ -275,7 +276,8 @@ extension URL.FormatStyle {
         ///     (more than two subdomains beyond the TLDs)  will be omitted.
         public static func omitSpecificSubdomains(
             _ subdomainsToOmit: Set<String> = Set(),
-            includeMultiLevelSubdomains omitMultiLevelSubdomains: Bool = false) -> Self {
+            includeMultiLevelSubdomains omitMultiLevelSubdomains: Bool = false
+        ) -> Self {
             .init(option: .displayed, condition: nil, omitMultiLevelSubdomains: omitMultiLevelSubdomains, omitSpecificSubdomains: subdomainsToOmit)
         }
 
@@ -289,11 +291,13 @@ extension URL.FormatStyle {
         public static func omitSpecificSubdomains(
             _ subdomainsToOmit: Set<String> = Set(),
             includeMultiLevelSubdomains omitMultiLevelSubdomains: Bool = false,
-            when component: URL.FormatStyle.Component, matches requirements: Set<String>) -> Self {
-            .init(option: .displayed,
-                  condition: .init(component: component, requirements: requirements),
-                  omitMultiLevelSubdomains: omitMultiLevelSubdomains,
-                  omitSpecificSubdomains: subdomainsToOmit)
+            when component: URL.FormatStyle.Component, matches requirements: Set<String>
+        ) -> Self {
+            .init(
+                option: .displayed,
+                condition: .init(component: component, requirements: requirements),
+                omitMultiLevelSubdomains: omitMultiLevelSubdomains,
+                omitSpecificSubdomains: subdomainsToOmit)
         }
     }
 }
@@ -382,7 +386,7 @@ extension URL.FormatStyle {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension URL.FormatStyle : ParseableFormatStyle {
+extension URL.FormatStyle: ParseableFormatStyle {
     /// The parse strategy used by this format style.
     public var parseStrategy: URL.ParseStrategy {
         .init(format: self, lenient: false)
@@ -390,7 +394,7 @@ extension URL.FormatStyle : ParseableFormatStyle {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension URL.FormatStyle : FormatStyle {
+extension URL.FormatStyle: FormatStyle {
     @inline(__always)
     private func url(_ url: URL, satisfies condition: ComponentDisplayCondition?) -> Bool {
         guard let condition = condition else {
@@ -411,8 +415,7 @@ extension URL.FormatStyle : FormatStyle {
     @inline(__always)
     private func shouldDisplayComponent(from url: URL, basedOn strategy: ComponentDisplayOption) -> Bool {
         let componentSatisfiesCondition = self.url(url, satisfies: strategy.condition)
-        return (componentSatisfiesCondition && strategy.option == .displayed) ||
-            (!componentSatisfiesCondition && strategy.option == .omitted)
+        return (componentSatisfiesCondition && strategy.option == .displayed) || (!componentSatisfiesCondition && strategy.option == .omitted)
     }
 
     @inline(__always)
@@ -456,7 +459,8 @@ extension URL.FormatStyle : FormatStyle {
                 continue
             }
             guard let intValue = Int(String(group), radix: 16),
-                  intValue >= 0, intValue <= 0xFFFF else {
+                intValue >= 0, intValue <= 0xFFFF
+            else {
                 return false
             }
         }
@@ -510,9 +514,7 @@ extension URL.FormatStyle : FormatStyle {
             // Remove the path trailing slash if path
             // is the last component displayed
             var path = urlComponents.path
-            if path.hasSuffix("/") &&
-                urlComponents.query == nil &&
-                urlComponents.fragment == nil {
+            if path.hasSuffix("/") && urlComponents.query == nil && urlComponents.fragment == nil {
                 path.removeLast()
             }
             urlString.append(path)
@@ -534,7 +536,7 @@ extension URL.FormatStyle : FormatStyle {
         // For example:
         // developer.source.apple.com -> source.apple.com (TLD: com)
         // developer.source.apple.com.cn -> source.apple.com.cn (TLD: com.cn)
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         guard let tlds = __NSURLGetTopLevelDomain(hostString, true) else {
             // If the host string does not contain a valid TLD, do nothing
             return
@@ -545,7 +547,7 @@ extension URL.FormatStyle : FormatStyle {
             return
         }
         subdomains.removeFirst(subdomains.count - (numberOfTLDs + 2))
-#endif
+        #endif
     }
 
     /// Formats a URL, using this style.
@@ -586,8 +588,10 @@ extension URL.FormatStyle : FormatStyle {
         // characters. Use an `URLComponents` (which has the updated
         // parser) to access all the decoded components instead of
         // accessing them via URL directly
-        guard let decoder = URLComponents(
-            url: value, resolvingAgainstBaseURL: false) else {
+        guard
+            let decoder = URLComponents(
+                url: value, resolvingAgainstBaseURL: false)
+        else {
             return value.absoluteString
         }
         var urlComponents = URLComponents()
@@ -635,9 +639,10 @@ extension URL.FormatStyle : FormatStyle {
                         componentsModified = true
                     }
                     if let subdomainsToOmit = self.host.omitSpecificSubdomains,
-                       hostComponents.count > 2,
-                       !isIPAddress,
-                       subdomainsToOmit.contains(String(hostComponents[0])) {
+                        hostComponents.count > 2,
+                        !isIPAddress,
+                        subdomainsToOmit.contains(String(hostComponents[0]))
+                    {
                         // Remove the first subdomain if it's one of the subdomainsToOmit
                         hostComponents.removeFirst()
                         componentsModified = true
@@ -698,15 +703,15 @@ extension URL {
     ///
     /// - Parameter format: The format style to apply when formatting the URL.
     /// - Returns: A formatted string representation of the URL.
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     public func formatted<F: Foundation.FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == URL {
         format.format(self)
     }
-#else
+    #else
     public func formatted<F: FoundationEssentials.FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == URL {
         format.format(self)
     }
-#endif
+    #endif
 
     /// Formats the URL using a default format style.
     ///

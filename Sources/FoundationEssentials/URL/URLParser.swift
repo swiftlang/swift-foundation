@@ -19,14 +19,14 @@ internal import Foundation_Private
 final class URLParseInfo: Sendable {
     let urlString: String
 
-    let schemeRange:    Range<String.Index>?
-    let userRange:      Range<String.Index>?
-    let passwordRange:  Range<String.Index>?
-    let hostRange:      Range<String.Index>?
-    let portRange:      Range<String.Index>?
-    let pathRange:      Range<String.Index>?
-    let queryRange:     Range<String.Index>?
-    let fragmentRange:  Range<String.Index>?
+    let schemeRange: Range<String.Index>?
+    let userRange: Range<String.Index>?
+    let passwordRange: Range<String.Index>?
+    let hostRange: Range<String.Index>?
+    let portRange: Range<String.Index>?
+    let pathRange: Range<String.Index>?
+    let queryRange: Range<String.Index>?
+    let fragmentRange: Range<String.Index>?
 
     let isIPLiteral: Bool
     let didPercentEncodeHost: Bool
@@ -34,11 +34,11 @@ final class URLParseInfo: Sendable {
 
     struct EncodedComponentSet: OptionSet {
         let rawValue: UInt8
-        static let user     = EncodedComponentSet(rawValue: 1 << 0)
+        static let user = EncodedComponentSet(rawValue: 1 << 0)
         static let password = EncodedComponentSet(rawValue: 1 << 1)
-        static let host     = EncodedComponentSet(rawValue: 1 << 2)
-        static let path     = EncodedComponentSet(rawValue: 1 << 3)
-        static let query    = EncodedComponentSet(rawValue: 1 << 4)
+        static let host = EncodedComponentSet(rawValue: 1 << 2)
+        static let path = EncodedComponentSet(rawValue: 1 << 3)
+        static let query = EncodedComponentSet(rawValue: 1 << 4)
         static let fragment = EncodedComponentSet(rawValue: 1 << 5)
     }
 
@@ -46,7 +46,10 @@ final class URLParseInfo: Sendable {
     /// Used to return the appropriate dataRepresentation or bytes for CFURL.
     let encodedComponents: EncodedComponentSet
 
-    init(urlString: String, schemeRange: Range<String.Index>?, userRange: Range<String.Index>?, passwordRange: Range<String.Index>?, hostRange: Range<String.Index>?, portRange: Range<String.Index>?, pathRange: Range<String.Index>?, queryRange: Range<String.Index>?, fragmentRange: Range<String.Index>?, isIPLiteral: Bool, didPercentEncodeHost: Bool, pathHasFileID: Bool, encodedComponents: EncodedComponentSet) {
+    init(
+        urlString: String, schemeRange: Range<String.Index>?, userRange: Range<String.Index>?, passwordRange: Range<String.Index>?, hostRange: Range<String.Index>?, portRange: Range<String.Index>?, pathRange: Range<String.Index>?,
+        queryRange: Range<String.Index>?, fragmentRange: Range<String.Index>?, isIPLiteral: Bool, didPercentEncodeHost: Bool, pathHasFileID: Bool, encodedComponents: EncodedComponentSet
+    ) {
         self.urlString = urlString
         self.schemeRange = schemeRange
         self.userRange = userRange
@@ -77,16 +80,20 @@ final class URLParseInfo: Sendable {
         guard hasAuthority else {
             return nil
         }
-        guard let startIndex = userRange?.lowerBound
+        guard
+            let startIndex = userRange?.lowerBound
                 ?? passwordRange?.lowerBound
                 ?? hostRange?.lowerBound
-                ?? portRange?.lowerBound else {
+                ?? portRange?.lowerBound
+        else {
             return nil
         }
-        guard let endIndex = portRange?.upperBound
+        guard
+            let endIndex = portRange?.upperBound
                 ?? hostRange?.upperBound
                 ?? passwordRange?.upperBound
-                ?? userRange?.upperBound else {
+                ?? userRange?.upperBound
+        else {
             return nil
         }
         return (startIndex..<endIndex)
@@ -152,14 +159,14 @@ final class URLParseInfo: Sendable {
 fileprivate struct URLBufferParseInfo {
     typealias URLBuffer = UnsafeBufferPointer<UInt8>
 
-    var schemeRange:    Range<URLBuffer.Index>?
-    var userRange:      Range<URLBuffer.Index>?
-    var passwordRange:  Range<URLBuffer.Index>?
-    var hostRange:      Range<URLBuffer.Index>?
-    var portRange:      Range<URLBuffer.Index>?
-    var pathRange:      Range<URLBuffer.Index>?
-    var queryRange:     Range<URLBuffer.Index>?
-    var fragmentRange:  Range<URLBuffer.Index>?
+    var schemeRange: Range<URLBuffer.Index>?
+    var userRange: Range<URLBuffer.Index>?
+    var passwordRange: Range<URLBuffer.Index>?
+    var hostRange: Range<URLBuffer.Index>?
+    var portRange: Range<URLBuffer.Index>?
+    var pathRange: Range<URLBuffer.Index>?
+    var queryRange: Range<URLBuffer.Index>?
+    var fragmentRange: Range<URLBuffer.Index>?
 
     var isIPLiteral: Bool = false
     var didPercentEncodeHost: Bool = false
@@ -401,7 +408,8 @@ internal struct RFC3986Parser {
             return allowEmptyScheme
         }
         guard first >= UInt8(ascii: "A"),
-              validate(buffer: schemeBuffer, component: .scheme, percentEncodingAllowed: false) else {
+            validate(buffer: schemeBuffer, component: .scheme, percentEncodingAllowed: false)
+        else {
             return false
         }
         return true
@@ -411,8 +419,9 @@ internal struct RFC3986Parser {
         // A valid scheme must start with an ALPHA character.
         // If first >= "A" and is in schemeAllowed, then first is ALPHA.
         guard let first = scheme.utf8.first,
-              first >= UInt8(ascii: "A"),
-              validate(string: scheme, component: .scheme, percentEncodingAllowed: false) else {
+            first >= UInt8(ascii: "A"),
+            validate(string: scheme, component: .scheme, percentEncodingAllowed: false)
+        else {
             return false
         }
         return true
@@ -446,12 +455,14 @@ internal struct RFC3986Parser {
         // A valid zone ID delimiter is the percent-encoded version "%25".
         let oneAfterIndex = utf8.index(after: percentIndex)
         guard oneAfterIndex != utf8.endIndex,
-              utf8[oneAfterIndex] == UInt8(ascii: "2") else {
+            utf8[oneAfterIndex] == UInt8(ascii: "2")
+        else {
             return false
         }
         let twoAfterIndex = utf8.index(after: oneAfterIndex)
         guard twoAfterIndex != utf8.endIndex,
-              utf8[twoAfterIndex] == UInt8(ascii: "5") else {
+            utf8[twoAfterIndex] == UInt8(ascii: "5")
+        else {
             return false
         }
 
@@ -683,7 +694,8 @@ internal struct RFC3986Parser {
                 }
                 finalURLString += percentEncodedHost
             } else if let idnaEncoded = IDNAEncodeHost(String(host)),
-                      validate(host: idnaEncoded, knownIPLiteral: false) {
+                validate(host: idnaEncoded, knownIPLiteral: false)
+            {
                 finalURLString += idnaEncoded
             } else {
                 return nil
@@ -783,7 +795,8 @@ internal struct RFC3986Parser {
                     currentIndex = buffer.index(after: currentIndex)
                     if currentIndex == buffer.endIndex {
                         guard let schemeRange = parseInfo.schemeRange,
-                              validate(schemeBuffer: buffer[schemeRange], allowEmptyScheme: allowEmptyScheme) else {
+                            validate(schemeBuffer: buffer[schemeRange], allowEmptyScheme: allowEmptyScheme)
+                        else {
                             return nil
                         }
                         // The string only contained a scheme, but the path always exists.
@@ -793,11 +806,12 @@ internal struct RFC3986Parser {
                 }
                 break
             } else if v == UInt8(ascii: "/")
-                        || v == UInt8(ascii: "?")
-                        || v == UInt8(ascii: "#")
-                        || v == UInt8(ascii: "[")
-                        || v == UInt8(ascii: "]")
-                        || v == UInt8(ascii: "@") {
+                || v == UInt8(ascii: "?")
+                || v == UInt8(ascii: "#")
+                || v == UInt8(ascii: "[")
+                || v == UInt8(ascii: "]")
+                || v == UInt8(ascii: "@")
+            {
                 // We did not find a scheme, so this is a relative-ref.
                 // Note that "[", "]", and "@" are heuristics telling us the user intends
                 // this to be an authority component, which is often followed by a port ":"
@@ -821,11 +835,7 @@ internal struct RFC3986Parser {
 
         // MARK: Authority
 
-        let doubleSlashExists = (
-            buffer.index(after: currentIndex) != buffer.endIndex &&
-            UInt8(ascii: "/") == buffer[currentIndex] &&
-            UInt8(ascii: "/") == buffer[buffer.index(after: currentIndex)]
-        )
+        let doubleSlashExists = (buffer.index(after: currentIndex) != buffer.endIndex && UInt8(ascii: "/") == buffer[currentIndex] && UInt8(ascii: "/") == buffer[buffer.index(after: currentIndex)])
         if doubleSlashExists {
             currentIndex = buffer.index(currentIndex, offsetBy: 2)
             let authorityStartIndex = currentIndex
@@ -922,7 +932,8 @@ internal struct RFC3986Parser {
         // MARK: Host and Port
 
         if hostStartIndex != authority.endIndex && authority[hostStartIndex] == UInt8(ascii: "["),
-           let endBracketIndex = authority[hostStartIndex...].firstIndex(of: UInt8(ascii: "]")) {
+            let endBracketIndex = authority[hostStartIndex...].firstIndex(of: UInt8(ascii: "]"))
+        {
             parseInfo.isIPLiteral = true
             hostEndIndex = authority.index(after: endBracketIndex)
             if hostEndIndex != authority.endIndex {
@@ -1003,15 +1014,16 @@ fileprivate extension StringProtocol {
                     outputBuffer[i] = v
                     i += 1
                 } else if skipAlreadyEncoded, v == percent,
-                          utf8Buffer.index(index, offsetBy: 1) != utf8Buffer.endIndex,
-                          utf8Buffer[utf8Buffer.index(index, offsetBy: 1)].isValidHexDigit,
-                          utf8Buffer.index(index, offsetBy: 2) != utf8Buffer.endIndex,
-                          utf8Buffer[utf8Buffer.index(index, offsetBy: 2)].isValidHexDigit {
+                    utf8Buffer.index(index, offsetBy: 1) != utf8Buffer.endIndex,
+                    utf8Buffer[utf8Buffer.index(index, offsetBy: 1)].isValidHexDigit,
+                    utf8Buffer.index(index, offsetBy: 2) != utf8Buffer.endIndex,
+                    utf8Buffer[utf8Buffer.index(index, offsetBy: 2)].isValidHexDigit
+                {
                     let inclusiveEnd = utf8Buffer.index(index, offsetBy: 2)
-                    i = outputBuffer[i...i+2].initialize(fromContentsOf: utf8Buffer[index...inclusiveEnd])
+                    i = outputBuffer[i...i + 2].initialize(fromContentsOf: utf8Buffer[index...inclusiveEnd])
                     index = inclusiveEnd // Incremented below, too
                 } else {
-                    i = outputBuffer[i...i+2].initialize(fromContentsOf: [percent, hexToAscii(v >> 4), hexToAscii(v & 0xF)])
+                    i = outputBuffer[i...i + 2].initialize(fromContentsOf: [percent, hexToAscii(v >> 4), hexToAscii(v & 0xF)])
                 }
                 index = utf8Buffer.index(after: index)
             }
@@ -1051,7 +1063,7 @@ fileprivate extension StringProtocol {
                         byte += hex
                         if excluding.contains(byte) {
                             // Keep the original percent-encoding for this byte
-                            i = outputBuffer[i...i+2].initialize(fromContentsOf: [UInt8(ascii: "%"), hexToAscii(byte >> 4), v])
+                            i = outputBuffer[i...i + 2].initialize(fromContentsOf: [UInt8(ascii: "%"), hexToAscii(byte >> 4), v])
                         } else {
                             outputBuffer[i] = byte
                             i += 1
@@ -1091,7 +1103,7 @@ extension RFC3986Parser {
                 var i = 0
                 for v in inputBuffer {
                     if including.contains(v) {
-                        i = outputBuffer[i...i+2].initialize(fromContentsOf: [._percent, hexToAscii(v >> 4), hexToAscii(v & 0xF)])
+                        i = outputBuffer[i...i + 2].initialize(fromContentsOf: [._percent, hexToAscii(v >> 4), hexToAscii(v & 0xF)])
                     } else {
                         outputBuffer[i] = v
                         i += 1
@@ -1136,31 +1148,31 @@ extension RFC3986Parser {
 internal struct URLComponentAllowedMask: RawRepresentable {
     let rawValue: UInt128
 
-    static let scheme           = Self(rawValue: 0x07fffffe07fffffe03ff680000000000)
+    static let scheme = Self(rawValue: 0x07fffffe07fffffe03ff680000000000)
 
     // user and password use the same allowed character set.
-    static let user             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
-    static let password         = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+    static let user = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+    static let password = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
 
     // hostIPvFuture is the user/password set + ":"
-    static let hostIPvFuture    = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
+    static let hostIPvFuture = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
 
-    static let host             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
-    static let hostZoneID       = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
-    static let path             = Self(rawValue: 0x47fffffe87ffffff2fffffd200000000)
+    static let host = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+    static let hostZoneID = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
+    static let path = Self(rawValue: 0x47fffffe87ffffff2fffffd200000000)
     static let pathFirstSegment = Self(rawValue: 0x47fffffe87ffffff2bffffd200000000)
 
     // query and fragment use the same allowed character set.
-    static let query            = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
-    static let fragment         = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
+    static let query = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
+    static let fragment = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
 
-    static let queryItem        = Self(rawValue: 0x47fffffe87ffffff8fffff9200000000)
+    static let queryItem = Self(rawValue: 0x47fffffe87ffffff8fffff9200000000)
 
     // `unreserved` character set from RFC 3986.
-    static let unreserved       = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
+    static let unreserved = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
 
     // `unreserved` + `reserved` character sets from RFC 3986.
-    static let anyValid         = Self(rawValue: 0x47fffffeafffffffafffffda00000000)
+    static let anyValid = Self(rawValue: 0x47fffffeafffffffafffffda00000000)
 
     func contains(_ codeUnit: UInt8) -> Bool {
         return codeUnit < 128 && ((rawValue & (UInt128(1) &<< codeUnit)) != 0)
@@ -1370,11 +1382,7 @@ extension RFC3986Parser {
 
         // MARK: Authority
 
-        let doubleSlashExists = (
-            buffer.index(after: currentIndex) != buffer.endIndex &&
-            UInt8(ascii: "/") == buffer[currentIndex] &&
-            UInt8(ascii: "/") == buffer[buffer.index(after: currentIndex)]
-        )
+        let doubleSlashExists = (buffer.index(after: currentIndex) != buffer.endIndex && UInt8(ascii: "/") == buffer[currentIndex] && UInt8(ascii: "/") == buffer[buffer.index(after: currentIndex)])
         if doubleSlashExists {
             currentIndex = buffer.index(currentIndex, offsetBy: 2)
             let authorityStartIndex = currentIndex
@@ -1467,7 +1475,8 @@ extension RFC3986Parser {
         // MARK: Host and Port
 
         if hostStartIndex != authority.endIndex && authority[hostStartIndex] == UInt8(ascii: "["),
-           let endBracketIndex = authority[hostStartIndex...].firstIndex(of: UInt8(ascii: "]")) {
+            let endBracketIndex = authority[hostStartIndex...].firstIndex(of: UInt8(ascii: "]"))
+        {
             parseInfo.isIPLiteral = true
             hostEndIndex = authority.index(after: endBracketIndex)
             if hostEndIndex != authority.endIndex {

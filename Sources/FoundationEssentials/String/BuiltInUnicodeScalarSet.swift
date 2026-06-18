@@ -54,7 +54,7 @@ internal struct BuiltInUnicodeScalarSet {
         case hasNonSelfMirrorMapping
         case caseIgnorable
         case graphemeExtend
-        
+
         // duplicates
         case controlAndFormatter
         case decomposable
@@ -120,17 +120,17 @@ internal struct BuiltInUnicodeScalarSet {
             return nil
         }
     }
-    
+
     enum BitmapResult {
         case bitmapFilled // kCFUniCharBitmapFilled
         case bitmapEmpty // kCFUniCharBitmapEmpty
         case bitmapAll // kCFUniCharBitmapAll
     }
-    
+
     static let bitShiftForByte = UInt16(3)
     static let bitShiftForMask = UInt16(7)
     static let byteCount = 8 * 1024
-    
+
     private struct BMPCacheKey: Hashable {
         let type: SetType
         let isInverted: Bool
@@ -151,26 +151,26 @@ internal struct BuiltInUnicodeScalarSet {
             return data
         }
     }
-    
+
     // CFCharacterSetCreateBitmapRepresentation
     func bitmapRepresentation(isInverted: Bool) -> Data {
         let numNonBMPPlanes = isInverted ? 16 : _numberOfPlanes - 1
-        
+
         var data = Data()
-        
+
         // Handle BMP Plane
         let bitmapData = getBitmap(isInverted: isInverted)
         data.append(bitmapData)
-        
+
         // Handle other planes
         if numNonBMPPlanes > 0 {
             for i in 0..<numNonBMPPlanes {
                 let (status, bitmap) = self.bitmap(forPlane: i + 1, isInverted: isInverted)
-                
+
                 if status == .bitmapEmpty {
                     continue
                 }
-                
+
                 let indexData = Data([UInt8(i + 1)])
                 data.append(indexData)
                 data.append(bitmap)
@@ -178,7 +178,7 @@ internal struct BuiltInUnicodeScalarSet {
         }
         return data
     }
-    
+
     // CFCharacterSetHasMemberInPlane
     func hasMember(inPlane plane: UInt8, isInverted: Bool) -> Bool {
         if charset == .control {
@@ -209,12 +209,12 @@ internal struct BuiltInUnicodeScalarSet {
             }
         }
     }
-    
+
     // __CFCSetGetBitmap
     internal func getBitmap(isInverted: Bool) -> Data {
         return Self.cachedBMP(for: charset, isInverted: isInverted)
     }
-    
+
     // CFUniCharIsMemberOf
     internal func contains(_ scalar: Unicode.Scalar) -> Bool {
         switch charset {
@@ -272,7 +272,7 @@ internal struct BuiltInUnicodeScalarSet {
             return false
         }
     }
-    
+
     // CFUniCharIsMemberOfBitmap
     func _isMemberOfBitmap(_ scalar: Unicode.Scalar, _ span: Span<UInt8>) -> Bool {
         let theChar = UInt16(truncatingIfNeeded: scalar.value) // intentionally truncated
@@ -283,7 +283,7 @@ internal struct BuiltInUnicodeScalarSet {
         let result = (UInt32(position) & bitMask) != 0
         return result
     }
-    
+
     // CFUniCharGetBitmapPtrForPlane
     // Returns nil for whitespace, whitespaceAndNewline, newline.
     // For callers that only need to check plane membership (not inversion), use this wrapper.
@@ -324,13 +324,13 @@ internal struct BuiltInUnicodeScalarSet {
             return (span, shouldInvert: charset == .illegal)
         }
     }
-    
+
     // CFUniCharGetBitmapForPlane
     internal func bitmap(forPlane plane: Int, isInverted: Bool) -> (BitmapResult, Data) {
-        
+
         if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
             let shouldInvert = invertBitmapData ? !isInverted : isInverted
-            
+
             // Fast path: for non-inverted, initialize Data using the pointer to avoid allocation
             if !shouldInvert {
                 // Not actually unsafe because lifetime of src is immortal
@@ -361,7 +361,7 @@ internal struct BuiltInUnicodeScalarSet {
     }
 
     internal func bitmap(forPlane plane: Int, isInverted: Bool, into destination: inout MutableSpan<UInt8>, apply: (inout UInt8, UInt8) -> Void) -> BitmapResult {
-        
+
         if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
             let shouldInvert = invertBitmapData ? !isInverted : isInverted
             for i in 0..<Self.byteCount {
@@ -381,7 +381,7 @@ internal struct BuiltInUnicodeScalarSet {
             } else if plane == 15 || plane == 16 {
                 let value: UInt32 = isInverted ? ~0 : 0
                 for i in stride(from: 0, to: Self.byteCount, by: 4) {
-                    apply(&destination[i],     UInt8(value & 0xFF))
+                    apply(&destination[i], UInt8(value & 0xFF))
                     apply(&destination[i + 1], UInt8((value >> 8) & 0xFF))
                     apply(&destination[i + 2], UInt8((value >> 16) & 0xFF))
                     apply(&destination[i + 3], UInt8((value >> 24) & 0xFF))
@@ -440,16 +440,17 @@ internal struct BuiltInUnicodeScalarSet {
                     bitmapDataPtr.advanced(by: _bitmapTableIndex!).pointee
                 }
             }
-            
+
             return Int(data._numPlanes)
         }
     }
-    
+
     // MARK: Helper methods
     private func isWhitespace(_ scalar: Unicode.Scalar) -> Bool {
-        return (scalar.value == 0x0020) || (scalar.value == 0x0009) || (scalar.value == 0x00A0) || (scalar.value == 0x1680) || (scalar.value >= 0x2000 && scalar.value <= 0x200B) || (scalar.value == 0x202F) || (scalar.value == 0x205F) || (scalar.value == 0x3000)
+        return (scalar.value == 0x0020) || (scalar.value == 0x0009) || (scalar.value == 0x00A0) || (scalar.value == 0x1680) || (scalar.value >= 0x2000 && scalar.value <= 0x200B) || (scalar.value == 0x202F) || (scalar.value == 0x205F)
+            || (scalar.value == 0x3000)
     }
-    
+
     private func isNewline(_ scalar: Unicode.Scalar) -> Bool {
         return ((scalar.value >= 0x000A && scalar.value <= 0x000D) || (scalar.value == 0x0085) || (scalar.value == 0x2028) || (scalar.value == 0x2029))
     }
@@ -464,26 +465,26 @@ internal struct BuiltInUnicodeScalarSet {
 
 #if !FOUNDATION_FRAMEWORK
 struct _CharacterSet {
-    
+
     static let __kCFBitmapSize = 8192
     static let allZeros = Data(repeating: 0x00, count: __kCFBitmapSize)
     static let allOnes = Data(repeating: 0xFF, count: __kCFBitmapSize)
-    
+
     enum Operation {
         case add
         case remove
     }
-    
+
     internal static func modifyBitmap(_ operation: Operation, char: UInt16, mutableSpan: inout MutableSpan<UInt8>) {
         let LOG_BPB = 3
         let BITSPERBYTE = 8
         let byteIndex = Int(char >> LOG_BPB)
         let bitPosition = char & UInt16(BITSPERBYTE - 1)
-        
+
         guard byteIndex < mutableSpan.count else { return }
-        
+
         let bitMask: UInt8 = 1 << bitPosition
-        
+
         switch operation {
         case .add:
             mutableSpan[byteIndex] |= bitMask

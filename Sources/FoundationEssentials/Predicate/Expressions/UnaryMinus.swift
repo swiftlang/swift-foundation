@@ -12,42 +12,42 @@
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
-    public struct UnaryMinus<Wrapped: PredicateExpression> : PredicateExpression where Wrapped.Output: SignedNumeric {
+    public struct UnaryMinus<Wrapped: PredicateExpression>: PredicateExpression where Wrapped.Output: SignedNumeric {
         public typealias Output = Wrapped.Output
-        
+
         public let wrapped: Wrapped
-        
+
         public init(_ wrapped: Wrapped) {
             self.wrapped = wrapped
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             try -wrapped.evaluate(bindings)
         }
     }
-    
+
     public static func build_UnaryMinus<T>(_ inner: T) -> UnaryMinus<T> {
         UnaryMinus(inner)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.UnaryMinus : CustomStringConvertible {
+extension PredicateExpressions.UnaryMinus: CustomStringConvertible {
     public var description: String {
         "UnaryMinus(wrapped: \(wrapped))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.UnaryMinus : StandardPredicateExpression where Wrapped : StandardPredicateExpression {}
+extension PredicateExpressions.UnaryMinus: StandardPredicateExpression where Wrapped: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.UnaryMinus : Codable where Wrapped : Codable {
+extension PredicateExpressions.UnaryMinus: Codable where Wrapped: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(wrapped)
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         wrapped = try container.decode(Wrapped.self)
@@ -55,4 +55,4 @@ extension PredicateExpressions.UnaryMinus : Codable where Wrapped : Codable {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.UnaryMinus : Sendable where Wrapped : Sendable {}
+extension PredicateExpressions.UnaryMinus: Sendable where Wrapped: Sendable {}

@@ -146,7 +146,7 @@ extension URL.Template.Expression.Element {
                 return []
             } else {
                 return [
-                    makeElement(d.lazy.flatMap { [$0.key, $0.value] }),
+                    makeElement(d.lazy.flatMap { [$0.key, $0.value] })
                 ]
             }
         default:

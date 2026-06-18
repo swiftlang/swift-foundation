@@ -28,10 +28,10 @@ import stdlib_h
 
 /// A protocol that provides consistent data access to the bytes underlying contiguous and noncontiguous data buffers.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol DataProtocol : RandomAccessCollection where Element == UInt8, SubSequence : DataProtocol {
+public protocol DataProtocol: RandomAccessCollection where Element == UInt8, SubSequence: DataProtocol {
     // FIXME: Remove in favor of opaque type on `regions`.
     /// A type that represents a collection of contiguous parts that make up the type conforming to a data protocol.
-    associatedtype Regions: BidirectionalCollection where Regions.Element : DataProtocol & ContiguousBytes, Regions.Element.SubSequence : ContiguousBytes
+    associatedtype Regions: BidirectionalCollection where Regions.Element: DataProtocol & ContiguousBytes, Regions.Element.SubSequence: ContiguousBytes
 
     /// A collection of buffers that make up the whole of the type conforming to a data protocol.
     var regions: Regions { get }
@@ -107,7 +107,7 @@ public protocol DataProtocol : RandomAccessCollection where Element == UInt8, Su
 
 /// A protocol that provides consistent data access to the bytes underlying contiguous and noncontiguous mutable data buffers.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol MutableDataProtocol : DataProtocol, MutableCollection, RangeReplaceableCollection {
+public protocol MutableDataProtocol: DataProtocol, MutableCollection, RangeReplaceableCollection {
     /// Replaces the contents of the data buffer with zeros for the provided range.
     ///
     /// The following example sets the bytes to zero for the bytes identified by
@@ -145,7 +145,7 @@ extension DataProtocol {
     /// // foundRange == Range(4..<7)
     /// ```
     public func firstRange<D: DataProtocol>(of data: D) -> Range<Index>? {
-        return self.firstRange(of: data, in: self.startIndex ..< self.endIndex)
+        return self.firstRange(of: data, in: self.startIndex..<self.endIndex)
     }
 
     /// Returns the last found range of the type's data buffer.
@@ -163,7 +163,7 @@ extension DataProtocol {
     /// // match == 6..<8
     /// ```
     public func lastRange<D: DataProtocol>(of data: D) -> Range<Index>? {
-        return self.lastRange(of: data, in: self.startIndex ..< self.endIndex)
+        return self.lastRange(of: data, in: self.startIndex..<self.endIndex)
     }
 
     /// Copies the bytes of data from the type into a raw memory buffer.
@@ -185,7 +185,7 @@ extension DataProtocol {
     /// - Returns: The number of bytes copied.
     @discardableResult
     public func copyBytes(to ptr: UnsafeMutableRawBufferPointer) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.endIndex)
+        return copyBytes(to: ptr, from: self.startIndex..<self.endIndex)
     }
 
     /// Copies the bytes of data from the type into a typed memory buffer.
@@ -207,7 +207,7 @@ extension DataProtocol {
     /// - Returns: The number of bytes copied.
     @discardableResult
     public func copyBytes<DestinationType>(to ptr: UnsafeMutableBufferPointer<DestinationType>) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.endIndex)
+        return copyBytes(to: ptr, from: self.startIndex..<self.endIndex)
     }
 
     /// Copies the provided number of bytes from the start of the type into a raw memory buffer.
@@ -231,7 +231,7 @@ extension DataProtocol {
     /// - Returns: The number of bytes copied.
     @discardableResult
     public func copyBytes(to ptr: UnsafeMutableRawBufferPointer, count: Int) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.index(self.startIndex, offsetBy: count))
+        return copyBytes(to: ptr, from: self.startIndex..<self.index(self.startIndex, offsetBy: count))
     }
 
     /// Copies the provided number of bytes from the start of the type into a typed memory buffer.
@@ -242,7 +242,7 @@ extension DataProtocol {
     /// - Returns: The number of bytes copied.
     @discardableResult
     public func copyBytes<DestinationType>(to ptr: UnsafeMutableBufferPointer<DestinationType>, count: Int) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.index(self.startIndex, offsetBy: count))
+        return copyBytes(to: ptr, from: self.startIndex..<self.index(self.startIndex, offsetBy: count))
     }
 
     /// Copies a range of the bytes from the type into a raw memory buffer.
@@ -371,7 +371,7 @@ extension DataProtocol {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DataProtocol where Self : ContiguousBytes {
+extension DataProtocol where Self: ContiguousBytes {
     /// Copies a range of the bytes from the type into a typed memory buffer.
     ///
     /// This specialization is available when the conforming type also conforms to
@@ -382,7 +382,7 @@ extension DataProtocol where Self : ContiguousBytes {
     ///   - range: The range of bytes to copy.
     public func copyBytes<DestinationType, R: RangeExpression>(to ptr: UnsafeMutableBufferPointer<DestinationType>, from range: R) where R.Bound == Index {
         precondition(ptr.baseAddress != nil)
-        
+
         let concreteRange = range.relative(to: self)
         withUnsafeBytes { fullBuffer in
             let adv = distance(from: startIndex, to: concreteRange.lowerBound)
@@ -409,7 +409,7 @@ extension MutableDataProtocol {
 //===--- DataProtocol Conformances ----------------------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : MutableDataProtocol {
+extension Data: MutableDataProtocol {
     @inlinable // This is @inlinable as trivially computable.
     public var regions: CollectionOfOne<Data> {
         return CollectionOfOne(self)
@@ -429,13 +429,13 @@ extension Data {
         if count == 0 { return }
         _copyBytesHelper(to: UnsafeMutableRawPointer(pointer), from: startIndex..<(startIndex + count))
     }
-    
+
     @inlinable // This is @inlinable as trivially forwarding.
     internal func _copyBytesHelper(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
         if range.isEmpty { return }
         _representation.copyBytes(to: pointer, from: range)
     }
-    
+
     /// Copies a subset of the contents of the data to memory.
     ///
     /// - parameter pointer: A pointer to the buffer you wish to copy the bytes into.
@@ -445,7 +445,7 @@ extension Data {
     public func copyBytes(to pointer: UnsafeMutablePointer<UInt8>, from range: Range<Index>) {
         _copyBytesHelper(to: pointer, from: range)
     }
-    
+
     /// Copies the bytes in a range from the data into a buffer.
     ///
     /// This function copies the bytes in `range` from the data into the buffer. If the count of the `range` is greater than `MemoryLayout<DestinationType>.stride * buffer.count` then the first N bytes will be copied into the buffer.
@@ -457,17 +457,17 @@ extension Data {
     public func copyBytes<DestinationType>(to buffer: UnsafeMutableBufferPointer<DestinationType>, from range: Range<Index>? = nil) -> Int {
         let cnt = count
         guard cnt > 0 else { return 0 }
-        
-        let copyRange : Range<Index>
+
+        let copyRange: Range<Index>
         if let r = range {
             guard !r.isEmpty else { return 0 }
             copyRange = r.lowerBound..<(r.lowerBound + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, r.upperBound - r.lowerBound))
         } else {
             copyRange = startIndex..<(startIndex + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, cnt))
         }
-        
+
         guard !copyRange.isEmpty else { return 0 }
-        
+
         _copyBytesHelper(to: buffer.baseAddress!, from: copyRange)
         return copyRange.upperBound - copyRange.lowerBound
     }
@@ -476,7 +476,7 @@ extension Data {
 //===--- DataProtocol Conditional Conformances ----------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Slice : DataProtocol where Base : DataProtocol {
+extension Slice: DataProtocol where Base: DataProtocol {
     public typealias Regions = [Base.Regions.Element.SubSequence]
 
     public var regions: [Base.Regions.Element.SubSequence] {

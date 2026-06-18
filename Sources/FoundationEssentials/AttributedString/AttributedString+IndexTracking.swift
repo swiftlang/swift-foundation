@@ -23,7 +23,7 @@ internal import _FoundationCollections
 extension AttributedString.Guts {
     func _prepareTrackedIndicesUpdate(mutationRange: Range<BigString.Index>) {
         // Move any range endpoints inside of the mutation range to outside of the mutation range since a range should never end up splitting a mutation
-        for idx in 0 ..< trackedRanges.count {
+        for idx in 0..<trackedRanges.count {
             let lowerBoundWithinMutation = trackedRanges[idx].lowerBound > mutationRange.lowerBound && trackedRanges[idx].lowerBound < mutationRange.upperBound
             let upperBoundWithinMutation = trackedRanges[idx].upperBound > mutationRange.lowerBound && trackedRanges[idx].upperBound < mutationRange.upperBound
             switch (lowerBoundWithinMutation, upperBoundWithinMutation) {
@@ -42,13 +42,13 @@ extension AttributedString.Guts {
             }
         }
     }
-    
+
     func _finalizeTrackedIndicesUpdate(mutationStartOffset: Int, isInsertion: Bool, utf8LengthDelta: Int) {
         // Update indices to point to the correct offsets based on the mutation deltas
-        for idx in 0 ..< trackedRanges.count {
+        for idx in 0..<trackedRanges.count {
             var lowerBound = trackedRanges[idx].lowerBound
             var upperBound = trackedRanges[idx].upperBound
-            
+
             // Shift the lower bound if the mutation changed the length of the string and either of the following are true:
             //      A) The lower bound is greater than the start of the mutation (meaning it must be after the mutation due to the prepare step)
             //      B) The lower bound is equal to the start of the mutation, but the mutation is an insertion (meaning the text is inserted before the start offset)
@@ -67,7 +67,7 @@ extension AttributedString.Guts {
                 // Form new indices even if the offsets don't change to ensure the indices are valid in the newly-mutated rope
                 string.utf8.formIndex(&lowerBound, offsetBy: 0)
             }
-            
+
             trackedRanges[idx] = Range(uncheckedBounds: (lowerBound, upperBound))
         }
     }
@@ -78,7 +78,7 @@ extension AttributedString.Guts {
 @available(FoundationPreview 6.2, *)
 extension AttributedString {
     // MARK: inout API
-    
+
     /// Tracks the location of the provided range throughout the mutation closure, updating the provided range to one that represents the same effective locations after the mutation.
     ///
     /// If updating the provided range is not possible (tracking failed) then this function will fatal error. Use the `Optional`-returning variants to provide custom fallback behavior.
@@ -87,12 +87,14 @@ extension AttributedString {
     ///   - body: A mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
     public mutating func transform<E>(updating range: inout Range<Index>, body: (inout AttributedString) throws(E) -> Void) throws(E) -> Void {
         guard let result = try self.transform(updating: range, body: body) else {
-            fatalError("The provided mutation body did not allow for maintaining index tracking. Ensure that your mutation body mutates the provided AttributedString instead of replacing it with a different AttributedString or use the non-inout version of transform(updating:body:) which returns an Optional value to provide fallback behavior.")
+            fatalError(
+                "The provided mutation body did not allow for maintaining index tracking. Ensure that your mutation body mutates the provided AttributedString instead of replacing it with a different AttributedString or use the non-inout version of transform(updating:body:) which returns an Optional value to provide fallback behavior."
+            )
         }
         range = result
     }
-    
-    /// Tracks the location of the provided ranges throughout the mutation closure, updating them to new ranges that represent the same effective locations after the mutation. 
+
+    /// Tracks the location of the provided ranges throughout the mutation closure, updating them to new ranges that represent the same effective locations after the mutation.
     ///
     /// If updating the provided ranges is not possible (tracking failed) then this function will fatal error. Use the `Optional`-returning variants to provide custom fallback behavior.
     /// - Parameters:
@@ -100,13 +102,15 @@ extension AttributedString {
     ///   - body: A mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
     public mutating func transform<E>(updating ranges: inout [Range<Index>], body: (inout AttributedString) throws(E) -> Void) throws(E) -> Void {
         guard let result = try self.transform(updating: ranges, body: body) else {
-            fatalError("The provided mutation body did not allow for maintaining index tracking. Ensure that your mutation body mutates the provided AttributedString instead of replacing it with a different AttributedString or use the non-inout version of transform(updating:body:) which returns an Optional value to provide fallback behavior.")
+            fatalError(
+                "The provided mutation body did not allow for maintaining index tracking. Ensure that your mutation body mutates the provided AttributedString instead of replacing it with a different AttributedString or use the non-inout version of transform(updating:body:) which returns an Optional value to provide fallback behavior."
+            )
         }
         ranges = result
     }
-    
+
     // MARK: Optional-returning API
-    
+
     /// Tracks the location of the provided range throughout the mutation closure, returning a new, updated range that represents the same effective locations after the mutation.
     /// - Parameters:
     ///   - range: A range to track throughout the `body` block.
@@ -115,7 +119,7 @@ extension AttributedString {
     public mutating func transform<E>(updating range: Range<Index>, body: (inout AttributedString) throws(E) -> Void) throws(E) -> Range<Index>? {
         try self.transform(updating: [range], body: body)?.first
     }
-    
+
     /// Tracks the location of the provided ranges throughout the mutation closure, returning a new, updated range that represents the same effective locations after the mutation
     /// - Parameters:
     ///   - ranges: Ranges to track throughout the `body` block.
@@ -123,7 +127,7 @@ extension AttributedString {
     /// - Returns: the updated `Range`s that are valid after the mutation has been performed or `nil` if the mutation performed does not allow for tracking to succeed (such as replacing the provided inout variable with an entirely different `AttributedString`). When the return value is non-`nil`, the returned array is guaranteed to be the same size as the provided array with updated ranges at the same indices as their respective original ranges in the input array.
     public mutating func transform<E>(updating ranges: [Range<Index>], body: (inout AttributedString) throws(E) -> Void) throws(E) -> [Range<Index>]? {
         precondition(!ranges.isEmpty, "Cannot update an empty array of ranges")
-        
+
         // Ensure we are uniquely referenced and mutate the tracked ranges to include the new ranges
         ensureUniqueReference()
         let originalCount = _guts.trackedRanges.count
@@ -131,7 +135,7 @@ extension AttributedString {
             precondition(range.lowerBound >= self.startIndex && range.upperBound <= self.endIndex, "AttributedString index is out of bounds")
             _guts.trackedRanges.append(range._bstringRange)
         }
-        
+
         // Catch and store any error thrown during mutation here so that we can do any appropriate cleanup afterwards
         // We don't use a defer block here because the return value (returned indices) is dependent upon the effects of the cleanup (the ensureUniqueReference() call may change the version that should be stored within the indices)
         var thrownError: E?
@@ -140,11 +144,11 @@ extension AttributedString {
         } catch {
             thrownError = error
         }
-        
+
         // Ensure we are still uniquely referenced (it's possible we may have been uniquely referenced before, but the mutation closure created a new reference - even if it threw an error - and we are no longer unique)
         // We also must ensure that any indices returned from this function are created after this call so that they are initialized with the updated version number
         ensureUniqueReference()
-        
+
         // If the `trackedRanges` state is inconsistent, tracking has been lost. The best we can do to validate consistent state is to ensure we have the correct number of ranges
         guard _guts.trackedRanges.count == originalCount + ranges.count else {
             // Clear the ranges to prevent any future lingering tracking issues with this AttributedString
@@ -154,17 +158,17 @@ extension AttributedString {
             }
             return nil
         }
-        
+
         defer {
             // Tracking state is consistent, so make sure we remove the ranges we added earlier (whether we throw or whether we use these ranges in the return value
             // Only remove those ranges added above in order to support recursive tracking
             _guts.trackedRanges.removeSubrange(originalCount...)
         }
-        
+
         if let thrownError {
             throw thrownError
         }
-        
+
         return _guts.trackedRanges.suffix(from: originalCount).map {
             $0._attributedStringRange(version: _guts.version)
         }

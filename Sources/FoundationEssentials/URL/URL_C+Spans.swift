@@ -130,13 +130,15 @@ internal func _createCFStringFromASCIIBuffer(
 ) -> Unmanaged<CFString>? {
     return withUnsafeTemporaryAllocation(of: Unicode.ASCII.CodeUnit.self, capacity: capacity) { outputBuffer in
         let outputLength = block(outputBuffer)
-        guard let string = CFStringCreateWithBytes(
-            kCFAllocatorDefault,
-            outputBuffer.baseAddress!,
-            outputLength,
-            CFStringBuiltInEncodings.ASCII.rawValue,
-            false
-        ) else {
+        guard
+            let string = CFStringCreateWithBytes(
+                kCFAllocatorDefault,
+                outputBuffer.baseAddress!,
+                outputLength,
+                CFStringBuiltInEncodings.ASCII.rawValue,
+                false
+            )
+        else {
             return nil
         }
         return Unmanaged<CFString>.passRetained(string)
@@ -149,11 +151,13 @@ internal func _createCFStringFromCharacterBuffer(
 ) -> Unmanaged<CFString>? {
     return withUnsafeTemporaryAllocation(of: UTF16.CodeUnit.self, capacity: capacity) { outputBuffer in
         let outputLength = block(outputBuffer)
-        guard let string = CFStringCreateWithCharacters(
-            kCFAllocatorDefault,
-            outputBuffer.baseAddress!,
-            outputLength
-        ) else {
+        guard
+            let string = CFStringCreateWithCharacters(
+                kCFAllocatorDefault,
+                outputBuffer.baseAddress!,
+                outputLength
+            )
+        else {
             return nil
         }
         return Unmanaged<CFString>.passRetained(string)

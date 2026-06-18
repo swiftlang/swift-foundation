@@ -49,29 +49,29 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
 }
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
-struct CalendarCache : Sendable, ~Copyable {
+struct CalendarCache: Sendable, ~Copyable {
     // MARK: - State
-    
+
     static let cache = CalendarCache()
-    
+
     // The values stored in these two locks do not depend upon each other, so it is safe to access them with separate locks. This helps avoids contention on a single lock.
-    
+
     private let _current = Mutex<(any _CalendarProtocol)?>(nil)
     private let _fixed = Mutex<[Calendar.Identifier: any _CalendarProtocol]>([:])
 
     fileprivate init() {
     }
-    
+
     var current: any _CalendarProtocol {
         if let result = _current.withLock({ $0 }) {
             return result
         }
-                        
+
         let id = Locale.current._calendarIdentifier
         // If we cannot create the right kind of class, we fail immediately here
         let calendarClass = _calendarClass(identifier: id)!
         let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        
+
         return _current.withLock {
             if let current = $0 {
                 // Someone beat us to setting it - use the existing one
@@ -82,7 +82,7 @@ struct CalendarCache : Sendable, ~Copyable {
             }
         }
     }
-    
+
     func reset() {
         // rdar://102017659
         // Don't create `currentCalendar` here to avoid deadlocking when retrieving a fixed
@@ -92,22 +92,22 @@ struct CalendarCache : Sendable, ~Copyable {
         _current.withLock { $0 = nil }
         _fixed.withLock { $0 = [:] }
     }
-    
+
     // MARK: Singletons
-    
+
     static let autoupdatingCurrent = _CalendarAutoupdating()
-    
+
     // MARK: -
-    
+
     func fixed(_ id: Calendar.Identifier) -> any _CalendarProtocol {
         if let existing = _fixed.withLock({ $0[id] }) {
             return existing
         }
-        
+
         // If we cannot create the right kind of class, we fail immediately here
         let calendarClass = _calendarClass(identifier: id)!
         let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        
+
         return _fixed.withLock {
             if let existing = $0[id] {
                 return existing
@@ -117,7 +117,7 @@ struct CalendarCache : Sendable, ~Copyable {
             }
         }
     }
-    
+
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
         // If we cannot create the right kind of class, we fail immediately here

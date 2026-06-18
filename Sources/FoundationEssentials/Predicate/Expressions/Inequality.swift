@@ -13,23 +13,23 @@
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct NotEqual<
-        LHS : PredicateExpression,
-        RHS : PredicateExpression
-    > : PredicateExpression
+        LHS: PredicateExpression,
+        RHS: PredicateExpression
+    >: PredicateExpression
     where
         LHS.Output == RHS.Output,
-        LHS.Output : Equatable
+        LHS.Output: Equatable
     {
         public typealias Output = Bool
-        
+
         public let lhs: LHS
         public let rhs: RHS
-        
+
         public init(lhs: LHS, rhs: RHS) {
             self.lhs = lhs
             self.rhs = rhs
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Bool {
             try lhs.evaluate(bindings) != rhs.evaluate(bindings)
         }
@@ -41,23 +41,23 @@ extension PredicateExpressions {
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.NotEqual : CustomStringConvertible {
+extension PredicateExpressions.NotEqual: CustomStringConvertible {
     public var description: String {
         "NotEqual(lhs: \(lhs), rhs: \(rhs))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.NotEqual : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.NotEqual: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.NotEqual : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.NotEqual: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(lhs)
         try container.encode(rhs)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         lhs = try container.decode(LHS.self)
@@ -66,4 +66,4 @@ extension PredicateExpressions.NotEqual : Codable where LHS : Codable, RHS : Cod
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.NotEqual : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.NotEqual: Sendable where LHS: Sendable, RHS: Sendable {}

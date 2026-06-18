@@ -27,7 +27,7 @@ internal func resetAllNumberFormatterCaches() {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal class ICUNumberFormatterBase : @unchecked Sendable {
+internal class ICUNumberFormatterBase: @unchecked Sendable {
     /// `Sendable` notes: ICU's `UNumberFormatter` itself is thread safe. The result type is not, but we create that each time we format.
     internal let uformatter: OpaquePointer
     /// Stored for testing purposes only
@@ -38,16 +38,16 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
         let ustr = Array(skeleton.utf16)
         var status = U_ZERO_ERROR
         let formatter = unumf_openForSkeletonAndLocale(ustr, Int32(ustr.count), localeIdentifier, &status)
-        
+
         guard let formatter else {
             return nil
         }
-        
+
         guard status.isSuccess else {
             unumf_close(formatter)
             return nil
         }
-        
+
         uformatter = formatter
     }
 
@@ -84,8 +84,7 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
         var attrstr = AttributedString(string)
         for attr in positions {
 
-            let strRange = String.Index(utf16Offset: attr.begin, in: string) ..<
-                String.Index(utf16Offset: attr.end, in: string)
+            let strRange = String.Index(utf16Offset: attr.begin, in: string)..<String.Index(utf16Offset: attr.end, in: string)
             let range = Range<AttributedString.Index>(strRange, in: attrstr)!
 
 
@@ -181,12 +180,12 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
             var status = U_ZERO_ERROR
             result = unumf_openResult(&status)
             try status.checkSuccess()
-#if FOUNDATION_FRAMEWORK // TODO: Remove this when Decimal is moved
+            #if FOUNDATION_FRAMEWORK // TODO: Remove this when Decimal is moved
             var v = value
             var str = NSDecimalString(&v, nil)
-#else
+            #else
             var str = value.description
-#endif // FOUNDATION_FRAMEWORK
+            #endif // FOUNDATION_FRAMEWORK
             str.withUTF8 {
                 $0.withMemoryRebound(to: CChar.self) {
                     unumf_formatDecimal(formatter, $0.baseAddress, Int32($0.count), result, &status)
@@ -199,14 +198,14 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
             var status = U_ZERO_ERROR
             result = unumf_openResult(&status)
             try status.checkSuccess()
-            
+
             var value = value
             value.withUTF8 {
                 $0.withMemoryRebound(to: CChar.self) {
                     unumf_formatDecimal(formatter, $0.baseAddress, Int32($0.count), result, &status)
                 }
             }
-            
+
             try status.checkSuccess()
         }
 
@@ -224,8 +223,8 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
 
 // MARK: - Integer
 
-final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
-    fileprivate struct Signature : Hashable {
+final class ICUNumberFormatter: ICUNumberFormatterBase, @unchecked Sendable {
+    fileprivate struct Signature: Hashable {
         let skeleton: String
         let localeIdentifier: String
     }
@@ -260,8 +259,8 @@ final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
 
 // MARK: - Currency
 
-final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
-    fileprivate struct Signature : Hashable {
+final class ICUCurrencyNumberFormatter: ICUNumberFormatterBase, @unchecked Sendable {
+    fileprivate struct Signature: Hashable {
         let skeleton: String
         let currencyCode: String
         let localeIdentifier: String
@@ -308,8 +307,8 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Send
 
 // MARK: - Integer Percent
 
-final class ICUPercentNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
-    fileprivate struct Signature : Hashable {
+final class ICUPercentNumberFormatter: ICUNumberFormatterBase, @unchecked Sendable {
+    fileprivate struct Signature: Hashable {
         let skeleton: String
         let localeIdentifier: String
     }
@@ -353,8 +352,8 @@ final class ICUPercentNumberFormatter : ICUNumberFormatterBase, @unchecked Senda
 
 // MARK: - Byte Count
 
-final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
-    fileprivate struct Signature : Hashable {
+final class ICUByteCountNumberFormatter: ICUNumberFormatterBase, @unchecked Sendable {
+    fileprivate struct Signature: Hashable {
         let skeleton: String
         let localeIdentifier: String
     }
@@ -383,8 +382,7 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sen
         var attrstr = AttributedString(string)
         for attr in positions {
 
-            let strRange = String.Index(utf16Offset: attr.begin, in: string) ..<
-                String.Index(utf16Offset: attr.end, in: string)
+            let strRange = String.Index(utf16Offset: attr.begin, in: string)..<String.Index(utf16Offset: attr.end, in: string)
             let range = Range<AttributedString.Index>(strRange, in: attrstr)!
 
             let field = attr.field
@@ -411,8 +409,8 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sen
 
 // MARK: - Measurement
 
-final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
-    fileprivate struct Signature : Hashable {
+final class ICUMeasurementNumberFormatter: ICUNumberFormatterBase, @unchecked Sendable {
+    fileprivate struct Signature: Hashable {
         let skeleton: String
         let localeIdentifier: String
     }
@@ -442,8 +440,7 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
         var attrstr = AttributedString(string)
         for attr in positions {
 
-            let strRange = String.Index(utf16Offset: attr.begin, in: string) ..<
-                String.Index(utf16Offset: attr.end, in: string)
+            let strRange = String.Index(utf16Offset: attr.begin, in: string)..<String.Index(utf16Offset: attr.end, in: string)
             let range = Range<AttributedString.Index>(strRange, in: attrstr)!
             let field = attr.field
             var container = AttributeContainer()

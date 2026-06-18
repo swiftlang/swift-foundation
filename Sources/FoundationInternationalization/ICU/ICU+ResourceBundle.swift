@@ -48,7 +48,7 @@ extension ICU {
         }
 
         deinit {
-            lockedBundle.withLock{
+            lockedBundle.withLock {
                 ures_close($0)
             }
         }
@@ -87,8 +87,8 @@ extension ICU {
             return ResourceBundle(existing: subBundle)
         }
 
-        func withIntegers<R: ~Copyable, E>(_ body: (Span<Int32>) throws(E)-> (R)) throws(E) -> R {
-            let (vector, length) =  lockedBundle.withLock { bundle  in
+        func withIntegers<R: ~Copyable, E>(_ body: (Span<Int32>) throws(E) -> (R)) throws(E) -> R {
+            let (vector, length) = lockedBundle.withLock { bundle in
                 var length: Int32 = 0
                 var status: UErrorCode = U_ZERO_ERROR
 
@@ -163,4 +163,3 @@ extension ICU {
 
     }
 }
-

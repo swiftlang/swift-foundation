@@ -97,7 +97,7 @@ private final class DataTests {
     // MARK: -
 
     // String of course has its own way to get data, but this way tests our own data struct
-    func dataFrom(_ string : String) -> Data {
+    func dataFrom(_ string: String) -> Data {
         // Create a Data out of those bytes
         var string = string
         return string.withUTF8 { (ptr) in
@@ -255,7 +255,7 @@ private final class DataTests {
         #expect(mutatingHello.count == helloLength * 2, "The length should have changed")
 
         // Get the underlying data for hello2
-        mutatingHello.withUnsafeMutableUInt8Bytes { (bytes : UnsafeMutablePointer<UInt8>) in
+        mutatingHello.withUnsafeMutableUInt8Bytes { (bytes: UnsafeMutablePointer<UInt8>) in
             #expect(bytes.pointee == 0x68, "First byte should be 0x68")
 
             // Mutate it
@@ -305,19 +305,19 @@ private final class DataTests {
 
     @Test func replaceSubrange3() {
         // The expected result
-        let expectedBytes : [UInt8] = [1, 2, 9, 10, 11, 12, 13]
+        let expectedBytes: [UInt8] = [1, 2, 9, 10, 11, 12, 13]
         let expected = expectedBytes.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
 
         // The data we'll mutate
-        let someBytes : [UInt8] = [1, 2, 3, 4, 5]
+        let someBytes: [UInt8] = [1, 2, 3, 4, 5]
         var a = someBytes.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
 
         // The bytes we'll insert
-        let b : [UInt8] = [9, 10, 11, 12, 13]
+        let b: [UInt8] = [9, 10, 11, 12, 13]
         b.withUnsafeBufferPointer {
             a.replaceSubrange(2..<5, with: $0)
         }
@@ -325,15 +325,15 @@ private final class DataTests {
     }
 
     @Test func replaceSubrange4() {
-        let expectedBytes : [UInt8] = [1, 2, 9, 10, 11, 12, 13]
+        let expectedBytes: [UInt8] = [1, 2, 9, 10, 11, 12, 13]
         let expected = Data(expectedBytes)
 
         // The data we'll mutate
-        let someBytes : [UInt8] = [1, 2, 3, 4, 5]
+        let someBytes: [UInt8] = [1, 2, 3, 4, 5]
         var a = Data(someBytes)
 
         // The bytes we'll insert
-        let b : [UInt8] = [9, 10, 11, 12, 13]
+        let b: [UInt8] = [9, 10, 11, 12, 13]
         a.replaceSubrange(2..<5, with: b)
         #expect(expected == a)
     }
@@ -361,7 +361,7 @@ private final class DataTests {
 
     @Test func replaceSubrangeEmptyBuffer() {
         var d = Data([1, 2, 3, 4])
-        d.replaceSubrange(1 ..< 3, with: UnsafeBufferPointer<Int>(start: nil, count: 0))
+        d.replaceSubrange(1..<3, with: UnsafeBufferPointer<Int>(start: nil, count: 0))
         #expect(d == Data([1, 4]))
     }
 
@@ -389,7 +389,7 @@ private final class DataTests {
     @Test func genericAlgorithms() {
         let hello = dataFrom("Hello World")
 
-        let isCapital = { (byte : UInt8) in byte >= 65 && byte <= 90 }
+        let isCapital = { (byte: UInt8) in byte >= 65 && byte <= 90 }
 
         let allCaps = hello.filter(isCapital)
         #expect(allCaps.count == 2)
@@ -422,7 +422,7 @@ private final class DataTests {
     }
 
     @Test func copyBytes_undersized() {
-        let a : [UInt8] = [1, 2, 3, 4, 5]
+        let a: [UInt8] = [1, 2, 3, 4, 5]
         let data = a.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
@@ -435,7 +435,7 @@ private final class DataTests {
         #expect(expectedSize - 1 == copiedCount)
 
         var index = 0
-        for v in a[0..<expectedSize-1] {
+        for v in a[0..<expectedSize - 1] {
             #expect(v == buffer[index])
             index += 1
         }
@@ -444,7 +444,7 @@ private final class DataTests {
     }
 
     @Test func copyBytes_oversized() {
-        let a : [Int32] = [1, 0, 1, 0, 1]
+        let a: [Int32] = [1, 0, 1, 0, 1]
         let data = a.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
@@ -462,14 +462,14 @@ private final class DataTests {
 
         do {
             // Equal sized buffer, data
-            let a : [UInt8] = [1, 2, 3, 4, 5]
+            let a: [UInt8] = [1, 2, 3, 4, 5]
             let data = a.withUnsafeBufferPointer {
                 return Data(buffer: $0)
             }
 
             let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: data.count, alignment: MemoryLayout<UInt8>.size)
 
-            var copiedCount : Int
+            var copiedCount: Int
 
             copiedCount = data.copyBytes(to: buffer, from: 0..<0)
             #expect(0 == copiedCount)
@@ -490,13 +490,13 @@ private final class DataTests {
 
         do {
             // Larger buffer than data
-            let a : [UInt8] = [1, 2, 3, 4]
+            let a: [UInt8] = [1, 2, 3, 4]
             let data = a.withUnsafeBufferPointer {
                 return Data(buffer: $0)
             }
 
             let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 10, alignment: MemoryLayout<UInt8>.size)
-            var copiedCount : Int
+            var copiedCount: Int
 
             copiedCount = data.copyBytes(to: buffer, from: 0..<3)
             #expect((0..<3).count == copiedCount)
@@ -511,14 +511,14 @@ private final class DataTests {
 
         do {
             // Larger data than buffer
-            let a : [UInt8] = [1, 2, 3, 4, 5, 6]
+            let a: [UInt8] = [1, 2, 3, 4, 5, 6]
             let data = a.withUnsafeBufferPointer {
                 return Data(buffer: $0)
             }
 
             let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 4, alignment: MemoryLayout<UInt8>.size)
 
-            var copiedCount : Int
+            var copiedCount: Int
 
             copiedCount = data.copyBytes(to: buffer, from: 0..<data.index(before: data.endIndex))
             #expect(4 == copiedCount)
@@ -536,17 +536,17 @@ private final class DataTests {
     @Test func copyBytes_fromSubSequenceToGenericBuffer() {
         let source = Data([1, 3, 5, 7, 9])[1..<3]
         var destination = Array<UInt8>(repeating: 8, count: 4)
-        
+
         destination.withUnsafeMutableBufferPointer {
             let count = source.copyBytes(to: $0)
             #expect(count == 2)
         }
-        
+
         #expect(destination == [3, 5, 8, 8])
     }
 
     @Test func genericBuffers() {
-        let a : [Int32] = [1, 0, 1, 0, 1]
+        let a: [Int32] = [1, 0, 1, 0, 1]
         var data = a.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
@@ -695,16 +695,20 @@ private final class DataTests {
     @Test func rangeOfDataProtocol() {
         // https://bugs.swift.org/browse/SR-10689
 
-        let base = Data([0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03,
-                         0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03])
+        let base = Data([
+            0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03,
+            0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03,
+        ])
         let subdata = base[10..<13] // [0x02, 0x03, 0x00]
         let oneByte = base[14..<15] // [0x02]
 
         do { // firstRange(of:in:)
-            func assertFirstRange(_ data: Data, _ fragment: Data, range: ClosedRange<Int>? = nil,
-                                  expectedStartIndex: Int?,
-                                  _ message: @autoclosure () -> Comment? = nil,
-                                  sourceLocation: SourceLocation = #_sourceLocation) {
+            func assertFirstRange(
+                _ data: Data, _ fragment: Data, range: ClosedRange<Int>? = nil,
+                expectedStartIndex: Int?,
+                _ message: @autoclosure () -> Comment? = nil,
+                sourceLocation: SourceLocation = #_sourceLocation
+            ) {
                 if let index = expectedStartIndex {
                     let expectedRange: Range<Int> = index..<(index + fragment.count)
                     if let someRange = range {
@@ -743,10 +747,12 @@ private final class DataTests {
         }
 
         do { // lastRange(of:in:)
-            func assertLastRange(_ data: Data, _ fragment: Data, range: ClosedRange<Int>? = nil,
-                                 expectedStartIndex: Int?,
-                                 _ message: @autoclosure () -> Comment? = nil,
-                                 sourceLocation: SourceLocation = #_sourceLocation) {
+            func assertLastRange(
+                _ data: Data, _ fragment: Data, range: ClosedRange<Int>? = nil,
+                expectedStartIndex: Int?,
+                _ message: @autoclosure () -> Comment? = nil,
+                sourceLocation: SourceLocation = #_sourceLocation
+            ) {
                 if let index = expectedStartIndex {
                     let expectedRange: Range<Int> = index..<(index + fragment.count)
                     if let someRange = range {
@@ -1018,7 +1024,7 @@ private final class DataTests {
         // Append to the `InlineSlice` representation
         data = Data(0..<23)
         data.append(addingRawCapacity: 20) {
-          $0.append(appendedValue)
+            $0.append(appendedValue)
         }
         #expect(data.count == 24)
         #expect(data.last == appendedValue)
@@ -1103,12 +1109,15 @@ private final class DataTests {
         // If we append a sequence of elements larger than a single InlineData, the internal append here should buffer.
         // We want to make sure that buffering in this way does not accidentally drop trailing elements on the floor.
         d.append(contentsOf: 0x03...0x2F)
-        #expect(Data([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                      0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-                      0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-                      0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
-                      0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
-                      0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F]) == d)
+        #expect(
+            Data([
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+                0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+                0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+                0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
+            ]) == d)
     }
 
     // This test is like test_appendingNonContiguousSequence_exactCount but uses a sequence which reports 0 for its `.underestimatedCount`.
@@ -1128,12 +1137,15 @@ private final class DataTests {
         // If we append a sequence of elements larger than a single InlineData, the internal append here should buffer.
         // We want to make sure that buffering in this way does not accidentally drop trailing elements on the floor.
         d.append(contentsOf: (0x03...0x2F).makeIterator()) // `.makeIterator()` produces a sequence whose `.underestimatedCount` is 0.
-        #expect(Data([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                      0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-                      0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-                      0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
-                      0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
-                      0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F]) == d)
+        #expect(
+            Data([
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+                0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+                0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+                0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
+            ]) == d)
     }
 
     @Test func sequenceInitializers() {
@@ -1701,17 +1713,17 @@ private final class DataTests {
             #expect(data.count == 0)
         }
     }
-    
+
     @Test func validateMutation_cow_mutableBytes() {
         var data = Data(count: 32)
         holdReference(data) {
             var bytes = data.mutableBytes
             bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
-            
+
             #expect(data[0] == 1)
             #expect(heldData?[0] == 0)
         }
-        
+
         var data2 = Data(count: 32)
         let originalPointer = data2.allocationForComparison
 
@@ -1720,21 +1732,21 @@ private final class DataTests {
         #expect(data2[0] == 1)
         #expect(data2.allocationForComparison == originalPointer)
     }
-    
+
     @Test func validateMutation_cow_mutableSpan() {
         var data = Data(count: 32)
         holdReference(data) {
             var bytes = data.mutableSpan
             bytes[0] = 1
-            
+
             #expect(data[0] == 1)
             #expect(heldData?[0] == 0)
         }
-        
+
         var data2 = Data(count: 32)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
         let originalPointer = data2.allocationForComparison
-        
+
         var bytes = data2.mutableSpan
         bytes[0] = 1
         #expect(data2[0] == 1)
@@ -1753,22 +1765,22 @@ private final class DataTests {
 
         data = Data(repeating: 2, count: 12)
         let value1 = data.withUnsafeBytes {
-            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0, +)) }
             return Value(sum)
         }
         #expect(value1.stored == 24)
         #expect(throws: LocalError.error) {
-            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            try data.withUnsafeBytes { _ throws(LocalError) in throw (LocalError.error) }
         }
 
         data = Data(repeating: 1, count: 128)
         let value2 = data.withUnsafeBytes {
-            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0, +)) }
             return Value(sum)
         }
         #expect(value2.stored == 128)
         #expect(throws: LocalError.error) {
-            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+            try data.withUnsafeBytes { _ throws(LocalError) in throw (LocalError.error) }
         }
     }
 
@@ -1780,12 +1792,12 @@ private final class DataTests {
             $0.withMemoryRebound(to: UInt8.self) {
                 for i in $0.indices { $0[i] = 2 }
             }
-            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0, +)) }
             return Value(sum)
         }
         #expect(value1.stored == 24)
         #expect(throws: LocalError.error) {
-            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw (LocalError.error) }
         }
 
         data = Data(count: 128)
@@ -1793,12 +1805,12 @@ private final class DataTests {
             $0.withMemoryRebound(to: UInt8.self) {
                 for i in $0.indices { $0[i] = 1 }
             }
-            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0, +)) }
             return Value(sum)
         }
         #expect(value2.stored == 128)
         #expect(throws: LocalError.error) {
-            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw (LocalError.error) }
         }
     }
 
@@ -1838,7 +1850,7 @@ private final class DataTests {
             0..<8,
             0..<16,
             0..<32,
-            0..<64
+            0..<64,
         ]
         let diffs = [0, 1, 2, 4, 8, 16, 32]
         for initial in initials {
@@ -1846,8 +1858,7 @@ private final class DataTests {
                 var data = Data(initial)
                 data.count += diff
                 #expect(
-                    Data(Array(initial) + Array(repeating: 0, count: diff)) ==
-                    data)
+                    Data(Array(initial) + Array(repeating: 0, count: diff)) == data)
             }
         }
     }
@@ -1860,7 +1871,7 @@ private final class DataTests {
             0..<8,
             0..<16,
             0..<32,
-            0..<64
+            0..<64,
         ]
         let diffs = [0, 1, 2, 4, 8, 16, 32]
         for initial in initials {
@@ -1869,8 +1880,7 @@ private final class DataTests {
                 var data = Data(initial)
                 data.count -= diff
                 #expect(
-                    Data(initial.dropLast(diff)) ==
-                    data)
+                    Data(initial.dropLast(diff)) == data)
             }
         }
     }
@@ -2033,7 +2043,7 @@ private final class DataTests {
 
     @Test
     func inlineDataMutableSpan() throws {
-#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
+        #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data()
         var span = source.mutableSpan
         var isEmpty = span.isEmpty
@@ -2049,24 +2059,24 @@ private final class DataTests {
         #expect(span.count == count)
         let v = UInt8.random(in: 10..<100)
         span[i] = v
-        var sub = span._mutatingExtracting(i ..< i+1)
+        var sub = span._mutatingExtracting(i..<i + 1)
         sub.update(repeating: v)
         #expect(source[i] == v)
-#endif
+        #endif
     }
 
     @Test
     func inlineSliceDataMutableSpan() throws {
-#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
+        #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data(0..<100)
         let count = source.count
         var span = source.mutableSpan
         #expect(span.count == count)
         let i = try #require(span.indices.randomElement())
-        var sub = span._mutatingExtracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i + 1)
         sub.update(repeating: .max)
         #expect(source[i] == .max)
-#endif
+        #endif
     }
 
     @Test
@@ -2085,7 +2095,7 @@ private final class DataTests {
         let byteCount = span.byteCount
         #expect(byteCount == count)
         let v = UInt8.random(in: 10..<100)
-        var sub = span._mutatingExtracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i + 1)
         sub.storeBytes(of: v, as: UInt8.self)
         #expect(source[i] == v)
     }
@@ -2110,66 +2120,66 @@ private final class DataTests {
             _ = data.subdata(in: 5..<200)
         }
     }
-    
+
     @Test func bounding_failure_replace() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data.replaceSubrange(5..<200, with: Data())
         }
     }
-    
+
     @Test func bounding_failure_replace2() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("a".data(using: .utf8))
-            let bytes : [UInt8] = [1, 2, 3]
+            let bytes: [UInt8] = [1, 2, 3]
             bytes.withUnsafeBufferPointer {
                 // lowerBound ok, upperBound after end of data
                 data.replaceSubrange(0..<2, with: $0)
             }
         }
     }
-    
+
     @Test func bounding_failure_replace3() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("a".data(using: .utf8))
-            let bytes : [UInt8] = [1, 2, 3]
+            let bytes: [UInt8] = [1, 2, 3]
             bytes.withUnsafeBufferPointer {
                 // lowerBound is > length
                 data.replaceSubrange(2..<4, with: $0)
             }
         }
     }
-    
+
     @Test func bounding_failure_replace4() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("a".data(using: .utf8))
-            let bytes : [UInt8] = [1, 2, 3]
+            let bytes: [UInt8] = [1, 2, 3]
             // lowerBound is > length
             data.replaceSubrange(2..<4, with: bytes)
         }
     }
-    
+
     @Test func bounding_failure_reset_range() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data.resetBytes(in: 100..<200)
         }
     }
-    
+
     @Test func bounding_failure_append_bad_length() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data.append("hello", count: -2)
         }
     }
-    
+
     @Test func bounding_failure_append_absurd_length() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data.append("hello", count: Int.min)
         }
     }
-    
+
     @Test func bounding_failure_subscript() async {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
@@ -2177,7 +2187,7 @@ private final class DataTests {
         }
     }
     #endif
-    
+
     @Test func splittingHttp() throws {
         func split(_ data: Data, on delimiter: String) -> [Data] {
             let dataDelimiter = delimiter.data(using: .utf8)!
@@ -2202,12 +2212,13 @@ private final class DataTests {
         }
         let data = try #require("GET /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n".data(using: .ascii))
         let fields = split(data, on: "\r\n")
-        let splitFields = try fields.map { try #require(String(data:$0, encoding: .utf8)) }
-        #expect([
-            "GET /index.html HTTP/1.1",
-            "Host: www.example.com",
-            ""
-        ] == splitFields)
+        let splitFields = try fields.map { try #require(String(data: $0, encoding: .utf8)) }
+        #expect(
+            [
+                "GET /index.html HTTP/1.1",
+                "Host: www.example.com",
+                "",
+            ] == splitFields)
     }
 
     @Test func doubleDeallocation() {
@@ -2292,39 +2303,27 @@ extension DataTests {
     }
 
     @Test func base64Encode_allBytesSequentially() {
-        let input = UInt8(0) ... UInt8(255)
+        let input = UInt8(0)...UInt8(255)
 
         #expect(
             Data(input).base64EncodedString() == """
-            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0B\
-            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgY\
-            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw\
-            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==
-            """
+                AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==
+                """
         )
         #expect(
             Data(input).base64EncodedString(options: .omitPaddingCharacter) == """
-            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0B\
-            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgY\
-            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw\
-            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w
-            """
+                AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w
+                """
         )
         #expect(
             Data(input).base64EncodedString(options: [.base64URLAlphabet]) == """
-            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0B\
-            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgY\
-            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw\
-            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w==
-            """
+                AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w==
+                """
         )
         #expect(
             Data(input).base64EncodedString(options: [.omitPaddingCharacter, .base64URLAlphabet]) == """
-            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0B\
-            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgY\
-            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw\
-            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w
-            """
+                AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w
+                """
         )
     }
 
@@ -2362,120 +2361,83 @@ extension DataTests {
 
         // using .endLineWithLineFeed
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\n\
-            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\n\
-            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\n\
-            IG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\nbmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\nb2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\nIG9ybmFyZSBmZWxpcy4=
+                """
         )
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithLineFeed]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\n\
-            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\n\
-            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithLineFeed]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\nVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\nbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+                """
         )
 
         // using .endLineWithCarriageReturn
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithCarriageReturn]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\
-            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\
-            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\
-            IG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithCarriageReturn]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\rbmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\rb2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\rIG9ybmFyZSBmZWxpcy4=
+                """
         )
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithCarriageReturn]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\
-            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\
-            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithCarriageReturn]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\rVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\rbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+                """
         )
 
         // using .endLineWithLineFeed, .endLineWithCarriageReturn
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed, .endLineWithCarriageReturn]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\n\
-            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\n\
-            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\n\
-            IG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed, .endLineWithCarriageReturn]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\nbmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\nb2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\nIG9ybmFyZSBmZWxpcy4=
+                """
         )
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithLineFeed, .endLineWithCarriageReturn]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\n\
-            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\n\
-            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithLineFeed, .endLineWithCarriageReturn]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\nVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\nbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+                """
         )
 
         // using no explicit endLine option
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\n\
-            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\n\
-            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\n\
-            IG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\nbmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\nb2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\nIG9ybmFyZSBmZWxpcy4=
+                """
         )
         #expect(
-            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters]) ==
-            """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\n\
-            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\n\
-            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
-            """
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters]) == """
+                TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\nVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\nbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+                """
         )
     }
 
     @Test func base64Encode_DoesNotAddLineSeparatorsInLastLineWhenStringFitsInLine() {
         #expect(
-             Data(repeating: 0, count: 48).base64EncodedString(options: .lineLength64Characters) ==
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            Data(repeating: 0, count: 48).base64EncodedString(options: .lineLength64Characters) == "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         )
 
         #expect(
-             Data(repeating: 0, count: 96).base64EncodedString(options: .lineLength64Characters) ==
-             """
-             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
-             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-             """
+            Data(repeating: 0, count: 96).base64EncodedString(options: .lineLength64Characters) == """
+                AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                """
         )
 
         #expect(
-            Data(repeating: 0, count: 48).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            Data(repeating: 0, count: 48).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) == "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         )
 
         #expect(
-             Data(repeating: 0, count: 96).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
-             """
-             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
-             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-             """
+            Data(repeating: 0, count: 96).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) == """
+                AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                """
         )
 
 
         #expect(
-            Data(repeating: 0, count: 57).base64EncodedString(options: .lineLength76Characters) ==
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            Data(repeating: 0, count: 57).base64EncodedString(options: .lineLength76Characters) == "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         )
 
         #expect(
-            Data(repeating: 0, count: 114).base64EncodedString(options: .lineLength76Characters) ==
-            """
-            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
-            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-            """
+            Data(repeating: 0, count: 114).base64EncodedString(options: .lineLength76Characters) == """
+                AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                """
         )
 
     }
@@ -2493,17 +2455,15 @@ extension DataTests {
     }
 
     @Test func base64Decode_AllTheBytesSequentially() {
-        let base64 = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w=="
+        let base64 =
+            "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w=="
 
-        #expect(Data(UInt8(0) ... UInt8(255)) == Data(base64Encoded: base64))
+        #expect(Data(UInt8(0)...UInt8(255)) == Data(base64Encoded: base64))
     }
 
     @Test func base64Decode_ignoringLineBreaks() {
         let base64 = """
-            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\n\
-            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\n\
-            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\n\
-            IG9ybmFyZSBmZWxpcy4=
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\nbmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\nb2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\nIG9ybmFyZSBmZWxpcy4=
             """
         let expected = """
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut at tincidunt arcu. Suspendisse nec sodales erat, sit amet imperdiet ipsum. Etiam sed ornare felis.
@@ -2731,34 +2691,38 @@ extension DataTests {
 
 
     @Test func base64Data_medium() {
-        let data = Data("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut at tincidunt arcu. Suspendisse nec sodales erat, sit amet imperdiet ipsum. Etiam sed ornare felis. Nunc mauris turpis, bibendum non lectus quis, malesuada placerat turpis. Nam adipiscing non massa et semper. Nulla convallis semper bibendum. Aliquam dictum nulla cursus mi ultricies, at tincidunt mi sagittis. Nulla faucibus at dui quis sodales. Morbi rutrum, dui id ultrices venenatis, arcu urna egestas felis, vel suscipit mauris arcu quis risus. Nunc venenatis ligula at orci tristique, et mattis purus pulvinar. Etiam ultricies est odio. Nunc eleifend malesuada justo, nec euismod sem ultrices quis. Etiam nec nibh sit amet lorem faucibus dapibus quis nec leo. Praesent sit amet mauris vel lacus hendrerit porta mollis consectetur mi. Donec eget tortor dui. Morbi imperdiet, arcu sit amet elementum interdum, quam nisl tempor quam, vitae feugiat augue purus sed lacus. In ac urna adipiscing purus venenatis volutpat vel et metus. Nullam nec auctor quam. Phasellus porttitor felis ac nibh gravida suscipit tempus at ante. Nunc pellentesque iaculis sapien a mattis. Aenean eleifend dolor non nunc laoreet, non dictum massa aliquam. Aenean quis turpis augue. Praesent augue lectus, mollis nec elementum eu, dignissim at velit. Ut congue neque id ullamcorper pellentesque. Maecenas euismod in elit eu vehicula. Nullam tristique dui nulla, nec convallis metus suscipit eget. Cras semper augue nec cursus blandit. Nulla rhoncus et odio quis blandit. Praesent lobortis dignissim velit ut pulvinar. Duis interdum quam adipiscing dolor semper semper. Nunc bibendum convallis dui, eget mollis magna hendrerit et. Morbi facilisis, augue eu fringilla convallis, mauris est cursus dolor, eu posuere odio nunc quis orci. Ut eu justo sem. Phasellus ut erat rhoncus, faucibus arcu vitae, vulputate erat. Aliquam nec magna viverra, interdum est vitae, rhoncus sapien. Duis tincidunt tempor ipsum ut dapibus. Nullam commodo varius metus, sed sollicitudin eros. Etiam nec odio et dui tempor blandit posuere.".utf8)
+        let data = Data(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut at tincidunt arcu. Suspendisse nec sodales erat, sit amet imperdiet ipsum. Etiam sed ornare felis. Nunc mauris turpis, bibendum non lectus quis, malesuada placerat turpis. Nam adipiscing non massa et semper. Nulla convallis semper bibendum. Aliquam dictum nulla cursus mi ultricies, at tincidunt mi sagittis. Nulla faucibus at dui quis sodales. Morbi rutrum, dui id ultrices venenatis, arcu urna egestas felis, vel suscipit mauris arcu quis risus. Nunc venenatis ligula at orci tristique, et mattis purus pulvinar. Etiam ultricies est odio. Nunc eleifend malesuada justo, nec euismod sem ultrices quis. Etiam nec nibh sit amet lorem faucibus dapibus quis nec leo. Praesent sit amet mauris vel lacus hendrerit porta mollis consectetur mi. Donec eget tortor dui. Morbi imperdiet, arcu sit amet elementum interdum, quam nisl tempor quam, vitae feugiat augue purus sed lacus. In ac urna adipiscing purus venenatis volutpat vel et metus. Nullam nec auctor quam. Phasellus porttitor felis ac nibh gravida suscipit tempus at ante. Nunc pellentesque iaculis sapien a mattis. Aenean eleifend dolor non nunc laoreet, non dictum massa aliquam. Aenean quis turpis augue. Praesent augue lectus, mollis nec elementum eu, dignissim at velit. Ut congue neque id ullamcorper pellentesque. Maecenas euismod in elit eu vehicula. Nullam tristique dui nulla, nec convallis metus suscipit eget. Cras semper augue nec cursus blandit. Nulla rhoncus et odio quis blandit. Praesent lobortis dignissim velit ut pulvinar. Duis interdum quam adipiscing dolor semper semper. Nunc bibendum convallis dui, eget mollis magna hendrerit et. Morbi facilisis, augue eu fringilla convallis, mauris est cursus dolor, eu posuere odio nunc quis orci. Ut eu justo sem. Phasellus ut erat rhoncus, faucibus arcu vitae, vulputate erat. Aliquam nec magna viverra, interdum est vitae, rhoncus sapien. Duis tincidunt tempor ipsum ut dapibus. Nullam commodo varius metus, sed sollicitudin eros. Etiam nec odio et dui tempor blandit posuere."
+                .utf8)
         let base64 = data.base64EncodedString()
-        #expect("TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4gTnVuYyBtYXVyaXMgdHVycGlzLCBiaWJlbmR1bSBub24gbGVjdHVzIHF1aXMsIG1hbGVzdWFkYSBwbGFjZXJhdCB0dXJwaXMuIE5hbSBhZGlwaXNjaW5nIG5vbiBtYXNzYSBldCBzZW1wZXIuIE51bGxhIGNvbnZhbGxpcyBzZW1wZXIgYmliZW5kdW0uIEFsaXF1YW0gZGljdHVtIG51bGxhIGN1cnN1cyBtaSB1bHRyaWNpZXMsIGF0IHRpbmNpZHVudCBtaSBzYWdpdHRpcy4gTnVsbGEgZmF1Y2lidXMgYXQgZHVpIHF1aXMgc29kYWxlcy4gTW9yYmkgcnV0cnVtLCBkdWkgaWQgdWx0cmljZXMgdmVuZW5hdGlzLCBhcmN1IHVybmEgZWdlc3RhcyBmZWxpcywgdmVsIHN1c2NpcGl0IG1hdXJpcyBhcmN1IHF1aXMgcmlzdXMuIE51bmMgdmVuZW5hdGlzIGxpZ3VsYSBhdCBvcmNpIHRyaXN0aXF1ZSwgZXQgbWF0dGlzIHB1cnVzIHB1bHZpbmFyLiBFdGlhbSB1bHRyaWNpZXMgZXN0IG9kaW8uIE51bmMgZWxlaWZlbmQgbWFsZXN1YWRhIGp1c3RvLCBuZWMgZXVpc21vZCBzZW0gdWx0cmljZXMgcXVpcy4gRXRpYW0gbmVjIG5pYmggc2l0IGFtZXQgbG9yZW0gZmF1Y2lidXMgZGFwaWJ1cyBxdWlzIG5lYyBsZW8uIFByYWVzZW50IHNpdCBhbWV0IG1hdXJpcyB2ZWwgbGFjdXMgaGVuZHJlcml0IHBvcnRhIG1vbGxpcyBjb25zZWN0ZXR1ciBtaS4gRG9uZWMgZWdldCB0b3J0b3IgZHVpLiBNb3JiaSBpbXBlcmRpZXQsIGFyY3Ugc2l0IGFtZXQgZWxlbWVudHVtIGludGVyZHVtLCBxdWFtIG5pc2wgdGVtcG9yIHF1YW0sIHZpdGFlIGZldWdpYXQgYXVndWUgcHVydXMgc2VkIGxhY3VzLiBJbiBhYyB1cm5hIGFkaXBpc2NpbmcgcHVydXMgdmVuZW5hdGlzIHZvbHV0cGF0IHZlbCBldCBtZXR1cy4gTnVsbGFtIG5lYyBhdWN0b3IgcXVhbS4gUGhhc2VsbHVzIHBvcnR0aXRvciBmZWxpcyBhYyBuaWJoIGdyYXZpZGEgc3VzY2lwaXQgdGVtcHVzIGF0IGFudGUuIE51bmMgcGVsbGVudGVzcXVlIGlhY3VsaXMgc2FwaWVuIGEgbWF0dGlzLiBBZW5lYW4gZWxlaWZlbmQgZG9sb3Igbm9uIG51bmMgbGFvcmVldCwgbm9uIGRpY3R1bSBtYXNzYSBhbGlxdWFtLiBBZW5lYW4gcXVpcyB0dXJwaXMgYXVndWUuIFByYWVzZW50IGF1Z3VlIGxlY3R1cywgbW9sbGlzIG5lYyBlbGVtZW50dW0gZXUsIGRpZ25pc3NpbSBhdCB2ZWxpdC4gVXQgY29uZ3VlIG5lcXVlIGlkIHVsbGFtY29ycGVyIHBlbGxlbnRlc3F1ZS4gTWFlY2VuYXMgZXVpc21vZCBpbiBlbGl0IGV1IHZlaGljdWxhLiBOdWxsYW0gdHJpc3RpcXVlIGR1aSBudWxsYSwgbmVjIGNvbnZhbGxpcyBtZXR1cyBzdXNjaXBpdCBlZ2V0LiBDcmFzIHNlbXBlciBhdWd1ZSBuZWMgY3Vyc3VzIGJsYW5kaXQuIE51bGxhIHJob25jdXMgZXQgb2RpbyBxdWlzIGJsYW5kaXQuIFByYWVzZW50IGxvYm9ydGlzIGRpZ25pc3NpbSB2ZWxpdCB1dCBwdWx2aW5hci4gRHVpcyBpbnRlcmR1bSBxdWFtIGFkaXBpc2NpbmcgZG9sb3Igc2VtcGVyIHNlbXBlci4gTnVuYyBiaWJlbmR1bSBjb252YWxsaXMgZHVpLCBlZ2V0IG1vbGxpcyBtYWduYSBoZW5kcmVyaXQgZXQuIE1vcmJpIGZhY2lsaXNpcywgYXVndWUgZXUgZnJpbmdpbGxhIGNvbnZhbGxpcywgbWF1cmlzIGVzdCBjdXJzdXMgZG9sb3IsIGV1IHBvc3VlcmUgb2RpbyBudW5jIHF1aXMgb3JjaS4gVXQgZXUganVzdG8gc2VtLiBQaGFzZWxsdXMgdXQgZXJhdCByaG9uY3VzLCBmYXVjaWJ1cyBhcmN1IHZpdGFlLCB2dWxwdXRhdGUgZXJhdC4gQWxpcXVhbSBuZWMgbWFnbmEgdml2ZXJyYSwgaW50ZXJkdW0gZXN0IHZpdGFlLCByaG9uY3VzIHNhcGllbi4gRHVpcyB0aW5jaWR1bnQgdGVtcG9yIGlwc3VtIHV0IGRhcGlidXMuIE51bGxhbSBjb21tb2RvIHZhcml1cyBtZXR1cywgc2VkIHNvbGxpY2l0dWRpbiBlcm9zLiBFdGlhbSBuZWMgb2RpbyBldCBkdWkgdGVtcG9yIGJsYW5kaXQgcG9zdWVyZS4=" == base64, "medium base64 conversion should work")
+        #expect(
+            "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4gTnVuYyBtYXVyaXMgdHVycGlzLCBiaWJlbmR1bSBub24gbGVjdHVzIHF1aXMsIG1hbGVzdWFkYSBwbGFjZXJhdCB0dXJwaXMuIE5hbSBhZGlwaXNjaW5nIG5vbiBtYXNzYSBldCBzZW1wZXIuIE51bGxhIGNvbnZhbGxpcyBzZW1wZXIgYmliZW5kdW0uIEFsaXF1YW0gZGljdHVtIG51bGxhIGN1cnN1cyBtaSB1bHRyaWNpZXMsIGF0IHRpbmNpZHVudCBtaSBzYWdpdHRpcy4gTnVsbGEgZmF1Y2lidXMgYXQgZHVpIHF1aXMgc29kYWxlcy4gTW9yYmkgcnV0cnVtLCBkdWkgaWQgdWx0cmljZXMgdmVuZW5hdGlzLCBhcmN1IHVybmEgZWdlc3RhcyBmZWxpcywgdmVsIHN1c2NpcGl0IG1hdXJpcyBhcmN1IHF1aXMgcmlzdXMuIE51bmMgdmVuZW5hdGlzIGxpZ3VsYSBhdCBvcmNpIHRyaXN0aXF1ZSwgZXQgbWF0dGlzIHB1cnVzIHB1bHZpbmFyLiBFdGlhbSB1bHRyaWNpZXMgZXN0IG9kaW8uIE51bmMgZWxlaWZlbmQgbWFsZXN1YWRhIGp1c3RvLCBuZWMgZXVpc21vZCBzZW0gdWx0cmljZXMgcXVpcy4gRXRpYW0gbmVjIG5pYmggc2l0IGFtZXQgbG9yZW0gZmF1Y2lidXMgZGFwaWJ1cyBxdWlzIG5lYyBsZW8uIFByYWVzZW50IHNpdCBhbWV0IG1hdXJpcyB2ZWwgbGFjdXMgaGVuZHJlcml0IHBvcnRhIG1vbGxpcyBjb25zZWN0ZXR1ciBtaS4gRG9uZWMgZWdldCB0b3J0b3IgZHVpLiBNb3JiaSBpbXBlcmRpZXQsIGFyY3Ugc2l0IGFtZXQgZWxlbWVudHVtIGludGVyZHVtLCBxdWFtIG5pc2wgdGVtcG9yIHF1YW0sIHZpdGFlIGZldWdpYXQgYXVndWUgcHVydXMgc2VkIGxhY3VzLiBJbiBhYyB1cm5hIGFkaXBpc2NpbmcgcHVydXMgdmVuZW5hdGlzIHZvbHV0cGF0IHZlbCBldCBtZXR1cy4gTnVsbGFtIG5lYyBhdWN0b3IgcXVhbS4gUGhhc2VsbHVzIHBvcnR0aXRvciBmZWxpcyBhYyBuaWJoIGdyYXZpZGEgc3VzY2lwaXQgdGVtcHVzIGF0IGFudGUuIE51bmMgcGVsbGVudGVzcXVlIGlhY3VsaXMgc2FwaWVuIGEgbWF0dGlzLiBBZW5lYW4gZWxlaWZlbmQgZG9sb3Igbm9uIG51bmMgbGFvcmVldCwgbm9uIGRpY3R1bSBtYXNzYSBhbGlxdWFtLiBBZW5lYW4gcXVpcyB0dXJwaXMgYXVndWUuIFByYWVzZW50IGF1Z3VlIGxlY3R1cywgbW9sbGlzIG5lYyBlbGVtZW50dW0gZXUsIGRpZ25pc3NpbSBhdCB2ZWxpdC4gVXQgY29uZ3VlIG5lcXVlIGlkIHVsbGFtY29ycGVyIHBlbGxlbnRlc3F1ZS4gTWFlY2VuYXMgZXVpc21vZCBpbiBlbGl0IGV1IHZlaGljdWxhLiBOdWxsYW0gdHJpc3RpcXVlIGR1aSBudWxsYSwgbmVjIGNvbnZhbGxpcyBtZXR1cyBzdXNjaXBpdCBlZ2V0LiBDcmFzIHNlbXBlciBhdWd1ZSBuZWMgY3Vyc3VzIGJsYW5kaXQuIE51bGxhIHJob25jdXMgZXQgb2RpbyBxdWlzIGJsYW5kaXQuIFByYWVzZW50IGxvYm9ydGlzIGRpZ25pc3NpbSB2ZWxpdCB1dCBwdWx2aW5hci4gRHVpcyBpbnRlcmR1bSBxdWFtIGFkaXBpc2NpbmcgZG9sb3Igc2VtcGVyIHNlbXBlci4gTnVuYyBiaWJlbmR1bSBjb252YWxsaXMgZHVpLCBlZ2V0IG1vbGxpcyBtYWduYSBoZW5kcmVyaXQgZXQuIE1vcmJpIGZhY2lsaXNpcywgYXVndWUgZXUgZnJpbmdpbGxhIGNvbnZhbGxpcywgbWF1cmlzIGVzdCBjdXJzdXMgZG9sb3IsIGV1IHBvc3VlcmUgb2RpbyBudW5jIHF1aXMgb3JjaS4gVXQgZXUganVzdG8gc2VtLiBQaGFzZWxsdXMgdXQgZXJhdCByaG9uY3VzLCBmYXVjaWJ1cyBhcmN1IHZpdGFlLCB2dWxwdXRhdGUgZXJhdC4gQWxpcXVhbSBuZWMgbWFnbmEgdml2ZXJyYSwgaW50ZXJkdW0gZXN0IHZpdGFlLCByaG9uY3VzIHNhcGllbi4gRHVpcyB0aW5jaWR1bnQgdGVtcG9yIGlwc3VtIHV0IGRhcGlidXMuIE51bGxhbSBjb21tb2RvIHZhcml1cyBtZXR1cywgc2VkIHNvbGxpY2l0dWRpbiBlcm9zLiBFdGlhbSBuZWMgb2RpbyBldCBkdWkgdGVtcG9yIGJsYW5kaXQgcG9zdWVyZS4="
+                == base64, "medium base64 conversion should work")
     }
 
     @Test func testBase64LineLengthOptions() {
         let expected46 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
-        let length46String = Data(repeating:0, count: 46).base64EncodedString(options: .lineLength64Characters)
+        let length46String = Data(repeating: 0, count: 46).base64EncodedString(options: .lineLength64Characters)
         #expect(length46String == expected46)
-        let length46Data = Data(repeating:0, count: 46).base64EncodedData(options: .lineLength64Characters)
+        let length46Data = Data(repeating: 0, count: 46).base64EncodedData(options: .lineLength64Characters)
         #expect(length46Data.count == 64)
         #expect(String(decoding: length46Data, as: Unicode.UTF8.self) == expected46)
 
         let expected47 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-        let length47String = Data(repeating:0, count: 47).base64EncodedString(options: .lineLength64Characters)
+        let length47String = Data(repeating: 0, count: 47).base64EncodedString(options: .lineLength64Characters)
         #expect(length47String == expected47)
-        let length47Data = Data(repeating:0, count: 47).base64EncodedData(options: .lineLength64Characters)
+        let length47Data = Data(repeating: 0, count: 47).base64EncodedData(options: .lineLength64Characters)
         #expect(length47Data.count == 64)
         #expect(String(decoding: length47Data, as: Unicode.UTF8.self) == expected47)
 
         let expected48 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        let length48String = Data(repeating:0, count: 48).base64EncodedString(options: .lineLength64Characters)
+        let length48String = Data(repeating: 0, count: 48).base64EncodedString(options: .lineLength64Characters)
         #expect(length48String == expected48)
-        let length48Data = Data(repeating:0, count: 48).base64EncodedData(options: .lineLength64Characters)
+        let length48Data = Data(repeating: 0, count: 48).base64EncodedData(options: .lineLength64Characters)
         #expect(length48Data.count == 64)
         #expect(String(decoding: length48Data, as: Unicode.UTF8.self) == expected48)
 
-        let length49 = Data(repeating:0, count: 49).base64EncodedString(options: .lineLength64Characters)
+        let length49 = Data(repeating: 0, count: 49).base64EncodedString(options: .lineLength64Characters)
         #expect(length49 == #"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\#r\#nAA=="#)
         #expect(Array(length49.utf8)[64] == 13)
         #expect(Array(length49.utf8)[65] == 10)
@@ -2809,7 +2773,7 @@ extension DataTests {
         dataII.replaceSubrange(0..<1, with: Data())
         #expect(dataII[0] == 0x02)
     }
-    
+
     #if canImport(Darwin) || os(Linux) || os(Android)
     @Test func cocoaErrorEOPNOTSUPP() throws {
         // Opening a socket via open(2) on Darwin can result in the EOPNOTSUPP error code
@@ -2821,7 +2785,7 @@ extension DataTests {
 
     @Test func dataInitDataElideCopy() {
         do {
-            let data = Data(0 ..< 100)
+            let data = Data(0..<100)
 
             // Initializing one Data from another should not copy the bytes
             let data2 = Data(data)
@@ -2829,7 +2793,7 @@ extension DataTests {
         }
 
         do {
-            let data = Data(0 ..< 100)
+            let data = Data(0..<100)
 
             // Initializing one Data from another should not copy the bytes, even when sliced as a prefix
             let data2 = Data(data.prefix(upTo: 50))
@@ -2838,10 +2802,10 @@ extension DataTests {
         }
 
         do {
-            let data = Data(0 ..< 100)
+            let data = Data(0..<100)
 
             // Initializing one Data from another should copy the bytes when the slice does not begin at 0
-            let data2 = Data(data[20 ..< 80])
+            let data2 = Data(data[20..<80])
             #expect(data2.startIndex == 0)
             #expect(data.allocationForComparison != data2.allocationForComparison)
         }
@@ -2865,11 +2829,11 @@ extension DataTests {
             .atomic, .withoutOverwriting,
             .noFileProtection, .completeFileProtection,
             .completeFileProtectionUnlessOpen, .completeFileProtectionUntilFirstUserAuthentication,
-            .fileProtectionMask
+            .fileProtectionMask,
         ]
-#if FOUNDATION_FRAMEWORK && !os(macOS)
+        #if FOUNDATION_FRAMEWORK && !os(macOS)
         elements.append(.completeFileProtectionWhenUserInactive)
-#endif
+        #endif
 
         Data.WritingOptions.validateConformance(
             elements: elements,
@@ -2992,11 +2956,11 @@ extension DataTests {
         }
         #expect(mutateMe == expected)
     }
-    
+
     @Test func rangeOfSlice() throws {
         let data = try #require("FooBar".data(using: .ascii))
         let slice = data[3...] // Bar
-        
+
         let range = slice.range(of: try #require("a".data(using: .ascii)))
         #expect(range == 4..<5 as Range<Data.Index>)
     }
@@ -3006,16 +2970,16 @@ extension DataTests {
 extension DataTests {
     @Test func noCustomDealloc_bridge() {
         let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1024, alignment: MemoryLayout<AnyObject>.alignment)
-        
+
         let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .free)
         let copy = data._bridgeToObjectiveC().copy() as! NSData
         #expect(data.allocationForComparison == copy.allocationForComparison)
     }
-    
+
     @Test func noCopy_uaf_bridge() {
         // this can only really be tested (modulo ASAN) via comparison of the pointer address of the storage.
         let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1024, alignment: MemoryLayout<AnyObject>.alignment)
-        
+
         let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .none)
         let copy = data._bridgeToObjectiveC().copy() as! NSData
         #expect(data.allocationForComparison != copy.allocationForComparison)
@@ -3045,10 +3009,12 @@ private var availableMemory: UInt64 {
 }
 
 // These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
-@Suite("Large Data Tests",
-   .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
-   .enabled(if: // Tests can create up to two large datas, require space for at least 3 to ensure we have sufficient room
-        availableMemory > (largeCount * 3),
+@Suite(
+    "Large Data Tests",
+    .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
+    .enabled(
+        if: // Tests can create up to two large datas, require space for at least 3 to ensure we have sufficient room
+            availableMemory > (largeCount * 3),
         "This device does not have sufficient memory to run large data tests (\(availableMemory) bytes available, \(largeCount * 3) bytes required)"
     )
 )
@@ -3062,10 +3028,10 @@ struct LargeDataTests {
         let isEmpty = span.isEmpty
         #expect(!isEmpty)
     }
-    
+
     @Test
     func largeSliceDataMutableSpan() throws {
-#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
+        #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data(repeating: 0, count: largeCount).dropFirst()
         #expect(source.startIndex != 0)
         var span = source.mutableSpan
@@ -3073,10 +3039,10 @@ struct LargeDataTests {
         let i = try #require(span.indices.dropFirst().randomElement())
         span[i] = .max
         #expect(source[i] == 0)
-        #expect(source[i+1] == .max)
-#endif
+        #expect(source[i + 1] == .max)
+        #endif
     }
-    
+
     @Test
     func largeSliceDataMutableRawSpan() throws {
         var source = Data(repeating: 0, count: largeCount).dropFirst()
@@ -3087,9 +3053,9 @@ struct LargeDataTests {
         let i = try #require(span.byteOffsets.dropFirst().randomElement())
         span.storeBytes(of: -1, toByteOffset: i, as: Int8.self)
         #expect(source[i] == 0)
-        #expect(source[i+1] == .max)
+        #expect(source[i + 1] == .max)
     }
-    
+
     @Test func validateMutation_cow_largeMutableBytes() {
         // Avoid copying a large data on platforms with constrained memory limits
         #if !canImport(Darwin) || os(macOS)
@@ -3097,21 +3063,21 @@ struct LargeDataTests {
         let heldData = data
         var bytes = data.mutableBytes
         bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
-        
+
         #expect(data[0] == 1)
         #expect(heldData[0] == 0)
         #endif
-        
+
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
         let originalPointer = data2.allocationForComparison
-        
+
         var bytes2 = data2.mutableBytes
         bytes2.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
         #expect(data2[0] == 1)
         #expect(data2.allocationForComparison == originalPointer)
     }
-    
+
     @Test func validateMutation_cow_largeMutableSpan() {
         // Avoid copying a large data on platforms with constrained memory limits
         #if !canImport(Darwin) || os(macOS)
@@ -3119,15 +3085,15 @@ struct LargeDataTests {
         let heldData = data
         var bytes = data.mutableSpan
         bytes[0] = 1
-        
+
         #expect(data[0] == 1)
         #expect(heldData[0] == 0)
         #endif
-        
+
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
         let originalPointer = data2.allocationForComparison
-        
+
         var bytes2 = data2.mutableSpan
         bytes2[0] = 1
         #expect(data2[0] == 1)
@@ -3149,14 +3115,14 @@ struct LargeDataTests {
             #expect($0.freeCapacity == 20)
             $0.append(51)
         }
-        #expect(data.count == largeCount+1)
+        #expect(data.count == largeCount + 1)
         #expect(data.last == 51)
         try? data.append(addingRawCapacity: 10) {
             #expect($0.freeCapacity == 10)
             $0.append(52)
             throw LocalError()
         }
-        #expect(data.count == largeCount+2)
+        #expect(data.count == largeCount + 2)
         #expect(data.last == 52)
 
         // transform from the `InlineData` form to the `LargeSlice` form
@@ -3311,7 +3277,7 @@ struct LargeDataTests {
         large = Data(count: largeCount)
         large[large.count - 1] = 0xCC
         large[0] = 0xAA
-        large.replaceSubrange(1 ..< large.count - 1, with: CollectionOfOne(0xBB))
+        large.replaceSubrange(1..<large.count - 1, with: CollectionOfOne(0xBB))
         #expect(large.count == 3)
         #expect(large[0] == 0xAA)
         #expect(large[1] == 0xBB)
@@ -3399,17 +3365,18 @@ private func capacity(_ data: consuming Data) -> Int {
 extension Data.WritingOptions: TestableOptionSet {
     public var _description: String {
         let protectionPart = Self(rawValue: self.rawValue & Self.fileProtectionMask.rawValue)
-        let protectionString = switch protectionPart {
-        case .noFileProtection: "noProtection"
-        case .completeFileProtection: "complete"
-        case .completeFileProtectionUnlessOpen: "unlessOpen"
-        case .completeFileProtectionUntilFirstUserAuthentication: "untilFirstAuth"
-#if FOUNDATION_FRAMEWORK && !os(macOS)
-        case .completeFileProtectionWhenUserInactive: "whenUserInactive"
-#endif
-        case []: "<none>"
-        default: "unknown (0x\(String(protectionPart.rawValue, radix: 16)))"
-        }
+        let protectionString =
+            switch protectionPart {
+            case .noFileProtection: "noProtection"
+            case .completeFileProtection: "complete"
+            case .completeFileProtectionUnlessOpen: "unlessOpen"
+            case .completeFileProtectionUntilFirstUserAuthentication: "untilFirstAuth"
+            #if FOUNDATION_FRAMEWORK && !os(macOS)
+            case .completeFileProtectionWhenUserInactive: "whenUserInactive"
+            #endif
+            case []: "<none>"
+            default: "unknown (0x\(String(protectionPart.rawValue, radix: 16)))"
+            }
 
         var options = [String]()
         if self.rawValue & Self.atomic.rawValue != 0 {

@@ -100,7 +100,7 @@ internal struct JSONWriter {
             @inline(__always)
             func appendAccumulatedBytes(from mark: UnsafePointer<UInt8>, to cursor: UnsafePointer<UInt8>, followedByContentsOf sequence: [UInt8]) {
                 if cursor > mark {
-                    writer(pointer: mark, count: cursor-mark)
+                    writer(pointer: mark, count: cursor - mark)
                 }
                 writer(contentsOf: sequence)
             }
@@ -108,9 +108,9 @@ internal struct JSONWriter {
             @inline(__always)
             func valueToASCII(_ value: UInt8) -> UInt8 {
                 switch value {
-                case 0 ... 9:
+                case 0...9:
                     return value &+ UInt8(ascii: "0")
-                case 10 ... 15:
+                case 10...15:
                     return value &- 10 &+ UInt8(ascii: "a")
                 default:
                     preconditionFailure()
@@ -202,7 +202,7 @@ internal struct JSONWriter {
         }
         writer(ascii: ._closebracket)
     }
-    
+
     mutating func serializePreformattedByteArray(_ bytes: [UInt8], _ lengths: [Int], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
@@ -231,7 +231,7 @@ internal struct JSONWriter {
 
             // Do NOT call `serializeString` here! The input strings have already been formatted exactly as they need to be for direct JSON output, including any requisite quotes or escaped characters for strings.
             let upperBound = lowerBound + length
-            writer(contentsOf: bytes[lowerBound ..< upperBound])
+            writer(contentsOf: bytes[lowerBound..<upperBound])
             lowerBound = upperBound
         }
         if pretty {
@@ -241,7 +241,7 @@ internal struct JSONWriter {
         writer(ascii: ._closebracket)
     }
 
-    mutating func serializeObject(_ dict: [String:JSONEncoderValue], depth: Int) throws {
+    mutating func serializeObject(_ dict: [String: JSONEncoderValue], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -293,7 +293,7 @@ internal struct JSONWriter {
             #else
             let compatibilitySorted = false
             #endif
-            
+
             // If we didn't use the NSString-based compatibility sorting, sort lexicographically by the UTF-8 view
             if !compatibilitySorted {
                 let elems = dict.sorted { a, b in
@@ -332,16 +332,16 @@ internal struct JSONWriter {
 
     mutating func writeIndent() {
         switch indent {
-        case 0:  break
-        case 1:  writer("  ")
-        case 2:  writer("    ")
-        case 3:  writer("      ")
-        case 4:  writer("        ")
-        case 5:  writer("          ")
-        case 6:  writer("            ")
-        case 7:  writer("              ")
-        case 8:  writer("                ")
-        case 9:  writer("                  ")
+        case 0: break
+        case 1: writer("  ")
+        case 2: writer("    ")
+        case 3: writer("      ")
+        case 4: writer("        ")
+        case 5: writer("          ")
+        case 6: writer("            ")
+        case 7: writer("              ")
+        case 8: writer("                ")
+        case 9: writer("                  ")
         case 10: writer("                    ")
         default:
             for _ in 0..<indent {

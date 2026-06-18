@@ -37,19 +37,19 @@ private struct ProcessInfoTests {
     }
 
     @Test func environment() {
-#if os(Windows)
+        #if os(Windows)
         func setenv(_ key: String, _ value: String, _ overwrite: Int) -> Int32 {
-          assert(overwrite == 1)
-          guard !key.contains("=") else {
-              errno = EINVAL
-              return -1
-          }
-          return _putenv("\(key)=\(value)")
+            assert(overwrite == 1)
+            guard !key.contains("=") else {
+                errno = EINVAL
+                return -1
+            }
+            return _putenv("\(key)=\(value)")
         }
-#endif
+        #endif
         let env = ProcessInfo.processInfo.environment
         #expect(!env.isEmpty, "environment should not have been empty")
-        
+
         #expect(ProcessInfo.processInfo.environment["test"] == nil)
         setenv("test", "worked", 1)
         #expect(ProcessInfo.processInfo.environment["test"] == "worked")
@@ -119,36 +119,41 @@ private struct ProcessInfoTests {
     #endif
     func operatingSystemIsAtLeastVersion() throws {
         #if os(watchOS)
-        #expect(ProcessInfo.processInfo
-            .isOperatingSystemAtLeast(
-                OperatingSystemVersion(majorVersion: 1, minorVersion: 12, patchVersion: 0)
-            ),
-        "ProcessInfo thinks 1.12 is > than 2.something")
-        #expect(ProcessInfo.processInfo
-            .isOperatingSystemAtLeast(
-                OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
-            ),
-        "ProcessInfo thinks we are on watchOS 1")
+        #expect(
+            ProcessInfo.processInfo
+                .isOperatingSystemAtLeast(
+                    OperatingSystemVersion(majorVersion: 1, minorVersion: 12, patchVersion: 0)
+                ),
+            "ProcessInfo thinks 1.12 is > than 2.something")
+        #expect(
+            ProcessInfo.processInfo
+                .isOperatingSystemAtLeast(
+                    OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
+                ),
+            "ProcessInfo thinks we are on watchOS 1")
         #elseif os(macOS) || (os(iOS) && !os(visionOS))
-        #expect(ProcessInfo.processInfo
-            .isOperatingSystemAtLeast(
-                OperatingSystemVersion(majorVersion: 6, minorVersion: 12, patchVersion: 0)
-            ),
-        "ProcessInfo thinks 6.12 is > than 10.something")
-        #expect(ProcessInfo.processInfo
-            .isOperatingSystemAtLeast(
-                OperatingSystemVersion(majorVersion: 6, minorVersion: 0, patchVersion: 0)
-            ),
-        "ProcessInfo thinks we are on System 5")
+        #expect(
+            ProcessInfo.processInfo
+                .isOperatingSystemAtLeast(
+                    OperatingSystemVersion(majorVersion: 6, minorVersion: 12, patchVersion: 0)
+                ),
+            "ProcessInfo thinks 6.12 is > than 10.something")
+        #expect(
+            ProcessInfo.processInfo
+                .isOperatingSystemAtLeast(
+                    OperatingSystemVersion(majorVersion: 6, minorVersion: 0, patchVersion: 0)
+                ),
+            "ProcessInfo thinks we are on System 5")
         #endif
-        #expect(!ProcessInfo.processInfo
-            .isOperatingSystemAtLeast(
-                OperatingSystemVersion(majorVersion: 70, minorVersion: 0, patchVersion: 0)
-            ),
-        "ProcessInfo thinks we are on System 70")
+        #expect(
+            !ProcessInfo.processInfo
+                .isOperatingSystemAtLeast(
+                    OperatingSystemVersion(majorVersion: 70, minorVersion: 0, patchVersion: 0)
+                ),
+            "ProcessInfo thinks we are on System 70")
     }
 
-#if os(macOS)
+    #if os(macOS)
     @Test func userName() {
         #expect(!ProcessInfo.processInfo.userName.isEmpty)
     }
@@ -156,25 +161,25 @@ private struct ProcessInfoTests {
     @Test func fullUserName() {
         #expect(!ProcessInfo.processInfo.fullUserName.isEmpty)
     }
-#endif
-    
+    #endif
+
     @Test func processName() {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         let targetNames = ["TestHost"]
-#elseif os(Linux) || os(Windows) || os(Android) || os(FreeBSD)
+        #elseif os(Linux) || os(Windows) || os(Android) || os(FreeBSD)
         let targetNames = ["swift-foundationPackageTests.xctest", "FoundationEssentialsTests-test-runner", "FoundationEssentialsTests-test-runner.exe"]
-#else
+        #else
         let targetNames = ["swiftpm-testing-helper", "xctest"]
-#endif
+        #endif
         let processInfo = ProcessInfo.processInfo
         let originalProcessName = processInfo.processName
         #expect(targetNames.contains(originalProcessName))
-        
+
         // Try assigning a new process name.
         let newProcessName = "TestProcessName"
         processInfo.processName = newProcessName
         #expect(processInfo.processName == newProcessName)
-        
+
         // Assign back to the original process name.
         processInfo.processName = originalProcessName
         #expect(processInfo.processName == originalProcessName)

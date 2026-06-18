@@ -25,26 +25,26 @@ private struct NumberParseStrategyTests {
         #expect(try strategy.parse("+8,765,000") == 8765000)
         #expect(try strategy.parse("+87,650,000") == 87650000)
     }
-    
+
     @Test func parsingCurrency() throws {
         let currencyStyle: IntegerFormatStyle<Int>.Currency = .init(code: "USD", locale: Locale(identifier: "en_US"))
         let strategy = IntegerParseStrategy(format: currencyStyle, lenient: true)
         #expect(try strategy.parse("$1.00") == 1)
         #expect(try strategy.parse("1.00 US dollars") == 1)
         #expect(try strategy.parse("USD\u{00A0}1.00") == 1)
-        
+
         #expect(try strategy.parse("$1,234.56") == 1234)
         #expect(try strategy.parse("1,234.56 US dollars") == 1234)
         #expect(try strategy.parse("USD\u{00A0}1,234.56") == 1234)
-        
+
         #expect(try strategy.parse("-$1,234.56") == -1234)
         #expect(try strategy.parse("-1,234.56 US dollars") == -1234)
         #expect(try strategy.parse("-USD\u{00A0}1,234.56") == -1234)
-        
+
         let accounting = IntegerParseStrategy(format: currencyStyle.sign(strategy: .accounting), lenient: true)
         #expect(try accounting.parse("($1,234.56)") == -1234)
     }
-    
+
     @Test func parsingIntStyle() throws {
         func _verifyResult(_ testData: [String], _ expected: [Int], _ style: IntegerFormatStyle<Int>, _ testName: Comment? = nil) throws {
             for i in 0..<testData.count {
@@ -52,24 +52,24 @@ private struct NumberParseStrategyTests {
                 #expect(parsed == expected[i], testName)
             }
         }
-        
+
         let locale = Locale(identifier: "en_US")
         let style: IntegerFormatStyle<Int> = .init(locale: locale)
         let data = [
-            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0
+            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0,
         ]
-        
-        try _verifyResult([ "8.765E7", "8.765E6", "8.765E5", "8.765E4", "8.765E3", "8.76E2", "8.7E1", "8E0", "0E0" ], data, style.notation(.scientific), "int style, notation: scientific")
-        try _verifyResult([ "87,650,000.", "8,765,000.", "876,500.", "87,650.", "8,765.", "876.", "87.", "8.", "0." ], data, style.decimalSeparator(strategy: .always), "int style, decimal separator: always")
+
+        try _verifyResult(["8.765E7", "8.765E6", "8.765E5", "8.765E4", "8.765E3", "8.76E2", "8.7E1", "8E0", "0E0"], data, style.notation(.scientific), "int style, notation: scientific")
+        try _verifyResult(["87,650,000.", "8,765,000.", "876,500.", "87,650.", "8,765.", "876.", "87.", "8.", "0."], data, style.decimalSeparator(strategy: .always), "int style, decimal separator: always")
     }
-    
+
     @Test func roundtripParsing_percent() throws {
         func _verifyRoundtripPercent(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Percent, _ testName: String = "", sourceLocation: SourceLocation = #_sourceLocation) throws {
             for value in testData {
                 let str = style.format(value)
                 let parsed = try Int(str, strategy: style.parseStrategy)
                 #expect(value == parsed, "\(testName): formatted string: \(str) parsed: \(parsed)", sourceLocation: sourceLocation)
-                
+
                 let nonLenientParsed = try Int(str, format: style, lenient: false)
                 #expect(value == nonLenientParsed, sourceLocation: sourceLocation)
             }
@@ -77,10 +77,10 @@ private struct NumberParseStrategyTests {
         let locale = Locale(identifier: "en_US")
         let percentStyle: IntegerFormatStyle<Int>.Percent = .init(locale: locale)
         let testData: [Int] = [
-            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0
+            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0,
         ]
         let negativeData: [Int] = [
-            -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8
+            -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8,
         ]
         try _verifyRoundtripPercent(testData, percentStyle, "percent style")
         try _verifyRoundtripPercent(testData, percentStyle.sign(strategy: .always()), "percent style, sign: always")
@@ -115,10 +115,10 @@ private struct NumberParseStrategyTests {
 
     @Test func roundtripCurrency() {
         let testData: [Int] = [
-            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0
+            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0,
         ]
         let negativeData: [Int] = [
-            -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8
+            -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8,
         ]
 
         func _verifyRoundtripCurrency(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Currency, _ testName: String = "", sourceLocation: SourceLocation = #_sourceLocation) {
@@ -176,10 +176,10 @@ private struct NumberParseStrategyTests {
 
     @Test func roundtripForeignCurrency() throws {
         let testData: [Int] = [
-            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0
+            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0,
         ]
         let negativeData: [Int] = [
-            -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8
+            -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8,
         ]
 
         func _verifyRoundtripCurrency(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Currency, _ testName: String = "", sourceLocation: SourceLocation = #_sourceLocation) throws {
@@ -213,12 +213,13 @@ private struct NumberParseStrategyTests {
 
     @Test func parseStrategyCodable_sameCurrency() throws {
         // same currency code
-        let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "USD", locale: Locale(identifier:"en_US"))
+        let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "USD", locale: Locale(identifier: "en_US"))
         let p = IntegerParseStrategy(format: fs)
         // Valid JSON representation for `p`
         let existingSerializedParseStrategy = """
+                \
             {"formatStyle":{"locale":{"current":0,"identifier":"en_US"},"collection":{"presentation":{"option":1}},"currencyCode":"USD"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}},"lenient":true,"locale":{"identifier":"en_US","current":0}}
-        """
+            """
 
         let existingData = try #require(existingSerializedParseStrategy.data(using: .utf8))
 
@@ -229,12 +230,13 @@ private struct NumberParseStrategyTests {
     }
 
     @Test func parseStrategyCodable_differentCurrency() throws {
-        let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "GBP", locale: Locale(identifier:"en_US"))
+        let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "GBP", locale: Locale(identifier: "en_US"))
         let p = IntegerParseStrategy(format: fs)
         // Valid JSON representation for `p`
         let existingSerializedParseStrategy = """
+                \
             {"formatStyle":{"collection":{"presentation":{"option":1}},"locale":{"current":0,"identifier":"en_US"},"currencyCode":"GBP"},"lenient":true,"locale":{"current":0,"identifier":"en_US"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}}}
-        """
+            """
 
         let existingData = try #require(existingSerializedParseStrategy.data(using: .utf8))
         let decoded: IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency> = try JSONDecoder().decode(IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency>.self, from: existingData)
@@ -243,8 +245,11 @@ private struct NumberParseStrategyTests {
         #expect(decoded.formatStyle.currencyCode == "GBP")
     }
 
-    let testNegativePositiveDecimalData: [Decimal] = [  Decimal(string:"87650")!, Decimal(string:"8765")!,
-        Decimal(string:"876.5")!, Decimal(string:"87.65")!, Decimal(string:"8.765")!, Decimal(string:"0.8765")!, Decimal(string:"0.08765")!, Decimal(string:"0.008765")!, Decimal(string:"0")!, Decimal(string:"-0.008765")!, Decimal(string:"-876.5")!, Decimal(string:"-87650")! ]
+    let testNegativePositiveDecimalData: [Decimal] = [
+        Decimal(string: "87650")!, Decimal(string: "8765")!,
+        Decimal(string: "876.5")!, Decimal(string: "87.65")!, Decimal(string: "8.765")!, Decimal(string: "0.8765")!, Decimal(string: "0.08765")!, Decimal(string: "0.008765")!, Decimal(string: "0")!, Decimal(string: "-0.008765")!,
+        Decimal(string: "-876.5")!, Decimal(string: "-87650")!,
+    ]
 
     @Test func decimalParseStrategy() throws {
         func _verifyRoundtrip(_ testData: [Decimal], _ style: Decimal.FormatStyle, _ testName: Comment = "") throws {
@@ -289,7 +294,7 @@ private struct NumberParseStrategyTests {
                 try parseStrategy.parse("128")
             }
         }
-        
+
         do {
             let format: IntegerFormatStyle<Int64> = .init(locale: locale)
             let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
@@ -302,7 +307,7 @@ private struct NumberParseStrategyTests {
                 try parseStrategy.parse("9223372036854775808")
             }
         }
-        
+
         do {
             let format: IntegerFormatStyle<UInt8> = .init(locale: locale)
             let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
@@ -315,7 +320,7 @@ private struct NumberParseStrategyTests {
                 try parseStrategy.parse("256")
             }
         }
-        
+
         do {
             // TODO: Parse integers greater than Int64
             let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
@@ -330,22 +335,22 @@ private struct NumberParseStrategyTests {
             #expect(throws: (any Error).self) {
                 try parseStrategy.parse("18446744073709551616")
             }
-            
+
             // TODO: Parse integers greater than Int64
             let maxInt64 = UInt64(Int64.max)
             #expect(try parseStrategy.parse((maxInt64 + 0).formatted(format)) == maxInt64) // not a Double
             #expect(throws: (any Error).self) {
-                try parseStrategy.parse((maxInt64 + 1).formatted(format))           // exact Doubl
+                try parseStrategy.parse((maxInt64 + 1).formatted(format)) // exact Doubl
             }
             #expect(throws: (any Error).self) {
-                try parseStrategy.parse((maxInt64 + 2).formatted(format))           // not a Doubl
+                try parseStrategy.parse((maxInt64 + 2).formatted(format)) // not a Doubl
             }
             #expect(throws: (any Error).self) {
-                try parseStrategy.parse((maxInt64 + 3).formatted(format))           // not a Doubl
+                try parseStrategy.parse((maxInt64 + 3).formatted(format)) // not a Doubl
             }
         }
     }
-    
+
     @Test func integerParseStrategyDoesNotRoundLargeIntegersToNearestDouble() throws {
         #expect(Double("9007199254740992") == Double(exactly: UInt64(1) << 53)!) // +2^53 + 0 -> +2^53
         #expect(Double("9007199254740993") == Double(exactly: UInt64(1) << 53)!) // +2^53 + 1 -> +2^53
@@ -362,7 +367,7 @@ private struct NumberParseStrategyTests {
                 try parseStrategy.parse("-9223372036854776833") // -2^63 - 1025 (Double: -2^63 - 2048)
             }
         }
-        
+
         do {
             let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
             let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
@@ -447,4 +452,3 @@ private struct NumberExtensionParseStrategyTests {
         #expect(try Decimal("-$3000.0000014", format: .currency(code: "USD").locale(locale)) == Decimal(string: "-3000.0000014")!)
     }
 }
-

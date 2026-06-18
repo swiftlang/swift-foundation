@@ -79,7 +79,7 @@ extension String {
     internal func deletingLastPathComponent() -> String {
         _convertingSlashesIfNeeded()._deletingLastPathComponent()
     }
-    
+
     private func _deletingLastPathComponent() -> String {
         guard let lastSlash = utf8.lastIndex(of: ._slash) else {
             // No slash, entire string is deleted
@@ -112,11 +112,11 @@ extension String {
 
         return String(self[...previousNonSlash])
     }
-        
+
     internal func appendingPathComponent(_ component: String) -> String {
         _convertingSlashesIfNeeded()._appendingPathComponent(component)
     }
-    
+
     private func _appendingPathComponent(_ component: String) -> String {
         guard !isEmpty else {
             return component._standardizingSlashes
@@ -132,7 +132,7 @@ extension String {
     internal var lastPathComponent: String {
         _convertingSlashesIfNeeded()._lastPathComponent
     }
-    
+
     private var _lastPathComponent: String {
         guard utf8.count > 1 else {
             return self
@@ -210,7 +210,7 @@ extension String {
         guard !pathExtension.isEmpty, validatePathExtension(pathExtension) else {
             return self
         }
-        if self == "/" { return "/.\(pathExtension)"}
+        if self == "/" { return "/.\(pathExtension)" }
         var result = self._droppingTrailingSlashes
         if result == "/" {
             // Path was all slashes
@@ -226,9 +226,10 @@ extension String {
     internal var pathExtension: String {
         let utf8Component = lastPathComponent.utf8
         guard utf8Component.last != ._dot,
-              let lastDot = utf8Component.lastIndex(of: ._dot),
-              // Don't treat a hidden file name as an extension
-              lastDot != utf8Component.startIndex else {
+            let lastDot = utf8Component.lastIndex(of: ._dot),
+            // Don't treat a hidden file name as an extension
+            lastDot != utf8Component.startIndex
+        else {
             return ""
         }
         let utf8FileName = utf8Component[..<lastDot]
@@ -246,7 +247,7 @@ extension String {
     internal func merging(relativePath: String) -> String {
         _convertingSlashesIfNeeded()._merging(relativePath: relativePath)
     }
-    
+
     private func _merging(relativePath: String) -> String {
         guard relativePath.utf8.first != ._slash else {
             return relativePath
@@ -340,20 +341,20 @@ extension String {
         _compressingSlashes()._droppingTrailingSlashes
     }
 
-// MARK: - Filesystem String Extensions
+    // MARK: - Filesystem String Extensions
 
-#if !NO_FILESYSTEM
-    
+    #if !NO_FILESYSTEM
+
     internal static func homeDirectoryPath() -> String {
         #if os(Windows)
         func fallbackCurrentUserDirectory() -> String {
             guard let fallback = ProcessInfo.processInfo.environment["ALLUSERSPROFILE"] else {
                 fatalError("Unable to find home directory for current user and ALLUSERSPROFILE environment variable is not set")
             }
-            
+
             return fallback
         }
-        
+
         var hToken: HANDLE? = nil
         guard OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) else {
             guard let UserProfile = ProcessInfo.processInfo.environment["UserProfile"] else {
@@ -362,10 +363,10 @@ extension String {
             return UserProfile
         }
         defer { CloseHandle(hToken) }
-        
+
         var dwcchSize: DWORD = 0
         _ = GetUserProfileDirectoryW(hToken, nil, &dwcchSize)
-        
+
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwcchSize)) {
             var dwcchSize: DWORD = DWORD($0.count)
             guard GetUserProfileDirectoryW(hToken, $0.baseAddress, &dwcchSize) else {
@@ -374,20 +375,20 @@ extension String {
             return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
         #else
-        
-        
+
+
         #if targetEnvironment(simulator)
         // Simulator checks these environment variables first for the current user
         if let envValue = getenv("CFFIXED_USER_HOME") ?? getenv("HOME") {
             return String(cString: envValue).standardizingPath
         }
         #endif
-        
+
         // First check CFFIXED_USER_HOME if the environment is not considered tainted
         if let envVar = Platform.getEnvSecure("CFFIXED_USER_HOME") {
             return envVar.standardizingPath
         }
-        
+
         #if !os(WASI) // WASI does not have user concept
         // Next, attempt to find the home directory via getpwuid
         // We use the real UID instead of the EUID here when the EUID is the root user (i.e. a process has called seteuid(0))
@@ -396,12 +397,12 @@ extension String {
             return dir.standardizingPath
         }
         #endif
-        
+
         // Fallback to HOME for the current user if possible
         if let home = getenv("HOME") {
             return String(cString: home).standardizingPath
         }
-        
+
         // If all else fails, fall back to /var/empty
         return "/var/empty"
         #endif
@@ -412,7 +413,7 @@ extension String {
         guard !user.isEmpty else {
             return nil
         }
-        
+
         return user.withCString(encodedAs: UTF16.self) { pwszUserName in
             var cbSID: DWORD = 0
             var cchReferencedDomainName: DWORD = 0
@@ -421,18 +422,18 @@ extension String {
             guard cbSID > 0 else {
                 return nil
             }
-            
+
             return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(cbSID)) { pSID in
                 return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cchReferencedDomainName)) { pwszReferencedDomainName in
                     guard LookupAccountNameW(nil, pwszUserName, pSID.baseAddress, &cbSID, pwszReferencedDomainName.baseAddress, &cchReferencedDomainName, &eUse) else {
                         return nil
                     }
-                    
+
                     var pwszSID: LPWSTR? = nil
                     guard ConvertSidToStringSidW(pSID.baseAddress, &pwszSID) else {
                         fatalError("unable to convert SID to string for user \(user)")
                     }
-                    
+
                     return #"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\\#(String(decodingCString: pwszSID!, as: UTF16.self))"#.withCString(encodedAs: UTF16.self) { pwszKeyPath in
                         return "ProfileImagePath".withCString(encodedAs: UTF16.self) { pwszKey in
                             var cbData: DWORD = 0
@@ -448,7 +449,7 @@ extension String {
                             }
                         }
                     }
-                    
+
                 }
             }
         }
@@ -465,7 +466,7 @@ extension String {
         #endif
         #endif
     }
-    
+
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
     internal static var temporaryDirectoryPath: String {
         func normalizedPath(with path: String) -> String {
@@ -522,7 +523,7 @@ extension String {
         let prefixes: [[UInt8]] = [
             Array("/private/var/automount/".utf8),
             Array("/var/automount/".utf8),
-            Array("/private/".utf8)
+            Array("/private/".utf8),
         ]
         return prefixes
     }()
@@ -540,18 +541,19 @@ extension String {
             Array("/opt".utf8),
             Array("/private".utf8),
             Array("/sbin".utf8),
-            Array("/usr".utf8)
+            Array("/usr".utf8),
         ]
         return exclusions
     }()
 
     private var _standardizingPath: String {
         var result = _convertingSlashesIfNeeded()._standardizingSlashes
-        let postNetStart = if result.utf8.starts(with: String.NETWORK_PREFIX) {
-            result.utf8.firstIndex(of: ._slash) ?? result.endIndex
-        } else {
-            result.startIndex
-        }
+        let postNetStart =
+            if result.utf8.starts(with: String.NETWORK_PREFIX) {
+                result.utf8.firstIndex(of: ._slash) ?? result.endIndex
+            } else {
+                result.startIndex
+            }
         let hasDotDot = result[postNetStart...]._hasDotDotComponent()
         if hasDotDot, let resolved = result._resolvingSymlinksInPath() {
             result = resolved
@@ -583,7 +585,7 @@ extension String {
     var abbreviatingWithTildeInPath: String {
         _convertingSlashesIfNeeded()._abbreviatingWithTildeInPath
     }
-    
+
     private var _abbreviatingWithTildeInPath: String {
         guard !self.isEmpty && self != "/" else { return self }
         let homeDir = String.homeDirectoryPath().utf8
@@ -592,18 +594,18 @@ extension String {
         guard nextIdxInOriginal == endIndex || utf8[nextIdxInOriginal] == ._slash else { return self }
         return "~" + self[nextIdxInOriginal...]
     }
-    
+
     var expandingTildeInPath: String {
         _convertingSlashesIfNeeded()._expandingTildeInPath
     }
-    
+
     private var _expandingTildeInPath: String {
         guard utf8.first == UInt8(ascii: "~") else { return self }
         let firstSlash = utf8.firstIndex(of: ._slash) ?? endIndex
         let indexAfterTilde = utf8.index(after: startIndex)
         var userDir: String
         if firstSlash != indexAfterTilde {
-            guard let dir = String.homeDirectoryPath(forUser: String(self[indexAfterTilde ..< firstSlash])) else {
+            guard let dir = String.homeDirectoryPath(forUser: String(self[indexAfterTilde..<firstSlash])) else {
                 return self
             }
             userDir = dir
@@ -612,7 +614,7 @@ extension String {
         }
         return userDir + self[firstSlash...]
     }
-    
+
     private static func _resolvingSymlinksInPathUsingFullPathAttribute(_ fsRep: UnsafePointer<CChar>) -> String? {
         #if canImport(Darwin)
         var attrs = attrlist()
@@ -622,7 +624,7 @@ extension String {
         guard getattrlist(fsRep, &attrs, &buffer, MemoryLayout<FullPathAttributes>.size, 0) == 0, buffer.fullPathAttr.attr_length > 0 else {
             return nil
         }
-        
+
         let length = Int(buffer.fullPathAttr.attr_length) // Includes null byte
         return withUnsafePointer(to: buffer.fullPathBuf) { pathPtr in
             pathPtr.withMemoryRebound(to: CChar.self, capacity: length) { ccharPtr in
@@ -633,7 +635,7 @@ extension String {
         return nil
         #endif // canImport(Darwin)
     }
-    
+
     func _resolvingSymlinksInPath() -> String? {
         guard !isEmpty else { return nil }
         #if os(Windows)
@@ -657,12 +659,12 @@ extension String {
             guard let fsPtr else { return nil }
             // If not using the cache (which may not require hitting the disk at all if it's warm), try getting the full path from getattrlist.
             // If it succeeds, this approach always returns an absolute path starting from the root. Since this function returns relative paths when given a relative path to a relative symlink, dont use this approach unless the path is absolute.
-            
+
             var path = self
             if URL.isAbsolute(standardizing: &path), let resolved = Self._resolvingSymlinksInPathUsingFullPathAttribute(fsPtr) {
                 return resolved
             }
-            
+
             return withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer -> String? in
                 buffer.initialize(repeating: 0)
                 defer { buffer.deinitialize() }
@@ -706,25 +708,25 @@ extension String {
                             }
                             linkBuffer[linkResultLen] = 0
                         }
-                        
+
                         scanLoc.pointee = slash
                         if linkResultLen > 0 {
                             links += 1
                             // If the link is not an absolute path, preserve the prefix
                             let preservedPrefixLength = linkBuffer[0] == 0x2F ? 0 : (buffer.baseAddress!.distance(to: lastScanLoc) + 1)
-                            
+
                             let scanLocIdx = buffer.baseAddress!.distance(to: scanLoc)
                             let suffixLength = fullLength - scanLocIdx // Includes null byte
                             if preservedPrefixLength + linkResultLen + suffixLength > FileManager.MAX_PATH_SIZE {
                                 return nil
                             }
-                            
+
                             // Shift the suffix + null byte to the correct location
-                            let afterSuffixIdx = buffer[(preservedPrefixLength + linkResultLen)...].update(fromContentsOf: buffer[scanLocIdx ..< (fullLength)])
-                            
+                            let afterSuffixIdx = buffer[(preservedPrefixLength + linkResultLen)...].update(fromContentsOf: buffer[scanLocIdx..<(fullLength)])
+
                             // Replace the component with the link
-                            _ = buffer[preservedPrefixLength ..< (preservedPrefixLength + linkResultLen)].update(fromContentsOf: linkBuffer[..<linkResultLen])
-                            
+                            _ = buffer[preservedPrefixLength..<(preservedPrefixLength + linkResultLen)].update(fromContentsOf: linkBuffer[..<linkResultLen])
+
                             fullLength = afterSuffixIdx
                             scanLoc = linkBuffer[0] == 0x2F ? buffer.baseAddress! : lastScanLoc
                         } else {
@@ -739,7 +741,7 @@ extension String {
         }
         #endif // os(Windows)
     }
-    
+
     var resolvingSymlinksInPath: String {
         var result = expandingTildeInPath
         if let resolved = result._resolvingSymlinksInPath() {
@@ -748,7 +750,7 @@ extension String {
         return result._standardizingPath
     }
 
-#endif // !NO_FILESYSTEM
+    #endif // !NO_FILESYSTEM
 
 }
 

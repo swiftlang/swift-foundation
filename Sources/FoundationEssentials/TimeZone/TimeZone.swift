@@ -33,7 +33,7 @@ internal import _FoundationCShims
 ///
 /// Cocoa does not provide any API to change the time zone of the computer, or of other applications.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct TimeZone : Hashable, Equatable, Sendable {
+public struct TimeZone: Hashable, Equatable, Sendable {
     private var _tz: _TimeZoneProtocol
 
     // MARK: -
@@ -71,7 +71,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
             guard let cached = TimeZoneCache.cache.offsetFixed(seconds) else {
                 return nil
             }
-            
+
             _tz = cached
         }
     }
@@ -131,7 +131,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
 
     /// The default time zone, settable via ObjC but not available in Swift API (because it's global mutable state).
     /// The default time zone is not autoupdating, but it can change at any time when the ObjC `setDefaultTimeZone:` API is called.
-    package static var `default` : TimeZone! {
+    package static var `default`: TimeZone! {
         get {
             TimeZoneCache.cache.default
         }
@@ -139,9 +139,9 @@ public struct TimeZone : Hashable, Equatable, Sendable {
             TimeZoneCache.cache.setDefault(newValue)
         }
     }
-    
-#if !FOUNDATION_FRAMEWORK
-    @_spi(SwiftCorelibsFoundation) public static var _default : TimeZone! {
+
+    #if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public static var _default: TimeZone! {
         get {
             TimeZone.default
         }
@@ -149,7 +149,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
             TimeZone.default = newValue
         }
     }
-#endif
+    #endif
 
     // MARK: -
     //
@@ -170,13 +170,14 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     public func secondsFromGMT(for date: Date = Date()) -> Int {
         _tz.secondsFromGMT(for: date)
     }
-    
+
     /// If the time zone does not observe daylight savings, then return the constant offset from GMT. Otherwise, returns nil.
     internal var fixedOffsetFromGMT: Int? {
         _tz.fixedOffsetFromGMT
     }
 
-    internal func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+    internal func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval)
+    {
         _tz.rawAndDaylightSavingTimeOffset(for: date, repeatedTimePolicy: repeatedTimePolicy, skippedTimePolicy: skippedTimePolicy)
     }
 
@@ -211,7 +212,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     /// Returns the mapping of abbreviations to time zone identifiers.
-    public static var abbreviationDictionary : [String : String] {
+    public static var abbreviationDictionary: [String: String] {
         get {
             // TODO: We may want to consider changing this for Essentials, as it returns a list of abbreviations which only Internationalization supports
             TimeZoneCache.cache.timeZoneAbbreviations()
@@ -247,11 +248,11 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.hash(into: &hasher)
     }
 
-    public static func ==(lhs: TimeZone, rhs: TimeZone) -> Bool {
+    public static func == (lhs: TimeZone, rhs: TimeZone) -> Bool {
         if lhs._tz === rhs._tz {
             return true
         }
-        
+
         // Autoupdating is only ever equal to autoupdating. Other time zones compare their values.
         if lhs._tz.isAutoupdating && rhs._tz.isAutoupdating {
             return true
@@ -272,9 +273,9 @@ public struct TimeZone : Hashable, Equatable, Sendable {
 /// Constants you use to specify a style when presenting time zone names.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone {
-#if !FOUNDATION_FRAMEWORK
-/// Enum you use to specify different name style of a time zone.
-    public enum NameStyle : Int, Sendable {
+    #if !FOUNDATION_FRAMEWORK
+    /// Enum you use to specify different name style of a time zone.
+    public enum NameStyle: Int, Sendable {
         /// Specifies a standard name style. For example, “Central Standard Time” for Central Time.
         case standard
         /// Specifies a short name style. For example, “CST” for Central Time.
@@ -288,20 +289,20 @@ extension TimeZone {
         /// Specifies a generic time zone name. For example, “CT” for Central Time.
         case shortGeneric
     }
-#else
+    #else
     public typealias NameStyle = NSTimeZone.NameStyle
-#endif
+    #endif
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
-    public var customMirror : Mirror {
+extension TimeZone: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
-          ("identifier", identifier),
-          ("tz", _tz),
-          ("abbreviation", abbreviation() as Any),
-          ("secondsFromGMT", secondsFromGMT()),
-          ("isDaylightSavingTime", isDaylightSavingTime()),
+            ("identifier", identifier),
+            ("tz", _tz),
+            ("abbreviation", abbreviation() as Any),
+            ("secondsFromGMT", secondsFromGMT()),
+            ("isDaylightSavingTime", isDaylightSavingTime()),
         ]
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
@@ -310,14 +311,14 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
         return _tz.debugDescription
     }
 
-    public var debugDescription : String {
+    public var debugDescription: String {
         return _tz.debugDescription
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : Codable {
-    private enum CodingKeys : Int, CodingKey {
+extension TimeZone: Codable {
+    private enum CodingKeys: Int, CodingKey {
         case identifier
         case autoupdating
     }
@@ -332,8 +333,10 @@ extension TimeZone : Codable {
 
         let identifier = try container.decode(String.self, forKey: .identifier)
         guard let timeZone = TimeZone(identifier: identifier) else {
-            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath,
-                                                                    debugDescription: "Invalid TimeZone identifier."))
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Invalid TimeZone identifier."))
         }
 
         self = timeZone
@@ -343,7 +346,7 @@ extension TimeZone : Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         // Even if we are autoupdatingCurrent, encode the identifier for backward compatibility
         try container.encode(self.identifier, forKey: .identifier)
-        
+
         // Autoupdating current timezones are treated as sentinel values, but the current TimeZone is encoded as a fixed TimeZone
         // This is the same behavior as Locale/Calendar except it did not previously encode as a sentinel value before FoundationPreview 6.3, so no extra key is encoded for the current time zone
         if _tz.isAutoupdating {
@@ -355,7 +358,7 @@ extension TimeZone : Codable {
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : ReferenceConvertible, _ObjectiveCBridgeable {
+extension TimeZone: ReferenceConvertible, _ObjectiveCBridgeable {
 
     public typealias ReferenceType = NSTimeZone
 
@@ -384,7 +387,7 @@ extension TimeZone : ReferenceConvertible, _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSTimeZone : _HasCustomAnyHashableRepresentation {
+extension NSTimeZone: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {
@@ -405,16 +408,16 @@ extension TimeZone {
 
 extension TimeZone {
     internal static func dataFromTZFile(_ name: String) -> Data {
-#if NO_TZFILE || os(Windows) || os(WASI)
+        #if NO_TZFILE || os(Windows) || os(WASI)
         return Data()
-#else
+        #else
         let path = TZDIR + "/" + name
         guard !path.contains("..") else {
             // No good reason for .. to be present anywhere in the path
             return Data()
         }
         return (try? Data(contentsOfFile: path)) ?? Data()
-#endif
+        #endif
     }
 
     internal static func resetSystemTimeZone() -> TimeZone? {
@@ -423,14 +426,14 @@ extension TimeZone {
         LocaleNotifications.cache.reset()
         return oldTimeZone
     }
-    
-#if !FOUNDATION_FRAMEWORK
+
+    #if !FOUNDATION_FRAMEWORK
     @_spi(SwiftCorelibsFoundation) public static func _dataFromTZFile(_ name: String) -> Data {
         TimeZone.dataFromTZFile(name)
     }
-    
+
     @_spi(SwiftCorelibsFoundation) public static func _resetSystemTimeZone() -> TimeZone? {
         TimeZone.resetSystemTimeZone()
     }
-#endif
+    #endif
 }

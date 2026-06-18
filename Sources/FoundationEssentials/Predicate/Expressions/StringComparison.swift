@@ -15,50 +15,51 @@
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct StringCaseInsensitiveCompare<
-        Root : PredicateExpression,
-        Other : PredicateExpression
-    > : PredicateExpression where
-        Root.Output : StringProtocol,
-        Other.Output : StringProtocol
+        Root: PredicateExpression,
+        Other: PredicateExpression
+    >: PredicateExpression
+    where
+        Root.Output: StringProtocol,
+        Other.Output: StringProtocol
     {
         public typealias Output = ComparisonResult
-        
+
         public let root: Root
         public let other: Other
-        
+
         public init(root: Root, other: Other) {
             self.root = root
             self.other = other
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             try root.evaluate(bindings).caseInsensitiveCompare(try other.evaluate(bindings))
         }
     }
-    
+
     public static func build_caseInsensitiveCompare<Root, Other>(_ root: Root, _ other: Other) -> StringCaseInsensitiveCompare<Root, Other> {
         StringCaseInsensitiveCompare(root: root, other: other)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.StringCaseInsensitiveCompare : CustomStringConvertible {
+extension PredicateExpressions.StringCaseInsensitiveCompare: CustomStringConvertible {
     public var description: String {
         "StringCaseInsensitiveCompare(root: \(root), other: \(other))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.StringCaseInsensitiveCompare : StandardPredicateExpression where Root : StandardPredicateExpression, Other : StandardPredicateExpression {}
+extension PredicateExpressions.StringCaseInsensitiveCompare: StandardPredicateExpression where Root: StandardPredicateExpression, Other: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.StringCaseInsensitiveCompare : Codable where Root : Codable, Other : Codable {
+extension PredicateExpressions.StringCaseInsensitiveCompare: Codable where Root: Codable, Other: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(root)
         try container.encode(other)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         root = try container.decode(Root.self)
@@ -67,6 +68,6 @@ extension PredicateExpressions.StringCaseInsensitiveCompare : Codable where Root
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.StringCaseInsensitiveCompare : Sendable where Root : Sendable, Other : Sendable {}
+extension PredicateExpressions.StringCaseInsensitiveCompare: Sendable where Root: Sendable, Other: Sendable {}
 
 #endif

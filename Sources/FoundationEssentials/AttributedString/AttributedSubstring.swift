@@ -106,7 +106,7 @@ extension AttributedSubstring { // Equatable
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedSubstring : AttributedStringProtocol {
+extension AttributedSubstring: AttributedStringProtocol {
     /// The position of the first character in a nonempty attributed substring.
     public var startIndex: AttributedString.Index {
         .init(_range.lowerBound, version: _guts.version)
@@ -146,9 +146,9 @@ extension AttributedSubstring : AttributedStringProtocol {
     /// - Parameters:
     ///   - attributes: The attribute container with the attributes to merge.
     ///   - mergePolicy: A policy to use when resolving conflicts.
-    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) {
+    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
-        _guts.mergeAttributes(attributes, in: _range, mergePolicy:  mergePolicy)
+        _guts.mergeAttributes(attributes, in: _range, mergePolicy: mergePolicy)
     }
 
     /// Replaces the attributed substring's attributes with those in a specified
@@ -214,7 +214,7 @@ extension AttributedSubstring {
     /// identical for the entire string or substring. Use ``runs`` to find
     /// portions with consistent attributes.
     @preconcurrency
-    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable {
         get {
             _guts.getUniformValue(in: _range, key: K.self)?.rawValue(as: K.self)
         }
@@ -237,7 +237,7 @@ extension AttributedSubstring {
     @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
-    ) -> K.Value? where K.Value : Sendable {
+    ) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }

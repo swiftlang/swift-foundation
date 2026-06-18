@@ -114,11 +114,12 @@ extension URL.Template.Expression {
                 maximumLength = nil
                 explode = false
             }
-            elements.append(Element(
-                name: URL.Template.VariableName(name),
-                maximumLength: maximumLength,
-                explode: explode
-            ))
+            elements.append(
+                Element(
+                    name: URL.Template.VariableName(name),
+                    maximumLength: maximumLength,
+                    explode: explode
+                ))
         }
 
         try popElement()
@@ -152,17 +153,17 @@ extension URL.Template {
 
         private init() {
             self.operatorRegex = try! Regex(#"([\+#.\/;\?&])?"#)
-            .asciiOnlyWordCharacters()
-            .asciiOnlyDigits()
-            .asciiOnlyCharacterClasses()
+                .asciiOnlyWordCharacters()
+                .asciiOnlyDigits()
+                .asciiOnlyCharacterClasses()
             self.separatorRegex = try! Regex(#","#)
-            .asciiOnlyWordCharacters()
-            .asciiOnlyDigits()
-            .asciiOnlyCharacterClasses()
+                .asciiOnlyWordCharacters()
+                .asciiOnlyDigits()
+                .asciiOnlyCharacterClasses()
             self.elementRegex = try! Regex(#"([a-zA-Z][a-zA-Z0-9_]*)(:([0-9]*)|\*)?"#)
-            .asciiOnlyWordCharacters()
-            .asciiOnlyDigits()
-            .asciiOnlyCharacterClasses()
+                .asciiOnlyWordCharacters()
+                .asciiOnlyDigits()
+                .asciiOnlyCharacterClasses()
             self.uriTemplateRegex = try! Regex(#"{([^}]+)}"#)
         }
     }

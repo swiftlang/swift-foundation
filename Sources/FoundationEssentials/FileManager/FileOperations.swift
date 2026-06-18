@@ -37,7 +37,7 @@ internal import QuarantinePrivate
 internal import _FoundationCShims
 
 extension CocoaError {
-#if os(Windows)
+    #if os(Windows)
     private static func fileOperationError(_ dwError: DWORD, _ suspectedErroneousPath: String, sourcePath: String? = nil, destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
         var path = suspectedErroneousPath
         if let sourcePath, let destinationPath, dwError == ERROR_BUFFER_OVERFLOW {
@@ -49,7 +49,7 @@ extension CocoaError {
             }
             path = lastLength > MAX_PATH || fullLength > MAX_PATH ? destinationPath : sourcePath
         }
-        
+
         return CocoaError.errorWithFilePath(path, win32: dwError, reading: false, variant: variant, source: sourcePath, destination: destinationPath)
     }
 
@@ -72,7 +72,7 @@ extension CocoaError {
     fileprivate static func copyFileError(_ error: DWORD, _ srcPath: String, _ dstPath: String) -> CocoaError {
         CocoaError.fileOperationError(error, srcPath, sourcePath: srcPath, destinationPath: dstPath, variant: "Copy")
     }
-#else
+    #else
     private static func fileOperationError(_ errNum: Int32, _ suspectedErroneousPath: String, sourcePath: String? = nil, destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
         // Try to be a little bit more intelligent about which path should be reported in the error. In the case of ENAMETOOLONG, we can more accurately guess which path is causing the error without racily checking the file system after the fact. This may not be perfect in the face of operations which span file systems, or on file systems that only support names/paths less than NAME_MAX or PATH_MAX, but it's better than nothing.
         var erroneousPath = suspectedErroneousPath
@@ -91,10 +91,10 @@ extension CocoaError {
                 erroneousPath = sourcePath
             }
         }
-        
+
         return CocoaError.errorWithFilePath(erroneousPath, errno: errNum, reading: false, variant: variant, source: sourcePath, destination: destinationPath)
     }
-    
+
     fileprivate static func removeFileError(_ errNum: Int32, _ path: String) -> CocoaError {
         if errNum == ENOTEMPTY {
             CocoaError.fileOperationError(EPERM, path, variant: "Remove")
@@ -102,29 +102,29 @@ extension CocoaError {
             CocoaError.fileOperationError(errNum, path, variant: "Remove")
         }
     }
-    
+
     fileprivate static func moveFileError(_ errNum: Int32, _ src: URL, _ dst: URL) -> CocoaError {
         CocoaError.fileOperationError(errNum, src.path, sourcePath: src.path, destinationPath: dst.path, variant: "Move")
     }
-    
+
     fileprivate static func linkFileError(_ errNum: Int32, _ srcPath: String, _ dstPath: String) -> CocoaError {
         CocoaError.fileOperationError(errNum, srcPath, sourcePath: srcPath, destinationPath: dstPath, variant: "Link")
     }
-    
+
     fileprivate static func copyFileError(_ errNum: Int32, _ srcPath: String, _ dstPath: String) -> CocoaError {
         CocoaError.fileOperationError(errNum, srcPath, sourcePath: srcPath, destinationPath: dstPath, variant: "Copy")
     }
-#endif
+    #endif
 }
 
 extension FileManager {
     fileprivate func _shouldProceedAfter(error: Error, removingItemAtPath path: String) -> Bool {
         var delegateResponse: Bool?
-        
+
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, removingItemAt: URL(fileURLWithPath: path))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, removingItemAtPath: path)
             }
@@ -132,16 +132,16 @@ extension FileManager {
             delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, removingItemAt: URL(fileURLWithPath: path))
             #endif
         }
-        
+
         return delegateResponse ?? false
     }
-    
+
     fileprivate func _shouldRemoveItemAtPath(_ path: String) -> Bool {
         var delegateResponse: Bool?
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldRemoveItemAt: URL(fileURLWithPath: path))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldRemoveItemAtPath: path)
             }
@@ -151,7 +151,7 @@ extension FileManager {
         }
         return delegateResponse ?? true
     }
-    
+
     fileprivate func _delegateImplementsRemoveItemConfirmation() -> Bool {
         guard let delegate = self.safeDelegate else { return false }
         #if FOUNDATION_FRAMEWORK
@@ -160,7 +160,7 @@ extension FileManager {
         return true
         #endif
     }
-    
+
     fileprivate func _delegateImplementsRemoveItemError() -> Bool {
         guard let delegate = self.safeDelegate else { return false }
         #if FOUNDATION_FRAMEWORK
@@ -169,14 +169,14 @@ extension FileManager {
         return true
         #endif
     }
-    
+
     fileprivate func _shouldProceedAfter(error: Error, copyingItemAtPath path: String, to dst: String) -> Bool {
         var delegateResponse: Bool?
-        
+
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, copyingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, copyingItemAtPath: path, toPath: dst)
             }
@@ -184,16 +184,16 @@ extension FileManager {
             delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, copyingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
-        
+
         return delegateResponse ?? false
     }
-    
+
     fileprivate func _shouldCopyItemAtPath(_ path: String, to dst: String) -> Bool {
         var delegateResponse: Bool?
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldCopyItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldCopyItemAtPath: path, toPath: dst)
             }
@@ -203,14 +203,14 @@ extension FileManager {
         }
         return delegateResponse ?? true
     }
-    
+
     fileprivate func _shouldProceedAfter(error: Error, linkingItemAtPath path: String, to dst: String) -> Bool {
         var delegateResponse: Bool?
-        
+
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, linkingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, linkingItemAtPath: path, toPath: dst)
             }
@@ -218,16 +218,16 @@ extension FileManager {
             delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, linkingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
-        
+
         return delegateResponse ?? false
     }
-    
+
     fileprivate func _shouldLinkItemAtPath(_ path: String, to dst: String) -> Bool {
         var delegateResponse: Bool?
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldLinkItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldLinkItemAtPath: path, toPath: dst)
             }
@@ -237,14 +237,14 @@ extension FileManager {
         }
         return delegateResponse ?? true
     }
-    
+
     fileprivate func _shouldProceedAfter(error: Error, movingItemAtPath path: String, to dst: String) -> Bool {
         var delegateResponse: Bool?
-        
+
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, movingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, movingItemAtPath: path, toPath: dst)
             }
@@ -252,16 +252,16 @@ extension FileManager {
             delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, movingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
-        
+
         return delegateResponse ?? false
     }
-    
+
     fileprivate func _shouldMoveItemAtPath(_ path: String, to dst: String) -> Bool {
         var delegateResponse: Bool?
         if let delegate = self.safeDelegate {
             #if FOUNDATION_FRAMEWORK
             delegateResponse = delegate.fileManager?(self, shouldMoveItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
-            
+
             if delegateResponse == nil {
                 delegateResponse = delegate.fileManager?(self, shouldMoveItemAtPath: path, toPath: dst)
             }
@@ -283,11 +283,11 @@ struct NSFileManagerMoveOptions: ExpressibleByArrayLiteral {
 #endif
 
 private protocol LinkOrCopyDelegate {
-#if os(Windows)
+    #if os(Windows)
     typealias ErrorType = DWORD
-#else
+    #else
     typealias ErrorType = Int32
-#endif
+    #endif
 
     func shouldPerformOnItemAtPath(_ path: String, to destination: String) -> Bool
     func throwIfNecessary(_ errno: ErrorType, _ source: String, _ destination: String) throws
@@ -309,7 +309,7 @@ extension removefile_state_t {
         removefile_state_get(self, UInt32(REMOVEFILE_STATE_ERRNO), &num)
         return num
     }
-    
+
     fileprivate func attachCallbacks(context: UnsafeRawPointer?, confirm: RemoveFileCallback?, error: RemoveFileCallback?) {
         if let confirm {
             removefile_state_set(self, UInt32(REMOVEFILE_STATE_CONFIRM_CONTEXT), context)
@@ -326,7 +326,7 @@ extension removefile_state_t {
 enum _FileOperations {
     // MARK: removefile
 
-#if os(Windows)
+    #if os(Windows)
     static func removeFile(_ path: String, with filemanager: FileManager?) throws {
         try path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
@@ -385,7 +385,8 @@ enum _FileOperations {
                             let fullpath = String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix()
 
                             if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
-                                    entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
+                                entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT
+                            {
                                 if filemanager?._shouldRemoveItemAtPath(fullpath) ?? true {
                                     stack.append((fullpath, true))
                                 }
@@ -419,7 +420,7 @@ enum _FileOperations {
             }
         }
     }
-#else
+    #else
     static func removeFile(_ path: String, with fileManager: FileManager?) throws {
         try path.withFileSystemRepresentation { rep in
             guard let rep else {
@@ -428,17 +429,17 @@ enum _FileOperations {
             try Self._removeFile(rep, path, with: fileManager)
         }
     }
-    
+
     #if canImport(Darwin)
     fileprivate class _FileRemoveContext {
         var error: CocoaError?
         var manager: FileManager
-        
+
         init(_ manager: FileManager) {
             self.manager = manager
         }
     }
-    
+
     private static func _removeFile(_ pathPtr: UnsafePointer<CChar>, _ pathStr: String, state: removefile_state_t) throws {
         let err = removefile(pathPtr, state, removefile_flags_t(REMOVEFILE_RECURSIVE))
         if err < 0 {
@@ -448,28 +449,28 @@ enum _FileOperations {
             throw CocoaError.removeFileError(state.errnum, pathStr)
         }
     }
-    
+
     private static func _removeFile(_ pathPtr: UnsafePointer<CChar>, _ pathStr: String, with fileManager: FileManager?) throws {
         let state = removefile_state_alloc()!
         defer { removefile_state_free(state) }
-        
+
         guard let fileManager else {
             // We have no file manager with a delegate, simply call removefile and return
             try Self._removeFile(pathPtr, pathStr, state: state)
             return
         }
-        
+
         let ctx = _FileRemoveContext(fileManager)
         try withExtendedLifetime(ctx) {
             let ctxPtr = Unmanaged.passUnretained(ctx).toOpaque()
             var confirmCallback: RemoveFileCallback?
             var errorCallback: RemoveFileCallback?
-            
+
             if fileManager._delegateImplementsRemoveItemConfirmation() {
                 confirmCallback = { _, pathPtr, contextPtr in
                     let context = Unmanaged<_FileOperations._FileRemoveContext>.fromOpaque(contextPtr).takeUnretainedValue()
                     let path = String(cString: pathPtr)
-                    
+
                     // Proceed unless the delegate says to skip
                     return (context.manager._shouldRemoveItemAtPath(path)) ? REMOVEFILE_PROCEED : REMOVEFILE_SKIP
                 }
@@ -478,9 +479,9 @@ enum _FileOperations {
                 errorCallback = { state, pathPtr, contextPtr in
                     let context = Unmanaged<_FileOperations._FileRemoveContext>.fromOpaque(contextPtr).takeUnretainedValue()
                     let path = String(cString: pathPtr)
-                    
+
                     let err = CocoaError.removeFileError(state.errnum, path)
-                    
+
                     // Proceed only if the delegate says so
                     if context.manager._shouldProceedAfter(error: err, removingItemAtPath: path) {
                         return REMOVEFILE_PROCEED
@@ -490,7 +491,7 @@ enum _FileOperations {
                     }
                 }
             }
-            
+
             state.attachCallbacks(context: ctxPtr, confirm: confirmCallback, error: errorCallback)
             try Self._removeFile(pathPtr, pathStr, state: state)
             if let error = ctx.error {
@@ -521,7 +522,7 @@ enum _FileOperations {
             }
             return
         }
-        
+
         guard fileManager?._shouldRemoveItemAtPath(resolve(path: pathStr)) ?? true else { return }
         let trivialResult = rmdir(path)
         if trivialResult == 0 {
@@ -539,7 +540,7 @@ enum _FileOperations {
             switch item {
             case let .error(err, errPath):
                 throw CocoaError.removeFileError(err, errPath)
-                
+
             case let .entry(entry):
                 let fts_path = entry.ftsEnt.fts_path!
                 switch Int32(entry.ftsEnt.fts_info) {
@@ -582,12 +583,12 @@ enum _FileOperations {
         }
     }
     #endif
-#endif
-    
+    #endif
+
     // MARK: Move File
-    
+
     static func moveFile(_ src: URL, to dst: URL, with fileManager: FileManager, options: NSFileManagerMoveOptions) throws {
-#if os(Windows)
+        #if os(Windows)
         try src.withUnsafeFileSystemRepresentation { pszSource in
             let source = String(cString: pszSource!)
             try dst.withUnsafeFileSystemRepresentation { pszDestination in
@@ -618,8 +619,7 @@ enum _FileOperations {
                         // destination are on different volumes and the source
                         // is a directory. In that case, we need to do a
                         // recursive copy and then remove the source.
-                        if PathIsSameRootW(pwszSource, pwszDestination) ||
-                                faSourceAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != FILE_ATTRIBUTE_DIRECTORY {
+                        if PathIsSameRootW(pwszSource, pwszDestination) || faSourceAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != FILE_ATTRIBUTE_DIRECTORY {
                             if !MoveFileExW(pwszSource, pwszDestination, MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) {
                                 let error = CocoaError.moveFileError(GetLastError(), src, dst)
                                 guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
@@ -680,19 +680,19 @@ enum _FileOperations {
                 }
             }
         }
-#else
+        #else
         try src.withUnsafeFileSystemRepresentation { srcPath in
             guard let srcPath else {
                 throw CocoaError.errorWithFilePath(.fileNoSuchFile, src)
             }
-            
+
             try dst.withUnsafeFileSystemRepresentation { dstPath in
                 guard let dstPath else {
                     throw CocoaError.errorWithFilePath(.fileNoSuchFile, dst)
                 }
-                
+
                 guard fileManager._shouldMoveItemAtPath(String(cString: srcPath), to: String(cString: dstPath)) else { return }
-                
+
                 // If the destination path already exists, we're going to bail out completely & set the error.
                 var fileInfoBuffer = stat()
                 var delegateIgnoredOverwriteError = false
@@ -703,8 +703,10 @@ enum _FileOperations {
                     if src.lastPathComponent.compare(dst.lastPathComponent, options: [.caseInsensitive]) == .orderedSame {
                         #if FOUNDATION_FRAMEWORK
                         // TODO: Support case-only rename in swift-foundation
-                        if let srcAttrs = try? src.resourceValues(forKeys: [.parentDirectoryURLKey]), let dstAttrs = try? dst.resourceValues(forKeys: [.parentDirectoryURLKey, .volumeSupportsCasePreservedNamesKey, .volumeSupportsCaseSensitiveNamesKey]) {
-                            
+                        if let srcAttrs = try? src.resourceValues(forKeys: [.parentDirectoryURLKey]),
+                            let dstAttrs = try? dst.resourceValues(forKeys: [.parentDirectoryURLKey, .volumeSupportsCasePreservedNamesKey, .volumeSupportsCaseSensitiveNamesKey])
+                        {
+
                             // ... but not if the source and destination are in different directories, meaning they're definitely different directory entries ...
                             if srcAttrs.parentDirectory == dstAttrs.parentDirectory {
                                 // ... but only in volumes that are case insensitive, but case preserving.
@@ -715,7 +717,7 @@ enum _FileOperations {
                         }
                         #endif
                     }
-                    
+
                     if !shouldProceed {
                         let err = CocoaError.moveFileError(EEXIST, src, dst)
                         guard fileManager._shouldProceedAfter(error: err, movingItemAtPath: String(cString: srcPath), to: String(cString: dstPath)) else {
@@ -724,17 +726,17 @@ enum _FileOperations {
                         delegateIgnoredOverwriteError = true
                     }
                 }
-                
+
                 // First, we should just rename (who knows? We might get lucky).
                 var renameError = rename(srcPath, dstPath) != 0
                 let renameErrno = errno
-                
-#if os(macOS) && FOUNDATION_FRAMEWORK
+
+                #if os(macOS) && FOUNDATION_FRAMEWORK
                 // If the rename was successful, stamp with DO_NOT_TRANSLOCATE, if requested. If rename failed with EXDEV, the copy operation will take care of it instead. Ignore failure. 26556142.
                 if !renameError && options.contains(.allowRunningResultInPlace) {
                     if let qtn = _qtn_file_alloc() {
                         defer { _qtn_file_free(qtn) }
-                        
+
                         if _qtn_file_init_with_path(qtn, dstPath) == 0 {
                             var flags = _qtn_file_get_flags(qtn)
                             if flags & QTN_FLAG_DO_NOT_TRANSLOCATE.rawValue == 0 {
@@ -745,9 +747,9 @@ enum _FileOperations {
                         }
                     }
                 }
-#endif
-                
-#if (os(macOS) || os(iOS)) && FOUNDATION_FRAMEWORK
+                #endif
+
+                #if (os(macOS) || os(iOS)) && FOUNDATION_FRAMEWORK
                 if renameError && renameErrno == ENOENT {
                     // Could this perhaps be a faulted-out iCloud file that we're attempting to move?
                     var handled: ObjCBool = false
@@ -756,47 +758,51 @@ enum _FileOperations {
                         renameError = false
                     }
                 }
-#endif
-                
+                #endif
+
                 if renameError {
                     if renameErrno == EXDEV {
                         // We tried to move something across a device. We should copy and then unlink the original.
                         var copyOptions: NSFileManagerCopyOptions = []
-#if os(macOS) && FOUNDATION_FRAMEWORK
+                        #if os(macOS) && FOUNDATION_FRAMEWORK
                         if options.contains(.allowRunningResultInPlace) {
                             copyOptions.insert(.allowRunningResultInPlace)
                         }
-#endif
-                        
+                        #endif
+
                         do {
                             try Self.copyFile(src.path, to: dst.path, with: fileManager, options: copyOptions)
                         } catch let copyError as CocoaError {
                             // The error occurred on the copy operation, however we don't want to report those paths - we want to report the paths on the top-level item; the one the move was requested for. We'll wrap the copy operation error in the underlying error key, but we'll pick up the error code from the underlying error itself.
-                            
+
                             if !delegateIgnoredOverwriteError {
                                 // Remove the incomplete copy at the destination, but only if the delegate didn't ignore the overwrite failure.
                                 try? Self.removeFile(dst.path, with: nil)
                             }
-                            
-                            throw CocoaError(copyError.code, userInfo: [
-                                NSFilePathErrorKey : src.path,
-                                NSDestinationFilePathErrorKey : dst.path,
-                                NSUserStringVariantErrorKey : "Move",
-                                NSUnderlyingErrorKey : copyError
-                            ])
+
+                            throw CocoaError(
+                                copyError.code,
+                                userInfo: [
+                                    NSFilePathErrorKey: src.path,
+                                    NSDestinationFilePathErrorKey: dst.path,
+                                    NSUserStringVariantErrorKey: "Move",
+                                    NSUnderlyingErrorKey: copyError,
+                                ])
                         }
-                        
+
                         // The copy was successful. Remove the original, but only if the delegate didn't ignore the rename failure.
                         do {
                             try Self.removeFile(src.path, with: nil)
                         } catch let removeError as CocoaError {
                             // Like the error from the copy operation above, make the "Remove" error the underlying error to a "Move" error.
-                            throw CocoaError(removeError.code, userInfo: [
-                                NSFilePathErrorKey : src.path,
-                                NSDestinationFilePathErrorKey : dst.path,
-                                NSUserStringVariantErrorKey : "Move",
-                                NSUnderlyingErrorKey : removeError
-                            ])
+                            throw CocoaError(
+                                removeError.code,
+                                userInfo: [
+                                    NSFilePathErrorKey: src.path,
+                                    NSDestinationFilePathErrorKey: dst.path,
+                                    NSUserStringVariantErrorKey: "Move",
+                                    NSUnderlyingErrorKey: removeError,
+                                ])
                         }
                     } else {
                         // The error was something other than EXDEV, which means the rename() failed. The error codes for the rename need to be translated into something good for Cocoa domain errors.
@@ -808,12 +814,12 @@ enum _FileOperations {
                 }
             }
         }
-#endif
+        #endif
     }
-    
+
     // MARK: Link/Copy File
 
-#if os(Windows)
+    #if os(Windows)
     private static func linkOrCopyFile(_ src: String, dst: String, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         let bCopyFile = delegate.copyData
         try src.withNTPathRepresentation { pwszSource in
@@ -861,7 +867,7 @@ enum _FileOperations {
             }
         }
     }
-#else
+    #else
     #if !canImport(Darwin)
     #if os(FreeBSD)
     private static let _freeBSDRelease = getosreldate()
@@ -874,7 +880,7 @@ enum _FileOperations {
             return
         }
         defer { close(srcfd) }
-        
+
         var fileInfo = stat()
         guard fstat(srcfd, &fileInfo) >= 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
@@ -931,7 +937,7 @@ enum _FileOperations {
             chunkSize = defaultChunkSize
         }
         var current: off_t = 0
-        
+
         #if os(WASI) || os(OpenBSD)
         // WASI doesn't have sendfile, so we need to do it in user space with read/write
         try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: chunkSize) { buffer in
@@ -966,7 +972,7 @@ enum _FileOperations {
         #endif
     }
     #endif
-    
+
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
         #if !os(WASI) && !os(Android) && !os(OpenBSD)
@@ -1051,7 +1057,7 @@ enum _FileOperations {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
             }
             #endif
-            
+
             // Copy modification date
             let value = statInfo.st_mtim
             var tv = (value, value)
@@ -1062,7 +1068,7 @@ enum _FileOperations {
                     }
                 }
             }
-            
+
             #if !os(WASI) // WASI doesn't have fchmod for now
             // Copy permissions
             if fchmod(dstFD, mode_t(statInfo.st_mode)) != 0 {
@@ -1074,7 +1080,7 @@ enum _FileOperations {
         }
     }
     #endif
-    
+
     private static func _openDirectoryFD(_ ptr: UnsafePointer<CChar>, srcPath: @autoclosure () -> String, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws -> CInt? {
         let fd = open(ptr, O_RDONLY | O_NOFOLLOW | O_DIRECTORY)
         guard fd >= 0 else {
@@ -1083,19 +1089,19 @@ enum _FileOperations {
         }
         return fd
     }
-    
+
     // Safely copies metadata from one directory to another ensuring that both paths are directories and cannot be swapped for files before/while copying metadata
     private static func _safeCopyDirectoryMetadata(src: UnsafePointer<CChar>, dst: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate, extraFlags: Int32 = 0) throws {
         guard let srcFD = try _openDirectoryFD(src, srcPath: String(cString: src), dstPath: String(cString: dst), delegate: delegate) else {
             return
         }
         defer { close(srcFD) }
-        
+
         guard let dstFD = try _openDirectoryFD(dst, srcPath: String(cString: src), dstPath: String(cString: dst), delegate: delegate) else {
             return
         }
         defer { close(dstFD) }
-        
+
         #if canImport(Darwin)
         if fcopyfile(srcFD, dstFD, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
             try delegate.throwIfNecessary(errno, String(cString: src), String(cString: dst))
@@ -1111,19 +1117,19 @@ enum _FileOperations {
             let srcLen = strlen(srcPtr)
             let dstAppendPtr = buffer.baseAddress!.advanced(by: dstLen)
             let remainingBuffer = FileManager.MAX_PATH_SIZE - dstLen
-            
+
             let seq = _FTSSequence(srcPtr, .init(FTS_PHYSICAL | FTS_NOCHDIR))
             let iterator = seq.makeIterator()
             while let item = iterator.next() {
                 switch item {
                 case let .error(errno, path):
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: true)
-                    
+
                 case let .entry(entry):
                     let fts_path = entry.ftsEnt.fts_path!
                     let trimmedPathPtr = fts_path.advanced(by: srcLen)
                     Platform.copyCString(dst: dstAppendPtr, src: trimmedPathPtr, size: remainingBuffer)
-                    
+
                     // we don't want to ask the delegate on the way back -up- the hierarchy if they want to copy a directory they've already seen and therefore already said "YES" to.
                     guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: fts_path), to: String(cString: buffer.baseAddress!)) else {
                         if entry.ftsEnt.fts_info == FTS_D {
@@ -1131,9 +1137,9 @@ enum _FileOperations {
                         }
                         continue
                     }
-                    
+
                     let extraFlags = entry.ftsEnt.fts_level == 0 ? delegate.extraCopyFileFlags : 0
-                    
+
                     switch Int32(entry.ftsEnt.fts_info) {
                     case FTS_D:
                         // Directory being visited in pre-order - create it with whatever default perms will be on the destination.
@@ -1148,13 +1154,13 @@ enum _FileOperations {
                             try delegate.throwIfNecessary(error, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
-                        
+
                     case FTS_DP:
                         // Directory being visited in post-order - copy the permissions over.
                         try Self._safeCopyDirectoryMetadata(src: fts_path, dst: buffer.baseAddress!, delegate: delegate, extraFlags: extraFlags)
-                        
-                    case FTS_SL: fallthrough    // Symlink.
-                    case FTS_SLNONE:            // Symlink with no target.
+
+                    case FTS_SL: fallthrough // Symlink.
+                    case FTS_SLNONE: // Symlink with no target.
                         // Do what the documentation says (and what linkPath:toPath:handler: does) - copy the symlink, instead of creating a hard link.
                         #if canImport(Darwin)
                         var flags: Int32
@@ -1177,9 +1183,9 @@ enum _FileOperations {
                             try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
-                        
-                    case FTS_DEFAULT: fallthrough   // Something not defined anywhere else.
-                    case FTS_F:                     // Regular file.
+
+                    case FTS_DEFAULT: fallthrough // Something not defined anywhere else.
+                    case FTS_F: // Regular file.
                         if delegate.copyData {
                             #if canImport(Darwin)
                             if copyfile(fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_CLONE | COPYFILE_ALL | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
@@ -1193,20 +1199,20 @@ enum _FileOperations {
                                 try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                             }
                         }
-                        
-                        // Error returns
-                    case FTS_DNR: fallthrough   // Directory cannot be read.
-                    case FTS_ERR: fallthrough   // Some error occurred, but we don't know what.
-                    case FTS_NS:                // No stat(2) information is available.
+
+                    // Error returns
+                    case FTS_DNR: fallthrough // Directory cannot be read.
+                    case FTS_ERR: fallthrough // Some error occurred, but we don't know what.
+                    case FTS_NS: // No stat(2) information is available.
                         try delegate.throwIfNecessary(entry.ftsEnt.fts_errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
-                        
+
                     default: break
                     }
                 }
             }
         }
     }
-    
+
     private static func linkOrCopyFile(_ src: String, dst: String, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         try src.withFileSystemRepresentation { srcPtr in
             guard let srcPtr else {
@@ -1220,10 +1226,10 @@ enum _FileOperations {
             }
         }
     }
-#endif
+    #endif
 
     static func copyFile(_ src: String, to dst: String, with fileManager: FileManager, options: NSFileManagerCopyOptions) throws {
-        struct CopyFileDelegate : LinkOrCopyDelegate {
+        struct CopyFileDelegate: LinkOrCopyDelegate {
             let copyData = true
             let extraCopyFileFlags: Int32
             let fileManager: FileManager
@@ -1236,7 +1242,7 @@ enum _FileOperations {
                 extraCopyFileFlags = 0
                 #endif
             }
-            
+
             func shouldPerformOnItemAtPath(_ path: String, to destination: String) -> Bool {
                 fileManager._shouldCopyItemAtPath(path, to: destination)
             }
@@ -1263,16 +1269,16 @@ enum _FileOperations {
         #endif
         try Self.linkOrCopyFile(src, dst: dst, with: fileManager, delegate: CopyFileDelegate(inPlace: inPlace, fileManager: fileManager))
     }
-    
+
     static func linkFile(_ src: String, to dst: String, with fileManager: FileManager) throws {
-        struct LinkFileDelegate : LinkOrCopyDelegate {
+        struct LinkFileDelegate: LinkOrCopyDelegate {
             let copyData = false
             let fileManager: FileManager
-            
+
             init(_ fileManager: FileManager) {
                 self.fileManager = fileManager
             }
-            
+
             func shouldPerformOnItemAtPath(_ path: String, to destination: String) -> Bool {
                 fileManager._shouldLinkItemAtPath(path, to: destination)
             }

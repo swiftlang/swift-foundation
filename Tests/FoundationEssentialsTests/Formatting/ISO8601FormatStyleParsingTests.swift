@@ -50,13 +50,13 @@ private struct ISO8601FormatStyleParsingTests {
         // Date is: "1970-01-01 15:35:46"
         #expect(try iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46Z") == Date(timeIntervalSinceReferenceDate: -978251054.0))
     }
-    
+
     @Test func iso8601ParseComponents_fromString() throws {
         let components = try DateComponents.ISO8601FormatStyle().parse("2022-01-28T15:35:46Z")
         #expect(components == DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: .gmt, year: 2022, month: 1, day: 28, hour: 15, minute: 35, second: 46))
         #expect(components.date != nil)
     }
-    
+
     @Test func iso8601ParseComponents_missingComponents() throws {
         // Default style requires time
         #expect(throws: (any Error).self) {
@@ -99,14 +99,14 @@ private struct ISO8601FormatStyleParsingTests {
         // Date is: "1970-01-01 15:35:46"
         #expect(try iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46Z") == DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: .gmt, hour: 15, minute: 35, second: 46))
     }
-        
+
     @Test func iso8601FractionalSecondsAreOptional() {
         let iso8601 = Date.ISO8601FormatStyle()
         let iso8601WithFraction = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
-        
+
         let str = "2022-01-28T15:35:46Z"
         let strWithFraction = "2022-01-28T15:35:46.123Z"
-        
+
         #expect(throws: Never.self) {
             try iso8601.parse(str)
         }
@@ -121,7 +121,7 @@ private struct ISO8601FormatStyleParsingTests {
             try iso8601WithFraction.parse(strWithFraction)
         }
     }
-    
+
     @Test(arguments: [
         ("2019-W52-07", "2019-12-29"),
         ("2020-W01-01", "2019-12-30"),
@@ -135,7 +135,7 @@ private struct ISO8601FormatStyleParsingTests {
         ("2026-W53-06", "2027-01-02"),
         ("2026-W53-07", "2027-01-03"),
         ("2027-W01-01", "2027-01-04"),
-        ("2027-W01-02", "2027-01-05")
+        ("2027-W01-02", "2027-01-05"),
     ])
     func weekOfYear(date: (String, String)) throws {
         let iso8601 = Date.ISO8601FormatStyle()
@@ -144,7 +144,7 @@ private struct ISO8601FormatStyleParsingTests {
         let parsedY = try iso8601.year().month().day().parse(date.1)
         #expect(parsedWoY == parsedY)
     }
-    
+
     @Test func zeroLeadingDigits() throws {
         // The parser allows for an arbitrary number of 0 pads in digits, including none.
         let iso8601 = Date.ISO8601FormatStyle()
@@ -160,24 +160,24 @@ private struct ISO8601FormatStyleParsingTests {
         #expect(try iso8601.parse("2022-01-28T15:05:46Z") == Date(timeIntervalSinceReferenceDate: 665075146.0))
         #expect(try iso8601.parse("2022-01-28T15:5:46Z") == Date(timeIntervalSinceReferenceDate: 665075146.0))
     }
-    
+
     @Test func timeZones() throws {
         let iso8601 = Date.ISO8601FormatStyle()
         let date = Date(timeIntervalSinceReferenceDate: 665076946.0)
-        
+
         var iso8601Pacific = iso8601
         iso8601Pacific.timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
-        
+
         // Has a seconds component (-28830)
         var iso8601PacificIsh = iso8601
         iso8601PacificIsh.timeZone = TimeZone(secondsFromGMT: -3600 * 8 - 30)!
-        
+
         #expect(try iso8601Pacific.timeSeparator(.omitted).parse("2022-01-28T073546-0800") == date)
         #expect(try iso8601Pacific.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T073546-08:00") == date)
 
         #expect(try iso8601PacificIsh.timeSeparator(.omitted).parse("2022-01-28T073516-080030") == date)
         #expect(try iso8601PacificIsh.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T073516-08:00:30") == date)
-        
+
         var iso8601gmtP1 = iso8601
         iso8601gmtP1.timeZone = TimeZone(secondsFromGMT: 3600)!
         #expect(try iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+0100") == date)
@@ -189,7 +189,7 @@ private struct ISO8601FormatStyleParsingTests {
         #expect(try iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+01:00") == date)
         #expect(try iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+01:00:00") == date)
     }
-    
+
     @Test func fractionalSeconds() throws {
         let expectedDate = Date(timeIntervalSinceReferenceDate: 646876592.34567)
         var iso8601 = Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: true)
@@ -197,7 +197,7 @@ private struct ISO8601FormatStyleParsingTests {
 
         let parsedWithFraction = try iso8601.parse("2021-07-01T23:56:32.34567")
         let parsedWithoutFraction = try iso8601.parse("2021-07-01T23:56:32")
-        
+
         let parsedWithFraction1 = try iso8601.parse("2021-07-01T23:56:32.3")
         let parsedWithFraction2 = try iso8601.parse("2021-07-01T23:56:32.34")
         let parsedWithFraction3 = try iso8601.parse("2021-07-01T23:56:32.345")
@@ -212,11 +212,11 @@ private struct ISO8601FormatStyleParsingTests {
         #expect(abs(parsedWithFraction3.timeIntervalSinceReferenceDate - expectedDate.timeIntervalSinceReferenceDate) <= 0.1)
         #expect(abs(parsedWithFraction4.timeIntervalSinceReferenceDate - expectedDate.timeIntervalSinceReferenceDate) <= 0.1)
     }
-    
+
     @Test func specialTimeZonesAndSpaces() throws {
         let reference = try Date("2020-03-05T12:00:00+00:00", strategy: .iso8601)
 
-        let tests : [(String, Date.ISO8601FormatStyle)] = [
+        let tests: [(String, Date.ISO8601FormatStyle)] = [
             ("2020-03-05T12:00:00+00:00", Date.ISO8601FormatStyle()),
             ("2020-03-05T12:00:00+0000", Date.ISO8601FormatStyle()),
             ("2020-03-05T12:00:00GMT", Date.ISO8601FormatStyle()),
@@ -247,12 +247,14 @@ private struct ISO8601FormatStyleParsingTests {
 
         for (parseMe, style) in tests {
             let parsed = try? style.parse(parseMe)
-            #expect(parsed == reference, """
+            #expect(
+                parsed == reference,
+                """
 
-parsing : \(parseMe)
-expected: \(reference) \(reference.timeIntervalSinceReferenceDate)
-result  : \(parsed != nil ? parsed!.debugDescription : "nil") \(parsed != nil ? parsed!.timeIntervalSinceReferenceDate : 0)
-""")
+                parsing : \(parseMe)
+                expected: \(reference) \(reference.timeIntervalSinceReferenceDate)
+                result  : \(parsed != nil ? parsed!.debugDescription : "nil") \(parsed != nil ? parsed!.timeIntervalSinceReferenceDate : 0)
+                """)
         }
     }
 }
@@ -296,7 +298,7 @@ private struct DateISO8601FormatStylePatternMatchingTests {
         #expect(upperBound == expectedUpperBound, "found upperBound: \(String(describing: upperBoundDescription)); expected: \(String(describing: expectedUpperBoundDescription))", sourceLocation: sourceLocation)
         if let match, let expectedDateComponents {
             // Only verify the components that are set in the expected. Skip them if they are nil. We don't provide a way to verify the output is nil in this function.
-            let comps : [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond, .dayOfYear]
+            let comps: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond, .dayOfYear]
             for c in comps {
                 if let expected = expectedDateComponents.value(for: c) {
                     #expect(
@@ -304,12 +306,12 @@ private struct DateISO8601FormatStylePatternMatchingTests {
                         sourceLocation: sourceLocation)
                 }
             }
-            
+
             if let tz = expectedDateComponents.timeZone {
                 #expect(match.timeZone == tz, sourceLocation: sourceLocation)
             }
         }
-        
+
         if match != nil, expectedDateComponents == nil {
             Issue.record("Expected no result, but got one anyway", sourceLocation: sourceLocation)
         }
@@ -320,7 +322,7 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             let iso8601FormatStyle = Date.ISO8601FormatStyle()
             _matchFullRange(str, formatStyle: iso8601FormatStyle, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, sourceLocation: sourceLocation)
         }
-        
+
         func verify(_ str: String, expectedUpperBound: String.Index?, expectedDateComponents: DateComponents?, sourceLocation: SourceLocation = #_sourceLocation) {
             let iso8601ComponentsFormatStyle = DateComponents.ISO8601FormatStyle()
             _matchFullRange(str, formatStyle: iso8601ComponentsFormatStyle, expectedUpperBound: expectedUpperBound, expectedDateComponents: expectedDateComponents, sourceLocation: sourceLocation)
@@ -329,7 +331,7 @@ private struct DateISO8601FormatStylePatternMatchingTests {
         // dateFormatter.date(from: "2021-07-01 15:56:32")!
         let expectedDate = Date(timeIntervalSinceReferenceDate: 646847792.0)
         let expectedDateComponents = DateComponents(year: 2021, month: 7, day: 1, hour: 15, minute: 56, second: 32)
-        
+
         let str = "2021-07-01T15:56:32Z"
         verify(str, expectedUpperBound: str.endIndex, expectedDate: expectedDate)
         verify(str, expectedUpperBound: str.endIndex, expectedDateComponents: expectedDateComponents)
@@ -354,19 +356,19 @@ private struct DateISO8601FormatStylePatternMatchingTests {
         }
 
         let gmt = TimeZone(secondsFromGMT: 0)!
-        let pst = TimeZone(secondsFromGMT: -3600*8)!
+        let pst = TimeZone(secondsFromGMT: -3600 * 8)!
 
         // This format requires a time zone
         do {
-            let expectedDate : Date? = nil
-            let expectedLength : Int? = nil
-            verify("2021-07-01T23:56:32",  .iso8601WithTimeZone(), expectedDate: expectedDate, expectedLength: expectedLength)
-            verify("2021-07-01T235632",    .iso8601WithTimeZone(), expectedDate: expectedDate, expectedLength: expectedLength)
+            let expectedDate: Date? = nil
+            let expectedLength: Int? = nil
+            verify("2021-07-01T23:56:32", .iso8601WithTimeZone(), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("2021-07-01T235632", .iso8601WithTimeZone(), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("2021-07-01 23:56:32Z", .iso8601WithTimeZone(), expectedDate: expectedDate, expectedLength: expectedLength)
-            
-            let expectedDateComponents : DateComponents? = nil
-            verify("2021-07-01T23:56:32",  .iso8601ComponentsWithTimeZone(), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
-            verify("2021-07-01T235632",    .iso8601ComponentsWithTimeZone(), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
+
+            let expectedDateComponents: DateComponents? = nil
+            verify("2021-07-01T23:56:32", .iso8601ComponentsWithTimeZone(), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
+            verify("2021-07-01T235632", .iso8601ComponentsWithTimeZone(), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
             verify("2021-07-01 23:56:32Z", .iso8601ComponentsWithTimeZone(), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
         }
         // This format matches up before the time zone, and creates the date using the specified time zone
@@ -374,21 +376,21 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             // dateFormatter.date(from: "2021-07-01 23:56:32")!
             let expectedDate = Date(timeIntervalSinceReferenceDate: 646876592.0)
             let expectedLength = "2021-07-01T23:56:32".count
-            verify("2021-07-01T23:56:32",       .iso8601(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
-            verify("2021-07-01T23:56:32Z",      .iso8601(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
-            verify("2021-07-01T15:56:32Z",      .iso8601(timeZone: pst), expectedDate: expectedDate, expectedLength: expectedLength)
-            verify("2021-07-01T15:56:32+00",    .iso8601(timeZone: pst), expectedDate: expectedDate, expectedLength: expectedLength)
-            verify("2021-07-01T15:56:32+0000",  .iso8601(timeZone: pst), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("2021-07-01T23:56:32", .iso8601(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("2021-07-01T23:56:32Z", .iso8601(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("2021-07-01T15:56:32Z", .iso8601(timeZone: pst), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("2021-07-01T15:56:32+00", .iso8601(timeZone: pst), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("2021-07-01T15:56:32+0000", .iso8601(timeZone: pst), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("2021-07-01T15:56:32+00:00", .iso8601(timeZone: pst), expectedDate: expectedDate, expectedLength: expectedLength)
-            
+
             let expectedDateComponentsGMT = DateComponents(timeZone: gmt, year: 2021, month: 7, day: 1, hour: 23, minute: 56, second: 32)
-            verify("2021-07-01T23:56:32",       .iso8601Components(timeZone: gmt), expectedDateComponents: expectedDateComponentsGMT, expectedLength: expectedLength)
-            verify("2021-07-01T23:56:32Z",      .iso8601Components(timeZone: gmt), expectedDateComponents: expectedDateComponentsGMT, expectedLength: expectedLength)
-            
+            verify("2021-07-01T23:56:32", .iso8601Components(timeZone: gmt), expectedDateComponents: expectedDateComponentsGMT, expectedLength: expectedLength)
+            verify("2021-07-01T23:56:32Z", .iso8601Components(timeZone: gmt), expectedDateComponents: expectedDateComponentsGMT, expectedLength: expectedLength)
+
             let expectedDateComponentsPST = DateComponents(timeZone: pst, year: 2021, month: 7, day: 1, hour: 15, minute: 56, second: 32)
-            verify("2021-07-01T15:56:32Z",      .iso8601Components(timeZone: pst), expectedDateComponents: expectedDateComponentsPST, expectedLength: expectedLength)
-            verify("2021-07-01T15:56:32+00",    .iso8601Components(timeZone: pst), expectedDateComponents: expectedDateComponentsPST, expectedLength: expectedLength)
-            verify("2021-07-01T15:56:32+0000",  .iso8601Components(timeZone: pst), expectedDateComponents: expectedDateComponentsPST, expectedLength: expectedLength)
+            verify("2021-07-01T15:56:32Z", .iso8601Components(timeZone: pst), expectedDateComponents: expectedDateComponentsPST, expectedLength: expectedLength)
+            verify("2021-07-01T15:56:32+00", .iso8601Components(timeZone: pst), expectedDateComponents: expectedDateComponentsPST, expectedLength: expectedLength)
+            verify("2021-07-01T15:56:32+0000", .iso8601Components(timeZone: pst), expectedDateComponents: expectedDateComponentsPST, expectedLength: expectedLength)
             verify("2021-07-01T15:56:32+00:00", .iso8601Components(timeZone: pst), expectedDateComponents: expectedDateComponentsPST, expectedLength: expectedLength)
         }
 
@@ -398,7 +400,7 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             let expectedDate = Date(timeIntervalSinceReferenceDate: 646876592.345)
             verify("2021-07-01T23:56:32.34567", .iso8601(timeZone: gmt, includingFractionalSeconds: true), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("2021-07-01T23:56:32.34567Z", .iso8601(timeZone: gmt, includingFractionalSeconds: true), expectedDate: expectedDate, expectedLength: expectedLength)
-            
+
             let expectedDateComponents = DateComponents(timeZone: gmt, year: 2021, month: 7, day: 1, hour: 23, minute: 56, second: 32)
             verify("2021-07-01T23:56:32.34567", .iso8601Components(timeZone: gmt, includingFractionalSeconds: true), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
             verify("2021-07-01T23:56:32.34567Z", .iso8601Components(timeZone: gmt, includingFractionalSeconds: true), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
@@ -410,7 +412,7 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             let expectedDate = Date(timeIntervalSinceReferenceDate: 646876592.0)
             verify("20210701T235632", .iso8601(timeZone: gmt, dateSeparator: .omitted, timeSeparator: .omitted), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("20210701 235632", .iso8601(timeZone: gmt, dateSeparator: .omitted, dateTimeSeparator: .space, timeSeparator: .omitted), expectedDate: expectedDate, expectedLength: expectedLength)
-            
+
             let expectedDateComponents = DateComponents(timeZone: gmt, year: 2021, month: 7, day: 1, hour: 23, minute: 56, second: 32)
             verify("20210701T235632", .iso8601Components(timeZone: gmt, dateSeparator: .omitted, timeSeparator: .omitted), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
             verify("20210701 235632", .iso8601Components(timeZone: gmt, dateSeparator: .omitted, dateTimeSeparator: .space, timeSeparator: .omitted), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
@@ -423,15 +425,15 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             let expectedLength = "2021-07-01".count
             let expectedDateComponents = DateComponents(timeZone: gmt, year: 2021, month: 7, day: 1)
 
-            verify("2021-07-01",                .iso8601Date(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("2021-07-01", .iso8601Date(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("2021-07-01T15:56:32+08:00", .iso8601Date(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("2021-07-01 15:56:32+08:00", .iso8601Date(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
-            verify("2021-07-01 i love summer",  .iso8601Date(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
-            
-            verify("2021-07-01",                .iso8601DateComponents(timeZone: gmt), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
+            verify("2021-07-01 i love summer", .iso8601Date(timeZone: gmt), expectedDate: expectedDate, expectedLength: expectedLength)
+
+            verify("2021-07-01", .iso8601DateComponents(timeZone: gmt), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
             verify("2021-07-01T15:56:32+08:00", .iso8601DateComponents(timeZone: gmt), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
             verify("2021-07-01 15:56:32+08:00", .iso8601DateComponents(timeZone: gmt), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
-            verify("2021-07-01 i love summer",  .iso8601DateComponents(timeZone: gmt), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
+            verify("2021-07-01 i love summer", .iso8601DateComponents(timeZone: gmt), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
         }
 
         do {
@@ -439,11 +441,11 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             let expectedDate = Date(timeIntervalSinceReferenceDate: 646790400.0)
             let expectedLength = "20210701".count
             let expectedDateComponents = DateComponents(timeZone: gmt, year: 2021, month: 7, day: 1)
-            verify("20210701",             .iso8601Date(timeZone: gmt, dateSeparator: .omitted), expectedDate: expectedDate, expectedLength: expectedLength)
+            verify("20210701", .iso8601Date(timeZone: gmt, dateSeparator: .omitted), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("20210701T155632+0800", .iso8601Date(timeZone: gmt, dateSeparator: .omitted), expectedDate: expectedDate, expectedLength: expectedLength)
             verify("20210701 155632+0800", .iso8601Date(timeZone: gmt, dateSeparator: .omitted), expectedDate: expectedDate, expectedLength: expectedLength)
-            
-            verify("20210701",             .iso8601DateComponents(timeZone: gmt, dateSeparator: .omitted), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
+
+            verify("20210701", .iso8601DateComponents(timeZone: gmt, dateSeparator: .omitted), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
             verify("20210701T155632+0800", .iso8601DateComponents(timeZone: gmt, dateSeparator: .omitted), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
             verify("20210701 155632+0800", .iso8601DateComponents(timeZone: gmt, dateSeparator: .omitted), expectedDateComponents: expectedDateComponents, expectedLength: expectedLength)
         }
@@ -467,11 +469,11 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             verify("20210701 23:56:32Z", .iso8601WithTimeZone(dateSeparator: .omitted, dateTimeSeparator: .space), expectedDate: expectedDate)
             verify("2021-07-01 15:56:32-0800", .iso8601WithTimeZone(dateTimeSeparator: .space), expectedDate: expectedDate)
             verify("2021-07-01T15:56:32-08:00", .iso8601WithTimeZone(timeZoneSeparator: .colon), expectedDate: expectedDate)
-            
+
             verify("2021-07-01T23:56:32Z", .iso8601ComponentsWithTimeZone(), expectedDateComponents: expectedDateComponentsGMT)
             verify("20210701 23:56:32Z", .iso8601ComponentsWithTimeZone(dateSeparator: .omitted, dateTimeSeparator: .space), expectedDateComponents: expectedDateComponentsGMT)
-            
-            let expectedDateComponentsPST = DateComponents(timeZone: TimeZone(secondsFromGMT: -3600*8)!, year: 2021, month: 7, day: 1, hour: 15, minute: 56, second: 32)
+
+            let expectedDateComponentsPST = DateComponents(timeZone: TimeZone(secondsFromGMT: -3600 * 8)!, year: 2021, month: 7, day: 1, hour: 15, minute: 56, second: 32)
 
             verify("2021-07-01 15:56:32-0800", .iso8601ComponentsWithTimeZone(dateTimeSeparator: .space), expectedDateComponents: expectedDateComponentsPST)
             verify("2021-07-01T15:56:32-08:00", .iso8601ComponentsWithTimeZone(timeZoneSeparator: .colon), expectedDateComponents: expectedDateComponentsPST)
@@ -486,7 +488,7 @@ private struct DateISO8601FormatStylePatternMatchingTests {
             verify("2021-07-01T23:56:32.314Z", .iso8601WithTimeZone(includingFractionalSeconds: true), expectedDate: expectedDate)
             verify("2021-07-01T235632.314Z", .iso8601WithTimeZone(includingFractionalSeconds: true, timeSeparator: .omitted), expectedDate: expectedDate)
             verify("2021-07-01T23:56:32.314000Z", .iso8601WithTimeZone(includingFractionalSeconds: true), expectedDate: expectedDate)
-            
+
             verify("2021-07-01T23:56:32.314Z", .iso8601ComponentsWithTimeZone(includingFractionalSeconds: true), expectedDateComponents: expectedDateComponents)
             verify("2021-07-01T235632.314Z", .iso8601ComponentsWithTimeZone(includingFractionalSeconds: true, timeSeparator: .omitted), expectedDateComponents: expectedDateComponents)
             verify("2021-07-01T23:56:32.314000Z", .iso8601ComponentsWithTimeZone(includingFractionalSeconds: true), expectedDateComponents: expectedDateComponents)

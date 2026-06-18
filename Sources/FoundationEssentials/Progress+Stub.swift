@@ -16,14 +16,14 @@
 internal final class Progress {
     var completedUnitCount: Int64
     var totalUnitCount: Int64
-    
+
     init(totalUnitCount: Int64) {
         self.completedUnitCount = 0
         self.totalUnitCount = totalUnitCount
     }
-    
-    func becomeCurrent(withPendingUnitCount: Int64) { }
-    func resignCurrent() { }
+
+    func becomeCurrent(withPendingUnitCount: Int64) {}
+    func resignCurrent() {}
     var isCancelled: Bool { false }
     static func current() -> Progress? { nil }
     var fractionCompleted: Double {

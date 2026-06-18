@@ -62,13 +62,13 @@ typealias _JSONDecoder = Foundation.JSONDecoder
 #endif
 
 func path(forResource name: String) -> _URL? {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // This benchmark config puts resources in the main bundle
     guard let url = Bundle.main.url(forResource: name, withExtension: nil) else { return nil }
-#else
+    #else
     // This is always package-based, and uses the module to find resources
     guard let url = Bundle.module.url(forResource: name, withExtension: nil) else { return nil }
-#endif
+    #endif
     return _URL(fileURLWithPath: url.path)
 }
 
@@ -77,7 +77,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .throughput]
-    
+
     let canadaPath = path(forResource: "canada.json")
     let canadaData = try! _Data(contentsOf: canadaPath!)
     let canada = try! _JSONDecoder().decode(FeatureCollection.self, from: canadaData)

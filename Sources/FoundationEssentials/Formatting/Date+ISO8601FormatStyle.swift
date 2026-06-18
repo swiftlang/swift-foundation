@@ -52,9 +52,9 @@ extension Date {
     /// ) // "2022-06-10T12:34:56.789Z"
     ///
     /// ```
-    public struct ISO8601FormatStyle : Sendable {
+    public struct ISO8601FormatStyle: Sendable {
         /// A type describing the character separating the time and time zone of a date in an ISO 8601 date format.
-        public enum TimeZoneSeparator : String, Codable, Sendable {
+        public enum TimeZoneSeparator: String, Codable, Sendable {
             /// Use a colon (`:`) to separate the time zone components.
             case colon = ":"
             /// Omit the time zone separator.
@@ -62,7 +62,7 @@ extension Date {
         }
 
         /// A type describing the character separating year, month, and day components of a date in an ISO 8601 date format.
-        public enum DateSeparator : String, Codable, Sendable {
+        public enum DateSeparator: String, Codable, Sendable {
             /// Use a dash (`-`) to separate date components.
             case dash = "-"
             /// Omit the date separator.
@@ -70,7 +70,7 @@ extension Date {
         }
 
         /// Type describing the character separating the time components of a date in an ISO 8601 date format.
-        public enum TimeSeparator : String, Codable, Sendable {
+        public enum TimeSeparator: String, Codable, Sendable {
             /// Use a colon (`:`) to separate time components.
             case colon = ":"
             /// Omit the time separator.
@@ -78,13 +78,13 @@ extension Date {
         }
 
         /// Type describing the character separating the date and time components of a date in an ISO 8601 date format.
-        public enum DateTimeSeparator : String, Codable, Sendable {
+        public enum DateTimeSeparator: String, Codable, Sendable {
             /// Use a space to separate the date and time components.
             case space = " "
             /// Use the standard `T` separator between date and time components.
             case standard = "'T'"
         }
-        
+
         public private(set) var timeSeparator: TimeSeparator {
             get {
                 componentsFormatStyle.timeSeparator
@@ -93,7 +93,7 @@ extension Date {
                 componentsFormatStyle.timeSeparator = newValue
             }
         }
-        
+
         /// If set, the style includes fractional seconds when formatting.
         /// Before Swift 6.2, if true when parsing, fractional seconds must be present. If false when parsing, fractional seconds must not be present.
         /// After Swift 6.2, fractional seconds may be present in the String regardless of the setting of this property.
@@ -105,7 +105,7 @@ extension Date {
                 componentsFormatStyle.includingFractionalSeconds = newValue
             }
         }
-                
+
         public private(set) var timeZoneSeparator: TimeZoneSeparator {
             get {
                 componentsFormatStyle.timeZoneSeparator
@@ -115,7 +115,7 @@ extension Date {
             }
         }
         /// The character used to separate the components of a date.
-        public private(set) var dateSeparator: DateSeparator  {
+        public private(set) var dateSeparator: DateSeparator {
             get {
                 componentsFormatStyle.dateSeparator
             }
@@ -123,7 +123,7 @@ extension Date {
                 componentsFormatStyle.dateSeparator = newValue
             }
         }
-        
+
         /// The character used to separate the date and time components of an ISO 8601 string representation of a date.
         public private(set) var dateTimeSeparator: DateTimeSeparator {
             get {
@@ -133,7 +133,7 @@ extension Date {
                 componentsFormatStyle.dateTimeSeparator = newValue
             }
         }
-        
+
         /// The time zone to use to create and parse date representations.
         public var timeZone: TimeZone {
             get {
@@ -145,35 +145,35 @@ extension Date {
         }
 
         // MARK: -
-        
+
         /// All parsing and formatting is done with the `DateComponents` style.
         private var componentsFormatStyle: DateComponents.ISO8601FormatStyle
-        
+
         // Convenience init to stash a components style inside this one
         internal init(_ componentsStyle: DateComponents.ISO8601FormatStyle) {
             componentsFormatStyle = componentsStyle
         }
-        
+
         // MARK: - Encoding
-        
+
         public init(from decoder: any Decoder) throws {
             // Delegate to the DateComponents.ISO8601FormatStyle type
             componentsFormatStyle = try DateComponents.ISO8601FormatStyle(from: decoder)
         }
-        
+
         public func encode(to encoder: any Encoder) throws {
             // Delegate to the DateComponents.ISO8601FormatStyle type
             try componentsFormatStyle.encode(to: encoder)
         }
-        
+
         public func hash(into hasher: inout Hasher) {
             hasher.combine(componentsFormatStyle)
         }
-        
-        public static func ==(lhs: ISO8601FormatStyle, rhs: ISO8601FormatStyle) -> Bool {
+
+        public static func == (lhs: ISO8601FormatStyle, rhs: ISO8601FormatStyle) -> Bool {
             lhs.componentsFormatStyle == rhs.componentsFormatStyle
         }
-        
+
         // MARK: -
 
         /// Creates an instance using the provided date separator, date and time components separator, and time zone.
@@ -202,8 +202,12 @@ extension Date {
         }
 
         // The default is the format of RFC 3339 with no fractional seconds: "yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"
-        public init(dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeSeparator: TimeSeparator = .colon, timeZoneSeparator: TimeZoneSeparator = .omitted, includingFractionalSeconds: Bool = false, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!) {
-            componentsFormatStyle = DateComponents.ISO8601FormatStyle(dateSeparator: dateSeparator, dateTimeSeparator: dateTimeSeparator, timeSeparator: timeSeparator, timeZoneSeparator: timeZoneSeparator, includingFractionalSeconds: includingFractionalSeconds, timeZone: timeZone)
+        public init(
+            dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeSeparator: TimeSeparator = .colon, timeZoneSeparator: TimeZoneSeparator = .omitted, includingFractionalSeconds: Bool = false,
+            timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!
+        ) {
+            componentsFormatStyle = DateComponents.ISO8601FormatStyle(
+                dateSeparator: dateSeparator, dateTimeSeparator: dateTimeSeparator, timeSeparator: timeSeparator, timeZoneSeparator: timeZoneSeparator, includingFractionalSeconds: includingFractionalSeconds, timeZone: timeZone)
         }
     }
 }
@@ -310,11 +314,11 @@ extension Date.ISO8601FormatStyle {
     /// - Returns: An ISO 8601 date format style modified to include the specified time zone separator style.
     public func timeZoneSeparator(_ separator: TimeZoneSeparator) -> Self {
         .init(componentsFormatStyle.timeZoneSeparator(separator))
-    }    
+    }
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : FormatStyle {
+extension Date.ISO8601FormatStyle: FormatStyle {
 
     /// Creates a locale-aware ISO 8601 string representation from a date value.
     ///
@@ -403,7 +407,7 @@ public extension ParseStrategy where Self == Date.ISO8601FormatStyle {
 
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : ParseStrategy {
+extension Date.ISO8601FormatStyle: ParseStrategy {
     /// Parses a string into a date.
     ///
     /// This method attempts to parse a provided string into an instance of
@@ -432,22 +436,22 @@ extension Date.ISO8601FormatStyle : ParseStrategy {
         }
         return date
     }
-    
+
     package func parse(_ value: String, in range: Range<String.Index>) -> (String.Index, Date)? {
         let v = value[range]
         guard !v.isEmpty else {
             return nil
         }
-        
+
         // Date parsing needs missing units filled out, so that we can calculate a date. Instead of filling them here, we do it inside the parse because it calculates which ones are truly needed.
         guard let (idx, comps) = componentsFormatStyle.parse(value, fillMissingUnits: true, in: range) else {
             return nil
         }
-        
+
         guard let date = componentsFormatStyle._calendar.date(from: comps) else {
             return nil
         }
-            
+
         return (idx, date)
     }
 }
@@ -463,7 +467,7 @@ extension Date.ISO8601FormatStyle: ParseableFormatStyle {
 // MARK: - Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.ISO8601FormatStyle : CustomConsumingRegexComponent {
+extension Date.ISO8601FormatStyle: CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
     public typealias RegexOutput = Date
     /// Processes the input string within the specified bounds, beginning at the given index, and returns the end position of the match and the produced output.
@@ -501,7 +505,9 @@ extension RegexComponent where Self == Date.ISO8601FormatStyle {
     ///   - timeSeparator: The separator between time components.
     ///   - timeZoneSeparator: The separator between time parts in the time zone.
     /// - Returns: A `RegexComponent` to match an ISO 8601 string, including time zone.
-    public static func iso8601WithTimeZone(includingFractionalSeconds: Bool = false, dateSeparator: Self.DateSeparator = .dash, dateTimeSeparator: Self.DateTimeSeparator = .standard, timeSeparator: Self.TimeSeparator = .colon, timeZoneSeparator: Self.TimeZoneSeparator = .omitted) -> Self {
+    public static func iso8601WithTimeZone(
+        includingFractionalSeconds: Bool = false, dateSeparator: Self.DateSeparator = .dash, dateTimeSeparator: Self.DateTimeSeparator = .standard, timeSeparator: Self.TimeSeparator = .colon, timeZoneSeparator: Self.TimeZoneSeparator = .omitted
+    ) -> Self {
         return Date.ISO8601FormatStyle(dateSeparator: dateSeparator, dateTimeSeparator: dateTimeSeparator, timeSeparator: timeSeparator, timeZoneSeparator: timeZoneSeparator, includingFractionalSeconds: includingFractionalSeconds)
     }
 

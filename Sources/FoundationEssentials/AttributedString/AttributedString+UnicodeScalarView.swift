@@ -136,11 +136,11 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
     ///   of the collection.
     @_alwaysEmitIntoClient
     public var count: Int {
-    #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _count
         }
-    #endif
+        #endif
         return _defaultCount
     }
 
@@ -177,11 +177,11 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         offsetBy distance: Int,
         limitedBy limit: AttributedString.Index
     ) -> AttributedString.Index? {
-    #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance, limitedBy: limit)
         }
-    #endif
+        #endif
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
@@ -194,13 +194,16 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
     ) -> AttributedString.Index? {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
         precondition(limit >= startIndex && limit <= endIndex, "AttributedString index out of bounds")
-        guard let j = _guts.string.unicodeScalars.index(
-            i._value, offsetBy: distance, limitedBy: limit._value
-        ) else {
+        guard
+            let j = _guts.string.unicodeScalars.index(
+                i._value, offsetBy: distance, limitedBy: limit._value
+            )
+        else {
             return nil
         }
-        precondition(j >= startIndex._value && j <= endIndex._value,
-                     "AttributedString index out of bounds")
+        precondition(
+            j >= startIndex._value && j <= endIndex._value,
+            "AttributedString index out of bounds")
         return Index(j, version: _guts.version)
     }
 
@@ -227,13 +230,13 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
         return _guts.string.unicodeScalars.distance(from: start._value, to: end._value)
     }
-    
+
     // FIXME: Why isn't this mutable if CharacterView's equivalent subscript has a setter?
     public subscript(index: AttributedString.Index) -> UnicodeScalar {
         precondition(index >= startIndex && index < endIndex, "AttributedString index out of bounds")
         return _guts.string.unicodeScalars[index._value]
     }
-    
+
     // FIXME: This should return `Self`.
     // FIXME: Why isn't this mutable if CharacterView's equivalent subscript has a setter?
     public subscript(bounds: Range<AttributedString.Index>) -> Slice<AttributedString.UnicodeScalarView> {
@@ -253,7 +256,7 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
             _guts = _guts.copy()
         }
     }
-    
+
     internal mutating func _mutateStringContents(
         in range: Range<BigString.Index>,
         attributes: AttributedString._AttributeStorage,
@@ -261,7 +264,7 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
     ) {
         // Invalidate attributes surrounding the affected range. (Phase 1)
         let state = _guts._prepareStringMutation(in: range)
-        
+
         // Update string contents.
         //
         // This is "fun". CharacterView (inconsistently) implements self-slicing, and so
@@ -270,9 +273,9 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         // right thing.
         var scalars = _unicodeScalars
         _guts.string = BigString() // Preserve uniqueness
-        
+
         body(&scalars, range)
-        
+
         self._guts.string = BigString(scalars.base)
         self._range = Range(uncheckedBounds: (scalars.startIndex, scalars.endIndex))
 
@@ -286,14 +289,14 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         // Invalidate attributes surrounding the affected range. (Phase 2)
         _guts._finalizeStringMutation(state)
     }
-    
+
     public mutating func replaceSubrange(
         _ subrange: Range<Index>, with newElements: some Collection<UnicodeScalar>
     ) {
         precondition(
             subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex,
             "AttributedString index range out of bounds")
-        
+
         let subrange = _guts.unicodeScalarRange(roundingDown: subrange._bstringRange)
 
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
@@ -305,7 +308,7 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
             _replaceSubrange(subrange, with: newElements)
         }
     }
-    
+
     internal mutating func _replaceSubrange(
         _ subrange: Range<BigString.Index>, with newElements: some Collection<UnicodeScalar>
     ) {
@@ -317,7 +320,8 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         // a full edit.
         var hasStringChanges = true
         if let newElements = _specialize(newElements, for: BigSubstring.UnicodeScalarView.self),
-           newElements.isIdentical(to: _unicodeScalars[subrange]) {
+            newElements.isIdentical(to: _unicodeScalars[subrange])
+        {
             hasStringChanges = false
         }
 

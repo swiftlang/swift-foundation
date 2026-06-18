@@ -15,19 +15,21 @@
 
 // MARK: - __PlistDictionaryEncoder
 
-internal class __PlistDictionaryEncoder : Encoder {
-    
-    internal static func encodeToTopLevelContainer<Value : Encodable>(_ value: Value) throws -> Any {
+internal class __PlistDictionaryEncoder: Encoder {
+
+    internal static func encodeToTopLevelContainer<Value: Encodable>(_ value: Value) throws -> Any {
         let encoder = __PlistDictionaryEncoder(options: .init())
         guard let topLevel = try encoder.boxGeneric(value, for: .root) else {
-            throw EncodingError.invalidValue(value,
-                                             EncodingError.Context(codingPath: [],
-                                                                   debugDescription: "Top-level \(Value.self) did not encode any values."))
+            throw EncodingError.invalidValue(
+                value,
+                EncodingError.Context(
+                    codingPath: [],
+                    debugDescription: "Top-level \(Value.self) did not encode any values."))
         }
 
         return topLevel
     }
-    
+
     // MARK: Properties
 
     /// The encoder's storage.
@@ -35,7 +37,7 @@ internal class __PlistDictionaryEncoder : Encoder {
 
     /// Options set on the top-level encoder.
     fileprivate let options: PropertyListEncoder._Options
-    
+
     internal var encoderCodingPathNode: _CodingPathNode
     fileprivate var codingPathDepth: Int
 
@@ -45,7 +47,7 @@ internal class __PlistDictionaryEncoder : Encoder {
     }
 
     /// Contextual user-provided information for use during encoding.
-    public var userInfo: [CodingUserInfoKey : Any] {
+    public var userInfo: [CodingUserInfoKey: Any] {
         return self.options.userInfo
     }
 
@@ -111,7 +113,7 @@ internal class __PlistDictionaryEncoder : Encoder {
     public func singleValueContainer() -> SingleValueEncodingContainer {
         return self
     }
-    
+
     // Instead of creating a new __PlistEncoder for passing to methods that take Encoder arguments, wrap the access in this method, which temporarily mutates this __PlistEncoder instance with the additional nesting depth and its coding path.
     @inline(__always)
     func with<T>(path: _CodingPathNode?, perform closure: () throws -> T) rethrows -> T {
@@ -176,7 +178,7 @@ fileprivate struct _PlistDictionaryEncodingStorage {
 
 // MARK: - Encoding Containers
 
-internal struct _PlistDictionaryKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContainerProtocol {
+internal struct _PlistDictionaryKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerProtocol {
     typealias Key = K
 
     // MARK: Properties
@@ -186,7 +188,7 @@ internal struct _PlistDictionaryKeyedEncodingContainer<K : CodingKey> : KeyedEnc
 
     /// A reference to the container we're writing to.
     private let container: NSMutableDictionary
-    
+
     private let codingPathNode: _CodingPathNode
 
     /// The path of coding keys taken to get to this point in encoding.
@@ -251,7 +253,7 @@ internal struct _PlistDictionaryKeyedEncodingContainer<K : CodingKey> : KeyedEnc
         self.container[key.stringValue] = self.encoder.box(value)
     }
 
-    public mutating func encode<T : Encodable>(_ value: T, forKey key: Key) throws {
+    public mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
         let boxed = try self.encoder.box(value, for: self.encoder.encoderCodingPathNode, key)
         self.container[key.stringValue] = boxed
     }
@@ -269,7 +271,7 @@ internal struct _PlistDictionaryKeyedEncodingContainer<K : CodingKey> : KeyedEnc
             dictionary = NSMutableDictionary()
             self.container[containerKey] = dictionary
         }
-        
+
         let container = _PlistDictionaryKeyedEncodingContainer<NestedKey>(referencing: self.encoder, codingPathNode: self.codingPathNode.appending(key), wrapping: dictionary)
         return KeyedEncodingContainer(container)
     }
@@ -300,7 +302,7 @@ internal struct _PlistDictionaryKeyedEncodingContainer<K : CodingKey> : KeyedEnc
     }
 }
 
-internal struct _PlistDictionaryUnkeyedEncodingContainer : UnkeyedEncodingContainer {
+internal struct _PlistDictionaryUnkeyedEncodingContainer: UnkeyedEncodingContainer {
     // MARK: Properties
 
     /// A reference to the encoder we're writing to.
@@ -331,23 +333,23 @@ internal struct _PlistDictionaryUnkeyedEncodingContainer : UnkeyedEncodingContai
 
     // MARK: - UnkeyedEncodingContainer Methods
 
-    public mutating func encodeNil()             throws { self.container.add(_plistNullNSString) }
-    public mutating func encode(_ value: Bool)   throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: Int)    throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: Int8)   throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: Int16)  throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: Int32)  throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: Int64)  throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: UInt)   throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: UInt8)  throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encodeNil() throws { self.container.add(_plistNullNSString) }
+    public mutating func encode(_ value: Bool) throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: Int) throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: Int8) throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: Int16) throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: Int32) throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: Int64) throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: UInt) throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: UInt8) throws { self.container.add(self.encoder.box(value)) }
     public mutating func encode(_ value: UInt16) throws { self.container.add(self.encoder.box(value)) }
     public mutating func encode(_ value: UInt32) throws { self.container.add(self.encoder.box(value)) }
     public mutating func encode(_ value: UInt64) throws { self.container.add(self.encoder.box(value)) }
-    public mutating func encode(_ value: Float)  throws { self.container.add(self.encoder.box(value)) }
+    public mutating func encode(_ value: Float) throws { self.container.add(self.encoder.box(value)) }
     public mutating func encode(_ value: Double) throws { self.container.add(self.encoder.box(value)) }
     public mutating func encode(_ value: String) throws { self.container.add(self.encoder.box(value)) }
 
-    public mutating func encode<T : Encodable>(_ value: T) throws {
+    public mutating func encode<T: Encodable>(_ value: T) throws {
         let boxed = try self.encoder.box(value, for: self.encoder.encoderCodingPathNode, _CodingKey(index: self.count))
         self.container.add(boxed)
     }
@@ -372,7 +374,7 @@ internal struct _PlistDictionaryUnkeyedEncodingContainer : UnkeyedEncodingContai
     }
 }
 
-extension __PlistDictionaryEncoder : SingleValueEncodingContainer {
+extension __PlistDictionaryEncoder: SingleValueEncodingContainer {
     // MARK: - SingleValueEncodingContainer Methods
 
     private func assertCanEncodeNewValue() {
@@ -454,7 +456,7 @@ extension __PlistDictionaryEncoder : SingleValueEncodingContainer {
         self.storage.push(container: self.box(value))
     }
 
-    public func encode<T : Encodable>(_ value: T) throws {
+    public func encode<T: Encodable>(_ value: T) throws {
         assertCanEncodeNewValue()
         try self.storage.push(container: self.box(value, for: self.encoderCodingPathNode))
     }
@@ -465,44 +467,46 @@ extension __PlistDictionaryEncoder : SingleValueEncodingContainer {
 extension __PlistDictionaryEncoder {
 
     /// Returns the given value boxed in a container appropriate for pushing onto the container stack.
-    @inline(__always) internal func box(_ value: Bool)   -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: Int)    -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: Int8)   -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: Int16)  -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: Int32)  -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: Int64)  -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: UInt)   -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: UInt8)  -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: Bool) -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: Int) -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: Int8) -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: Int16) -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: Int32) -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: Int64) -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: UInt) -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: UInt8) -> NSObject { NSNumber(value: value) }
     @inline(__always) internal func box(_ value: UInt16) -> NSObject { NSNumber(value: value) }
     @inline(__always) internal func box(_ value: UInt32) -> NSObject { NSNumber(value: value) }
     @inline(__always) internal func box(_ value: UInt64) -> NSObject { NSNumber(value: value) }
-    @inline(__always) internal func box(_ value: Float)  -> NSObject { NSNumber(value: value) }
+    @inline(__always) internal func box(_ value: Float) -> NSObject { NSNumber(value: value) }
     @inline(__always) internal func box(_ value: Double) -> NSObject { NSNumber(value: value) }
     @inline(__always) internal func box(_ value: String) -> NSObject { NSString(string: value) }
 
     func box(_ value: Encodable, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> NSObject {
         return try self.boxGeneric(value, for: codingPathNode, additionalKey) ?? NSDictionary()
     }
-    
-    fileprivate func boxGeneric<T : Encodable>(_ value: T, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> NSObject? {
+
+    fileprivate func boxGeneric<T: Encodable>(_ value: T, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> NSObject? {
         switch T.self {
         case is Date.Type:
             return value as! NSDate
         case is Data.Type:
             return value as! NSData
         default:
-            return try _boxGeneric({
-                try value.encode(to: $0)
-            }, for: node, additionalKey)
+            return try _boxGeneric(
+                {
+                    try value.encode(to: $0)
+                }, for: node, additionalKey)
         }
     }
-    
+
     fileprivate func boxGeneric<T: EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> NSObject? {
-        try _boxGeneric({
-            try value.encode(to: $0, configuration: configuration)
-        }, for: node, additionalKey)
+        try _boxGeneric(
+            {
+                try value.encode(to: $0, configuration: configuration)
+            }, for: node, additionalKey)
     }
-    
+
     func _boxGeneric(_ encode: (__PlistDictionaryEncoder) throws -> Void, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> NSObject? {
         // The value should request a container from the __PlistENcoder.
         let depth = self.storage.count
@@ -532,7 +536,7 @@ extension __PlistDictionaryEncoder {
 
 /// __PlistDictionaryReferencingEncoder is a special subclass of __PlistDictionaryEncoder which has its own storage, but references the contents of a different encoder.
 /// It's used in superEncoder(), which returns a new encoder for encoding a superclass -- the lifetime of the encoder should not escape the scope it's created in, but it doesn't necessarily know when it's done being used (to write to the original container).
-internal class __PlistDictionaryReferencingEncoder : __PlistDictionaryEncoder {
+internal class __PlistDictionaryReferencingEncoder: __PlistDictionaryEncoder {
     // MARK: Reference types.
 
     /// The type of container we're referencing.

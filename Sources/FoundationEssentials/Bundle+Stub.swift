@@ -17,7 +17,7 @@ package struct Bundle: Hashable, Equatable, Sendable {
 
     public var localizations: [String] { return [] }
 
-    public var infoDictionary: [String : Any]? { return [:] }
+    public var infoDictionary: [String: Any]? { return [:] }
 
     public static func preferredLocalizations(from localizationsArray: [String], forPreferences preferencesArray: [String]?) -> [String] {
         // Backstop behavior here is to return the first value

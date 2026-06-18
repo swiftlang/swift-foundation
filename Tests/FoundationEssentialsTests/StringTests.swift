@@ -43,16 +43,18 @@ private struct StringTests {
         test("ıi", "Ii")
 
         // Word boundaries
-        test("Th.he.EVERYWHERE",
-             "Th.He.Everywhere")
-        test("HELLO world\t\t\tThere.here.EVERYWHERE 78dollars",
-             "Hello World\t\t\tThere.Here.Everywhere 78Dollars")
+        test(
+            "Th.he.EVERYWHERE",
+            "Th.He.Everywhere")
+        test(
+            "HELLO world\t\t\tThere.here.EVERYWHERE 78dollars",
+            "Hello World\t\t\tThere.Here.Everywhere 78Dollars")
         test("GOOd Evening WOrld!", "Good Evening World!")
 
         // We don't do title case, so minor words are also capitalized
         test("train your mind for peak performance: a science-based approach for achieving your goals!", "Train Your Mind For Peak Performance: A Science-Based Approach For Achieving Your Goals!")
         test("cAt! ʻeTc.", "Cat! ʻEtc.")
-        test("a ʻCaT. A ʻdOg! ʻeTc.",  "A ʻCat. A ʻDog! ʻEtc.")
+        test("a ʻCaT. A ʻdOg! ʻeTc.", "A ʻCat. A ʻDog! ʻEtc.")
         test("49ERS", "49Ers")
         test("«丰(aBc)»", "«丰(Abc)»")
         test("Nat’s test can’t run", "Nat’s Test Can’t Run")
@@ -63,8 +65,9 @@ private struct StringTests {
         test("\u{1F80}", "\u{1F88}")
 
         // Width variants
-        test("ｈｅｌｌｏ，ｗｏＲＬＤ\tｈｅｒｅ．ＴＨＥＲＥ？ｅＶｅｒＹＷＨＥＲＥ",
-             "Ｈｅｌｌｏ，Ｗｏｒｌｄ\tＨｅｒｅ．Ｔｈｅｒｅ？Ｅｖｅｒｙｗｈｅｒｅ")
+        test(
+            "ｈｅｌｌｏ，ｗｏＲＬＤ\tｈｅｒｅ．ＴＨＥＲＥ？ｅＶｅｒＹＷＨＥＲＥ",
+            "Ｈｅｌｌｏ，Ｗｏｒｌｄ\tＨｅｒｅ．Ｔｈｅｒｅ？Ｅｖｅｒｙｗｈｅｒｅ")
 
         // Diacritics
         test("ĤĒḺḶŐ ẀỌṜŁÐ", "Ĥēḻḷő Ẁọṝłð")
@@ -92,7 +95,7 @@ private struct StringTests {
 
     @Test func testTrimmingCharactersWithPredicate() {
         typealias TrimmingPredicate = (Character) -> Bool
-        
+
         func test(_ str: String, while predicate: TrimmingPredicate, _ expected: Substring, sourceLocation: SourceLocation = #_sourceLocation) {
             #expect(str._trimmingCharacters(while: predicate) == expected, sourceLocation: sourceLocation)
         }
@@ -151,7 +154,7 @@ private struct StringTests {
         let result = tested._range(of: string, anchored: anchored, backwards: backwards)
         var exp: Range<String.Index>?
         if let expectation {
-            exp = tested.index(tested.startIndex, offsetBy: expectation.lowerBound) ..< tested.index(tested.startIndex, offsetBy: expectation.upperBound)
+            exp = tested.index(tested.startIndex, offsetBy: expectation.lowerBound)..<tested.index(tested.startIndex, offsetBy: expectation.upperBound)
         } else {
             exp = nil
         }
@@ -276,22 +279,22 @@ private struct StringTests {
         }
 
         test([], expected: "")
-        test([ 0x00 ], expected: "\u{0000}")
-        test([ 0x24 ], expected: "$")
-        test([ 0x41, 0x42 ], expected: "AB")
-        test([ 0x20AC ], expected: "\u{20AC}")
-        test([ 0x3040, 0x3041, 0xFFEF ], expected: "\u{3040}\u{3041}\u{FFEF}")
-        test([ 0x0939, 0x0940 ], expected: "\u{0939}\u{0940}")
+        test([0x00], expected: "\u{0000}")
+        test([0x24], expected: "$")
+        test([0x41, 0x42], expected: "AB")
+        test([0x20AC], expected: "\u{20AC}")
+        test([0x3040, 0x3041, 0xFFEF], expected: "\u{3040}\u{3041}\u{FFEF}")
+        test([0x0939, 0x0940], expected: "\u{0939}\u{0940}")
 
         // surrogates
-        test([ 0xD801, 0xDC37 ], expected: "\u{10437}")
-        test([ 0xD852, 0xDF62 ], expected: "\u{24B62}")
-        test([ 0x41, 0x42, 0xD852, 0xDF62 ], expected: "AB\u{24B62}")
+        test([0xD801, 0xDC37], expected: "\u{10437}")
+        test([0xD852, 0xDF62], expected: "\u{24B62}")
+        test([0x41, 0x42, 0xD852, 0xDF62], expected: "AB\u{24B62}")
 
         // invalid input
-        test([ 0xD800 ], expected: nil)
-        test([ 0x42, 0xD800 ], expected: nil)
-        test([ 0xD800, 0x42 ], expected: nil)
+        test([0xD800], expected: nil)
+        test([0x42, 0xD800], expected: nil)
+        test([0xD800, 0x42], expected: nil)
     }
 
     @Test func testTryFromUTF16_roundtrip() {
@@ -307,7 +310,9 @@ private struct StringTests {
         // BMP: consists code points up to U+FFFF
         test("")
         test("\t\t\n abcFooFOO \n FOOc\t \t 123 \n")
-        test("the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy dogz")
+        test(
+            "the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy dogz"
+        )
         test("\u{3040}\u{3041}\u{FFEF}")
         test("\u{3040}\u{3041}\u{FFEF}abbbc\u{FFFF}\u{FFF0}\u{FFF1}")
 
@@ -323,46 +328,46 @@ private struct StringTests {
         let range = try str[...]._range(of: "\\bname"[...], options: .regularExpression)
         let start = str.index(str.startIndex, offsetBy: 5)
         let end = str.index(str.startIndex, offsetBy: 9)
-        #expect(range == start ..< end)
+        #expect(range == start..<end)
     }
-    
+
     @Test func testParagraphLineRangeOfSeparator() {
         for separator in ["\n", "\r", "\r\n", "\u{2029}", "\u{2028}", "\u{85}"] {
-            let range = separator.startIndex ..< separator.endIndex
+            let range = separator.startIndex..<separator.endIndex
             let paragraphResult = separator._paragraphBounds(around: range)
             let lineResult = separator._lineBounds(around: range)
-            #expect(paragraphResult.start ..< paragraphResult.end == range)
-            #expect(lineResult.start ..< lineResult.end == range)
+            #expect(paragraphResult.start..<paragraphResult.end == range)
+            #expect(lineResult.start..<lineResult.end == range)
         }
     }
-    
+
     @Test func testAlmostMatchingSeparator() {
         let string = "A\u{200D}B" // U+200D Zero Width Joiner (ZWJ) matches U+2028 Line Separator except for the final UTF-8 scalar
-        let lineResult = string._lineBounds(around: string.startIndex ..< string.startIndex)
+        let lineResult = string._lineBounds(around: string.startIndex..<string.startIndex)
         #expect(lineResult.start == string.startIndex)
         #expect(lineResult.end == string.endIndex)
         #expect(lineResult.contentsEnd == string.endIndex)
     }
-    
+
     @Test func testFileSystemRepresentation() throws {
         func assertCString(_ ptr: UnsafePointer<CChar>, equals other: String, sourceLocation: SourceLocation = #_sourceLocation) {
             #expect(String(cString: ptr) == other, sourceLocation: sourceLocation)
         }
 
-#if os(Windows)
+        #if os(Windows)
         let original = #"\Path1\Path Two\Path Three\Some Really Long File Name Section.txt"#
-#else
+        #else
         let original = "/Path1/Path Two/Path Three/Some Really Long File Name Section.txt"
-#endif
+        #endif
         try original.withFileSystemRepresentation {
             assertCString(try #require($0), equals: original)
         }
-        
+
         let withWhitespace = original + "\u{2000}\u{2001}"
         try withWhitespace.withFileSystemRepresentation {
             assertCString(try #require($0), equals: withWhitespace)
         }
-        
+
         let withHangul = original + "\u{AC00}\u{AC01}"
         try withHangul.withFileSystemRepresentation { buf1 in
             let buf1 = try #require(buf1)
@@ -374,29 +379,29 @@ private struct StringTests {
                 }
             }
         }
-        
+
         let withNullSuffix = original + "\u{0000}\u{0000}"
         try withNullSuffix.withFileSystemRepresentation {
             assertCString(try #require($0), equals: original)
         }
-        
-#if canImport(Darwin) || FOUNDATION_FRAMEWORK
+
+        #if canImport(Darwin) || FOUNDATION_FRAMEWORK
         // The buffer should dynamically grow and not be limited to a size of PATH_MAX
         Array(repeating: "A", count: Int(PATH_MAX) - 1).joined().withFileSystemRepresentation { ptr in
             #expect(ptr != nil)
         }
-        
+
         Array(repeating: "A", count: Int(PATH_MAX)).joined().withFileSystemRepresentation { ptr in
             #expect(ptr != nil)
         }
-        
+
         // The buffer should fit the scalars that expand the most during decomposition
         for string in ["\u{1D160}", "\u{0CCB}", "\u{0390}"] {
             string.withFileSystemRepresentation { ptr in
                 #expect(ptr != nil, "Could not create file system representation for \(string.debugDescription)")
             }
         }
-#endif
+        #endif
     }
 
     @Test func testLastPathComponent() {
@@ -424,7 +429,7 @@ private struct StringTests {
         #expect("/////".lastPathComponent == "/")
         #expect("/./..//./..//".lastPathComponent == "..")
         #expect("/😎/😂/❤️/".lastPathComponent == "❤️")
-        
+
         #expect("/a/b/c".lastPathComponent == "c")
         #expect("/aaa".lastPathComponent == "aaa")
         #expect("/a/b/c/".lastPathComponent == "c")
@@ -914,7 +919,7 @@ private struct StringTests {
             #expect(result == expected)
         }
     }
-    
+
     @Test func deletingLastPathComponent() {
         #expect("/a/b/c".deletingLastPathComponent() == "/a/b")
         #expect("".deletingLastPathComponent() == "")
@@ -932,7 +937,7 @@ private struct StringTests {
         #expect("a/b/".deletingLastPathComponent() == "a")
         #expect("a//b//".deletingLastPathComponent() == "a")
     }
-    
+
     @Test func appendingPathComponent() {
         let comp = "test"
         #expect("/a/b/c".appendingPathComponent(comp) == "/a/b/c/test")
@@ -943,7 +948,7 @@ private struct StringTests {
         #expect("/a/b/c/".appendingPathComponent(comp) == "/a/b/c/test")
         #expect("hello".appendingPathComponent(comp) == "hello/test")
         #expect("hello/".appendingPathComponent(comp) == "hello/test")
-        
+
         #expect("hello/".appendingPathComponent("/test") == "hello/test")
         #expect("hello".appendingPathComponent("/test") == "hello/test")
         #expect("hello///".appendingPathComponent("///test") == "hello/test")
@@ -958,20 +963,20 @@ private struct StringTests {
 
     @Test func dataUsingEncoding() {
         let s = "hello 🧮"
-        
+
         // Verify things work on substrings too
         let s2 = "x" + s + "x"
         let subString = s2[s2.index(after: s2.startIndex)..<s2.index(before: s2.endIndex)]
-        
+
         // UTF16 - specific endianness
-        
+
         let utf16BEExpected = Data([0, 104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 216, 62, 221, 238])
         let utf16BEOutput = s.data(using: .utf16BigEndian)
         #expect(utf16BEOutput == utf16BEExpected)
-        
+
         let utf16BEOutputSubstring = subString.data(using: .utf16BigEndian)
         #expect(utf16BEOutputSubstring == utf16BEExpected)
-        
+
         let utf16LEExpected = Data([104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 0, 62, 216, 238, 221])
         let utf16LEOutput = s.data(using: .utf16LittleEndian)
         #expect(utf16LEOutput == utf16LEExpected)
@@ -980,7 +985,7 @@ private struct StringTests {
         #expect(utf16LEOutputSubstring == utf16LEExpected)
 
         // UTF32 - specific endianness
-        
+
         let utf32BEExpected = Data([0, 0, 0, 104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 1, 249, 238])
         let utf32BEOutput = s.data(using: .utf32BigEndian)
         #expect(utf32BEOutput == utf32BEExpected)
@@ -988,8 +993,8 @@ private struct StringTests {
         let utf32LEExpected = Data([104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 0, 0, 238, 249, 1, 0])
         let utf32LEOutput = s.data(using: .utf32LittleEndian)
         #expect(utf32LEOutput == utf32LEExpected)
-        
-        
+
+
         // UTF16 and 32, platform endianness
         let utf16LEWithBOM = Data([0xFF, 0xFE]) + utf16LEExpected
         let utf32LEWithBOM = Data([0xFF, 0xFE, 0x00, 0x00]) + utf32LEExpected
@@ -998,9 +1003,9 @@ private struct StringTests {
 
         let utf16Output = s.data(using: .utf16)!
         let utf32Output = s.data(using: .utf32)!
-        
+
         let bom = 0xFFFE
-        
+
         if bom.littleEndian == bom {
             // We are on a little endian system. Expect a LE BOM
             #expect(utf16Output == utf16LEWithBOM)
@@ -1012,21 +1017,21 @@ private struct StringTests {
         } else {
             fatalError("Unknown endianness")
         }
-        
+
         // UTF16
-        
+
         let utf16BEString = String(bytes: utf16BEExpected, encoding: .utf16BigEndian)
         #expect(s == utf16BEString)
-        
+
         let utf16LEString = String(bytes: utf16LEExpected, encoding: .utf16LittleEndian)
         #expect(s == utf16LEString)
-        
+
         let utf16LEBOMString = String(bytes: utf16LEWithBOM, encoding: .utf16)
         #expect(s == utf16LEBOMString)
-        
+
         let utf16BEBOMString = String(bytes: utf16BEWithBOM, encoding: .utf16)
         #expect(s == utf16BEBOMString)
-        
+
         // No BOM, no encoding specified. We assume the data is big endian, which leads to garbage (but not nil).
         let utf16LENoBOMString = String(bytes: utf16LEExpected, encoding: .utf16)
         #expect(utf16LENoBOMString != nil)
@@ -1036,24 +1041,24 @@ private struct StringTests {
         #expect(s == utf16BENoBOMString)
 
         // UTF32
-        
+
         let utf32BEString = String(bytes: utf32BEExpected, encoding: .utf32BigEndian)
         #expect(s == utf32BEString)
-        
+
         let utf32LEString = String(bytes: utf32LEExpected, encoding: .utf32LittleEndian)
         #expect(s == utf32LEString)
-        
-        
+
+
         let utf32BEBOMString = String(bytes: utf32BEWithBOM, encoding: .utf32)
         #expect(s == utf32BEBOMString)
-        
+
         let utf32LEBOMString = String(bytes: utf32LEWithBOM, encoding: .utf32)
         #expect(s == utf32LEBOMString)
-        
+
         // No BOM, no encoding specified. We assume the data is big endian, which leads to a nil.
         let utf32LENoBOMString = String(bytes: utf32LEExpected, encoding: .utf32)
         #expect(utf32LENoBOMString == nil)
-        
+
         // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
         let utf32BENoBOMString = String(bytes: utf32BEExpected, encoding: .utf32)
         #expect(s == utf32BENoBOMString)
@@ -1062,7 +1067,7 @@ private struct StringTests {
         let utf16LEBOMStringMismatch = String(bytes: utf16LEWithBOM, encoding: .utf16BigEndian)
         let utf16LEBOMStringMismatchBytes = utf16LEBOMStringMismatch?.data(using: .utf16BigEndian)
         #expect(utf16LEWithBOM == utf16LEBOMStringMismatchBytes)
-        
+
         let utf16BEBOMStringMismatch = String(bytes: utf16BEWithBOM, encoding: .utf16LittleEndian)
         let utf16BEBomStringMismatchBytes = utf16BEBOMStringMismatch?.data(using: .utf16LittleEndian)
         #expect(utf16BEWithBOM == utf16BEBomStringMismatchBytes)
@@ -1070,12 +1075,12 @@ private struct StringTests {
         // For a UTF32 mismatch, the string creation simply returns nil.
         let utf32LEBOMStringMismatch = String(bytes: utf32LEWithBOM, encoding: .utf32BigEndian)
         #expect(utf32LEBOMStringMismatch == nil)
-        
+
         let utf32BEBOMStringMismatch = String(bytes: utf32BEWithBOM, encoding: .utf32LittleEndian)
         #expect(utf32BEBOMStringMismatch == nil)
-        
+
         // UTF-8 With BOM
-        
+
         let utf8BOM = Data([0xEF, 0xBB, 0xBF])
         let helloWorld = Data("Hello, world".utf8)
         #expect(String(bytes: utf8BOM + helloWorld, encoding: .utf8) == "Hello, world")
@@ -1089,28 +1094,28 @@ private struct StringTests {
             let strRoundTripUTF16BE = String(data: strAsUTF16BE, encoding: .utf16BigEndian)!
             return strRoundTripUTF16BE == str
         }
-        
+
         // Verify that the BOM is preserved through a UTF8/16 transformation.
 
         // ASCII '2' followed by UTF8 BOM
-        #expect(roundTrip(Data([ 0x32, 0xef, 0xbb, 0xbf ])))
-        
+        #expect(roundTrip(Data([0x32, 0xef, 0xbb, 0xbf])))
+
         // UTF8 BOM followed by ASCII '4'
-        #expect(roundTrip(Data([ 0xef, 0xbb, 0xbf, 0x34 ])))
+        #expect(roundTrip(Data([0xef, 0xbb, 0xbf, 0x34])))
     }
-    
+
     @Test func dataUsingEncoding_ascii() {
         #expect("abc".data(using: .ascii) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         #expect("abc".data(using: .nonLossyASCII) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         #expect("e\u{301}\u{301}f".data(using: .ascii) == nil)
         #expect("e\u{301}\u{301}f".data(using: .nonLossyASCII) == nil)
-        
+
         #expect("abc".data(using: .ascii, allowLossyConversion: true) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         #expect("abc".data(using: .nonLossyASCII, allowLossyConversion: true) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         #expect("e\u{301}\u{301}f".data(using: .ascii, allowLossyConversion: true) == Data([UInt8(ascii: "e"), 0xFF, 0xFF, UInt8(ascii: "f")]))
         #expect("e\u{301}\u{301}f".data(using: .nonLossyASCII, allowLossyConversion: true) == Data([UInt8(ascii: "e"), UInt8(ascii: "?"), UInt8(ascii: "?"), UInt8(ascii: "f")]))
     }
-    
+
     @Test func initWithBytes_ascii() {
         #expect(String(bytes: "abc".utf8, encoding: .ascii) == "abc")
         #expect(String(bytes: "abc".utf8, encoding: .nonLossyASCII) == "abc")
@@ -1120,21 +1125,22 @@ private struct StringTests {
 
     @Test func compressingSlashes() {
         let testCases: [(String, String)] = [
-            ("", ""),                       // Empty string
-            ("/", "/"),                     // Single slash
-            ("/////", "/"),                 // All slashes
-            ("ABCDE", "ABCDE"),             // No slashes
-            ("//ABC", "/ABC"),              // Starts with multiple slashes
-            ("/ABCD", "/ABCD"),             // Starts with single slash
-            ("ABC//", "ABC/"),              // Ends with multiple slashes
-            ("ABCD/", "ABCD/"),             // Ends with single slash
-            ("//ABC//", "/ABC/"),           // Starts and ends with multiple slashes
-            ("AB/CD", "AB/CD"),             // Single internal slash
+            ("", ""), // Empty string
+            ("/", "/"), // Single slash
+            ("/////", "/"), // All slashes
+            ("ABCDE", "ABCDE"), // No slashes
+            ("//ABC", "/ABC"), // Starts with multiple slashes
+            ("/ABCD", "/ABCD"), // Starts with single slash
+            ("ABC//", "ABC/"), // Ends with multiple slashes
+            ("ABCD/", "ABCD/"), // Ends with single slash
+            ("//ABC//", "/ABC/"), // Starts and ends with multiple slashes
+            ("AB/CD", "AB/CD"), // Single internal slash
             ("AB//DF/GH//I", "AB/DF/GH/I"), // Internal slashes
-            ("//😎///😂/❤️//", "/😎/😂/❤️/")
+            ("//😎///😂/❤️//", "/😎/😂/❤️/"),
         ]
         for (testString, expectedResult) in testCases {
-            let result = testString
+            let result =
+                testString
                 ._compressingSlashes()
             #expect(result == expectedResult)
         }
@@ -1142,14 +1148,14 @@ private struct StringTests {
 
     @Test func pathHasDotDotComponent() {
         let testCases: [(String, Bool)] = [
-            ("../AB", true),            // Begins with ..
-            ("/ABC/..", true),          // Ends with ..
-            ("/ABC/../DEF", true),      // Internal ..
-            ("/ABC/DEF..", false),      // Ends with .. but not part of path
-            ("ABC/../../DEF", true),    // Multiple internal dot dot
-            ("/AB/./CD", false),        // Internal single dot
-            ("/AB/..../CD", false),     // Internal multiple dots
-            ("..", true),               // Dot dot only
+            ("../AB", true), // Begins with ..
+            ("/ABC/..", true), // Ends with ..
+            ("/ABC/../DEF", true), // Internal ..
+            ("/ABC/DEF..", false), // Ends with .. but not part of path
+            ("ABC/../../DEF", true), // Multiple internal dot dot
+            ("/AB/./CD", false), // Internal single dot
+            ("/AB/..../CD", false), // Internal multiple dots
+            ("..", true), // Dot dot only
             ("...", false),
             ("..AB", false),
             ("..AB/", false),
@@ -1158,10 +1164,11 @@ private struct StringTests {
             ("/..AB/", false),
             ("A../", false),
             ("/..", true),
-            ("././/./.", false)
+            ("././/./.", false),
         ]
         for (testString, expectedResult) in testCases {
-            let result = testString
+            let result =
+                testString
                 ._hasDotDotComponent()
             #expect(result == expectedResult)
         }
@@ -1202,8 +1209,8 @@ private struct StringTests {
     }
 
     @Test func init_contentsOf_usedEncoding() throws {
-#if FOUNDATION_FRAMEWORK
-        let encs : [String.Encoding] = [
+        #if FOUNDATION_FRAMEWORK
+        let encs: [String.Encoding] = [
             .ascii,
             .nextstep,
             .japaneseEUC,
@@ -1225,40 +1232,40 @@ private struct StringTests {
             .utf16LittleEndian,
             .utf32,
             .utf32BigEndian,
-            .utf32LittleEndian
+            .utf32LittleEndian,
         ]
-#else
-        var encs : [String.Encoding] = [
+        #else
+        var encs: [String.Encoding] = [
             .utf8,
             .utf16,
             .utf32,
         ]
-        
+
         // A note about utf16/32 little/big endian
         // Foundation will only write out the BOM for encoded string data when using the unspecified encoding versions (.utf16, .utf32). It will, however, write the extended attribute if it can.
         // On non-Darwin platforms, where we have less guarantee that the extended attribute was succesfully written, we cannot actually promise that the round-trip below will work. If the xattr fails to write (which we do not report as an error, for both historical and practical reasons), and the BOM is not present, then we will just read the data back in as UTF8.
         // Therefore, we only test here the utf8/16/32 encodings.
-        
+
         #if canImport(Darwin)
         // Only test non-UTF encodings on platforms where we successfully read/write the extended file attribute
         encs += [
             .ascii,
             .macOSRoman,
-            .isoLatin1
+            .isoLatin1,
         ]
         #endif
-#endif
-        
+        #endif
+
         for encoding in encs {
             try withTemporaryStringFile(encoding: encoding) { existingURL, _ in
                 var usedEncoding = String.Encoding(rawValue: 0)
                 let content = try String(contentsOf: existingURL, usedEncoding: &usedEncoding)
-                
+
                 #expect(encoding == usedEncoding)
                 #expect(temporaryFileContents == content)
             }
         }
-        
+
         // Test non-existent file
         try withTemporaryStringFile { _, nonExistentURL in
             var usedEncoding = String.Encoding(rawValue: 0)
@@ -1268,11 +1275,11 @@ private struct StringTests {
             #expect(0 == usedEncoding.rawValue)
         }
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     @Test func extendedAttributeEncodings() throws {
         // XAttr is supported on some platforms, but not all. For now we just test this code on Darwin.
-        let encs : [String.Encoding] = [
+        let encs: [String.Encoding] = [
             .ascii,
             .nextstep,
             .japaneseEUC,
@@ -1294,17 +1301,17 @@ private struct StringTests {
             .utf16LittleEndian,
             .utf32,
             .utf32BigEndian,
-            .utf32LittleEndian
+            .utf32LittleEndian,
         ]
-        
+
         for encoding in encs {
-            // Round trip the 
+            // Round trip the
             let packageData = try #require(extendedAttributeData(for: encoding))
-            
+
             let back = encodingFromDataForExtendedAttribute(packageData)
             #expect(back == encoding)
         }
-        
+
         #expect(encodingFromDataForExtendedAttribute("us-ascii;1536".data(using: .utf8)!)! == .ascii)
         #expect(encodingFromDataForExtendedAttribute("x-nextstep;2817".data(using: .utf8)!)! == .nextstep)
         #expect(encodingFromDataForExtendedAttribute("euc-jp;2336".data(using: .utf8)!)! == .japaneseEUC)
@@ -1328,7 +1335,7 @@ private struct StringTests {
         #expect(encodingFromDataForExtendedAttribute("utf-32be;402653440".data(using: .utf8)!)! == .utf32BigEndian)
         #expect(encodingFromDataForExtendedAttribute("utf-32le;469762304".data(using: .utf8)!)! == .utf32LittleEndian)
     }
-#endif
+    #endif
 
     @Test func write_toFile() throws {
         try withTemporaryStringFile { existingURL, nonExistentURL in
@@ -1348,14 +1355,14 @@ private struct StringTests {
             let nonExistentPath = nonExistentURL.path()
             let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
             try s.write(to: nonExistentURL, atomically: false, encoding: .ascii)
-            
+
             let content = try String(contentsOfFile: nonExistentPath, encoding: .ascii)
-            
+
             #expect(s == content)
         }
 
     }
-    
+
     func verifyEncoding(_ encoding: String.Encoding, valid: [String], invalid: [String], sourceLocation: SourceLocation = #_sourceLocation) throws {
         for string in valid {
             let data = try #require(string.data(using: encoding), "Failed to encode \(string.debugDescription)", sourceLocation: sourceLocation)
@@ -1365,37 +1372,43 @@ private struct StringTests {
             #expect(string.data(using: .macOSRoman) == nil, "Incorrectly successfully encoded \(string.debugDescription)", sourceLocation: sourceLocation)
         }
     }
-    
+
     @Test func testISOLatin1Encoding() throws {
-        try verifyEncoding(.isoLatin1, valid: [
-            "abcdefghijklmnopqrstuvwxyz",
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            "0123456789",
-            "!\"#$%&'()*+,-./",
-            "¡¶ÅÖæöÿ\u{0080}\u{00A0}~",
-            "Hello\nworld",
-            "Hello\r\nworld"
-        ], invalid: [
-            "🎺",
-            "מ",
-            "✁",
-            "abcd🎺efgh"
-        ])
+        try verifyEncoding(
+            .isoLatin1,
+            valid: [
+                "abcdefghijklmnopqrstuvwxyz",
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                "0123456789",
+                "!\"#$%&'()*+,-./",
+                "¡¶ÅÖæöÿ\u{0080}\u{00A0}~",
+                "Hello\nworld",
+                "Hello\r\nworld",
+            ],
+            invalid: [
+                "🎺",
+                "מ",
+                "✁",
+                "abcd🎺efgh",
+            ])
     }
-    
+
     @Test func testMacRomanEncoding() throws {
-        try verifyEncoding(.macOSRoman, valid: [
-            "abcdefghijklmnopqrstuvwxyz",
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            "0123456789",
-            "!\"#$%&'()*+,-./",
-            "ÄÇçÑû¶≠∏\u{00A0}÷Êˇ"
-        ], invalid: [
-            "🎺",
-            "מ",
-            "✁",
-            "abcd🎺efgh"
-        ])
+        try verifyEncoding(
+            .macOSRoman,
+            valid: [
+                "abcdefghijklmnopqrstuvwxyz",
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                "0123456789",
+                "!\"#$%&'()*+,-./",
+                "ÄÇçÑû¶≠∏\u{00A0}÷Êˇ",
+            ],
+            invalid: [
+                "🎺",
+                "מ",
+                "✁",
+                "abcd🎺efgh",
+            ])
     }
 
     @Test func encodingNames() {
@@ -1473,7 +1486,7 @@ func withTemporaryStringFile(encoding: String.Encoding = .utf8, _ block: (_ exis
     try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
 
     try temporaryFileContents.write(to: fileURL, atomically: true, encoding: encoding)
-    
+
     let nonExisting = rootURL.appending(path: "-NonExist", directoryHint: .notDirectory)
     try block(fileURL, nonExisting)
     try FileManager.default.removeItem(at: rootURL)
@@ -1487,7 +1500,7 @@ struct StringTestsStdlib {
 
     // The most simple subclass of NSString that CoreFoundation does not know
     // about.
-    class NonContiguousNSString : NSString {
+    class NonContiguousNSString: NSString {
         required init(coder aDecoder: NSCoder) {
             fatalError("don't call this initializer")
         }
@@ -1505,11 +1518,11 @@ struct StringTestsStdlib {
             super.init()
         }
 
-#if os(macOS) // for AppKit
+        #if os(macOS) // for AppKit
         required init?(pasteboardPropertyList propertyList: Any, ofType type: NSPasteboard.PasteboardType) {
             fatalError("init(pasteboardPropertyList:ofType:) has not been implemented")
         }
-#endif
+        #endif
 
         @objc(copyWithZone:) override func copy(with zone: NSZone?) -> Any {
             // Ensure that copying this string produces a class that CoreFoundation
@@ -1562,8 +1575,10 @@ struct StringTestsStdlib {
 
     @Test func localizedStringWithFormat() {
         let world: NSString = "world"
-        #expect("Hello, world!%42" == String.localizedStringWithFormat(
-            "Hello, %@!%%%ld", world, 42))
+        #expect(
+            "Hello, world!%42"
+                == String.localizedStringWithFormat(
+                    "Hello, %@!%%%ld", world, 42))
 
         #expect("0.5" == String.init(format: "%g", locale: Locale(identifier: "en_US"), 0.5))
         #expect("0,5" == String.init(format: "%g", locale: Locale(identifier: "uk"), 0.5))
@@ -1571,8 +1586,7 @@ struct StringTestsStdlib {
 
     @Test func init_cString_encoding() {
         "foo, a basmati bar!".withCString {
-            #expect("foo, a basmati bar!" ==
-                        String(cString: $0, encoding: String.defaultCStringEncoding))
+            #expect("foo, a basmati bar!" == String(cString: $0, encoding: String.defaultCStringEncoding))
         }
     }
 
@@ -1603,8 +1617,7 @@ struct StringTestsStdlib {
 
     @Test func localizedCapitalized() {
         #expect(
-            "Foo Foo Foo Foo" ==
-            "foo Foo fOO FOO".capitalized(with: Locale(identifier: "en")))
+            "Foo Foo Foo Foo" == "foo Foo fOO FOO".capitalized(with: Locale(identifier: "en")))
         #expect("Жжж" == "жжж".capitalized(with: Locale(identifier: "en")))
 
         //
@@ -1639,9 +1652,10 @@ struct StringTestsStdlib {
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
 
-        let locale = localeID.map {
-            Locale(identifier: $0)
-        } ?? nil
+        let locale =
+            localeID.map {
+                Locale(identifier: $0)
+            } ?? nil
 
         #expect(expected == op(locale), message(), sourceLocation: sourceLocation)
     }
@@ -1654,8 +1668,7 @@ struct StringTestsStdlib {
         expectLocalizedEquality("Жжж", { loc in "жжж".capitalized(with: loc) })
 
         #expect(
-            "Foo Foo Foo Foo" ==
-            "foo Foo fOO FOO".capitalized(with: nil))
+            "Foo Foo Foo Foo" == "foo Foo fOO FOO".capitalized(with: nil))
         #expect("Жжж" == "жжж".capitalized(with: nil))
 
         //
@@ -1678,57 +1691,41 @@ struct StringTestsStdlib {
     }
 
     @Test func caseInsensitiveCompare() {
-        #expect(ComparisonResult.orderedSame ==
-                    "abCD".caseInsensitiveCompare("AbCd"))
-        #expect(ComparisonResult.orderedAscending ==
-                    "abCD".caseInsensitiveCompare("AbCdE"))
+        #expect(ComparisonResult.orderedSame == "abCD".caseInsensitiveCompare("AbCd"))
+        #expect(ComparisonResult.orderedAscending == "abCD".caseInsensitiveCompare("AbCdE"))
 
-        #expect(ComparisonResult.orderedSame ==
-                    "абвг".caseInsensitiveCompare("АбВг"))
-        #expect(ComparisonResult.orderedAscending ==
-                    "абВГ".caseInsensitiveCompare("АбВгД"))
+        #expect(ComparisonResult.orderedSame == "абвг".caseInsensitiveCompare("АбВг"))
+        #expect(ComparisonResult.orderedAscending == "абВГ".caseInsensitiveCompare("АбВгД"))
     }
 
     @Test func commonPrefix() {
-        #expect("ab" ==
-                    "abcd".commonPrefix(with: "abdc", options: []))
-        #expect("abC" ==
-                    "abCd".commonPrefix(with: "abce", options: .caseInsensitive))
+        #expect("ab" == "abcd".commonPrefix(with: "abdc", options: []))
+        #expect("abC" == "abCd".commonPrefix(with: "abce", options: .caseInsensitive))
 
-        #expect("аб" ==
-                    "абвг".commonPrefix(with: "абгв", options: []))
-        #expect("абВ" ==
-                    "абВг".commonPrefix(with: "абвд", options: .caseInsensitive))
+        #expect("аб" == "абвг".commonPrefix(with: "абгв", options: []))
+        #expect("абВ" == "абВг".commonPrefix(with: "абвд", options: .caseInsensitive))
     }
 
     @Test func compare() {
-        #expect(ComparisonResult.orderedSame ==
-                    "abc".compare("abc"))
-        #expect(ComparisonResult.orderedAscending ==
-                    "абв".compare("где"))
+        #expect(ComparisonResult.orderedSame == "abc".compare("abc"))
+        #expect(ComparisonResult.orderedAscending == "абв".compare("где"))
 
-        #expect(ComparisonResult.orderedSame ==
-                    "abc".compare("abC", options: .caseInsensitive))
-        #expect(ComparisonResult.orderedSame ==
-                    "абв".compare("абВ", options: .caseInsensitive))
+        #expect(ComparisonResult.orderedSame == "abc".compare("abC", options: .caseInsensitive))
+        #expect(ComparisonResult.orderedSame == "абв".compare("абВ", options: .caseInsensitive))
 
         do {
             let s = "abcd"
             let r = s.index(after: s.startIndex)..<s.endIndex
-            #expect(ComparisonResult.orderedSame ==
-                        s.compare("bcd", range: r))
+            #expect(ComparisonResult.orderedSame == s.compare("bcd", range: r))
         }
         do {
             let s = "абвг"
             let r = s.index(after: s.startIndex)..<s.endIndex
-            #expect(ComparisonResult.orderedSame ==
-                        s.compare("бвг", range: r))
+            #expect(ComparisonResult.orderedSame == s.compare("бвг", range: r))
         }
 
-        #expect(ComparisonResult.orderedSame ==
-                    "abc".compare("abc", locale: nil))
-        #expect(ComparisonResult.orderedSame ==
-                    "абв".compare("абв", locale: nil))
+        #expect(ComparisonResult.orderedSame == "abc".compare("abc", locale: nil))
+        #expect(ComparisonResult.orderedSame == "абв".compare("абв", locale: nil))
     }
 
     @Test func completePath() throws {
@@ -1798,61 +1795,60 @@ struct StringTestsStdlib {
     }
 
     @Test func components_separatedBy_characterSet() {
-        #expect([""] == "".components(
-            separatedBy: CharacterSet.decimalDigits))
+        #expect(
+            [""]
+                == "".components(
+                    separatedBy: CharacterSet.decimalDigits))
 
         #expect(
-            ["абв", "", "あいう", "abc"] ==
-            "абв12あいう3abc".components(
-                separatedBy: CharacterSet.decimalDigits))
+            ["абв", "", "あいう", "abc"]
+                == "абв12あいう3abc".components(
+                    separatedBy: CharacterSet.decimalDigits))
 
         #expect(
-            ["абв", "", "あいう", "abc"] ==
-            "абв\u{1F601}\u{1F602}あいう\u{1F603}abc"
+            ["абв", "", "あいう", "abc"]
+                == "абв\u{1F601}\u{1F602}あいう\u{1F603}abc"
                 .components(
                     separatedBy: CharacterSet(charactersIn: "\u{1F601}\u{1F602}\u{1F603}")))
 
         // Performs Unicode scalar comparison.
         #expect(
-            ["abcし\u{3099}def"] ==
-            "abcし\u{3099}def".components(
-                separatedBy: CharacterSet(charactersIn: "\u{3058}")))
+            ["abcし\u{3099}def"]
+                == "abcし\u{3099}def".components(
+                    separatedBy: CharacterSet(charactersIn: "\u{3058}")))
     }
 
     @Test func components_separatedBy_string() {
         #expect([""] == "".components(separatedBy: "//"))
 
         #expect(
-            ["абв", "あいう", "abc"] ==
-            "абв//あいう//abc".components(separatedBy: "//"))
+            ["абв", "あいう", "abc"] == "абв//あいう//abc".components(separatedBy: "//"))
 
         // Performs normalization.
         #expect(
-            ["abc", "def"] ==
-            "abcし\u{3099}def".components(separatedBy: "\u{3058}"))
+            ["abc", "def"] == "abcし\u{3099}def".components(separatedBy: "\u{3058}"))
     }
 
     @Test func cString() {
         #expect("абв".cString(using: .ascii) == nil)
 
-        let expectedBytes: [UInt8] = [ 0xd0, 0xb0, 0xd0, 0xb1, 0xd0, 0xb2, 0 ]
+        let expectedBytes: [UInt8] = [0xd0, 0xb0, 0xd0, 0xb1, 0xd0, 0xb2, 0]
         let expectedStr: [CChar] = expectedBytes.map { CChar(bitPattern: $0) }
-        #expect(expectedStr ==
-                    "абв".cString(using: .utf8)!)
+        #expect(expectedStr == "абв".cString(using: .utf8)!)
     }
 
-     @Test func data() throws {
-         #expect("あいう".data(using: .ascii, allowLossyConversion: false) == nil)
+    @Test func data() throws {
+        #expect("あいう".data(using: .ascii, allowLossyConversion: false) == nil)
 
-         do {
-             let data = try #require("あいう".data(using: .utf8))
-             let expectedBytes = Data([
-                0xe3, 0x81, 0x82, 0xe3, 0x81, 0x84, 0xe3, 0x81, 0x86
-             ])
+        do {
+            let data = try #require("あいう".data(using: .utf8))
+            let expectedBytes = Data([
+                0xe3, 0x81, 0x82, 0xe3, 0x81, 0x84, 0xe3, 0x81, 0x86,
+            ])
 
-             #expect(expectedBytes == data)
-         }
-     }
+            #expect(expectedBytes == data)
+        }
+    }
 
     @Test func initWithData() {
         let bytes: [UInt8] = [0xe3, 0x81, 0x82, 0xe3, 0x81, 0x84, 0xe3, 0x81, 0x86]
@@ -1896,10 +1892,12 @@ struct StringTestsStdlib {
         var sentences: [String] = []
         let range = startIndex..<endIndex
         let scheme: NSLinguisticTagScheme = .tokenType
-        s.enumerateLinguisticTags(in: range,
-                                  scheme: scheme.rawValue,
-                                  options: [],
-                                  orthography: nil) {
+        s.enumerateLinguisticTags(
+            in: range,
+            scheme: scheme.rawValue,
+            options: [],
+            orthography: nil
+        ) {
             (tag: String, tokenRange: Range<String.Index>, sentenceRange: Range<String.Index>, stop: inout Bool)
             in
             tags.append(tag)
@@ -1909,11 +1907,12 @@ struct StringTestsStdlib {
                 stop = true
             }
         }
-        #expect([
-            NSLinguisticTag.word.rawValue,
-            NSLinguisticTag.whitespace.rawValue,
-            NSLinguisticTag.word.rawValue
-        ] == tags)
+        #expect(
+            [
+                NSLinguisticTag.word.rawValue,
+                NSLinguisticTag.whitespace.rawValue,
+                NSLinguisticTag.word.rawValue,
+            ] == tags)
         #expect(["Глокая", " ", "куздра"] == tokens)
         let sentence = String(s[startIndex..<endIndex])
         #expect([sentence, sentence, sentence] == sentences)
@@ -1927,10 +1926,14 @@ struct StringTestsStdlib {
             var substrings: [String] = []
             // FIXME(strings): this API should probably change to accept a Substring?
             // instead of a String? and a range.
-            s.enumerateSubstrings(in: startIndex..<endIndex,
-                                  options: String.EnumerationOptions.byComposedCharacterSequences) {
-                (substring: String?, substringRange: Range<String.Index>,
-                 enclosingRange: Range<String.Index>, stop: inout Bool)
+            s.enumerateSubstrings(
+                in: startIndex..<endIndex,
+                options: String.EnumerationOptions.byComposedCharacterSequences
+            ) {
+                (
+                    substring: String?, substringRange: Range<String.Index>,
+                    enclosingRange: Range<String.Index>, stop: inout Bool
+                )
                 in
                 substrings.append(substring!)
                 #expect(substring == String(s[substringRange]))
@@ -1940,10 +1943,14 @@ struct StringTestsStdlib {
         }
         do {
             var substrings: [String] = []
-            s.enumerateSubstrings(in: startIndex..<endIndex,
-                                  options: [.byComposedCharacterSequences, .substringNotRequired]) {
-                (substring_: String?, substringRange: Range<String.Index>,
-                 enclosingRange: Range<String.Index>, stop: inout Bool)
+            s.enumerateSubstrings(
+                in: startIndex..<endIndex,
+                options: [.byComposedCharacterSequences, .substringNotRequired]
+            ) {
+                (
+                    substring_: String?, substringRange: Range<String.Index>,
+                    enclosingRange: Range<String.Index>, stop: inout Bool
+                )
                 in
                 #expect(substring_ == nil)
                 let substring = s[substringRange]
@@ -1973,10 +1980,11 @@ struct StringTestsStdlib {
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
             var usedLength = 0
             var remainingRange = startIndex..<endIndex
-            let result = s.getBytes(&buffer, maxLength: 11, usedLength: &usedLength,
-                                    encoding: .utf8,
-                                    options: [],
-                                    range: startIndex..<endIndex, remaining: &remainingRange)
+            let result = s.getBytes(
+                &buffer, maxLength: 11, usedLength: &usedLength,
+                encoding: .utf8,
+                options: [],
+                range: startIndex..<endIndex, remaining: &remainingRange)
             #expect(result)
             #expect(expectedStr == buffer)
             #expect(11 == usedLength)
@@ -1994,10 +2002,11 @@ struct StringTestsStdlib {
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
             var usedLength = 0
             var remainingRange = startIndex..<endIndex
-            let result = s.getBytes(&buffer, maxLength: 11, usedLength: &usedLength,
-                                    encoding: .utf8,
-                                    options: [],
-                                    range: startIndex..<endIndex, remaining: &remainingRange)
+            let result = s.getBytes(
+                &buffer, maxLength: 11, usedLength: &usedLength,
+                encoding: .utf8,
+                options: [],
+                range: startIndex..<endIndex, remaining: &remainingRange)
             #expect(result)
             #expect(expectedStr == buffer)
             #expect(4 == usedLength)
@@ -2014,10 +2023,11 @@ struct StringTestsStdlib {
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
             var usedLength = 0
             var remainingRange = startIndex..<endIndex
-            let result = s.getBytes(&buffer, maxLength: bufferLength,
-                                    usedLength: &usedLength, encoding: .utf8,
-                                    options: [],
-                                    range: startIndex..<endIndex, remaining: &remainingRange)
+            let result = s.getBytes(
+                &buffer, maxLength: bufferLength,
+                usedLength: &usedLength, encoding: .utf8,
+                options: [],
+                range: startIndex..<endIndex, remaining: &remainingRange)
             #expect(result)
             #expect(expectedStr == buffer)
             #expect(19 == usedLength)
@@ -2034,10 +2044,11 @@ struct StringTestsStdlib {
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
             var usedLength = 0
             var remainingRange = startIndex..<endIndex
-            let result = s.getBytes(&buffer, maxLength: bufferLength,
-                                    usedLength: &usedLength, encoding: .ascii,
-                                    options: [],
-                                    range: startIndex..<endIndex, remaining: &remainingRange)
+            let result = s.getBytes(
+                &buffer, maxLength: bufferLength,
+                usedLength: &usedLength, encoding: .ascii,
+                options: [],
+                range: startIndex..<endIndex, remaining: &remainingRange)
             #expect(result)
             #expect(expectedStr == buffer)
             #expect(4 == usedLength)
@@ -2053,11 +2064,13 @@ struct StringTestsStdlib {
             let bufferLength = 1
             var buffer = Array(
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
-            let result = s.getCString(&buffer, maxLength: 100,
-                                      encoding: .utf8)
+            let result = s.getCString(
+                &buffer, maxLength: 100,
+                encoding: .utf8)
             #expect(!result)
-            let result2 = s.getCString(&buffer, maxLength: 1,
-                                       encoding: .utf8)
+            let result2 = s.getCString(
+                &buffer, maxLength: 1,
+                encoding: .utf8)
             #expect(!result2)
         }
         do {
@@ -2065,11 +2078,13 @@ struct StringTestsStdlib {
             let bufferLength = 16
             var buffer = Array(
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
-            let result = s.getCString(&buffer, maxLength: 100,
-                                      encoding: .utf8)
+            let result = s.getCString(
+                &buffer, maxLength: 100,
+                encoding: .utf8)
             #expect(!result)
-            let result2 = s.getCString(&buffer, maxLength: 16,
-                                       encoding: .utf8)
+            let result2 = s.getCString(
+                &buffer, maxLength: 16,
+                encoding: .utf8)
             #expect(!result2)
         }
         do {
@@ -2081,12 +2096,14 @@ struct StringTestsStdlib {
             }
             var buffer = Array(
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
-            let result = s.getCString(&buffer, maxLength: 100,
-                                      encoding: .utf8)
+            let result = s.getCString(
+                &buffer, maxLength: 100,
+                encoding: .utf8)
             #expect(result)
             #expect(expectedStr == buffer)
-            let result2 = s.getCString(&buffer, maxLength: 17,
-                                       encoding: .utf8)
+            let result2 = s.getCString(
+                &buffer, maxLength: 17,
+                encoding: .utf8)
             #expect(result2)
             #expect(expectedStr == buffer)
         }
@@ -2095,18 +2112,20 @@ struct StringTestsStdlib {
             let bufferLength = 100
             var buffer = Array(
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
-            let result = s.getCString(&buffer, maxLength: 8,
-                                      encoding: .utf8)
+            let result = s.getCString(
+                &buffer, maxLength: 8,
+                encoding: .utf8)
             #expect(!result)
         }
         do {
             // String with unpaired surrogates.
-            let illFormedUTF16 = NonContiguousNSString([ 0xd800 ]) as String
+            let illFormedUTF16 = NonContiguousNSString([0xd800]) as String
             let bufferLength = 100
             var buffer = Array(
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
-            let result = illFormedUTF16.getCString(&buffer, maxLength: 100,
-                                                   encoding: .utf8)
+            let result = illFormedUTF16.getCString(
+                &buffer, maxLength: 100,
+                encoding: .utf8)
             #expect(!result)
         }
     }
@@ -2118,12 +2137,11 @@ struct StringTestsStdlib {
             var outStartIndex = s.startIndex
             var outLineEndIndex = s.startIndex
             var outContentsEndIndex = s.startIndex
-            s.getLineStart(&outStartIndex, end: &outLineEndIndex,
-                           contentsEnd: &outContentsEndIndex, for: r)
-            #expect("штеко будланула\nбокра и кудрячит\n" ==
-                        s[outStartIndex..<outLineEndIndex])
-            #expect("штеко будланула\nбокра и кудрячит" ==
-                        s[outStartIndex..<outContentsEndIndex])
+            s.getLineStart(
+                &outStartIndex, end: &outLineEndIndex,
+                contentsEnd: &outContentsEndIndex, for: r)
+            #expect("штеко будланула\nбокра и кудрячит\n" == s[outStartIndex..<outLineEndIndex])
+            #expect("штеко будланула\nбокра и кудрячит" == s[outStartIndex..<outContentsEndIndex])
         }
     }
 
@@ -2134,12 +2152,11 @@ struct StringTestsStdlib {
             var outStartIndex = s.startIndex
             var outEndIndex = s.startIndex
             var outContentsEndIndex = s.startIndex
-            s.getParagraphStart(&outStartIndex, end: &outEndIndex,
-                                contentsEnd: &outContentsEndIndex, for: r)
-            #expect("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n" ==
-                        s[outStartIndex..<outEndIndex])
-            #expect("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка." ==
-                        s[outStartIndex..<outContentsEndIndex])
+            s.getParagraphStart(
+                &outStartIndex, end: &outEndIndex,
+                contentsEnd: &outContentsEndIndex, for: r)
+            #expect("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n" == s[outStartIndex..<outEndIndex])
+            #expect("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка." == s[outStartIndex..<outContentsEndIndex])
         }
     }
 
@@ -2168,9 +2185,12 @@ struct StringTestsStdlib {
     @Test func init_bytesNoCopy_length_encoding_freeWhenDone() {
         let s = "abc あかさた"
         var bytes: [UInt8] = Array(s.utf8)
-        #expect(s == String(bytesNoCopy: &bytes,
-                              length: bytes.count, encoding: .utf8,
-                              freeWhenDone: false))
+        #expect(
+            s
+                == String(
+                    bytesNoCopy: &bytes,
+                    length: bytes.count, encoding: .utf8,
+                    freeWhenDone: false))
 
         /*
          FIXME: Test disabled because the NSString documentation is unclear about
@@ -2195,8 +2215,11 @@ struct StringTestsStdlib {
         let expected = "abc абв \u{0001F60A}"
         let chars: [unichar] = Array(expected.utf16)
 
-        #expect(expected == String(utf16CodeUnitsNoCopy: chars,
-                                     count: chars.count, freeWhenDone: false))
+        #expect(
+            expected
+                == String(
+                    utf16CodeUnitsNoCopy: chars,
+                    count: chars.count, freeWhenDone: false))
     }
 
     @Test func init_format() {
@@ -2205,8 +2228,7 @@ struct StringTestsStdlib {
             "abc абв \u{0001F60A}" == String(format: "abc абв \u{0001F60A}"))
 
         let world: NSString = "world"
-        #expect("Hello, world!%42" ==
-                    String(format: "Hello, %@!%%%ld", world, 42))
+        #expect("Hello, world!%42" == String(format: "Hello, %@!%%%ld", world, 42))
 
         // test for rdar://problem/18317906
         #expect("3.12" == String(format: "%.2f", 3.123456789))
@@ -2216,26 +2238,30 @@ struct StringTestsStdlib {
     @Test func init_format_arguments() {
         #expect("" == String(format: "", arguments: []))
         #expect(
-            "abc абв \u{0001F60A}" ==
-            String(format: "abc абв \u{0001F60A}", arguments: []))
+            "abc абв \u{0001F60A}" == String(format: "abc абв \u{0001F60A}", arguments: []))
 
         let world: NSString = "world"
-        let args: [CVarArg] = [ world, 42 ]
-        #expect("Hello, world!%42" ==
-                    String(format: "Hello, %@!%%%ld", arguments: args))
+        let args: [CVarArg] = [world, 42]
+        #expect("Hello, world!%42" == String(format: "Hello, %@!%%%ld", arguments: args))
     }
 
     @Test func init_format_locale() {
         let world: NSString = "world"
-        #expect("Hello, world!%42" == String(format: "Hello, %@!%%%ld",
-                                               locale: nil, world, 42))
+        #expect(
+            "Hello, world!%42"
+                == String(
+                    format: "Hello, %@!%%%ld",
+                    locale: nil, world, 42))
     }
 
     @Test func init_format_locale_arguments() {
         let world: NSString = "world"
-        let args: [CVarArg] = [ world, 42 ]
-        #expect("Hello, world!%42" == String(format: "Hello, %@!%%%ld",
-                                               locale: nil, arguments: args))
+        let args: [CVarArg] = [world, 42]
+        #expect(
+            "Hello, world!%42"
+                == String(
+                    format: "Hello, %@!%%%ld",
+                    locale: nil, arguments: args))
     }
 
     @Test func utf16Count() {
@@ -2263,45 +2289,38 @@ struct StringTestsStdlib {
         let endIndex = s.index(s.startIndex, offsetBy: 17)
         var tokenRanges: [Range<String.Index>] = []
         let scheme = NSLinguisticTagScheme.tokenType
-        let tags = s.linguisticTags(in: startIndex..<endIndex,
-                                    scheme: scheme.rawValue,
-                                    options: [],
-                                    orthography: nil, tokenRanges: &tokenRanges)
-        #expect([
-            NSLinguisticTag.word.rawValue,
-            NSLinguisticTag.whitespace.rawValue,
-            NSLinguisticTag.word.rawValue
-        ] == tags)
-        #expect(["Глокая", " ", "куздра"] ==
-                    tokenRanges.map { String(s[$0]) } )
+        let tags = s.linguisticTags(
+            in: startIndex..<endIndex,
+            scheme: scheme.rawValue,
+            options: [],
+            orthography: nil, tokenRanges: &tokenRanges)
+        #expect(
+            [
+                NSLinguisticTag.word.rawValue,
+                NSLinguisticTag.whitespace.rawValue,
+                NSLinguisticTag.word.rawValue,
+            ] == tags)
+        #expect(["Глокая", " ", "куздра"] == tokenRanges.map { String(s[$0]) })
     }
 
     @Test func localizedCaseInsensitiveCompare() {
-        #expect(ComparisonResult.orderedSame ==
-                    "abCD".localizedCaseInsensitiveCompare("AbCd"))
-        #expect(ComparisonResult.orderedAscending ==
-                    "abCD".localizedCaseInsensitiveCompare("AbCdE"))
+        #expect(ComparisonResult.orderedSame == "abCD".localizedCaseInsensitiveCompare("AbCd"))
+        #expect(ComparisonResult.orderedAscending == "abCD".localizedCaseInsensitiveCompare("AbCdE"))
 
-        #expect(ComparisonResult.orderedSame ==
-                    "абвг".localizedCaseInsensitiveCompare("АбВг"))
-        #expect(ComparisonResult.orderedAscending ==
-                    "абВГ".localizedCaseInsensitiveCompare("АбВгД"))
+        #expect(ComparisonResult.orderedSame == "абвг".localizedCaseInsensitiveCompare("АбВг"))
+        #expect(ComparisonResult.orderedAscending == "абВГ".localizedCaseInsensitiveCompare("АбВгД"))
     }
 
     @Test func localizedCompare() {
-        #expect(ComparisonResult.orderedAscending ==
-                    "abCD".localizedCompare("AbCd"))
+        #expect(ComparisonResult.orderedAscending == "abCD".localizedCompare("AbCd"))
 
-        #expect(ComparisonResult.orderedAscending ==
-                    "абвг".localizedCompare("АбВг"))
+        #expect(ComparisonResult.orderedAscending == "абвг".localizedCompare("АбВг"))
     }
 
     @Test func localizedStandardCompare() {
-        #expect(ComparisonResult.orderedAscending ==
-                    "abCD".localizedStandardCompare("AbCd"))
+        #expect(ComparisonResult.orderedAscending == "abCD".localizedStandardCompare("AbCd"))
 
-        #expect(ComparisonResult.orderedAscending ==
-                    "абвг".localizedStandardCompare("АбВг"))
+        #expect(ComparisonResult.orderedAscending == "абвг".localizedStandardCompare("АбВг"))
     }
 
     @Test func localizedLowercase() {
@@ -2403,16 +2422,14 @@ struct StringTestsStdlib {
     }
 
     @Test func pathComponents() {
-        #expect([ "/", "foo", "bar" ] as [NSString] == ("/foo/bar" as NSString).pathComponents as [NSString])
-        #expect([ "/", "абв", "где" ] as [NSString] == ("/абв/где" as NSString).pathComponents as [NSString])
+        #expect(["/", "foo", "bar"] as [NSString] == ("/foo/bar" as NSString).pathComponents as [NSString])
+        #expect(["/", "абв", "где"] as [NSString] == ("/абв/где" as NSString).pathComponents as [NSString])
     }
 
     @Test func precomposedStringWithCanonicalMapping() {
         #expect("abc" == "abc".precomposedStringWithCanonicalMapping)
-        #expect("だくてん" ==
-                    "\u{305f}\u{3099}くてん".precomposedStringWithCanonicalMapping)
-        #expect("ﾀﾞｸﾃﾝ" ==
-                    "\u{ff80}\u{ff9e}ｸﾃﾝ".precomposedStringWithCanonicalMapping)
+        #expect("だくてん" == "\u{305f}\u{3099}くてん".precomposedStringWithCanonicalMapping)
+        #expect("ﾀﾞｸﾃﾝ" == "\u{ff80}\u{ff9e}ｸﾃﾝ".precomposedStringWithCanonicalMapping)
         #expect("\u{fb03}" == "\u{fb03}".precomposedStringWithCanonicalMapping)
     }
 
@@ -2430,14 +2447,13 @@ struct StringTestsStdlib {
     }
 
     @Test func propertyList() {
-        #expect(["foo", "bar"] ==
-                    "(\"foo\", \"bar\")".propertyList() as! [String])
+        #expect(["foo", "bar"] == "(\"foo\", \"bar\")".propertyList() as! [String])
     }
 
     @Test func propertyListFromStringsFileFormat() {
-        #expect(["foo": "bar", "baz": "baz"] ==
-                    "/* comment */\n\"foo\" = \"bar\";\n\"baz\";"
-            .propertyListFromStringsFileFormat() as Dictionary<String, String>)
+        #expect(
+            ["foo": "bar", "baz": "baz"] == "/* comment */\n\"foo\" = \"bar\";\n\"baz\";"
+                .propertyListFromStringsFileFormat() as Dictionary<String, String>)
     }
 
     @Test func rangeOfCharacterFrom() {
@@ -2454,15 +2470,17 @@ struct StringTestsStdlib {
             }
             do {
                 let s = "абвклмнабвклмн"
-                let r = s.rangeOfCharacter(from: charset,
-                                           options: .backwards)!
+                let r = s.rangeOfCharacter(
+                    from: charset,
+                    options: .backwards)!
                 #expect(s.index(s.startIndex, offsetBy: 9) == r.lowerBound)
                 #expect(s.index(s.startIndex, offsetBy: 10) == r.upperBound)
             }
             do {
                 let s = "абвклмнабв"
-                let r = s.rangeOfCharacter(from: charset,
-                                           range: s.index(s.startIndex, offsetBy: 3)..<s.endIndex)!
+                let r = s.rangeOfCharacter(
+                    from: charset,
+                    range: s.index(s.startIndex, offsetBy: 3)..<s.endIndex)!
                 #expect(s.index(s.startIndex, offsetBy: 7) == r.lowerBound)
                 #expect(s.index(s.startIndex, offsetBy: 8) == r.upperBound)
             }
@@ -2481,8 +2499,7 @@ struct StringTestsStdlib {
             let charset = CharacterSet(charactersIn: "\u{1F600}")
             do {
                 let s = "abc\u{1F600}"
-                #expect("\u{1F600}" ==
-                            s[s.rangeOfCharacter(from: charset)!])
+                #expect("\u{1F600}" == s[s.rangeOfCharacter(from: charset)!])
             }
             do {
                 #expect("abc\u{1F601}".rangeOfCharacter(from: charset) == nil)
@@ -2492,31 +2509,49 @@ struct StringTestsStdlib {
 
     @Test func rangeOfComposedCharacterSequence() {
         let s = "\u{1F601}abc \u{305f}\u{3099} def"
-        #expect("\u{1F601}" == s[s.rangeOfComposedCharacterSequence(
-            at: s.startIndex)])
-        #expect("a" == s[s.rangeOfComposedCharacterSequence(
-            at: s.index(s.startIndex, offsetBy: 1))])
-        #expect("\u{305f}\u{3099}" == s[s.rangeOfComposedCharacterSequence(
-            at: s.index(s.startIndex, offsetBy: 5))])
-        #expect(" " == s[s.rangeOfComposedCharacterSequence(
-            at: s.index(s.startIndex, offsetBy: 6))])
+        #expect(
+            "\u{1F601}"
+                == s[
+                    s.rangeOfComposedCharacterSequence(
+                        at: s.startIndex)])
+        #expect(
+            "a"
+                == s[
+                    s.rangeOfComposedCharacterSequence(
+                        at: s.index(s.startIndex, offsetBy: 1))])
+        #expect(
+            "\u{305f}\u{3099}"
+                == s[
+                    s.rangeOfComposedCharacterSequence(
+                        at: s.index(s.startIndex, offsetBy: 5))])
+        #expect(
+            " "
+                == s[
+                    s.rangeOfComposedCharacterSequence(
+                        at: s.index(s.startIndex, offsetBy: 6))])
     }
 
     @Test func rangeOfComposedCharacterSequences() {
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        #expect("\u{1F601}a" == s[s.rangeOfComposedCharacterSequences(
-            for: s.startIndex..<s.index(s.startIndex, offsetBy: 2))])
-        #expect("せ\u{3099}そ\u{3099}" == s[s.rangeOfComposedCharacterSequences(
-            for: s.index(s.startIndex, offsetBy: 8)..<s.index(s.startIndex, offsetBy: 10))])
+        #expect(
+            "\u{1F601}a"
+                == s[
+                    s.rangeOfComposedCharacterSequences(
+                        for: s.startIndex..<s.index(s.startIndex, offsetBy: 2))])
+        #expect(
+            "せ\u{3099}そ\u{3099}"
+                == s[
+                    s.rangeOfComposedCharacterSequences(
+                        for: s.index(s.startIndex, offsetBy: 8)..<s.index(s.startIndex, offsetBy: 10))])
     }
 
-    func toIntRange<S : StringProtocol>(
+    func toIntRange<S: StringProtocol>(
         _ string: S, _ maybeRange: Range<String.Index>?
     ) -> Range<Int>? where S.Index == String.Index {
         guard let range = maybeRange else { return nil }
 
-        return string.distance(from: string.startIndex, to: range.lowerBound) ..< string.distance(from: string.startIndex, to: range.upperBound)
+        return string.distance(from: string.startIndex, to: range.lowerBound)..<string.distance(from: string.startIndex, to: range.upperBound)
     }
 
     @Test func range() {
@@ -2556,24 +2591,24 @@ struct StringTestsStdlib {
     }
 
     @Test func contains() {
-            #expect(!"".contains(""))
-            #expect(!"".contains("a"))
-            #expect(!"a".contains(""))
-            #expect(!"a".contains("b"))
-            #expect("a".contains("a"))
-            #expect(!"a".contains("A"))
-            #expect(!"A".contains("a"))
-            #expect(!"a".contains("a\u{0301}"))
-            #expect("a\u{0301}".contains("a\u{0301}"))
-            #expect(!"a\u{0301}".contains("a"))
-            #expect(!"a\u{0301}".contains("\u{0301}")) // Update to match stdlib's `firstRange` and `contains` result
-            #expect(!"a".contains("\u{0301}"))
+        #expect(!"".contains(""))
+        #expect(!"".contains("a"))
+        #expect(!"a".contains(""))
+        #expect(!"a".contains("b"))
+        #expect("a".contains("a"))
+        #expect(!"a".contains("A"))
+        #expect(!"A".contains("a"))
+        #expect(!"a".contains("a\u{0301}"))
+        #expect("a\u{0301}".contains("a\u{0301}"))
+        #expect(!"a\u{0301}".contains("a"))
+        #expect(!"a\u{0301}".contains("\u{0301}")) // Update to match stdlib's `firstRange` and `contains` result
+        #expect(!"a".contains("\u{0301}"))
 
-            #expect(!"i".contains("I"))
-            #expect(!"I".contains("i"))
-            #expect(!"\u{0130}".contains("i"))
-            #expect(!"i".contains("\u{0130}"))
-            #expect(!"\u{0130}".contains("ı"))
+        #expect(!"i".contains("I"))
+        #expect(!"I".contains("i"))
+        #expect(!"\u{0130}".contains("i"))
+        #expect(!"i".contains("\u{0130}"))
+        #expect(!"\u{0130}".contains("ı"))
     }
 
     @Test func localizedCaseInsensitiveContains() {
@@ -2641,7 +2676,7 @@ struct StringTestsStdlib {
         #expect(0..<1 == rangeOf("a\u{0301}", "a\u{0301}", locale: en))
         #expect(0..<1 == rangeOf("a\u{0301}", "a", locale: en))
         do {
-        // FIXME: Indices that don't correspond to grapheme cluster boundaries.
+            // FIXME: Indices that don't correspond to grapheme cluster boundaries.
             let s = "a\u{0301}"
             #expect(
                 "\u{0301}" == s[s.localizedStandardRange(of: "\u{0301}", locale: en)!])
@@ -2665,24 +2700,21 @@ struct StringTestsStdlib {
 
     @Test func addingPercentEncoding() {
         #expect(
-            "abcd1234" ==
-            "abcd1234".addingPercentEncoding(withAllowedCharacters: .alphanumerics))
+            "abcd1234" == "abcd1234".addingPercentEncoding(withAllowedCharacters: .alphanumerics))
         #expect(
-            "abcd%20%D0%B0%D0%B1%D0%B2%D0%B3" ==
-            "abcd абвг".addingPercentEncoding(withAllowedCharacters: .alphanumerics))
+            "abcd%20%D0%B0%D0%B1%D0%B2%D0%B3" == "abcd абвг".addingPercentEncoding(withAllowedCharacters: .alphanumerics))
     }
 
     @Test func appendingFormat() {
         #expect("" == "".appendingFormat(""))
         #expect("a" == "a".appendingFormat(""))
         #expect(
-            "abc абв \u{0001F60A}" ==
-            "abc абв \u{0001F60A}".appendingFormat(""))
+            "abc абв \u{0001F60A}" == "abc абв \u{0001F60A}".appendingFormat(""))
 
         let formatArg: NSString = "привет мир \u{0001F60A}"
         #expect(
-            "abc абв \u{0001F60A}def привет мир \u{0001F60A} 42" ==
-            "abc абв \u{0001F60A}"
+            "abc абв \u{0001F60A}def привет мир \u{0001F60A} 42"
+                == "abc абв \u{0001F60A}"
                 .appendingFormat("def %@ %ld", formatArg, 42))
     }
 
@@ -2722,81 +2754,103 @@ struct StringTestsStdlib {
 
     @Test func padding() {
         #expect(
-            "abc абв \u{0001F60A}" ==
-            "abc абв \u{0001F60A}".padding(
-                toLength: 10, withPad: "XYZ", startingAt: 0))
+            "abc абв \u{0001F60A}"
+                == "abc абв \u{0001F60A}".padding(
+                    toLength: 10, withPad: "XYZ", startingAt: 0))
         #expect(
-            "abc абв \u{0001F60A}XYZXY" ==
-            "abc абв \u{0001F60A}".padding(
-                toLength: 15, withPad: "XYZ", startingAt: 0))
+            "abc абв \u{0001F60A}XYZXY"
+                == "abc абв \u{0001F60A}".padding(
+                    toLength: 15, withPad: "XYZ", startingAt: 0))
         #expect(
-            "abc абв \u{0001F60A}YZXYZ" ==
-            "abc абв \u{0001F60A}".padding(
-                toLength: 15, withPad: "XYZ", startingAt: 1))
+            "abc абв \u{0001F60A}YZXYZ"
+                == "abc абв \u{0001F60A}".padding(
+                    toLength: 15, withPad: "XYZ", startingAt: 1))
     }
 
     @Test func replacingCharacters() {
         do {
             let empty = ""
-            #expect("" == empty.replacingCharacters(
-                in: empty.startIndex..<empty.startIndex, with: ""))
+            #expect(
+                ""
+                    == empty.replacingCharacters(
+                        in: empty.startIndex..<empty.startIndex, with: ""))
         }
 
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        #expect(s == s.replacingCharacters(
-            in: s.startIndex..<s.startIndex, with: ""))
-        #expect(s == s.replacingCharacters(
-            in: s.endIndex..<s.endIndex, with: ""))
-        #expect("zzz" + s == s.replacingCharacters(
-            in: s.startIndex..<s.startIndex, with: "zzz"))
-        #expect(s + "zzz" == s.replacingCharacters(
-            in: s.endIndex..<s.endIndex, with: "zzz"))
+        #expect(
+            s
+                == s.replacingCharacters(
+                    in: s.startIndex..<s.startIndex, with: ""))
+        #expect(
+            s
+                == s.replacingCharacters(
+                    in: s.endIndex..<s.endIndex, with: ""))
+        #expect(
+            "zzz" + s
+                == s.replacingCharacters(
+                    in: s.startIndex..<s.startIndex, with: "zzz"))
+        #expect(
+            s + "zzz"
+                == s.replacingCharacters(
+                    in: s.endIndex..<s.endIndex, with: "zzz"))
 
         #expect(
-            "す\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingCharacters(
-                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: ""))
+            "す\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingCharacters(
+                    in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: ""))
         #expect(
-            "zzzす\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingCharacters(
-                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "zzz"))
+            "zzzす\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingCharacters(
+                    in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "zzz"))
         #expect(
-            "\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingCharacters(
-                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "\u{1F602}"))
-
-        #expect("\u{1F601}" == s.replacingCharacters(
-            in: s.index(after: s.startIndex)..<s.endIndex, with: ""))
-        #expect("\u{1F601}zzz" == s.replacingCharacters(
-            in: s.index(after: s.startIndex)..<s.endIndex, with: "zzz"))
-        #expect("\u{1F601}\u{1F602}" == s.replacingCharacters(
-            in: s.index(after: s.startIndex)..<s.endIndex, with: "\u{1F602}"))
+            "\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingCharacters(
+                    in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "\u{1F602}"))
 
         #expect(
-            "\u{1F601}aす\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingCharacters(
-                in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7), with: ""))
+            "\u{1F601}"
+                == s.replacingCharacters(
+                    in: s.index(after: s.startIndex)..<s.endIndex, with: ""))
         #expect(
-            "\u{1F601}azzzす\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingCharacters(
-                in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7), with: "zzz"))
+            "\u{1F601}zzz"
+                == s.replacingCharacters(
+                    in: s.index(after: s.startIndex)..<s.endIndex, with: "zzz"))
         #expect(
-            "\u{1F601}a\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingCharacters(
-                in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7),
-                with: "\u{1F602}"))
+            "\u{1F601}\u{1F602}"
+                == s.replacingCharacters(
+                    in: s.index(after: s.startIndex)..<s.endIndex, with: "\u{1F602}"))
+
+        #expect(
+            "\u{1F601}aす\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingCharacters(
+                    in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7), with: ""))
+        #expect(
+            "\u{1F601}azzzす\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingCharacters(
+                    in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7), with: "zzz"))
+        #expect(
+            "\u{1F601}a\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingCharacters(
+                    in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7),
+                    with: "\u{1F602}"))
     }
 
     @Test func replacingOccurrences() {
         do {
             let empty = ""
-            #expect("" == empty.replacingOccurrences(
-                of: "", with: ""))
-            #expect("" == empty.replacingOccurrences(
-                of: "", with: "xyz"))
-            #expect("" == empty.replacingOccurrences(
-                of: "abc", with: "xyz"))
+            #expect(
+                ""
+                    == empty.replacingOccurrences(
+                        of: "", with: ""))
+            #expect(
+                ""
+                    == empty.replacingOccurrences(
+                        of: "", with: "xyz"))
+            #expect(
+                ""
+                    == empty.replacingOccurrences(
+                        of: "abc", with: "xyz"))
         }
 
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
@@ -2807,76 +2861,75 @@ struct StringTestsStdlib {
         #expect("" == s.replacingOccurrences(of: s, with: ""))
 
         #expect(
-            "\u{1F601}xyzbc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingOccurrences(of: "a", with: "xyz"))
+            "\u{1F601}xyzbc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" == s.replacingOccurrences(of: "a", with: "xyz"))
 
         #expect(
-            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingOccurrences(
-                of: "\u{1F601}", with: "\u{1F602}\u{1F603}"))
+            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingOccurrences(
+                    of: "\u{1F601}", with: "\u{1F602}\u{1F603}"))
 
         #expect(
-            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingOccurrences(
-                of: "し\u{3099}", with: "xyz"))
+            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingOccurrences(
+                    of: "し\u{3099}", with: "xyz"))
 
         #expect(
-            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingOccurrences(
-                of: "し\u{3099}", with: "xyz"))
+            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingOccurrences(
+                    of: "し\u{3099}", with: "xyz"))
 
         #expect(
-            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingOccurrences(
-                of: "\u{3058}", with: "xyz"))
+            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingOccurrences(
+                    of: "\u{3058}", with: "xyz"))
 
         //
         // Use non-default 'options:'
         //
 
         #expect(
-            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingOccurrences(
-                of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
-                options: String.CompareOptions.literal))
+            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingOccurrences(
+                    of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
+                    options: String.CompareOptions.literal))
 
-        #expect(s == s.replacingOccurrences(
-            of: "\u{3058}", with: "xyz",
-            options: String.CompareOptions.literal))
+        #expect(
+            s
+                == s.replacingOccurrences(
+                    of: "\u{3058}", with: "xyz",
+                    options: String.CompareOptions.literal))
 
         //
         // Use non-default 'range:'
         //
 
         #expect(
-            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
-            s.replacingOccurrences(
-                of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
-                options: String.CompareOptions.literal,
-                range: s.startIndex..<s.index(s.startIndex, offsetBy: 1)))
+            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
+                == s.replacingOccurrences(
+                    of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
+                    options: String.CompareOptions.literal,
+                    range: s.startIndex..<s.index(s.startIndex, offsetBy: 1)))
 
-        #expect(s == s.replacingOccurrences(
-            of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
-            options: String.CompareOptions.literal,
-            range: s.index(s.startIndex, offsetBy: 1)..<s.index(s.startIndex, offsetBy: 3)))
+        #expect(
+            s
+                == s.replacingOccurrences(
+                    of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
+                    options: String.CompareOptions.literal,
+                    range: s.index(s.startIndex, offsetBy: 1)..<s.index(s.startIndex, offsetBy: 3)))
     }
 
     @Test func removingPercentEncoding() {
         #expect(
-            "abcd абвг" ==
-            "abcd абвг".removingPercentEncoding)
+            "abcd абвг" == "abcd абвг".removingPercentEncoding)
 
         #expect(
-            "abcd абвг\u{0000}\u{0001}" ==
-            "abcd абвг%00%01".removingPercentEncoding)
+            "abcd абвг\u{0000}\u{0001}" == "abcd абвг%00%01".removingPercentEncoding)
 
         #expect(
-            "abcd абвг" ==
-            "%61%62%63%64%20%D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding)
+            "abcd абвг" == "%61%62%63%64%20%D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding)
 
         #expect(
-            "abcd абвг" ==
-            "ab%63d %D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding)
+            "abcd абвг" == "ab%63d %D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding)
 
         #expect("%ED%B0".removingPercentEncoding == nil)
 
@@ -2892,30 +2945,37 @@ struct StringTestsStdlib {
     }
 
     @Test func trimmingCharacters() {
-        #expect("" == "".trimmingCharacters(
-            in: CharacterSet.decimalDigits))
+        #expect(
+            ""
+                == "".trimmingCharacters(
+                    in: CharacterSet.decimalDigits))
 
-        #expect("abc" == "abc".trimmingCharacters(
-            in: CharacterSet.decimalDigits))
+        #expect(
+            "abc"
+                == "abc".trimmingCharacters(
+                    in: CharacterSet.decimalDigits))
 
-        #expect("" == "123".trimmingCharacters(
-            in: CharacterSet.decimalDigits))
+        #expect(
+            ""
+                == "123".trimmingCharacters(
+                    in: CharacterSet.decimalDigits))
 
-        #expect("abc" == "123abc789".trimmingCharacters(
-            in: CharacterSet.decimalDigits))
+        #expect(
+            "abc"
+                == "123abc789".trimmingCharacters(
+                    in: CharacterSet.decimalDigits))
 
         // Performs Unicode scalar comparison.
         #expect(
-            "し\u{3099}abc" ==
-            "し\u{3099}abc".trimmingCharacters(
-                in: CharacterSet(charactersIn: "\u{3058}")))
+            "し\u{3099}abc"
+                == "し\u{3099}abc".trimmingCharacters(
+                    in: CharacterSet(charactersIn: "\u{3058}")))
     }
 
     @Test func NSString_stringsByAppendingPaths() {
         #expect([] as [NSString] == ("" as NSString).strings(byAppendingPaths: []) as [NSString])
         #expect(
-            [ "/tmp/foo", "/tmp/bar" ] as [NSString] ==
-            ("/tmp" as NSString).strings(byAppendingPaths: [ "foo", "bar" ]) as [NSString])
+            ["/tmp/foo", "/tmp/bar"] as [NSString] == ("/tmp" as NSString).strings(byAppendingPaths: ["foo", "bar"]) as [NSString])
     }
 
     @available(*, deprecated)
@@ -2923,8 +2983,7 @@ struct StringTestsStdlib {
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
         #expect(s == s.substring(from: s.startIndex))
-        #expect("せ\u{3099}そ\u{3099}" ==
-                    s.substring(from: s.index(s.startIndex, offsetBy: 8)))
+        #expect("せ\u{3099}そ\u{3099}" == s.substring(from: s.index(s.startIndex, offsetBy: 8)))
         #expect("" == s.substring(from: s.index(s.startIndex, offsetBy: 10)))
     }
 
@@ -2933,8 +2992,7 @@ struct StringTestsStdlib {
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
         #expect("" == s.substring(to: s.startIndex))
-        #expect("\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}" ==
-                    s.substring(to: s.index(s.startIndex, offsetBy: 8)))
+        #expect("\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}" == s.substring(to: s.index(s.startIndex, offsetBy: 8)))
         #expect(s == s.substring(to: s.index(s.startIndex, offsetBy: 10)))
     }
 
@@ -2944,13 +3002,11 @@ struct StringTestsStdlib {
 
         #expect("" == s.substring(with: s.startIndex..<s.startIndex))
         #expect(
-            "" ==
-            s.substring(with: s.index(s.startIndex, offsetBy: 1)..<s.index(s.startIndex, offsetBy: 1)))
+            "" == s.substring(with: s.index(s.startIndex, offsetBy: 1)..<s.index(s.startIndex, offsetBy: 1)))
         #expect("" == s.substring(with: s.endIndex..<s.endIndex))
         #expect(s == s.substring(with: s.startIndex..<s.endIndex))
         #expect(
-            "さ\u{3099}し\u{3099}す\u{3099}" ==
-            s.substring(with: s.index(s.startIndex, offsetBy: 5)..<s.index(s.startIndex, offsetBy: 8)))
+            "さ\u{3099}し\u{3099}す\u{3099}" == s.substring(with: s.index(s.startIndex, offsetBy: 5)..<s.index(s.startIndex, offsetBy: 8)))
     }
 
     @Test func localizedUppercase() {
@@ -3036,20 +3092,17 @@ struct StringTestsStdlib {
         do {
             let source = "tre\u{300}s k\u{fc}hl"
             #expect(
-                "tres kuhl" ==
-                source.applyingTransform(.stripDiacritics, reverse: false))
+                "tres kuhl" == source.applyingTransform(.stripDiacritics, reverse: false))
         }
         do {
             let source = "hiragana"
             #expect(
-                "ひらがな" ==
-                source.applyingTransform(.latinToHiragana, reverse: false))
+                "ひらがな" == source.applyingTransform(.latinToHiragana, reverse: false))
         }
         do {
             let source = "ひらがな"
             #expect(
-                "hiragana" ==
-                source.applyingTransform(.latinToHiragana, reverse: true))
+                "hiragana" == source.applyingTransform(.latinToHiragana, reverse: true))
         }
     }
 
@@ -3097,8 +3150,7 @@ struct StringTestsStdlib {
 
 extension String {
     func range(fromStart: Int, fromEnd: Int) -> Range<String.Index> {
-        return index(startIndex, offsetBy: fromStart) ..<
-           index(endIndex, offsetBy: fromEnd)
+        return index(startIndex, offsetBy: fromStart)..<index(endIndex, offsetBy: fromEnd)
     }
     subscript(fromStart: Int, fromEnd: Int) -> SubSequence {
         return self[range(fromStart: fromStart, fromEnd: fromEnd)]
@@ -3145,17 +3197,12 @@ struct StdlibSubstringTests {
         let range = s.range(fromStart: 2, fromEnd: -7)
         let expected = "__goodbye, world"
         let replacement = "goodbye"
-        #expect(expected ==
-                    s.replacingCharacters(in: range, with: replacement))
-        #expect(expected[2, 0] ==
-                    s[2, 0].replacingCharacters(in: range, with: replacement))
+        #expect(expected == s.replacingCharacters(in: range, with: replacement))
+        #expect(expected[2, 0] == s[2, 0].replacingCharacters(in: range, with: replacement))
 
-        #expect(replacement ==
-                    s.replacingCharacters(in: s.startIndex..., with: replacement))
-        #expect(replacement ==
-                    s.replacingCharacters(in: ..<s.endIndex, with: replacement))
-        #expect(expected[2, 0] ==
-                    s[2, 0].replacingCharacters(in: range, with: replacement[...]))
+        #expect(replacement == s.replacingCharacters(in: s.startIndex..., with: replacement))
+        #expect(replacement == s.replacingCharacters(in: ..<s.endIndex, with: replacement))
+        #expect(expected[2, 0] == s[2, 0].replacingCharacters(in: range, with: replacement[...]))
     }
 
     @Test func replacingOccurrences_NilRange() {
@@ -3166,47 +3213,31 @@ struct StdlibSubstringTests {
         #expect("he11o" == s.replacingOccurrences(of: "l", with: "1"[...]))
         #expect("he11o" == s.replacingOccurrences(of: "l"[...], with: "1"[...]))
 
-        #expect("he11o" ==
-                    s[...].replacingOccurrences(of: "l", with: "1"))
-        #expect("he11o" ==
-                    s[...].replacingOccurrences(of: "l"[...], with: "1"))
-        #expect("he11o" ==
-                    s[...].replacingOccurrences(of: "l", with: "1"[...]))
-        #expect("he11o" ==
-                    s[...].replacingOccurrences(of: "l"[...], with: "1"[...]))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l", with: "1"))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l"[...], with: "1"))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l", with: "1"[...]))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l"[...], with: "1"[...]))
     }
 
     @Test func replacingOccurrences_NonNilRange() {
         let s = "hello"
         let r = s.range(fromStart: 1, fromEnd: -2)
 
-        #expect("he1lo" ==
-                    s.replacingOccurrences(of: "l", with: "1", range: r))
-        #expect("he1lo" ==
-                    s.replacingOccurrences(of: "l"[...], with: "1", range: r))
-        #expect("he1lo" ==
-                    s.replacingOccurrences(of: "l", with: "1"[...], range: r))
-        #expect("he1lo" ==
-                    s.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l", with: "1", range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l"[...], with: "1", range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l", with: "1"[...], range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
 
-        #expect("he1lo" ==
-                    s[...].replacingOccurrences(of: "l", with: "1", range: r))
-        #expect("he1lo" ==
-                    s[...].replacingOccurrences(of: "l"[...], with: "1", range: r))
-        #expect("he1lo" ==
-                    s[...].replacingOccurrences(of: "l", with: "1"[...], range: r))
-        #expect("he1lo" ==
-                    s[...].replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l", with: "1", range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l"[...], with: "1", range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l", with: "1"[...], range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
 
         let ss = s[1, -1]
-        #expect("e1l" ==
-                    ss.replacingOccurrences(of: "l", with: "1", range: r))
-        #expect("e1l" ==
-                    ss.replacingOccurrences(of: "l"[...], with: "1", range: r))
-        #expect("e1l" ==
-                    ss.replacingOccurrences(of: "l", with: "1"[...], range: r))
-        #expect("e1l" ==
-                    ss.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l", with: "1", range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l"[...], with: "1", range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l", with: "1"[...], range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
     }
 
     @available(*, deprecated)

@@ -16,9 +16,9 @@ internal import Foundation_Private.NSFileManager
 
 @objc(_NSFileManagerBridge)
 @objcMembers
-final class _NSFileManagerBridge : NSObject {
+final class _NSFileManagerBridge: NSObject {
     private let _impl: _FileManagerImpl
-    
+
     @objc(initWithFileManager:)
     init(implementing manager: FileManager) {
         var impl = _FileManagerImpl()
@@ -26,7 +26,7 @@ final class _NSFileManagerBridge : NSObject {
         self._impl = impl
         super.init()
     }
-    
+
     func urls(for directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
         _impl.urls(for: directory, in: domainMask)
     }
@@ -34,7 +34,7 @@ final class _NSFileManagerBridge : NSObject {
     func url(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
         try _impl.url(for: directory, in: domain, appropriateFor: url, create: shouldCreate)
     }
-    
+
     func getRelationship(_ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>, ofDirectoryAt directoryURL: URL, toItemAt otherURL: URL) throws {
         try _impl.getRelationship(outRelationship, ofDirectoryAt: directoryURL, toItemAt: otherURL)
     }
@@ -43,7 +43,7 @@ final class _NSFileManagerBridge : NSObject {
         try _impl.getRelationship(outRelationship, of: directory, in: domainMask, toItemAt: url)
     }
 
-    func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
+    func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey: Any]? = nil) throws {
         try _impl.createDirectory(at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
@@ -51,11 +51,11 @@ final class _NSFileManagerBridge : NSObject {
         try _impl.createSymbolicLink(at: url, withDestinationURL: destURL)
     }
 
-    func setAttributes(_ attributes: [FileAttributeKey : Any], ofItemAtPath path: String) throws {
+    func setAttributes(_ attributes: [FileAttributeKey: Any], ofItemAtPath path: String) throws {
         try _impl.setAttributes(attributes, ofItemAtPath: path)
     }
 
-    func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
+    func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey: Any]? = nil) throws {
         try _impl.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
@@ -67,11 +67,11 @@ final class _NSFileManagerBridge : NSObject {
         try _impl.subpathsOfDirectory(atPath: path)
     }
 
-    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
+    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
         try _impl.attributesOfItem(atPath: path)
     }
 
-    func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey : Any] {
+    func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey: Any] {
         try _impl.attributesOfFileSystem(forPath: path)
     }
 
@@ -161,19 +161,19 @@ final class _NSFileManagerBridge : NSObject {
     func displayName(atPath path: String) -> String {
         _impl.displayName(atPath: path)
     }
-    
+
     func contents(atPath path: String) -> Data? {
         _impl.contents(atPath: path)
     }
 
-    func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey : Any]? = nil) -> Bool {
+    func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey: Any]? = nil) -> Bool {
         _impl.createFile(atPath: path, contents: data, attributes: attr)
     }
 
     func string(withFileSystemRepresentation str: UnsafePointer<CChar>, length len: Int) -> String {
         _impl.string(withFileSystemRepresentation: str, length: len)
     }
-    
+
     func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
         try path.withFileSystemRepresentation(body)
     }
@@ -185,7 +185,7 @@ final class _NSFileManagerBridge : NSObject {
     var temporaryDirectory: URL {
         _impl.temporaryDirectory
     }
-    
+
     func homeDirectory(forUser userName: String?) -> URL? {
         _impl.homeDirectory(forUser: userName)
     }

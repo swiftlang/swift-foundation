@@ -189,7 +189,7 @@ func calendarBenchmarks() {
 
     // MARK: - Allocations
     let reference = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
-    
+
     let allocationsConfiguration = Benchmark.Configuration(
         metrics: [.cpuTotal, .mallocCountTotal, .peakMemoryResident, .throughput],
         timeUnits: .nanoseconds,
@@ -204,7 +204,7 @@ func calendarBenchmarks() {
             assert(date != nil)
         }
     }
-    
+
     Benchmark("allocationsForCurrentCalendar", configuration: allocationsConfiguration) { benchmark in
         for _ in benchmark.scaledIterations {
             // Current calendar
@@ -213,7 +213,7 @@ func calendarBenchmarks() {
             assert(date != nil)
         }
     }
-    
+
     Benchmark("allocationsForAutoupdatingCurrentCalendar", configuration: allocationsConfiguration) { benchmark in
         for _ in benchmark.scaledIterations {
             // Autoupdating current calendar
@@ -222,7 +222,7 @@ func calendarBenchmarks() {
             assert(date != nil)
         }
     }
-    
+
     Benchmark("copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
         var cal = Calendar(identifier: .gregorian)
         for i in benchmark.scaledIterations {
@@ -230,7 +230,7 @@ func calendarBenchmarks() {
             assert(cal.firstWeekday == i % 2)
         }
     }
-    
+
     Benchmark("copyOnWritePerformanceNoDiff", configuration: allocationsConfiguration) { benchmark in
         var cal = Calendar(identifier: .gregorian)
         let tz = TimeZone(secondsFromGMT: 1800)!
@@ -238,7 +238,7 @@ func calendarBenchmarks() {
             cal.timeZone = tz
         }
     }
-    
+
     Benchmark("allocationsForFixedLocale", configuration: allocationsConfiguration) { benchmark in
         // Fixed locale
         for _ in benchmark.scaledIterations {
@@ -247,7 +247,7 @@ func calendarBenchmarks() {
             assert(identifier == "en_US")
         }
     }
-    
+
     Benchmark("allocationsForCurrentLocale", configuration: allocationsConfiguration) { benchmark in
         // Current locale
         for _ in benchmark.scaledIterations {
@@ -256,7 +256,7 @@ func calendarBenchmarks() {
             assert(identifier == "en_US")
         }
     }
-    
+
     Benchmark("allocationsForAutoupdatingCurrentLocale", configuration: allocationsConfiguration) { benchmark in
         // Autoupdating current locale
         for _ in benchmark.scaledIterations {
@@ -268,14 +268,18 @@ func calendarBenchmarks() {
     // MARK: - Identifiers
 
     Benchmark("identifierFromComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
-        let c1 = ["kCFLocaleLanguageCodeKey" : "en"]
-        let c2 = ["kCFLocaleLanguageCodeKey" : "zh",
-                  "kCFLocaleScriptCodeKey" : "Hans",
-                  "kCFLocaleCountryCodeKey" : "TW"]
-        let c3 = ["kCFLocaleLanguageCodeKey" : "es",
-                  "kCFLocaleScriptCodeKey" : "",
-                  "kCFLocaleCountryCodeKey" : "409"]
-        
+        let c1 = ["kCFLocaleLanguageCodeKey": "en"]
+        let c2 = [
+            "kCFLocaleLanguageCodeKey": "zh",
+            "kCFLocaleScriptCodeKey": "Hans",
+            "kCFLocaleCountryCodeKey": "TW",
+        ]
+        let c3 = [
+            "kCFLocaleLanguageCodeKey": "es",
+            "kCFLocaleScriptCodeKey": "",
+            "kCFLocaleCountryCodeKey": "409",
+        ]
+
         for _ in benchmark.scaledIterations {
             let id1 = Locale.identifier(fromComponents: c1)
             let id2 = Locale.identifier(fromComponents: c2)
@@ -366,7 +370,7 @@ func calendarBenchmarks() {
                     for hh in stride(from: 0, to: 23, by: 7) {
                         for mm in stride(from: 0, to: 60, by: 13) {
                             for ss in stride(from: 0, to: 60, by: 18) {
-                                let dc = DateComponents(year: y, month: m, day: d, hour: hh, minute:mm, second: ss )
+                                let dc = DateComponents(year: y, month: m, day: d, hour: hh, minute: mm, second: ss)
                                 results.append(dc)
                             }
                         }
@@ -596,4 +600,3 @@ func calendarBenchmarks() {
         }
     }
 }
-

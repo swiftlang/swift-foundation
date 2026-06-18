@@ -30,7 +30,7 @@ private struct PredicateMacroBasicTests {
             """
         )
     }
-    
+
     @Test func implicitReturn() {
         AssertPredicateExpansion(
             """
@@ -47,7 +47,7 @@ private struct PredicateMacroBasicTests {
             """
         )
     }
-    
+
     @Test func inferredGenerics() {
         AssertPredicateExpansion(
             """
@@ -64,7 +64,7 @@ private struct PredicateMacroBasicTests {
             """
         )
     }
-    
+
     @Test func shorthandArgumentNames() {
         AssertPredicateExpansion(
             """
@@ -81,7 +81,7 @@ private struct PredicateMacroBasicTests {
             """
         )
     }
-    
+
     @Test func explicitClosureArgumentTypes() {
         AssertPredicateExpansion(
             """
@@ -98,7 +98,7 @@ private struct PredicateMacroBasicTests {
             """
         )
     }
-    
+
     @Test func diagnoseMissingTrailingClosure() {
         AssertPredicateExpansion(
             """
@@ -131,17 +131,17 @@ private struct PredicateMacroBasicTests {
                         DiagnosticTest.FixItTest(
                             "Use a trailing closure instead of a function parameter",
                             result: """
-                                    #Predicate<Object> {
-                                        return true
-                                    }
-                                    """
+                                #Predicate<Object> {
+                                    return true
+                                }
+                                """
                         )
                     ]
                 )
             ]
         )
     }
-    
+
     @Test func keyPath() {
         AssertPredicateExpansion(
             """
@@ -192,7 +192,7 @@ private struct PredicateMacroBasicTests {
             """
         )
     }
-    
+
     @Test func comments() {
         AssertPredicateExpansion(
             """

@@ -39,18 +39,19 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     private var isDecomposable: Bool {
         return _parseInfo.scheme == nil || hasAuthority || _parseInfo.path.utf8.first == ._slash
     }
-    
+
     // Note: We use a lock instead of a lazy var to ensure that we always
     // bridge to the same NSURL even if the URL was copied across threads.
     private let _nsurlLock = Mutex<NSURL?>(nil)
     private var _nsurl: NSURL {
         return _nsurlLock.withLock {
             if let nsurl = $0 { return nsurl }
-            let nsurl = if _foundation_swift_nsurl_feature_enabled() {
-                _swiftCFURL() as NSURL
-            } else {
-                Self._makeNSURL(from: _parseInfo, baseURL: _baseURL)
-            }
+            let nsurl =
+                if _foundation_swift_nsurl_feature_enabled() {
+                    _swiftCFURL() as NSURL
+                } else {
+                    Self._makeNSURL(from: _parseInfo, baseURL: _baseURL)
+                }
             $0 = nsurl
             return nsurl
         }
@@ -70,11 +71,12 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     }
 
     init?(stringOrEmpty: String, relativeTo base: URL? = nil, encodingInvalidCharacters: Bool = true, encoding: String.Encoding = .utf8, compatibility: Bool = false, forceBaseURL: Bool = false) {
-        let parseInfo = if compatibility {
-            Self.compatibilityParse(string: stringOrEmpty, encodingInvalidCharacters: encodingInvalidCharacters)
-        } else {
-            Self.parse(string: stringOrEmpty, encodingInvalidCharacters: encodingInvalidCharacters)
-        }
+        let parseInfo =
+            if compatibility {
+                Self.compatibilityParse(string: stringOrEmpty, encodingInvalidCharacters: encodingInvalidCharacters)
+            } else {
+                Self.parse(string: stringOrEmpty, encodingInvalidCharacters: encodingInvalidCharacters)
+            }
         guard let parseInfo else { return nil }
         _parseInfo = parseInfo
         _baseURL = (forceBaseURL || parseInfo.scheme == nil) ? base?.absoluteURL : nil
@@ -86,12 +88,12 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         guard !string.isEmpty else { return nil }
         self.init(stringOrEmpty: string)
     }
-    
+
     convenience init?(string: String, relativeTo base: URL?) {
         guard !string.isEmpty else { return nil }
         self.init(stringOrEmpty: string, relativeTo: base)
     }
-    
+
     convenience init?(string: String, encodingInvalidCharacters: Bool) {
         guard !string.isEmpty else { return nil }
         self.init(stringOrEmpty: string, encodingInvalidCharacters: encodingInvalidCharacters)
@@ -105,17 +107,17 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         let directoryHint: URL.DirectoryHint = isDirectory ? .isDirectory : .notDirectory
         self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint, relativeTo: base)
     }
-    
+
     convenience init(fileURLWithPath path: String, relativeTo base: URL?) {
         let directoryHint: URL.DirectoryHint = path.utf8.last == ._slash ? .isDirectory : .checkFileSystem
         self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint, relativeTo: base)
     }
-    
+
     convenience init(fileURLWithPath path: String, isDirectory: Bool) {
         let directoryHint: URL.DirectoryHint = isDirectory ? .isDirectory : .notDirectory
         self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint)
     }
-    
+
     convenience init(fileURLWithPath path: String) {
         let directoryHint: URL.DirectoryHint = path.utf8.last == ._slash ? .isDirectory : .checkFileSystem
         self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint)
@@ -141,12 +143,13 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             return
         }
 
-        var filePath = if pathStyle == .windows {
-            // Convert any "\" to "/" before storing the URL parse info
-            path.replacing(._backslash, with: ._slash)
-        } else {
-            path
-        }
+        var filePath =
+            if pathStyle == .windows {
+                // Convert any "\" to "/" before storing the URL parse info
+                path.replacing(._backslash, with: ._slash)
+            } else {
+                path
+            }
 
         #if FOUNDATION_FRAMEWORK
         // Linked-on-or-after check for apps which incorrectly pass a full URL
@@ -250,7 +253,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             self.init(url: url)
         }
     }
-    
+
     convenience init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo base: URL?) {
         let pathString = String(cString: path)
         let directoryHint: URL.DirectoryHint = isDirectory ? .isDirectory : .notDirectory
@@ -320,13 +323,14 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
                 builder.query = baseQuery
             }
         } else {
-            let newPath = if builder.path.utf8.first == ._slash {
-                builder.path
-            } else if baseURL.hasAuthority && baseURL.path().isEmpty {
-                "/" + builder.path
-            } else {
-                baseURL.path(percentEncoded: true).merging(relativePath: builder.path)
-            }
+            let newPath =
+                if builder.path.utf8.first == ._slash {
+                    builder.path
+                } else if baseURL.hasAuthority && baseURL.path().isEmpty {
+                    "/" + builder.path
+                } else {
+                    baseURL.path(percentEncoded: true).merging(relativePath: builder.path)
+                }
             builder.path = newPath.removingDotSegments
         }
         return builder.string
@@ -381,7 +385,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             return Parser.percentDecode(user, encoding: _encoding)
         }
     }
-    
+
     var password: String? {
         return password(percentEncoded: true)
     }
@@ -491,7 +495,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     func path(percentEncoded: Bool) -> String {
         return absolutePath(percentEncoded: percentEncoded)
     }
-    
+
     var query: String? {
         return query(percentEncoded: true)
     }
@@ -510,7 +514,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             return Parser.percentDecode(query, encoding: _encoding)
         }
     }
-    
+
     var fragment: String? {
         return fragment(percentEncoded: true)
     }
@@ -541,8 +545,9 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         }
         // "C:\" is standardized to "/C:/" on initialization.
         if let driveLetter = iter.next(), driveLetter.isAlpha,
-           iter.next() == ._colon,
-           iter.next() == ._slash {
+            iter.next() == ._colon,
+            iter.next() == ._slash
+        {
             // Strip trailing slashes from the path, which preserves a root "/".
             let path = slashDropper(String(Substring(urlPath.utf8.dropFirst(3))))
             // Don't include a leading slash before the drive letter
@@ -584,7 +589,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         #endif
         return try fileSystemPath().withFileSystemRepresentation { try block($0) }
     }
-    
+
     var hasDirectoryPath: Bool {
         let path = String(_parseInfo.path)
         if path.utf8.last == ._slash {
@@ -621,16 +626,16 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         let directoryHint: URL.DirectoryHint = isDirectory ? .isDirectory : .notDirectory
         return appending(path: pathComponent, directoryHint: directoryHint)
     }
-    
+
     func appendingPathComponent(_ pathComponent: String) -> URL? {
         return appending(path: pathComponent, directoryHint: .checkFileSystem)
     }
 
-    func appending<S>(path: S, directoryHint: URL.DirectoryHint) -> URL? where S : StringProtocol {
+    func appending<S>(path: S, directoryHint: URL.DirectoryHint) -> URL? where S: StringProtocol {
         return appending(path: path, directoryHint: directoryHint, encodingSlashes: false)
     }
 
-    func appending<S>(component: S, directoryHint: URL.DirectoryHint) -> URL? where S : StringProtocol {
+    func appending<S>(component: S, directoryHint: URL.DirectoryHint) -> URL? where S: StringProtocol {
         // The old .appending(component:) implementation did not actually percent-encode
         // "/" for file URLs as the documentation suggests. Many apps accidentally use
         // .appending(component: "path/with/slashes") instead of using .appending(path:),
@@ -739,23 +744,24 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         return _SwiftURL(stringOrEmpty: string, relativeTo: baseURL)?.url
     }
 
-#if !NO_FILESYSTEM
+    #if !NO_FILESYSTEM
 
     private static func isDirectory(_ path: String) -> Bool {
         guard !path.isEmpty else { return false }
         #if os(Windows)
         let path = path.replacing(._slash, with: ._backslash)
-        return (try? path.withNTPathRepresentation { pwszPath in
-            // If path points to a symlink (reparse point), get a handle to
-            // the symlink itself using FILE_FLAG_OPEN_REPARSE_POINT.
-            let handle = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
-            guard handle != INVALID_HANDLE_VALUE else { return false }
-            defer { CloseHandle(handle) }
-            var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
-            guard GetFileInformationByHandle(handle, &info) else { return false }
-            if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT { return false }
-            return (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY
-        }) ?? false
+        return
+            (try? path.withNTPathRepresentation { pwszPath in
+                // If path points to a symlink (reparse point), get a handle to
+                // the symlink itself using FILE_FLAG_OPEN_REPARSE_POINT.
+                let handle = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
+                guard handle != INVALID_HANDLE_VALUE else { return false }
+                defer { CloseHandle(handle) }
+                var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
+                guard GetFileInformationByHandle(handle, &info) else { return false }
+                if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT { return false }
+                return (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY
+            }) ?? false
         #else
         // FileManager uses stat() to check if the file exists.
         // URL historically won't follow a symlink at the end
@@ -783,7 +789,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         return URL(filePath: filePath, directoryHint: .isDirectory)
     }
 
-#endif
+    #endif
 
     /// True if the URL's relative path would resolve against a base URL path
     private var pathResolvesAgainstBase: Bool {
@@ -792,13 +798,11 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
 
     func deletingLastPathComponent() -> URL? {
         let path = relativePath(percentEncoded: true)
-        let shouldAppendDotDot = (
-            pathResolvesAgainstBase && (
-                path.isEmpty
-                || path.lastPathComponent == "."
-                || path.lastPathComponent == ".."
-            )
-        )
+        let shouldAppendDotDot =
+            (pathResolvesAgainstBase
+                && (path.isEmpty
+                    || path.lastPathComponent == "."
+                    || path.lastPathComponent == ".."))
 
         var newPath = path
         if newPath.lastPathComponent != ".." {
@@ -833,7 +837,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         let string = components._uncheckedString(original: false)
         return _SwiftURL(stringOrEmpty: string, relativeTo: baseURL)?.url
     }
-    
+
     func appendingPathExtension(_ pathExtension: String) -> URL? {
         guard !pathExtension.isEmpty, !_parseInfo.path.isEmpty else {
             return nil
@@ -862,7 +866,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         let string = components._uncheckedString(original: false)
         return _SwiftURL(stringOrEmpty: string, relativeTo: baseURL)?.url
     }
-    
+
     var standardized: URL? {
         /// Compatibility path for apps that loop on:
         /// `url = url.deletingPathComponent().standardized` until `url.path.isEmpty`.
@@ -872,11 +876,12 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         /// `URL("/../").standardized == URL("")`
         #if FOUNDATION_FRAMEWORK
         guard isDecomposable else { return nil }
-        let newPath = if URL.compatibility1 && _parseInfo.path == "/../" {
-            ""
-        } else {
-            String(_parseInfo.path)
-        }
+        let newPath =
+            if URL.compatibility1 && _parseInfo.path == "/../" {
+                ""
+            } else {
+                String(_parseInfo.path)
+            }
         #else
         let newPath = String(_parseInfo.path)
         #endif
@@ -896,7 +901,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         return _SwiftURL(stringOrEmpty: string, relativeTo: baseURL)?.url
     }
 
-#if !NO_FILESYSTEM
+    #if !NO_FILESYSTEM
     var standardizedFileURL: URL? {
         guard isFileURL, !fileSystemPath().isEmpty else { return nil }
         return URL(filePath: fileSystemPath().standardizingPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory)
@@ -906,7 +911,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         guard isFileURL, !fileSystemPath().isEmpty else { return nil }
         return URL(filePath: fileSystemPath().resolvingSymlinksInPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory)
     }
-#endif
+    #endif
 
     private static let dataSchemeUTF8 = Array("data".utf8)
     var description: String {
@@ -926,7 +931,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         return description
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
 
     func bridgeToNSURL() -> NSURL {
         return _nsurl
@@ -952,13 +957,13 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         #endif
     }
 
-#else
+    #else
 
     internal func convertingFileReference() -> _SwiftURL {
         return self
     }
 
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     static func == (lhs: _SwiftURL, rhs: _SwiftURL) -> Bool {
         return lhs.relativeString == rhs.relativeString && lhs.baseURL == rhs.baseURL
@@ -989,7 +994,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             if let scheme = parseInfo.scheme {
                 self.scheme = String(scheme)
             }
-            if let user = parseInfo.user{
+            if let user = parseInfo.user {
                 self.user = String(user)
             }
             if let password = parseInfo.password {
@@ -1084,23 +1089,23 @@ extension _SwiftURL {
         let rawValue: UInt32
 
         // These must match the CFURL flags defined in CFURL.m
-        static let hasScheme            = _CFURLFlags(rawValue: 0x00000001)
-        static let hasUser              = _CFURLFlags(rawValue: 0x00000002)
-        static let hasPassword          = _CFURLFlags(rawValue: 0x00000004)
-        static let hasHost              = _CFURLFlags(rawValue: 0x00000008)
-        static let hasPort              = _CFURLFlags(rawValue: 0x00000010)
-        static let hasPath              = _CFURLFlags(rawValue: 0x00000020)
-        static let hasParameters        = _CFURLFlags(rawValue: 0x00000040) // Unused
-        static let hasQuery             = _CFURLFlags(rawValue: 0x00000080)
-        static let hasFragment          = _CFURLFlags(rawValue: 0x00000100)
-        static let isIPLiteral          = _CFURLFlags(rawValue: 0x00000400)
-        static let isDirectory          = _CFURLFlags(rawValue: 0x00000800)
-        static let isCanonicalFileURL   = _CFURLFlags(rawValue: 0x00001000) // Unused
-        static let pathHasFileID        = _CFURLFlags(rawValue: 0x00002000)
-        static let isDecomposable       = _CFURLFlags(rawValue: 0x00004000)
-        static let posixAndURLPathsMatch        = _CFURLFlags(rawValue: 0x00008000)
-        static let originalAndURLStringsMatch   = _CFURLFlags(rawValue: 0x00010000)
-        static let originatedFromSwift          = _CFURLFlags(rawValue: 0x00020000)
+        static let hasScheme = _CFURLFlags(rawValue: 0x00000001)
+        static let hasUser = _CFURLFlags(rawValue: 0x00000002)
+        static let hasPassword = _CFURLFlags(rawValue: 0x00000004)
+        static let hasHost = _CFURLFlags(rawValue: 0x00000008)
+        static let hasPort = _CFURLFlags(rawValue: 0x00000010)
+        static let hasPath = _CFURLFlags(rawValue: 0x00000020)
+        static let hasParameters = _CFURLFlags(rawValue: 0x00000040) // Unused
+        static let hasQuery = _CFURLFlags(rawValue: 0x00000080)
+        static let hasFragment = _CFURLFlags(rawValue: 0x00000100)
+        static let isIPLiteral = _CFURLFlags(rawValue: 0x00000400)
+        static let isDirectory = _CFURLFlags(rawValue: 0x00000800)
+        static let isCanonicalFileURL = _CFURLFlags(rawValue: 0x00001000) // Unused
+        static let pathHasFileID = _CFURLFlags(rawValue: 0x00002000)
+        static let isDecomposable = _CFURLFlags(rawValue: 0x00004000)
+        static let posixAndURLPathsMatch = _CFURLFlags(rawValue: 0x00008000)
+        static let originalAndURLStringsMatch = _CFURLFlags(rawValue: 0x00010000)
+        static let originatedFromSwift = _CFURLFlags(rawValue: 0x00020000)
     }
 
     private static func _makeCFURL(from parseInfo: URLParseInfo, baseURL: CFURL?) -> CFURL {
@@ -1141,7 +1146,8 @@ extension _SwiftURL {
 
         // CFURL considers an empty host nil unless there's another authority component
         if let hostRange = parseInfo.hostRange,
-           (!hostRange.isEmpty || !flags.isDisjoint(with: [.hasUser, .hasPassword, .hasPort])) {
+            (!hostRange.isEmpty || !flags.isDisjoint(with: [.hasUser, .hasPassword, .hasPort]))
+        {
             flags.insert(.hasHost)
             let nsRange = string._toRelativeNSRange(hostRange)
             ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
@@ -1201,7 +1207,7 @@ extension _SwiftURL {
         if _isCanonicalFileURL {
             var flags = __CFURLFlags(type: .file)
             flags.insert([
-                .hasScheme, .hasHost, .hasOldPath, .isDecomposable, .isFileURL
+                .hasScheme, .hasHost, .hasOldPath, .isDecomposable, .isFileURL,
             ])
             if hasDirectoryPath {
                 flags.insert(.hasDirectoryPath)

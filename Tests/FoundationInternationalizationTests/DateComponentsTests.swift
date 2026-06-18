@@ -41,7 +41,7 @@ private struct DateComponentsTests {
     @Test func isValidDate() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
-        
+
         let dc = DateComponents(year: 2022, month: 11, day: 1)
         #expect(dc.isValidDate(in: calendar))
 
@@ -74,7 +74,8 @@ private struct DateComponentsTests {
     }
 
     @Test func valueForComponent() {
-        let comps = DateComponents(calendar: nil, timeZone: nil, era: 1, year: 2013, month: 4, day: 2, hour: 20, minute: 33, second: 49, nanosecond: 192837465, weekday: 3, weekdayOrdinal: 1, quarter: nil, weekOfMonth: 1, weekOfYear: 14, yearForWeekOfYear: 2013)
+        let comps = DateComponents(
+            calendar: nil, timeZone: nil, era: 1, year: 2013, month: 4, day: 2, hour: 20, minute: 33, second: 49, nanosecond: 192837465, weekday: 3, weekdayOrdinal: 1, quarter: nil, weekOfMonth: 1, weekOfYear: 14, yearForWeekOfYear: 2013)
 
         #expect(comps.value(for: .calendar) == nil)
         #expect(comps.value(for: .timeZone) == nil)
@@ -177,9 +178,14 @@ private struct DateComponentsTests {
 #if FOUNDATION_FRAMEWORK
 extension DateComponentsTests {
     func date(from string: String, nanoseconds: Int? = nil) -> Date {
-        let d = try! Date(string, strategy: Date.ParseStrategy(format: "\(year: .extended(minimumLength: 4))-\(month: .twoDigits)-\(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) \(timeZone: .iso8601(.short))", locale: Locale(identifier: "en_US"), timeZone: TimeZone.gmt))
+        let d = try! Date(
+            string,
+            strategy: Date.ParseStrategy(
+                format: "\(year: .extended(minimumLength: 4))-\(month: .twoDigits)-\(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) \(timeZone: .iso8601(.short))",
+                locale: Locale(identifier: "en_US"), timeZone: TimeZone.gmt))
         if nanoseconds != nil {
-            let comps = Calendar(identifier: .gregorian).dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .timeZone, .calendar], from: d)
+            let comps = Calendar(identifier: .gregorian).dateComponents(
+                [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .timeZone, .calendar], from: d)
             return Calendar(identifier: .gregorian).date(from: comps)!
         }
         return d

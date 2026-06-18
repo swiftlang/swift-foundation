@@ -118,7 +118,7 @@ internal import Synchronization
 /// by name by collecting them in an ``AttributeScope``.
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributedString : Sendable {
+public struct AttributedString: Sendable {
     internal var _guts: Guts
 
     internal init(_ guts: Guts) {
@@ -129,7 +129,7 @@ public struct AttributedString : Sendable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal static let currentIdentity = Atomic(0)
-    internal static var _nextModifyIdentity : Int {
+    internal static var _nextModifyIdentity: Int {
         currentIdentity.wrappingAdd(1, ordering: .relaxed).newValue
     }
 }
@@ -164,7 +164,7 @@ extension AttributedString {
         self.init(Guts(string: string, runs: _InternalRuns(runs)))
         // Only scalar-bound attributes can be incorrect if only one run exists
         if attributes.containsScalarConstraint {
-            _guts.fixScalarConstrainedAttributes(in: string.startIndex ..< string.endIndex)
+            _guts.fixScalarConstrainedAttributes(in: string.startIndex..<string.endIndex)
         }
     }
 
@@ -193,7 +193,7 @@ extension AttributedString {
     /// - Parameters:
     ///   - elements: A character sequence that provides the textual content for the attributed string.
     ///   - attributes: Attributes to apply to the textual content.
-    public init<S : Sequence>(
+    public init<S: Sequence>(
         _ elements: S,
         attributes: AttributeContainer = .init()
     ) where S.Element == Character {
@@ -214,14 +214,14 @@ extension AttributedString {
         // one does too much, this one does too little.)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // TODO: Support scope-specific initialization in FoundationPreview
     /// Creates an attributed string from another attributed string, including an attribute scope that a key path identifies.
     ///
     /// - Parameters:
     ///   - other: An attributed string or attributed substring.
     ///   - scope: An ``AttributeScopes`` key path that identifies an attribute scope to associate with the attributed string.
-    public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: KeyPath<AttributeScopes, S.Type>) {
+    public init<S: AttributeScope, T: AttributedStringProtocol>(_ other: T, including scope: KeyPath<AttributeScopes, S.Type>) {
         self.init(other, including: S.self)
     }
 
@@ -230,7 +230,7 @@ extension AttributedString {
     /// - Parameters:
     ///   - other: An attributed string or attributed substring.
     ///   - scope: An attribute scope to associate with the attributed string.
-    public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: S.Type) {
+    public init<S: AttributeScope, T: AttributedStringProtocol>(_ other: T, including scope: S.Type) {
         // FIXME: This `copy(in:)` call does too much work, potentially unexpectedly removing attributes.
         self.init(other.__guts.copy(in: other._stringBounds))
         let attributeTypes = scope.attributeKeyTypes()
@@ -245,7 +245,7 @@ extension AttributedString {
             }
         }
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -306,9 +306,9 @@ extension AttributedString { // AttributedStringAttributeMutation
     /// - Parameters:
     ///   - attributes: The attribute container with the attributes to merge.
     ///   - mergePolicy: A policy to use when resolving conflicts between this string's attributes and those in `attributes`.
-    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributeMergePolicy = .keepNew) {
+    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy: AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
-        _guts.mergeAttributes(attributes, in: _stringBounds, mergePolicy:  mergePolicy)
+        _guts.mergeAttributes(attributes, in: _stringBounds, mergePolicy: mergePolicy)
     }
 
     /// Replaces occurrences of attributes in one attribute container with those in another attribute container.
@@ -343,7 +343,7 @@ extension AttributedString { // AttributedStringAttributeMutation
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString: AttributedStringProtocol {
     /// A type that represents the position of a character or code unit within an attributed string.
-    public struct Index : Comparable, Sendable {
+    public struct Index: Comparable, Sendable {
         internal var _value: BigString.Index
         internal var _version: AttributedString.Guts.Version
 
@@ -360,23 +360,23 @@ extension AttributedString: AttributedStringProtocol {
             left._value < right._value
         }
     }
-    
+
     /// The position of the first character in a nonempty attributed string.
     ///
     /// In an empty string, `startIndex` is equal to `endIndex`.
-    public var startIndex : Index {
+    public var startIndex: Index {
         Index(_guts.string.startIndex, version: _guts.version)
     }
-    
+
     /// The string's past-the-end position — the position one greater than the last valid subscript argument.
     ///
     /// In an empty string, `endIndex` is equal to `startIndex`.
-    public var endIndex : Index {
+    public var endIndex: Index {
         Index(_guts.string.endIndex, version: _guts.version)
     }
-    
+
     @preconcurrency
-    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable {
         get {
             _guts.getUniformValue(in: _stringBounds, key: K.self)?.rawValue(as: K.self)
         }
@@ -389,7 +389,7 @@ extension AttributedString: AttributedStringProtocol {
             }
         }
     }
-    
+
     /// Returns an attribute value that a key path indicates.
     ///
     /// This subscript returns `nil` unless the specified attribute exists, and is present and
@@ -406,7 +406,7 @@ extension AttributedString: AttributedStringProtocol {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
-    
+
     /// Returns a scoped attribute container that a key path indicates.
     ///
     /// Use this subscript when you need to work with an explicit attribute scope. For example,
@@ -456,7 +456,7 @@ extension AttributedString {
     ///
     /// - Parameter s: The string to append.
     public mutating func append(_ s: some AttributedStringProtocol) {
-        replaceSubrange(endIndex ..< endIndex, with: s)
+        replaceSubrange(endIndex..<endIndex, with: s)
     }
 
     /// Inserts the specified string at a specific index in the attributed string.
@@ -465,7 +465,7 @@ extension AttributedString {
     ///   - s: The string to insert.
     ///   - index: The index that indicates where to insert the string.
     public mutating func insert(_ s: some AttributedStringProtocol, at index: AttributedString.Index) {
-        replaceSubrange(index ..< index, with: s)
+        replaceSubrange(index..<index, with: s)
     }
 
     /// Removes a range of characters from the attributed string.
@@ -498,7 +498,7 @@ extension AttributedString {
     ///   - lhs: An attributed string or substring to concatenate.
     ///   - rhs: Another attributed string or substring to concatenate.
     /// - Returns: The result of concatenating `rhs` to the end of `lhs`.
-    public static func +(lhs: AttributedString, rhs: some AttributedStringProtocol) -> AttributedString {
+    public static func + (lhs: AttributedString, rhs: some AttributedStringProtocol) -> AttributedString {
         var result = lhs
         result.append(rhs)
         return result
@@ -509,7 +509,7 @@ extension AttributedString {
     /// - Parameters:
     ///   - lhs: An attributed string. After the operation, the value of this string is the original `lhs` string with `rhs` appended to it.
     ///   - rhs: An attributed string or substring to append to `lhs`.
-    public static func +=(lhs: inout AttributedString, rhs: some AttributedStringProtocol) {
+    public static func += (lhs: inout AttributedString, rhs: some AttributedStringProtocol) {
         lhs.append(rhs)
     }
 
@@ -593,9 +593,10 @@ extension RangeSet where Bound == AttributedString.Index {
 
 extension RangeSet where Bound == BigString.Index {
     internal func _attributedStringIndices(version: AttributedString.Guts.Version) -> RangeSet<AttributedString.Index> {
-        RangeSet<AttributedString.Index>(self.ranges.lazy.map {
-            $0._attributedStringRange(version: version)
-        })
+        RangeSet<AttributedString.Index>(
+            self.ranges.lazy.map {
+                $0._attributedStringRange(version: version)
+            })
     }
 }
 
@@ -604,7 +605,7 @@ extension Range where Bound == BigString.Index {
     internal var _utf8OffsetRange: Range<Int> {
         Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))
     }
-    
+
     internal func _attributedStringRange(version: AttributedString.Guts.Version) -> Range<AttributedString.Index> {
         Range<AttributedString.Index>(uncheckedBounds: (AttributedString.Index(lowerBound, version: version), AttributedString.Index(upperBound, version: version)))
     }

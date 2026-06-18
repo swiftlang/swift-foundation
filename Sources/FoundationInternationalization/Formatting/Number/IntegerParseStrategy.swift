@@ -16,7 +16,7 @@ import FoundationEssentials
 
 /// A parse strategy for creating integer values from formatted strings.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct IntegerParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryInteger {
+public struct IntegerParseStrategy<Format>: Codable, Hashable where Format: FormatStyle, Format.FormatInput: BinaryInteger {
     /// The format style this strategy uses when parsing strings.
     public var formatStyle: Format
     /// A Boolean value that indicates whether parsing allows any discrepencies in the expected format.
@@ -24,7 +24,7 @@ public struct IntegerParseStrategy<Format> : Codable, Hashable where Format : Fo
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension IntegerParseStrategy : Sendable where Format : Sendable {}
+extension IntegerParseStrategy: Sendable where Format: Sendable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerParseStrategy: ParseStrategy {
@@ -33,8 +33,11 @@ extension IntegerParseStrategy: ParseStrategy {
         let trimmedString = value._trimmingWhitespace()
         guard let result = try parse(trimmedString, startingAt: trimmedString.startIndex, in: trimmedString.startIndex..<trimmedString.endIndex) else {
             let exampleString = formatStyle.format(123)
-            throw CocoaError(CocoaError.formatting, userInfo: [
-                NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \(exampleString)" ])
+            throw CocoaError(
+                CocoaError.formatting,
+                userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \(exampleString)"
+                ])
         }
         return result.1
     }
@@ -69,19 +72,28 @@ extension IntegerParseStrategy: ParseStrategy {
         var upperBound = 0
         if let value = parser.parseAsInt(substr, upperBound: &upperBound) {
             guard let exact = Format.FormatInput(exactly: value) else {
-                throw CocoaError(CocoaError.formatting, userInfo: [
-                    NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type" ])
+                throw CocoaError(
+                    CocoaError.formatting,
+                    userInfo: [
+                        NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type"
+                    ])
             }
             let upperBoundInSubstr = String.Index(utf16Offset: upperBound, in: substr)
             return (upperBoundInSubstr, exact)
         } else if let value = parser.parseAsDouble(substr, upperBound: &upperBound) {
             guard value.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) else {
-                throw CocoaError(CocoaError.formatting, userInfo: [
-                    NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the lossless floating-point range" ])
+                throw CocoaError(
+                    CocoaError.formatting,
+                    userInfo: [
+                        NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the lossless floating-point range"
+                    ])
             }
             guard let exact = Format.FormatInput(exactly: value) else {
-                throw CocoaError(CocoaError.formatting, userInfo: [
-                    NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type" ])
+                throw CocoaError(
+                    CocoaError.formatting,
+                    userInfo: [
+                        NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type"
+                    ])
             }
             let upperBoundInSubstr = String.Index(utf16Offset: upperBound, in: substr)
             return (upperBoundInSubstr, exact)

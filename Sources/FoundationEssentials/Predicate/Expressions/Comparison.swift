@@ -14,7 +14,7 @@
 extension PredicateExpressions {
     public enum ComparisonOperator: Codable, Sendable {
         case lessThan, lessThanOrEqual, greaterThan, greaterThanOrEqual
-        
+
         private typealias LessThanCodingKeys = EmptyCodingKeys
         private typealias LessThanOrEqualCodingKeys = EmptyCodingKeys
         private typealias GreaterThanCodingKeys = EmptyCodingKeys
@@ -22,62 +22,62 @@ extension PredicateExpressions {
     }
 
     public struct Comparison<
-        LHS : PredicateExpression,
-        RHS : PredicateExpression
-    > : PredicateExpression
+        LHS: PredicateExpression,
+        RHS: PredicateExpression
+    >: PredicateExpression
     where
         LHS.Output == RHS.Output,
-        LHS.Output : Comparable
+        LHS.Output: Comparable
     {
         public typealias Output = Bool
-        
+
         public let op: ComparisonOperator
 
         public let lhs: LHS
         public let rhs: RHS
-        
+
         public init(lhs: LHS, rhs: RHS, op: ComparisonOperator) {
             self.lhs = lhs
             self.rhs = rhs
             self.op = op
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Bool {
             let a = try lhs.evaluate(bindings)
             let b = try rhs.evaluate(bindings)
             switch op {
-            case .lessThan:           return a < b
-            case .lessThanOrEqual:    return a <= b
-            case .greaterThan:        return a > b
+            case .lessThan: return a < b
+            case .lessThanOrEqual: return a <= b
+            case .greaterThan: return a > b
             case .greaterThanOrEqual: return a >= b
             }
         }
     }
-    
+
     public static func build_Comparison<LHS, RHS>(lhs: LHS, rhs: RHS, op: ComparisonOperator) -> Comparison<LHS, RHS> {
         Comparison(lhs: lhs, rhs: rhs, op: op)
     }
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Comparison : CustomStringConvertible {
+extension PredicateExpressions.Comparison: CustomStringConvertible {
     public var description: String {
         "Comparison(lhs: \(lhs), operator: \(op), rhs: \(rhs))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Comparison : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.Comparison: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.Comparison: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(lhs)
         try container.encode(rhs)
         try container.encode(op)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         lhs = try container.decode(LHS.self)
@@ -87,4 +87,4 @@ extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : C
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Comparison : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.Comparison: Sendable where LHS: Sendable, RHS: Sendable {}

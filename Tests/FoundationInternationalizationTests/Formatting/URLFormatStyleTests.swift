@@ -65,10 +65,10 @@ private struct URLFormatStyleTests {
         // Default style for scheme is .omitIfHTTPFamily
         verify("https://www.apple.com/path", matches: "/path", withStyle: style)
         // Test omitMultiLevelSubdomains (requires TLD detection, framework only)
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         style = style.host(.omitSpecificSubdomains([], includeMultiLevelSubdomains: true))
         verify("https://docs.api.code.apple.com.cn", matches: "code.apple.com.cn", withStyle: style)
-#endif
+        #endif
         style = style.host(.omitSpecificSubdomains([], includeMultiLevelSubdomains: true, when: .scheme, matches: ["http", "https"]))
         verify("ftp://a.b.c.d.apple.com", matches: "ftp://a.b.c.d.apple.com", withStyle: style)
         // Test omitSpecificDomains
@@ -220,7 +220,7 @@ private struct URLFormatStyleTests {
         verify("http://@google.com", matches: "http://google.com", withStyle: style)
 
         // Multi-level subdomain stripping requires TLD detection (framework only)
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         style = standard.host(.omitSpecificSubdomains(["m", "mobile", "www"], includeMultiLevelSubdomains: true))
         verify("http://a.b.c.d.e.com", matches: "d.e.com", withStyle: style)
         verify("http://apple.com.a.a.a.a.a.a.a.a.a.a.evil.com", matches: "a.evil.com", withStyle: style)
@@ -242,7 +242,7 @@ private struct URLFormatStyleTests {
         verify("http://m.mobile.twitter.com", matches: "twitter.com", withStyle: style)
         verify("http://mobile.m.twitter.com", matches: "twitter.com", withStyle: style)
         verify("http://mobile.com", matches: "mobile.com", withStyle: style)
-#endif
+        #endif
     }
 
     @Test func lookalikeCharacters() {
@@ -365,10 +365,10 @@ private struct URLFormatStyleTests {
             (url: "https://xn--8pa", output: "https://xn--8pa"),
             (url: "https://xn--3hb112n", output: "https://xn--3hb112n"),
             (url: "https://xn--a-ypc062v", output: "https://xn--a-ypc062v"),
-            (url: "https://xn--2j8c", output: "https://xn--2j8c"),  // U+1043D
-            (url: "https://xn--ikg", output: "https://xn--ikg"),    // U+1E9C
-            (url: "https://xn--jkg", output: "https://xn--jkg"),    // U+1E9D
-            (url: "https://xn--cng", output: "https://xn--cng")     // U+1EFE or U+1EFF
+            (url: "https://xn--2j8c", output: "https://xn--2j8c"), // U+1043D
+            (url: "https://xn--ikg", output: "https://xn--ikg"), // U+1E9C
+            (url: "https://xn--jkg", output: "https://xn--jkg"), // U+1E9D
+            (url: "https://xn--cng", output: "https://xn--cng"), // U+1EFE or U+1EFF
         ]
         for spoofTest in punycodeSpoofTests {
             verify(spoofTest.url, matches: spoofTest.output, withStyle: style)
@@ -419,7 +419,7 @@ private struct URLFormatStyleTests {
             // Thai
             "https://กขabc",
             // Arabic
-            "https://تفاح"
+            "https://تفاح",
         ]
         for validTest in validUnicodeTests {
             verify(validTest, matches: validTest, withStyle: style)
@@ -440,7 +440,12 @@ private struct URLFormatStyleTests {
             (url: "http://xn--d1abbgf6aiiy.xn--p1ai", output: "http://президент.рф"),
             (url: "http://xn--b1aaebccb4c.xn--d1abbgf6aiiy.xn--p1ai", output: "http://медведев.президент.рф"),
             (url: "http://%E5%BC%95%E3%81%8D%E5%89%B2%E3%82%8A.jp", output: "http://引き割り.jp"),
-            (url: "https://maps.apple.com/?address=Carrer%20de%20Par%C3%ADs,%20114,%2008029%20Barcelona,%20Spain&auid=742406409215325628&ll=41.388445,2.146888&lsp=9902&q=Sant%20Jordi%20Swimming%20Pool&_ext=ChoKBQgEEM4BCgQIBRADCgUIBhCnAQoECAoQABIkKR6C/fovpkRAMUBsY44HNwBAOSzmKw09vURAQYCTnBGgIgJA&t=m", output: "https://maps.apple.com/?address=Carrer de París, 114, 08029 Barcelona, Spain&auid=742406409215325628&ll=41.388445,2.146888&lsp=9902&q=Sant Jordi Swimming Pool&_ext=ChoKBQgEEM4BCgQIBRADCgUIBhCnAQoECAoQABIkKR6C/fovpkRAMUBsY44HNwBAOSzmKw09vURAQYCTnBGgIgJA&t=m"),
+            (
+                url:
+                    "https://maps.apple.com/?address=Carrer%20de%20Par%C3%ADs,%20114,%2008029%20Barcelona,%20Spain&auid=742406409215325628&ll=41.388445,2.146888&lsp=9902&q=Sant%20Jordi%20Swimming%20Pool&_ext=ChoKBQgEEM4BCgQIBRADCgUIBhCnAQoECAoQABIkKR6C/fovpkRAMUBsY44HNwBAOSzmKw09vURAQYCTnBGgIgJA&t=m",
+                output:
+                    "https://maps.apple.com/?address=Carrer de París, 114, 08029 Barcelona, Spain&auid=742406409215325628&ll=41.388445,2.146888&lsp=9902&q=Sant Jordi Swimming Pool&_ext=ChoKBQgEEM4BCgQIBRADCgUIBhCnAQoECAoQABIkKR6C/fovpkRAMUBsY44HNwBAOSzmKw09vURAQYCTnBGgIgJA&t=m"
+            ),
             (url: "https://en.wikipedia.org/wiki/Mission_San_Francisco_de_As%C3%ADs", output: "https://en.wikipedia.org/wiki/Mission_San_Francisco_de_Asís"),
         ]
         for encodedUnicodeTest in validEncodedUnicodeTests {

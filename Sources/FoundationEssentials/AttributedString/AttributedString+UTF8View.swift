@@ -35,7 +35,7 @@ extension AttributedString {
             _range = range
         }
     }
-    
+
     /// A view of the attributed string’s contents as a collection of UTF-8 code units.
     public var utf8: UTF8View {
         UTF8View(_guts)
@@ -103,13 +103,16 @@ extension AttributedString.UTF8View: BidirectionalCollection {
     ) -> AttributedString.Index? {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
         precondition(limit >= startIndex && limit <= endIndex, "AttributedString index out of bounds")
-        guard let j = _guts.string.utf8.index(
-            i._value, offsetBy: distance, limitedBy: limit._value
-        ) else {
+        guard
+            let j = _guts.string.utf8.index(
+                i._value, offsetBy: distance, limitedBy: limit._value
+            )
+        else {
             return nil
         }
-        precondition(j >= startIndex._value && j <= endIndex._value,
-                     "AttributedString index out of bounds")
+        precondition(
+            j >= startIndex._value && j <= endIndex._value,
+            "AttributedString index out of bounds")
         return Index(j, version: _guts.version)
     }
 
@@ -121,17 +124,16 @@ extension AttributedString.UTF8View: BidirectionalCollection {
         precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
         return _guts.string.utf8.distance(from: start._value, to: end._value)
     }
-    
+
     public subscript(index: AttributedString.Index) -> UTF8.CodeUnit {
         precondition(index >= startIndex && index < endIndex, "AttributedString index out of bounds")
         return _guts.string.utf8[index._value]
     }
-    
+
     public subscript(bounds: Range<AttributedString.Index>) -> Self {
         let bounds = bounds._bstringRange
         precondition(
-            bounds.lowerBound >= _range.lowerBound && bounds.lowerBound <= _range.upperBound &&
-            bounds.upperBound >= _range.lowerBound && bounds.upperBound <= _range.upperBound,
+            bounds.lowerBound >= _range.lowerBound && bounds.lowerBound <= _range.upperBound && bounds.upperBound >= _range.lowerBound && bounds.upperBound <= _range.upperBound,
             "AttributedString index range out of bounds")
         return Self(_guts, in: bounds)
     }

@@ -21,7 +21,7 @@ extension Date {
     /// Use `Date.IntervalFormatStyle` to create user-readable strings of date intervals.
     /// The format style provides customization to show specific date and time components.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct IntervalFormatStyle : Codable, Hashable, Sendable {
+    public struct IntervalFormatStyle: Codable, Hashable, Sendable {
 
         /// The type that defines date interval styles that vary in length or in their included components.
         public typealias DateStyle = Date.FormatStyle.DateStyle
@@ -36,7 +36,7 @@ extension Date {
         public var calendar: Calendar
 
         // Internal
-        internal var symbols =  Date.FormatStyle.DateFieldCollection()
+        internal var symbols = Date.FormatStyle.DateFieldCollection()
 
         /// Creates a new `FormatStyle` with the given configurations.
         /// - Parameters:
@@ -88,7 +88,7 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.IntervalFormatStyle : FormatStyle {}
+extension Date.IntervalFormatStyle: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.IntervalFormatStyle {
@@ -183,21 +183,20 @@ public extension FormatStyle where Self == Date.IntervalFormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Range where Bound == Date {
-    
+
     /// Formats the date range as an interval.
     public func formatted() -> String {
         Date.IntervalFormatStyle().format(self)
     }
-    
+
     /// Formats the date range using the specified date and time format styles.
     public func formatted(date: Date.IntervalFormatStyle.DateStyle, time: Date.IntervalFormatStyle.TimeStyle) -> String {
         Date.IntervalFormatStyle(date: date, time: time).format(self)
     }
-    
+
     /// Formats the date range using the specified style.
-    public func formatted<S>(_ style: S) -> S.FormatOutput where S : FormatStyle, S.FormatInput == Range<Date> {
+    public func formatted<S>(_ style: S) -> S.FormatOutput where S: FormatStyle, S.FormatInput == Range<Date> {
         style.format(self)
     }
-    
-}
 
+}

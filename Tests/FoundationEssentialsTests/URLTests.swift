@@ -109,53 +109,53 @@ private struct URLTests {
         let base = URL(string: "http://a/b/c/d;p?q")
         let tests = [
             // RFC 3986 5.4.1. Normal Examples
-            "g:h"           :  "g:h",
-            "g"             :  "http://a/b/c/g",
-            "./g"           :  "http://a/b/c/g",
-            "g/"            :  "http://a/b/c/g/",
-            "/g"            :  "http://a/g",
-            "//g"           :  "http://g",
-            "?y"            :  "http://a/b/c/d;p?y",
-            "g?y"           :  "http://a/b/c/g?y",
-            "#s"            :  "http://a/b/c/d;p?q#s",
-            "g#s"           :  "http://a/b/c/g#s",
-            "g?y#s"         :  "http://a/b/c/g?y#s",
-            ";x"            :  "http://a/b/c/;x",
-            "g;x"           :  "http://a/b/c/g;x",
-            "g;x?y#s"       :  "http://a/b/c/g;x?y#s",
-            ""              :  "http://a/b/c/d;p?q",
-            "."             :  "http://a/b/c/",
-            "./"            :  "http://a/b/c/",
-            ".."            :  "http://a/b/",
-            "../"           :  "http://a/b/",
-            "../g"          :  "http://a/b/g",
-            "../.."         :  "http://a/",
-            "../../"        :  "http://a/",
-            "../../g"       :  "http://a/g",
+            "g:h": "g:h",
+            "g": "http://a/b/c/g",
+            "./g": "http://a/b/c/g",
+            "g/": "http://a/b/c/g/",
+            "/g": "http://a/g",
+            "//g": "http://g",
+            "?y": "http://a/b/c/d;p?y",
+            "g?y": "http://a/b/c/g?y",
+            "#s": "http://a/b/c/d;p?q#s",
+            "g#s": "http://a/b/c/g#s",
+            "g?y#s": "http://a/b/c/g?y#s",
+            ";x": "http://a/b/c/;x",
+            "g;x": "http://a/b/c/g;x",
+            "g;x?y#s": "http://a/b/c/g;x?y#s",
+            "": "http://a/b/c/d;p?q",
+            ".": "http://a/b/c/",
+            "./": "http://a/b/c/",
+            "..": "http://a/b/",
+            "../": "http://a/b/",
+            "../g": "http://a/b/g",
+            "../..": "http://a/",
+            "../../": "http://a/",
+            "../../g": "http://a/g",
 
             // RFC 3986 5.4.1. Abnormal Examples
-            "../../../g"    :  "http://a/g",
-            "../../../../g" :  "http://a/g",
-            "/./g"          :  "http://a/g",
-            "/../g"         :  "http://a/g",
-            "g."            :  "http://a/b/c/g.",
-            ".g"            :  "http://a/b/c/.g",
-            "g.."           :  "http://a/b/c/g..",
-            "..g"           :  "http://a/b/c/..g",
+            "../../../g": "http://a/g",
+            "../../../../g": "http://a/g",
+            "/./g": "http://a/g",
+            "/../g": "http://a/g",
+            "g.": "http://a/b/c/g.",
+            ".g": "http://a/b/c/.g",
+            "g..": "http://a/b/c/g..",
+            "..g": "http://a/b/c/..g",
 
-            "./../g"        :  "http://a/b/g",
-            "./g/."         :  "http://a/b/c/g/",
-            "g/./h"         :  "http://a/b/c/g/h",
-            "g/../h"        :  "http://a/b/c/h",
-            "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
-            "g;x=1/../y"    :  "http://a/b/c/y",
+            "./../g": "http://a/b/g",
+            "./g/.": "http://a/b/c/g/",
+            "g/./h": "http://a/b/c/g/h",
+            "g/../h": "http://a/b/c/h",
+            "g;x=1/./y": "http://a/b/c/g;x=1/y",
+            "g;x=1/../y": "http://a/b/c/y",
 
-            "g?y/./x"       :  "http://a/b/c/g?y/./x",
-            "g?y/../x"      :  "http://a/b/c/g?y/../x",
-            "g#s/./x"       :  "http://a/b/c/g#s/./x",
-            "g#s/../x"      :  "http://a/b/c/g#s/../x",
+            "g?y/./x": "http://a/b/c/g?y/./x",
+            "g?y/../x": "http://a/b/c/g?y/../x",
+            "g#s/./x": "http://a/b/c/g#s/./x",
+            "g#s/../x": "http://a/b/c/g#s/../x",
 
-            "http:g"        :  "http:g", // For strict parsers
+            "http:g": "http:g", // For strict parsers
         ]
 
         let testsFailingWithoutSwiftURL = Set([
@@ -182,53 +182,53 @@ private struct URLTests {
         let base = URL(string: "http://a/b/c/d;p?q")
         let tests = [
             // RFC 3986 5.4.1. Normal Examples
-            "g:h"           :  "h",
-            "g"             :  "/b/c/g",
-            "./g"           :  "/b/c/g",
-            "g/"            :  "/b/c/g/",
-            "/g"            :  "/g",
-            "//g"           :  "",
-            "?y"            :  "/b/c/d;p",
-            "g?y"           :  "/b/c/g",
-            "#s"            :  "/b/c/d;p",
-            "g#s"           :  "/b/c/g",
-            "g?y#s"         :  "/b/c/g",
-            ";x"            :  "/b/c/;x",
-            "g;x"           :  "/b/c/g;x",
-            "g;x?y#s"       :  "/b/c/g;x",
-            ""              :  "/b/c/d;p",
-            "."             :  "/b/c/",
-            "./"            :  "/b/c/",
-            ".."            :  "/b/",
-            "../"           :  "/b/",
-            "../g"          :  "/b/g",
-            "../.."         :  "/",
-            "../../"        :  "/",
-            "../../g"       :  "/g",
+            "g:h": "h",
+            "g": "/b/c/g",
+            "./g": "/b/c/g",
+            "g/": "/b/c/g/",
+            "/g": "/g",
+            "//g": "",
+            "?y": "/b/c/d;p",
+            "g?y": "/b/c/g",
+            "#s": "/b/c/d;p",
+            "g#s": "/b/c/g",
+            "g?y#s": "/b/c/g",
+            ";x": "/b/c/;x",
+            "g;x": "/b/c/g;x",
+            "g;x?y#s": "/b/c/g;x",
+            "": "/b/c/d;p",
+            ".": "/b/c/",
+            "./": "/b/c/",
+            "..": "/b/",
+            "../": "/b/",
+            "../g": "/b/g",
+            "../..": "/",
+            "../../": "/",
+            "../../g": "/g",
 
             // RFC 3986 5.4.1. Abnormal Examples
-            "../../../g"    :  "/g",
-            "../../../../g" :  "/g",
-            "/./g"          :  "/g",
-            "/../g"         :  "/g",
-            "g."            :  "/b/c/g.",
-            ".g"            :  "/b/c/.g",
-            "g.."           :  "/b/c/g..",
-            "..g"           :  "/b/c/..g",
+            "../../../g": "/g",
+            "../../../../g": "/g",
+            "/./g": "/g",
+            "/../g": "/g",
+            "g.": "/b/c/g.",
+            ".g": "/b/c/.g",
+            "g..": "/b/c/g..",
+            "..g": "/b/c/..g",
 
-            "./../g"        :  "/b/g",
-            "./g/."         :  "/b/c/g/",
-            "g/./h"         :  "/b/c/g/h",
-            "g/../h"        :  "/b/c/h",
-            "g;x=1/./y"     :  "/b/c/g;x=1/y",
-            "g;x=1/../y"    :  "/b/c/y",
+            "./../g": "/b/g",
+            "./g/.": "/b/c/g/",
+            "g/./h": "/b/c/g/h",
+            "g/../h": "/b/c/h",
+            "g;x=1/./y": "/b/c/g;x=1/y",
+            "g;x=1/../y": "/b/c/y",
 
-            "g?y/./x"       :  "/b/c/g",
-            "g?y/../x"      :  "/b/c/g",
-            "g#s/./x"       :  "/b/c/g",
-            "g#s/../x"      :  "/b/c/g",
+            "g?y/./x": "/b/c/g",
+            "g?y/../x": "/b/c/g",
+            "g#s/./x": "/b/c/g",
+            "g#s/../x": "/b/c/g",
 
-            "http:g"        :  "g", // For strict parsers
+            "http:g": "g", // For strict parsers
         ]
         for test in tests {
             let url = URL(stringOrEmpty: test.key, relativeTo: base)!
@@ -464,7 +464,7 @@ private struct URLTests {
         let string = "http://example.com/path[0]?query[1]#frag[2]"
         var components = try #require(URLComponents(string: string))
         let url = try #require(URL(string: string))
-        
+
         #expect(url.relativeString == components.string)
         #expect(url.path() == components.percentEncodedPath)
         #expect(url.query() == components.percentEncodedQuery)
@@ -480,7 +480,7 @@ private struct URLTests {
         #expect(url.fragment() == components.percentEncodedFragment)
     }
 
-    
+
     @Test(.enabled(if: foundation_swift_url_enabled()))
     func pathComponentsPercentEncodedSlash() throws {
         var url = try #require(URL(string: "https://example.com/https%3A%2F%2Fexample.com"))
@@ -502,7 +502,7 @@ private struct URLTests {
         #expect(url.pathComponents == ["/", "https://example.com/path"])
     }
 
-    
+
     @Test(.enabled(if: foundation_swift_url_enabled()))
     func rootlessPath() throws {
         let paths = ["", "path"]
@@ -781,8 +781,9 @@ private struct URLTests {
         let cwd = URL.currentDirectory()
         var iter = cwd.path().utf8.makeIterator()
         if iter.next() == ._slash,
-           let driveLetter = iter.next(), driveLetter.isLetter!,
-           iter.next() == ._colon {
+            let driveLetter = iter.next(), driveLetter.isLetter!,
+            iter.next() == ._colon
+        {
             let path = #"\\?\"# + "\(Unicode.Scalar(driveLetter))" + #":\"#
             url = URL(filePath: path, directoryHint: .isDirectory)
             #expect(url.path.last == "/")
@@ -815,67 +816,59 @@ private struct URLTests {
 
         // Appending path
         #expect(
-            base.appending(path: "/api/v2").absoluteString ==
-            "https://www.example.com/api/v2"
+            base.appending(path: "/api/v2").absoluteString == "https://www.example.com/api/v2"
         )
         var testAppendPath = base
         testAppendPath.append(path: "/api/v3")
         #expect(
-            testAppendPath.absoluteString ==
-            "https://www.example.com/api/v3"
+            testAppendPath.absoluteString == "https://www.example.com/api/v3"
         )
 
         // Appending component
         #expect(
-            base.appending(component: "AC/DC").absoluteString ==
-            "https://www.example.com/AC%2FDC"
+            base.appending(component: "AC/DC").absoluteString == "https://www.example.com/AC%2FDC"
         )
         var testAppendComponent = base
         testAppendComponent.append(component: "AC/DC")
         #expect(
-            testAppendComponent.absoluteString ==
-            "https://www.example.com/AC%2FDC"
+            testAppendComponent.absoluteString == "https://www.example.com/AC%2FDC"
         )
 
         // Append queryItems
         let queryItems = [
             URLQueryItem(name: "id", value: "42"),
-            URLQueryItem(name: "color", value: "blue")
+            URLQueryItem(name: "color", value: "blue"),
         ]
         #expect(
-            base.appending(queryItems: queryItems).absoluteString ==
-            "https://www.example.com?id=42&color=blue"
+            base.appending(queryItems: queryItems).absoluteString == "https://www.example.com?id=42&color=blue"
         )
         var testAppendQueryItems = base
         testAppendQueryItems.append(queryItems: queryItems)
         #expect(
-            testAppendQueryItems.absoluteString ==
-            "https://www.example.com?id=42&color=blue"
+            testAppendQueryItems.absoluteString == "https://www.example.com?id=42&color=blue"
         )
 
         // Appending components
         #expect(
-            base.appending(components: "api", "artist", "AC/DC").absoluteString ==
-            "https://www.example.com/api/artist/AC%2FDC"
+            base.appending(components: "api", "artist", "AC/DC").absoluteString == "https://www.example.com/api/artist/AC%2FDC"
         )
         var testAppendComponents = base
         testAppendComponents.append(components: "api", "artist", "AC/DC")
         #expect(
-            testAppendComponents.absoluteString ==
-            "https://www.example.com/api/artist/AC%2FDC"
+            testAppendComponents.absoluteString == "https://www.example.com/api/artist/AC%2FDC"
         )
 
         // Chaining various appends
-        let chained = base
+        let chained =
+            base
             .appending(path: "api/v2")
             .appending(queryItems: [
                 URLQueryItem(name: "magic", value: "42"),
-                URLQueryItem(name: "color", value: "blue")
+                URLQueryItem(name: "color", value: "blue"),
             ])
             .appending(components: "get", "products")
         #expect(
-            chained.absoluteString ==
-            "https://www.example.com/api/v2/get/products?magic=42&color=blue"
+            chained.absoluteString == "https://www.example.com/api/v2/get/products?magic=42&color=blue"
         )
     }
 
@@ -1057,7 +1050,7 @@ private struct URLTests {
         relative.deleteLastPathComponent()
         #expect(relative.relativePath == "../..")
         #expect(relative.hasDirectoryPath)
-        checkBehavior(relative.path, new:"/", old: "/..")
+        checkBehavior(relative.path, new: "/", old: "/..")
 
         relative.append(path: "path", directoryHint: .isDirectory)
         #expect(relative.relativePath == "../../path")
@@ -1498,7 +1491,7 @@ private struct URLTests {
         #expect(comp.percentEncodedQuery == "%23query")
         #expect(comp.percentEncodedFragment == "%23fragment")
     }
-    
+
     // This brute forces many combinations and takes a long time.
     @Test(.disabled("Disabled in automated testing - enable manually when needed"))
     func componentsRangeCombinations() throws {
@@ -1545,11 +1538,7 @@ private struct URLTests {
             } else {
                 // Even if we set comp.user = nil, a non-nil password
                 // implies that user exists as the empty string.
-                let isEmptyUserWithPassword = (
-                    comp.user?.isEmpty ?? false &&
-                    comp.rangeOfUser?.isEmpty ?? false &&
-                    comp.password != nil
-                )
+                let isEmptyUserWithPassword = (comp.user?.isEmpty ?? false && comp.rangeOfUser?.isEmpty ?? false && comp.password != nil)
                 #expect(comp.rangeOfUser == nil || isEmptyUserWithPassword)
             }
             if let password {
@@ -1564,11 +1553,7 @@ private struct URLTests {
             } else {
                 // Even if we set comp.host = nil, any non-nil authority component
                 // implies that host exists as the empty string.
-                let isEmptyHostWithAuthorityComponent = (
-                    comp.host?.isEmpty ?? false &&
-                    comp.rangeOfHost?.isEmpty ?? false &&
-                    (user != nil || password != nil || port != nil)
-                )
+                let isEmptyHostWithAuthorityComponent = (comp.host?.isEmpty ?? false && comp.rangeOfHost?.isEmpty ?? false && (user != nil || password != nil || port != nil))
                 #expect(comp.rangeOfHost == nil || isEmptyHostWithAuthorityComponent)
             }
             if let port {
@@ -2554,7 +2539,7 @@ private struct URLTests {
         #expect(absoluteURL.absoluteString == "https://example.com/dir/caf%C3%A9")
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     @Test func componentsBridging() {
         var nsURLComponents = NSURLComponents(
             string: "https://example.com?url=https%3A%2F%2Fapple.com"
@@ -2568,8 +2553,8 @@ private struct URLTests {
         nsURLComponents = urlComponents as NSURLComponents
         #expect(urlComponents.string == nsURLComponents.string)
     }
-#endif
-    
+    #endif
+
     @Test func filePathRelativeToBase() async throws {
         try await FilePlayground {
             Directory("dir") {

@@ -20,45 +20,48 @@ import Testing
 #endif
 
 
-
 extension Duration {
     init(weeks: Int64 = 0, days: Int64 = 0, hours: Int64 = 0, minutes: Int64 = 0, seconds: Int64 = 0, milliseconds: Int64 = 0, microseconds: Int64 = 0) {
-        self = .init(secondsComponent: Int64(weeks * 604800 + days * 86400 + hours * 3600 + minutes * 60 + seconds),
-                     attosecondsComponent: Int64(milliseconds * 1_000_000_000_000_000 + microseconds * 1_000_000_000_000))
+        self = .init(
+            secondsComponent: Int64(weeks * 604800 + days * 86400 + hours * 3600 + minutes * 60 + seconds),
+            attosecondsComponent: Int64(milliseconds * 1_000_000_000_000_000 + microseconds * 1_000_000_000_000))
     }
 }
 
 @Suite("Duration to Measurement Addition")
 private struct DurationToMeasurementAdditionTests {
     typealias Unit = Duration.UnitsFormatStyle.Unit
-    func assertEqualDurationUnitValues(_ duration: Duration, units: [Unit], rounding: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalLength: Int = .max, roundingIncrement: Double? = nil, expectation values: [Double], sourceLocation: SourceLocation = #_sourceLocation) {
+    func assertEqualDurationUnitValues(
+        _ duration: Duration, units: [Unit], rounding: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalLength: Int = .max, roundingIncrement: Double? = nil, expectation values: [Double],
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) {
         let result = duration.valuesForUnits(units, trailingFractionalLength: trailingFractionalLength, smallestUnitRounding: rounding, roundingIncrement: roundingIncrement)
         #expect(result == values, sourceLocation: sourceLocation)
     }
 
     @Test func durationToMeasurements() {
-        let hmsn : [Unit] = [ .hours, .minutes, .seconds, .nanoseconds]
+        let hmsn: [Unit] = [.hours, .minutes, .seconds, .nanoseconds]
         assertEqualDurationUnitValues(.seconds(0), units: hmsn, expectation: [0, 0, 0, 0])
         assertEqualDurationUnitValues(.seconds(35), units: hmsn, expectation: [0, 0, 35, 0])
         assertEqualDurationUnitValues(.seconds(60), units: hmsn, expectation: [0, 1, 0, 0])
         assertEqualDurationUnitValues(.seconds(120), units: hmsn, expectation: [0, 2, 0, 0])
         assertEqualDurationUnitValues(.seconds(3600), units: hmsn, expectation: [1, 0, 0, 0])
         assertEqualDurationUnitValues(.seconds(3600 + 60 + 35), units: hmsn, expectation: [1, 1, 35, 0])
-        assertEqualDurationUnitValues(.init(seconds: 3600 + 60 + 35, milliseconds: 5), units: hmsn, expectation: [1, 1, 35, 5_000_000 ])
-        assertEqualDurationUnitValues(.init(seconds: 3600 + 60 + 35, milliseconds: 5), units: hmsn, trailingFractionalLength: 0 ,roundingIncrement: 1e6, expectation: [1, 1, 35, 5_000_000 ])
+        assertEqualDurationUnitValues(.init(seconds: 3600 + 60 + 35, milliseconds: 5), units: hmsn, expectation: [1, 1, 35, 5_000_000])
+        assertEqualDurationUnitValues(.init(seconds: 3600 + 60 + 35, milliseconds: 5), units: hmsn, trailingFractionalLength: 0, roundingIncrement: 1e6, expectation: [1, 1, 35, 5_000_000])
 
 
-        let hms : [Unit] = [ .hours, .minutes, .seconds]
-        assertEqualDurationUnitValues(.seconds(0), units: hms, expectation: [0, 0, 0 ])
+        let hms: [Unit] = [.hours, .minutes, .seconds]
+        assertEqualDurationUnitValues(.seconds(0), units: hms, expectation: [0, 0, 0])
         assertEqualDurationUnitValues(.seconds(35), units: hms, expectation: [0, 0, 35])
         assertEqualDurationUnitValues(.seconds(60), units: hms, expectation: [0, 1, 0])
         assertEqualDurationUnitValues(.seconds(120), units: hms, expectation: [0, 2, 0])
         assertEqualDurationUnitValues(.seconds(3600), units: hms, expectation: [1, 0, 0])
         assertEqualDurationUnitValues(.seconds(3600 + 60 + 35), units: hms, expectation: [1, 1, 35])
         assertEqualDurationUnitValues(.init(seconds: 3600 + 60 + 35, milliseconds: 500), units: hms, expectation: [1, 1, 35.5])
-        assertEqualDurationUnitValues(.init(seconds: 3600 + 60 + 35, milliseconds: 500), units: hms, trailingFractionalLength: 1, expectation: [1, 1, 35.5 ])
+        assertEqualDurationUnitValues(.init(seconds: 3600 + 60 + 35, milliseconds: 500), units: hms, trailingFractionalLength: 1, expectation: [1, 1, 35.5])
 
-        let hm : [Unit] = [ .hours, .minutes ]
+        let hm: [Unit] = [.hours, .minutes]
         assertEqualDurationUnitValues(.seconds(3600 + 60 + 24), units: hm, trailingFractionalLength: 1, expectation: [1, 1.4])
         assertEqualDurationUnitValues(.seconds(3600 + 60 + 30), units: hm, trailingFractionalLength: 1, expectation: [1, 1.5])
     }
@@ -84,212 +87,245 @@ private struct DurationToMeasurementAdditionTests {
             }
         }
         // [.nanoseconds]
-        test(.seconds(Int64.max), units: [.nanoseconds],
-             (.down, [Double(Int64.max) * 1e9])
+        test(
+            .seconds(Int64.max), units: [.nanoseconds],
+            (.down, [Double(Int64.max) * 1e9])
         )
 
         // [.seconds]
-        test(.init(milliseconds: 499), units: [.seconds],
-             (.toNearestOrAwayFromZero, [0]),
-             (.down, [0]),
-             (.up, [1])
+        test(
+            .init(milliseconds: 499), units: [.seconds],
+            (.toNearestOrAwayFromZero, [0]),
+            (.down, [0]),
+            (.up, [1])
         )
 
-        test(.init(milliseconds: 499), units: [.seconds], trailingFractionalLength: 1,
-             (.toNearestOrAwayFromZero, [0.5]),
-             (.down, [0.4]),
-             (.up, [0.5])
+        test(
+            .init(milliseconds: 499), units: [.seconds], trailingFractionalLength: 1,
+            (.toNearestOrAwayFromZero, [0.5]),
+            (.down, [0.4]),
+            (.up, [0.5])
         )
 
-        test(.init(milliseconds: 500), units: [.seconds],
-             (.toNearestOrAwayFromZero, [1]),
-             (.down, [0]),
-             (.up, [1])
+        test(
+            .init(milliseconds: 500), units: [.seconds],
+            (.toNearestOrAwayFromZero, [1]),
+            (.down, [0]),
+            (.up, [1])
         )
 
-        test(.init(milliseconds: 999), units: [.seconds],
-             (.toNearestOrAwayFromZero, [1]),
-             (.down, [0]),
-             (.up, [1])
+        test(
+            .init(milliseconds: 999), units: [.seconds],
+            (.toNearestOrAwayFromZero, [1]),
+            (.down, [0]),
+            (.up, [1])
         )
 
-        test(.init(milliseconds: 999, microseconds: 500), units: [.seconds],
-             (.toNearestOrAwayFromZero, [1]),
-             (.down, [0]),
-             (.up, [1])
+        test(
+            .init(milliseconds: 999, microseconds: 500), units: [.seconds],
+            (.toNearestOrAwayFromZero, [1]),
+            (.down, [0]),
+            (.up, [1])
         )
 
-        test(.init(seconds: 59, milliseconds: 999), units: [.seconds],
-             (.toNearestOrAwayFromZero, [60]),
-             (.down, [59]),
-             (.up, [60])
+        test(
+            .init(seconds: 59, milliseconds: 999), units: [.seconds],
+            (.toNearestOrAwayFromZero, [60]),
+            (.down, [59]),
+            (.up, [60])
         )
 
         // [ .minutes, .seconds ]
 
-        test(.init(milliseconds: 499), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [0, 0]),
-             (.down, [0, 0]),
-             (.up, [0, 1])
+        test(
+            .init(milliseconds: 499), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [0, 0]),
+            (.down, [0, 0]),
+            (.up, [0, 1])
         )
 
-        test(.init(milliseconds: 500), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [0, 1]),
-             (.down, [0, 0]),
-             (.up, [0, 1])
+        test(
+            .init(milliseconds: 500), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [0, 1]),
+            (.down, [0, 0]),
+            (.up, [0, 1])
         )
 
-        test(.init(seconds: 59, milliseconds: 400), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [0, 59]),
-             (.down, [0, 59]),
-             (.up, [1, 0])
+        test(
+            .init(seconds: 59, milliseconds: 400), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [0, 59]),
+            (.down, [0, 59]),
+            (.up, [1, 0])
         )
 
-        test(.init(seconds: 59, milliseconds: 500), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [1, 0]),
-             (.down, [0, 59]),
-             (.up, [1, 0])
+        test(
+            .init(seconds: 59, milliseconds: 500), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [1, 0]),
+            (.down, [0, 59]),
+            (.up, [1, 0])
         )
 
-        test(.init(seconds: 59, milliseconds: 999), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [1, 0]),
-             (.down, [0, 59]),
-             (.up, [1, 0])
+        test(
+            .init(seconds: 59, milliseconds: 999), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [1, 0]),
+            (.down, [0, 59]),
+            (.up, [1, 0])
         )
 
-        test(.init(minutes: 16, milliseconds: 499), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [16, 0]),
-             (.down, [16, 0]),
-             (.up, [16, 1])
+        test(
+            .init(minutes: 16, milliseconds: 499), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [16, 0]),
+            (.down, [16, 0]),
+            (.up, [16, 1])
         )
 
-        test(.init(minutes: 16, milliseconds: 500), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [16, 1]),
-             (.down, [16, 0]),
-             (.up, [16, 1])
+        test(
+            .init(minutes: 16, milliseconds: 500), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [16, 1]),
+            (.down, [16, 0]),
+            (.up, [16, 1])
         )
 
-        test(.init(minutes: 16, seconds: 59, milliseconds: 499), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [16, 59]),
-             (.down, [16, 59]),
-             (.up, [17, 0])
+        test(
+            .init(minutes: 16, seconds: 59, milliseconds: 499), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [16, 59]),
+            (.down, [16, 59]),
+            (.up, [17, 0])
         )
 
-        test(.init(minutes: 16, seconds: 59, milliseconds: 500), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [17, 0]),
-             (.down, [16, 59]),
-             (.up, [17, 0])
+        test(
+            .init(minutes: 16, seconds: 59, milliseconds: 500), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [17, 0]),
+            (.down, [16, 59]),
+            (.up, [17, 0])
         )
 
-        test(.init(minutes: 59, seconds: 59, milliseconds: 499), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [59, 59]),
-             (.down, [59, 59]),
-             (.up, [60, 0])
+        test(
+            .init(minutes: 59, seconds: 59, milliseconds: 499), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [59, 59]),
+            (.down, [59, 59]),
+            (.up, [60, 0])
         )
 
-        test(.init(minutes: 59, seconds: 59, milliseconds: 500), units: [ .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [60, 0]),
-             (.down, [59, 59]),
-             (.up, [60, 0])
+        test(
+            .init(minutes: 59, seconds: 59, milliseconds: 500), units: [.minutes, .seconds],
+            (.toNearestOrAwayFromZero, [60, 0]),
+            (.down, [59, 59]),
+            (.up, [60, 0])
         )
 
         // [ .hours, .minutes, .seconds ]
 
-        test(.init(milliseconds: 499), units: [ .hours, .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [0, 0, 0]),
-             (.down,  [0, 0, 0]),
-             (.up,  [0, 0, 1])
+        test(
+            .init(milliseconds: 499), units: [.hours, .minutes, .seconds],
+            (.toNearestOrAwayFromZero, [0, 0, 0]),
+            (.down, [0, 0, 0]),
+            (.up, [0, 0, 1])
         )
 
-        test(.init(milliseconds: 500), units: [ .hours, .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [0, 0, 1]),
-             (.down,  [0, 0, 0]),
-             (.up,  [0, 0, 1])
+        test(
+            .init(milliseconds: 500), units: [.hours, .minutes, .seconds],
+            (.toNearestOrAwayFromZero, [0, 0, 1]),
+            (.down, [0, 0, 0]),
+            (.up, [0, 0, 1])
         )
 
-        test(.init(minutes: 59, seconds: 59, milliseconds: 499), units: [ .hours, .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [0, 59, 59]),
-             (.down,  [0, 59, 59]),
-             (.up,  [1, 0, 0])
+        test(
+            .init(minutes: 59, seconds: 59, milliseconds: 499), units: [.hours, .minutes, .seconds],
+            (.toNearestOrAwayFromZero, [0, 59, 59]),
+            (.down, [0, 59, 59]),
+            (.up, [1, 0, 0])
         )
 
-        test(.init(minutes: 59, seconds: 59, milliseconds: 500), units: [ .hours, .minutes, .seconds ],
-             (.toNearestOrAwayFromZero, [1, 0, 0]),
-             (.down,  [0, 59, 59]),
-             (.up,  [1, 0, 0])
+        test(
+            .init(minutes: 59, seconds: 59, milliseconds: 500), units: [.hours, .minutes, .seconds],
+            (.toNearestOrAwayFromZero, [1, 0, 0]),
+            (.down, [0, 59, 59]),
+            (.up, [1, 0, 0])
         )
 
         // [ .hours, .minutes ]
 
-        test(.init(minutes: 59, seconds: 29, milliseconds: 999), units: [ .hours, .minutes ],
-             (.toNearestOrAwayFromZero, [0, 59]),
-             (.down, [0, 59]),
-             (.up, [1, 0])
+        test(
+            .init(minutes: 59, seconds: 29, milliseconds: 999), units: [.hours, .minutes],
+            (.toNearestOrAwayFromZero, [0, 59]),
+            (.down, [0, 59]),
+            (.up, [1, 0])
         )
 
-        test(.init(minutes: 59, seconds: 30), units: [ .hours, .minutes ],
-             (.toNearestOrAwayFromZero, [1, 0]),
-             (.down, [0, 59]),
-             (.up, [1, 0])
+        test(
+            .init(minutes: 59, seconds: 30), units: [.hours, .minutes],
+            (.toNearestOrAwayFromZero, [1, 0]),
+            (.down, [0, 59]),
+            (.up, [1, 0])
         )
 
         // [ .minutes, .seconds, .milliseconds ]
 
-        test(.init(minutes: 16, seconds: 59, milliseconds: 500), units: [ .minutes, .seconds, .milliseconds ],
-             (.toNearestOrAwayFromZero, [16, 59, 500]),
-             (.down, [16, 59, 500]),
-             (.up, [16, 59, 500])
+        test(
+            .init(minutes: 16, seconds: 59, milliseconds: 500), units: [.minutes, .seconds, .milliseconds],
+            (.toNearestOrAwayFromZero, [16, 59, 500]),
+            (.down, [16, 59, 500]),
+            (.up, [16, 59, 500])
         )
 
-        test(.init(minutes: 16, seconds: 59, milliseconds: 999, microseconds: 499), units: [ .minutes, .seconds, .milliseconds ],
-             (.toNearestOrAwayFromZero, [16, 59, 999]),
-             (.down, [16, 59, 999]),
-             (.up, [17, 0, 0])
+        test(
+            .init(minutes: 16, seconds: 59, milliseconds: 999, microseconds: 499), units: [.minutes, .seconds, .milliseconds],
+            (.toNearestOrAwayFromZero, [16, 59, 999]),
+            (.down, [16, 59, 999]),
+            (.up, [17, 0, 0])
         )
 
-        test(.init(minutes: 16, seconds: 59, milliseconds: 999, microseconds: 500), units: [ .minutes, .seconds, .milliseconds ],
-             (.toNearestOrAwayFromZero, [17, 0, 0]),
-             (.down, [16, 59, 999]),
-             (.up, [17, 0, 0])
+        test(
+            .init(minutes: 16, seconds: 59, milliseconds: 999, microseconds: 500), units: [.minutes, .seconds, .milliseconds],
+            (.toNearestOrAwayFromZero, [17, 0, 0]),
+            (.down, [16, 59, 999]),
+            (.up, [17, 0, 0])
         )
 
         // [ .milliseconds ]
 
-        test(.init(milliseconds: 999, microseconds: 499), units: [ .milliseconds ],
-             (.toNearestOrAwayFromZero, [999]),
-             (.down, [999]),
-             (.up, [1000])
+        test(
+            .init(milliseconds: 999, microseconds: 499), units: [.milliseconds],
+            (.toNearestOrAwayFromZero, [999]),
+            (.down, [999]),
+            (.up, [1000])
         )
 
-        test(.init(milliseconds: 999, microseconds: 500), units: [ .milliseconds ],
-             (.toNearestOrAwayFromZero, [1000]),
-             (.down, [999]),
-             (.up, [1000])
+        test(
+            .init(milliseconds: 999, microseconds: 500), units: [.milliseconds],
+            (.toNearestOrAwayFromZero, [1000]),
+            (.down, [999]),
+            (.up, [1000])
         )
 
-        test(.init(seconds: 1, milliseconds: 999, microseconds: 499), units: [ .milliseconds ],
-             (.toNearestOrAwayFromZero, [1999]),
-             (.down, [1999]),
-             (.up, [2000])
+        test(
+            .init(seconds: 1, milliseconds: 999, microseconds: 499), units: [.milliseconds],
+            (.toNearestOrAwayFromZero, [1999]),
+            (.down, [1999]),
+            (.up, [2000])
         )
 
-        test(.init(seconds: 1, milliseconds: 999, microseconds: 500), units: [ .milliseconds ],
-             (.toNearestOrAwayFromZero, [2000]),
-             (.down, [1999]),
-             (.up, [2000])
+        test(
+            .init(seconds: 1, milliseconds: 999, microseconds: 500), units: [.milliseconds],
+            (.toNearestOrAwayFromZero, [2000]),
+            (.down, [1999]),
+            (.up, [2000])
         )
 
         // [.milliseconds, .microseconds]
-        test(.init(milliseconds: 999, microseconds: 499), units: [ .milliseconds, .microseconds ],
-             (.toNearestOrAwayFromZero, [999, 499]),
-             (.down, [999, 499]),
-             (.up, [999, 499])
+        test(
+            .init(milliseconds: 999, microseconds: 499), units: [.milliseconds, .microseconds],
+            (.toNearestOrAwayFromZero, [999, 499]),
+            (.down, [999, 499]),
+            (.up, [999, 499])
         )
 
-        test(.init(milliseconds: 999, microseconds: 499), units: [ .milliseconds, .microseconds ],
-             (.toNearestOrAwayFromZero, [999, 499]),
-             (.down, [999, 499]),
-             (.up, [999, 499])
+        test(
+            .init(milliseconds: 999, microseconds: 499), units: [.milliseconds, .microseconds],
+            (.toNearestOrAwayFromZero, [999, 499]),
+            (.down, [999, 499]),
+            (.up, [999, 499])
         )
     }
 }
@@ -495,62 +531,95 @@ private struct DurationTimeAttributedStyleTests {
     }
 
     @Test func attributedStyle_enUS() {
-        assertWithPattern(seconds: 3695, pattern: .hourMinute, expected: [
-            ("1", .hours),
-            (":", nil),
-            ("02", .minutes)])
-        assertWithPattern(seconds: 3695, pattern: .hourMinute(padHourToLength: 1, roundSeconds: .down), expected: [
-            ("1", .hours),
-            (":", nil),
-            ("01", .minutes)])
-        assertWithPattern(seconds: 3695, pattern: .hourMinuteSecond, expected: [
-            ("1", .hours),
-            (":", nil),
-            ("01", .minutes),
-            (":", nil),
-            ("35", .seconds)])
-        assertWithPattern(seconds: 3695, milliseconds: 500, pattern: .hourMinuteSecond(padHourToLength: 1, roundFractionalSeconds: .up), expected: [
-            ("1", .hours),
-            (":", nil),
-            ("01", .minutes),
-            (":", nil),
-            ("36", .seconds)])
-        assertWithPattern(seconds: 3695, pattern: .minuteSecond, expected: [
-            ("61", .minutes),
-            (":", nil),
-            ("35", .seconds)])
-        assertWithPattern(seconds: 3695, pattern: .minuteSecond(padMinuteToLength: 2, fractionalSecondsLength: 2), expected: [
-            ("61", .minutes),
-            (":", nil),
-            ("35.00", .seconds)])
-        assertWithPattern(seconds: 3695, milliseconds: 350, pattern: .minuteSecond(padMinuteToLength: 2, fractionalSecondsLength: 2), expected: [
-            ("61", .minutes),
-            (":", nil),
-            ("35.35", .seconds)])
+        assertWithPattern(
+            seconds: 3695, pattern: .hourMinute,
+            expected: [
+                ("1", .hours),
+                (":", nil),
+                ("02", .minutes),
+            ])
+        assertWithPattern(
+            seconds: 3695, pattern: .hourMinute(padHourToLength: 1, roundSeconds: .down),
+            expected: [
+                ("1", .hours),
+                (":", nil),
+                ("01", .minutes),
+            ])
+        assertWithPattern(
+            seconds: 3695, pattern: .hourMinuteSecond,
+            expected: [
+                ("1", .hours),
+                (":", nil),
+                ("01", .minutes),
+                (":", nil),
+                ("35", .seconds),
+            ])
+        assertWithPattern(
+            seconds: 3695, milliseconds: 500, pattern: .hourMinuteSecond(padHourToLength: 1, roundFractionalSeconds: .up),
+            expected: [
+                ("1", .hours),
+                (":", nil),
+                ("01", .minutes),
+                (":", nil),
+                ("36", .seconds),
+            ])
+        assertWithPattern(
+            seconds: 3695, pattern: .minuteSecond,
+            expected: [
+                ("61", .minutes),
+                (":", nil),
+                ("35", .seconds),
+            ])
+        assertWithPattern(
+            seconds: 3695, pattern: .minuteSecond(padMinuteToLength: 2, fractionalSecondsLength: 2),
+            expected: [
+                ("61", .minutes),
+                (":", nil),
+                ("35.00", .seconds),
+            ])
+        assertWithPattern(
+            seconds: 3695, milliseconds: 350, pattern: .minuteSecond(padMinuteToLength: 2, fractionalSecondsLength: 2),
+            expected: [
+                ("61", .minutes),
+                (":", nil),
+                ("35.35", .seconds),
+            ])
 
         // Padding
-        assertWithPattern(seconds: 3695, pattern: .hourMinute(padHourToLength: 2), expected: [
-            ("01", .hours),
-            (":", nil),
-            ("02", .minutes)])
-        assertWithPattern(seconds: 3695, pattern: .hourMinuteSecond(padHourToLength: 2), expected: [
-            ("01", .hours),
-            (":", nil),
-            ("01", .minutes),
-            (":", nil),
-            ("35", .seconds)])
-        assertWithPattern(seconds: 3695, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: [
-            ("01", .hours),
-            (":", nil),
-            ("01", .minutes),
-            (":", nil),
-            ("35.00", .seconds)])
-        assertWithPattern(seconds: 3695, milliseconds: 500, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: [
-            ("01", .hours),
-            (":", nil),
-            ("01", .minutes),
-            (":", nil),
-            ("35.50", .seconds)])
+        assertWithPattern(
+            seconds: 3695, pattern: .hourMinute(padHourToLength: 2),
+            expected: [
+                ("01", .hours),
+                (":", nil),
+                ("02", .minutes),
+            ])
+        assertWithPattern(
+            seconds: 3695, pattern: .hourMinuteSecond(padHourToLength: 2),
+            expected: [
+                ("01", .hours),
+                (":", nil),
+                ("01", .minutes),
+                (":", nil),
+                ("35", .seconds),
+            ])
+        assertWithPattern(
+            seconds: 3695, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2),
+            expected: [
+                ("01", .hours),
+                (":", nil),
+                ("01", .minutes),
+                (":", nil),
+                ("35.00", .seconds),
+            ])
+        assertWithPattern(
+            seconds: 3695, milliseconds: 500, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2),
+            expected: [
+                ("01", .hours),
+                (":", nil),
+                ("01", .minutes),
+                (":", nil),
+                ("35.50", .seconds),
+            ])
     }
 }
 
@@ -650,12 +719,12 @@ private struct TestDurationTimeDiscreteConformance {
         #expect(try #require(style.discreteInput(after: Duration(secondsComponent: -8, attosecondsComponent: -531546586433266880))) <= Duration(secondsComponent: 30, attosecondsComponent: 0))
     }
 
-    @Test(arguments:
-        [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
+    @Test(
+        arguments: [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
             [
                 Duration.TimeFormatStyle(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: roundingRule)),
                 Duration.TimeFormatStyle(pattern: .minuteSecond(padMinuteToLength: 0, fractionalSecondsLength: 2, roundFractionalSeconds: roundingRule)),
-                Duration.TimeFormatStyle(pattern: .hourMinute(padHourToLength: 0, roundSeconds: roundingRule))
+                Duration.TimeFormatStyle(pattern: .hourMinute(padHourToLength: 0, roundSeconds: roundingRule)),
             ]
         }
     )

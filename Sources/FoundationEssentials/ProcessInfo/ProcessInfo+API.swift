@@ -32,7 +32,7 @@ extension ProcessInfo {
     public var arguments: [String] { _processInfo.arguments }
 
     /// The variable names (keys) and their values in the environment from which the process was launched.
-    public var environment: [String : String] { _processInfo.environment }
+    public var environment: [String: String] { _processInfo.environment }
 
     /// Global unique identifier for the process.
     ///
@@ -104,11 +104,14 @@ extension ProcessInfo {
     ///   executing is the same or later than the given version; otherwise
     ///   `false`.
     public func isOperatingSystemAtLeast(_ version: OperatingSystemVersion) -> Bool {
-        return _processInfo
-            .isOperatingSystemAtLeast((
-                major: version.majorVersion,
-                minor: version.minorVersion,
-                patch: version.patchVersion))
+        return
+            _processInfo
+            .isOperatingSystemAtLeast(
+                (
+                    major: version.majorVersion,
+                    minor: version.minorVersion,
+                    patch: version.patchVersion
+                ))
     }
 }
 

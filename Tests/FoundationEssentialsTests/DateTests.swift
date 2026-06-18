@@ -57,8 +57,7 @@ private struct DateTests {
 
         #expect(distantPast < currentDate)
         #expect(currentDate > distantPast)
-        #expect(distantPast.timeIntervalSince(currentDate) <
-                          3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
+        #expect(distantPast.timeIntervalSince(currentDate) < 3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
     @Test func distantFuture() {
@@ -67,13 +66,12 @@ private struct DateTests {
 
         #expect(currentDate < distantFuture)
         #expect(distantFuture > currentDate)
-        #expect(distantFuture.timeIntervalSince(currentDate) >
-                              3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
+        #expect(distantFuture.timeIntervalSince(currentDate) > 3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
     @Test func now() {
-        let date1 : Date = .now
-        let date2 : Date = .now
+        let date1: Date = .now
+        let date2: Date = .now
 
         #expect(date1 <= date2)
     }
@@ -96,11 +94,11 @@ private struct DateTests {
     @Test
     #endif
     func descriptionDistantPast() throws {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         #expect("0001-01-01 00:00:00 +0000" == Date.distantPast.description)
-#else
+        #else
         #expect("0000-12-30 00:00:00 +0000" == Date.distantPast.description)
-#endif
+        #endif
     }
 
     #if os(Windows)
@@ -114,22 +112,22 @@ private struct DateTests {
 
     @Test func descriptionBeyondDistantPast() {
         let date = Date.distantPast.addingTimeInterval(TimeInterval(-1))
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         #expect("0000-12-31 23:59:59 +0000" == date.description)
-#else
+        #else
         #expect("<description unavailable>" == date.description)
-#endif
+        #endif
     }
 
     @Test func descriptionBeyondDistantFuture() {
         let date = Date.distantFuture.addingTimeInterval(TimeInterval(1))
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         #expect("4001-01-01 00:00:01 +0000" == date.description)
-#else
+        #else
         #expect("<description unavailable>" == date.description)
-#endif
+        #endif
     }
-    
+
     @Test func nowIsAfterReasonableDate() {
         let date = Date.now
         #expect(date.timeIntervalSinceReferenceDate > 742100000.0) // "2024-07-08T02:53:20Z"

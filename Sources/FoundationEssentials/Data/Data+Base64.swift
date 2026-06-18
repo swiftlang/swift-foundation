@@ -31,11 +31,11 @@ import stdlib_h
 
 #if !FOUNDATION_FRAMEWORK
 extension Data {
-    
+
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Base64EncodingOptions : OptionSet, Sendable {
+    public struct Base64EncodingOptions: OptionSet, Sendable {
         public let rawValue: UInt
-        
+
         public init(rawValue: UInt) {
             self.rawValue = rawValue
         }
@@ -46,13 +46,13 @@ extension Data {
         /// When a maximum line length is set, specify that the line ending to insert should include a carriage return.
         public static let endLineWithCarriageReturn = Base64EncodingOptions(rawValue: 1 << 4)
         /// When a maximum line length is set, specify that the line ending to insert should include a line feed.
-        public static let endLineWithLineFeed       = Base64EncodingOptions(rawValue: 1 << 5)
+        public static let endLineWithLineFeed = Base64EncodingOptions(rawValue: 1 << 5)
     }
-    
+
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Base64DecodingOptions : OptionSet, Sendable {
+    public struct Base64DecodingOptions: OptionSet, Sendable {
         public let rawValue: UInt
-        
+
         public init(rawValue: UInt) {
             self.rawValue = rawValue
         }
@@ -75,7 +75,7 @@ extension Data.Base64EncodingOptions {
     /// Use the base64url alphabet to encode the data
     @available(FoundationPreview 6.3, *)
     public static let base64URLAlphabet = Self(rawValue: 1 << 6)
-    
+
     /// Omit the `=` padding characters in the end of the base64 encoded result
     @available(FoundationPreview 6.3, *)
     public static let omitPaddingCharacter = Self(rawValue: 1 << 7)
@@ -382,11 +382,12 @@ extension Base64 {
 
         assert(options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters))
 
-        let lineLength = if options.contains(.lineLength64Characters) {
-            48
-        } else {
-            57
-        }
+        let lineLength =
+            if options.contains(.lineLength64Characters) {
+                48
+            } else {
+                57
+            }
 
         let lines = input.count / lineLength
 
@@ -496,25 +497,27 @@ extension Base64 {
     }
 
     static func encodeComputeCapacity(bytes: Int, options: Data.Base64EncodingOptions) -> Int {
-        let capacityWithoutBreaks = if options.contains(.omitPaddingCharacter) {
-            switch bytes % 3 {
-            case 0: ((bytes + 2) / 3) * 4
-            case 1: ((bytes + 2) / 3) * 4 - 2
-            case 2: ((bytes + 2) / 3) * 4 - 1
-            default: fatalError()
+        let capacityWithoutBreaks =
+            if options.contains(.omitPaddingCharacter) {
+                switch bytes % 3 {
+                case 0: ((bytes + 2) / 3) * 4
+                case 1: ((bytes + 2) / 3) * 4 - 2
+                case 2: ((bytes + 2) / 3) * 4 - 1
+                default: fatalError()
+                }
+            } else {
+                ((bytes + 2) / 3) * 4
             }
-        } else {
-            ((bytes + 2) / 3) * 4
-        }
 
         guard options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters) else {
             return capacityWithoutBreaks
         }
 
-        let seperatorBytes = switch (options.contains(.endLineWithCarriageReturn), options.contains(.endLineWithLineFeed)) {
-        case (true, true), (false, false): 2
-        case (true, false), (false, true): 1
-        }
+        let seperatorBytes =
+            switch (options.contains(.endLineWithCarriageReturn), options.contains(.endLineWithLineFeed)) {
+            case (true, true), (false, false): 2
+            case (true, false), (false, true): 1
+            }
 
         let lineLength = options.contains(.lineLength64Characters) ? 64 : 76
         let lineBreaks = capacityWithoutBreaks / lineLength
@@ -626,7 +629,7 @@ extension Base64 {
                 // branch prediction?
                 try self._decode(from: inBuffer, into: target, length: &length, options: options)
             }
-            
+
             return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
         } catch {
             // Do not leak the malloc on error
@@ -651,11 +654,12 @@ extension Base64 {
             }
         }
         let base64NonPaddedLength = lastNonPaddedIndex + 1
-        let bytesToParseLength = if base64NonPaddedLength % 4 == 0 {
-            (base64NonPaddedLength / 4) * 4
-        } else {
-            (base64NonPaddedLength / 4) * 4 + 4
-        }
+        let bytesToParseLength =
+            if base64NonPaddedLength % 4 == 0 {
+                (base64NonPaddedLength / 4) * 4
+            } else {
+                (base64NonPaddedLength / 4) * 4 + 4
+            }
         if bytesToParseLength > inBuffer.count {
             throw DecodingError.invalidLength
         }
@@ -670,7 +674,7 @@ extension Base64 {
         try Self.withUnsafeDecodingTablesAsBufferPointers(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
             var outIndex = 0
             if fullchunks > 0 {
-                for chunk in 0 ..< fullchunks {
+                for chunk in 0..<fullchunks {
                     let inIndex = chunk * 4
                     let a0 = inBuffer[inIndex]
                     let a1 = inBuffer[inIndex + 1]
@@ -955,7 +959,9 @@ extension Base64 {
         }
     }
 
-    static func withUnsafeDecodingTablesAsBufferPointers<R, E: Swift.Error>(options: Data.Base64DecodingOptions, _ body: (UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>) throws(E) -> R) throws(E) -> R {
+    static func withUnsafeDecodingTablesAsBufferPointers<R, E: Swift.Error>(
+        options: Data.Base64DecodingOptions, _ body: (UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>) throws(E) -> R
+    ) throws(E) -> R {
         let decoding0 = Self.decoding0
         let decoding1 = Self.decoding1
         let decoding2 = Self.decoding2
@@ -985,8 +991,8 @@ extension Base64 {
     static func isValidBase64Byte(_ byte: UInt8, options: Data.Base64DecodingOptions) -> Bool {
         switch byte {
         case UInt8(ascii: "A")...UInt8(ascii: "Z"),
-             UInt8(ascii: "a")...UInt8(ascii: "z"),
-             UInt8(ascii: "0")...UInt8(ascii: "9"):
+            UInt8(ascii: "a")...UInt8(ascii: "z"),
+            UInt8(ascii: "0")...UInt8(ascii: "9"):
             true
 
         case UInt8(ascii: "-"), UInt8(ascii: "_"):

@@ -28,241 +28,241 @@ private enum ExpressionTests {
     @Test
     static func parsingWithSingleName() throws {
         #expect(
-            try Expression("var") ==
-            Expression(
-                operator: nil,
-                elements: [
-                    Element(
-                        name: .init("var"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("var")
+                == Expression(
+                    operator: nil,
+                    elements: [
+                        Element(
+                            name: .init("var"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("+var") ==
-            Expression(
-                operator: .reserved,
-                elements: [
-                    Element(
-                        name: .init("var"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("+var")
+                == Expression(
+                    operator: .reserved,
+                    elements: [
+                        Element(
+                            name: .init("var"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("#hello") ==
-            Expression(
-                operator: .fragment,
-                elements: [
-                    Element(
-                        name: .init("hello"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("#hello")
+                == Expression(
+                    operator: .fragment,
+                    elements: [
+                        Element(
+                            name: .init("hello"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression(".list") ==
-            Expression(
-                operator: .nameLabel,
-                elements: [
-                    Element(
-                        name: .init("list"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression(".list")
+                == Expression(
+                    operator: .nameLabel,
+                    elements: [
+                        Element(
+                            name: .init("list"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("/foo") ==
-            Expression(
-                operator: .pathSegment,
-                elements: [
-                    Element(
-                        name: .init("foo"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("/foo")
+                == Expression(
+                    operator: .pathSegment,
+                    elements: [
+                        Element(
+                            name: .init("foo"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression(";name") ==
-            Expression(
-                operator: .pathParameter,
-                elements: [
-                    Element(
-                        name: .init("name"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression(";name")
+                == Expression(
+                    operator: .pathParameter,
+                    elements: [
+                        Element(
+                            name: .init("name"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("?count") ==
-            Expression(
-                operator: .queryComponent,
-                elements: [
-                    Element(
-                        name: .init("count"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("?count")
+                == Expression(
+                    operator: .queryComponent,
+                    elements: [
+                        Element(
+                            name: .init("count"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("&max") ==
-            Expression(
-                operator: .continuation,
-                elements: [
-                    Element(
-                        name: .init("max"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("&max")
+                == Expression(
+                    operator: .continuation,
+                    elements: [
+                        Element(
+                            name: .init("max"),
+                            maximumLength: nil,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("var:30") ==
-            Expression(
-                operator: nil,
-                elements: [
-                    Element(
-                        name: .init("var"),
-                        maximumLength: 30,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("var:30")
+                == Expression(
+                    operator: nil,
+                    elements: [
+                        Element(
+                            name: .init("var"),
+                            maximumLength: 30,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("+var:30") ==
-            Expression(
-                operator: .reserved,
-                elements: [
-                    Element(
-                        name: .init("var"),
-                        maximumLength: 30,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("+var:30")
+                == Expression(
+                    operator: .reserved,
+                    elements: [
+                        Element(
+                            name: .init("var"),
+                            maximumLength: 30,
+                            explode: false
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("list*") ==
-            Expression(
-                operator: nil,
-                elements: [
-                    Element(
-                        name: .init("list"),
-                        maximumLength: nil,
-                        explode: true
-                    ),
-                ]
-            )
+            try Expression("list*")
+                == Expression(
+                    operator: nil,
+                    elements: [
+                        Element(
+                            name: .init("list"),
+                            maximumLength: nil,
+                            explode: true
+                        )
+                    ]
+                )
         )
         #expect(
-            try Expression("&list*") ==
-            Expression(
-                operator: .continuation,
-                elements: [
-                    Element(
-                        name: .init("list"),
-                        maximumLength: nil,
-                        explode: true
-                    ),
-                ]
-            )
+            try Expression("&list*")
+                == Expression(
+                    operator: .continuation,
+                    elements: [
+                        Element(
+                            name: .init("list"),
+                            maximumLength: nil,
+                            explode: true
+                        )
+                    ]
+                )
         )
     }
 
     @Test
     static func parsingWithMultipleNames() throws {
         #expect(
-            try Expression("x,y") ==
-            Expression(
-                operator: nil,
-                elements: [
-                    Element(
-                        name: .init("x"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                    Element(
-                        name: .init("y"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("x,y")
+                == Expression(
+                    operator: nil,
+                    elements: [
+                        Element(
+                            name: .init("x"),
+                            maximumLength: nil,
+                            explode: false
+                        ),
+                        Element(
+                            name: .init("y"),
+                            maximumLength: nil,
+                            explode: false
+                        ),
+                    ]
+                )
         )
         #expect(
-            try Expression("&x,y,empty") ==
-            Expression(
-                operator: .continuation,
-                elements: [
-                    Element(
-                        name: .init("x"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                    Element(
-                        name: .init("y"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                    Element(
-                        name: .init("empty"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("&x,y,empty")
+                == Expression(
+                    operator: .continuation,
+                    elements: [
+                        Element(
+                            name: .init("x"),
+                            maximumLength: nil,
+                            explode: false
+                        ),
+                        Element(
+                            name: .init("y"),
+                            maximumLength: nil,
+                            explode: false
+                        ),
+                        Element(
+                            name: .init("empty"),
+                            maximumLength: nil,
+                            explode: false
+                        ),
+                    ]
+                )
         )
         #expect(
-            try Expression("?q,lang") ==
-            Expression(
-                operator: .queryComponent,
-                elements: [
-                    Element(
-                        name: .init("q"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                    Element(
-                        name: .init("lang"),
-                        maximumLength: nil,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("?q,lang")
+                == Expression(
+                    operator: .queryComponent,
+                    elements: [
+                        Element(
+                            name: .init("q"),
+                            maximumLength: nil,
+                            explode: false
+                        ),
+                        Element(
+                            name: .init("lang"),
+                            maximumLength: nil,
+                            explode: false
+                        ),
+                    ]
+                )
         )
         #expect(
-            try Expression("/list*,path:4") ==
-            Expression(
-                operator: .pathSegment,
-                elements: [
-                    Element(
-                        name: .init("list"),
-                        maximumLength: nil,
-                        explode: true
-                    ),
-                    Element(
-                        name: .init("path"),
-                        maximumLength: 4,
-                        explode: false
-                    ),
-                ]
-            )
+            try Expression("/list*,path:4")
+                == Expression(
+                    operator: .pathSegment,
+                    elements: [
+                        Element(
+                            name: .init("list"),
+                            maximumLength: nil,
+                            explode: true
+                        ),
+                        Element(
+                            name: .init("path"),
+                            maximumLength: 4,
+                            explode: false
+                        ),
+                    ]
+                )
         )
     }
 

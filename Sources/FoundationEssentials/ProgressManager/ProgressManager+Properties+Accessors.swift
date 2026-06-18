@@ -42,7 +42,7 @@ extension ProgressManager {
                 }
             }
         }
-        
+
         set {
             var parents: [Parent]?
             if P.self == ProgressManager.Properties.TotalFileCount.self {
@@ -76,7 +76,7 @@ extension ProgressManager {
                     }
                 }
             }
-            
+
             if let parents = parents {
                 if P.self == ProgressManager.Properties.TotalFileCount.self {
                     markSelfDirty(property: ProgressManager.Properties.TotalFileCount.self, parents: parents)
@@ -88,7 +88,7 @@ extension ProgressManager {
             }
         }
     }
-    
+
     /// Gets or sets custom unsigned integer properties.
     ///
     /// This subscript provides read-write access to custom progress properties where both the value
@@ -115,7 +115,7 @@ extension ProgressManager {
                 }
             }
         }
-        
+
         set {
             var parents: [Parent]?
             if P.self == ProgressManager.Properties.TotalByteCount.self {
@@ -149,7 +149,7 @@ extension ProgressManager {
                     }
                 }
             }
-            
+
             if let parents = parents {
                 if P.self == ProgressManager.Properties.TotalByteCount.self {
                     markSelfDirty(property: ProgressManager.Properties.TotalByteCount.self, parents: parents)
@@ -161,7 +161,7 @@ extension ProgressManager {
             }
         }
     }
-    
+
     /// Gets or sets custom double properties.
     ///
     /// This subscript provides read-write access to custom progress properties where both the value
@@ -176,7 +176,7 @@ extension ProgressManager {
                 return state.customPropertiesDouble[MetatypeWrapper(P.self)] ?? P.defaultValue
             }
         }
-        
+
         set {
             var parents: [Parent]?
             self.withMutation(keyPath: \.customPropertiesDouble) {
@@ -188,13 +188,13 @@ extension ProgressManager {
                     return state.parents
                 }
             }
-            
+
             if let parents = parents {
                 markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
             }
         }
     }
-    
+
     /// Gets or sets custom string properties.
     ///
     /// This subscript provides read-write access to custom progress properties where the value
@@ -221,13 +221,13 @@ extension ProgressManager {
                     return state.parents
                 }
             }
-            
+
             if let parents = parents {
                 markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
             }
         }
     }
-    
+
     /// Gets or sets custom URL properties.
     ///
     /// This subscript provides read-write access to custom progress properties where the value
@@ -254,13 +254,13 @@ extension ProgressManager {
                     return state.parents
                 }
             }
-            
+
             if let parents = parents {
                 markSelfDirty(property: MetatypeWrapper(P.self), parents: parents)
             }
         }
     }
-    
+
     /// Gets or sets custom unsigned integer properties.
     ///
     /// This subscript provides read-write access to custom progress properties where the value
@@ -307,7 +307,7 @@ extension ProgressManager {
                     }
                 }
             }
-            
+
             if let parents = parents {
                 if P.self == ProgressManager.Properties.Throughput.self {
                     markSelfDirty(property: ProgressManager.Properties.Throughput.self, parents: parents)
@@ -317,7 +317,7 @@ extension ProgressManager {
             }
         }
     }
-    
+
     /// Gets or sets custom duration properties.
     ///
     /// This subscript provides read-write access to custom progress properties where the value
@@ -364,7 +364,7 @@ extension ProgressManager {
                     }
                 }
             }
-            
+
             if let parents = parents {
                 if P.self == ProgressManager.Properties.EstimatedTimeRemaining.self {
                     markSelfDirty(property: ProgressManager.Properties.EstimatedTimeRemaining.self, parents: parents)
@@ -374,9 +374,9 @@ extension ProgressManager {
             }
         }
     }
-    
+
     // MARK: Methods to Read Custom Properties of Subtree with ProgressManager as root
-    
+
 
     /// Returns a summary for a custom integer property across the progress subtree.
     ///
@@ -407,7 +407,7 @@ extension ProgressManager {
             return updatedResult
         }
     }
-    
+
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
     /// This method aggregates the values of a custom unsigned integer property from this progress manager
@@ -437,7 +437,7 @@ extension ProgressManager {
             return updatedResult
         }
     }
-    
+
     /// Returns a summary for a custom double property across the progress subtree.
     ///
     /// This method aggregates the values of a custom double property from this progress manager
@@ -453,7 +453,7 @@ extension ProgressManager {
         self.didSet(keyPath: \.customPropertiesDoubleSummary)
         return updatedResult
     }
-    
+
     /// Returns a summary for a custom string property across the progress subtree.
     ///
     /// This method aggregates the values of a custom string property from this progress manager
@@ -469,7 +469,7 @@ extension ProgressManager {
         self.didSet(keyPath: \.customPropertiesStringSummary)
         return updatedResult
     }
-    
+
     /// Returns a summary for a custom URL property across the progress subtree.
     ///
     /// This method aggregates the values of a custom URL property from this progress manager
@@ -485,7 +485,7 @@ extension ProgressManager {
         self.didSet(keyPath: \.customPropertiesURLSummary)
         return updatedResult
     }
-    
+
     /// Returns a summary for a custom unsigned integer property across the progress subtree.
     ///
     /// This method aggregates the values of a custom unsigned integer property from this progress manager
@@ -509,7 +509,7 @@ extension ProgressManager {
             return updatedResult
         }
     }
-    
+
     /// Returns a summary for a custom duration property across the progress subtree.
     ///
     /// This method aggregates the values of a custom duration property from this progress manager

@@ -17,15 +17,15 @@
 /// not support reverse intervals i.e. intervals where the duration is less than 0 and the end date
 /// occurs earlier in time than the start date.
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-public struct DateInterval : Comparable, Hashable, Codable, Sendable {
+public struct DateInterval: Comparable, Hashable, Codable, Sendable {
 
     /// The start date.
-    public var start : Date
+    public var start: Date
 
     /// The end date.
     ///
     /// - Precondition: `end >= start`
-    public var end : Date {
+    public var end: Date {
         get {
             return start + duration
         }
@@ -38,7 +38,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
     /// The duration.
     ///
     /// - Precondition: `duration >= 0`
-    public var duration : TimeInterval {
+    public var duration: TimeInterval {
         willSet {
             precondition(newValue >= 0, "Negative durations are not allowed")
         }
@@ -121,7 +121,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
         let timeIntervalForGivenStart = dateInterval.start.timeIntervalSinceReferenceDate
         let timeIntervalForGivenEnd = dateInterval.end.timeIntervalSinceReferenceDate
 
-        let resultStartDate : Date
+        let resultStartDate: Date
         if timeIntervalForGivenStart >= timeIntervalForSelfStart {
             resultStartDate = dateInterval.start
         } else {
@@ -129,7 +129,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
             resultStartDate = start
         }
 
-        let resultEndDate : Date
+        let resultEndDate: Date
         if timeIntervalForGivenEnd >= timeIntervalForSelfEnd {
             resultEndDate = end
         } else {
@@ -157,18 +157,18 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
     }
 
     @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-    public static func ==(lhs: DateInterval, rhs: DateInterval) -> Bool {
+    public static func == (lhs: DateInterval, rhs: DateInterval) -> Bool {
         return lhs.start == rhs.start && lhs.duration == rhs.duration
     }
 
     @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-    public static func <(lhs: DateInterval, rhs: DateInterval) -> Bool {
+    public static func < (lhs: DateInterval, rhs: DateInterval) -> Bool {
         return lhs.compare(rhs) == .orderedAscending
     }
 }
 
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension DateInterval: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var description: String {
         return "\(start) to \(end)"
     }
@@ -189,7 +189,7 @@ extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-extension DateInterval : ReferenceConvertible, _ObjectiveCBridgeable {
+extension DateInterval: ReferenceConvertible, _ObjectiveCBridgeable {
     public typealias ReferenceType = NSDateInterval
 
     public static func _getObjectiveCType() -> Any.Type {
@@ -207,7 +207,7 @@ extension DateInterval : ReferenceConvertible, _ObjectiveCBridgeable {
         }
     }
 
-    public static func _conditionallyBridgeFromObjectiveC(_ dateInterval : NSDateInterval, result: inout DateInterval?) -> Bool {
+    public static func _conditionallyBridgeFromObjectiveC(_ dateInterval: NSDateInterval, result: inout DateInterval?) -> Bool {
         result = DateInterval(start: dateInterval.startDate, duration: dateInterval.duration)
         return true
     }
@@ -221,7 +221,7 @@ extension DateInterval : ReferenceConvertible, _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-extension NSDateInterval : _HasCustomAnyHashableRepresentation {
+extension NSDateInterval: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {

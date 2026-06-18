@@ -29,25 +29,25 @@ extension FileManager.SearchPathDomainMask {
         Self(rawValue: NSSearchPathDomainMask_Private.sharedUserDomainMask.rawValue)
     }
     #endif
-    
+
     static var _partitionedSystemDomainMask: Self {
         Self(rawValue: NSSearchPathDomainMask_Private.partitionedSystemDomainMask.rawValue)
     }
-    
+
     static var _appCryptexDomainMask: Self {
         Self(rawValue: NSSearchPathDomainMask_Private.appCryptexDomainMask.rawValue)
     }
-    
+
     static var _osCryptexDomainMask: Self {
         Self(rawValue: NSSearchPathDomainMask_Private.osCryptexDomainMask.rawValue)
     }
     #endif
-    
+
     internal var firstMask: Self? {
         guard !self.isEmpty else { return nil }
         return Self(rawValue: 1 << self.rawValue.trailingZeroBitCount)
     }
-    
+
     fileprivate static var valid: Self {
         #if FOUNDATION_FRAMEWORK
         [.userDomainMask, .localDomainMask, .networkDomainMask, .systemDomainMask, ._appCryptexDomainMask, ._osCryptexDomainMask]
@@ -92,7 +92,7 @@ func _DarwinSearchPaths(for directory: FileManager.SearchPathDirectory, in domai
             $0
         }
     }
-    
+
     #if os(macOS) && FOUNDATION_FRAMEWORK
     // NSSharedUserDomainMask is basically just a wrapper around NSUserDomainMask.
     let compatibleSharedUserDomainMask = domain != .allDomainsMask && (domain.rawValue & 16) != 0

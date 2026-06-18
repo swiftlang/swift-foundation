@@ -31,7 +31,7 @@ import WASILibc
 import CRT
 #endif
 
-extension DiscreteFormatStyle where FormatInput : Comparable {
+extension DiscreteFormatStyle where FormatInput: Comparable {
     /// Produces a sequence that generates all outputs of a discrete format style from a given start to a given end.
     func evaluate(from initialInput: FormatInput, to end: FormatInput, _ advance: @escaping (FormatInput, FormatInput) -> FormatInput? = { prev, next in next }) -> LazySequence<DiscreteFormatStyleSequence<Self>> {
         DiscreteFormatStyleSequence(style: self, input: initialInput, end: end, advance: advance, isLower: <).lazy
@@ -40,13 +40,15 @@ extension DiscreteFormatStyle where FormatInput : Comparable {
 
 extension DiscreteFormatStyle {
     /// Produces a sequence that generates all outputs of a discrete format style from a given start to a given end.
-    func evaluate(from initialInput: FormatInput, to end: FormatInput, _ advance: @escaping (FormatInput, FormatInput) -> FormatInput? = { prev, next in next }, isLower: @escaping (FormatInput, FormatInput) -> Bool) -> LazySequence<DiscreteFormatStyleSequence<Self>> {
+    func evaluate(from initialInput: FormatInput, to end: FormatInput, _ advance: @escaping (FormatInput, FormatInput) -> FormatInput? = { prev, next in next }, isLower: @escaping (FormatInput, FormatInput) -> Bool) -> LazySequence<
+        DiscreteFormatStyleSequence<Self>
+    > {
         DiscreteFormatStyleSequence(style: self, input: initialInput, end: end, advance: advance, isLower: isLower).lazy
     }
 }
 
 /// A sequence that generates all outputs of a discrete format style from a given start to a given end.
-struct DiscreteFormatStyleSequence<Style: DiscreteFormatStyle> : Sequence, IteratorProtocol {
+struct DiscreteFormatStyleSequence<Style: DiscreteFormatStyle>: Sequence, IteratorProtocol {
     private let style: Style
     private var input: Style.FormatInput
     private let end: Style.FormatInput
@@ -69,18 +71,23 @@ struct DiscreteFormatStyleSequence<Style: DiscreteFormatStyle> : Sequence, Itera
     }
 
     mutating func next() -> (input: Style.FormatInput, output: Style.FormatOutput)? {
-        guard !abort && (isIncreasing
-                ? !isLower(end, input)
-                : !isLower(input, end)) else {
+        guard
+            !abort
+                && (isIncreasing
+                    ? !isLower(end, input)
+                    : !isLower(input, end))
+        else {
             return nil
         }
 
         let input = self.input
         let output = style.format(input)
 
-        guard let next = isIncreasing
+        guard
+            let next = isIncreasing
                 ? style.discreteInput(after: input)
-                : style.discreteInput(before: input) else {
+                : style.discreteInput(before: input)
+        else {
             self.abort = true
             return (input, output)
         }
@@ -150,7 +157,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     samples: Int = 10000,
     _ message: @autoclosure () -> String = "",
     sourceLocation: SourceLocation = #_sourceLocation
-) throws where Style.FormatOutput : Equatable, Style.FormatInput == Duration {
+) throws where Style.FormatOutput: Equatable, Style.FormatInput == Duration {
     try verifyDiscreteFormatStyleConformance(
         style,
         samples: samples,
@@ -188,7 +195,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     max: Date = Date(timeIntervalSinceReferenceDate: 2000 * 365 * 24 * 3600),
     _ message: @autoclosure () -> String = "",
     sourceLocation: SourceLocation = #_sourceLocation
-) throws where Style.FormatOutput : Equatable, Style.FormatInput == Date {
+) throws where Style.FormatOutput: Equatable, Style.FormatInput == Date {
     try verifyDiscreteFormatStyleConformance(
         style,
         samples: samples,
@@ -236,7 +243,9 @@ func verifyDiscreteFormatStyleConformance(
         samples: samples,
         randomInput: { range in
             if let range {
-                return Swift.min(range.lowerBound.lowerBound, range.upperBound.lowerBound)..<Date(timeIntervalSinceReferenceDate: Double.random(in: range.lowerBound.upperBound.timeIntervalSinceReferenceDate..<range.upperBound.upperBound.timeIntervalSinceReferenceDate))
+                return Swift.min(
+                    range.lowerBound.lowerBound, range.upperBound.lowerBound)..<Date(
+                        timeIntervalSinceReferenceDate: Double.random(in: range.lowerBound.upperBound.timeIntervalSinceReferenceDate..<range.upperBound.upperBound.timeIntervalSinceReferenceDate))
             } else {
                 let bound = now + abs(Double.randomSample(max: max.timeIntervalSince(now)))
 
@@ -258,7 +267,9 @@ func verifyDiscreteFormatStyleConformance(
         samples: samples,
         randomInput: { range in
             if let range {
-                return Date(timeIntervalSinceReferenceDate: Double.random(in: range.lowerBound.lowerBound.timeIntervalSinceReferenceDate..<range.upperBound.lowerBound.timeIntervalSinceReferenceDate))..<Swift.max(range.lowerBound.upperBound, range.upperBound.upperBound)
+                return Date(
+                    timeIntervalSinceReferenceDate: Double.random(in: range.lowerBound.lowerBound.timeIntervalSinceReferenceDate..<range.upperBound.lowerBound.timeIntervalSinceReferenceDate))..<Swift.max(
+                        range.lowerBound.upperBound, range.upperBound.upperBound)
             } else {
                 let bound = now - abs(Double.randomSample(max: now.timeIntervalSince(min)))
 
@@ -295,7 +306,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     codeFormatter: (Style.FormatInput) -> String,
     _ message: @autoclosure () -> String = "",
     sourceLocation: SourceLocation = #_sourceLocation
-) throws where Style.FormatOutput : Equatable, Style.FormatInput : Equatable {
+) throws where Style.FormatOutput: Equatable, Style.FormatInput: Equatable {
     func _message(assertion: Assertion, before: Bool, inputValue: Style.FormatInput, expectedValue: Style.FormatInput?, note: String) -> String {
         let message = message()
         let prefix = (message.isEmpty ? "\(note)" : "\(message): \(note)") + "\n"
@@ -304,12 +315,13 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
         if let expectedValue {
             if assertion == .greaterEqual || assertion == .lowerEqual {
                 if let discreteInput = before ? style.discreteInput(before: inputValue) : style.discreteInput(after: inputValue),
-                   let nextInput = before ? style.input(after: discreteInput) : style.input(before: discreteInput) {
+                    let nextInput = before ? style.input(after: discreteInput) : style.input(before: discreteInput)
+                {
                     reason = """
-                    style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue))) returned \(codeFormatter(discreteInput)), but
-                    \(codeFormatter(expectedValue)), which is a valid input, because style.input(\(before ? "after" : "before"): \(codeFormatter(discreteInput))) = \(codeFormatter(nextInput)),
-                    already produces a different formatted output '\(style.format(expectedValue))' compared to style.format(\(codeFormatter(inputValue))), which is '\(style.format(inputValue))'
-                    """
+                        style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue))) returned \(codeFormatter(discreteInput)), but
+                        \(codeFormatter(expectedValue)), which is a valid input, because style.input(\(before ? "after" : "before"): \(codeFormatter(discreteInput))) = \(codeFormatter(nextInput)),
+                        already produces a different formatted output '\(style.format(expectedValue))' compared to style.format(\(codeFormatter(inputValue))), which is '\(style.format(inputValue))'
+                        """
                 } else {
                     reason = ""
                 }
@@ -318,17 +330,17 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
             }
         } else {
             reason = """
-            style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue))) returned nil, but
-            style.format(\(codeFormatter(inputValue))) = '\(style.format(inputValue))', which is different from
-            style.format(\(codeFormatter(before ? min : max))) = '\(style.format(before ? min : max))'
-            """
+                style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue))) returned nil, but
+                style.format(\(codeFormatter(inputValue))) = '\(style.format(inputValue))', which is different from
+                style.format(\(codeFormatter(before ? min : max))) = '\(style.format(before ? min : max))'
+                """
         }
 
         return prefix + """
-        #expect\(assertion.rawValue)(try #require(style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue)))), \(expectedValue == nil ? "nil" : codeFormatter(expectedValue!)))
+            #expect\(assertion.rawValue)(try #require(style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue)))), \(expectedValue == nil ? "nil" : codeFormatter(expectedValue!)))
 
-        \(reason)
-        """
+            \(reason)
+            """
     }
 
     func nextUp(_ input: Style.FormatInput) throws -> Style.FormatInput {
@@ -416,7 +428,7 @@ private extension Double {
     // the same number of samples in the range 0..<1 as in the range 1000..<10000.
     static func randomSample(max: Double) -> Double {
         let d = 10.0
-        let r = pow(d, Double.random(in: 0..<((log(max) + log(1 + (1.0/max))) / log(d)))) - 1
+        let r = pow(d, Double.random(in: 0..<((log(max) + log(1 + (1.0 / max))) / log(d)))) - 1
         return Bool.random() ? r : -r
     }
 }

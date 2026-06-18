@@ -70,6 +70,6 @@ struct StringNTPathTests {
 
         let stripped = rawPath.removingNTPathPrefix()
         #expect(stripped == expected)
-    }    
+    }
 }
 #endif

@@ -193,10 +193,10 @@ struct SortDescriptorTests {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // TODO: When String.compare(_:options:locale:) is available in FoundationInternationalization, enable these tests
     // https://github.com/apple/swift-foundation/issues/284
-    
+
     @Test func string_comparator_order() {
         let reverseComparator = {
             var comparator = String.StandardComparator.localized
@@ -246,7 +246,7 @@ struct SortDescriptorTests {
             SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: .localized, order: .reverse).order == .reverse
         )
     }
-    
+
     @Test func string_comparator_property_polarity() {
         #expect(
             SortDescriptor(\NonNSObjectRoot.word).stringComparator?.order == .forward
@@ -262,6 +262,6 @@ struct SortDescriptorTests {
             SortDescriptor(\NonNSObjectRoot.maybeWord, order: .reverse).stringComparator?.order == .forward
         )
     }
-#endif
+    #endif
 
 }

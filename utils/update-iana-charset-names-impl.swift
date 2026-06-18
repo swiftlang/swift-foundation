@@ -167,9 +167,7 @@ extension String {
         var result = ""
         var previousWord: Substring.UTF8View? = nil
         for wordUTF8 in self.utf8.split(whereSeparator: {
-            !$0._isASCIINumeric &&
-            !$0._isASCIIUppercase &&
-            !$0._isASCIILowercase
+            !$0._isASCIINumeric && !$0._isASCIIUppercase && !$0._isASCIILowercase
         }) {
             defer {
                 previousWord = wordUTF8
@@ -183,7 +181,8 @@ extension String {
                 result += "_"
             }
             if let firstNonNumericIndex = wordUTF8.firstIndex(where: { !$0._isASCIINumeric }),
-               wordUTF8[firstNonNumericIndex...].allSatisfy({ $0._isASCIIUppercase }) {
+                wordUTF8[firstNonNumericIndex...].allSatisfy({ $0._isASCIIUppercase })
+            {
                 result += word
             } else {
                 result += word.capitalized(with: nil)

@@ -104,7 +104,7 @@ package struct AnySortComparator: SortComparator, Sendable {
     /// Gets the current `order` property of `base`.
     private let getOrder: @Sendable (Any) -> SortOrder
 
-    package init<Comparator: SortComparator>(_ comparator: Comparator) where Comparator : Sendable {
+    package init<Comparator: SortComparator>(_ comparator: Comparator) where Comparator: Sendable {
         self._base = comparator
         self._compare = { (base: Any, lhs: Any, rhs: Any) -> ComparisonResult in
             (base as! Comparator).compare(lhs as! Comparator.Compared, rhs as! Comparator.Compared)
@@ -138,13 +138,13 @@ package struct AnySortComparator: SortComparator, Sendable {
     }
 
     package static func == (lhs: Self, rhs: Self) -> Bool {
-        func compare<L : Equatable, R : Equatable>(_ l : L, _ r : R) -> Bool {
+        func compare<L: Equatable, R: Equatable>(_ l: L, _ r: R) -> Bool {
             guard let rr = r as? L else {
                 return false
             }
             return l == rr
         }
-        
+
         return compare(lhs._base, rhs._base)
     }
 }
@@ -156,18 +156,18 @@ package struct AnySortComparator: SortComparator, Sendable {
 public struct ComparableComparator<Compared: Comparable>: SortComparator, Sendable {
     /// The sort order that the comparator uses to compare.
     public var order: SortOrder
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(order: SortOrder = .forward) {
         self.order = order
     }
-#else
+    #else
     // No need for availability on this initializer in the package.
     public init(order: SortOrder = .forward) {
         self.order = order
     }
-#endif
+    #endif
 
     private func unorderedCompare(_ lhs: Compared, _ rhs: Compared) -> ComparisonResult {
         if lhs < rhs { return .orderedAscending }
@@ -213,7 +213,7 @@ package struct OptionalComparator<Base: SortComparator>: SortComparator {
     }
 }
 
-extension OptionalComparator : Sendable where Base : Sendable { }
+extension OptionalComparator: Sendable where Base: Sendable {}
 
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 extension Never: SortComparator {
@@ -254,7 +254,8 @@ extension Sequence {
     ///   sorting the sequence's elements. Any subsequent comparators are used
     ///   to further refine the order of elements with equal values.
     /// - Returns: an array of the elements sorted using `comparators`.
-    public func sorted<S: Sequence, Comparator: SortComparator>(using comparators: S) -> [Element] where
+    public func sorted<S: Sequence, Comparator: SortComparator>(using comparators: S) -> [Element]
+    where
         S.Element == Comparator,
         Element == Comparator.Compared
     {

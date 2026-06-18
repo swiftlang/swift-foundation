@@ -37,18 +37,18 @@ public typealias TimeInterval = Double
 ///
 /// `Date` bridges to the `NSDate` class. You can use these interchangeably in code that interacts with Objective-C APIs.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct Date : Comparable, Hashable, Equatable, Sendable {
+public struct Date: Comparable, Hashable, Equatable, Sendable {
 
-    internal var _time : TimeInterval
+    internal var _time: TimeInterval
 
     /// The number of seconds from 1 January 1970 to the reference date, 1 January 2001.
-    public static let timeIntervalBetween1970AndReferenceDate : TimeInterval = 978307200.0
+    public static let timeIntervalBetween1970AndReferenceDate: TimeInterval = 978307200.0
 
     /// The number of seconds from 1 January 1601 to the reference date, 1 January 2001.
     internal static let timeIntervalBetween1601AndReferenceDate: TimeInterval = 12622780800.0
 
     /// The interval between 00:00:00 UTC on 1 January 2001 and the current date and time.
-    public static var timeIntervalSinceReferenceDate : TimeInterval {
+    public static var timeIntervalSinceReferenceDate: TimeInterval {
         return Self.getCurrentAbsoluteTime()
     }
 
@@ -162,7 +162,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     ///
     /// This property is equivalent to calling ``Date/init()``. If you assign this value to a variable or property, the assigned value doesn't automatically update as time passes.
     @backDeployed(before: macOS 12, iOS 15, tvOS 15, watchOS 8)
-    public static var now : Date { Date() }
+    public static var now: Date { Date() }
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(_time)
@@ -182,17 +182,17 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     }
 
     /// Returns true if the two `Date` values represent the same point in time.
-    public static func ==(lhs: Date, rhs: Date) -> Bool {
+    public static func == (lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate == rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns true if the left hand `Date` is earlier in time than the right hand `Date`.
-    public static func <(lhs: Date, rhs: Date) -> Bool {
+    public static func < (lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate < rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns true if the left hand `Date` is later in time than the right hand `Date`.
-    public static func >(lhs: Date, rhs: Date) -> Bool {
+    public static func > (lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate > rhs.timeIntervalSinceReferenceDate
     }
 
@@ -202,12 +202,12 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     ///   - lhs: A date.
     ///   - rhs: A ``TimeInterval`` to add to the date.
     /// - Returns: A date with a specified amount of time added to it.
-    public static func +(lhs: Date, rhs: TimeInterval) -> Date {
+    public static func + (lhs: Date, rhs: TimeInterval) -> Date {
         return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate + rhs)
     }
 
     /// Returns a `Date` with a specified amount of time subtracted from it.
-    public static func -(lhs: Date, rhs: TimeInterval) -> Date {
+    public static func - (lhs: Date, rhs: TimeInterval) -> Date {
         return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate - rhs)
     }
 
@@ -219,14 +219,14 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     ///
     /// > Warning:
     /// > This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. This takes into account complexities like daylight saving time, months with different numbers of days, and more.
-    public static func +=(lhs: inout Date, rhs: TimeInterval) {
+    public static func += (lhs: inout Date, rhs: TimeInterval) {
         lhs = lhs + rhs
     }
 
     /// Subtract a `TimeInterval` from a `Date`.
     ///
     /// - warning: This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. That will take into account complexities like daylight saving time, months with different numbers of days, and more.
-    public static func -=(lhs: inout Date, rhs: TimeInterval) {
+    public static func -= (lhs: inout Date, rhs: TimeInterval) {
         lhs = lhs - rhs
     }
 
@@ -235,7 +235,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Date {
     private static func getCurrentAbsoluteTime() -> TimeInterval {
-#if canImport(WinSDK)
+        #if canImport(WinSDK)
         var ft: FILETIME = FILETIME()
         var li: ULARGE_INTEGER = ULARGE_INTEGER()
         GetSystemTimePreciseAsFileTime(&ft)
@@ -243,21 +243,21 @@ extension Date {
         li.HighPart = ft.dwHighDateTime
         // FILETIME represents 100-ns intervals since January 1, 1601 (UTC)
         return TimeInterval(Double(li.QuadPart) / 10_000_000.0 - Self.timeIntervalBetween1601AndReferenceDate)
-#else
+        #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_REALTIME, &ts)
         var ret = TimeInterval(ts.tv_sec) - Self.timeIntervalBetween1970AndReferenceDate
         ret += (1.0E-9 * TimeInterval(ts.tv_nsec))
         return ret
-#endif // canImport(WinSDK)
+        #endif // canImport(WinSDK)
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
-// For backwards compatibility, the Darwin version of this method is left alone
-// because it uses `NSDateFormatter` and may behave slightly differently.
-#if !FOUNDATION_FRAMEWORK
+extension Date: CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+    // For backwards compatibility, the Darwin version of this method is left alone
+    // because it uses `NSDateFormatter` and may behave slightly differently.
+    #if !FOUNDATION_FRAMEWORK
     /// A string representation of the date object (read-only).
     /// The representation is useful for debugging only.
     /// There are a number of options to acquire a formatted string for a date including: date formatters
@@ -268,11 +268,11 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         // NSDate uses the constant format `uuuu-MM-dd HH:mm:ss '+0000'`
 
         // Glibc needs a non-standard format option to pad %Y to 4 digits
-#if canImport(Glibc) && !os(FreeBSD)
+        #if canImport(Glibc) && !os(FreeBSD)
         let format = "%4Y-%m-%d %H:%M:%S +0000"
-#else
+        #else
         let format = "%Y-%m-%d %H:%M:%S +0000"
-#endif
+        #endif
         let unavailable = "<description unavailable>"
 
         guard self >= Date.distantPast else {
@@ -283,14 +283,14 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         }
 
         var info = tm()
-#if os(Windows)
+        #if os(Windows)
         var time = __time64_t(self.timeIntervalSince1970)
         let errno: errno_t = _gmtime64_s(&info, &time)
         guard errno == 0 else { return unavailable }
-#else
+        #else
         var time = time_t(self.timeIntervalSince1970)
         gmtime_r(&time, &info)
-#endif
+        #endif
 
         // This allocates stack space for range of 10^102 years
         // That's more than Date currently supports.
@@ -311,7 +311,7 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
             return result
         }
     }
-#endif // !FOUNDATION_FRAMEWORK
+    #endif // !FOUNDATION_FRAMEWORK
 
     public var debugDescription: String {
         return description
@@ -319,14 +319,14 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
 
     public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
-          ("timeIntervalSinceReferenceDate", timeIntervalSinceReferenceDate)
+            ("timeIntervalSinceReferenceDate", timeIntervalSinceReferenceDate)
         ]
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : Codable {
+extension Date: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let timestamp = try container.decode(Double.self)
@@ -342,7 +342,7 @@ extension Date : Codable {
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : ReferenceConvertible, _ObjectiveCBridgeable {
+extension Date: ReferenceConvertible, _ObjectiveCBridgeable {
     public typealias ReferenceType = NSDate
 
     @_semantics("convertToObjectiveC")
@@ -370,7 +370,7 @@ extension Date : ReferenceConvertible, _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSDate : _HasCustomAnyHashableRepresentation {
+extension NSDate: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {
@@ -382,7 +382,7 @@ extension NSDate : _HasCustomAnyHashableRepresentation {
 // MARK: - Playground Support
 #if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : _CustomPlaygroundQuickLookable {
+extension Date: _CustomPlaygroundQuickLookable {
     var summary: String {
         let df = DateFormatter()
         df.dateStyle = .medium
@@ -405,7 +405,7 @@ extension Date {
     package var capped: Date {
         return max(min(self, Date.validCalendarRange.upperBound), Date.validCalendarRange.lowerBound)
     }
-    
+
     package var isValidForEnumeration: Bool {
         Date.validCalendarRange.contains(self)
     }
@@ -425,7 +425,7 @@ extension Date {
     public func distance(to other: Date) -> TimeInterval {
         return other.timeIntervalSinceReferenceDate - self.timeIntervalSinceReferenceDate
     }
-    
+
     /// Returns a date offset the specified time interval from this date.
     ///
     /// - Parameter n: The time interval offset.

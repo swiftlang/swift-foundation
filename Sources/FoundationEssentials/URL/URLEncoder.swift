@@ -83,9 +83,10 @@ internal enum URLEncoder {
                 writeIndex += 1
                 readIndex += 1
             } else if skipAlreadyEncoded, byte == UInt8(ascii: "%"),
-                      readIndex + 2 < input.count,
-                      input[readIndex + 1].isValidHexDigit,
-                      input[readIndex + 2].isValidHexDigit {
+                readIndex + 2 < input.count,
+                input[readIndex + 1].isValidHexDigit,
+                input[readIndex + 2].isValidHexDigit
+            {
                 guard !checkBounds || writeIndex + 2 < output.count else { return nil }
                 // Copy the valid percent-escape to the output buffer
                 writeIndex = output[writeIndex...].initialize(
@@ -98,7 +99,7 @@ internal enum URLEncoder {
                 writeIndex = output[writeIndex...].initialize(fromContentsOf: [
                     UInt8(ascii: "%"),
                     hexToAscii(byte >> 4),
-                    hexToAscii(byte & 0xF)
+                    hexToAscii(byte & 0xF),
                 ])
                 readIndex += 1
             }
@@ -199,9 +200,10 @@ internal enum URLEncoder {
                 output.append(byte)
                 readIndex += 1
             } else if byte == UInt8(ascii: "%"),
-                      readIndex + 2 < input.count,
-                      input[readIndex + 1].isValidHexDigit,
-                      input[readIndex + 2].isValidHexDigit {
+                readIndex + 2 < input.count,
+                input[readIndex + 1].isValidHexDigit,
+                input[readIndex + 2].isValidHexDigit
+            {
                 guard output.freeCapacity >= 3 else { return false }
                 // Copy the valid percent-escape to the output buffer
                 output.append(UInt8(ascii: "%"))
@@ -243,8 +245,9 @@ internal enum URLEncoder {
                 continue
             }
             guard readIndex + 2 < input.count,
-                  let hex1 = asciiToHex(input[readIndex + 1]),
-                  let hex2 = asciiToHex(input[readIndex + 2]) else {
+                let hex1 = asciiToHex(input[readIndex + 1]),
+                let hex2 = asciiToHex(input[readIndex + 2])
+            else {
                 return nil
             }
             let byte = (hex1 << 4) + hex2
@@ -404,12 +407,14 @@ internal enum URLEncoder {
         var mut = string
         return mut.withUTF8 { buffer in
             return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: buffer.count) { decodedBuffer -> String? in
-                guard let bytesWritten = URLEncoder._percentDecode(
-                    input: buffer,
-                    output: decodedBuffer,
-                    excludingASCII: .none,
-                    checkBounds: false
-                ) else {
+                guard
+                    let bytesWritten = URLEncoder._percentDecode(
+                        input: buffer,
+                        output: decodedBuffer,
+                        excludingASCII: .none,
+                        checkBounds: false
+                    )
+                else {
                     return nil
                 }
                 let output = UnsafeBufferPointer(rebasing: decodedBuffer[..<bytesWritten])
@@ -436,12 +441,14 @@ internal enum URLEncoder {
         var mut = string
         return mut.withUTF8 { buffer in
             return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: buffer.count) { decodedBuffer -> String? in
-                guard let bytesWritten = URLEncoder._percentDecode(
-                    input: buffer,
-                    output: decodedBuffer,
-                    excludingASCII: excludingASCII,
-                    checkBounds: false
-                ) else {
+                guard
+                    let bytesWritten = URLEncoder._percentDecode(
+                        input: buffer,
+                        output: decodedBuffer,
+                        excludingASCII: excludingASCII,
+                        checkBounds: false
+                    )
+                else {
                     return nil
                 }
                 let output = UnsafeBufferPointer(rebasing: decodedBuffer[..<bytesWritten])
@@ -491,8 +498,9 @@ internal enum URLEncoder {
                     }
 
                     guard readIndex + 2 < input.count,
-                          let hex1 = asciiToHex(input[readIndex + 1]),
-                          let hex2 = asciiToHex(input[readIndex + 2]) else {
+                        let hex1 = asciiToHex(input[readIndex + 1]),
+                        let hex2 = asciiToHex(input[readIndex + 2])
+                    else {
                         return nil
                     }
 
@@ -518,7 +526,7 @@ internal enum URLEncoder {
                             writeIndex += 1
                         } else {
                             // Convert this ISOLatin1 byte to UTF8
-                            output[writeIndex] = (0xC0 | (byte >> 6))       // 110000xx
+                            output[writeIndex] = (0xC0 | (byte >> 6)) // 110000xx
                             output[writeIndex + 1] = (0x80 | (byte & 0x3F)) // 10xxxxxx
                             writeIndex += 2
                         }
@@ -538,8 +546,9 @@ internal enum URLEncoder {
                     // then use String(bytes:encoding:) for conversion to UTF8.
                     while readIndex < input.count && input[readIndex] == UInt8(ascii: "%") {
                         guard readIndex + 2 < input.count,
-                              let hex1 = asciiToHex(input[readIndex + 1]),
-                              let hex2 = asciiToHex(input[readIndex + 2]) else {
+                            let hex1 = asciiToHex(input[readIndex + 1]),
+                            let hex2 = asciiToHex(input[readIndex + 2])
+                        else {
                             return nil
                         }
                         let byte = (hex1 << 4) + hex2
@@ -611,16 +620,15 @@ internal enum URLEncoder {
                 let scalar1 = scalars[index1].value
                 let scalar2 = scalars[index2].value
                 guard scalar1 < 128, scalar2 < 128,
-                      let hex1 = asciiToHex(UInt8(truncatingIfNeeded: scalar1)),
-                      let hex2 = asciiToHex(UInt8(truncatingIfNeeded: scalar2)) else {
+                    let hex1 = asciiToHex(UInt8(truncatingIfNeeded: scalar1)),
+                    let hex2 = asciiToHex(UInt8(truncatingIfNeeded: scalar2))
+                else {
                     return nil
                 }
                 let byte = (hex1 << 4) + hex2
                 decoded.append(byte)
                 readIndex = scalars.index(after: index2)
-            } while (
-                readIndex != endIndex && scalars[readIndex] == "%"
-            )
+            } while (readIndex != endIndex && scalars[readIndex] == "%")
 
             guard let decodedString = String(bytes: decoded, encoding: encoding) else {
                 return nil
@@ -654,7 +662,7 @@ internal enum URLEncoder {
                 writeIndex = buffer[writeIndex...].initialize(fromContentsOf: [
                     UInt8(ascii: "%"),
                     hexToAscii(byte >> 4),
-                    hexToAscii(byte & 0xF)
+                    hexToAscii(byte & 0xF),
                 ])
             }
             return writeIndex
@@ -712,9 +720,7 @@ extension URLEncoder {
                 var writeIndex = 0
                 var inputStart = 0
                 var inputEnd = buffer.count
-                let isIPLiteral = (
-                    buffer.first == UInt8(ascii: "[") && buffer.last == UInt8(ascii: "]")
-                )
+                let isIPLiteral = (buffer.first == UInt8(ascii: "[") && buffer.last == UInt8(ascii: "]"))
                 if isIPLiteral {
                     output[0] = UInt8(ascii: "[")
                     writeIndex += 1

@@ -17,24 +17,24 @@ import FoundationEssentials
 internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class ICURelativeDateFormatter : @unchecked Sendable {
-    struct Signature : Hashable {
+internal final class ICURelativeDateFormatter: @unchecked Sendable {
+    struct Signature: Hashable {
         let localeIdentifier: String
         let numberFormatStyle: UNumberFormatStyle.RawValue?
         let relativeDateStyle: UDateRelativeDateTimeFormatterStyle.RawValue
         let context: UDisplayContext.RawValue
     }
-    
-    static let sortedAllowedComponents : [Calendar.Component] = [ .year, .month, .weekOfMonth, .day, .hour, .minute, .second ]
 
-    static let componentsToURelativeDateUnit : [Calendar.Component: URelativeDateTimeUnit] = [
+    static let sortedAllowedComponents: [Calendar.Component] = [.year, .month, .weekOfMonth, .day, .hour, .minute, .second]
+
+    static let componentsToURelativeDateUnit: [Calendar.Component: URelativeDateTimeUnit] = [
         .year: .year,
         .month: .month,
         .weekOfMonth: .week,
         .day: .day,
         .hour: .hour,
         .minute: .minute,
-        .second: .second
+        .second: .second,
     ]
 
     /// `Sendable` notes: `ureldatefmt_format` is thread safe after initialization.
@@ -77,7 +77,8 @@ internal final class ICURelativeDateFormatter : @unchecked Sendable {
     }
 
     internal static func formatter(for style: Date.RelativeFormatStyle) -> ICURelativeDateFormatter {
-        let signature = Signature(localeIdentifier: style.locale.identifier, numberFormatStyle: style.unitsStyle.icuNumberFormatStyle?.rawValue, relativeDateStyle: style.unitsStyle.icuRelativeDateStyle.rawValue, context: style.capitalizationContext.icuContext.rawValue)
+        let signature = Signature(
+            localeIdentifier: style.locale.identifier, numberFormatStyle: style.unitsStyle.icuNumberFormatStyle?.rawValue, relativeDateStyle: style.unitsStyle.icuRelativeDateStyle.rawValue, context: style.capitalizationContext.icuContext.rawValue)
         let formatter = Self.cache.formatter(for: signature) {
             ICURelativeDateFormatter(signature: signature)
         }

@@ -256,11 +256,13 @@ private func posixLikePath(fromHFSPath path: String) -> String {
 }
 
 private func posixPath(urlPath: String, encoding: String.Encoding, isFileURL: Bool) -> String? {
-    guard var path = URLEncoder.percentDecode(
-        string: urlPath,
-        encoding: encoding,
-        excludingASCII: isFileURL ? .posixPath : .none
-    ) else {
+    guard
+        var path = URLEncoder.percentDecode(
+            string: urlPath,
+            encoding: encoding,
+            excludingASCII: isFileURL ? .posixPath : .none
+        )
+    else {
         return nil
     }
     if path.utf8.last == UInt8(ascii: "/") && path.utf8.count > rootLength(path: path) {
@@ -284,15 +286,17 @@ private func windowsPath(urlPath: String, encoding: String.Encoding) -> String? 
     }
     // "C:\" is standardized to "/C:/" on initialization.
     if let driveLetter = iter.next(), driveLetter.isAlpha,
-       iter.next() == ._colon,
-       iter.next() == ._slash {
+        iter.next() == ._colon,
+        iter.next() == ._slash
+    {
         // Strip trailing slashes from the path, which preserves a root "/".
         var path = String(Substring(urlPath.utf8.dropFirst(3)))._droppingTrailingSlash
-        path = URLEncoder.percentDecode(
-            string: path,
-            encoding: encoding,
-            excludingASCII: .windowsPath
-        )?.replacing(._slash, with: ._backslash) ?? path
+        path =
+            URLEncoder.percentDecode(
+                string: path,
+                encoding: encoding,
+                excludingASCII: .windowsPath
+            )?.replacing(._slash, with: ._backslash) ?? path
         // Don't include a leading slash before the drive letter
         return "\(Unicode.Scalar(driveLetter)):\(path)"
     }

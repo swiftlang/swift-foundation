@@ -28,21 +28,21 @@ internal import Synchronization
 #endif
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class PropertyListDecoder {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     public typealias PropertyListFormat = PropertyListSerialization.PropertyListFormat
-#else
-    public enum PropertyListFormat : UInt, Sendable  {
+    #else
+    public enum PropertyListFormat: UInt, Sendable {
         case xml = 100
         case binary = 200
         case openStep = 1
     }
-#endif
+    #endif
     // MARK: Options
 
     /// A dictionary you use to customize decoding by providing contextual
     /// information.
     @preconcurrency
-    open var userInfo: [CodingUserInfoKey : any Sendable] {
+    open var userInfo: [CodingUserInfoKey: any Sendable] {
         get {
             optionsLock._unsafeLock()
             defer { optionsLock._unsafeUnlock() }
@@ -66,7 +66,7 @@ open class PropertyListDecoder {
 
     /// Options set on the top-level encoder to pass down the decoding hierarchy.
     internal struct _Options {
-        var userInfo: [CodingUserInfoKey : any Sendable] = [:]
+        var userInfo: [CodingUserInfoKey: any Sendable] = [:]
     }
 
     /// The options set on the top-level decoder.
@@ -88,7 +88,7 @@ open class PropertyListDecoder {
     /// - returns: A value of the requested type.
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not a valid property list.
     /// - throws: An error if any value throws an error during decoding.
-    open func decode<T : Decodable>(_ type: T.Type, from data: Data) throws -> T {
+    open func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
         var format: PropertyListDecoder.PropertyListFormat = .binary
         return try decode(type, from: data, format: &format)
     }
@@ -102,80 +102,87 @@ open class PropertyListDecoder {
     /// - returns: A value of the requested type along with the detected format of the property list.
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not a valid property list.
     /// - throws: An error if any value throws an error during decoding.
-    open func decode<T : Decodable>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
-        try _decode({
-            try $0.decode(type)
-        }, from: data, format: &format)
+    open func decode<T: Decodable>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
+        try _decode(
+            {
+                try $0.decode(type)
+            }, from: data, format: &format)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func decode<T : DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
+    open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
         var format: PropertyListDecoder.PropertyListFormat = .binary
         return try decode(type, from: data, format: &format, configuration: configuration)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
+    open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T: DecodableWithConfiguration, C: DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, configuration: C.decodingConfiguration)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func decode<T, C>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C: DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
+    open func decode<T, C>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: C.Type) throws -> T
+    where T: DecodableWithConfiguration, C: DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, format: &format, configuration: C.decodingConfiguration)
     }
-    
+
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func decode<T : DecodableWithConfiguration>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: T.DecodingConfiguration) throws -> T {
-        try _decode({
-            try $0.decode(type, configuration: configuration)
-        }, from: data, format: &format)
+    open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: T.DecodingConfiguration) throws -> T {
+        try _decode(
+            {
+                try $0.decode(type, configuration: configuration)
+            }, from: data, format: &format)
     }
-    
+
     private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
-        return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
-            var decoder: _PlistDecoder<_BPlistDecodingFormat>
-            do {
-                let map = try BPlistScanner.scanBinaryPropertyList(from: utf8Buffer)
-                decoder = try _PlistDecoder(referencing: map, options: self.options, codingPathNode: .root)
-            } catch let error as BPlistError {
-                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
-            }
-            let result = try doDecode(decoder)
+        return try Self.detectFormatAndConvertEncoding(
+            for: data,
+            binaryPlist: { utf8Buffer in
+                var decoder: _PlistDecoder<_BPlistDecodingFormat>
+                do {
+                    let map = try BPlistScanner.scanBinaryPropertyList(from: utf8Buffer)
+                    decoder = try _PlistDecoder(referencing: map, options: self.options, codingPathNode: .root)
+                } catch let error as BPlistError {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
+                }
+                let result = try doDecode(decoder)
 
-            let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
-            decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+                let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
+                decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
 
-            format = .binary
-            return result
-        }, xml: { utf8Buffer in
-            var decoder: _PlistDecoder<_XMLPlistDecodingFormat>
-            do {
-                var scanInfo = XMLPlistScanner(buffer: utf8Buffer)
-                let map = try scanInfo.scanXMLPropertyList()
-                decoder = try _PlistDecoder(referencing: map, options: self.options, codingPathNode: .root)
-            } catch let error as XMLPlistError {
-                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
-            }
-            let result = try doDecode(decoder)
+                format = .binary
+                return result
+            },
+            xml: { utf8Buffer in
+                var decoder: _PlistDecoder<_XMLPlistDecodingFormat>
+                do {
+                    var scanInfo = XMLPlistScanner(buffer: utf8Buffer)
+                    let map = try scanInfo.scanXMLPropertyList()
+                    decoder = try _PlistDecoder(referencing: map, options: self.options, codingPathNode: .root)
+                } catch let error as XMLPlistError {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
+                }
+                let result = try doDecode(decoder)
 
-            let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
-            decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+                let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
+                decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
 
-            format = .xml
-            return result
-        }, openstep: { utf16View in
-            let value: Any
-            do {
-                value = try __ParseOldStylePropertyList(utf16: utf16View)
-            } catch let error as OpenStepPlistError {
-                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
-            }
-            let decoder = __PlistDictionaryDecoder(referencing: value, at: [], options: options)
-            format = .openStep
-            return try doDecode(decoder)
-        })
+                format = .xml
+                return result
+            },
+            openstep: { utf16View in
+                let value: Any
+                do {
+                    value = try __ParseOldStylePropertyList(utf16: utf16View)
+                } catch let error as OpenStepPlistError {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
+                }
+                let decoder = __PlistDictionaryDecoder(referencing: value, at: [], options: options)
+                format = .openStep
+                return try doDecode(decoder)
+            })
     }
-    
+
     @inline(__always)
     private static func findXMLTagOpening(in buffer: BufferView<UInt8>) -> BufferView<UInt8>.Index? {
         buffer.withUnsafeRawPointer { bufPtr, bufCount in
@@ -185,15 +192,15 @@ open class PropertyListDecoder {
             return buffer.index(buffer.startIndex, offsetBy: 5)
         }
     }
-    
+
     @inline(__always)
     private static func findEncodingLocation(in buffer: BufferView<UInt8>) throws -> BufferView<UInt8>.Index? {
         var idx = buffer.startIndex
         let endIdx = buffer.endIndex
-        
+
         while idx < endIdx {
             let ch = buffer[unchecked: idx]
-            
+
             // Looks like the end of the <?xml...> tag. No explicit encoding found.
             if ch == UInt8(ascii: "?") || ch == UInt8(ascii: ">") {
                 return nil
@@ -215,32 +222,33 @@ open class PropertyListDecoder {
                 buffer.formIndex(after: &idx)
             }
         }
-        
+
         // Reached of the input without finding 'encoding'
         return nil
     }
-    
+
     private static func readQuotedEncoding(in buffer: BufferView<UInt8>) throws -> String.Encoding {
         guard let quote = buffer.first,
-              quote == UInt8(ascii: "'") || quote == UInt8(ascii: "\"") else {
+            quote == UInt8(ascii: "'") || quote == UInt8(ascii: "\"")
+        else {
             return .utf8
         }
 
         // Move past the quote character
         let baseIdx = buffer.index(after: buffer.startIndex)
-        
+
         let endIdx = buffer.endIndex
         var idx = baseIdx
         while idx < endIdx && buffer[unchecked: idx] != quote {
             buffer.formIndex(after: &idx)
         }
-        
+
         return try buffer[unchecked: baseIdx..<idx].withUnsafePointer { ptr, encodingLength in
             if encodingLength == 5, Platform.strncasecmp_clocale(ptr, "utf-8", 5) == 0 {
                 return .utf8
             }
-            
-#if FOUNDATION_FRAMEWORK
+
+            #if FOUNDATION_FRAMEWORK
             guard let encodingName = String(bytes: UnsafeBufferPointer(start: ptr, count: encodingLength), encoding: .isoLatin1) else {
                 throw DecodingError._dataCorrupted("Encountered unknown encoding", for: .root)
             }
@@ -250,25 +258,25 @@ open class PropertyListDecoder {
             }
 
             return String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(enc))
-#else
+            #else
             // TODO: For now, FoundationEssentials only has support for utf-8.
             throw DecodingError._dataCorrupted("Encountered unknown encoding", for: .root)
-#endif
+            #endif
         }
 
     }
-    
+
     private static func scanForExplicitXMLEncoding(in buffer: BufferView<UInt8>) throws -> String.Encoding {
         // Scan for the <?xml.... ?> opening
         guard let postOpeningIdx = findXMLTagOpening(in: buffer) else {
             return .utf8
         }
-        
+
         // Found "<?xml"; now we scan for "encoding"
         guard let postEncodingIdx = try findEncodingLocation(in: buffer[postOpeningIdx...]) else {
             return .utf8
         }
-        
+
         // Read the quoted encoding value and convert it into a String.Encoding.
         return try readQuotedEncoding(in: buffer[postEncodingIdx...])
     }
@@ -296,22 +304,24 @@ open class PropertyListDecoder {
         }
     }
 
-    static func detectFormatAndConvertEncoding<T>(for data: Data,
-                                                  binaryPlist: (BufferView<UInt8>) throws -> T,
-                                                  xml: (BufferView<UInt8>) throws -> T,
-                                                  openstep: (String.UTF16View) throws -> T) rethrows -> T {
+    static func detectFormatAndConvertEncoding<T>(
+        for data: Data,
+        binaryPlist: (BufferView<UInt8>) throws -> T,
+        xml: (BufferView<UInt8>) throws -> T,
+        openstep: (String.UTF16View) throws -> T
+    ) rethrows -> T {
         try data.withBufferView { buffer in
-            
+
             // Binary plist always begins with the same literal bytes, which isn't valid in any of the other formats.
             if BPlistScanner.hasBPlistMagic(in: buffer) {
                 return try binaryPlist(buffer)
             }
-            
+
             // Try to deduce the text encoding of the file so that we can determine if it's XML or not.
             let (encoding, bomLength) = try detectEncoding(of: buffer)
             let postBOMIndex = buffer.index(buffer.startIndex, offsetBy: bomLength)
             let postBOMBuffer = buffer[unchecked: postBOMIndex...]
-            
+
             var result: T?
             try Self.withUTF8Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf8Buffer in
                 if XMLPlistScanner.detectPossibleXMLPlist(for: utf8Buffer) {
@@ -321,7 +331,7 @@ open class PropertyListDecoder {
             if let result {
                 return result
             }
-            
+
             // If it doesn't appear to be XML or binary, then we assume it's an OpenStep plist and try to parse it with that format.
             return try Self.withUTF16Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf16View in
                 try openstep(utf16View)
@@ -329,7 +339,7 @@ open class PropertyListDecoder {
         }
     }
 
-    static func withUTF8Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (BufferView<UInt8>) throws -> T ) throws -> T {
+    static func withUTF8Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (BufferView<UInt8>) throws -> T) throws -> T {
         if sourceEncoding == .utf8 {
             return try closure(buffer)
         } else {
@@ -343,7 +353,7 @@ open class PropertyListDecoder {
         }
     }
 
-    static func withUTF16Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (String.UTF16View) throws -> T ) throws -> T {
+    static func withUTF16Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (String.UTF16View) throws -> T) throws -> T {
         // If we were careful with endianness, we could avoid some copies here.
         guard let string = String(bytes: buffer, encoding: sourceEncoding) else {
             throw DecodingError._dataCorrupted("Cannot convert input to UTF-16", for: .root)
@@ -351,9 +361,9 @@ open class PropertyListDecoder {
         return try closure(string.utf16)
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // __PlistDictionaryDecoder is only available in the framework for now
-    
+
     /// Decodes a top-level value of the given type from the given property list container (top-level array or dictionary).
     ///
     /// - parameter type: The type of the value to decode.
@@ -361,7 +371,7 @@ open class PropertyListDecoder {
     /// - returns: A value of the requested type.
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not a valid property list.
     /// - throws: An error if any value throws an error during decoding.
-    internal func decode<T : Decodable>(_ type: T.Type, fromTopLevel container: Any) throws -> T {
+    internal func decode<T: Decodable>(_ type: T.Type, fromTopLevel container: Any) throws -> T {
         let decoder = __PlistDictionaryDecoder(referencing: container, options: self.options)
         guard let value = try decoder.unbox(container, as: type) else {
             throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: [], debugDescription: "The given data did not contain a top-level value."))
@@ -369,8 +379,8 @@ open class PropertyListDecoder {
 
         return value
     }
-    
-    internal func decode<T : DecodableWithConfiguration>(_ type: T.Type, fromTopLevel container: Any, configuration: T.DecodingConfiguration) throws -> T {
+
+    internal func decode<T: DecodableWithConfiguration>(_ type: T.Type, fromTopLevel container: Any, configuration: T.DecodingConfiguration) throws -> T {
         let decoder = __PlistDictionaryDecoder(referencing: container, options: self.options)
         guard let value = try decoder.unbox(container, as: type, configuration: configuration) else {
             throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: [], debugDescription: "The given data did not contain a top-level value."))
@@ -378,8 +388,8 @@ open class PropertyListDecoder {
 
         return value
     }
-#endif
+    #endif
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension PropertyListDecoder : @unchecked Sendable {}
+extension PropertyListDecoder: @unchecked Sendable {}

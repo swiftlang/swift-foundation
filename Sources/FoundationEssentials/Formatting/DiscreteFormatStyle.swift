@@ -103,7 +103,7 @@
 /// - the  formatted output between `xB` and `zB`, as well as `zA` and `xA` (excluding bounds) cannot
 ///   be predicted
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-public protocol DiscreteFormatStyle<FormatInput, FormatOutput> : FormatStyle {
+public protocol DiscreteFormatStyle<FormatInput, FormatOutput>: FormatStyle {
     /// The next discretization boundary before the given input.
     ///
     /// Use this function to determine the next "smaller" input that warrants updating the formatted output.
@@ -192,7 +192,7 @@ public protocol DiscreteFormatStyle<FormatInput, FormatOutput> : FormatStyle {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension DiscreteFormatStyle where FormatInput : FloatingPoint {
+extension DiscreteFormatStyle where FormatInput: FloatingPoint {
     public func input(before input: FormatInput) -> FormatInput? {
         guard input > -FormatInput.infinity else {
             return nil
@@ -211,7 +211,7 @@ extension DiscreteFormatStyle where FormatInput : FloatingPoint {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension DiscreteFormatStyle where FormatInput : FixedWidthInteger {
+extension DiscreteFormatStyle where FormatInput: FixedWidthInteger {
     public func input(before input: FormatInput) -> FormatInput? {
         guard input > FormatInput.min else {
             return nil

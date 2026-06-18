@@ -17,7 +17,7 @@ internal import CoreFoundation_Private.CFString
 
 extension UnicodeScalar {
     func _toHalfWidth() -> Self {
-#if FOUNDATION_FRAMEWORK // TODO: Implement `CFUniCharCompatibilityDecompose` in Swift
+        #if FOUNDATION_FRAMEWORK // TODO: Implement `CFUniCharCompatibilityDecompose` in Swift
         if value >= 0xFF00 && value < 0xFFEF {
             var halfWidth = value
             CFUniCharCompatibilityDecompose(&halfWidth, 1, 1)
@@ -25,9 +25,9 @@ extension UnicodeScalar {
         } else {
             return self
         }
-#else
+        #else
         fatalError("_toHalfWidth is not implemented yet")
-#endif
+        #endif
     }
 
     var _isGraphemeExtend: Bool {
@@ -43,7 +43,7 @@ extension UnicodeScalar {
             return self
         }
 
-#if FOUNDATION_FRAMEWORK // TODO: Implement `CFUniCharDecomposeCharacter` in Swift
+        #if FOUNDATION_FRAMEWORK // TODO: Implement `CFUniCharDecomposeCharacter` in Swift
         var stripped: UInt32? = nil
         withUnsafeTemporaryAllocation(of: UTF32Char.self, capacity: 64) { ptr in
             guard let base = ptr.baseAddress else {
@@ -58,16 +58,16 @@ extension UnicodeScalar {
         }
 
         return stripped != nil ? UnicodeScalar(stripped!)! : self
-#else
+        #else
         fatalError("_stripDiacritics is not implemented yet")
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
     }
 
-    var _caseFoldMapping : String {
-#if FOUNDATION_FRAMEWORK // TODO: Expose Case Mapping Data without @_spi(_Unicode)
+    var _caseFoldMapping: String {
+        #if FOUNDATION_FRAMEWORK // TODO: Expose Case Mapping Data without @_spi(_Unicode)
         return self.properties._caseFolded
-#else
+        #else
         fatalError("_caseFoldMapping is not implemented yet")
-#endif
+        #endif
     }
 }

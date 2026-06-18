@@ -17,7 +17,7 @@ internal import Synchronization
 //MARK: Progress Parent - Subprogress / ProgressReporter Child Interop
 @available(FoundationPreview 6.4, *)
 extension Progress {
-    
+
     /// Returns a Subprogress which can be passed to any method that reports progress
     /// It can be then used to create a child `ProgressManager` reporting to this `Progress`
     ///
@@ -27,17 +27,17 @@ extension Progress {
     /// which may be instantiated by `Subprogress` later when `reporter(totalCount:)` is called.
     /// - Returns: A `Subprogress` instance.
     public func subprogress(assigningCount count: Int) -> Subprogress {
-        
+
         // Make a ProgressManager
         let manager = ProgressManager(totalCount: 1)
-        
+
         // Create a NSProgress - ProgressManager bridge for mirroring
         let subprogressBridge = SubprogressBridge(
             parent: self,
             portion: Int64(count),
             manager: manager
         )
-        
+
         // Instantiate a Subprogress with ProgressManager as parent
         // Store bridge
         let subprogress = Subprogress(
@@ -45,44 +45,44 @@ extension Progress {
             assignedCount: 1,
             subprogressBridge: subprogressBridge
         )
-        
+
         return subprogress
     }
-    
+
     /// Adds a ProgressReporter as a child to a Progress, which constitutes a portion of Progress's totalUnitCount.
     ///
     /// - Parameters:
     ///   - reporter: A `ProgressReporter` instance.
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     public func addChild(_ reporter: ProgressReporter, withPendingUnitCount count: Int) {
-        
+
         precondition(self.isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
-        
+
         // Create a NSProgress - ProgressReporter bridge
         let reporterBridge = ProgressReporterBridge(
             parent: self,
             portion: Int64(count),
             reporterBridge: reporter
         )
-        
+
         // Store bridge
         reporter.manager.addBridge(reporterBridge: reporterBridge)
     }
-    
+
     // MARK: Cycle detection
     private func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
         guard let parent = self._parent() else {
             return false
         }
-        
+
         guard parent is NSProgressBridge else {
             return parent.isCycle(reporter: reporter)
         }
-        
+
         guard let unwrappedParent = (parent as? NSProgressBridge)?.manager else {
             return false
         }
-        
+
         if unwrappedParent === reporter.manager {
             return true
         }
@@ -102,14 +102,14 @@ extension ProgressManager {
     ///   - progress: `Progress` which receives the delegated `count`.
     public func assign(count: Int, to progress: Foundation.Progress) {
         precondition(progress._parent() == nil, "Cannot assign a progress to more than one parent.")
-        
+
         // Create a ProgressManager - NSProgress bridge
         let progressBridge = NSProgressBridge(
             manager: self,
             progress: progress,
             assignedCount: count
         )
-        
+
         // Add bridge as a parent
         progress._setParent(progressBridge, portion: Int64(count))
 
@@ -120,10 +120,10 @@ extension ProgressManager {
 
 @available(FoundationPreview 6.4, *)
 internal final class SubprogressBridge: Sendable {
-    
+
     internal let progressBridge: Progress
     internal let manager: ProgressManager
-    
+
     init(parent: Progress, portion: Int64, manager: ProgressManager) {
         self.progressBridge = Progress(totalUnitCount: 1, parent: parent, pendingUnitCount: portion)
         self.manager = manager
@@ -132,7 +132,7 @@ internal final class SubprogressBridge: Sendable {
             guard let self else {
                 return
             }
-            
+
             // Use atomic update to avoid corrupting NSProgress's parent accounting.
             // overallFraction's denominator changes when children finish, and setting
             // totalUnitCount and completedUnitCount separately causes a momentary spike
@@ -147,10 +147,10 @@ internal final class SubprogressBridge: Sendable {
 
 @available(FoundationPreview 6.4, *)
 internal final class ProgressReporterBridge: Sendable {
-    
+
     internal let progressBridge: Progress
     internal let reporterBridge: ProgressReporter
-    
+
     init(parent: Progress, portion: Int64, reporterBridge: ProgressReporter) {
         self.progressBridge = Progress(
             totalUnitCount: Int64(reporterBridge.manager.totalCount ?? 0),
@@ -159,19 +159,19 @@ internal final class ProgressReporterBridge: Sendable {
         )
         self.progressBridge.completedUnitCount = Int64(reporterBridge.manager.completedCount)
         self.reporterBridge = reporterBridge
-                
+
         let manager = reporterBridge.manager
-        
+
         manager.addObserver { [weak self] observerState in
             guard let self else {
                 return
             }
-            
+
             self.progressBridge.totalUnitCount = Int64(observerState.totalCount)
             self.progressBridge.completedUnitCount = Int64(observerState.completedCount)
         }
     }
-    
+
 }
 
 @available(FoundationPreview 6.4, *)
@@ -186,11 +186,11 @@ internal final class NSProgressBridge: Progress, @unchecked Sendable {
         self.managerBridge = ProgressManager(totalCount: Int(clamping: progress.totalUnitCount))
         self.progress = progress
         super.init(parent: nil, userInfo: nil)
-        
+
         managerBridge.setCounts { completed, total in
             completed = Int(clamping: progress.completedUnitCount)
         }
-        
+
         let position = manager.addChild(
             childManager: managerBridge,
             assignedCount: assignedCount,
@@ -217,17 +217,17 @@ extension ProgressManager {
         var totalCount: Int
         var completedCount: Int
     }
-    
+
     internal struct InteropObservation {
         let subprogressBridge: SubprogressBridge?
         var reporterBridge: ProgressReporterBridge?
         var nsProgressBridge: Foundation.Progress?
     }
-    
+
     internal enum InteropType {
         case interopMirror(ProgressManager)
         case interopObservation(InteropObservation)
-        
+
         internal var totalCount: Int? {
             switch self {
             case .interopMirror(let mirror):
@@ -236,7 +236,7 @@ extension ProgressManager {
                 nil
             }
         }
-        
+
         internal var completedCount: Int? {
             switch self {
             case .interopMirror(let mirror):
@@ -245,7 +245,7 @@ extension ProgressManager {
                 nil
             }
         }
-        
+
         internal var fractionCompleted: Double? {
             switch self {
             case .interopMirror(let mirror):
@@ -254,7 +254,7 @@ extension ProgressManager {
                 nil
             }
         }
-        
+
         internal var isIndeterminate: Bool? {
             switch self {
             case .interopMirror(let mirror):
@@ -263,11 +263,11 @@ extension ProgressManager {
                 nil
             }
         }
-        
+
         internal var isFinished: Bool? {
             switch self {
             case .interopMirror(let mirror):
-                 mirror.isFinished
+                mirror.isFinished
             case .interopObservation:
                 nil
             }
@@ -293,7 +293,7 @@ extension ProgressManager {
             state.observers.append(observer)
         }
     }
-    
+
     /// Notifies all `_observers` of `self` when `state` changes.
     internal func notifyObservers(with observedState: ObserverState) {
         state.withLock { state in
@@ -302,14 +302,15 @@ extension ProgressManager {
             }
         }
     }
-    
+
     /// Notifies interop bridge observers so that grandchild progress propagates
     /// through the SubprogressBridge to the parent NSProgress.
     internal func notifyInteropObserversOfChildUpdate() {
         // Phase 1: Collect bridge manager and dirty children info
         let info: (bridgeManager: ProgressManager, updates: [PendingChildUpdateInfo]?)? = state.withLock { state in
             guard case .interopObservation(let observation) = state.interopType,
-                  let bridgeManager = observation.subprogressBridge?.manager else {
+                let bridgeManager = observation.subprogressBridge?.manager
+            else {
                 return nil
             }
             return (bridgeManager, state.pendingChildrenUpdates())
@@ -323,11 +324,12 @@ extension ProgressManager {
         var childrenUpdates: [PendingChildUpdate] = []
         for update in updates {
             let updatedFraction = update.manager.updatedProgressFraction()
-            childrenUpdates.append(PendingChildUpdate(
-                index: update.index,
-                updatedFraction: updatedFraction,
-                assignedCount: update.assignedCount
-            ))
+            childrenUpdates.append(
+                PendingChildUpdate(
+                    index: update.index,
+                    updatedFraction: updatedFraction,
+                    assignedCount: update.assignedCount
+                ))
         }
 
         // Phase 3: Apply updates and compute fraction
@@ -340,23 +342,23 @@ extension ProgressManager {
         // Notify bridge
         info.bridgeManager.notifyObservers(with: observerState)
     }
-    
+
     internal func addBridge(reporterBridge: ProgressReporterBridge? = nil, nsProgressBridge: Foundation.Progress? = nil) {
         state.withLock { state in
             var interopObservation = InteropObservation(subprogressBridge: nil)
-            
+
             if let reporterBridge {
                 interopObservation.reporterBridge = reporterBridge
             }
-            
+
             if let nsProgressBridge {
                 interopObservation.nsProgressBridge = nsProgressBridge
             }
-            
+
             state.interopType = .interopObservation(interopObservation)
         }
     }
-    
+
     internal func setInteropChild(interopMirror: ProgressManager) {
         state.withLock { state in
             state.interopType = .interopMirror(interopMirror)

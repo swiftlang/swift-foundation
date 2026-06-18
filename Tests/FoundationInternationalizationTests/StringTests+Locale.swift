@@ -94,7 +94,7 @@ private struct StringLocaleTests {
         }
 
         test(nil, "ﬄ", "FFL") // 0xFB04
-        test(nil, "ß", "SS")   // 0x0053
+        test(nil, "ß", "SS") // 0x0053
         test(nil, "ﬀ", "FF")
 
         test("en", "ﬄ", "FFL")
@@ -105,7 +105,7 @@ private struct StringLocaleTests {
         // Greek letter
         test(nil, "Ά", "Ά")
         test(nil, "ά", "Ά")
-        test(nil, "ᾈ", "ἈΙ")  // 0x1F88
+        test(nil, "ᾈ", "ἈΙ") // 0x1F88
 
         test(nil, "\u{0391}\u{0301}", "\u{0391}\u{0301}")
         test(nil, "\u{03B1}\u{0301}", "\u{0391}\u{0301}")
@@ -136,7 +136,7 @@ private struct StringLocaleTests {
             #expect(actual == expected, "actual: \(actual._scalarViewDescription), expected: \(expected._scalarViewDescription)", sourceLocation: sourceLocation)
         }
 
-        test(nil, "ᾈ", "ᾀ")     // 0x1F88
+        test(nil, "ᾈ", "ᾀ") // 0x1F88
         test("en", "ᾈ", "ᾀ")
         test("en", "SOMEVERYVERYVERYVERYVERYVERYVERYVERYVERYLONGSTRING", "someveryveryveryveryveryveryveryveryverylongstring")
         test("el_GR", "ᾈ", "ᾀ")
@@ -159,4 +159,3 @@ private struct StringLocaleTests {
         _ = input.capitalized(with: Locale(identifier: "en_US"))
     }
 }
-

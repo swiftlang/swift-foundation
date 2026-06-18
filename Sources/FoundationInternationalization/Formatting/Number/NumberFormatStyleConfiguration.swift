@@ -18,7 +18,7 @@ internal import _FoundationICU
 
 /// The capitalization formatting context used when formatting dates and times.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
+public struct FormatStyleCapitalizationContext: Codable, Hashable, Sendable {
 
     internal enum Option: Int, Codable, Hashable {
         case unknown
@@ -49,7 +49,7 @@ public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     var formatterContext: Formatter.Context {
         switch option {
         case .unknown:
@@ -64,27 +64,27 @@ public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
             return .middleOfSentence
         }
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
-    public static var unknown : FormatStyleCapitalizationContext {
+    public static var unknown: FormatStyleCapitalizationContext {
         .init(.unknown)
     }
 
     /// For stand-alone usage, such as an isolated name on a calendar page.
-    public static var standalone : FormatStyleCapitalizationContext {
+    public static var standalone: FormatStyleCapitalizationContext {
         .init(.standalone)
     }
 
     /// For use in a UI list or menu item.
-    public static var listItem : FormatStyleCapitalizationContext {
+    public static var listItem: FormatStyleCapitalizationContext {
         .init(.listItem)
     }
 
-    public static var beginningOfSentence : FormatStyleCapitalizationContext {
+    public static var beginningOfSentence: FormatStyleCapitalizationContext {
         .init(.beginningOfSentence)
     }
 
-    public static var middleOfSentence : FormatStyleCapitalizationContext {
+    public static var middleOfSentence: FormatStyleCapitalizationContext {
         .init(.middleOfSentence)
     }
 }
@@ -94,7 +94,7 @@ public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
 /// This type is effectively a namespace to collect types that configure parts of a formatted number, such as grouping, precision, and separator and sign characters.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum NumberFormatStyleConfiguration {
-    internal struct Collection : Codable, Hashable, Sendable {
+    internal struct Collection: Codable, Hashable, Sendable {
         var scale: Double?
         var precision: Precision?
         var group: Grouping?
@@ -113,8 +113,8 @@ public enum NumberFormatStyleConfiguration {
     typealias Scale = Double
 
     /// A structure that an integer format style uses to configure grouping.
-    public struct Grouping : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Int, Codable, Hashable {
+    public struct Grouping: Codable, Hashable, CustomStringConvertible, Sendable {
+        enum Option: Int, Codable, Hashable {
             case automatic
             case hidden
 
@@ -141,7 +141,7 @@ public enum NumberFormatStyleConfiguration {
     }
 
     /// A structure that an integer format style uses to configure precision.
-    public struct Precision : Codable, Hashable, Sendable {
+    public struct Precision: Codable, Hashable, Sendable {
 
         enum Option: Hashable {
             case significantDigits(min: Int, max: Int?)
@@ -213,7 +213,7 @@ public enum NumberFormatStyleConfiguration {
         ///   - fractionLimits: A range from the minimum to the maximum number of digits to use when formatting the fraction part of a number.
         /// - Returns: A precision that constrains formatted values to ranges of digits in the integer and fraction parts.
         public static func integerAndFractionLength<R1: RangeExpression, R2: RangeExpression>(integerLimits: R1, fractionLimits: R2) -> Self where R1.Bound == Int, R2.Bound == Int {
-            let (minInt, maxInt) =  integerLimits.clampedLowerAndUpperBounds(validPartLength)
+            let (minInt, maxInt) = integerLimits.clampedLowerAndUpperBounds(validPartLength)
             let (minFrac, maxFrac) = fractionLimits.clampedLowerAndUpperBounds(validPartLength)
 
             return Precision(option: .integerAndFractionalLength(minInt: minInt, maxInt: maxInt, minFraction: minFrac, maxFraction: maxFrac))
@@ -274,8 +274,8 @@ public enum NumberFormatStyleConfiguration {
     }
 
     /// A structure that an integer format style uses to configure a decimal separator display strategy.
-    public struct DecimalSeparatorDisplayStrategy : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Int, Codable, Hashable {
+    public struct DecimalSeparatorDisplayStrategy: Codable, Hashable, CustomStringConvertible, Sendable {
+        enum Option: Int, Codable, Hashable {
             case automatic
             case always
         }
@@ -289,7 +289,7 @@ public enum NumberFormatStyleConfiguration {
 
         /// A strategy that always displays decimal separators.
         // "1.1", "1."
-        public static var always : Self { .init(option: .always) }
+        public static var always: Self { .init(option: .always) }
 
         public var description: String {
             switch option {
@@ -302,8 +302,8 @@ public enum NumberFormatStyleConfiguration {
     }
 
     /// A structure that an integer format style uses to configure a sign display strategy.
-    public struct SignDisplayStrategy : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Int, Hashable, Codable {
+    public struct SignDisplayStrategy: Codable, Hashable, CustomStringConvertible, Sendable {
+        enum Option: Int, Hashable, Codable {
             case always
             case hidden
         }
@@ -353,8 +353,8 @@ public enum NumberFormatStyleConfiguration {
     }
 
     /// A structure that an integer format style uses to configure notation.
-    public struct Notation : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Int, Codable, Hashable {
+    public struct Notation: Codable, Hashable, CustomStringConvertible, Sendable {
+        enum Option: Int, Codable, Hashable {
             case automatic
             case scientific
             case compactName
@@ -418,7 +418,7 @@ public enum NumberFormatStyleConfiguration {
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
-extension NumberFormatStyleConfiguration : Sendable {}
+extension NumberFormatStyleConfiguration: Sendable {}
 
 /// Configuration settings for formatting currency values.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -436,7 +436,7 @@ public enum CurrencyFormatStyleConfiguration {
     public typealias Notation = NumberFormatStyleConfiguration.Notation
 
     internal typealias RoundingIncrement = NumberFormatStyleConfiguration.RoundingIncrement
-    internal struct Collection : Codable, Hashable {
+    internal struct Collection: Codable, Hashable {
         var scale: Double?
         var precision: Precision?
         var group: Grouping?
@@ -450,7 +450,7 @@ public enum CurrencyFormatStyleConfiguration {
 
     /// A structure used to configure sign display strategies for currency format styles.
     public struct SignDisplayStrategy: Codable, Hashable, Sendable {
-        enum Option : Int, Hashable, Codable {
+        enum Option: Int, Hashable, Codable {
             case always
             case hidden
         }
@@ -496,7 +496,7 @@ public enum CurrencyFormatStyleConfiguration {
 
     /// A structure used to configure the presentation of currency format styles.
     public struct Presentation: Codable, Hashable, Sendable {
-        enum Option : Int, Codable, Hashable {
+        enum Option: Int, Codable, Hashable {
             case narrow
             case standard
             case isoCode
@@ -528,19 +528,19 @@ public enum CurrencyFormatStyleConfiguration {
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
-extension CurrencyFormatStyleConfiguration : Sendable {}
+extension CurrencyFormatStyleConfiguration: Sendable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum DescriptiveNumberFormatConfiguration {
     public typealias CapitalizationContext = FormatStyleCapitalizationContext
-    public struct Presentation : Codable, Hashable, Sendable {
-        internal enum Option : Int, Codable, Hashable {
+    public struct Presentation: Codable, Hashable, Sendable {
+        internal enum Option: Int, Codable, Hashable {
             case spellOut = 1
             case ordinal = 2
             case cardinal = 3
 
             #if FOUNDATION_FRAMEWORK
-            fileprivate var numberFormatterStyle : NumberFormatter.Style {
+            fileprivate var numberFormatterStyle: NumberFormatter.Style {
                 switch self {
                 case .spellOut:
                     return .spellOut
@@ -557,13 +557,13 @@ public enum DescriptiveNumberFormatConfiguration {
         public static var spellOut: Self { Presentation(rawValue: 1) }
         public static var ordinal: Self { Presentation(rawValue: 2) }
         internal static var cardinal: Self { Presentation(rawValue: 3) }
-        
+
         internal init(rawValue: Int) {
             option = Option(rawValue: rawValue)!
         }
     }
 
-    internal struct Collection : Codable, Hashable {
+    internal struct Collection: Codable, Hashable {
         var presentation: Presentation
         var capitalizationContext: CapitalizationContext?
 
@@ -585,7 +585,7 @@ public enum DescriptiveNumberFormatConfiguration {
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
-extension DescriptiveNumberFormatConfiguration : Sendable {}
+extension DescriptiveNumberFormatConfiguration: Sendable {}
 
 // MARK: - Codable
 
@@ -643,7 +643,7 @@ extension FloatingPointRoundingRule {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointRoundingRule: @retroactive Codable { }
+extension FloatingPointRoundingRule: @retroactive Codable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.RoundingIncrement: Codable {
@@ -675,7 +675,7 @@ extension NumberFormatStyleConfiguration.RoundingIncrement: Codable {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension NumberFormatStyleConfiguration.Precision.Option : Codable {
+extension NumberFormatStyleConfiguration.Precision.Option: Codable {
     private enum CodingKeys: CodingKey {
         case minSignificantDigits
         case maxSignificantDigits
@@ -689,11 +689,15 @@ extension NumberFormatStyleConfiguration.Precision.Option : Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let minSignificantDigits = try container.decodeIfPresent(Int.self, forKey: .minSignificantDigits), let maxSignificantDigits = try container.decodeIfPresent(Int.self, forKey: .maxSignificantDigits) {
             self = .significantDigits(min: minSignificantDigits, max: maxSignificantDigits)
-        } else if let minInt = try container.decodeIfPresent(Int.self, forKey: .minIntegerLength), let maxInt = try container.decodeIfPresent(Int.self, forKey: .maxIntegerLength), let minFrac = try container.decodeIfPresent(Int.self, forKey: .minFractionalLength), let maxFrac = try container.decodeIfPresent(Int.self, forKey: .maxFractionalLength) {
+        } else if let minInt = try container.decodeIfPresent(Int.self, forKey: .minIntegerLength), let maxInt = try container.decodeIfPresent(Int.self, forKey: .maxIntegerLength),
+            let minFrac = try container.decodeIfPresent(Int.self, forKey: .minFractionalLength), let maxFrac = try container.decodeIfPresent(Int.self, forKey: .maxFractionalLength)
+        {
             self = .integerAndFractionalLength(minInt: minInt, maxInt: maxInt, minFraction: minFrac, maxFraction: maxFrac)
         } else {
-            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath,
-                                                              debugDescription: "Invalid Precision"))
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Invalid Precision"))
         }
     }
 
@@ -834,7 +838,7 @@ extension NumberFormatStyleConfiguration.Precision {
         return incrementStem
     }
 
-    var skeleton : String {
+    var skeleton: String {
         switch self.option {
         case .significantDigits(let min, let max):
             return significantDigitsSkeleton(min: min, max: max)
@@ -879,7 +883,7 @@ extension NumberFormatStyleConfiguration.Precision {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.Grouping {
-    var skeleton : String {
+    var skeleton: String {
         switch self.option {
         case .automatic:
             // This is the default, so no need to set it
@@ -892,7 +896,7 @@ extension NumberFormatStyleConfiguration.Grouping {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.SignDisplayStrategy {
-    var skeleton : String {
+    var skeleton: String {
         let stem: String
         switch positive {
         case .always:
@@ -916,7 +920,7 @@ extension NumberFormatStyleConfiguration.SignDisplayStrategy {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy {
-    var skeleton : String {
+    var skeleton: String {
         let stem: String
         switch option {
         case .always:
@@ -930,7 +934,7 @@ extension NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.RoundingRule {
-    var skeleton : String {
+    var skeleton: String {
         var stem: String
         switch self {
         case .awayFromZero:
@@ -954,7 +958,7 @@ extension NumberFormatStyleConfiguration.RoundingRule {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.Notation {
-    var skeleton : String {
+    var skeleton: String {
         let stem: String
         switch self.option {
         case .scientific:
@@ -970,7 +974,7 @@ extension NumberFormatStyleConfiguration.Notation {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.Scale {
-    var skeleton : String {
+    var skeleton: String {
         return "scale/\(Decimal(self))"
     }
 }

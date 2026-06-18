@@ -32,7 +32,7 @@ let testDates = {
         Date(timeIntervalSince1970: -2827137600), // 1880-05-30T12:00:00
         Date(timeIntervalSince1970: 0),
         Date.now,
-        Date(timeIntervalSince1970: 26205249600) // 2800-05-30
+        Date(timeIntervalSince1970: 26205249600), // 2800-05-30
     ]
     var dates: [Date] = []
     for seed in seeds {
@@ -87,7 +87,7 @@ func timeZoneBenchmarks() {
     let gmtOffsetTimeZoneConfiguration = Benchmark.Configuration(scalingFactor: .mega)
 
     var gmtOffsetTimeZoneNames = (0...14).map { "GMT+\($0)" }
-    gmtOffsetTimeZoneNames.append(contentsOf: (0...12).map{ "GMT-\($0)" })
+    gmtOffsetTimeZoneNames.append(contentsOf: (0...12).map { "GMT-\($0)" })
 
     Benchmark("GMTOffsetTimeZone-creation", configuration: gmtOffsetTimeZoneConfiguration) { benchmark in
         for name in gmtOffsetTimeZoneNames {
@@ -142,7 +142,7 @@ func timeZoneBenchmarks() {
 
 
     // Benchmark for GMT TimeZone
-    let gmtTimeZones = [ -64800, -64769, -64709, -61229, -36029, -35969, -35909, -32489, -32429, -3629, -1829, -89, -29, -1, 0, 29, 30, 90, 1770, 3570, 3630, 34170, 35910, 35970, 36030, 64650, 64710 ].map { TimeZone(secondsFromGMT: $0)! }
+    let gmtTimeZones = [-64800, -64769, -64709, -61229, -36029, -35969, -35909, -32489, -32429, -3629, -1829, -89, -29, -1, 0, 29, 30, 90, 1770, 3570, 3630, 34170, 35910, 35970, 36030, 64650, 64710].map { TimeZone(secondsFromGMT: $0)! }
 
     Benchmark("gmtTimeZone_abbreviation", configuration: .init(scalingFactor: .giga)) { benchmark in
         for gmtTimeZone in gmtTimeZones {
@@ -185,4 +185,3 @@ func timeZoneBenchmarks() {
         }
     }
 }
-

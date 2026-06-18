@@ -10,23 +10,24 @@
 //===----------------------------------------------------------------------===//
 
 extension String {
-    struct _BlockSearchingOptions : OptionSet {
+    struct _BlockSearchingOptions: OptionSet {
         let rawValue: Int
-        
+
         static let findStart = Self(rawValue: 1 << 0)
         static let findEnd = Self(rawValue: 1 << 1)
         static let findContentsEnd = Self(rawValue: 1 << 2)
         static let stopAtLineSeparators = Self(rawValue: 1 << 3)
     }
-    
-    static let paragraphSeparators : [[UTF8.CodeUnit]] = [
+
+    static let paragraphSeparators: [[UTF8.CodeUnit]] = [
         [0xE2, 0x80, 0xA9] // U+2029 Paragraph Separator
     ]
-    
-    static let lineSeparators : [[UTF8.CodeUnit]] = paragraphSeparators + [
-        [0xE2, 0x80, 0xA8], // U+2028 Line Separator
-        [0xC2, 0x85] // U+0085 <Next Line> (NEL)
-    ]
+
+    static let lineSeparators: [[UTF8.CodeUnit]] =
+        paragraphSeparators + [
+            [0xE2, 0x80, 0xA8], // U+2028 Line Separator
+            [0xC2, 0x85], // U+0085 <Next Line> (NEL)
+        ]
 }
 
 struct _StringBlock<Index> {
@@ -79,9 +80,9 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
             while separator[separatorIdx] == self[strIdx] {
                 if !separator.formIndex(&separatorIdx, offsetBy: offset, limitedBy: sepLimit) {
                     // We've fully matched the separator, return the appropriate range
-                    return (reverse ? strIdx ... start : start ... strIdx).relative(to: self)
+                    return (reverse ? strIdx...start : start...strIdx).relative(to: self)
                 }
-                
+
                 if !formIndex(&strIdx, offsetBy: offset, limitedBy: strLimit) {
                     // We've run off the end of the string and haven't finished the separator, break out
                     break
@@ -104,7 +105,7 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
         for options: String._BlockSearchingOptions,
         in range: Range<Index>
     ) -> _StringBlock<Index> {
-        let fullStringRange = startIndex ..< endIndex
+        let fullStringRange = startIndex..<endIndex
 
         guard !(range == fullStringRange && !options.contains(.findContentsEnd)) else {
             return _StringBlock(start: startIndex, end: endIndex, contentsEnd: nil)
@@ -115,7 +116,7 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
         }
 
         let separatorCharacters = options.contains(.stopAtLineSeparators) ? String.lineSeparators : String.paragraphSeparators
-        
+
         var start: Index? = nil
         if options.contains(.findStart) {
             if range.lowerBound == startIndex {
@@ -150,7 +151,7 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
                 }
             }
         }
-        
+
         var end: Index? = nil
         var contentsEnd: Index? = nil
         if options.contains(.findEnd) || options.contains(.findContentsEnd) {

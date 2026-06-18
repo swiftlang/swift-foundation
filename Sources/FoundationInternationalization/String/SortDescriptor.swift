@@ -16,25 +16,25 @@ import FoundationEssentials
 
 /// A serializable description of how to sort numerics and strings.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
-public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {    
+public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     /// The set of supported safely serializable comparisons.
     enum AllowedComparison: Hashable, Codable, Sendable {
         /// Compare `String` by retrieving from key path, using using the given standard string comparator.
         case comparableString(String.StandardComparator, KeyPath<Compared, String> & Sendable)
-        
+
         /// Compare `String?` by retrieving from key path, using using the given standard string comparator.
         case comparableOptionalString(String.StandardComparator, KeyPath<Compared, String?> & Sendable)
-        
+
         /// Compares using `Swift.Comparable` implementation.
         case comparable(AnySortComparator, PartialKeyPath<Compared> & Sendable)
-        
-#if FOUNDATION_FRAMEWORK
+
+        #if FOUNDATION_FRAMEWORK
         /// Compares using the `compare` selector on the given type.
         case compare
-        
+
         /// Compares `String`s using the given standard string comparator.
         case compareString(String.StandardComparator)
-#endif
+        #endif
 
         enum CodingKeys: String, CodingKey {
             case rawValue
@@ -42,8 +42,8 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         }
 
         // This compatibility definition of == and hash are only needed for the swift 5.x compiler, which can't automatically generate it due to the Sendable conformance
-#if compiler(<6.0)
-        static func ==(lhs: Self, rhs: Self) -> Bool {
+        #if compiler(<6.0)
+        static func == (lhs: Self, rhs: Self) -> Bool {
             switch (lhs, rhs) {
             case (.comparableString(let lhsComp, let lhsKeypath), .comparableString(let rhsComp, let rhsKeypath)):
                 return lhsComp == rhsComp && lhsKeypath == rhsKeypath
@@ -51,17 +51,17 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
                 return lhsComp == rhsComp && lhsKeypath == rhsKeypath
             case (.comparable(let lhsComp, let lhsKeypath), .comparable(let rhsComp, let rhsKeypath)):
                 return lhsComp == rhsComp && lhsKeypath == rhsKeypath
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             case (.compare, .compare):
                 return true
             case (.compareString(let lhsComp), .compareString(let rhsComp)):
                 return lhsComp == rhsComp
-#endif
+            #endif
             default:
                 return false
             }
         }
-        
+
         func hash(into hasher: inout Hasher) {
             switch self {
             case .comparableString(let comp, let kp):
@@ -73,17 +73,17 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
             case .comparable(let comp, let kp):
                 hasher.combine(comp)
                 hasher.combine(kp)
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             case .compare:
                 hasher.combine(1)
             case .compareString(let comp):
                 hasher.combine(comp)
-#endif
+            #endif
             }
         }
-#endif
-        
-#if FOUNDATION_FRAMEWORK
+        #endif
+
+        #if FOUNDATION_FRAMEWORK
         fileprivate var selector: Selector {
             switch self {
             case .compare:
@@ -94,52 +94,52 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
                 fatalError("Accessing `selector` for `comparable` comparison")
             }
         }
-#endif
+        #endif
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let rawValue = try container.decode(UInt.self, forKey: .rawValue)
             switch rawValue {
-            case 0: 
-#if FOUNDATION_FRAMEWORK
+            case 0:
+                #if FOUNDATION_FRAMEWORK
                 self = .compare
-#else
+                #else
                 throw DecodingError.dataCorruptedError(
                     forKey: .rawValue,
                     in: container,
                     debugDescription: "`compare` is not supported on this platform.")
-#endif
+                #endif
             case 1:
-#if FOUNDATION_FRAMEWORK
+                #if FOUNDATION_FRAMEWORK
                 let comparator = try container.decode(String.StandardComparator.self, forKey: .stringComparator)
                 if comparator.equalsIgnoringOrder(.lexical) {
                     throw DecodingError.dataCorruptedError(
                         forKey: .rawValue,
                         in: container,
                         debugDescription: """
-                        Attempted to decode `AllowedSelector` in invalid
-                        configuration.
-                        """)
+                            Attempted to decode `AllowedSelector` in invalid
+                            configuration.
+                            """)
                 }
                 self = .compareString(comparator)
-#else
+                #else
                 throw DecodingError.dataCorruptedError(
                     forKey: .rawValue,
                     in: container,
                     debugDescription: "`compareString` is not supported on this platform.")
-#endif
+                #endif
             default:
                 throw DecodingError.dataCorruptedError(
                     forKey: .rawValue,
                     in: container,
                     debugDescription: """
-                    Attempted to decode `AllowedSelector` in invalid
-                    configuration.
-                    """)
+                        Attempted to decode `AllowedSelector` in invalid
+                        configuration.
+                        """)
             }
         }
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         fileprivate init?(fromSelector selector: Selector) {
             switch NSStringFromSelector(selector) {
             case "compare:":
@@ -152,26 +152,25 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
                 return nil
             }
         }
-#endif
-        
+        #endif
+
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             switch self {
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             case .compare:
                 try container.encode(0, forKey: .rawValue)
             case let .compareString(comparator):
                 try container.encode(1, forKey: .rawValue)
                 try container.encode(comparator, forKey: .stringComparator)
-#endif
+            #endif
             case .comparable, .comparableString, .comparableOptionalString:
                 throw EncodingError.invalidValue(
                     self,
                     .init(
                         codingPath: [],
                         debugDescription: """
-                            Encoding SortDescriptor with values of type \
-                            non-NSObject `Compared` is unsupported.
+                            Encoding SortDescriptor with values of type non-NSObject `Compared` is unsupported.
                             """
                     )
                 )
@@ -191,10 +190,10 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
             return keyPath
         case .comparableOptionalString(_, let keyPath):
             return keyPath
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         case .compare, .compareString(_:):
             return nil
-#endif
+        #endif
         }
     }
 
@@ -210,10 +209,10 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
             result = comparator
         case .comparableOptionalString(let comparator, _):
             result = comparator
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         case .compareString(let comparator):
             result = comparator
-#endif
+        #endif
         default:
             result = nil
         }
@@ -233,7 +232,7 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
 
 
     // MARK: - Initializers for supported types.
-    
+
     // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
     // Should be removed and the related functions should be made public when rdar://131764614 is resolved
     @_alwaysEmitIntoClient
@@ -241,203 +240,203 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     public init<Value>(_ keyPath: KeyPath<Compared, Value> & Sendable, order: SortOrder = .forward) where Value: Comparable {
         self.init(keyPath as KeyPath<Compared, Value>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init<Value>(_ keyPath: KeyPath<Compared, Value?> & Sendable, order: SortOrder = .forward) where Value: Comparable {
         self.init(keyPath as KeyPath<Compared, Value?>, order: order)
     }
-    
+
     #if FOUNDATION_FRAMEWORK
     @_alwaysEmitIntoClient
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard) {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator)
     }
-    
+
     @_alwaysEmitIntoClient
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard) {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator)
     }
-    
+
     @_alwaysEmitIntoClient
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Bool> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Bool>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Bool?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Bool?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Double> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Double>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Double?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Double?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Float> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Float>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Float?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Float?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int8> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int8>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int8?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int8?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int16> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int16>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int16?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int16?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int32> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int32>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int32?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int32?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int64> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int64>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int64?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int64?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Int?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt8> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt8>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt8?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt8?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt16> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt16>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt16?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt16?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt32> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt32>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt32?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt32?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt64> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt64>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt64?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt64?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UInt?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Date> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Date>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, Date?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Date?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UUID> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UUID>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, UUID?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UUID?>, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator, order: order)
     }
-    
+
     @_alwaysEmitIntoClient
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator, order: order)
@@ -486,10 +485,10 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         )
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // TODO: On Darwin, the following initializers use `.localizedStandard` as the default value. Without String.compare(_:options:locale:), we have to leave the default un-set for other platforms. Once we have it, we can re-unify the behavior again.
     // https://github.com/apple/swift-foundation/issues/284
-    
+
     /// Creates a `SortDescriptor` that orders optional values using the given
     /// standard string comparator.
     ///
@@ -574,7 +573,7 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         comparator.order = order
         self.comparison = .comparableOptionalString(comparator, keyPath._unsafeAssumeSendable)
     }
-#else
+    #else
     /// Temporarily available as a replacement for `init(_:comparator:)` with a default argument.
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator) {
         self.order = comparator.order
@@ -606,10 +605,10 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         comparator.order = order
         self.comparison = .comparableOptionalString(comparator, keyPath)
     }
-#endif
+    #endif
 
-#if FOUNDATION_FRAMEWORK
-    
+    #if FOUNDATION_FRAMEWORK
+
     // We provide individual initializers for all supported types to ensure that we don't allow creation with custom types that conform to standard library numeric protocols.
     // These types are all NSObject-based, so only valid in the framework.
 
@@ -1005,11 +1004,10 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     ///   - order: The initial order to use for comparison.
     /*public*/ @usableFromInline init(_ keyPath: KeyPath<Compared, String>, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) where Compared: NSObject {
         guard let keyString = keyPath._kvcKeyPathString else {
-            fatalError("""
-            \(String(describing: Compared.self)) must be introspectable by \
-            the objective-c runtime in order to use it as the base type of \
-            a `SortDescriptor`.
-            """)
+            fatalError(
+                """
+                \(String(describing: Compared.self)) must be introspectable by the objective-c runtime in order to use it as the base type of a `SortDescriptor`.
+                """)
         }
         self.keyString = keyString
         self.order = order
@@ -1036,11 +1034,10 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     ///   - order: The initial order to use for comparison.
     /*public*/ @usableFromInline init(_ keyPath: KeyPath<Compared, String?>, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) where Compared: NSObject {
         guard let keyString = keyPath._kvcKeyPathString else {
-            fatalError("""
-            \(String(describing: Compared.self)) must be introspectable by \
-            the objective-c runtime in order to use it as the base type of \
-            a `SortDescriptor`.
-            """)
+            fatalError(
+                """
+                \(String(describing: Compared.self)) must be introspectable by the objective-c runtime in order to use it as the base type of a `SortDescriptor`.
+                """)
         }
         self.keyString = keyString
         self.order = order
@@ -1057,21 +1054,20 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
 
     private init<Key>(uncheckedCompareBasedKeyPath keyPath: KeyPath<Compared, Key>, order: SortOrder) where Compared: NSObject {
         guard let keyString = keyPath._kvcKeyPathString else {
-            fatalError("""
-            \(String(describing: Compared.self)) must be introspectable by \
-            the objective-c runtime in order to use it as the base type of \
-            a `SortDescriptor`.
-            """)
+            fatalError(
+                """
+                \(String(describing: Compared.self)) must be introspectable by the objective-c runtime in order to use it as the base type of a `SortDescriptor`.
+                """)
         }
         self.keyString = keyString
         self.order = order
         self.comparison = .compare
     }
-    
-#endif // FOUNDATION_FRAMEWORK
-    
 
-#if FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
+
+
+    #if FOUNDATION_FRAMEWORK
     /// Creates a sort descriptor using a sort descriptor and a type that you specify.
     ///
     /// Returns `nil` if there isn't a ``SortDescriptor`` equivalent to the
@@ -1090,14 +1086,16 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     public init?(_ descriptor: NSSortDescriptor, comparing comparedType: Compared.Type) where Compared: NSObject {
         guard let keyString = descriptor.key else { return nil }
         guard let selector = descriptor.selector else { return nil }
-        guard let comparison = AllowedComparison(
-            fromSelector: selector) else { return nil }
+        guard
+            let comparison = AllowedComparison(
+                fromSelector: selector)
+        else { return nil }
         self.keyString = keyString
         self.order = descriptor.ascending ? .forward : .reverse
         self.comparison = comparison
     }
-#endif
-    
+    #endif
+
     /// Provides the relative ordering of two elements.
     ///
     /// - Parameters:
@@ -1108,31 +1106,31 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         switch comparison {
         case .comparable(let comparator, let keyPath):
             // The following line is not needed for Swift 6 mode, but is here for temporary compatibility with the Swift 5.x compiler
-#if compiler(<6.0)
+            #if compiler(<6.0)
             let kp = keyPath as PartialKeyPath<Compared>
-#else
+            #else
             let kp = keyPath
-#endif
+            #endif
             return comparator.compare(
                 lhs[keyPath: kp],
                 rhs[keyPath: kp]
             )
         case .comparableString(let comparator, let keyPath):
-#if compiler(<6.0)
+            #if compiler(<6.0)
             let kp = keyPath as KeyPath<Compared, String>
-#else
+            #else
             let kp = keyPath
-#endif
+            #endif
             return comparator.compare(
                 lhs[keyPath: kp],
                 rhs[keyPath: kp]
             )
         case .comparableOptionalString(let comparator, let keyPath):
-#if compiler(<6.0)
+            #if compiler(<6.0)
             let kp = keyPath as KeyPath<Compared, String?>
-#else
+            #else
             let kp = keyPath
-#endif
+            #endif
             return switch (lhs[keyPath: kp], rhs[keyPath: kp]) {
             case (nil, nil):
                 .orderedSame
@@ -1143,11 +1141,11 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
             case let (lhsString?, rhsString?):
                 comparator.compare(lhsString, rhsString)
             }
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         case .compare, .compareString(_):
             let bridged = NSSortDescriptor(_sortDescriptor: self)
             return bridged.compare(lhs, to: rhs)
-#endif
+        #endif
         }
     }
 
@@ -1177,30 +1175,30 @@ extension NSSortDescriptor {
         self.init(_sortDescriptor)
     }
 
-    @available(macOS, deprecated: 14,
-               message: """
-               Use `init(_:) where Compared: NSObject` instead. Attempt to \
-               convert SortDescriptor with Compared being non-NSObject will \
-               result in a fatalError at runtime.
-               """)
-    @available(iOS, deprecated: 17,
-               message: """
-               Use `init(_:) where Compared: NSObject` instead. Attempt to \
-               convert SortDescriptor with Compared being non-NSObject will \
-               result in a fatalError at runtime.
-               """)
-    @available(tvOS, deprecated: 17,
-               message: """
-               Use `init(_:) where Compared: NSObject` instead. Attempt to \
-               convert SortDescriptor with Compared being non-NSObject will \
-               result in a fatalError at runtime.
-               """)
-    @available(watchOS, deprecated: 10,
-               message: """
-               Use `init(_:) where Compared: NSObject` instead. Attempt to \
-               convert SortDescriptor with Compared being non-NSObject will \
-               result in a fatalError at runtime.
-               """)
+    @available(
+        macOS, deprecated: 14,
+        message: """
+            Use `init(_:) where Compared: NSObject` instead. Attempt to convert SortDescriptor with Compared being non-NSObject will result in a fatalError at runtime.
+            """
+    )
+    @available(
+        iOS, deprecated: 17,
+        message: """
+            Use `init(_:) where Compared: NSObject` instead. Attempt to convert SortDescriptor with Compared being non-NSObject will result in a fatalError at runtime.
+            """
+    )
+    @available(
+        tvOS, deprecated: 17,
+        message: """
+            Use `init(_:) where Compared: NSObject` instead. Attempt to convert SortDescriptor with Compared being non-NSObject will result in a fatalError at runtime.
+            """
+    )
+    @available(
+        watchOS, deprecated: 10,
+        message: """
+            Use `init(_:) where Compared: NSObject` instead. Attempt to convert SortDescriptor with Compared being non-NSObject will result in a fatalError at runtime.
+            """
+    )
     @_disfavoredOverload
     public convenience init<Compared>(_ sortDescriptor: SortDescriptor<Compared>) {
         // This `init` used to unconditionally accept all `SortDescriptor`s,
@@ -1218,9 +1216,9 @@ extension NSSortDescriptor {
         // we'll fatalError to prevent the `NSSortDescriptor` from propagating
         // further into user's program, which may result in data loss.
         guard let keyString = sortDescriptor.keyString else {
-            fatalError("""
-                Attempt to convert SortDescriptor with Compared being \
-                non-NSObject
+            fatalError(
+                """
+                Attempt to convert SortDescriptor with Compared being non-NSObject
                 """)
         }
 

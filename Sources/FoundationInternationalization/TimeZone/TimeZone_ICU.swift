@@ -27,14 +27,14 @@ internal import _FoundationICU
 internal import Synchronization
 
 #if !FOUNDATION_FRAMEWORK
-@_dynamicReplacement(for: _timeZoneICUClass())
+@_dynamicReplacement(for:_timeZoneICUClass())
 private func _timeZoneICUClass_localized() -> _TimeZoneProtocol.Type? {
     return _TimeZoneICU.self
 }
 #endif
 
 #if os(Windows)
-@_dynamicReplacement(for: _timeZoneIdentifier(forWindowsIdentifier:))
+@_dynamicReplacement(for:_timeZoneIdentifier(forWindowsIdentifier:))
 private func _timeZoneIdentifier_ICU(forWindowsIdentifier windowsIdentifier: String) -> String? {
     _TimeZoneICU.getSystemTimeZoneID(forWindowsIdentifier: windowsIdentifier)
 }
@@ -56,14 +56,14 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         fatalError("Unexpected init")
     }
 
-     // This is safe because it's only mutated at deinit time
-    private let _timeZone : Mutex<UnsafePointer<UTimeZone?>>?
+    // This is safe because it's only mutated at deinit time
+    private let _timeZone: Mutex<UnsafePointer<UTimeZone?>>?
 
     // This is only currently in use for foundation_swift_ICUResourceTimeZone_feature_enabled
     let _timeZoneICUResource: _TimeZoneICUResource?
 
     // This type is safely sendable because it is guarded by a lock in _TimeZoneICU and we never vend it outside of the lock so it can only ever be accessed from within the lock
-    struct State : @unchecked Sendable {
+    struct State: @unchecked Sendable {
         /// Access must be serialized
         private var _calendar: UnsafeMutablePointer<UCalendar?>?
 
@@ -73,7 +73,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
             // Open the calendar (_TimeZone will close)
             var status = U_ZERO_ERROR
-            let calendar : UnsafeMutablePointer<UCalendar?>? = Array(identifier.utf16).withUnsafeBufferPointer {
+            let calendar: UnsafeMutablePointer<UCalendar?>? = Array(identifier.utf16).withUnsafeBufferPointer {
                 let calendar = ucal_open($0.baseAddress, Int32($0.count), "", UCAL_DEFAULT, &status)
                 if !status.isSuccess {
                     return nil
@@ -94,7 +94,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     // Note: it is unsafe to allow the wrapped state (or anything it references) to escape outside of the lock
     let lock: Mutex<State>
     let name: String
-    
+
     deinit {
         lock.withLock {
             guard let c = $0.calendar(identifier) else { return }
@@ -135,7 +135,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             self._timeZone = nil
         } else {
             // Use the already canonicalized `name` instead of `identifier` to initiate ICU time zone
-            let timeZone : UnsafeMutablePointer<UTimeZone?>? = Array(name.utf16).withUnsafeBufferPointer {
+            let timeZone: UnsafeMutablePointer<UTimeZone?>? = Array(name.utf16).withUnsafeBufferPointer {
                 let uatimezone = uatimezone_open($0.baseAddress, Int32($0.count), &status)
                 guard status.isSuccess else {
                     return nil
@@ -151,12 +151,12 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             self._timeZoneICUResource = nil
         }
     }
-    
+
     // MARK: -
     var identifier: String {
         self.name
     }
-    
+
     var data: Data? {
         nil
     }
@@ -172,15 +172,15 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     func _secondsFromGMT(for date: Date) -> Int {
         let result = _timeZone._borrowingMap {
             $0.withLock {
-                 var rawOffset: Int32 = 0
-                 var dstOffset: Int32 = 0
-                 var status: UErrorCode = U_ZERO_ERROR
-                 uatimezone_getOffset($0, date.udate, 0, &rawOffset, &dstOffset, &status)
-                 guard status.checkSuccessAndLogError("error getting uatimezone offset") else {
-                     return 0
-                 }
-                 return Int((rawOffset + dstOffset) / 1000)
-             }
+                var rawOffset: Int32 = 0
+                var dstOffset: Int32 = 0
+                var status: UErrorCode = U_ZERO_ERROR
+                uatimezone_getOffset($0, date.udate, 0, &rawOffset, &dstOffset, &status)
+                guard status.checkSuccessAndLogError("error getting uatimezone offset") else {
+                    return 0
+                }
+                return Int((rawOffset + dstOffset) / 1000)
+            }
         }
         guard let result else {
             preconditionFailure()
@@ -281,7 +281,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
 
         let result: (Int32, Int32)? = _timeZone._borrowingMap {
-             $0.withLock {
+            $0.withLock {
                 var rawOffset: Int32 = 0
                 var dstOffset: Int32 = 0
                 var status = U_ZERO_ERROR
@@ -315,12 +315,12 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
                 return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: true, isDaylight: false)
             case .shortGeneric:
                 return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: true, isDaylight: false)
-#if FOUNDATION_FRAMEWORK
-                // We only need this when building in ObjC mode, when the enum comes from a .h
+            #if FOUNDATION_FRAMEWORK
+            // We only need this when building in ObjC mode, when the enum comes from a .h
             @unknown default:
                 // Use standard style
                 return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: false, isDaylight: false)
-#endif
+            #endif
             }
         }
     }
@@ -561,7 +561,7 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             "VST",
             "W-SU",
             "WET",
-            "Zulu"
+            "Zulu",
         ]
         var result: [String] = []
 
@@ -616,12 +616,12 @@ let icuTZIdentifiers: [String] = {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone {
     /// Returns an array of strings listing the identifier of all the time zones known to the system.
-    public static var knownTimeZoneIdentifiers : [String] {
+    public static var knownTimeZoneIdentifiers: [String] {
         icuTZIdentifiers
     }
 
     /// Returns the time zone data version.
-    public static var timeZoneDataVersion : String {
+    public static var timeZoneDataVersion: String {
         _TimeZoneICU.timeZoneDataVersion
     }
 }

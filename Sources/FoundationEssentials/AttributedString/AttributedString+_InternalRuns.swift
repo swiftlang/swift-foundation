@@ -109,12 +109,12 @@ extension AttributedString._InternalRuns {
 }
 
 extension AttributedString._InternalRuns.Index: Equatable {
-    static func ==(left: Self, right: Self) -> Bool {
+    static func == (left: Self, right: Self) -> Bool {
         left.utf8Offset == right.utf8Offset
     }
 }
 extension AttributedString._InternalRuns.Index: Comparable {
-    static func <(left: Self, right: Self) -> Bool {
+    static func < (left: Self, right: Self) -> Bool {
         left.utf8Offset < right.utf8Offset
     }
 }
@@ -260,10 +260,12 @@ extension AttributedString._InternalRuns {
         var offset = index.offset
         var utf8Offset = index.utf8Offset
         var i = index.base
-        let attributes = _rope.update(at: &i, by: {
-            body(&$0.attributes)
-            return $0.attributes
-        })
+        let attributes = _rope.update(
+            at: &i,
+            by: {
+                body(&$0.attributes)
+                return $0.attributes
+            })
 
         let next = _rope.index(after: i)
         if next < _rope.endIndex, _rope[next].attributes == attributes {

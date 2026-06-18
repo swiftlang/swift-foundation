@@ -20,28 +20,28 @@ import Foundation
 
 @Suite("HTTPFormatStyle Formatting")
 private struct HTTPFormatStyleFormattingTests {
-    
+
     @Test func basics() throws {
         let date = Date.now
-        
+
         let formatted = date.formatted(.http) // e.g.  "Fri, 17 Jan 2025 19:03:05 GMT"
         let parsed = try Date(formatted, strategy: .http)
-        
+
         #expect(abs(date.timeIntervalSinceReferenceDate - parsed.timeIntervalSinceReferenceDate) <= 1.0)
     }
-    
+
     @Test func components() throws {
         let date = Date.now
         let formatted = date.formatted(.http) // e.g.  "Fri, 17 Jan 2025 19:03:05 GMT"
-        
+
         let parsed = try DateComponents(formatted, strategy: .http)
-        
+
         let resultDate = Calendar(identifier: .gregorian).date(from: parsed)
         let resultDateUnwrapped = try #require(resultDate)
-        
+
         #expect(abs(date.timeIntervalSinceReferenceDate - resultDateUnwrapped.timeIntervalSinceReferenceDate) <= 1.0)
     }
-    
+
     @Test(arguments: [
         "Mon, 20 Jan 2025 01:02:03 GMT",
         "Tue, 20 Jan 2025 10:02:03 GMT",
@@ -78,7 +78,7 @@ private struct HTTPFormatStyleFormattingTests {
             try DateComponents(good, strategy: .http)
         }
     }
-    
+
     @Test(arguments: [
         "Xri, 17 Jan 2025 19:03:05 GMT",
         "Fri, 17 Janu 2025 19:03:05 GMT",
@@ -105,11 +105,11 @@ private struct HTTPFormatStyleFormattingTests {
             try DateComponents(bad, strategy: .http)
         }
     }
-    
+
     @Test func componentsFormat() throws {
         let input = "Fri, 17 Jan 2025 19:03:05 GMT"
         let parsed = try DateComponents(input, strategy: .http)
-        
+
         #expect(parsed.weekday == 6)
         #expect(parsed.day == 17)
         #expect(parsed.month == 1)
@@ -119,16 +119,15 @@ private struct HTTPFormatStyleFormattingTests {
         #expect(parsed.second == 5)
         #expect(parsed.timeZone == TimeZone.gmt)
     }
-    
+
     @Test func validatingResultOfParseVsString() throws {
         // This date will parse correctly, but of course the value of 99 does not correspond to the actual day.
         let strangeDate = "Mon, 99 Jan 2025 19:03:05 GMT"
         let date = try Date(strangeDate, strategy: .http)
         let components = try DateComponents(strangeDate, strategy: .http)
-        
+
         let actualDay = Calendar(identifier: .gregorian).component(.day, from: date)
         let componentDay = try #require(components.day)
         #expect(actualDay != componentDay)
     }
 }
-

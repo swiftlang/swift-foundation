@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
+package final class _TimeZoneGMT: _TimeZoneProtocol, @unchecked Sendable {
     let offset: Int
     let name: String
-    
+
     required package init?(identifier: String) {
         guard let offset = TimeZone.tryParseGMTName(identifier), let offsetName = TimeZone.nameForSecondsFromGMT(offset) else {
             return nil
@@ -35,7 +35,7 @@ package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
     package var identifier: String {
         self.name
     }
-    
+
     package var fixedOffsetFromGMT: Int? {
         offset
     }
@@ -43,19 +43,19 @@ package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
     package func secondsFromGMT(for date: Date) -> Int {
         offset
     }
-    
+
     package func abbreviation(for date: Date) -> String? {
         _TimeZoneGMT.abbreviation(for: offset)
     }
-    
+
     package func isDaylightSavingTime(for date: Date) -> Bool {
         false
     }
-    
+
     package func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
         0.0
     }
-    
+
     package func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         (offset, 0)
     }
@@ -63,7 +63,7 @@ package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
     package func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         nil
     }
-    
+
     package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         // _TimeZoneGMTICU has localization support, if required.
         nil
@@ -71,7 +71,7 @@ package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
 
     package var debugDescription: String {
         "gmt offset \(offset)"
-    }    
+    }
 }
 
 extension _TimeZoneGMT {

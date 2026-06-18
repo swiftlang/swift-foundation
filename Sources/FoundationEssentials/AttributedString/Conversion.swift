@@ -56,9 +56,9 @@ extension String {
 ///
 /// Attributed string keys that don't conform to this protocol cast the value to <doc://com.apple.documentation/documentation/swift/anyobject> before converting to Objective-C. When converting from Objective-C, the value casts to the key's ``AttributedStringKey/Value`` type. In cases where Swift types bridge automatically to Objective-C types, like <doc://com.apple.documentation/documentation/swift/string> to ``NSString``, this default behavior is adequate. But for unbridged value types, you need to conform to this protocol and provide the conversion methods.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
+public protocol ObjectiveCConvertibleAttributedStringKey: AttributedStringKey {
     /// The Objective-C type that corresponds to this key's value type.
-    associatedtype ObjectiveCValue : NSObject
+    associatedtype ObjectiveCValue: NSObject
 
     /// Returns an Objective-C typed value for a given value of this key's type.
     ///
@@ -74,7 +74,7 @@ public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
+extension ObjectiveCConvertibleAttributedStringKey where Value: RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
     public static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return NSNumber(value: value.rawValue)
     }
@@ -87,7 +87,7 @@ extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentabl
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
+extension ObjectiveCConvertibleAttributedStringKey where Value: RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
     public static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return value.rawValue as NSString
     }
@@ -99,9 +99,9 @@ extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentabl
     }
 }
 
-internal struct _AttributeConversionOptions : OptionSet {
+internal struct _AttributeConversionOptions: OptionSet {
     let rawValue: Int
-    
+
     // If an attribute's value(for: ObjectiveCValue) or objectiveCValue(for: Value) function throws, ignore the error and drop the attribute
     static let dropThrowingAttributes = Self(rawValue: 1 << 0)
 }
@@ -116,7 +116,7 @@ extension AttributeContainer {
     /// `FoundationAttributes`, `SwiftUIAttributes`, and `AccessibilityAttributes`. To use
     /// third-party attribute scopes, use the initializers ``AttributeContainer/init(_:including:)-2mw0o``
     /// and ``AttributeContainer/init(_:including:)-28n0g``.
-    public init(_ dictionary: [NSAttributedString.Key : Any]) {
+    public init(_ dictionary: [NSAttributedString.Key: Any]) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(dictionary, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
@@ -129,10 +129,10 @@ extension AttributeContainer {
     ///
     /// This initializer only collects attributes from `dictionary` that exist in the provided scope.
     /// The resulting attribute container omits any keys in `dictionary` that don't exist in `scope`.
-    public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: KeyPath<AttributeScopes, S.Type>) throws {
+    public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key: Any], including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(dictionary, including: S.self)
     }
-    
+
     /// Creates an attribute container from a dictionary and an attribute scope.
     ///
     /// - Parameters:
@@ -141,11 +141,11 @@ extension AttributeContainer {
     ///
     /// This initializer only collects attributes from `dictionary` that exist in the provided scope.
     /// The resulting attribute container omits any keys in `dictionary` that don't exist in `scope`.
-    public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: S.Type) throws {
+    public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key: Any], including scope: S.Type) throws {
         try self.init(dictionary, attributeTable: S.attributeKeyTypes())
     }
-    
-    fileprivate init(_ dictionary: [NSAttributedString.Key : Any], attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
+
+    fileprivate init(_ dictionary: [NSAttributedString.Key: Any], attributeTable: [String: any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
         storage = .init()
         for (key, value) in dictionary {
             if let type = attributeTable[key.rawValue] {
@@ -171,16 +171,16 @@ extension Dictionary where Key == NSAttributedString.Key, Value == Any {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(container, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
-    
+
     public init<S: AttributeScope>(_ container: AttributeContainer, including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(container, including: S.self)
     }
-    
+
     public init<S: AttributeScope>(_ container: AttributeContainer, including scope: S.Type) throws {
         try self.init(container, attributeTable: S.attributeKeyTypes())
     }
-    
-    fileprivate init(_ container: AttributeContainer, attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
+
+    fileprivate init(_ container: AttributeContainer, attributeTable: [String: any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
         self.init()
         for key in container.storage.keys {
             if let type = attributeTable[key] {
@@ -232,10 +232,10 @@ extension NSAttributedString {
     public convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: S.Type) throws {
         try self.init(attrStr, attributeTable: scope.attributeKeyTypes())
     }
-    
+
     internal convenience init(
         _ attrStr: AttributedString,
-        attributeTable: [String : any AttributedStringKey.Type],
+        attributeTable: [String: any AttributedStringKey.Type],
         options: _AttributeConversionOptions = []
     ) throws {
         // FIXME: Consider making an NSString subclass backed by a BigString
@@ -274,7 +274,7 @@ extension AttributedString {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(nsStr, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
-    
+
     /// Creates a value-type attributed string from a reference type, including an attribute scope that a key path identifies.
     ///
     /// - Parameters:
@@ -286,7 +286,7 @@ extension AttributedString {
     public init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(nsStr, including: S.self)
     }
-    
+
     /// Creates a value-type attributed string from a reference type, including an attribute scope.
     ///
     /// - Parameters:
@@ -298,7 +298,7 @@ extension AttributedString {
     public init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: S.Type) throws {
         try self.init(nsStr, attributeTable: S.attributeKeyTypes())
     }
-    
+
     private init(
         _ nsStr: NSAttributedString,
         attributeTable: [String: any AttributedStringKey.Type],
@@ -328,7 +328,7 @@ extension AttributedString {
                 stop.pointee = true
                 return
             }
-            
+
             let alignedStart = alignedEnd
             unalignedEnd = string.utf16.index(unalignedEnd, offsetBy: range.length)
             // Note: we should be rounding down here, as unaligned indices are supposed to be
@@ -339,7 +339,7 @@ extension AttributedString {
 
             let runLength = string.utf8.distance(from: alignedStart, to: alignedEnd)
             guard runLength > 0 else { return }
-            
+
             if pendingRun.length > 0, pendingRun.attributes == container.storage {
                 pendingRun.length += runLength
             } else {
@@ -421,7 +421,7 @@ extension NSRange {
             to: range.upperBound._value)
         self.init(location: utf16Start - utf16Base, length: utf16Length)
     }
-    
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init?<S: StringProtocol>(_ markdownSourcePosition: AttributedString.MarkdownSourcePosition, in target: S) {
         let startOffsets: AttributedString.MarkdownSourcePosition.Offsets
@@ -437,7 +437,7 @@ extension NSRange {
             startOffsets = offsets.start
             endOffsets = offsets.end
         }
-        
+
         // Since bounds are inclusive, we need to advance to the next UTF-16 scalar
         // If doing so will leave a hanging high surrogate value (i.e., the UTF-8 offset was within a code point), then don't advance
         var actualEndUTF16 = startOffsets.utf16
@@ -457,7 +457,7 @@ extension AttributedString {
     internal struct _IndexConverterFromString: Collection {
         typealias Index = String.Index
         typealias Element = Index
-        
+
         let _string: BigString
         let _range: Range<BigString.Index>
 
@@ -513,7 +513,7 @@ extension BigString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Range where Bound == AttributedString.Index {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     public init?<S: AttributedStringProtocol>(_ range: NSRange, in string: S) {
         // FIXME: This can return indices addressing trailing surrogates, which isn't a thing
         // FIXME: AttributedString is normally prepared to handle.
@@ -531,7 +531,7 @@ extension Range where Bound == AttributedString.Index {
         guard start >= string.startIndex._value, end <= string.endIndex._value else { return nil }
         self.init(uncheckedBounds: (.init(start, version: string.__guts.version), .init(end, version: string.__guts.version)))
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     // FIXME: Converting indices between different collection types does not make sense.
     // FIXME: (Indices are meaningless without the collection value to which they belong,
@@ -551,7 +551,7 @@ extension Range where Bound == AttributedString.Index {
         // matching index type. So we need to construct a dummy collection type for just that.
         let dummy = AttributedString._IndexConverterFromString(
             attributedString.__guts.string,
-            attributedString.startIndex._value ..< attributedString.endIndex._value)
+            attributedString.startIndex._value..<attributedString.endIndex._value)
         let range = region.relative(to: dummy)
         self.init(_range: range, in: attributedString)
     }
@@ -562,9 +562,9 @@ extension Range where Bound == AttributedString.Index {
         in attributedString: some AttributedStringProtocol
     ) {
         guard let lower = attributedString.__guts.string.index(from: _range.lowerBound),
-              let upper = attributedString.__guts.string.index(from: _range.upperBound),
-              lower >= attributedString.startIndex._value,
-              upper <= attributedString.endIndex._value
+            let upper = attributedString.__guts.string.index(from: _range.upperBound),
+            lower >= attributedString.startIndex._value,
+            upper <= attributedString.endIndex._value
         else {
             return nil
         }
@@ -579,15 +579,15 @@ extension AttributedString {
     internal struct _IndexConverterFromAttributedString: Collection {
         typealias Index = AttributedString.Index
         typealias Element = Index
-        
+
         let string: Substring
         let version: Guts.Version
-        
+
         init(_ string: Substring, version: Guts.Version) {
             self.string = string
             self.version = version
         }
-        
+
         subscript(position: Index) -> Index { position }
         var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset), version: version) }
         var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset), version: version) }
@@ -639,19 +639,18 @@ extension Range where Bound == String.Index {
         self.init(uncheckedBounds: (start, end))
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // TODO: Support AttributedString markdown in FoundationPreview
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init?<S: StringProtocol>(_ markdownSourcePosition: AttributedString.MarkdownSourcePosition, in target: S) {
         if let start = markdownSourcePosition.startOffsets, let end = markdownSourcePosition.endOffsets {
-            self = target.utf8.index(target.startIndex, offsetBy: start.utf8) ..< target.utf8.index(target.startIndex, offsetBy: end.utf8 + 1)
+            self = target.utf8.index(target.startIndex, offsetBy: start.utf8)..<target.utf8.index(target.startIndex, offsetBy: end.utf8 + 1)
         } else {
             guard let offsets = markdownSourcePosition.calculateOffsets(within: target) else {
                 return nil
             }
-            self = target.utf8.index(target.startIndex, offsetBy: offsets.start.utf8) ..< target.utf8.index(target.startIndex, offsetBy: offsets.end.utf8 + 1)
+            self = target.utf8.index(target.startIndex, offsetBy: offsets.start.utf8)..<target.utf8.index(target.startIndex, offsetBy: offsets.end.utf8 + 1)
         }
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 }
-

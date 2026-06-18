@@ -20,7 +20,7 @@ internal import os
 import FoundationEssentials
 #endif
 
-enum ICU { }
+enum ICU {}
 
 internal struct ICUError: Error, CustomDebugStringConvertible {
     var code: UErrorCode
@@ -35,11 +35,11 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
         return String(cString: error)
     }
 
-#if canImport(os)
+    #if canImport(os)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "icu")
     }()
-#endif
+    #endif
 }
 
 extension UErrorCode {
@@ -54,11 +54,11 @@ extension UErrorCode {
     }
 
     func checkSuccessAndLogError(_ message: @escaping @autoclosure () -> String) -> Bool {
-#if canImport(os)
+        #if canImport(os)
         if !isSuccess {
             ICUError.logger.error("\(message()). Error: \(ICUError(code: self).debugDescription)")
         }
-#endif
+        #endif
         return isSuccess
     }
 }
@@ -79,7 +79,7 @@ internal func _withResizingUCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeM
                             return String(_utf16: innerBuffer, count: Int(innerLen))
                         }
                     }
-                    
+
                     // At this point the retry has also failed
                     return nil
                 }
@@ -87,7 +87,7 @@ internal func _withResizingUCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeM
                 return String(_utf16: buffer, count: Int(len))
             }
         }
-        
+
         return nil
     }
 }
@@ -103,7 +103,7 @@ internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_
                 return String(_utf16: buffer, count: Int(len))
             }
         }
-        
+
         return nil
     }
 }
@@ -150,7 +150,7 @@ internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_K
                 return String(validatingUTF8: buffer.baseAddress!)
             }
         }
-        
+
         return nil
     }
 }
@@ -162,12 +162,12 @@ internal func _withStringAsCString(_ input: String, _ body: (UnsafePointer<CChar
         guard let result = body(base) else {
             return nil
         }
-        
+
         guard result != base else {
             // ICU has returned the same pointer to us, without a copy. In order to avoid using deallocated memory (the buffer that Swift inserted to wrap the String), avoid accessing the returned pointer.
             return input
         }
-        
+
         return String(cString: result)
     }
 }

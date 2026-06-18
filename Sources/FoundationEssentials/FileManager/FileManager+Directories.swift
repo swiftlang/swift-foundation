@@ -46,7 +46,7 @@ extension _FileManagerImpl {
     var homeDirectoryForCurrentUser: URL {
         URL(filePath: String.homeDirectoryPath(), directoryHint: .isDirectory)
     }
-    
+
     func homeDirectory(forUser userName: String?) -> URL? {
         guard let userName else {
             return homeDirectoryForCurrentUser
@@ -56,11 +56,11 @@ extension _FileManagerImpl {
         }
         return URL(filePath: path, directoryHint: .isDirectory)
     }
-    
+
     var temporaryDirectory: URL {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
-    
+
     func url(
         for directory: FileManager.SearchPathDirectory,
         in domain: FileManager.SearchPathDomainMask,
@@ -83,18 +83,18 @@ extension _FileManagerImpl {
             domain = ._partitionedSystemDomainMask
         }
         #endif
-        
+
         let urls = Array(_SearchPathURLs(for: directory, in: domain, expandTilde: true))
         #if FOUNDATION_FRAMEWORK
         let url = domain == ._partitionedSystemDomainMask ? urls.last : urls.first
         #else
         let url = urls.first
         #endif
-        
+
         guard let url else {
             throw CocoaError(.fileReadUnknown)
         }
-        
+
         if shouldCreate {
             #if FOUNDATION_FRAMEWORK
             _LogSpecialFolderRecreation(fileManager, url.path)
@@ -103,7 +103,7 @@ extension _FileManagerImpl {
             #if os(macOS) && FOUNDATION_FRAMEWORK
             isUserDomain = isUserDomain || domain == ._sharedUserDomainMask
             #endif
-            var attrDictionary: [FileAttributeKey : Any] = [:]
+            var attrDictionary: [FileAttributeKey: Any] = [:]
             if isUserDomain {
                 attrDictionary[.posixPermissions] = 0o700
             } else {
@@ -119,27 +119,27 @@ extension _FileManagerImpl {
         }
         return url
     }
-    
+
     func urls(
         for directory: FileManager.SearchPathDirectory,
         in domainMask: FileManager.SearchPathDomainMask
     ) -> [URL] {
         Array(_SearchPathURLs(for: directory, in: domainMask, expandTilde: true))
     }
-    
+
     #if FOUNDATION_FRAMEWORK
     func containerURL(forSecurityApplicationGroupIdentifier groupIdentifier: String) -> URL? {
         groupIdentifier.withCString {
-            guard let path = container_create_or_lookup_app_group_path_by_app_group_identifier($0, nil)  else {
+            guard let path = container_create_or_lookup_app_group_path_by_app_group_identifier($0, nil) else {
                 return nil
             }
-            
+
             defer { path.deallocate() }
             return URL(fileURLWithFileSystemRepresentation: path, isDirectory: true, relativeTo: nil)
         }
     }
-#endif
-    
+    #endif
+
     func contentsOfDirectory(atPath path: String) throws -> [String] {
         #if os(macOS)
         // CFURLEnumerator/CarbonCore does not operate on /dev paths
@@ -147,7 +147,7 @@ extension _FileManagerImpl {
             guard fileManager.fileExists(atPath: path) else {
                 throw CocoaError.errorWithFilePath(path, osStatus: -43 /*fnfErr*/, reading: true, variant: "Folder")
             }
-            
+
             #if FOUNDATION_FRAMEWORK
             // Use CFURLEnumerator in Foundation framework, otherwise fallback to POSIX sequence below
             var err: NSError?
@@ -159,11 +159,11 @@ extension _FileManagerImpl {
         }
         #endif
         var result: [String] = []
-#if os(Windows)
+        #if os(Windows)
         let iterator = _Win32DirectoryContentsSequence(path: path, appendSlashForDirectory: false).makeIterator()
-#else
+        #else
         let iterator = _POSIXDirectoryContentsSequence(path: path, appendSlashForDirectory: false).makeIterator()
-#endif
+        #endif
         if let error = iterator.error {
             throw error
         } else {
@@ -173,9 +173,9 @@ extension _FileManagerImpl {
         }
         return result
     }
-    
+
     func subpathsOfDirectory(atPath path: String) throws -> [String] {
-#if os(Windows)
+        #if os(Windows)
         try path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
@@ -186,8 +186,7 @@ extension _FileManagerImpl {
         var results: [String] = []
         for item in _Win32DirectoryContentsSequence(path: path, appendSlashForDirectory: true) {
             results.append(item.fileName)
-            if item.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY &&
-                item.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
+            if item.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY && item.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
 
                 var pwszSubPath: PWSTR? = nil
                 let hr = PathAllocCombine(path, item.fileName, PATHCCH_ALLOW_LONG_PATHS, &pwszSubPath)
@@ -196,26 +195,27 @@ extension _FileManagerImpl {
                 }
                 defer { LocalFree(pwszSubPath) }
 
-                results.append(contentsOf: try subpathsOfDirectory(atPath: String(decodingCString: pwszSubPath!, as: UTF16.self)).map {
-                    var pwszFullPath: PWSTR? = nil
-                    _ = PathAllocCombine(item.fileName, $0, PATHCCH_ALLOW_LONG_PATHS, &pwszFullPath)
-                    defer { LocalFree(pwszFullPath) }
-                    return String(decodingCString: pwszFullPath!, as: UTF16.self).standardizingPath.replacing("\\", with: "/")
-                 })
+                results.append(
+                    contentsOf: try subpathsOfDirectory(atPath: String(decodingCString: pwszSubPath!, as: UTF16.self)).map {
+                        var pwszFullPath: PWSTR? = nil
+                        _ = PathAllocCombine(item.fileName, $0, PATHCCH_ALLOW_LONG_PATHS, &pwszFullPath)
+                        defer { LocalFree(pwszFullPath) }
+                        return String(decodingCString: pwszFullPath!, as: UTF16.self).standardizingPath.replacing("\\", with: "/")
+                    })
             }
         }
         return results
-#elseif os(OpenBSD)
+        #elseif os(OpenBSD)
         throw CocoaError.errorWithFilePath(.featureUnsupported, path)
-#else
+        #else
         return try path.withFileSystemRepresentation { fileSystemRep in
             guard let fileSystemRep else {
                 throw CocoaError.errorWithFilePath(.fileNoSuchFile, path)
             }
-            
+
             let subpaths = _FTSSequence(fileSystemRep, FTS_PHYSICAL | FTS_NOCHDIR | FTS_NOSTAT).subpaths
             var realFirstPath: String?
-            
+
             var results: [String] = []
             for item in subpaths {
                 var subpath: String
@@ -225,12 +225,12 @@ extension _FileManagerImpl {
                 case .entry(let path):
                     subpath = path
                 }
-                
+
                 guard let realFirstPath else {
                     realFirstPath = subpath
                     continue
                 }
-                
+
                 let trueSubpath = subpath.trimmingPrefix(realFirstPath)
                 if trueSubpath.first == "/" {
                     results.append(String(trueSubpath.dropFirst()))
@@ -240,37 +240,38 @@ extension _FileManagerImpl {
             }
             return results
         }
-#endif
+        #endif
     }
 
     func createDirectory(
         at url: URL,
         withIntermediateDirectories createIntermediates: Bool,
-        attributes: [FileAttributeKey : Any]? = nil
+        attributes: [FileAttributeKey: Any]? = nil
     ) throws {
         guard url.isFileURL else {
             throw CocoaError.errorWithFilePath(.fileWriteUnsupportedScheme, url)
         }
-        
+
         let path = url.path
         guard !path.isEmpty else {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, url)
         }
-        
+
         try fileManager.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
     func createDirectory(
         atPath path: String,
         withIntermediateDirectories createIntermediates: Bool,
-        attributes: [FileAttributeKey : Any]? = nil
+        attributes: [FileAttributeKey: Any]? = nil
     ) throws {
-#if os(Windows)
+        #if os(Windows)
         var saAttributes: SECURITY_ATTRIBUTES =
-            SECURITY_ATTRIBUTES(nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size),
-                                lpSecurityDescriptor: nil,
-                                bInheritHandle: false)
-        // `CreateDirectoryW` does not create intermediate directories, so we need to handle that manually.  
+            SECURITY_ATTRIBUTES(
+                nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size),
+                lpSecurityDescriptor: nil,
+                bInheritHandle: false)
+        // `CreateDirectoryW` does not create intermediate directories, so we need to handle that manually.
         // Note: `SHCreateDirectoryExW` seems to have issues with long paths.
         if createIntermediates {
             // Create intermediate directories recursively
@@ -307,7 +308,7 @@ extension _FileManagerImpl {
                     }
                 }
             }
-            
+
             try _createDirectoryRecursively(at: path)
             if let attributes {
                 try? fileManager.setAttributes(attributes, ofItemAtPath: path)
@@ -322,12 +323,12 @@ extension _FileManagerImpl {
                 try? fileManager.setAttributes(attributes, ofItemAtPath: path)
             }
         }
-#else
+        #else
         try fileManager.withFileSystemRepresentation(for: path) { pathPtr in
             guard let pathPtr else {
                 throw CocoaError.errorWithFilePath(.fileWriteUnknown, path)
             }
-            
+
             guard createIntermediates else {
                 guard mkdir(pathPtr, 0o777) == 0 else {
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
@@ -337,12 +338,12 @@ extension _FileManagerImpl {
                 }
                 return
             }
-            
+
             #if FOUNDATION_FRAMEWORK
             var firstDirectoryPtr: UnsafePointer<CChar>?
             defer { firstDirectoryPtr?.deallocate() }
             let result = _mkpath_np(pathPtr, S_IRWXU | S_IRWXG | S_IRWXO, &firstDirectoryPtr)
-            
+
             guard result == 0 else {
                 guard result != EEXIST else { return }
                 var errNum = result
@@ -366,18 +367,18 @@ extension _FileManagerImpl {
                 }
                 throw CocoaError.errorWithFilePath(errPath, errno: errNum, reading: false)
             }
-            
+
             guard let attributes else {
                 return // Nothing left to do
             }
-            
+
             // The directory was successfully created. To keep binary compatibility, we need to post-process the newly created directories and set attributes.
             // We're relying on the knowledge that _mkpath_np does not change any of the parent path components of firstDirectory. Otherwise, I think we'd have to canonicalize paths or check for IDs, which would probably require more file system calls than is worthwhile.
             var currentDirectory = firstDirectoryPtr.flatMap(String.init(cString:)) ?? path
-            
+
             // Start with the first newly created directory.
-            try? fileManager.setAttributes(attributes, ofItemAtPath: currentDirectory)// Not returning error to preserve binary compatibility.
-            
+            try? fileManager.setAttributes(attributes, ofItemAtPath: currentDirectory) // Not returning error to preserve binary compatibility.
+
             // Now append each subsequent path component.
             let fullComponents = path.pathComponents
             let currentComponents = currentDirectory.pathComponents
@@ -421,10 +422,10 @@ extension _FileManagerImpl {
             try _create(path: path)
             #endif
         }
-#endif
+        #endif
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     func getRelationship(
         _ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>,
         ofDirectoryAt directoryURL: URL,
@@ -432,44 +433,44 @@ extension _FileManagerImpl {
     ) throws {
         // Get url's resource identifier, volume identifier, and make sure it is a directory
         let dirValues = try directoryURL.resourceValues(forKeys: [.fileResourceIdentifierKey, .volumeIdentifierKey, .isDirectoryKey])
-        
+
         guard let isDirectory = dirValues.isDirectory, isDirectory else {
             outRelationship.pointee = .other
             return
         }
-        
+
         // Get other's resource identifier and make sure it is not the same resource as otherURL
         let otherValues = try otherURL.resourceValues(forKeys: [.fileIdentifierKey, .fileResourceIdentifierKey, .volumeIdentifierKey])
         guard !otherValues.fileResourceIdentifier!.isEqual(dirValues.fileResourceIdentifier!) else {
             outRelationship.pointee = .same
             return
         }
-        
+
         guard otherValues.volumeIdentifier!.isEqual(dirValues.volumeIdentifier!) else {
             outRelationship.pointee = .other
             return
         }
-        
+
         // Start looking through the parent chain up to the volume root for a parent that is equal to 'url'. Stop when the current URL reaches the volume root
         var currentURL = otherURL
         while try !currentURL.resourceValues(forKeys: [.isVolumeKey]).isVolume! {
             // Get url's parentURL
             let parentURL = try currentURL.resourceValues(forKeys: [.parentDirectoryURLKey]).parentDirectory!
-            
+
             let parentResourceID = try parentURL.resourceValues(forKeys: [.fileResourceIdentifierKey]).fileResourceIdentifier!
-            
+
             if parentResourceID.isEqual(dirValues.fileResourceIdentifier!) {
                 outRelationship.pointee = .contains
                 return
             }
-            
+
             currentURL = parentURL
         }
-        
+
         outRelationship.pointee = .other
         return
     }
-    
+
     func getRelationship(
         _ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>,
         of directory: FileManager.SearchPathDirectory,
@@ -487,28 +488,29 @@ extension _FileManagerImpl {
             ofDirectoryAt: directoryURL,
             toItemAt: url)
     }
-#endif
-    
+    #endif
+
     func changeCurrentDirectoryPath(_ path: String) -> Bool {
-#if os(Windows)
-        return (try? path.withNTPathRepresentation {
-            // It seems setting CWD with the long name prefix causes issues with calls to GetFullPathNameW, path which are just '\'
-            // end up coming back a '\\' instead of 'C:\'.  There is some gih ub comments suggesting the prefix does not work with
-            // SetCurrentDirectroy either (https://github.com/MicrosoftDocs/feedback/issues/1441#issuecomment-506574206)
-            String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix().withCString(encodedAs: UTF16.self) { pwszStripped in
-                SetCurrentDirectoryW(pwszStripped)
-            }
-        }) ?? false
-#else
+        #if os(Windows)
+        return
+            (try? path.withNTPathRepresentation {
+                // It seems setting CWD with the long name prefix causes issues with calls to GetFullPathNameW, path which are just '\'
+                // end up coming back a '\\' instead of 'C:\'.  There is some gih ub comments suggesting the prefix does not work with
+                // SetCurrentDirectroy either (https://github.com/MicrosoftDocs/feedback/issues/1441#issuecomment-506574206)
+                String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix().withCString(encodedAs: UTF16.self) { pwszStripped in
+                    SetCurrentDirectoryW(pwszStripped)
+                }
+            }) ?? false
+        #else
         fileManager.withFileSystemRepresentation(for: path) { rep in
             guard let rep else { return false }
             return chdir(rep) == 0
         }
-#endif
+        #endif
     }
-    
+
     var currentDirectoryPath: String? {
-#if os(Windows)
+        #if os(Windows)
         // Make an initial call to GetCurrentDirectoryW to get a buffer size estimate.
         // This is solely to minimize the number of allocations and number of bytes allocated versus starting with a hardcoded value like MAX_PATH.
         // We should NOT early-return if this returns 0, in order to avoid TOCTOU issues.
@@ -516,14 +518,14 @@ extension _FileManagerImpl {
         return try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
             GetCurrentDirectoryW(DWORD($0.count), $0.baseAddress)
         }
-#else
+        #else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
                 return nil
             }
             return fileManager.string(withFileSystemRepresentation: buffer.baseAddress!, length: strlen(buffer.baseAddress!))
         }
-#endif
+        #endif
     }
 }
 

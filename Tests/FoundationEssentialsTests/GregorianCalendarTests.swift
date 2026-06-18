@@ -113,10 +113,10 @@ private struct GregorianCalendarTests {
         let nextLeapMonthDate = calendar.nextDate(after: date1, matching: DateComponents(isLeapMonth: true), matchingPolicy: .strict)
         #expect(nextLeapMonthDate == nil) // There is not a date in Gregorian that is a leap month
 
-#if FIXED_SINGLE_LEAPMONTH
+        #if FIXED_SINGLE_LEAPMONTH
         let nextNonLeapMonthDate = calendar.nextDate(after: date1, matching: DateComponents(isLeapMonth: false), matchingPolicy: .strict)
         #expect(nextNonLeapMonthDate == date1) // date1 matches the condition already
-#endif
+        #endif
 
         var settingLeapMonthComponents = calendar.dateComponents([.year, .month, .day], from: date1)
         settingLeapMonthComponents.isLeapMonth = true
@@ -220,7 +220,10 @@ private struct GregorianCalendarTests {
     // MARK: - DateComponents from date
     @Test func testDateComponentsFromDate() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 0)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
-        func test(_ date: Date, _ timeZone: TimeZone, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
+        func test(
+            _ date: Date, _ timeZone: TimeZone, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int,
+            yearForWeekOfYear: Int, isLeapMonth: Bool, sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             let dc = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date)
             #expect(dc.era == era, sourceLocation: sourceLocation)
             #expect(dc.year == year, sourceLocation: sourceLocation)
@@ -239,16 +242,29 @@ private struct GregorianCalendarTests {
             #expect(dc.isLeapMonth == isLeapMonth, sourceLocation: sourceLocation)
             #expect(dc.timeZone == timeZone, sourceLocation: sourceLocation)
         }
-        test(Date(timeIntervalSince1970: 852045787.0), .gmt, expectedEra: 1, year: 1996, month: 12, day: 31, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 3, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 5, weekOfYear: 53, yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-12-31T15:23:07Z
-        test(Date(timeIntervalSince1970: 825607387.0), .gmt, expectedEra: 1, year: 1996, month: 2, day: 29, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 5, weekdayOrdinal: 5, quarter: 1, weekOfMonth: 4, weekOfYear: 9, yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-02-29T15:23:07Z
-        test(Date(timeIntervalSince1970: 828838987.0), .gmt, expectedEra: 1, year: 1996, month: 4, day: 7, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 1, weekdayOrdinal: 1, quarter: 2, weekOfMonth: 2, weekOfYear: 15, yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-04-07T01:03:07Z
-        test(Date(timeIntervalSince1970: -62135765813.0), .gmt, expectedEra: 1, year: 1, month: 1, day: 1, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 7, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 0, weekOfYear: 52, yearForWeekOfYear: 0, isLeapMonth: false) // 0001-01-01T01:03:07Z
-        test(Date(timeIntervalSince1970: -62135852213.0), .gmt, expectedEra: 0, year: 1, month: 12, day: 31, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 6, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 4, weekOfYear: 52, yearForWeekOfYear: 0, isLeapMonth: false) // 0000-12-31T01:03:07Z
+        test(
+            Date(timeIntervalSince1970: 852045787.0), .gmt, expectedEra: 1, year: 1996, month: 12, day: 31, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 3, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 5, weekOfYear: 53,
+            yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-12-31T15:23:07Z
+        test(
+            Date(timeIntervalSince1970: 825607387.0), .gmt, expectedEra: 1, year: 1996, month: 2, day: 29, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 5, weekdayOrdinal: 5, quarter: 1, weekOfMonth: 4, weekOfYear: 9,
+            yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-02-29T15:23:07Z
+        test(
+            Date(timeIntervalSince1970: 828838987.0), .gmt, expectedEra: 1, year: 1996, month: 4, day: 7, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 1, weekdayOrdinal: 1, quarter: 2, weekOfMonth: 2, weekOfYear: 15,
+            yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-04-07T01:03:07Z
+        test(
+            Date(timeIntervalSince1970: -62135765813.0), .gmt, expectedEra: 1, year: 1, month: 1, day: 1, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 7, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 0, weekOfYear: 52, yearForWeekOfYear: 0,
+            isLeapMonth: false) // 0001-01-01T01:03:07Z
+        test(
+            Date(timeIntervalSince1970: -62135852213.0), .gmt, expectedEra: 0, year: 1, month: 12, day: 31, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 6, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 4, weekOfYear: 52, yearForWeekOfYear: 0,
+            isLeapMonth: false) // 0000-12-31T01:03:07Z
     }
 
     @Test func testDateComponentsFromDate_DST() {
 
-        func test(_ date: Date, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
+        func test(
+            _ date: Date, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int,
+            isLeapMonth: Bool, sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             let dc = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date)
             #expect(dc.era == era, "era should be equal", sourceLocation: sourceLocation)
             #expect(dc.year == year, "era should be equal", sourceLocation: sourceLocation)
@@ -269,9 +285,15 @@ private struct GregorianCalendarTests {
         }
 
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
-        test(Date(timeIntervalSince1970: -62135769600.0), expectedEra: 1, year: 1, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 7, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 1, isLeapMonth: false) // 0001-01-01T00:00:00Z
-        test(Date(timeIntervalSince1970: 64092211200.0), expectedEra: 1, year: 4001, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 4001, isLeapMonth: false)
-        test(Date(timeIntervalSince1970: -210866760000.0), expectedEra: 0, year: 4713, month: 1, day: 1, hour: 12, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: -4712, isLeapMonth: false)
+        test(
+            Date(timeIntervalSince1970: -62135769600.0), expectedEra: 1, year: 1, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 7, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 1,
+            isLeapMonth: false) // 0001-01-01T00:00:00Z
+        test(
+            Date(timeIntervalSince1970: 64092211200.0), expectedEra: 1, year: 4001, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 4001,
+            isLeapMonth: false)
+        test(
+            Date(timeIntervalSince1970: -210866760000.0), expectedEra: 0, year: 4713, month: 1, day: 1, hour: 12, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: -4712,
+            isLeapMonth: false)
     }
 
     // MARK: - Add
@@ -530,53 +552,53 @@ private struct GregorianCalendarTests {
         gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 7, gregorianStartDate: nil)
 
         let march1_1996 = Date(timeIntervalSince1970: 825723300) // 1996-03-01 23:35:00 +0000
-        testAdding(.init(day: -1, hour: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825640500.0))
-        testAdding(.init(month: -1, hour: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:823221300.0))
-        testAdding(.init(month: -1, day: 30 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825809700.0))
-        testAdding(.init(year: 4, day: -1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:951867300.0))
-        testAdding(.init(day: -1, hour: 24 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825723300.0))
-        testAdding(.init(day: -1, weekday: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825723300.0))
-        testAdding(.init(day: -7, weekOfYear: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825723300.0))
-        testAdding(.init(day: -7, weekOfMonth: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825723300.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:826328100.0))
+        testAdding(.init(day: -1, hour: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825640500.0))
+        testAdding(.init(month: -1, hour: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 823221300.0))
+        testAdding(.init(month: -1, day: 30), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825809700.0))
+        testAdding(.init(year: 4, day: -1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 951867300.0))
+        testAdding(.init(day: -1, hour: 24), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
+        testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
+        testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825723300.0))
+        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 826328100.0))
 
-        testAdding(.init(day: -1, hour: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825640500.0))
-        testAdding(.init(month: -1, hour: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:823221300.0))
-        testAdding(.init(month: -1, day: 30 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:823304100.0))
-        testAdding(.init(year: 4, day: -1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:951867300.0))
-        testAdding(.init(day: -1, hour: 24 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825636900.0))
+        testAdding(.init(day: -1, hour: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 825640500.0))
+        testAdding(.init(month: -1, hour: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 823221300.0))
+        testAdding(.init(month: -1, day: 30), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 823304100.0))
+        testAdding(.init(year: 4, day: -1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 951867300.0))
+        testAdding(.init(day: -1, hour: 24), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 825636900.0))
         testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: true, expected: march1_1996)
         testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: true, expected: march1_1996)
         testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: true, expected: march1_1996)
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:826328100.0))
+        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 826328100.0))
 
         let oct24_1582 = Date(timeIntervalSince1970: -12218515200.0) // Expect: 1582-10-24T00:00:00Z
-        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218598000.0))
-        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12220239600.0))
-        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217651200.0))
-        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12092371200.0))
-        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
-        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
+        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12218598000.0))
+        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12220239600.0))
+        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12217651200.0))
+        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12092371200.0))
+        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12218515200.0))
+        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12218515200.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12217910400.0))
+        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970: -12217910400.0))
 
-        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218598000.0))
-        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220239600.0))
-        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220243200.0))
-        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12092371200.0))
-        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218601600.0))
-        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12218598000.0))
+        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12220239600.0))
+        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12220243200.0))
+        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12092371200.0))
+        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12218601600.0))
+        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12218515200.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12218515200.0))
 
-        testAdding(.init(weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0)) // Expect: 1582-10-31 00:00:00Z
-        testAdding(.init(weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0))
-        testAdding(.init(weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217305600.0)) // Expect: 1582-11-07 00:00:00
-        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0)) // Expect: 1582-10-31 00:00:00 +0000
+        testAdding(.init(weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12217910400.0)) // Expect: 1582-10-31 00:00:00Z
+        testAdding(.init(weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12217910400.0))
+        testAdding(.init(weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12217305600.0)) // Expect: 1582-11-07 00:00:00
+        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12217910400.0)) // Expect: 1582-10-31 00:00:00 +0000
 
-        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12215318400.0)) // expect: 1582-11-30 00:00:00 - adding 2 weeks is 1582-11-07, adding -7 days wraps around to 1582-11-30
+        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970: -12215318400.0)) // expect: 1582-11-30 00:00:00 - adding 2 weeks is 1582-11-07, adding -7 days wraps around to 1582-11-30
 
         do {
             gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
@@ -584,11 +606,11 @@ private struct GregorianCalendarTests {
             let date = Date(timeIntervalSinceReferenceDate: 2557249259.5) // 2082-1-13 19:00:59.5 +0000
             testAdding(.init(day: 1), to: date, wrap: true, expected: Date(timeIntervalSinceReferenceDate: 2557335659.5))
 
-            let date2 = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+            let date2 = Date(timeIntervalSinceReferenceDate: 0) // 2000-12-31 16:00:00 PT
             testAdding(.init(month: 2), to: date2, wrap: false, expected: Date(timeIntervalSince1970: 983404800)) // 2001-03-01 00:00:00 UTC, 2001-02-28 16:00:00 PT
         }
     }
-#if _pointerBitWidth(_64)
+    #if _pointerBitWidth(_64)
     @Test func testAddLargeValue() throws {
 
         let date = Date(timeIntervalSinceReferenceDate: 656157793.922098)
@@ -600,7 +622,7 @@ private struct GregorianCalendarTests {
             _ = calendar.date(byAdding: component, value: value, to: date)
         }
     }
-#endif
+    #endif
 
     // MARK: - Ordinality
 
@@ -611,7 +633,7 @@ private struct GregorianCalendarTests {
 
         func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Int?, sourceLocation: SourceLocation = #_sourceLocation) {
             let result = cal.ordinality(of: small, in: large, for: date)
-            #expect(result == expected,  "small: \(small), large: \(large)", sourceLocation: sourceLocation)
+            #expect(result == expected, "small: \(small), large: \(large)", sourceLocation: sourceLocation)
         }
 
         var date: Date
@@ -946,7 +968,7 @@ private struct GregorianCalendarTests {
         var subtractMe = DateComponents()
         subtractMe.dayOfYear = -1
         let firstDay = Date(timeIntervalSinceReferenceDate: 662688000)
-        let previousDay = try #require(cal.date(byAdding: subtractMe, to:firstDay, wrappingComponents: false))
+        let previousDay = try #require(cal.date(byAdding: subtractMe, to: firstDay, wrappingComponents: false))
         let previousDayComps = cal.dateComponents([.year, .dayOfYear], from: previousDay)
         var previousDayExpectationComps = DateComponents()
         previousDayExpectationComps.year = 2021
@@ -1236,10 +1258,10 @@ private struct GregorianCalendarTests {
         test([.yearForWeekOfYear, .weekOfYear], expected: .init(weekOfYear: -4, yearForWeekOfYear: 0))
         test([.weekday, .year, .month, .weekdayOrdinal], expected: .init(year: 0, month: 0, weekday: -28, weekdayOrdinal: 0))
 
-        calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8*3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        start = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+        calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8 * 3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        start = Date(timeIntervalSinceReferenceDate: 0) // 2000-12-31 16:00:00 PT
         end = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
-        var expected = DateComponents(era: 0, year: 0, month: 2, day: 4, hour: 4, minute: 20, second: 22, nanosecond: 0, weekday: 0, weekdayOrdinal: 0, quarter: 0 , weekOfMonth: 0, weekOfYear: 0,  yearForWeekOfYear: 0)
+        var expected = DateComponents(era: 0, year: 0, month: 2, day: 4, hour: 4, minute: 20, second: 22, nanosecond: 0, weekday: 0, weekdayOrdinal: 0, quarter: 0, weekOfMonth: 0, weekOfYear: 0, yearForWeekOfYear: 0)
         // FIXME 123202377: This is wrong, but it's the same as Calendar_ICU's current behavior
         expected.dayOfYear = 0
         test([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], expected: expected)
@@ -1482,8 +1504,8 @@ private struct GregorianCalendarTests {
         test(.second, expected: -95)
         test(.nanosecond, expected: Int(Int32.min))
 
-        calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8*3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        start = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
+        calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8 * 3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        start = Date(timeIntervalSinceReferenceDate: 0) // 2000-12-31 16:00:00 PT
         end = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
         test(.month, expected: 2)
         test(.dayOfYear, expected: 63)
@@ -1549,26 +1571,25 @@ private struct GregorianCalendarTests {
         test(.minute, expected: -120)
         test(.second, expected: -7200)
     }
-    
+
     // MARK: ISO8601
-    
+
     @Test func test_iso8601Gregorian() {
         var calendar1 = Calendar(identifier: .iso8601)
         calendar1.timeZone = .gmt
         var calendar2 = Calendar(identifier: .iso8601)
         calendar2.timeZone = .gmt
         #expect(calendar1 == calendar2)
-        
+
         #expect(calendar1.firstWeekday == 2)
         #expect(calendar1.minimumDaysInFirstWeek == 4)
         #expect(calendar1.locale == .unlocalized)
-        
+
         // Verify that the properties are still mutable
         let tz = TimeZone(secondsFromGMT: -3600)!
         calendar1.timeZone = tz
         #expect(calendar1 != calendar2)
-        
+
         #expect(calendar1.timeZone == tz)
     }
 }
-

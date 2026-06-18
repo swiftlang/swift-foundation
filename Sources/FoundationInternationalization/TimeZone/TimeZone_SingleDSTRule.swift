@@ -30,9 +30,9 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
     enum RuleMode {
-        case dayOfMonth  // Day of month mode
+        case dayOfMonth // Day of month mode
         case dayOfWeekInMonth // Day of week in month mode
-        case dayOfWeekOnOrAfterDayOfMonth  // Day of week >= day of month mode
+        case dayOfWeekOnOrAfterDayOfMonth // Day of week >= day of month mode
         case dayOfWeekOnOrBeforeDayOfMonth // Day of week <= day of month mode
     }
 
@@ -40,14 +40,14 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     // MARK: - Properties
 
-    let rawOffset: Int           // Raw offset in seconds
-    let dstSavings: Int          // DST savings in seconds
+    let rawOffset: Int // Raw offset in seconds
+    let dstSavings: Int // DST savings in seconds
 
     struct RuleComponents {
-        let month: Int           // 0-based (0 = January)
-        let day: Int             // Day-of-month if mode is `.dayOfMonth`, or day-of-week-in-month (2 in "2nd Sunday in March", -1 for "last Sunday in October") if mode is `.dayOfWeekInMonth`
-        let dayOfWeek: Int       // 1-based (1 == Sunday, 7 == Saturday)
-        let time: Int            // Time in seconds since start of day
+        let month: Int // 0-based (0 = January)
+        let day: Int // Day-of-month if mode is `.dayOfMonth`, or day-of-week-in-month (2 in "2nd Sunday in March", -1 for "last Sunday in October") if mode is `.dayOfWeekInMonth`
+        let dayOfWeek: Int // 1-based (1 == Sunday, 7 == Saturday)
+        let time: Int // Time in seconds since start of day
         let timeMode: TimeMode
         let mode: RuleMode
         init(month: Int8, day: Int8, dayOfWeek: Int8, time: Int32, timeMode: TimeMode) throws(SingleDSTRuleTimeZoneError) {
@@ -117,7 +117,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
     let startRule: RuleComponents // DST starts. For example, PST has startRule.month == March
-    let endRule: RuleComponents   // DST ends. For example, PST has endRule.month == November
+    let endRule: RuleComponents // DST ends. For example, PST has endRule.month == November
     let isSouthernHemisphere: Bool
 
     let startYear: Int
@@ -136,7 +136,10 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     let calendar: _CalendarGregorian
 
-    init(offsetSeconds: Int32, dstSavingsSeconds: Int32, startMonth: Int8, startDay: Int8, startDayOfWeek: Int8, startTime: Int32, startTimeMode: TimeMode, endMonth: Int8, endDay: Int8, endDayOfWeek: Int8, endTime: Int32, endTimeMode: TimeMode, startYear: Int32 = 0) throws(SingleDSTRuleTimeZoneError) {
+    init(
+        offsetSeconds: Int32, dstSavingsSeconds: Int32, startMonth: Int8, startDay: Int8, startDayOfWeek: Int8, startTime: Int32, startTimeMode: TimeMode, endMonth: Int8, endDay: Int8, endDayOfWeek: Int8, endTime: Int32, endTimeMode: TimeMode,
+        startYear: Int32 = 0
+    ) throws(SingleDSTRuleTimeZoneError) {
 
         // Determine if we use daylight time (equivalent to ICU logic)
         let useDaylight = (startDay != 0 && endDay != 0)
@@ -185,8 +188,8 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             return Int(rawOffset)
         }
 
-        let icuMonth = components.month - 1  // Convert from 1-based to 0-based
-        let icuDayOfWeek = components.weekday  // Sunday = 1
+        let icuMonth = components.month - 1 // Convert from 1-based to 0-based
+        let icuDayOfWeek = components.weekday // Sunday = 1
         let seconds = components.hour * 3600 + components.minute * 60 + components.second + components.nanosecond / 1_000_000_000
 
         return _gmtOffset(era: components.era, year: components.year, month: icuMonth, day: components.day, dayOfWeek: icuDayOfWeek, seconds: seconds)
@@ -203,14 +206,15 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         let monthLength = monthLength(year: year, month: month)
         let prevMonthLength = previousMonthLength(year: year, month: month)
 
-        let secondsDelta = switch startRule.timeMode {
-        case .wallTime:
-            0
-        case .standardTime:
-            0
-        case .utcTime:
-            -rawOffset
-        }
+        let secondsDelta =
+            switch startRule.timeMode {
+            case .wallTime:
+                0
+            case .standardTime:
+                0
+            case .utcTime:
+                -rawOffset
+            }
         let startCompare = compareToRule(
             month: month, monthLength: monthLength, prevMonthLength: prevMonthLength,
             dayOfMonth: day, dayOfWeek: dayOfWeek, seconds: seconds,
@@ -224,14 +228,15 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         // - We're in southern hemisphere and we're after the end rule
         // In these cases we must be in DST
         if isSouthernHemisphere != (startCompare != .orderedAscending) {
-            let secondsDelta = switch endRule.timeMode {
-            case .wallTime:
-                dstSavings
-            case .standardTime:
-                0
-            case .utcTime:
-                -rawOffset
-            }
+            let secondsDelta =
+                switch endRule.timeMode {
+                case .wallTime:
+                    dstSavings
+                case .standardTime:
+                    0
+                case .utcTime:
+                    -rawOffset
+                }
             endCompare = compareToRule(
                 month: month, monthLength: monthLength, prevMonthLength: prevMonthLength,
                 dayOfMonth: day, dayOfWeek: dayOfWeek, seconds: seconds,
@@ -242,8 +247,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             endCompare = .orderedSame
         }
 
-        if (!isSouthernHemisphere && (startCompare != .orderedAscending && endCompare == .orderedAscending)) ||
-           (isSouthernHemisphere && (startCompare != .orderedAscending || endCompare == .orderedAscending)) {
+        if (!isSouthernHemisphere && (startCompare != .orderedAscending && endCompare == .orderedAscending)) || (isSouthernHemisphere && (startCompare != .orderedAscending || endCompare == .orderedAscending)) {
             result += dstSavings
         }
 
@@ -370,7 +374,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     private func previousMonthLength(year: Int, month: Int) -> Int {
         month == 0 ? 31 : monthLength(year: year, month: month - 1)
     }
-    
+
     // Returns the day number from 1970, with day 0 == Jan 1 1970
     private func daysSince1970(year: Int, month: Int, dayOfMonth: Int) -> Int {
         precondition(month >= 0 && month < 12)
@@ -384,9 +388,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         // Days in prior months this year
         let isLeap = _CalendarGregorian.isLeapYear(year)
-        let daysInPriorMonths = isLeap ?
-            Self.DAYS_IN_PRIOR_MONTHS_LEAP_YEAR[Int(month)] :
-            Self.DAYS_IN_PRIOR_MONTHS_NOT_LEAP_YEAR[Int(month)]
+        let daysInPriorMonths = isLeap ? Self.DAYS_IN_PRIOR_MONTHS_LEAP_YEAR[Int(month)] : Self.DAYS_IN_PRIOR_MONTHS_NOT_LEAP_YEAR[Int(month)]
         let totalDaysSinceBCE1 = daysSinceBCE1 + Int(daysInPriorMonths) + Int(dayOfMonth)
 
         // Jan 1, 1970 CE is day 719163 since BCE 1, Jan 1 in the proleptic Gregorian calendar
@@ -395,7 +397,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         return daysSince1970
     }
-    
+
     // Returns: 1 == Sunday, 2 == Monday, ..., 7 == Saturday
     private func dayOfWeek(daysSince1970: Int) -> Int {
         // Jan 1, 1970 was a Thursday
@@ -404,14 +406,14 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
         return dayOfWeek > 0 ? dayOfWeek : dayOfWeek + 7
     }
-    
+
     // MARK: - Transition Rules Support
 
     enum TransitionDirection {
         case next
         case previous
     }
-    
+
     // Returns DST transitions before or after the given date
     func dstTransition(relativeTo baseDate: Date, direction: TransitionDirection, inclusive: Bool = false) -> Date? {
         guard useDaylight else {
@@ -457,7 +459,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     func dstTransition(after baseDate: Date, inclusive: Bool = false) -> Date? {
         return dstTransition(relativeTo: baseDate, direction: .next, inclusive: inclusive)
     }
-    
+
     // Convenience method for finding the previous transition before a date
     func dstTransition(before baseDate: Date, inclusive: Bool = false) -> Date? {
         return dstTransition(relativeTo: baseDate, direction: .previous, inclusive: inclusive)
@@ -474,7 +476,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             if baseYear < startYear {
                 return startDateForRuleInYear(startYear, rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
             }
-            
+
             // Try current year first
             let currentYearDate = startDateForRuleInYear(baseYear, rule: rule, previousRawOffset: previousRawOffset, previousDSTOffset: previousDSTOffset)
 
@@ -505,7 +507,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         }
     }
 
-    
+
     // Returns the start date of the rule in the given year
     private func startDateForRuleInYear(_ year: Int, rule: RuleComponents, previousRawOffset: Int, previousDSTOffset: Int) -> Date {
         // For _TimeZoneSingleDSTRule, we don't have explicit end year, so we allow any reasonable year
@@ -531,12 +533,12 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
                 ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: monthLength)
                 ruleDay += 7 * (rule.day + 1) // day is negative
             }
-            
+
             // Apply day-of-week adjustment
             let currentDayOfWeek = self.dayOfWeek(daysSince1970: ruleDay)
             let targetDayOfWeek = rule.dayOfWeek
             var delta = targetDayOfWeek - currentDayOfWeek
-            
+
             if after {
                 delta = delta < 0 ? delta + 7 : delta
             } else {
@@ -548,19 +550,19 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             // Day of week >= or <= specific date
             let after = (rule.mode == .dayOfWeekOnOrAfterDayOfMonth)
             var targetDay = rule.day
-            
+
             // Handle Feb <= 29 for non-leap years
             if !after && rule.month == 1 && rule.day == 29 && !_CalendarGregorian.isLeapYear(year) { // February
                 targetDay = 28
             }
-            
+
             ruleDay = daysSince1970(year: year, month: rule.month, dayOfMonth: targetDay)
 
             // Apply day-of-week adjustment
             let currentDayOfWeek = self.dayOfWeek(daysSince1970: ruleDay)
             let targetDayOfWeek = rule.dayOfWeek
             var delta = targetDayOfWeek - currentDayOfWeek
-            
+
             if after {
                 // move forward to target day
                 delta = delta < 0 ? delta + 7 : delta
@@ -570,7 +572,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
             }
             ruleDay += Int(delta)
         }
-        
+
         // Convert to seconds and add time of day
         var result = Double(ruleDay) * 86400.0 + Double(rule.time)
 
@@ -585,7 +587,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
     let _cachedFirstTransition: Mutex<Date??>
-    
+
     // the first transition for this timezone
     var firstTransition: Date? {
         // Check if we already have a cached value (including cached nil)
@@ -601,7 +603,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         } else {
             calculated = nil
         }
-        
+
         // Cache the result (including nil)
         _cachedFirstTransition.withLock {
             $0 = calculated

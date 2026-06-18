@@ -27,23 +27,23 @@ extension AttributedStringProtocol {
 /// Tests for `AttributedString` to confirm expected CoW behavior
 @Suite("AttributedString Copy on Write")
 private struct AttributedStringCOWTests {
-    
+
     // MARK: - Utility Functions
-    
+
     func createAttributedString() -> AttributedString {
         var str = AttributedString("Hello", attributes: container)
         str += AttributedString(" ")
         str += AttributedString("World", attributes: containerB)
         return str
     }
-    
+
     func assertCOWCopy(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         let str = createAttributedString()
         var copy = str
         operation(&copy)
         #expect(str != copy, "Mutation operation did not copy when multiple references exist", sourceLocation: sourceLocation)
     }
-    
+
     func assertCOWCopyManual(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         var str = createAttributedString()
         let gutsPtr = Unmanaged.passUnretained(str._guts)
@@ -51,7 +51,7 @@ private struct AttributedStringCOWTests {
         let newGutsPtr = Unmanaged.passUnretained(str._guts)
         #expect(gutsPtr.toOpaque() != newGutsPtr.toOpaque(), "Mutation operation with manual copy did not perform copy", sourceLocation: sourceLocation)
     }
-    
+
     func assertCOWNoCopy(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         var str = createAttributedString()
         let gutsPtr = Unmanaged.passUnretained(str._guts)
@@ -59,36 +59,36 @@ private struct AttributedStringCOWTests {
         let newGutsPtr = Unmanaged.passUnretained(str._guts)
         #expect(gutsPtr.toOpaque() == newGutsPtr.toOpaque(), "Mutation operation copied when only one reference exists", sourceLocation: sourceLocation)
     }
-    
+
     func assertCOWBehavior(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         assertCOWCopy(sourceLocation: sourceLocation, operation)
         assertCOWNoCopy(sourceLocation: sourceLocation, operation)
     }
-    
+
     func makeSubrange(_ str: AttributedString) -> Range<AttributedString.Index> {
         return str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.endIndex, offsetBy: -2)
     }
-    
+
     func makeSubranges(_ str: AttributedString) -> RangeSet<AttributedString.Index> {
         let rangeA = str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.startIndex, offsetBy: 4)
         let rangeB = str.characters.index(str.endIndex, offsetBy: -4)..<str.characters.index(str.endIndex, offsetBy: -2)
         return RangeSet([rangeA, rangeB])
     }
-    
+
     let container: AttributeContainer = {
         var container = AttributeContainer()
         container.testInt = 2
         return container
     }()
-    
+
     let containerB: AttributeContainer = {
         var container = AttributeContainer()
         container.testBool = true
         return container
     }()
-    
+
     // MARK: - Tests
-    
+
     @Test
     func topLevelType() {
         assertCOWBehavior { (str) in
@@ -125,7 +125,7 @@ private struct AttributedStringCOWTests {
             str.test.testInt = 3
         }
     }
-    
+
     @Test
     func substring() {
         assertCOWBehavior { (str) in
@@ -147,7 +147,7 @@ private struct AttributedStringCOWTests {
             str[makeSubrange(str)].test.testInt = 3
         }
     }
-    
+
     @Test
     func discontiguousSubstring() {
         assertCOWBehavior { (str) in
@@ -173,11 +173,11 @@ private struct AttributedStringCOWTests {
             str[makeSubranges(str)] = other[makeSubranges(other)]
         }
     }
-    
+
     @Test
     func characters() {
         let char: Character = "a"
-        
+
         assertCOWBehavior { (str) in
             str.characters.replaceSubrange(makeSubrange(str), with: "abc")
         }
@@ -197,16 +197,16 @@ private struct AttributedStringCOWTests {
             str.characters[makeSubrange(str)].append("a")
         }
     }
-    
+
     @Test
     func unicodeScalars() {
         let scalar: UnicodeScalar = "a"
-        
+
         assertCOWBehavior { (str) in
             str.unicodeScalars.replaceSubrange(makeSubrange(str), with: [scalar, scalar])
         }
     }
-    
+
     @Test
     func genericProtocol() {
         assertCOWBehavior {
@@ -216,45 +216,45 @@ private struct AttributedStringCOWTests {
             $0[makeSubrange($0)].genericSetAttribute()
         }
     }
-    
+
     @Test
     func indexTracking() {
         assertCOWBehavior {
-            _ = $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+            _ = $0.transform(updating: $0.startIndex..<$0.endIndex) {
                 $0.testInt = 2
             }
         }
         assertCOWBehavior {
-            _ = $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+            _ = $0.transform(updating: $0.startIndex..<$0.endIndex) {
                 $0.insert(AttributedString("_"), at: $0.startIndex)
             }
         }
         assertCOWBehavior {
-            _ = $0.transform(updating: [$0.startIndex ..< $0.endIndex]) {
+            _ = $0.transform(updating: [$0.startIndex..<$0.endIndex]) {
                 $0.testInt = 2
             }
         }
         assertCOWBehavior {
-            _ = $0.transform(updating: [$0.startIndex ..< $0.endIndex]) {
+            _ = $0.transform(updating: [$0.startIndex..<$0.endIndex]) {
                 $0.insert(AttributedString("_"), at: $0.startIndex)
             }
         }
-        
+
         // Ensure that creating a reference in the transformation closure still causes a copy to happen during post-mutation index updates
         var storage = AttributedString()
         assertCOWCopyManual {
-            _ = $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+            _ = $0.transform(updating: $0.startIndex..<$0.endIndex) {
                 $0.insert(AttributedString("_"), at: $0.startIndex)
                 // Store a reference after performing the mutation so the mutation doesn't cause an inherent copy
                 storage = $0
             }
         }
         #expect(storage != "")
-        
+
         // Ensure the same semantics hold even when the closure throws
         storage = AttributedString()
         assertCOWCopyManual {
-            _ = try? $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+            _ = try? $0.transform(updating: $0.startIndex..<$0.endIndex) {
                 $0.insert(AttributedString("_"), at: $0.startIndex)
                 // Store a reference after performing the mutation so the mutation doesn't cause an inherent copy
                 storage = $0

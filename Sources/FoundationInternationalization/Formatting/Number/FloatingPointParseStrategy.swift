@@ -16,7 +16,7 @@ import FoundationEssentials
 
 /// A parse strategy for creating floating-point values from formatted strings.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct FloatingPointParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryFloatingPoint {
+public struct FloatingPointParseStrategy<Format>: Codable, Hashable where Format: FormatStyle, Format.FormatInput: BinaryFloatingPoint {
     /// The format style this strategy uses when parsing strings.
     public var formatStyle: Format
     /// A Boolean value that indicates whether parsing allows any discrepencies in the expected format.
@@ -24,7 +24,7 @@ public struct FloatingPointParseStrategy<Format> : Codable, Hashable where Forma
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointParseStrategy : Sendable where Format : Sendable {}
+extension FloatingPointParseStrategy: Sendable where Format: Sendable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointParseStrategy: ParseStrategy {
@@ -34,8 +34,11 @@ extension FloatingPointParseStrategy: ParseStrategy {
         let trimmedString = value._trimmingWhitespace()
         guard let result = try parse(trimmedString, startingAt: trimmedString.startIndex, in: trimmedString.startIndex..<trimmedString.endIndex) else {
             let exampleString = formatStyle.format(3.14)
-            throw CocoaError(CocoaError.formatting, userInfo: [
-                NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \(exampleString)" ])
+            throw CocoaError(
+                CocoaError.formatting,
+                userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \(exampleString)"
+                ])
         }
         return result.1
     }
@@ -65,8 +68,11 @@ extension FloatingPointParseStrategy: ParseStrategy {
         }
 
         guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
-            throw CocoaError(CocoaError.formatting, userInfo: [
-                NSDebugDescriptionErrorKey: "Cannot parse \(value), unable to create formatter" ])
+            throw CocoaError(
+                CocoaError.formatting,
+                userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value), unable to create formatter"
+                ])
         }
         let substr = value[index..<range.upperBound]
         var upperBound = 0

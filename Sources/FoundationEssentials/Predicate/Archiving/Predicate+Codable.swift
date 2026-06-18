@@ -27,37 +27,37 @@ extension PredicateCodableConfiguration {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension Predicate : Codable {
+extension Predicate: Codable {
     public func encode(to encoder: Encoder) throws {
         try self.encode(to: encoder, configuration: .default)
     }
-    
+
     public init(from decoder: Decoder) throws {
         try self.init(from: decoder, configuration: .default)
     }
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Expression : Codable {
+extension Expression: Codable {
     public func encode(to encoder: Encoder) throws {
         try self.encode(to: encoder, configuration: .default)
     }
-    
+
     public init(from decoder: Decoder) throws {
         try self.init(from: decoder, configuration: .default)
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension Predicate : CodableWithConfiguration {
+extension Predicate: CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
-    
+
     public func encode(to encoder: Encoder, configuration: EncodingConfiguration) throws {
         var container = encoder.unkeyedContainer()
         try container.encodePredicateExpression(expression, variable: repeat each variable, predicateConfiguration: configuration)
     }
-    
+
     public init(from decoder: Decoder, configuration: DecodingConfiguration) throws {
         var container = try decoder.unkeyedContainer()
         let result = try container.decodePredicateExpression(input: repeat (each Input).self, predicateConfiguration: configuration)
@@ -70,15 +70,15 @@ extension Predicate : CodableWithConfiguration {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Expression : CodableWithConfiguration {
+extension Expression: CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
-    
+
     public func encode(to encoder: Encoder, configuration: EncodingConfiguration) throws {
         var container = encoder.unkeyedContainer()
         try container.encodePredicateExpression(expression, variable: repeat each variable, predicateConfiguration: configuration)
     }
-    
+
     public init(from decoder: Decoder, configuration: DecodingConfiguration) throws {
         var container = try decoder.unkeyedContainer()
         let result = try container.decodePredicateExpression(input: repeat (each Input).self, output: Output.self, predicateConfiguration: configuration)

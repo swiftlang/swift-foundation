@@ -319,20 +319,23 @@ internal func WIN32_FROM_HRESULT(_ hr: HRESULT) -> DWORD {
 internal func FillNullTerminatedWideStringBuffer(initialSize: DWORD, maxSize: DWORD, _ body: (UnsafeMutableBufferPointer<WCHAR>) throws -> DWORD) throws -> String {
     var bufferCount = max(1, min(initialSize, maxSize))
     while bufferCount <= maxSize {
-        if let result = try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(bufferCount), { buffer in
-            let count = try body(buffer)
-            switch count {
-            case 0:
-                throw Win32Error(GetLastError())
-            case 1..<DWORD(buffer.count):
-                let result = String(decodingCString: buffer.baseAddress!, as: UTF16.self)
-                assert(result.utf16.count == count, "Parsed UTF-16 count \(result.utf16.count) != reported UTF-16 count \(count)")
-                return result
-            default:
-                bufferCount *= 2
-                return nil
-            }
-        }) {
+        if let result = try withUnsafeTemporaryAllocation(
+            of: WCHAR.self, capacity: Int(bufferCount),
+            { buffer in
+                let count = try body(buffer)
+                switch count {
+                case 0:
+                    throw Win32Error(GetLastError())
+                case 1..<DWORD(buffer.count):
+                    let result = String(decodingCString: buffer.baseAddress!, as: UTF16.self)
+                    assert(result.utf16.count == count, "Parsed UTF-16 count \(result.utf16.count) != reported UTF-16 count \(count)")
+                    return result
+                default:
+                    bufferCount *= 2
+                    return nil
+                }
+            })
+        {
             return result
         }
     }

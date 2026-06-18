@@ -136,7 +136,7 @@ private struct PropertyListEncoderTests {
     }
 
     @Test func encodingMultipleNestedContainersWithTheSameTopLevelKey() {
-        struct Model : Codable, Equatable {
+        struct Model: Codable, Equatable {
             let first: String
             let second: String
 
@@ -166,29 +166,32 @@ private struct PropertyListEncoderTests {
             }
 
             static var testValue: Model {
-                return Model(first: "Johnny Appleseed",
-                             second: "appleseed@apple.com")
+                return Model(
+                    first: "Johnny Appleseed",
+                    second: "appleseed@apple.com")
             }
-            enum TopLevelCodingKeys : String, CodingKey {
+            enum TopLevelCodingKeys: String, CodingKey {
                 case top
             }
 
-            enum FirstNestedCodingKeys : String, CodingKey {
+            enum FirstNestedCodingKeys: String, CodingKey {
                 case first
             }
-            enum SecondNestedCodingKeys : String, CodingKey {
+            enum SecondNestedCodingKeys: String, CodingKey {
                 case second
             }
         }
 
         let model = Model.testValue
-        let expectedXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>top</key>\n\t<dict>\n\t\t<key>first</key>\n\t\t<string>Johnny Appleseed</string>\n\t\t<key>second</key>\n\t\t<string>appleseed@apple.com</string>\n\t</dict>\n</dict>\n</plist>\n".data(using: .utf8)!
+        let expectedXML =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>top</key>\n\t<dict>\n\t\t<key>first</key>\n\t\t<string>Johnny Appleseed</string>\n\t\t<key>second</key>\n\t\t<string>appleseed@apple.com</string>\n\t</dict>\n</dict>\n</plist>\n"
+            .data(using: .utf8)!
         _testRoundTrip(of: model, in: .xml, expectedPlist: expectedXML)
     }
 
-#if FOUNDATION_EXIT_TESTS
+    #if FOUNDATION_EXIT_TESTS
     @Test func encodingConflictedTypeNestedContainersWithTheSameTopLevelKey() async {
-        struct Model : Encodable, Equatable {
+        struct Model: Encodable, Equatable {
             let first: String
 
             func encode(to encoder: Encoder) throws {
@@ -209,11 +212,11 @@ private struct PropertyListEncoderTests {
             static var testValue: Model {
                 return Model(first: "Johnny Appleseed")
             }
-            enum TopLevelCodingKeys : String, CodingKey {
+            enum TopLevelCodingKeys: String, CodingKey {
                 case top
             }
 
-            enum FirstNestedCodingKeys : String, CodingKey {
+            enum FirstNestedCodingKeys: String, CodingKey {
                 case first
             }
         }
@@ -226,7 +229,7 @@ private struct PropertyListEncoderTests {
             let _ = try encoder.encode(model)
         }
     }
-#endif
+    #endif
 
     // MARK: - Encoder Features
     @Test func nestedContainerCodingPaths() {
@@ -243,9 +246,9 @@ private struct PropertyListEncoderTests {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // requires PropertyListSerialization, JSONSerialization
-    
+
     @Test func encodingTopLevelData() throws {
         let data = try JSONSerialization.data(withJSONObject: [String](), options: [])
         _testRoundTrip(of: data, in: .binary, expectedPlist: try PropertyListSerialization.data(fromPropertyList: data, format: .binary, options: 0))
@@ -267,11 +270,11 @@ private struct PropertyListEncoderTests {
         _testRoundTrip(of: topLevel, in: .binary, expectedPlist: try PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0))
         _testRoundTrip(of: topLevel, in: .xml, expectedPlist: try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0))
     }
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     // MARK: - Type coercion
     @Test func typeCoercion() throws {
-        func _testRoundTripTypeCoercionFailure<T,U>(of value: T, as type: U.Type, sourceLocation: SourceLocation = #_sourceLocation) throws where T : Codable, U : Codable {
+        func _testRoundTripTypeCoercionFailure<T, U>(of value: T, as type: U.Type, sourceLocation: SourceLocation = #_sourceLocation) throws where T: Codable, U: Codable {
             let encoder = PropertyListEncoder()
 
             encoder.outputFormat = .xml
@@ -369,7 +372,7 @@ private struct PropertyListEncoderTests {
     // MARK: - Encoder State
     // SR-6078
     @Test func encoderStateThrowOnEncode() {
-        struct Wrapper<T : Encodable> : Encodable {
+        struct Wrapper<T: Encodable>: Encodable {
             let value: T
             init(_ value: T) { self.value = value }
 
@@ -385,9 +388,9 @@ private struct PropertyListEncoderTests {
             }
         }
 
-        struct Throwing : Encodable {
+        struct Throwing: Encodable {
             func encode(to encoder: Encoder) throws {
-                enum EncodingError : Error { case foo }
+                enum EncodingError: Error { case foo }
                 throw EncodingError.foo
             }
         }
@@ -414,12 +417,12 @@ private struct PropertyListEncoderTests {
     // SR-6048
     @Test func decoderStateThrowOnDecode() {
         #expect(throws: Never.self) {
-            let plist = try PropertyListEncoder().encode([1,2,3])
+            let plist = try PropertyListEncoder().encode([1, 2, 3])
             let _ = try PropertyListDecoder().decode(EitherDecodable<[String], [Int]>.self, from: plist)
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // MARK: - NSKeyedArchiver / NSKeyedUnarchiver integration
     @Test func archiving() throws {
         struct CodableType: Codable, Equatable {
@@ -432,21 +435,22 @@ private struct PropertyListEncoderTests {
         let keyedArchiver = NSKeyedArchiver(requiringSecureCoding: false)
         keyedArchiver.outputFormat = .xml
 
-        let value = CodableType(willBeNil: nil,
-                                arrayOfOptionals: ["a", "b", nil, "c"],
-                                dictionaryOfArrays: [ "data" : [Data([0xfe, 0xed, 0xfa, 0xce]), Data([0xba, 0xaa, 0xaa, 0xad])]])
+        let value = CodableType(
+            willBeNil: nil,
+            arrayOfOptionals: ["a", "b", nil, "c"],
+            dictionaryOfArrays: ["data": [Data([0xfe, 0xed, 0xfa, 0xce]), Data([0xba, 0xaa, 0xaa, 0xad])]])
 
         try keyedArchiver.encodeEncodable(value, forKey: "strings")
         keyedArchiver.finishEncoding()
         let data = keyedArchiver.encodedData
-        
+
         let keyedUnarchiver = try NSKeyedUnarchiver(forReadingFrom: data)
         let unarchived = try keyedUnarchiver.decodeTopLevelDecodable(CodableType.self, forKey: "strings")
-        
+
         #expect(unarchived == value)
     }
-#endif
-    
+    #endif
+
     // MARK: - Helper Functions
     private var _plistEmptyDictionaryBinary: Data {
         return Data(base64Encoded: "YnBsaXN0MDDQCAAAAAAAAAEBAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAJ")!
@@ -456,7 +460,7 @@ private struct PropertyListEncoderTests {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict/>\n</plist>\n".data(using: .utf8)!
     }
 
-    private func _testEncodeFailure<T : Encodable>(of value: T, in format: PropertyListDecoder.PropertyListFormat, sourceLocation: SourceLocation = #_sourceLocation) {
+    private func _testEncodeFailure<T: Encodable>(of value: T, in format: PropertyListDecoder.PropertyListFormat, sourceLocation: SourceLocation = #_sourceLocation) {
         #expect(throws: (any Error).self, "Encode of top-level \(T.self) was expected to fail.", sourceLocation: sourceLocation) {
             let encoder = PropertyListEncoder()
             encoder.outputFormat = format
@@ -465,7 +469,7 @@ private struct PropertyListEncoderTests {
     }
 
     @discardableResult
-    private func _testRoundTrip<T>(of value: T, in format: PropertyListDecoder.PropertyListFormat, expectedPlist plist: Data? = nil, sourceLocation: SourceLocation = #_sourceLocation) -> T? where T : Codable, T : Equatable {
+    private func _testRoundTrip<T>(of value: T, in format: PropertyListDecoder.PropertyListFormat, expectedPlist plist: Data? = nil, sourceLocation: SourceLocation = #_sourceLocation) -> T? where T: Codable, T: Equatable {
         var payload: Data! = nil
         do {
             let encoder = PropertyListEncoder()
@@ -498,9 +502,9 @@ private struct PropertyListEncoderTests {
 
     // MARK: - Other tests
     @Test func unkeyedContainerContainingNulls() throws {
-        struct UnkeyedContainerContainingNullTestType : Codable, Equatable {
+        struct UnkeyedContainerContainingNullTestType: Codable, Equatable {
             var array = [String?]()
-            
+
             func encode(to encoder: Encoder) throws {
                 var container = encoder.unkeyedContainer()
                 // We want to test this with explicit encodeNil calls.
@@ -512,7 +516,7 @@ private struct PropertyListEncoderTests {
                     }
                 }
             }
-            
+
             init(from decoder: Decoder) throws {
                 var container = try decoder.unkeyedContainer()
                 while !container.isAtEnd {
@@ -523,27 +527,27 @@ private struct PropertyListEncoderTests {
                     }
                 }
             }
-            
+
             init(array: [String?]) { self.array = array }
         }
-        
+
         let array = [nil, "test", nil]
         _testRoundTrip(of: UnkeyedContainerContainingNullTestType(array: array), in: .xml)
         _testRoundTrip(of: UnkeyedContainerContainingNullTestType(array: array), in: .binary)
     }
-    
+
     @Test func invalidNSDataKey_82142612() throws {
         let data = try testData(forResource: "Test_82142612", withExtension: "bad")
 
         let decoder = PropertyListDecoder()
         #expect(throws: (any Error).self) {
-            try decoder.decode([String:String].self, from: data)
+            try decoder.decode([String: String].self, from: data)
         }
 
         // Repeat something similar with XML.
         let xmlData = "<plist><dict><data>abcd</data><string>xyz</string></dict></plist>".data(using: .utf8)!
         #expect(throws: (any Error).self) {
-            try decoder.decode([String:String].self, from: xmlData)
+            try decoder.decode([String: String].self, from: xmlData)
         }
     }
 
@@ -551,22 +555,22 @@ private struct PropertyListEncoderTests {
         let decoder = PropertyListDecoder()
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
-        var data = try encoder.encode(["abcd":"xyz"])
+        var data = try encoder.encode(["abcd": "xyz"])
 
         // Replace the tag for the ASCII string (0101) that is length 4 ("abcd" => length: 0100) with a boolean "true" tag (0000_1001)
         let range = data.range(of: Data([0b0101_0100]))!
         data.replaceSubrange(range, with: Data([0b000_1001]))
         #expect(throws: (any Error).self) {
-            try decoder.decode([String:String].self, from: data)
+            try decoder.decode([String: String].self, from: data)
         }
 
         let xmlData = "<plist><dict><string>abcd</string><string>xyz</string></dict></plist>".data(using: .utf8)!
         #expect(throws: (any Error).self) {
-            try decoder.decode([String:String].self, from: xmlData)
+            try decoder.decode([String: String].self, from: xmlData)
         }
     }
 
-    struct GenericProperties : Decodable {
+    struct GenericProperties: Decodable {
         var assertionFailure: String?
 
         enum CodingKeys: String, CodingKey {
@@ -664,14 +668,14 @@ private struct PropertyListEncoderTests {
 </plist>
         */
 
-        var errorPlists = [String : String]()
+        var errorPlists = [String: String]()
 
         errorPlists["Deleted leading <"] = String(originalXML[originalXML.index(after: originalXML.startIndex)...])
         errorPlists["Unterminated comment"] = originalXML.replacing("<dict>", with: "<-- unending comment\n<dict>")
         errorPlists["Mess with DOCTYPE"] = originalXML.replacing("DOCTYPE", with: "foobar")
 
         let range = originalXML.firstRange(of: "//EN")!
-        errorPlists["Early EOF"] = String(originalXML[originalXML.startIndex ..< range.lowerBound])
+        errorPlists["Early EOF"] = String(originalXML[originalXML.startIndex..<range.lowerBound])
 
         errorPlists["MalformedDTD"] = originalXML.replacing("<!DOCTYPE", with: "<?DOCTYPE")
         errorPlists["Mismathed close tag"] = originalXML.replacing("</array>", with: "</somethingelse>")
@@ -761,10 +765,10 @@ private struct PropertyListEncoderTests {
         checkInvalidEdgeCase("<integer>4294967296</integer>", type: UInt32.self)
         checkInvalidEdgeCase("<integer>18446744073709551616</integer>", type: UInt64.self)
     }
-    
+
     @Test func xmlIntegerWhitespace() throws {
         let xml = "<array><integer> +\t42</integer><integer>\t-   99</integer><integer> -\t0xFACE</integer></array>"
-        
+
         let value = try PropertyListDecoder().decode([Int].self, from: xml.data(using: .utf8)!)
         #expect(value == [42, -99, -0xFACE])
     }
@@ -786,17 +790,17 @@ private struct PropertyListEncoderTests {
 
         _testRoundTrip(of: [Float.greatestFiniteMagnitude], in: .binary)
         _testRoundTrip(of: [-Float.greatestFiniteMagnitude], in: .binary)
-//        _testRoundTrip(of: [Float.nan], in: .binary) // NaN can't be equated.
+        //        _testRoundTrip(of: [Float.nan], in: .binary) // NaN can't be equated.
         _testRoundTrip(of: [Float.infinity], in: .binary)
         _testRoundTrip(of: [-Float.infinity], in: .binary)
 
         _testRoundTrip(of: [Double.greatestFiniteMagnitude], in: .binary)
         _testRoundTrip(of: [-Double.greatestFiniteMagnitude], in: .binary)
-//        _testRoundTrip(of: [Double.nan], in: .binary) // NaN can't be equated.
+        //        _testRoundTrip(of: [Double.nan], in: .binary) // NaN can't be equated.
         _testRoundTrip(of: [Double.infinity], in: .binary)
         _testRoundTrip(of: [-Double.infinity], in: .binary)
     }
-    
+
     @Test func binaryReals() throws {
         func encode<T: BinaryFloatingPoint & Encodable>(_: T.Type) throws -> (data: Data, expected: [T]) {
             let expected: [T] = [
@@ -806,20 +810,20 @@ private struct PropertyListEncoderTests {
                 1.000000000000000000000001,
                 31415.9e-4,
                 -.infinity,
-                .infinity
+                .infinity,
             ]
             let encoder = PropertyListEncoder()
             encoder.outputFormat = .binary
             let data = try encoder.encode(expected)
             return (data, expected)
         }
-        
+
         func test<T: BinaryFloatingPoint & Codable>(_ type: T.Type) throws {
             let (data, expected) = try encode(type)
             let result = try PropertyListDecoder().decode([T].self, from: data)
             #expect(result == expected, "Type: \(type)")
         }
-        
+
         try test(Float.self)
         try test(Double.self)
     }
@@ -834,7 +838,7 @@ private struct PropertyListEncoderTests {
             1.000000000000000000000001,
             31415.9e-4,
             -.infinity,
-            .infinity
+            .infinity,
         ]
         #expect(array == expected)
 
@@ -874,7 +878,7 @@ private struct PropertyListEncoderTests {
 
         let data = oldStyleWithErrors.data(using: .ascii)!
 
-        struct Thing : Decodable {
+        struct Thing: Decodable {
             var hello: String
         }
         let plistDecoder = PropertyListDecoder()
@@ -952,10 +956,10 @@ private struct PropertyListEncoderTests {
 
     @Test func oldStylePlist_dictionary() {
         let data = """
-{ "test key" = value;
-  testData = <feed face>;
-  "nested array" = (a, b, c); }
-""".data(using: .utf16)!
+            { "test key" = value;
+              testData = <feed face>;
+              "nested array" = (a, b, c); }
+            """.data(using: .utf16)!
 
         struct Values: Decodable {
             let testKey: String
@@ -980,76 +984,76 @@ private struct PropertyListEncoderTests {
 
     @Test func oldStylePlist_stringsFileFormat() {
         let data = """
-string1 = "Good morning";
-string2 = "Good afternoon";
-string3 = "Good evening";
-""".data(using: .utf16)!
+            string1 = "Good morning";
+            string2 = "Good afternoon";
+            string3 = "Good evening";
+            """.data(using: .utf16)!
 
         do {
-            let decoded = try PropertyListDecoder().decode([String:String].self, from: data)
+            let decoded = try PropertyListDecoder().decode([String: String].self, from: data)
             let expected = [
                 "string1": "Good morning",
                 "string2": "Good afternoon",
-                "string3": "Good evening"
+                "string3": "Good evening",
             ]
             #expect(decoded == expected)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
     }
-        
+
     @Test func oldStylePlist_comments() {
         let data = """
-// Initial comment */
-string1 = /*Test*/ "Good morning";  // Test
-string2 = "Good afternoon" /*Test// */;
-string3 = "Good evening"; // Test
-""".data(using: .utf16)!
+            // Initial comment */
+            string1 = /*Test*/ "Good morning";  // Test
+            string2 = "Good afternoon" /*Test// */;
+            string3 = "Good evening"; // Test
+            """.data(using: .utf16)!
 
         do {
-            let decoded = try PropertyListDecoder().decode([String:String].self, from: data)
+            let decoded = try PropertyListDecoder().decode([String: String].self, from: data)
             let expected = [
                 "string1": "Good morning",
                 "string2": "Good afternoon",
-                "string3": "Good evening"
+                "string3": "Good evening",
             ]
             #expect(decoded == expected)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     // Requires __PlistDictionaryDecoder
-    
+
     @Test func oldStylePlist_data() {
         let data = """
-data1 = <7465
-73 74
-696E67                31
+            data1 = <7465
+            73 74
+            696E67                31
 
-323334>;
-""".data(using: .utf16)!
-        
+            323334>;
+            """.data(using: .utf16)!
+
         do {
-            let decoded = try PropertyListDecoder().decode([String:Data].self, from: data)
-            let expected = ["data1" : "testing1234".data(using: .utf8)!]
+            let decoded = try PropertyListDecoder().decode([String: Data].self, from: data)
+            let expected = ["data1": "testing1234".data(using: .utf8)!]
             #expect(decoded == expected)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
     }
-#endif
+    #endif
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // Requires PropertyListSerialization
-    
+
     @Test func bplistCollectionReferences() throws {
         // Use NSArray/NSDictionary and PropertyListSerialization so that we get a bplist with internal references.
-        let c: NSArray = [ "a", "a", "a" ]
-        let b: NSArray = [ c, c, c ]
-        let a: NSArray = [ b, b, b ]
-        let d: NSDictionary = ["a" : a, "b" : b, "c" : c]
+        let c: NSArray = ["a", "a", "a"]
+        let b: NSArray = [c, c, c]
+        let a: NSArray = [b, b, b]
+        let d: NSDictionary = ["a": a, "b": b, "c": c]
         let data = try PropertyListSerialization.data(fromPropertyList: d, format: .binary, options: 0)
 
         struct DecodedReferences: Decodable {
@@ -1057,13 +1061,13 @@ data1 = <7465
             let b: [[String]]
             let c: [String]
         }
-        
+
         let decoded = try PropertyListDecoder().decode(DecodedReferences.self, from: data)
         #expect(decoded.a == a as? [[[String]]])
         #expect(decoded.b == b as? [[String]])
         #expect(decoded.c == c as? [String])
     }
-#endif
+    #endif
 
 
     @Test func reallyOldDates_5842198() throws {
@@ -1078,7 +1082,7 @@ data1 = <7465
     @Test func badDates() throws {
         let timeInterval = TimeInterval(-63145612800) // This is the equivalent of an all-zero gregorian date.
         let date = Date(timeIntervalSinceReferenceDate: timeInterval)
-        
+
         _testRoundTrip(of: [date], in: .xml)
         _testRoundTrip(of: [date], in: .binary)
     }
@@ -1090,7 +1094,10 @@ data1 = <7465
         encoder.outputFormat = .xml
         let data = try encoder.encode([date])
         let str = String(data: data, encoding: String.Encoding.utf8)
-        #expect(str == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>0000-01-02T00:00:00Z</date>\n</array>\n</plist>\n")
+        #expect(
+            str
+                == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>0000-01-02T00:00:00Z</date>\n</array>\n</plist>\n"
+        )
     }
 
     @Test func badDate_decode() throws {
@@ -1145,7 +1152,10 @@ data1 = <7465
         encoder.outputFormat = .xml
         let data = try encoder.encode([date])
         let str = String(data: data, encoding: String.Encoding.utf8)
-        #expect(str == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>2024-02-01T20:43:14Z</date>\n</array>\n</plist>\n") // Previously encoded as "2024-01-32T20:43:14Z"
+        #expect(
+            str
+                == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>2024-02-01T20:43:14Z</date>\n</array>\n</plist>\n"
+        ) // Previously encoded as "2024-01-32T20:43:14Z"
     }
 
     @Test func decodingCompatibility_122065123() throws {
@@ -1171,15 +1181,18 @@ data1 = <7465
 
     @Test func dataWithBOM_utf8() throws {
         let bom = Data([0xef, 0xbb, 0xbf])
-        let plist = bom + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(using: .utf8)!
+        let plist =
+            bom + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(using: .utf8)!
 
         let result = try PropertyListDecoder().decode(String.self, from: plist)
         #expect(result == "hello")
     }
-    
+
     @Test func dataWithBOM_utf32be() throws {
         let bom = Data([0x00, 0x00, 0xfe, 0xff])
-        let plist = bom + "<?xml version=\"1.0\" encoding=\"UTF-32BE\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(using: .utf32BigEndian)!
+        let plist =
+            bom + "<?xml version=\"1.0\" encoding=\"UTF-32BE\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(
+                using: .utf32BigEndian)!
 
         let result = try PropertyListDecoder().decode(String.self, from: plist)
         #expect(result == "hello")
@@ -1187,7 +1200,9 @@ data1 = <7465
 
     @Test func dataWithBOM_utf32le() throws {
         let bom = Data([0xff, 0xfe])
-        let plist = bom + "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(using: .utf16LittleEndian)!
+        let plist =
+            bom + "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(
+                using: .utf16LittleEndian)!
 
         let result = try PropertyListDecoder().decode(String.self, from: plist)
         #expect(result == "hello")
@@ -1197,56 +1212,65 @@ data1 = <7465
         let data = try testData(forResource: "bad_plist", withExtension: "bad")
 
         #expect(throws: (any Error).self) {
-    try PropertyListDecoder().decode([String].self, from: data)
-}    }
-
-    @Test func plistWithEscapedCharacters() throws {
-        let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>com.apple.security.temporary-exception.sbpl</key><string>(allow mach-lookup (global-name-regex #&quot;^[0-9]+$&quot;))</string></dict></plist>".data(using: .utf8)!
-        let result = try PropertyListDecoder().decode([String:String].self, from: plist)
-        #expect(result == ["com.apple.security.temporary-exception.sbpl" : "(allow mach-lookup (global-name-regex #\"^[0-9]+$\"))"])
+            try PropertyListDecoder().decode([String].self, from: data)
+        }
     }
 
-#if FOUNDATION_FRAMEWORK
+    @Test func plistWithEscapedCharacters() throws {
+        let plist =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>com.apple.security.temporary-exception.sbpl</key><string>(allow mach-lookup (global-name-regex #&quot;^[0-9]+$&quot;))</string></dict></plist>"
+            .data(using: .utf8)!
+        let result = try PropertyListDecoder().decode([String: String].self, from: plist)
+        #expect(result == ["com.apple.security.temporary-exception.sbpl": "(allow mach-lookup (global-name-regex #\"^[0-9]+$\"))"])
+    }
+
+    #if FOUNDATION_FRAMEWORK
     // OpenStep format is not supported in Essentials
     @Test func returnRightFormatFromParse() throws {
         let plist = "{ CFBundleDevelopmentRegion = en; }".data(using: .utf8)!
 
-        var format : PropertyListDecoder.PropertyListFormat = .binary
-        let _ = try PropertyListDecoder().decode([String:String].self, from: plist, format: &format)
+        var format: PropertyListDecoder.PropertyListFormat = .binary
+        let _ = try PropertyListDecoder().decode([String: String].self, from: plist, format: &format)
         #expect(format == .openStep)
     }
-#endif
+    #endif
 
     @Test func decodingEmoji() throws {
-        let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#128664;</string></dict></plist>".data(using: .utf8)!
+        let plist =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#128664;</string></dict></plist>"
+            .data(using: .utf8)!
 
-        let result = try PropertyListDecoder().decode([String:String].self, from: plist)
+        let result = try PropertyListDecoder().decode([String: String].self, from: plist)
         let expected = "\u{0001F698}"
         #expect(expected == result["emoji"])
     }
 
     @Test func decodingTooManyCharactersError() throws {
         // Try a plist with too many characters to be a unicode escape sequence
-        let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#12341234128664;</string></dict></plist>".data(using: .utf8)!
+        let plist =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#12341234128664;</string></dict></plist>"
+            .data(using: .utf8)!
 
         #expect(throws: (any Error).self) {
-            try PropertyListDecoder().decode([String:String].self, from: plist)
+            try PropertyListDecoder().decode([String: String].self, from: plist)
         }
         // Try a plist with an invalid unicode escape sequence
-        let plist2 = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#12866411;</string></dict></plist>".data(using: .utf8)!
+        let plist2 =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#12866411;</string></dict></plist>"
+            .data(using: .utf8)!
 
         #expect(throws: (any Error).self) {
-            try PropertyListDecoder().decode([String:String].self, from: plist2)
+            try PropertyListDecoder().decode([String: String].self, from: plist2)
         }
     }
-    
+
     @Test func roundTripEmoji() throws {
         let strings = ["🚘", "👩🏻‍❤️‍👨🏿", "🏋🏽‍♂️🕺🏼🥌"]
-        
+
         _testRoundTrip(of: strings, in: .xml)
         _testRoundTrip(of: strings, in: .binary)
     }
-    
+
     @Test func roundTripEscapedStrings() {
         let strings = ["&", "<", ">"]
         _testRoundTrip(of: strings, in: .xml)
@@ -1255,8 +1279,9 @@ data1 = <7465
     @Test func unterminatedComment() {
         let plist = "<array><!-- comment -->".data(using: .utf8)!
         #expect(throws: (any Error).self) {
-    try PropertyListDecoder().decode([String].self, from: plist)
-}    }
+            try PropertyListDecoder().decode([String].self, from: plist)
+        }
+    }
 
     @Test func incompleteOpenTag() {
         let plist = "<array".data(using: .utf8)!
@@ -1274,308 +1299,316 @@ data1 = <7465
         let expected = "Test &amp; &33; <![CDATA[] outside"
         #expect(result == expected)
     }
-    
+
     @Test func supers() throws {
-        struct UsesSupers : Codable, Equatable {
+        struct UsesSupers: Codable, Equatable {
             var assertionFailure: String?
-            
+
             mutating func assertEqual<T: Equatable>(_ t1: T, _ t2: T) {
                 if t1 != t2 {
                     assertionFailure = "Values are not equal: \(t1) != \(t2)"
                 }
             }
-            
-            mutating func assertTrue( _ res: Bool) {
+
+            mutating func assertTrue(_ res: Bool) {
                 if !res {
                     assertionFailure = "Expected true result"
                 }
             }
-            
+
             enum CodingKeys: String, CodingKey {
                 case a, b, unkeyed
             }
-            
+
             func encode(to encoder: Encoder) throws {
                 var keyed = encoder.container(keyedBy: CodingKeys.self)
                 try keyed.encodeNil(forKey: .a)
-                
+
                 let superB = keyed.superEncoder(forKey: .b)
                 var bSVC = superB.singleValueContainer()
                 try bSVC.encode("b")
-                
+
                 let s = keyed.superEncoder()
                 var sSVC = s.singleValueContainer()
                 try sSVC.encode("super")
-                
+
                 let superUnkeyed = keyed.superEncoder(forKey: .unkeyed)
                 var unkeyed = superUnkeyed.unkeyedContainer()
-                
+
                 try unkeyed.encodeNil()
-                
+
                 let superInUnkeyed = unkeyed.superEncoder()
-                
+
                 try unkeyed.encode("final")
-                
+
                 var sIUSVC = superInUnkeyed.singleValueContainer()
                 try sIUSVC.encode("middle")
             }
-            
+
             init(from decoder: Decoder) throws {
                 let keyed = try decoder.container(keyedBy: CodingKeys.self)
                 assertTrue(try keyed.decodeNil(forKey: .a))
-                
+
                 let superB = try keyed.superDecoder(forKey: .b)
                 let bSVC = try superB.singleValueContainer()
                 assertEqual("b", try bSVC.decode(String.self))
-                
+
                 let s = try keyed.superDecoder()
                 let sSVC = try s.singleValueContainer()
                 assertEqual("super", try sSVC.decode(String.self))
-                
+
                 let superUnkeyed = try keyed.superDecoder(forKey: .unkeyed)
                 var unkeyed = try superUnkeyed.unkeyedContainer()
-                
+
                 let gotNil = try unkeyed.decodeNil()
                 assertTrue(gotNil)
-                
+
                 let superInUnkeyed = try unkeyed.superDecoder()
                 let sIUSVC = try superInUnkeyed.singleValueContainer()
                 assertEqual("middle", try sIUSVC.decode(String.self))
-                
+
                 assertEqual("final", try unkeyed.decode(String.self))
             }
-            
-            init() { }
+
+            init() {}
         }
-        
+
         let result1 = try #require(_testRoundTrip(of: UsesSupers(), in: .xml))
         #expect(result1.assertionFailure == nil)
         let result2 = try #require(_testRoundTrip(of: UsesSupers(), in: .binary))
         #expect(result2.assertionFailure == nil)
     }
-    
+
     @Test func badReferenceIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa3, 0x01, 0x02, /*0x03*/0xBD, // 3 elements array: indexes([42, 314, 0xFF]) -- BUT third index replaced with an invalid one (0xBD) which should throw an error intead of crashing.
-            0x10, 0x2a, // integer 42
-            0x11, 0x01, 0x3a, // integer 314
-            0x10, 0xff, // integer 0xFF
-            0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa3, 0x01, 0x02, /*0x03*/ 0xBD, // 3 elements array: indexes([42, 314, 0xFF]) -- BUT third index replaced with an invalid one (0xBD) which should throw an error intead of crashing.
+                0x10, 0x2a, // integer 42
+                0x11, 0x01, 0x3a, // integer 314
+                0x10, 0xff, // integer 0xFF
+                0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, // trailer
+            ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func badTopObjectIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
-            0x10, 0x2a, // integer 42
-            0x11, 0x01, 0x3a, // integer 314
-            0x10, 0xff, // integer 0xFF
-            0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Top object index -- CORRUPTED
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
+                0x10, 0x2a, // integer 42
+                0x11, 0x01, 0x3a, // integer 314
+                0x10, 0xff, // integer 0xFF
+                0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Top object index -- CORRUPTED
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, // trailer
+            ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func outOfBoundsObjectOffset() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
-            0x10, 0x2a, // integer 42
-            0x11, 0x01, 0x3a, // integer 314
-            0x10, 0xff, // integer 0xFF
-            0x08, 0x0c, 0x0e, /*0x11*/ 0xEE, // object offset table: offsets([array, 42, 314, 0xFF]) -- BUT one offset is out of range.
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
+                0x10, 0x2a, // integer 42
+                0x11, 0x01, 0x3a, // integer 314
+                0x10, 0xff, // integer 0xFF
+                0x08, 0x0c, 0x0e, /*0x11*/ 0xEE, // object offset table: offsets([array, 42, 314, 0xFF]) -- BUT one offset is out of range.
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, // trailer
+            ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func outOfBoundsOffsetTableStart() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
-            0x10, 0x2a, // integer 42
-            0x11, 0x01, 0x3a, // integer 314
-            0x10, 0xff, // integer 0xFF
-            0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF // trailer -- CORRUPTED with out of bounds offset table start offset
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
+                0x10, 0x2a, // integer 42
+                0x11, 0x01, 0x3a, // integer 314
+                0x10, 0xff, // integer 0xFF
+                0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // trailer -- CORRUPTED with out of bounds offset table start offset
+            ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func tooLargeObjectCount() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
-            0x10, 0x2a, // integer 42
-            0x11, 0x01, 0x3a, // integer 314
-            0x10, 0xff, // integer 0xFF
-            0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // object count -- CORRUPTED
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
+                0x10, 0x2a, // integer 42
+                0x11, 0x01, 0x3a, // integer 314
+                0x10, 0xff, // integer 0xFF
+                0x08, 0x0c, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF])
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // object count -- CORRUPTED
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, // trailer
+            ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func tooLargeOffset() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
-            0x10, 0x2a, // integer 42
-            0x11, 0x01, 0x3a, // integer 314
-            0x10, 0xff, // integer 0xFF
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, // offset(array)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, // offset(42)
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // offset(314) -- CORRUPTED
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, // offset(0xFF)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x01, // MODIFIED to make object offsets be 8 bytes instead of 1
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer -- MODIFIED to accommodate larger object index size
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
+                0x10, 0x2a, // integer 42
+                0x11, 0x01, 0x3a, // integer 314
+                0x10, 0xff, // integer 0xFF
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, // offset(array)
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, // offset(42)
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // offset(314) -- CORRUPTED
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, // offset(0xFF)
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x01, // MODIFIED to make object offsets be 8 bytes instead of 1
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, // trailer -- MODIFIED to accommodate larger object index size
+            ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func tooLargeIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa3, // 3 element array
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // index(42)
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // index(314) -- CORRUPTED to a very large value
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // index(0xFF)
-            0x10, 0x2a, // integer 42
-            0x11, 0x01, 0x3a, // integer 314
-            0x10, 0xff, // integer 0xFF
-            0x08, 0x21, 0x23, 0x26, // object offset table: offsets([array, 42, 314, 0xFF])
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x08, // MODIFIED to make object offsets be 8 bytes instead of 1
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x28 // trailer -- MODIFIED to accommodate larger object index size
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa3, // 3 element array
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // index(42)
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // index(314) -- CORRUPTED to a very large value
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // index(0xFF)
+                0x10, 0x2a, // integer 42
+                0x11, 0x01, 0x3a, // integer 314
+                0x10, 0xff, // integer 0xFF
+                0x08, 0x21, 0x23, 0x26, // object offset table: offsets([array, 42, 314, 0xFF])
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x08, // MODIFIED to make object offsets be 8 bytes instead of 1
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x28, // trailer -- MODIFIED to accommodate larger object index size
+            ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func uid() throws {
         // There's no public interface where an NSKeyedArchiver UID value will correctly decode through PropertyListDecoder. This test ensures that it isn't mistaken for some other type.
-        
+
         let xml = "<plist><dict><key>CF$UID</key><integer>1</integer></dict></plist>"
         let xmlData = xml.data(using: .utf8)!
 
         #expect(throws: (any Error).self) {
-            try PropertyListDecoder().decode([String:Int32].self, from: xmlData)
+            try PropertyListDecoder().decode([String: Int32].self, from: xmlData)
         }
-        let bplist = [
-            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
-            0xa1, 0x01, // 1 element array: indexes([cfuid])
-            0x80, 0x01, // cfuid: 1
-            0x08, 0x0a, // object offset table: offsets([array, cfuid])
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c // trailer
-        ] as [UInt8]
+        let bplist =
+            [
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+                0xa1, 0x01, // 1 element array: indexes([cfuid])
+                0x80, 0x01, // cfuid: 1
+                0x08, 0x0a, // object offset table: offsets([array, cfuid])
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, // trailer
+            ] as [UInt8]
         let bplistData = Data(bplist)
 
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int32].self, from: bplistData)
         }
     }
-    
+
     @Test func fauxStability_struct() throws {
         struct FauxStable: Encodable {
             let a = "a"
             let z = "z"
             let n = "n"
         }
-        
+
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
-        
+
         let encoding = try encoder.encode(FauxStable())
         for _ in 0..<1000 {
             let reencoding = try encoder.encode(FauxStable())
             #expect(encoding == reencoding)
         }
     }
-    
+
     @Test func fauxStability_dict() throws {
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
-        
-        let encoding = try encoder.encode(["a":"a", "z":"z", "n":"n"])
+
+        let encoding = try encoder.encode(["a": "a", "z": "z", "n": "n"])
         for _ in 0..<1000 {
-            let reencoding = try encoder.encode(["a":"a", "z":"z", "n":"n"])
+            let reencoding = try encoder.encode(["a": "a", "z": "z", "n": "n"])
             #expect(encoding == reencoding)
         }
     }
-    
+
     @Test func multipleDecodeOptions() throws {
         let cases = [
             MultipleDecodeOptionsTestType("1", .int),
             MultipleDecodeOptionsTestType("1.2", .float),
-            MultipleDecodeOptionsTestType("foo", .string)
+            MultipleDecodeOptionsTestType("foo", .string),
         ]
         for input in cases {
             _testRoundTrip(of: input, in: .binary)
             _testRoundTrip(of: input, in: .xml)
         }
     }
-    
+
     @Test func customSubclass() throws {
         // verify we consult the subclass for the output format
-        let encodeMe = ["hello":"world"]
+        let encodeMe = ["hello": "world"]
         let encoder = XMLOnlyEncoder()
         let data = try encoder.encode(encodeMe)
         let dataAsStr = String(data: data, encoding: .utf8)!
@@ -1613,20 +1646,20 @@ data1 = <7465
         }
 
     }
-    
+
     @Test func garbageCharactersAfterXMLTagName() throws {
         let garbage = "<plist><dict><key>bar</key><stringGARBAGE>foo</string></dict></plist>".data(using: .utf8)!
-        
+
         #expect(throws: (any Error).self) {
-            try PropertyListDecoder().decode([String:String].self, from: garbage)
+            try PropertyListDecoder().decode([String: String].self, from: garbage)
         }
         // Historical behavior allows for whitespace to immediately follow tag names
         let acceptable = "<plist><dict><key>bar</key><string      >foo</string></dict></plist>".data(using: .utf8)!
-        
-        #expect(try PropertyListDecoder().decode([String:String].self, from: acceptable) == ["bar":"foo"])
+
+        #expect(try PropertyListDecoder().decode([String: String].self, from: acceptable) == ["bar": "foo"])
     }
 }
-            
+
 
 // MARK: - Helper Global Functions
 func AssertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -1660,21 +1693,21 @@ func AssertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String, 
 // MARK: - Test Types
 
 // MARK: - Empty Types
-fileprivate struct EmptyStruct : Codable, Equatable {
-    static func ==(_ lhs: EmptyStruct, _ rhs: EmptyStruct) -> Bool {
+fileprivate struct EmptyStruct: Codable, Equatable {
+    static func == (_ lhs: EmptyStruct, _ rhs: EmptyStruct) -> Bool {
         return true
     }
 }
 
-fileprivate class EmptyClass : Codable, Equatable {
-    static func ==(_ lhs: EmptyClass, _ rhs: EmptyClass) -> Bool {
+fileprivate class EmptyClass: Codable, Equatable {
+    static func == (_ lhs: EmptyClass, _ rhs: EmptyClass) -> Bool {
         return true
     }
 }
 
 // MARK: - Single-Value Types
 /// A simple on-off switch type that encodes as a single Bool value.
-fileprivate enum Switch : Codable {
+fileprivate enum Switch: Codable {
     case off
     case on
 
@@ -1682,7 +1715,7 @@ fileprivate enum Switch : Codable {
         let container = try decoder.singleValueContainer()
         switch try container.decode(Bool.self) {
         case false: self = .off
-        case true:  self = .on
+        case true: self = .on
         }
     }
 
@@ -1690,13 +1723,13 @@ fileprivate enum Switch : Codable {
         var container = encoder.singleValueContainer()
         switch self {
         case .off: try container.encode(false)
-        case .on:  try container.encode(true)
+        case .on: try container.encode(true)
         }
     }
 }
 
 /// A simple timestamp type that encodes as a single Double value.
-fileprivate struct Timestamp : Codable, Equatable {
+fileprivate struct Timestamp: Codable, Equatable {
     let value: Double
 
     init(_ value: Double) {
@@ -1713,13 +1746,13 @@ fileprivate struct Timestamp : Codable, Equatable {
         try container.encode(self.value)
     }
 
-    static func ==(_ lhs: Timestamp, _ rhs: Timestamp) -> Bool {
+    static func == (_ lhs: Timestamp, _ rhs: Timestamp) -> Bool {
         return lhs.value == rhs.value
     }
 }
 
 /// A simple referential counter type that encodes as a single Int value.
-fileprivate final class Counter : Codable, Equatable {
+fileprivate final class Counter: Codable, Equatable {
     var count: Int = 0
 
     init() {}
@@ -1734,41 +1767,41 @@ fileprivate final class Counter : Codable, Equatable {
         try container.encode(self.count)
     }
 
-    static func ==(_ lhs: Counter, _ rhs: Counter) -> Bool {
+    static func == (_ lhs: Counter, _ rhs: Counter) -> Bool {
         return lhs === rhs || lhs.count == rhs.count
     }
 }
 
-private struct CodableTypeWithConfiguration : CodableWithConfiguration, Equatable {
+private struct CodableTypeWithConfiguration: CodableWithConfiguration, Equatable {
     struct Config {
         let num: Int
-        
+
         init(_ num: Int) {
             self.num = num
         }
     }
-    
-    struct ConfigProviding : EncodingConfigurationProviding, DecodingConfigurationProviding {
+
+    struct ConfigProviding: EncodingConfigurationProviding, DecodingConfigurationProviding {
         static var encodingConfiguration: Config { Config(2) }
         static var decodingConfiguration: Config { Config(2) }
     }
-    
+
     typealias EncodingConfiguration = Config
     typealias DecodingConfiguration = Config
-    
+
     static let testValue = Self(3)
-    
+
     let num: Int
-    
+
     init(_ num: Int) {
         self.num = num
     }
-    
+
     func encode(to encoder: Encoder, configuration: Config) throws {
         var container = encoder.singleValueContainer()
         try container.encode(num + configuration.num)
     }
-    
+
     init(from decoder: Decoder, configuration: Config) throws {
         let container = try decoder.singleValueContainer()
         num = try container.decode(Int.self) - configuration.num
@@ -1777,7 +1810,7 @@ private struct CodableTypeWithConfiguration : CodableWithConfiguration, Equatabl
 
 // MARK: - Structured Types
 /// A simple address type that encodes as a dictionary of values.
-fileprivate struct Address : Codable, Equatable {
+fileprivate struct Address: Codable, Equatable {
     let street: String
     let city: String
     let state: String
@@ -1792,25 +1825,22 @@ fileprivate struct Address : Codable, Equatable {
         self.country = country
     }
 
-    static func ==(_ lhs: Address, _ rhs: Address) -> Bool {
-        return lhs.street == rhs.street &&
-        lhs.city == rhs.city &&
-        lhs.state == rhs.state &&
-        lhs.zipCode == rhs.zipCode &&
-        lhs.country == rhs.country
+    static func == (_ lhs: Address, _ rhs: Address) -> Bool {
+        return lhs.street == rhs.street && lhs.city == rhs.city && lhs.state == rhs.state && lhs.zipCode == rhs.zipCode && lhs.country == rhs.country
     }
 
     static var testValue: Address {
-        return Address(street: "1 Infinite Loop",
-                       city: "Cupertino",
-                       state: "CA",
-                       zipCode: 95014,
-                       country: "United States")
+        return Address(
+            street: "1 Infinite Loop",
+            city: "Cupertino",
+            state: "CA",
+            zipCode: 95014,
+            country: "United States")
     }
 }
 
 /// A simple person class that encodes as a dictionary of values.
-fileprivate class Person : Codable, Equatable {
+fileprivate class Person: Codable, Equatable {
     let name: String
     let email: String
     let website: String?
@@ -1822,12 +1852,10 @@ fileprivate class Person : Codable, Equatable {
     }
 
     func isEqual(_ other: Person) -> Bool {
-        return self.name == other.name &&
-        self.email == other.email &&
-        self.website == other.website
+        return self.name == other.name && self.email == other.email && self.website == other.website
     }
 
-    static func ==(_ lhs: Person, _ rhs: Person) -> Bool {
+    static func == (_ lhs: Person, _ rhs: Person) -> Bool {
         return lhs.isEqual(rhs)
     }
 
@@ -1837,7 +1865,7 @@ fileprivate class Person : Codable, Equatable {
 }
 
 /// A class which shares its encoder and decoder with its superclass.
-fileprivate class Employee : Person {
+fileprivate class Employee: Person {
     let id: Int
 
     init(name: String, email: String, website: String? = nil, id: Int) {
@@ -1845,7 +1873,7 @@ fileprivate class Employee : Person {
         super.init(name: name, email: email, website: website)
     }
 
-    enum CodingKeys : String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         case id
     }
 
@@ -1875,7 +1903,7 @@ fileprivate class Employee : Person {
 }
 
 /// A simple company struct which encodes as a dictionary of nested values.
-fileprivate struct Company : Codable, Equatable {
+fileprivate struct Company: Codable, Equatable {
     let address: Address
     var employees: [Employee]
 
@@ -1884,7 +1912,7 @@ fileprivate struct Company : Codable, Equatable {
         self.employees = employees
     }
 
-    static func ==(_ lhs: Company, _ rhs: Company) -> Bool {
+    static func == (_ lhs: Company, _ rhs: Company) -> Bool {
         return lhs.address == rhs.address && lhs.employees == rhs.employees
     }
 
@@ -1894,7 +1922,7 @@ fileprivate struct Company : Codable, Equatable {
 }
 
 /// An enum type which decodes from Bool?.
-fileprivate enum EnhancedBool : Codable {
+fileprivate enum EnhancedBool: Codable {
     case `true`
     case `false`
     case fileNotFound
@@ -1920,7 +1948,7 @@ fileprivate enum EnhancedBool : Codable {
 }
 
 /// A type which encodes as an array directly through a single value container.
-private struct Numbers : Codable, Equatable {
+private struct Numbers: Codable, Equatable {
     let values = [4, 8, 15, 16, 23, 42]
 
     init() {}
@@ -1938,7 +1966,7 @@ private struct Numbers : Codable, Equatable {
         try container.encode(values)
     }
 
-    static func ==(_ lhs: Numbers, _ rhs: Numbers) -> Bool {
+    static func == (_ lhs: Numbers, _ rhs: Numbers) -> Bool {
         return lhs.values == rhs.values
     }
 
@@ -1948,16 +1976,16 @@ private struct Numbers : Codable, Equatable {
 }
 
 /// A type which encodes as a dictionary directly through a single value container.
-fileprivate final class Mapping : Codable, Equatable {
-    let values: [String : String]
+fileprivate final class Mapping: Codable, Equatable {
+    let values: [String: String]
 
-    init(values: [String : String]) {
+    init(values: [String: String]) {
         self.values = values
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        values = try container.decode([String : String].self)
+        values = try container.decode([String: String].self)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1965,30 +1993,32 @@ fileprivate final class Mapping : Codable, Equatable {
         try container.encode(values)
     }
 
-    static func ==(_ lhs: Mapping, _ rhs: Mapping) -> Bool {
+    static func == (_ lhs: Mapping, _ rhs: Mapping) -> Bool {
         return lhs === rhs || lhs.values == rhs.values
     }
 
     static var testValue: Mapping {
-        return Mapping(values: ["Apple": "http://apple.com",
-                                "localhost": "http://127.0.0.1"])
+        return Mapping(values: [
+            "Apple": "http://apple.com",
+            "localhost": "http://127.0.0.1",
+        ])
     }
 }
 
-private struct NestedContainersTestType : Encodable {
+private struct NestedContainersTestType: Encodable {
     let testSuperEncoder: Bool
 
     init(testSuperEncoder: Bool = false) {
         self.testSuperEncoder = testSuperEncoder
     }
 
-    enum TopLevelCodingKeys : Int, CodingKey {
+    enum TopLevelCodingKeys: Int, CodingKey {
         case a
         case b
         case c
     }
 
-    enum IntermediateCodingKeys : Int, CodingKey {
+    enum IntermediateCodingKeys: Int, CodingKey {
         case one
         case two
     }
@@ -2069,7 +2099,7 @@ private struct NestedContainersTestType : Encodable {
 
 /// A key type which can take on any string or integer value.
 /// This needs to mirror _PlistKey.
-fileprivate struct _TestKey : CodingKey {
+fileprivate struct _TestKey: CodingKey {
     var stringValue: String
     var intValue: Int?
 
@@ -2090,19 +2120,19 @@ fileprivate struct _TestKey : CodingKey {
 }
 
 /// Wraps a type T so that it can be encoded at the top level of a payload.
-fileprivate struct TopLevelWrapper<T> : Codable, Equatable where T : Codable, T : Equatable {
+fileprivate struct TopLevelWrapper<T>: Codable, Equatable where T: Codable, T: Equatable {
     let value: T
 
     init(_ value: T) {
         self.value = value
     }
 
-    static func ==(_ lhs: TopLevelWrapper<T>, _ rhs: TopLevelWrapper<T>) -> Bool {
+    static func == (_ lhs: TopLevelWrapper<T>, _ rhs: TopLevelWrapper<T>) -> Bool {
         return lhs.value == rhs.value
     }
 }
 
-fileprivate enum EitherDecodable<T : Decodable, U : Decodable> : Decodable {
+fileprivate enum EitherDecodable<T: Decodable, U: Decodable>: Decodable {
     case t(T)
     case u(U)
 
@@ -2118,21 +2148,21 @@ fileprivate enum EitherDecodable<T : Decodable, U : Decodable> : Decodable {
     }
 }
 
-private struct MultipleDecodeOptionsTestType : Codable, Equatable {
+private struct MultipleDecodeOptionsTestType: Codable, Equatable {
     enum EncodingOption: Equatable {
         case string
         case int
         case float
     }
-    
+
     let value: String
     let encodingOption: EncodingOption
-    
+
     init(_ value: String, _ encodingOption: EncodingOption) {
         self.value = value
         self.encodingOption = encodingOption
     }
-    
+
     func encode(to encoder: any Encoder) throws {
         var container = encoder.unkeyedContainer()
         switch encodingOption {
@@ -2140,9 +2170,9 @@ private struct MultipleDecodeOptionsTestType : Codable, Equatable {
         case .int: try container.encode(Int(value)!)
         case .float: try container.encode(Float(value)!)
         }
-        
+
     }
-    
+
     init(from decoder: any Decoder) throws {
         var container = try decoder.unkeyedContainer()
         if let int = try? container.decode(Int.self) {
@@ -2160,9 +2190,9 @@ private struct MultipleDecodeOptionsTestType : Codable, Equatable {
 
 // MARK: - Helper Class
 
-class XMLOnlyEncoder : PropertyListEncoder, @unchecked Sendable {
+class XMLOnlyEncoder: PropertyListEncoder, @unchecked Sendable {
     override var outputFormat: PropertyListDecoder.PropertyListFormat {
         get { return .xml }
-        set { }
+        set {}
     }
 }

@@ -13,8 +13,8 @@
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @preconcurrency
-    public struct AttributesSlice1<T : AttributedStringKey> : BidirectionalCollection, Sendable
-    where T.Value : Sendable {
+    public struct AttributesSlice1<T: AttributedStringKey>: BidirectionalCollection, Sendable
+    where T.Value: Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -50,7 +50,7 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                
+
                 let run: AttributedString.Runs.Run
                 let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
@@ -66,16 +66,16 @@ extension AttributedString.Runs {
                         attributeNames: _slice._names,
                         constraints: _slice._constraints,
                         endOfCurrent: false)
-                    range = _index ..< end
+                    range = _index..<end
                     _index = next
                 } else {
                     // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
                     run = _slice.runs[_index]
                     let next = _slice.index(after: _index)
-                    range = _index ..< next
+                    range = _index..<next
                     _index = next
                 }
-                
+
                 return (run._attributes[T.self], range)
             }
         }
@@ -122,7 +122,7 @@ extension AttributedString.Runs {
                 endOfCurrent: true
             )
             let attributes = runs._guts.runs[runIndex].attributes
-            return (attributes[T.self], start ..< end)
+            return (attributes[T.self], start..<end)
         }
 
         // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
@@ -132,12 +132,12 @@ extension AttributedString.Runs {
     }
 
     @preconcurrency
-    public subscript<T : AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> where T.Value : Sendable {
+    public subscript<T: AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> where T.Value: Sendable {
         return AttributesSlice1<T>(runs: self)
     }
 
     @preconcurrency
-    public subscript<T : AttributedStringKey>(_ t: T.Type) -> AttributesSlice1<T> where T.Value : Sendable {
+    public subscript<T: AttributedStringKey>(_ t: T.Type) -> AttributesSlice1<T> where T.Value: Sendable {
         return AttributesSlice1<T>(runs: self)
     }
 }
@@ -146,12 +146,12 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice2<
-        T : AttributedStringKey,
-        U : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
-        T.Value : Sendable,
-        U.Value : Sendable
+        T.Value: Sendable,
+        U.Value: Sendable
     {
         public typealias Index = AttributedString.Index
 
@@ -160,7 +160,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: Set<AttributeRunBoundaries?>
 
@@ -188,7 +188,7 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                
+
                 let run: AttributedString.Runs.Run
                 let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
@@ -204,16 +204,16 @@ extension AttributedString.Runs {
                         attributeNames: _slice._names,
                         constraints: _slice._constraints,
                         endOfCurrent: false)
-                    range = _index ..< end
+                    range = _index..<end
                     _index = next
                 } else {
                     // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
                     run = _slice.runs[_index]
                     let next = _slice.index(after: _index)
-                    range = _index ..< next
+                    range = _index..<next
                     _index = next
                 }
-                
+
                 return (run._attributes[T.self], run._attributes[U.self], range)
             }
         }
@@ -221,11 +221,11 @@ extension AttributedString.Runs {
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-        
+
         public var startIndex: Index {
             Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
-        
+
         public var endIndex: Index {
             Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
@@ -260,7 +260,7 @@ extension AttributedString.Runs {
                 endOfCurrent: true
             )
             let attributes = runs._guts.runs[runIndex].attributes
-            return (attributes[T.self], attributes[U.self], start ..< end)
+            return (attributes[T.self], attributes[U.self], start..<end)
         }
 
         // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
@@ -270,30 +270,32 @@ extension AttributedString.Runs {
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey
+    >(
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>
     ) -> AttributesSlice2<T, U>
     where
-        T.Value : Sendable,
-        U.Value : Sendable {
+        T.Value: Sendable,
+        U.Value: Sendable
+    {
         return AttributesSlice2<T, U>(runs: self)
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey
+    >(
         _ t: T.Type,
         _ u: U.Type
     ) -> AttributesSlice2<T, U>
-    where 
-        T.Value : Sendable,
-        U.Value : Sendable {
+    where
+        T.Value: Sendable,
+        U.Value: Sendable
+    {
         return AttributesSlice2<T, U>(runs: self)
     }
 }
@@ -302,14 +304,14 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice3<
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable
     {
         public typealias Index = AttributedString.Index
 
@@ -318,7 +320,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: Set<AttributeRunBoundaries?>
 
@@ -346,7 +348,7 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                
+
                 let run: AttributedString.Runs.Run
                 let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
@@ -362,32 +364,33 @@ extension AttributedString.Runs {
                         attributeNames: _slice._names,
                         constraints: _slice._constraints,
                         endOfCurrent: false)
-                    range = _index ..< end
+                    range = _index..<end
                     _index = next
                 } else {
                     // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
                     run = _slice.runs[_index]
                     let next = _slice.index(after: _index)
-                    range = _index ..< next
+                    range = _index..<next
                     _index = next
                 }
-                
+
                 return (
                     run._attributes[T.self],
                     run._attributes[U.self],
                     run._attributes[V.self],
-                    range)
+                    range
+                )
             }
         }
 
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-        
+
         public var startIndex: Index {
             Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
-        
+
         public var endIndex: Index {
             Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
@@ -422,7 +425,7 @@ extension AttributedString.Runs {
                 endOfCurrent: true
             )
             let attributes = runs._guts.runs[runIndex].attributes
-            return (attributes[T.self], attributes[U.self], attributes[V.self], start ..< end)
+            return (attributes[T.self], attributes[U.self], attributes[V.self], start..<end)
         }
 
         // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
@@ -432,36 +435,38 @@ extension AttributedString.Runs {
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey
+    >(
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>,
         _ v: KeyPath<AttributeDynamicLookup, V>
     ) -> AttributesSlice3<T, U, V>
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable {
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable
+    {
         return AttributesSlice3<T, U, V>(runs: self)
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey
+    >(
         _ t: T.Type,
         _ u: U.Type,
         _ v: V.Type
     ) -> AttributesSlice3<T, U, V>
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable {
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable
+    {
         return AttributesSlice3<T, U, V>(runs: self)
     }
 }
@@ -470,16 +475,16 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice4<
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable,
-        W.Value : Sendable
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable,
+        W.Value: Sendable
     {
         public typealias Index = AttributedString.Index
 
@@ -488,7 +493,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: Set<AttributeRunBoundaries?>
 
@@ -516,7 +521,7 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                
+
                 let run: AttributedString.Runs.Run
                 let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
@@ -532,33 +537,34 @@ extension AttributedString.Runs {
                         attributeNames: _slice._names,
                         constraints: _slice._constraints,
                         endOfCurrent: false)
-                    range = _index ..< end
+                    range = _index..<end
                     _index = next
                 } else {
                     // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
                     run = _slice.runs[_index]
                     let next = _slice.index(after: _index)
-                    range = _index ..< next
+                    range = _index..<next
                     _index = next
                 }
-                
+
                 return (
                     run._attributes[T.self],
                     run._attributes[U.self],
                     run._attributes[V.self],
                     run._attributes[W.self],
-                    range)
+                    range
+                )
             }
         }
 
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-        
+
         public var startIndex: Index {
             Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
-        
+
         public var endIndex: Index {
             Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
@@ -598,7 +604,8 @@ extension AttributedString.Runs {
                 attributes[U.self],
                 attributes[V.self],
                 attributes[W.self],
-                start ..< end)
+                start..<end
+            )
         }
 
         // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
@@ -608,42 +615,44 @@ extension AttributedString.Runs {
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey
+    >(
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>,
         _ v: KeyPath<AttributeDynamicLookup, V>,
         _ w: KeyPath<AttributeDynamicLookup, W>
     ) -> AttributesSlice4<T, U, V, W>
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable,
-        W.Value : Sendable {
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable,
+        W.Value: Sendable
+    {
         return AttributesSlice4<T, U, V, W>(runs: self)
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey
+    >(
         _ t: T.Type,
         _ u: U.Type,
         _ v: V.Type,
         _ w: W.Type
     ) -> AttributesSlice4<T, U, V, W>
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable,
-        W.Value : Sendable {
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable,
+        W.Value: Sendable
+    {
         return AttributesSlice4<T, U, V, W>(runs: self)
     }
 }
@@ -652,18 +661,18 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice5<
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey,
-        X : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey,
+        X: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable,
-        W.Value : Sendable,
-        X.Value : Sendable
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable,
+        W.Value: Sendable,
+        X.Value: Sendable
     {
         public typealias Index = AttributedString.Index
 
@@ -672,7 +681,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: Set<AttributeRunBoundaries?>
 
@@ -685,7 +694,7 @@ extension AttributedString.Runs {
                 U.runBoundaries,
                 V.runBoundaries,
                 W.runBoundaries,
-                X.runBoundaries
+                X.runBoundaries,
             ]
         }
 
@@ -704,7 +713,7 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                
+
                 let run: AttributedString.Runs.Run
                 let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
@@ -720,34 +729,35 @@ extension AttributedString.Runs {
                         attributeNames: _slice._names,
                         constraints: _slice._constraints,
                         endOfCurrent: false)
-                    range = _index ..< end
+                    range = _index..<end
                     _index = next
                 } else {
                     // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
                     run = _slice.runs[_index]
                     let next = _slice.index(after: _index)
-                    range = _index ..< next
+                    range = _index..<next
                     _index = next
                 }
-                
+
                 return (
                     run._attributes[T.self],
                     run._attributes[U.self],
                     run._attributes[V.self],
                     run._attributes[W.self],
                     run._attributes[X.self],
-                    range)
+                    range
+                )
             }
         }
 
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-        
+
         public var startIndex: Index {
             Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
-        
+
         public var endIndex: Index {
             Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
@@ -788,7 +798,8 @@ extension AttributedString.Runs {
                 attributes[V.self],
                 attributes[W.self],
                 attributes[X.self],
-                start ..< end)
+                start..<end
+            )
         }
 
         // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
@@ -798,48 +809,50 @@ extension AttributedString.Runs {
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey,
-        X : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey,
+        X: AttributedStringKey
+    >(
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>,
         _ v: KeyPath<AttributeDynamicLookup, V>,
         _ w: KeyPath<AttributeDynamicLookup, W>,
         _ x: KeyPath<AttributeDynamicLookup, X>
-    ) -> AttributesSlice5<T, U, V, W, X> 
+    ) -> AttributesSlice5<T, U, V, W, X>
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable,
-        W.Value : Sendable,
-        X.Value : Sendable {
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable,
+        W.Value: Sendable,
+        X.Value: Sendable
+    {
         return AttributesSlice5<T, U, V, W, X>(runs: self)
     }
 
     @preconcurrency
-    public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey,
-        X : AttributedStringKey
-    > (
+    public subscript<
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey,
+        X: AttributedStringKey
+    >(
         _ t: T.Type,
         _ u: U.Type,
         _ v: V.Type,
         _ w: W.Type,
         _ x: X.Type
-    ) -> AttributesSlice5<T, U, V, W, X> 
+    ) -> AttributesSlice5<T, U, V, W, X>
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable,
-        W.Value : Sendable,
-        X.Value : Sendable {
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable,
+        W.Value: Sendable,
+        X.Value: Sendable
+    {
         return AttributesSlice5<T, U, V, W, X>(runs: self)
     }
 }
@@ -849,7 +862,7 @@ extension AttributedString.Runs {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @_spi(AttributedString)
-    public struct NSAttributesSlice : BidirectionalCollection, Sendable {
+    public struct NSAttributesSlice: BidirectionalCollection, Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -884,7 +897,7 @@ extension AttributedString.Runs {
                 }
                 let run = _slice._runs[_index]
                 let next = _slice.index(after: _index)
-                let range = _index ..< next
+                let range = _index..<next
                 _index = next
                 return (_slice.buildContainer(from: run._attributes), range)
             }
@@ -930,7 +943,7 @@ extension AttributedString.Runs {
                 endOfCurrent: true
             )
             let attributes = _runs._guts.runs[runIndex].attributes
-            return (buildContainer(from: attributes), start ..< end)
+            return (buildContainer(from: attributes), start..<end)
         }
 
         // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
@@ -942,12 +955,12 @@ extension AttributedString.Runs {
             AttributeContainer(storage.filterWithoutInvalidatingDependents { _names.contains($0.key) })
         }
     }
-    
+
     @_spi(AttributedString)
     public subscript(nsAttributedStringKeys keys: NSAttributedString.Key...) -> NSAttributesSlice {
         self[nsAttributedStringKeys: keys]
     }
-    
+
     @_spi(AttributedString)
     public subscript(nsAttributedStringKeys keys: [NSAttributedString.Key]) -> NSAttributesSlice {
         return NSAttributesSlice(runs: self, names: keys.map { $0.rawValue })

@@ -81,11 +81,11 @@ private enum _XDGUserDirectory: String {
     case music = "MUSIC"
     case pictures = "PICTURES"
     case videos = "VIDEOS"
-    
+
     var url: URL {
         return url(userConfiguration: _XDGUserDirectory.configuredDirectoryURLs, osDefaultConfiguration: _XDGUserDirectory.osDefaultDirectoryURLs)
     }
-    
+
     func url(userConfiguration: [_XDGUserDirectory: URL], osDefaultConfiguration: [_XDGUserDirectory: URL]) -> URL {
         if let url = userConfiguration[self] {
             return url
@@ -95,9 +95,10 @@ private enum _XDGUserDirectory: String {
             return self.defaultValue
         }
     }
-    
+
     var defaultValue: URL {
-        let component = switch self {
+        let component =
+            switch self {
             case .desktop: "Desktop"
             case .download: "Downloads"
             case .publicShare: "Public"
@@ -105,34 +106,34 @@ private enum _XDGUserDirectory: String {
             case .music: "Music"
             case .pictures: "Pictures"
             case .videos: "Videos"
-        }
+            }
         return FileManager.default.homeDirectoryForCurrentUser.appending(component: component)
     }
-    
+
     private static func parseConfigFile(_ url: URL) -> [_XDGUserDirectory: URL]? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         let configuration = String(decoding: data, as: UTF8.self)
-        
+
         var entries: [_XDGUserDirectory: URL] = [:]
         let home = FileManager.default.homeDirectoryForCurrentUser
-        
+
         for line in configuration.split(separator: "\n") {
             if let equalsIdx = line.firstIndex(of: "=") {
                 var variable = String(line[..<equalsIdx])._trimmingWhitespace()
-                
+
                 let prefix = "XDG_"
                 let suffix = "_DIR"
                 if variable.hasPrefix(prefix) && variable.hasSuffix(suffix) {
                     let endOfPrefix = variable.unicodeScalars.index(variable.startIndex, offsetBy: prefix.unicodeScalars.count)
                     let startOfSuffix = variable.unicodeScalars.index(variable.endIndex, offsetBy: -suffix.unicodeScalars.count)
-                    
-                    variable = String(variable[endOfPrefix ..< startOfSuffix])
+
+                    variable = String(variable[endOfPrefix..<startOfSuffix])
                 }
-                
+
                 guard let directory = _XDGUserDirectory(rawValue: variable) else {
                     continue
                 }
-                
+
                 let path = String(line[line.unicodeScalars.index(after: equalsIdx)...])._trimmingWhitespace()
                 if !path.isEmpty {
                     entries[directory] = URL(filePath: path, directoryHint: .isDirectory, relativeTo: home)
@@ -141,23 +142,23 @@ private enum _XDGUserDirectory: String {
                 return nil // Incorrect syntax.
             }
         }
-        
+
         return entries
     }
-    
+
     private static let configuredDirectoryURLs: [_XDGUserDirectory: URL] = {
         parseConfigFile(_xdgConfigHomeURL().appending(component: "user-dirs.dirs")) ?? [:]
     }()
-    
+
     private static let osDefaultDirectoryURLs: [_XDGUserDirectory: URL] = {
         for directory in _xdgConfigURLs() {
             let configurationFile = directory.appending(component: "user-dirs.defaults")
-            
+
             if let result = parseConfigFile(configurationFile) {
                 return result
             }
         }
-        
+
         return [:]
     }()
 }
@@ -166,40 +167,40 @@ func _XDGSearchPathURL(for directory: FileManager.SearchPathDirectory, in domain
     return switch (directory, domain) {
     case (.autosavedInformationDirectory, .userDomainMask):
         _xdgDataHomeURL().appending(component: "Autosave Information", directoryHint: .isDirectory)
-        
+
     case (.desktopDirectory, .userDomainMask):
         _XDGUserDirectory.desktop.url
-        
+
     case (.documentDirectory, .userDomainMask):
         _XDGUserDirectory.documents.url
-        
+
     case (.cachesDirectory, .userDomainMask):
         _xdgCacheURL()
-        
+
     case (.applicationSupportDirectory, .userDomainMask):
         _xdgDataHomeURL()
-        
+
     case (.downloadsDirectory, .userDomainMask):
         _XDGUserDirectory.download.url
-        
+
     case (.userDirectory, .localDomainMask):
         _xdgHomeURL()
-        
+
     case (.moviesDirectory, .userDomainMask):
         _XDGUserDirectory.videos.url
-        
+
     case (.musicDirectory, .userDomainMask):
         _XDGUserDirectory.music.url
-        
+
     case (.picturesDirectory, .userDomainMask):
         _XDGUserDirectory.pictures.url
-        
+
     case (.sharedPublicDirectory, .userDomainMask):
         _XDGUserDirectory.publicShare.url
-        
+
     case (.trashDirectory, .localDomainMask), (.trashDirectory, .userDomainMask):
         FileManager.default.homeDirectoryForCurrentUser.appending(component: ".Trash", directoryHint: .isDirectory)
-        
+
     default: nil
     }
 }

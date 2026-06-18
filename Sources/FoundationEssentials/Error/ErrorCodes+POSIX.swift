@@ -1,19 +1,19 @@
 //===----------------------------------------------------------------------===//
- //
- // This source file is part of the Swift.org open source project
- //
- // Copyright (c) 2022 Apple Inc. and the Swift project authors
- // Licensed under Apache License v2.0 with Runtime Library Exception
- //
- // See https://swift.org/LICENSE.txt for license information
- //
- //===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2022 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+//
+//===----------------------------------------------------------------------===//
 
 // Import for POSIXErrorCode
 #if canImport(Android)
 @preconcurrency import Android
 #elseif canImport(Glibc)
-@preconcurrency import Glibc 
+@preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Darwin)
@@ -28,7 +28,7 @@ import WinSDK
 #if FOUNDATION_FRAMEWORK
 /// Describes an error in the POSIX error domain.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct POSIXError : _BridgedStoredNSError {
+public struct POSIXError: _BridgedStoredNSError {
     public let _nsError: NSError
 
     public init(_nsError error: NSError) {
@@ -46,13 +46,13 @@ public struct POSIXError : _BridgedStoredNSError {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension POSIXErrorCode : _ErrorCodeProtocol {
+extension POSIXErrorCode: _ErrorCodeProtocol {
     public typealias _ErrorType = POSIXError
 }
 #else
 
 /// Describes an error in the POSIX error domain.
-public struct POSIXError : Error, Hashable, Sendable {
+public struct POSIXError: Error, Hashable, Sendable {
     public let code: Code
 
     public static var errorDomain: String { return "NSPOSIXErrorDomain" }
@@ -64,7 +64,7 @@ public struct POSIXError : Error, Hashable, Sendable {
     public init(_ code: Code) {
         self.code = code
     }
-    
+
     public typealias Code = POSIXErrorCode
 }
 #endif
@@ -397,7 +397,7 @@ extension POSIXError {
         return .ETOOMANYREFS
     }
     #endif
-    
+
     /// Operation timed out.
     public static var ETIMEDOUT: POSIXErrorCode {
         return .ETIMEDOUT
@@ -446,7 +446,7 @@ extension POSIXError {
         return .EPROCLIM
     }
     #endif
-    
+
     #if !os(Windows)
     #if !os(WASI)
     /// Too many users.
@@ -503,7 +503,7 @@ extension POSIXError {
         return .EPROCUNAVAIL
     }
     #endif
-    
+
     /// No locks available.
     public static var ENOLCK: POSIXErrorCode {
         return .ENOLCK
@@ -513,7 +513,7 @@ extension POSIXError {
     public static var ENOSYS: POSIXErrorCode {
         return .ENOSYS
     }
-    
+
     #if canImport(Darwin)
     /// Inappropriate file type or format.
     public static var EFTYPE: POSIXErrorCode {
@@ -530,7 +530,7 @@ extension POSIXError {
         return .ENEEDAUTH
     }
     #endif
-    
+
     /// Intelligent device errors.
 
     #if canImport(Darwin)
@@ -560,13 +560,13 @@ extension POSIXError {
         return .EBADEXEC
     }
     #endif
-    
+
     #if canImport(Darwin)
     /// Bad CPU type in executable.
     public static var EBADARCH: POSIXErrorCode {
         return .EBADARCH
     }
-    
+
     /// Shared library version mismatch.
     public static var ESHLIBVERS: POSIXErrorCode {
         return .ESHLIBVERS
@@ -580,11 +580,11 @@ extension POSIXError {
 
     /// Operation canceled.
     public static var ECANCELED: POSIXErrorCode {
-#if os(Windows)
+        #if os(Windows)
         return POSIXErrorCode(rawValue: Int32(ERROR_CANCELLED))!
-#else
+        #else
         return .ECANCELED
-#endif
+        #endif
     }
 
     #if !os(Windows)

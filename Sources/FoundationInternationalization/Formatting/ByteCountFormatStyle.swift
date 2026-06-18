@@ -44,15 +44,30 @@ internal import _FoundationICU
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct ByteCountFormatStyle: FormatStyle, Sendable {
     /// The semantic style the format style uses to represent a byte count value.
-    public var style: Style { get { attributed.style } set { attributed.style = newValue} }
+    public var style: Style {
+        get { attributed.style }
+        set { attributed.style = newValue }
+    }
     /// The units the format style can use to express the byte count.
-    public var allowedUnits: Units { get { attributed.allowedUnits } set { attributed.allowedUnits = newValue} }
+    public var allowedUnits: Units {
+        get { attributed.allowedUnits }
+        set { attributed.allowedUnits = newValue }
+    }
     /// A Boolean value that indicates whether the format style should spell out zero-byte values as text.
-    public var spellsOutZero: Bool { get { attributed.spellsOutZero } set { attributed.spellsOutZero = newValue} }
+    public var spellsOutZero: Bool {
+        get { attributed.spellsOutZero }
+        set { attributed.spellsOutZero = newValue }
+    }
     /// A Boolean value that indicates whether the format style should include the exact byte count, in addition to expressing it in terms of units.
-    public var includesActualByteCount: Bool { get { attributed.includesActualByteCount } set { attributed.includesActualByteCount = newValue} }
+    public var includesActualByteCount: Bool {
+        get { attributed.includesActualByteCount }
+        set { attributed.includesActualByteCount = newValue }
+    }
     /// The locale to use to format the numeric part of the byte count.
-    public var locale: Locale { get { attributed.locale } set { attributed.locale = newValue} }
+    public var locale: Locale {
+        get { attributed.locale }
+        set { attributed.locale = newValue }
+    }
     /// An attributed format style based on the byte count format style.
     public var attributed: Attributed
 
@@ -197,7 +212,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
             guard let languageCode = locale.language.languageCode?._normalizedIdentifier else { return false }
 
             switch languageCode {
-            case "ar", "da", "el", "en", "fr",  "hi", "hr", "id", "it", "ms", "pt", "ro", "th":
+            case "ar", "da", "el", "en", "fr", "hi", "hr", "id", "it", "ms", "pt", "ro", "th":
                 return true
             default:
                 break
@@ -215,7 +230,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
 
             return false
         }
-        
+
         func _format(_ formatterValue: ICUNumberFormatter.Value, doubleValue: Double) -> AttributedString {
             let unit: Unit = allowedUnits.contains(.kb) ? .kilobyte : .byte
             if spellsOutZero && doubleValue.isZero {
@@ -275,7 +290,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
             }()
 
             let denominator = decimal ? bestUnit.decimalSize : bestUnit.binarySize
-            let unitValue = doubleValue/Double(denominator)
+            let unitValue = doubleValue / Double(denominator)
 
             let precisionSkeleton: String
             switch bestUnit {
@@ -308,7 +323,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
 
             return attributedString
         }
-        
+
         /// Formats a numeric byte count, using this style.
         ///
         /// - Parameter value: The 64-bit byte count to format.
@@ -366,7 +381,7 @@ private func localizedParens(locale: Locale) -> (String, String) {
     guard status.checkSuccessAndLogError("ulocdata_getExemplarSet failed.") else {
         return (" (", ")")
     }
-    
+
     let fullwidthLeftParenUTF32 = 0x0000FF08 as Int32
     let containsFullWidth = uset_contains(exemplars!, fullwidthLeftParenUTF32).boolValue
 

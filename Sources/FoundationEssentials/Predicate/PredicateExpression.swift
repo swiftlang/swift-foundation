@@ -40,7 +40,7 @@ internal import Synchronization
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol PredicateExpression<Output> {
     associatedtype Output
-    
+
     func evaluate(_ bindings: PredicateBindings) throws -> Output
 }
 
@@ -48,7 +48,7 @@ public protocol PredicateExpression<Output> {
 ///
 /// Don't declare new types that conform to the `StandardPredicateExpression` protocol.  Only the types provided by Foundation are valid conforming types.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-public protocol StandardPredicateExpression<Output> : PredicateExpression, Codable, Sendable {}
+public protocol StandardPredicateExpression<Output>: PredicateExpression, Codable, Sendable {}
 
 /// An error thrown while evaluating a predicate.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
@@ -59,13 +59,13 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
         case forceCastFailure(String?)
         case invalidInput(String?)
     }
-    
+
     private let _error: _Error
-    
+
     internal init(_ error: _Error) {
         _error = error
     }
-    
+
     public var debugDescription: String {
         switch _error {
         case .undefinedVariable:
@@ -78,8 +78,8 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
             return string ?? "The inputs to this expression are invalid"
         }
     }
-    
-    public static func ==(lhs: Self, rhs: Self) -> Bool {
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         switch lhs._error {
         case .undefinedVariable:
             return rhs == .undefinedVariable
@@ -100,7 +100,7 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
             return false
         }
     }
-    
+
     public static let undefinedVariable = Self(.undefinedVariable)
     public static let forceUnwrapFailure = Self(.forceUnwrapFailure(nil))
     public static let forceCastFailure = Self(.forceCastFailure(nil))
@@ -112,36 +112,36 @@ extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
         let id: UInt
         private static let nextID = Atomic<UInt>(0)
-        
+
         init() {
             self.id = Self.nextID.wrappingAdd(1, ordering: .relaxed).oldValue
         }
-        
+
         public func encode(to encoder: Encoder) throws {
             var container = encoder.singleValueContainer()
             try container.encode(id)
         }
-        
+
         public init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
             let decodedID = try container.decode(UInt.self)
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             if let newVariable = _ThreadLocal[.predicateArchivingState]?.createVariable(for: decodedID) {
                 self = newVariable
                 return
             }
-#endif // FOUNDATION_FRAMEWORK
+            #endif // FOUNDATION_FRAMEWORK
             self.id = decodedID
         }
     }
-    
-    public struct Variable<Output> : StandardPredicateExpression {
+
+    public struct Variable<Output>: StandardPredicateExpression {
         public let key: VariableID
-        
+
         public init() {
             self.key = VariableID()
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             if let value = bindings[self] {
                 return value
@@ -149,47 +149,47 @@ extension PredicateExpressions {
             throw PredicateError.undefinedVariable
         }
     }
-    
-    public struct KeyPath<Root : PredicateExpression, Output> : PredicateExpression {
+
+    public struct KeyPath<Root: PredicateExpression, Output>: PredicateExpression {
         public let root: Root
         public let keyPath: Swift.KeyPath<Root.Output, Output> & Sendable
-        
+
         public init(root: Root, keyPath: Swift.KeyPath<Root.Output, Output> & Sendable) {
             keyPath._validateForPredicateUsage()
             self.root = root
             self.keyPath = keyPath
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             return try root.evaluate(bindings)[keyPath: keyPath as Swift.KeyPath<Root.Output, Output>]
         }
     }
 
-    public struct Value<Output> : PredicateExpression {
+    public struct Value<Output>: PredicateExpression {
         public let value: Output
-        
+
         public init(_ value: Output) {
             self.value = value
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) -> Output {
             return self.value
         }
     }
-    
+
     public static func build_Arg<T>(_ arg: T) -> Value<T> {
         Value(arg)
     }
-    
+
     public static func build_Arg<T: PredicateExpression>(_ arg: T) -> T {
         arg
     }
-    
+
     /* public */
     @usableFromInline static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value>) -> PredicateExpressions.KeyPath<Root, Value> {
         KeyPath(root: root, keyPath: keyPath._unsafeAssumeSendable)
     }
-    
+
     // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
     // Should be removed and the above function should be made public when rdar://131764614 is resolved
     @_alwaysEmitIntoClient
@@ -217,62 +217,66 @@ extension AnyKeyPath {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.KeyPath : Codable where Root : Codable {
-    private enum CodingKeys : CodingKey {
+extension PredicateExpressions.KeyPath: Codable where Root: Codable {
+    private enum CodingKeys: CodingKey {
         case root
         case identifier
     }
-    
+
     public func encode(to encoder: Encoder) throws {
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(root, forKey: .root)
         guard let identifier = _ThreadLocal[.predicateArchivingState]?.configuration._identifier(for: keyPath) else {
             throw EncodingError.invalidValue(keyPath, .init(codingPath: container.codingPath, debugDescription: "The '\(keyPath.debugDescription)' keypath is not in the provided allowlist"))
         }
         try container.encode(identifier, forKey: .identifier)
-#else
+        #else
         throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "Encoding PredicateExpressions.KeyPath is not supported"))
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         root = try container.decode(Root.self, forKey: .root)
         let identifier = try container.decode(String.self, forKey: .identifier)
         guard let anykp = _ThreadLocal[.predicateArchivingState]?.configuration._keyPath(for: identifier, rootType: Root.Output.self) else {
             throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "A keypath for the '\(identifier)' identifier is not in the provided allowlist")
         }
         guard let kp = anykp as? Swift.KeyPath<Root.Output, Output> else {
-            throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "Key path '\(anykp.debugDescription)' (KeyPath<\(_typeName(type(of: anykp).rootType)), \(_typeName(type(of: anykp).valueType))>) for identifier '\(identifier)' did not match the expression's requirement for KeyPath<\(_typeName(Root.Output.self)), \(_typeName(Output.self))>")
+            throw DecodingError.dataCorruptedError(
+                forKey: .identifier, in: container,
+                debugDescription:
+                    "Key path '\(anykp.debugDescription)' (KeyPath<\(_typeName(type(of: anykp).rootType)), \(_typeName(type(of: anykp).valueType))>) for identifier '\(identifier)' did not match the expression's requirement for KeyPath<\(_typeName(Root.Output.self)), \(_typeName(Output.self))>"
+            )
         }
         self.keyPath = kp._unsafeAssumeSendable
-#else
+        #else
         throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "Decoding PredicateExpressions.KeyPath is not supported")
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
     }
 }
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
+extension PredicateExpressions.KeyPath: Sendable where Root: Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.KeyPath : StandardPredicateExpression where Root : StandardPredicateExpression {}
+extension PredicateExpressions.KeyPath: StandardPredicateExpression where Root: StandardPredicateExpression {}
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.KeyPath : CustomStringConvertible {
+extension PredicateExpressions.KeyPath: CustomStringConvertible {
     public var description: String {
         "KeyPath(root: \(root), keyPath: \(keyPath.debugDescription))"
     }
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Value : Codable where Output : Codable {
+extension PredicateExpressions.Value: Codable where Output: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(value)
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         value = try container.decode(Output.self)
@@ -280,13 +284,13 @@ extension PredicateExpressions.Value : Codable where Output : Codable {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Value : Sendable where Output : Sendable {}
+extension PredicateExpressions.Value: Sendable where Output: Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable /*, Output : Sendable*/ {}
+extension PredicateExpressions.Value: StandardPredicateExpression where Output: Codable /*, Output : Sendable*/ {}
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Value : CustomStringConvertible {
+extension PredicateExpressions.Value: CustomStringConvertible {
     public var description: String {
         var result = "Value<\(_typeName(Output.self))>("
         debugPrint(value, separator: "", terminator: "", to: &result)
@@ -295,7 +299,7 @@ extension PredicateExpressions.Value : CustomStringConvertible {
 }
 
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
-extension PredicateExpressions.Variable : CustomStringConvertible {
+extension PredicateExpressions.Variable: CustomStringConvertible {
     public var description: String {
         "Variable(\(key.id))"
     }
@@ -303,20 +307,20 @@ extension PredicateExpressions.Variable : CustomStringConvertible {
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.KeyPath {
-    public enum CommonKeyPathKind : Hashable, Sendable {
+    public enum CommonKeyPathKind: Hashable, Sendable {
         case collectionCount
         case collectionIsEmpty
         case collectionFirst
         case bidirectionalCollectionLast
     }
-    
+
     public var kind: CommonKeyPathKind? {
         guard let collectionType = Root.Output.self as? any Collection.Type else {
             return nil
         }
         return Self.kind(keyPath, collectionType: collectionType)
     }
-    
+
     private static func kind<C: Collection>(_ anyKP: AnyKeyPath, collectionType: C.Type) -> CommonKeyPathKind? {
         let kp = anyKP as! PartialKeyPath<C>
         switch kp {
@@ -335,7 +339,7 @@ extension PredicateExpressions.KeyPath {
             return nil
         }
     }
-    
+
     private static func kind<C: Collection, Element: Hashable>(_ kp: PartialKeyPath<C>, hashableElementType: Element.Type) -> CommonKeyPathKind? {
         switch kp {
         case \Set<Element>.count:

@@ -24,11 +24,11 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     internal init(adoptingReference reference: NSCalendar) {
         _calendar = reference
     }
-    
+
     required init(identifier: Calendar.Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil, gregorianStartDate: Date? = nil) {
         fatalError("Unexpected init")
     }
-    
+
     static func == (lhs: _CalendarBridged, rhs: _CalendarBridged) -> Bool {
         lhs._calendar == rhs._calendar
     }
@@ -38,24 +38,25 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     }
 
     func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> any _CalendarProtocol {
-        CalendarCache.cache.fixed(identifier: self.identifier, 
-                                  locale: changingLocale ?? locale,
-                                  timeZone: changingTimeZone ?? timeZone,
-                                  firstWeekday: changingFirstWeekday ?? firstWeekday,
-                                  minimumDaysInFirstWeek: changingMinimumDaysInFirstWeek ?? minimumDaysInFirstWeek,
-                                  gregorianStartDate: gregorianStartDate)
+        CalendarCache.cache.fixed(
+            identifier: self.identifier,
+            locale: changingLocale ?? locale,
+            timeZone: changingTimeZone ?? timeZone,
+            firstWeekday: changingFirstWeekday ?? firstWeekday,
+            minimumDaysInFirstWeek: changingMinimumDaysInFirstWeek ?? minimumDaysInFirstWeek,
+            gregorianStartDate: gregorianStartDate)
     }
-    
+
     // MARK: -
     //
 
     /// The identifier of the calendar.
-    var identifier : Calendar.Identifier {
+    var identifier: Calendar.Identifier {
         return Calendar._fromNSCalendarIdentifier(_calendar.calendarIdentifier)!
     }
 
     /// The locale of the calendar.
-    var locale : Locale? {
+    var locale: Locale? {
         get {
             _calendar.locale
         }
@@ -67,9 +68,9 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     var localeIdentifier: String {
         _calendar.locale?.identifier ?? ""
     }
-    
+
     /// The time zone of the calendar.
-    var timeZone : TimeZone {
+    var timeZone: TimeZone {
         get {
             _calendar.timeZone
         }
@@ -79,7 +80,7 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     }
 
     /// The first weekday of the calendar.
-    var firstWeekday : Int {
+    var firstWeekday: Int {
         get {
             _calendar.firstWeekday
         }
@@ -89,7 +90,7 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     }
 
     /// The number of minimum days in the first week.
-    var minimumDaysInFirstWeek : Int {
+    var minimumDaysInFirstWeek: Int {
         get {
             _calendar.minimumDaysInFirstWeek
         }
@@ -137,8 +138,8 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     /// - parameter date: The specified date.
     /// - returns: A new `DateInterval` if the starting time and duration of a component could be calculated, otherwise `nil`.
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
-        var interval : TimeInterval = 0
-        var nsDate : NSDate? = NSDate(timeIntervalSinceReferenceDate: 0)
+        var interval: TimeInterval = 0
+        var nsDate: NSDate? = NSDate(timeIntervalSinceReferenceDate: 0)
         if _calendar.range(of: _toNSCalendarUnit([component]), start: &nsDate, interval: &interval, for: date) {
             guard let nsDate else { return nil }
             return DateInterval(start: nsDate as Date, duration: interval)
@@ -215,7 +216,7 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     func isDateInWeekend(_ date: Date) -> Bool {
         _calendar.isDateInWeekend(date)
     }
-    
+
     // MARK: -
     //
 
@@ -226,7 +227,7 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     var debugDescription: String {
         "bridged \(_calendar.debugDescription)"
     }
-    
+
     var isBridged: Bool {
         true
     }

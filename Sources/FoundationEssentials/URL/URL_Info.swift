@@ -21,38 +21,38 @@ internal enum _URLImplType: UInt32 {
 internal struct _URLFlags: OptionSet {
     let rawValue: UInt32
 
-    static var implTypeMask:            Self { Self(rawValue: 0b11) }
+    static var implTypeMask: Self { Self(rawValue: 0b11) }
 
-    static var hasScheme:               Self { Self(rawValue: 1 << 2) }
-    static var hasHost:                 Self { Self(rawValue: 1 << 3) }
-    static var hasPort:                 Self { Self(rawValue: 1 << 4) }
-    static var hasOldPath:              Self { Self(rawValue: 1 << 5) }
-    static var hasQuery:                Self { Self(rawValue: 1 << 6) }
-    static var hasFragment:             Self { Self(rawValue: 1 << 7) }
+    static var hasScheme: Self { Self(rawValue: 1 << 2) }
+    static var hasHost: Self { Self(rawValue: 1 << 3) }
+    static var hasPort: Self { Self(rawValue: 1 << 4) }
+    static var hasOldPath: Self { Self(rawValue: 1 << 5) }
+    static var hasQuery: Self { Self(rawValue: 1 << 6) }
+    static var hasFragment: Self { Self(rawValue: 1 << 7) }
 
-    static var hasUser:                 Self { Self(rawValue: 1 << 8) }
-    static var hasPassword:             Self { Self(rawValue: 1 << 9) }
+    static var hasUser: Self { Self(rawValue: 1 << 8) }
+    static var hasPassword: Self { Self(rawValue: 1 << 9) }
 
     // Frequently used flags for compatibility
-    static var isDecomposable:          Self { Self(rawValue: 1 << 10) }
-    static var hasOldNetLocation:       Self { Self(rawValue: 1 << 11) }
+    static var isDecomposable: Self { Self(rawValue: 1 << 10) }
+    static var hasOldNetLocation: Self { Self(rawValue: 1 << 11) }
 
-    static var isFileURL:               Self { Self(rawValue: 1 << 12) }
-    static var isFileReferenceURL:      Self { Self(rawValue: 1 << 13) }
-    static var hasDirectoryPath:        Self { Self(rawValue: 1 << 14) }
-    static var hasEncodedPath:          Self { Self(rawValue: 1 << 15) }
+    static var isFileURL: Self { Self(rawValue: 1 << 12) }
+    static var isFileReferenceURL: Self { Self(rawValue: 1 << 13) }
+    static var hasDirectoryPath: Self { Self(rawValue: 1 << 14) }
+    static var hasEncodedPath: Self { Self(rawValue: 1 << 15) }
 
-    static var hasNonUTF8Encoding:      Self { Self(rawValue: 1 << 16) }
-    static var isIPLiteral:             Self { Self(rawValue: 1 << 17) }
-    static var shouldEncodeUser:        Self { Self(rawValue: 1 << 18) }
-    static var shouldEncodePassword:    Self { Self(rawValue: 1 << 19) }
-    static var shouldEncodeHost:        Self { Self(rawValue: 1 << 20) }
-    static var shouldEncodePath:        Self { Self(rawValue: 1 << 21) }
-    static var shouldEncodeQuery:       Self { Self(rawValue: 1 << 22) }
-    static var shouldEncodeFragment:    Self { Self(rawValue: 1 << 23) }
+    static var hasNonUTF8Encoding: Self { Self(rawValue: 1 << 16) }
+    static var isIPLiteral: Self { Self(rawValue: 1 << 17) }
+    static var shouldEncodeUser: Self { Self(rawValue: 1 << 18) }
+    static var shouldEncodePassword: Self { Self(rawValue: 1 << 19) }
+    static var shouldEncodeHost: Self { Self(rawValue: 1 << 20) }
+    static var shouldEncodePath: Self { Self(rawValue: 1 << 21) }
+    static var shouldEncodeQuery: Self { Self(rawValue: 1 << 22) }
+    static var shouldEncodeFragment: Self { Self(rawValue: 1 << 23) }
 
     // WHATWG URL special schemes (ftp, file, http, https, ws, wss)
-    static var hasSpecialScheme:         Self { Self(rawValue: 1 << 24) }
+    static var hasSpecialScheme: Self { Self(rawValue: 1 << 24) }
 
     // Flags that are guaranteed to be set in a canonical file URL
     static var fileImplFlags: Self { [.init(type: .file), .hasOldPath, .isDecomposable] }
@@ -66,12 +66,12 @@ extension _URLFlags {
 
     // Swift URL only stores the fully-encoded URL string, so the presence of
     // these "should" encode flags imply that those components were encoded.
-    static var didEncodeUser:       Self { .shouldEncodeUser }
-    static var didEncodePassword:   Self { .shouldEncodePassword }
-    static var didEncodeHost:       Self { .shouldEncodeHost }
-    static var didEncodePath:       Self { .shouldEncodePath }
-    static var didEncodeQuery:      Self { .shouldEncodeQuery }
-    static var didEncodeFragment:   Self { .shouldEncodeFragment }
+    static var didEncodeUser: Self { .shouldEncodeUser }
+    static var didEncodePassword: Self { .shouldEncodePassword }
+    static var didEncodeHost: Self { .shouldEncodeHost }
+    static var didEncodePath: Self { .shouldEncodePath }
+    static var didEncodeQuery: Self { .shouldEncodeQuery }
+    static var didEncodeFragment: Self { .shouldEncodeFragment }
 }
 
 internal struct _URLInfo: _URLParseable, _URLHeader {
@@ -80,23 +80,23 @@ internal struct _URLInfo: _URLParseable, _URLHeader {
     var flags: _URLFlags = []
 
     // Ranges are valid for the string's UTF8 bytes
-    var schemeRange:    Range<Int> = 0..<0
-    var hostRange:      Range<Int> = 0..<0
-    var portRange:      Range<Int> = 0..<0
-    var pathRange:      Range<Int> = 0..<0
-    var queryRange:     Range<Int> = 0..<0
-    var fragmentRange:  Range<Int> = 0..<0
-    var userRange:      Range<Int> = 0..<0
-    var passwordRange:  Range<Int> = 0..<0
+    var schemeRange: Range<Int> = 0..<0
+    var hostRange: Range<Int> = 0..<0
+    var portRange: Range<Int> = 0..<0
+    var pathRange: Range<Int> = 0..<0
+    var queryRange: Range<Int> = 0..<0
+    var fragmentRange: Range<Int> = 0..<0
+    var userRange: Range<Int> = 0..<0
+    var passwordRange: Range<Int> = 0..<0
 
-    var hasScheme: Bool     { flags.contains(.hasScheme) }
-    var hasUser: Bool       { flags.contains(.hasUser) }
-    var hasPassword: Bool   { flags.contains(.hasPassword) }
-    var hasHost: Bool       { flags.contains(.hasHost) }
-    var hasPort: Bool       { flags.contains(.hasPort) }
-    var hasPath: Bool       { true } // Path always exists
-    var hasQuery: Bool      { flags.contains(.hasQuery) }
-    var hasFragment: Bool   { flags.contains(.hasFragment) }
+    var hasScheme: Bool { flags.contains(.hasScheme) }
+    var hasUser: Bool { flags.contains(.hasUser) }
+    var hasPassword: Bool { flags.contains(.hasPassword) }
+    var hasHost: Bool { flags.contains(.hasHost) }
+    var hasPort: Bool { flags.contains(.hasPort) }
+    var hasPath: Bool { true } // Path always exists
+    var hasQuery: Bool { flags.contains(.hasQuery) }
+    var hasFragment: Bool { flags.contains(.hasFragment) }
 
     mutating func setOriginalString(_ string: String) {
         self.string = string
@@ -165,14 +165,16 @@ internal struct _URLInfo: _URLParseable, _URLHeader {
         var flags: _URLFlags = []
         var s = string
         return s.withUTF8 {
-            guard URL.parse(
-                UTF8.self,
-                span: $0.span,
-                flags: &flags,
-                into: &info,
-                allowEncoding: encodingInvalidCharacters,
-                useModernParsing: true
-            ) else {
+            guard
+                URL.parse(
+                    UTF8.self,
+                    span: $0.span,
+                    flags: &flags,
+                    into: &info,
+                    allowEncoding: encodingInvalidCharacters,
+                    useModernParsing: true
+                )
+            else {
                 return nil
             }
             info.flags = flags
@@ -249,10 +251,11 @@ extension _URLInfo {
             return (filePathInfo(string: "./", flags: flags), base)
         }
 
-        let urlString = switch pathStyle {
-        case .posix: URL.parsePOSIXPath(filePath, flags: &flags, isDirectory: isDirectory)
-        case .windows: URL.parseWindowsPath(filePath, flags: &flags, isDirectory: isDirectory)
-        }
+        let urlString =
+            switch pathStyle {
+            case .posix: URL.parsePOSIXPath(filePath, flags: &flags, isDirectory: isDirectory)
+            case .windows: URL.parseWindowsPath(filePath, flags: &flags, isDirectory: isDirectory)
+            }
 
         let base = resolveBaseURL(base, updating: &flags)
         return (filePathInfo(string: urlString, flags: flags), base)
@@ -340,16 +343,17 @@ extension _URLInfo {
 
         // Update flags for the new path
         var flags = flags
-        if (!newPath.isEmpty && flags.contains(.isDecomposable)) ||
-            (newPath.isEmpty && flags.contains(.hasOldNetLocation)) {
+        if (!newPath.isEmpty && flags.contains(.isDecomposable)) || (newPath.isEmpty && flags.contains(.hasOldNetLocation)) {
             flags.insert(.hasOldPath)
         } else {
             flags.remove(.hasOldPath)
         }
 
-        assert(isDirectory == newPath.withUnsafeBufferPointer {
-            URL.hasDirectoryPath($0, pathEnd: $0.count, pathLength: $0.count)
-        })
+        assert(
+            isDirectory
+                == newPath.withUnsafeBufferPointer {
+                    URL.hasDirectoryPath($0, pathEnd: $0.count, pathLength: $0.count)
+                })
         if isDirectory {
             flags.insert(.hasDirectoryPath)
         } else {
@@ -379,7 +383,7 @@ extension _URLInfo {
         flags.remove([
             .hasNonUTF8Encoding,
             .didEncodeUser, .didEncodePassword, .didEncodeHost,
-            .didEncodePath, .didEncodeQuery, .didEncodeFragment
+            .didEncodePath, .didEncodeQuery, .didEncodeFragment,
         ])
 
         var result = self
@@ -410,7 +414,7 @@ extension _URLInfo {
     var originalString: String {
         if flags.isDisjoint(with: [
             .didEncodeUser, .didEncodePassword, .didEncodeHost,
-            .didEncodePath, .didEncodeQuery, .didEncodeFragment
+            .didEncodePath, .didEncodeQuery, .didEncodeFragment,
         ]) {
             return string
         }
@@ -466,9 +470,7 @@ extension _URLInfo {
                             fromSpan: stringSpan.extracting(hostRange)
                         )
                     } else {
-                        let shouldPercentDecode = (
-                            !flags.contains(.hasSpecialScheme) || flags.contains(.isIPLiteral) || _uidnaHook() == nil
-                        )
+                        let shouldPercentDecode = (!flags.contains(.hasSpecialScheme) || flags.contains(.isIPLiteral) || _uidnaHook() == nil)
                         if shouldPercentDecode, let written = decode(range: hostRange) {
                             writeIndex += written
                         } else {

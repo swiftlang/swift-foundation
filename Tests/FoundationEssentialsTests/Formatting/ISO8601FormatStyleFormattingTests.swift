@@ -38,7 +38,7 @@ private struct ISO8601FormatStyleFormattingTests {
         // Day-only results: the default time is midnight for parsed date when the time piece is missing
         // Date is: "2022-01-28 00:00:00"
         #expect(iso8601.year().month().day().dateSeparator(.dash).format(date) == "2022-01-28")
-        
+
         // Date is: "2022-01-28 00:00:00"
         #expect(iso8601.year().month().day().dateSeparator(.omitted).format(date) == "20220128")
 
@@ -56,27 +56,27 @@ private struct ISO8601FormatStyleFormattingTests {
         #expect(iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon).format(date) == "15:35:46Z")
         // Date is: "1970-01-01 15:35:46"
         #expect(iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).format(date) == "15:35:46Z")
-                
+
         // Time zones
-        
+
         var iso8601Pacific = iso8601
         iso8601Pacific.timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
-        
+
         // Has a seconds component (-28830)
         var iso8601PacificIsh = iso8601
         iso8601PacificIsh.timeZone = TimeZone(secondsFromGMT: -3600 * 8 - 30)!
-        
+
         #expect(iso8601Pacific.timeSeparator(.omitted).format(date) == "2022-01-28T073546-0800")
         #expect(iso8601Pacific.timeSeparator(.omitted).timeZoneSeparator(.colon).format(date) == "2022-01-28T073546-08:00")
 
         #expect(iso8601PacificIsh.timeSeparator(.omitted).format(date) == "2022-01-28T073516-080030")
         #expect(iso8601PacificIsh.timeSeparator(.omitted).timeZoneSeparator(.colon).format(date) == "2022-01-28T073516-08:00:30")
-        
+
         var iso8601gmtP1 = iso8601
         iso8601gmtP1.timeZone = TimeZone(secondsFromGMT: 3600)!
         #expect(iso8601gmtP1.timeSeparator(.omitted).format(date) == "2022-01-28T163546+0100")
         #expect(iso8601gmtP1.timeSeparator(.omitted).timeZoneSeparator(.colon).format(date) == "2022-01-28T163546+01:00")
-        
+
     }
 
     @Test func iso8601ComponentsFormatMissingPieces() throws {
@@ -90,7 +90,7 @@ private struct ISO8601FormatStyleFormattingTests {
         let emptyFormatted = emptyComponents.formatted(.iso8601)
         #expect(emptyFormatted == "1970-01-01T00:00:00Z")
     }
-    
+
     @Test func iso8601ComponentsFormat() throws {
         let date = Date(timeIntervalSinceReferenceDate: 665076946.0)
         // Be sure to use the ISO8601 calendar here to decompose to the right week of year components (the starting day is not the same as gregorian)
@@ -109,7 +109,7 @@ private struct ISO8601FormatStyleFormattingTests {
         // Day-only results: the default time is midnight for parsed date when the time piece is missing
         // Date is: "2022-01-28 00:00:00"
         #expect(iso8601.year().month().day().dateSeparator(.dash).format(componentsInGMT) == "2022-01-28")
-        
+
         // Date is: "2022-01-28 00:00:00"
         #expect(iso8601.year().month().day().dateSeparator(.omitted).format(componentsInGMT) == "20220128")
 
@@ -127,9 +127,9 @@ private struct ISO8601FormatStyleFormattingTests {
         #expect(iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon).format(componentsInGMT) == "15:35:46Z")
         // Date is: "1970-01-01 15:35:46"
         #expect(iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).format(componentsInGMT) == "15:35:46Z")
-                
+
         // Time zones
-        
+
         var iso8601Pacific = iso8601
         let pacificTimeZone = TimeZone(secondsFromGMT: -3600 * 8)!
         iso8601Pacific.timeZone = pacificTimeZone
@@ -146,7 +146,7 @@ private struct ISO8601FormatStyleFormattingTests {
 
         #expect(iso8601PacificIsh.timeSeparator(.omitted).format(componentsInPacificIsh) == "2022-01-28T073516-080030")
         #expect(iso8601PacificIsh.timeSeparator(.omitted).timeZoneSeparator(.colon).format(componentsInPacificIsh) == "2022-01-28T073516-08:00:30")
-        
+
         var iso8601gmtP1 = iso8601
         let gmtP1TimeZone = TimeZone(secondsFromGMT: 3600)!
         iso8601gmtP1.timeZone = gmtP1TimeZone
@@ -154,7 +154,7 @@ private struct ISO8601FormatStyleFormattingTests {
         #expect(iso8601gmtP1.timeSeparator(.omitted).format(componentsInGMTP1) == "2022-01-28T163546+0100")
         #expect(iso8601gmtP1.timeSeparator(.omitted).timeZoneSeparator(.colon).format(componentsInGMTP1) == "2022-01-28T163546+01:00")
     }
-    
+
     @Test func codable() throws {
         let iso8601Style = Date.ISO8601FormatStyle().year().month().day()
         let encoder = JSONEncoder()
@@ -205,7 +205,7 @@ private struct ISO8601FormatStyleFormattingTests {
         let str = Date.ISO8601FormatStyle().format(dc, appendingTimeZoneOffset: 0)
         #expect(str == "-2025-01-20T00:00:00Z")
     }
-    
+
     @Test func rounding() {
         // Date is: "1970-01-01 15:35:45.9999"
         let date = Date(timeIntervalSinceReferenceDate: -978251054.0 - 0.0001)

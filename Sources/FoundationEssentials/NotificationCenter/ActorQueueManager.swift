@@ -22,12 +22,12 @@ internal import Synchronization
 @objc(_NotificationCenterActorQueueManager)
 #endif
 internal final class _NotificationCenterActorQueueManager: _NotificationCenterActorQueueManagerNSObjectWrapper, @unchecked Sendable {
-#if !NO_FILESYSTEM
+    #if !NO_FILESYSTEM
     struct State {
         var buffer = [@Sendable () async -> Void]()
         var continuation: UnsafeContinuation<(@Sendable () async -> Void)?, Never>?
         var isCancelled: Bool = false
-        
+
         static func waitForWork(_ state: borrowing Mutex<State>) async -> (@Sendable () async -> Void)? {
             return await withTaskCancellationHandler {
                 return await withUnsafeContinuation { continuation in
@@ -59,7 +59,7 @@ internal final class _NotificationCenterActorQueueManager: _NotificationCenterAc
             }
         }
     }
-    
+
     let stateRef: StateReference
     let workerTask: Task<(), Never>
 
@@ -82,11 +82,11 @@ internal final class _NotificationCenterActorQueueManager: _NotificationCenterAc
         }
         super.init()
     }
-    
+
     deinit {
         workerTask.cancel()
     }
-    
+
     func enqueue(_ work: @escaping @Sendable () async -> Void) {
         stateRef.state.withLock { state in
             state.buffer.append(work)
@@ -97,5 +97,5 @@ internal final class _NotificationCenterActorQueueManager: _NotificationCenterAc
             }
         }
     }
-#endif
+    #endif
 }

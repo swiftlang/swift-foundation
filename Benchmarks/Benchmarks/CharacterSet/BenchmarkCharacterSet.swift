@@ -26,7 +26,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .throughput]
-    
+
     let string = "Hello, Let's use Character Set"
     let range = Unicode.Scalar(0x10000)!..<UnicodeScalar(0x20000)!
     let data = Data([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
@@ -161,7 +161,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(!CharacterSet.alphanumerics.isSuperset(of: CharacterSet(charactersIn: invalidAlphanumericsInput)))
         }
     }
-    
+
     // MARK: rdar://173078708 Hash & Equality & Bitmap Representation
     Benchmark("CharacterSet: Hash Predefined CharacterSet") { benchmark in
         for _ in benchmark.scaledIterations {
@@ -171,7 +171,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(hasher.finalize())
         }
     }
-    
+
     Benchmark("CharacterSet Hash BMP-Only CharacterSet") { benchmark in
         for _ in benchmark.scaledIterations {
             let cs: CharacterSet = {
@@ -185,7 +185,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(hasher.finalize())
         }
     }
-    
+
     Benchmark("CharacterSet: Hash Multi-Plane CharacterSet") { benchmark in
         for _ in benchmark.scaledIterations {
             let cs: CharacterSet = {
@@ -244,7 +244,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(hasher.finalize())
         }
     }
-    
+
     Benchmark("CharacterSet: Hash Almost Everything") { benchmark in
         for _ in benchmark.scaledIterations {
             let cs: CharacterSet = {
@@ -257,7 +257,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(hasher.finalize())
         }
     }
-    
+
     let csSample1: CharacterSet = {
         var cs = CharacterSet(charactersIn: "a"..."z")
         cs.insert(charactersIn: "A"..."Z")
@@ -271,7 +271,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(csSample1 == csSample1Copy)
         }
     }
-    
+
     let csSample2: CharacterSet = {
         var cs = CharacterSet(charactersIn: "ABC")
         cs.invert()
@@ -287,7 +287,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(csSample2 == csSample3)
         }
     }
-    
+
     let csSample4: CharacterSet = {
         var cs = CharacterSet(charactersIn: "a"..."z")
         cs.insert(charactersIn: "A"..."Z")
@@ -299,7 +299,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(csSample1 == csSample4)
         }
     }
-    
+
     let csSample5: CharacterSet = {
         var cs = CharacterSet(charactersIn: "Hello, World!")
         return cs
@@ -309,13 +309,13 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(csSample1 == csSample5)
         }
     }
-    
+
     Benchmark("CharacterSet: Bitmap Representation of Small CharacterSet") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(csSample1.bitmapRepresentation)
         }
     }
-    
+
     let csSample6: CharacterSet = {
         var cs = CharacterSet(charactersIn: "a"..."z")
         cs.insert(charactersIn: "A"..."Z")
@@ -372,7 +372,7 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(csSample6.bitmapRepresentation)
         }
     }
-    
+
     let csSample7: CharacterSet = {
         var characterSet = CharacterSet(charactersIn: "\u{0000}"..."\u{10FFFF}")
         characterSet.remove(charactersIn: "\"\\\n\r\t\u{0008}\u{000C}")

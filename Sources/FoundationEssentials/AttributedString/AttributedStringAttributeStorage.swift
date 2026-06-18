@@ -12,7 +12,7 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal struct _AttributeValue : Hashable, CustomStringConvertible, Sendable {
+    internal struct _AttributeValue: Hashable, CustomStringConvertible, Sendable {
         private typealias RawValue = any Sendable & Hashable
         private let _rawValue: RawValue
 
@@ -23,23 +23,23 @@ extension AttributedString {
         let runBoundaries: AttributeRunBoundaries?
         let inheritedByAddedText: Bool
         let invalidationConditions: Set<AttributeInvalidationCondition>?
-        
+
         var description: String { String(describing: _rawValue) }
-        
-        init<K: AttributedStringKey>(_ value: K.Value, for key: K.Type) where K.Value : Sendable {
+
+        init<K: AttributedStringKey>(_ value: K.Value, for key: K.Type) where K.Value: Sendable {
             _rawValue = value
             runBoundaries = K.runBoundaries
             inheritedByAddedText = K.inheritedByAddedText
             invalidationConditions = K.invalidationConditions
         }
-        
+
         #if FOUNDATION_FRAMEWORK
         @inline(__always)
         private static func _unsafeAssumeSendableRawValue<T>(_ value: T) -> RawValue {
             // Perform this cast in a separate function unaware of the T: Hashable constraint to avoid compiler warnings when performing the Hashable --> Hashable & Sendable cast
             value as! RawValue
         }
-        
+
         fileprivate init<K: AttributedStringKey>(assumingSendable value: K.Value, for key: K.Type) {
             _rawValue = Self._unsafeAssumeSendableRawValue(value)
             runBoundaries = K.runBoundaries
@@ -61,11 +61,11 @@ extension AttributedString {
             return invalidationConditions?.contains { $0 == condition } ?? false
         }
 
-        static func wrapIfPresent<K: AttributedStringKey>(_ value: K.Value?, for key: K.Type) -> Self? where K.Value : Sendable {
+        static func wrapIfPresent<K: AttributedStringKey>(_ value: K.Value?, for key: K.Type) -> Self? where K.Value: Sendable {
             guard let value = value else { return nil }
             return Self(value, for: K.self)
         }
-        
+
         func rawValue<K: AttributedStringKey>(
             as key: K.Type
         ) -> K.Value where K.Value: Sendable {
@@ -75,7 +75,7 @@ extension AttributedString {
             }
             return value
         }
-        
+
         #if FOUNDATION_FRAMEWORK
         fileprivate func rawValueAssumingSendable<K: AttributedStringKey>(
             as key: K.Type
@@ -87,8 +87,8 @@ extension AttributedString {
             return value
         }
         #endif
-        
-        static func ==(left: Self, right: Self) -> Bool {
+
+        static func == (left: Self, right: Self) -> Bool {
             func openEquatableLHS<LeftValue: Hashable & Sendable>(_ leftValue: LeftValue) -> Bool {
                 func openEquatableRHS<RightValue: Hashable & Sendable>(_ rightValue: RightValue) -> Bool {
                     // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
@@ -101,7 +101,7 @@ extension AttributedString {
             }
             return openEquatableLHS(left._rawValue)
         }
-        
+
         func hash(into hasher: inout Hasher) {
             _rawValue.hash(into: &hasher)
         }
@@ -110,7 +110,7 @@ extension AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 internal extension Dictionary where Key == String, Value == AttributedString._AttributeValue {
-    var _attrStrDescription : String {
+    var _attrStrDescription: String {
         let keyvals = self.reduce(into: "") { (res, entry) in
             res += "\t\(entry.key) = \(entry.value)\n"
         }
@@ -124,14 +124,14 @@ extension AttributedString {
         internal typealias AttributeMergePolicy = AttributedString.AttributeMergePolicy
         internal typealias _AttributeValue = AttributedString._AttributeValue
 
-        private(set) var contents : [String : _AttributeValue]
+        private(set) var contents: [String: _AttributeValue]
 
         /// The set of keys in this container that need to invalidated
         /// when some particular key changes.
         ///
         /// FIXME: We do not need to cache this. Remove it.
-        private var invalidatableKeys : Set<String>
-        
+        private var invalidatableKeys: Set<String>
+
         init() {
             self.contents = [:]
             self.invalidatableKeys = []
@@ -151,7 +151,7 @@ extension AttributedString._AttributeStorage {
     var isEmpty: Bool {
         contents.isEmpty
     }
-    
+
     var keys: Dictionary<String, _AttributeValue>.Keys {
         contents.keys
     }
@@ -216,17 +216,17 @@ extension AttributedString._AttributeStorage {
         }
     }
 
-    subscript <T: AttributedStringKey>(_ attribute: T.Type) -> T.Value? where T.Value : Sendable {
+    subscript<T: AttributedStringKey>(_ attribute: T.Type) -> T.Value? where T.Value: Sendable {
         get { self[T.name]?.rawValue(as: T.self) }
         set { self[T.name] = .wrapIfPresent(newValue, for: T.self) }
     }
-    
+
     #if FOUNDATION_FRAMEWORK
     /// Stores & retrieves an attribute value bypassing the T.Value : Sendable constraint
     ///
     /// In general, callers should _always_ use the subscript that contains a T.Value : Sendable constraint
     /// This subscript should only be used in contexts when callers are forced to work around the lack of an AttributedStringKey.Value : Sendable constraint and assume the values are Sendable (ex. during NSAttributedString conversion while iterating scopes)
-    subscript <T: AttributedStringKey>(assumingSendable attribute: T.Type) -> T.Value? {
+    subscript<T: AttributedStringKey>(assumingSendable attribute: T.Type) -> T.Value? {
         get {
             self[T.name]?.rawValueAssumingSendable(as: T.self)
         }
@@ -240,7 +240,7 @@ extension AttributedString._AttributeStorage {
     }
     #endif
 
-    subscript (_ attributeName: String) -> _AttributeValue? {
+    subscript(_ attributeName: String) -> _AttributeValue? {
         get { self.contents[attributeName] }
         set {
             let oldValue: _AttributeValue?
@@ -252,7 +252,7 @@ extension AttributedString._AttributeStorage {
             _attributeModified(attributeName, old: oldValue, new: newValue)
         }
     }
-    
+
     mutating func removeValue<T: AttributedStringKey>(forKey: T.Type) -> Bool {
         let oldValue = self.contents.removeValue(forKey: T.name)
         _attributeModified(T.name, old: oldValue, new: nil)

@@ -67,10 +67,12 @@ extension NSURL {
             blockIfASCII: { span in
                 return _createCFStringFromASCIIBuffer(capacity: span.count) { outputBuffer in
                     _ = outputBuffer.initialize(fromSpan: span.extracting(..<pathRange.endIndex))
-                    let writeIndex = pathRange.startIndex + resolveDotSegmentsInPlace(
-                        buffer: outputBuffer[pathRange],
-                        useRFC1808: false
-                    )
+                    let writeIndex =
+                        pathRange.startIndex
+                        + resolveDotSegmentsInPlace(
+                            buffer: outputBuffer[pathRange],
+                            useRFC1808: false
+                        )
                     return outputBuffer[writeIndex...].initialize(
                         fromSpan: span.extracting(pathRange.endIndex...)
                     )
@@ -79,10 +81,12 @@ extension NSURL {
             blockIfUTF16: { span in
                 return _createCFStringFromCharacterBuffer(capacity: span.count) { outputBuffer in
                     _ = outputBuffer.initialize(fromSpan: span.extracting(..<pathRange.endIndex))
-                    let writeIndex = pathRange.startIndex + resolveDotSegmentsInPlace(
-                        buffer: outputBuffer[pathRange],
-                        useRFC1808: false
-                    )
+                    let writeIndex =
+                        pathRange.startIndex
+                        + resolveDotSegmentsInPlace(
+                            buffer: outputBuffer[pathRange],
+                            useRFC1808: false
+                        )
                     return outputBuffer[writeIndex...].initialize(
                         fromSpan: span.extracting(pathRange.endIndex...)
                     )

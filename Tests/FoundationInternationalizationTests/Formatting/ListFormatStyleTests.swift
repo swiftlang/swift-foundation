@@ -56,28 +56,28 @@ private struct ListFormatStyleTests {
         let _ = ["one", "two"].formatted()
         let _ = [1, 2].formatted(.list(memberStyle: .number, type: .or, width: .standard))
     }
-    
+
     @Test func autoupdatingCurrentChangesFormatResults() async {
         await usingCurrentInternationalizationPreferences {
             let locale = Locale.autoupdatingCurrent
             let list = ["one", "two", "three", "four"]
-            
+
             // Get a formatted result from es-ES
             var prefs = LocalePreferences()
             prefs.languages = ["es-ES"]
             prefs.locale = "es_ES"
             LocaleCache.cache.resetCurrent(to: prefs)
             let formattedSpanish = list.formatted(.list(type: .and).locale(locale))
-            
+
             // Get a formatted result from en-US
             prefs.languages = ["en-US"]
             prefs.locale = "en_US"
             LocaleCache.cache.resetCurrent(to: prefs)
             let formattedEnglish = list.formatted(.list(type: .and).locale(locale))
-            
+
             // Reset to current preferences before any possibility of failing this test
             LocaleCache.cache.reset()
-            
+
             // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
             #expect(formattedSpanish != formattedEnglish)
         }

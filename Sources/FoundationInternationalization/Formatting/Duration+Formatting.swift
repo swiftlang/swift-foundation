@@ -92,8 +92,9 @@ extension Duration {
         case (.up, _), (.awayFromZero, true):
             doesBoundRoundToInput = !countingDown
         case (.toNearestOrAwayFromZero, _):
-            doesBoundRoundToInput = countingDown && bound > .zero
-            || !countingDown && bound < .zero
+            doesBoundRoundToInput =
+                countingDown && bound > .zero
+                || !countingDown && bound < .zero
         case (.toNearestOrEven, _):
             doesBoundRoundToInput = roundsToEven
         case (.towardZero, _):
@@ -131,7 +132,7 @@ extension Duration {
 
         var (values, remainder) = rounded.factor(intoUnits: units)
 
-        values[values.count-1] += TimeInterval(remainder) / Self.secondCoefficient(for: smallestUnit)
+        values[values.count - 1] += TimeInterval(remainder) / Self.secondCoefficient(for: smallestUnit)
 
         return values
     }
@@ -270,7 +271,7 @@ extension Duration {
         case .seconds:
             return 1_000_000_000_000_000_000
         case .milliseconds:
-            return  1_000_000_000_000_000
+            return 1_000_000_000_000_000
         case .microseconds:
             return 1_000_000_000_000
         case .nanoseconds:

@@ -19,9 +19,9 @@ extension String {
     /// algorithms.
     public struct StandardComparator: SortComparator, Codable, Sendable {
         public typealias Compared = String
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         // https://github.com/apple/swift-foundation/issues/284
-        
+
         /// Compares `String`s as compared by the Finder.
         ///
         /// Uses a localized, numeric comparison in the current locale.
@@ -32,7 +32,7 @@ extension String {
                 .numeric,
                 .caseInsensitive,
                 .widthInsensitive,
-                .forcedOrdering
+                .forcedOrdering,
             ],
             localized: true
         )
@@ -40,12 +40,12 @@ extension String {
         /// Compares `String`s using a localized comparison in the current
         /// locale.
         public static let localized = StandardComparator(options: [], localized: true)
-#endif
+        #endif
 
         /// Compares `String`s lexically.
         public static let lexical = StandardComparator(options: [], localized: false)
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         private static let validAlgorithms: [StandardComparator: Selector] = [
             .localizedStandard:
                 #selector(NSString.localizedStandardCompare(_:)),
@@ -56,31 +56,31 @@ extension String {
             .lexical: #selector(NSString.compare(_:)),
             .lexical.flipped: #selector(NSString.compare(_:)),
         ]
-#else
+        #else
         // https://github.com/apple/swift-foundation/issues/284
         private static let validAlgorithms: [StandardComparator: Bool] = [
             .lexical: true,
             .lexical.flipped: true,
         ]
-#endif
-        
+        #endif
+
         private var flipped: StandardComparator {
             var result = self
             result.order = self.order == .forward ? .reverse : .forward
             return result
         }
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         var associatedSelector: Selector {
             guard let selector = Self.validAlgorithms[self] else {
-                fatalError("""
-                Attempted to retrieve selector from a \
-                String.StandardSortComparator with an invalid configuration.
-                """)
+                fatalError(
+                    """
+                    Attempted to retrieve selector from a String.StandardSortComparator with an invalid configuration.
+                    """)
             }
             return selector
         }
-#endif
+        #endif
 
         func equalsIgnoringOrder(_ other: Self) -> Bool {
             return options == other.options && isLocalized == other.isLocalized
@@ -134,26 +134,24 @@ extension String {
                     DecodingError.Context(
                         codingPath: container.codingPath,
                         debugDescription: """
-                        Attempted to decode \
-                        \(String(describing: Self.self)) in invalid \
-                        configuration.
-                        """))
+                            Attempted to decode \(String(describing: Self.self)) in invalid configuration.
+                            """))
             }
         }
 
         public func compare(_ lhs: String, _ rhs: String) -> ComparisonResult {
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             // https://github.com/apple/swift-foundation/issues/284
-            
+
             if isLocalized {
                 return lhs.compare(rhs, options: options, locale: Locale.current).withOrder(order)
             } else {
                 return lhs.compare(rhs, options: options).withOrder(order)
             }
-#else
+            #else
             // TODO: Until compare(_:options:locale:) is ported to FoundationInternationalization, only support unlocalized
             return lhs.compare(rhs, options: options).withOrder(order)
-#endif
+            #endif
         }
 
         public func hash(into hasher: inout Hasher) {
@@ -188,9 +186,9 @@ extension String {
 
         public var order: SortOrder
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         // https://github.com/apple/swift-foundation/issues/284
-        
+
         /// Creates a `String.Comparator` with the given `CompareOptions` and
         /// `Locale`.
         ///
@@ -204,14 +202,14 @@ extension String {
             self.locale = locale
             self.order = order
         }
-#else
+        #else
         // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, only support unlocalized comparisons
         public init(options: String.CompareOptions, order: SortOrder = .forward) {
             self.options = options
             self.locale = nil
             self.order = order
         }
-#endif
+        #endif
 
         /// Creates a `String.Comparator` that represents the same comparison
         /// as the given `String.StandardComparator`.
@@ -221,13 +219,13 @@ extension String {
         public init(_ standardComparison: StandardComparator) {
             self.order = standardComparison.order
             self.options = standardComparison.options
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             self.locale = Locale.current
-#else
+            #else
             // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, only support unlocalized comparisons
             // https://github.com/apple/swift-foundation/issues/284
             self.locale = nil
-#endif
+            #endif
         }
 
         public init(from decoder: Decoder) throws {
@@ -239,13 +237,13 @@ extension String {
         }
 
         public func compare(_ lhs: String, _ rhs: String) -> ComparisonResult {
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             return lhs.compare(rhs, options: options, locale: locale).withOrder(order)
-#else
+            #else
             // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, only support unlocalized comparisons
             // https://github.com/apple/swift-foundation/issues/284
             return lhs.compare(rhs, options: options).withOrder(order)
-#endif
+            #endif
         }
 
         public func hash(into hasher: inout Hasher) {
@@ -267,9 +265,9 @@ extension String {
 // in the generic case.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 extension SortComparator where Self == String.Comparator {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     // https://github.com/apple/swift-foundation/issues/284
-    
+
     /// A comparator that compares a string using a localized, numeric
     /// comparison in the current locale.
     public static var localizedStandard: String.Comparator {
@@ -281,11 +279,10 @@ extension SortComparator where Self == String.Comparator {
     public static var localized: String.Comparator {
         String.Comparator(.localized)
     }
-#endif
+    #endif
 
     /// Compares `String`s lexically.
     static var lexical: String.Comparator {
         String.Comparator(.lexical)
     }
 }
-

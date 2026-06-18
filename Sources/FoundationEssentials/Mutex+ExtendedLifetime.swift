@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 package import Synchronization
 
-extension Mutex where Value : Sendable {
+extension Mutex where Value: Sendable {
     private struct LockResult<T: ~Copyable, V: ~Copyable>: ~Copyable {
         let bodyResult: T
         let extendedValue: V

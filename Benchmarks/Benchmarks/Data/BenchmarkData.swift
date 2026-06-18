@@ -24,7 +24,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
-    
+
     #if _pointerBitWidth(_64)
     typealias HalfInt = Int32
     #elseif _pointerBitWidth(_32)
@@ -55,14 +55,14 @@ let benchmarks: @Sendable () -> Void = {
         (Data(), "empty"),
         (createInlineData(), "inline"),
         (createSmallSliceData(), "smallSlice"),
-        (createLargeSliceData(), "largeSlice")
+        (createLargeSliceData(), "largeSlice"),
     ]
 
     let dataKinds2: [(Data, String)] = [
         (Data(), "empty"),
         (createInlineData(), "inline"),
         (createSmallSliceData(), "smallSlice"),
-        (createLargeSliceData(), "largeSlice")
+        (createLargeSliceData(), "largeSlice"),
     ]
 
     class DataBox {
@@ -77,41 +77,51 @@ let benchmarks: @Sendable () -> Void = {
     class TwoDatasBox {
         var d1: Data
         var d2: Data
-        
+
         init(d1: Data, d2: Data) {
             self.d1 = d1
             self.d2 = d2
         }
     }
-    
+
     // MARK: -
 
-    Benchmark("DataInitSequence", configuration: .init(tags: ["kind": "inline"]), closure: { benchmark in
-        for _ in benchmark.scaledIterations {
-            blackHole(Data([1, 3, 5, 7]))
-        }
-    })
+    Benchmark(
+        "DataInitSequence", configuration: .init(tags: ["kind": "inline"]),
+        closure: { benchmark in
+            for _ in benchmark.scaledIterations {
+                blackHole(Data([1, 3, 5, 7]))
+            }
+        })
 
-    Benchmark("DataInitSequence", configuration: .init(tags: ["kind": "smallSlice"]), closure: { benchmark in
-        for _ in benchmark.scaledIterations {
-            blackHole(Data([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33]))
-        }
-    })
+    Benchmark(
+        "DataInitSequence", configuration: .init(tags: ["kind": "smallSlice"]),
+        closure: { benchmark in
+            for _ in benchmark.scaledIterations {
+                blackHole(Data([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33]))
+            }
+        })
 
     for (data, name) in dataKinds {
-        Benchmark("DataEqual", configuration: .init(tags: ["kind": name]), closure: { _, box in
-            blackHole(box.d1 == box.d2)
-        }, setup: { () -> TwoDatasBox in
-            TwoDatasBox(d1: data, d2: data)
-        })
+        Benchmark(
+            "DataEqual", configuration: .init(tags: ["kind": name]),
+            closure: { _, box in
+                blackHole(box.d1 == box.d2)
+            },
+            setup: { () -> TwoDatasBox in
+                TwoDatasBox(d1: data, d2: data)
+            })
     }
 
     for ((data1, name), (data2, _)) in zip(dataKinds, dataKinds2) {
-        Benchmark("DataNotEqual", configuration: .init(tags: ["kind": name]), closure: { _, box in
-            blackHole(box.d1 != box.d2)
-        }, setup: { () -> TwoDatasBox in
-            TwoDatasBox(d1: data1, d2: data2)
-        })
+        Benchmark(
+            "DataNotEqual", configuration: .init(tags: ["kind": name]),
+            closure: { _, box in
+                blackHole(box.d1 != box.d2)
+            },
+            setup: { () -> TwoDatasBox in
+                TwoDatasBox(d1: data1, d2: data2)
+            })
     }
 
     for (data, name) in dataKinds {
@@ -124,7 +134,7 @@ let benchmarks: @Sendable () -> Void = {
 
     for (data, name) in dataKinds {
         Benchmark("DataIterate", configuration: .init(tags: ["kind": name, "iteration": "indices"])) { _ in
-            for index in data.startIndex ..< data.endIndex {
+            for index in data.startIndex..<data.endIndex {
                 blackHole(data[index])
             }
         }
@@ -147,28 +157,37 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     for (data, name) in dataKinds.dropFirst() {
-        Benchmark("DataAppend", configuration: .init(tags: ["kind": name]), closure: { benchmark, box in
-            for _ in benchmark.scaledIterations {
-                box.d.append(5)
-                box.d.removeLast()
-            }
-        }, setup: { () -> DataBox in
-            DataBox(d: data)
-        })
+        Benchmark(
+            "DataAppend", configuration: .init(tags: ["kind": name]),
+            closure: { benchmark, box in
+                for _ in benchmark.scaledIterations {
+                    box.d.append(5)
+                    box.d.removeLast()
+                }
+            },
+            setup: { () -> DataBox in
+                DataBox(d: data)
+            })
     }
 
     for (data, name) in dataKinds.dropFirst() {
-        Benchmark("DataInsert", configuration: .init(tags: ["kind": name]), closure: { benchmark, box in
-            box.d.insert(5, at: 3)
-            box.d.remove(at: 3)
-        }, setup: { () -> DataBox in
-            DataBox(d: data)
-        })
+        Benchmark(
+            "DataInsert", configuration: .init(tags: ["kind": name]),
+            closure: { benchmark, box in
+                box.d.insert(5, at: 3)
+                box.d.remove(at: 3)
+            },
+            setup: { () -> DataBox in
+                DataBox(d: data)
+            })
     }
 
-    Benchmark("DataFromString", closure: { benchmark, string in
-        blackHole(string.data(using: .ascii))
-    }, setup: { () -> String in
-        Array(repeating: "A", count: 1024 * 1024).joined()
-    })
+    Benchmark(
+        "DataFromString",
+        closure: { benchmark, string in
+            blackHole(string.data(using: .ascii))
+        },
+        setup: { () -> String in
+            Array(repeating: "A", count: 1024 * 1024).joined()
+        })
 }

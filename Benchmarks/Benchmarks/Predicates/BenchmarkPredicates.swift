@@ -25,28 +25,31 @@ let monster2 = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: .sword(
 // These tests are disabled, as enabling them will make compilation fail due to https://github.com/apple/swift/issues/69277
 #if false
 func registerPredicateTests_disabled() {
-    predicateTests.append(("predicateThreeKeypathNestedComputedPropertyCondition", #Predicate<Monster> { monster in
-        ((monster.weaponP1 == 1) &&
-         (monster.weaponP2 == 2) &&
-         (monster.weaponP3 == 3))
-    }))
-    
-    predicateTests.append(("predicateFiveKeypathNestedComputedPropertyCondition", #Predicate<Monster> { monster in
-        ((monster.weaponP1 == 1) &&
-         (monster.weaponP2 == 2) &&
-         (monster.weaponP3 == 3) &&
-         (monster.weaponP4 == 4) &&
-         (monster.weaponP5 == 5))
-    }))
-    
-    var variadicPredicateTests : [(String, Predicate<Monster, Monster>)] = []
+    predicateTests.append(
+        (
+            "predicateThreeKeypathNestedComputedPropertyCondition",
+            #Predicate<Monster> { monster in
+                ((monster.weaponP1 == 1) && (monster.weaponP2 == 2) && (monster.weaponP3 == 3))
+            }
+        ))
 
-    variadicPredicateTests.append(("predicateVariadicThreeKeypathNestedComputedPropertyCondition",
-                                   #Predicate<Monster, Monster> { monster, monster2 in
-        ((monster.weaponP1 == 1) &&
-         (monster.weaponP2 == 2) &&
-         (monster2.weaponP2 == 2))
-    }))
+    predicateTests.append(
+        (
+            "predicateFiveKeypathNestedComputedPropertyCondition",
+            #Predicate<Monster> { monster in
+                ((monster.weaponP1 == 1) && (monster.weaponP2 == 2) && (monster.weaponP3 == 3) && (monster.weaponP4 == 4) && (monster.weaponP5 == 5))
+            }
+        ))
+
+    var variadicPredicateTests: [(String, Predicate<Monster, Monster>)] = []
+
+    variadicPredicateTests.append(
+        (
+            "predicateVariadicThreeKeypathNestedComputedPropertyCondition",
+            #Predicate<Monster, Monster> { monster, monster2 in
+                ((monster.weaponP1 == 1) && (monster.weaponP2 == 2) && (monster2.weaponP2 == 2))
+            }
+        ))
 
     variadicPredicateTests.forEach { (testDescription, predicate) in
         Benchmark(testDescription) { benchmark in
@@ -71,23 +74,39 @@ func registerPredicateTests() {
     #if USE_PACKAGE || !os(Windows)
     if #available(macOS 14, *) {
 
-        var predicateTests : [(String, Predicate<Monster>)] = []
+        var predicateTests: [(String, Predicate<Monster>)] = []
 
-        predicateTests.append(("predicateTrivialCondition", #Predicate<Monster> { monster in
-            true
-        }))
+        predicateTests.append(
+            (
+                "predicateTrivialCondition",
+                #Predicate<Monster> { monster in
+                    true
+                }
+            ))
 
-        predicateTests.append(("predicateKeypathPropertyCondition", #Predicate<Monster> { monster in
-            (monster.level == 80)
-        }))
+        predicateTests.append(
+            (
+                "predicateKeypathPropertyCondition",
+                #Predicate<Monster> { monster in
+                    (monster.level == 80)
+                }
+            ))
 
-        predicateTests.append(("predicateKeypathComputedPropertyCondition", #Predicate<Monster> { monster in
-            (monster.levelComputed == 80)
-        }))
+        predicateTests.append(
+            (
+                "predicateKeypathComputedPropertyCondition",
+                #Predicate<Monster> { monster in
+                    (monster.levelComputed == 80)
+                }
+            ))
 
-        predicateTests.append(("predicateKeypathNestedComputedPropertyCondition", #Predicate<Monster> { monster in
-            (monster.weaponP1 == 1)
-        }))
+        predicateTests.append(
+            (
+                "predicateKeypathNestedComputedPropertyCondition",
+                #Predicate<Monster> { monster in
+                    (monster.weaponP1 == 1)
+                }
+            ))
 
         predicateTests.forEach { (testDescription, predicate) in
             Benchmark(testDescription) { benchmark in
@@ -117,4 +136,3 @@ let benchmarks: @Sendable () -> Void = {
 
     registerPredicateTests()
 }
-

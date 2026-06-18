@@ -51,8 +51,8 @@ private struct HebrewCalendarTests {
     }
 
     @Test func monthsInYear() {
-        #expect(HebrewArithmetic.monthsInYear(5786) == 12)   // common
-        #expect(HebrewArithmetic.monthsInYear(5787) == 13)   // leap
+        #expect(HebrewArithmetic.monthsInYear(5786) == 12) // common
+        #expect(HebrewArithmetic.monthsInYear(5787) == 13) // leap
     }
 
     @Test func daysInYear_bounds() {
@@ -75,23 +75,23 @@ private struct HebrewCalendarTests {
         let cal = makeCalendar()
         let cases: [(year: Int, month: Int, day: Int)] = [
             // Common year 5786
-            (5786, 1, 1),    // Tishrei 1
-            (5786, 3, 25),   // Kislev 25 (Hanukkah start)
-            (5786, 7, 1),    // Adar 1 (common year)
-            (5786, 8, 15),   // Nisan 15 (Passover)
-            (5786, 13, 29),  // Elul 29 (last day of common year)
+            (5786, 1, 1), // Tishrei 1
+            (5786, 3, 25), // Kislev 25 (Hanukkah start)
+            (5786, 7, 1), // Adar 1 (common year)
+            (5786, 8, 15), // Nisan 15 (Passover)
+            (5786, 13, 29), // Elul 29 (last day of common year)
             // Leap year 5787
-            (5787, 6, 1),    // Adar I 1 (leap only)
-            (5787, 7, 1),    // Adar II 1 (leap)
-            (5787, 8, 15),   // Nisan 15 (leap — Nisan still month 8)
-            (5787, 13, 29),  // Elul 29 (last day of leap year)
+            (5787, 6, 1), // Adar I 1 (leap only)
+            (5787, 7, 1), // Adar II 1 (leap)
+            (5787, 8, 15), // Nisan 15 (leap — Nisan still month 8)
+            (5787, 13, 29), // Elul 29 (last day of leap year)
             // Extreme values
-            (1, 1, 1),       // Year 1 AM
-            (4000, 7, 29),   // Late Adar in common year 4000
+            (1, 1, 1), // Year 1 AM
+            (4000, 7, 29), // Late Adar in common year 4000
         ]
         for (y, m, d) in cases {
             var dc = DateComponents()
-            dc.era = 0   // Hebrew AM era (ICU convention: 0-based)
+            dc.era = 0 // Hebrew AM era (ICU convention: 0-based)
             dc.year = y
             dc.month = m
             dc.day = d

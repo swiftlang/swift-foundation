@@ -40,24 +40,24 @@ private struct DurationUnitsFormatStyleTests {
         #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)) == "24 seconds")
         #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)) == "0 seconds")
 
-        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "2 hours, 43 minutes, 24 seconds")
-        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 43 minutes, 24 seconds")
-        #expect(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 0 minutes, 24 seconds")
-        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 0 minutes, 0 seconds")
+        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "2 hours, 43 minutes, 24 seconds")
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 43 minutes, 24 seconds")
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 0 minutes, 24 seconds")
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 0 minutes, 0 seconds")
 
-        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "3 hr")
-        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "43 min")
-        #expect(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "24 sec")
-        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "0 sec")
+        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "3 hr")
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "43 min")
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "24 sec")
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "0 sec")
 
-        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "2.72 hr")
-        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "43.40 min")
-        #expect(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "24.49 sec")
-        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "0.00 sec")
+        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "2.72 hr")
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "43.40 min")
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "24.49 sec")
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "0.00 sec")
 
-        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 43 minutes, 24 seconds")
-        #expect(d4.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 43 minutes, 05 seconds")
-        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 00 minutes, 00 seconds")
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 43 minutes, 24 seconds")
+        #expect(d4.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 43 minutes, 05 seconds")
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 00 minutes, 00 seconds")
 
         #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)) == "02 hours, 43 minutes, 24 seconds")
         #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)) == "43 minutes, 24 seconds")
@@ -73,7 +73,10 @@ private struct DurationUnitsFormatStyleTests {
         #expect(Duration(minutes: 43, seconds: 24, milliseconds: 490).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "43 minutes, 24.49 seconds")
     }
 
-    func verify(seconds: Int, milliseconds: Int, allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+    func verify(
+        seconds: Int, milliseconds: Int, allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) {
         let d = Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds))
         #expect(d.formatted(.units(allowed: allowedUnits, zeroValueUnits: .show(length: 1), fractionalPart: .show(length: fractionalSecondsLength, rounded: rounding, increment: increment)).locale(enUS)) == expected, sourceLocation: sourceLocation)
     }
@@ -82,13 +85,13 @@ private struct DurationUnitsFormatStyleTests {
 
         // [.minutes, .seconds]
 
-        verify(seconds: 0, milliseconds: 499,  allowedUnits: [.minutes, .seconds], expected: "0 min, 0 sec")
-        verify(seconds: 0, milliseconds: 500,  allowedUnits: [.minutes, .seconds], expected: "0 min, 0 sec")
-        verify(seconds: 0, milliseconds: 501,  allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
-        verify(seconds: 0, milliseconds: 999,  allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
-        verify(seconds: 1, milliseconds: 005,  allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
-        verify(seconds: 1, milliseconds: 499,  allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
-        verify(seconds: 1, milliseconds: 501,  allowedUnits: [.minutes, .seconds], expected: "0 min, 2 sec")
+        verify(seconds: 0, milliseconds: 499, allowedUnits: [.minutes, .seconds], expected: "0 min, 0 sec")
+        verify(seconds: 0, milliseconds: 500, allowedUnits: [.minutes, .seconds], expected: "0 min, 0 sec")
+        verify(seconds: 0, milliseconds: 501, allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
+        verify(seconds: 0, milliseconds: 999, allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
+        verify(seconds: 1, milliseconds: 005, allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
+        verify(seconds: 1, milliseconds: 499, allowedUnits: [.minutes, .seconds], expected: "0 min, 1 sec")
+        verify(seconds: 1, milliseconds: 501, allowedUnits: [.minutes, .seconds], expected: "0 min, 2 sec")
         verify(seconds: 59, milliseconds: 499, allowedUnits: [.minutes, .seconds], expected: "0 min, 59 sec")
         verify(seconds: 59, milliseconds: 500, allowedUnits: [.minutes, .seconds], expected: "1 min, 0 sec")
         verify(seconds: 59, milliseconds: 501, allowedUnits: [.minutes, .seconds], expected: "1 min, 0 sec")
@@ -110,13 +113,13 @@ private struct DurationUnitsFormatStyleTests {
 
         // [hours, minutes, seconds]
 
-        verify(seconds: 0, milliseconds: 499,  allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 0 sec")
-        verify(seconds: 0, milliseconds: 500,  allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 0 sec")
-        verify(seconds: 0, milliseconds: 501,  allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
-        verify(seconds: 0, milliseconds: 999,  allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
-        verify(seconds: 1, milliseconds: 005,  allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
-        verify(seconds: 1, milliseconds: 499,  allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
-        verify(seconds: 1, milliseconds: 501,  allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 2 sec")
+        verify(seconds: 0, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 0 sec")
+        verify(seconds: 0, milliseconds: 500, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 0 sec")
+        verify(seconds: 0, milliseconds: 501, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
+        verify(seconds: 0, milliseconds: 999, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
+        verify(seconds: 1, milliseconds: 005, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
+        verify(seconds: 1, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 1 sec")
+        verify(seconds: 1, milliseconds: 501, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 2 sec")
         verify(seconds: 59, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 59 sec")
         verify(seconds: 59, milliseconds: 500, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 1 min, 0 sec")
         verify(seconds: 59, milliseconds: 501, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 1 min, 0 sec")
@@ -142,7 +145,7 @@ private struct DurationUnitsFormatStyleTests {
         // 59 minutes
         verify(seconds: 3569, milliseconds: 499, allowedUnits: [.hours, .minutes], expected: "0 hr, 59 min")
         verify(seconds: 3569, milliseconds: 500, allowedUnits: [.hours, .minutes], expected: "0 hr, 59 min") // 29.5 seconds is still less than half minutes, so it would be rounded down
-        verify(seconds: 3570, milliseconds: 0,  allowedUnits: [.hours, .minutes], expected: "1 hr, 0 min")
+        verify(seconds: 3570, milliseconds: 0, allowedUnits: [.hours, .minutes], expected: "1 hr, 0 min")
 
         // 1 hour, 0 minutes, x seconds
         verify(seconds: 3629, milliseconds: 400, allowedUnits: [.hours, .minutes], expected: "1 hr, 0 min")
@@ -166,12 +169,12 @@ private struct DurationUnitsFormatStyleTests {
     @Test func showFractionParts() {
         // [.minutes, .seconds]
 
-        verify(seconds: 0, milliseconds: 499,  allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 0.50 sec")
-        verify(seconds: 0, milliseconds: 999,  allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 1.00 sec")
+        verify(seconds: 0, milliseconds: 499, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 0.50 sec")
+        verify(seconds: 0, milliseconds: 999, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 1.00 sec")
 
-        verify(seconds: 1, milliseconds: 005,  allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 1.00 sec")
-        verify(seconds: 1, milliseconds: 499,  allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 1.50 sec")
-        verify(seconds: 1, milliseconds: 999,  allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 2.00 sec")
+        verify(seconds: 1, milliseconds: 005, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 1.00 sec")
+        verify(seconds: 1, milliseconds: 499, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 1.50 sec")
+        verify(seconds: 1, milliseconds: 999, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 2.00 sec")
         verify(seconds: 59, milliseconds: 994, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 59.99 sec")
         verify(seconds: 59, milliseconds: 995, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "1 min, 0.00 sec")
         verify(seconds: 59, milliseconds: 996, allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "1 min, 0.00 sec")
@@ -201,14 +204,14 @@ private struct DurationUnitsFormatStyleTests {
         verify(seconds: 3599, milliseconds: 996, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, expected: "1 hr, 0 min, 0.00 sec")
 
         verify(seconds: 3599, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .down, expected: "0 hr, 59 min, 59.49 sec")
-        verify(seconds: 3599, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up,   expected: "0 hr, 59 min, 59.50 sec")
+        verify(seconds: 3599, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up, expected: "0 hr, 59 min, 59.50 sec")
         verify(seconds: 3599, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .down, increment: 1, expected: "0 hr, 59 min, 59.00 sec")
-        verify(seconds: 3599, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up,   increment: 1, expected: "1 hr, 0 min, 0.00 sec")
+        verify(seconds: 3599, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up, increment: 1, expected: "1 hr, 0 min, 0.00 sec")
 
-        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .down,  expected: "0 hr, 59 min, 59.99 sec")
-        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up,    expected: "1 hr, 0 min, 0.00 sec")
-        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .down,  increment: 1, expected: "0 hr, 59 min, 59.00 sec")
-        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up,    increment: 1, expected: "1 hr, 0 min, 0.00 sec")
+        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .down, expected: "0 hr, 59 min, 59.99 sec")
+        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up, expected: "1 hr, 0 min, 0.00 sec")
+        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .down, increment: 1, expected: "0 hr, 59 min, 59.00 sec")
+        verify(seconds: 3599, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, rounding: .up, increment: 1, expected: "1 hr, 0 min, 0.00 sec")
 
         verify(seconds: 7199, milliseconds: 499, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, expected: "1 hr, 59 min, 59.50 sec")
         verify(seconds: 7199, milliseconds: 994, allowedUnits: [.hours, .minutes, .seconds], fractionalSecondsLength: 2, expected: "1 hr, 59 min, 59.99 sec")
@@ -219,82 +222,86 @@ private struct DurationUnitsFormatStyleTests {
 
         // 59.99165 min
         verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, expected: "0 hr, 59.99 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, expected: "1 hr, 0.00 min")
         verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, increment: 0.000001, expected: "0 hr, 59.99 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   increment: 0.000001, expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, increment: 0.000001, expected: "1 hr, 0.00 min")
         verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, increment: 0.01, expected: "0 hr, 59.99 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   increment: 0.01, expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, increment: 0.01, expected: "1 hr, 0.00 min")
         verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, increment: 0.1, expected: "0 hr, 59.90 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   increment: 0.1, expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, increment: 0.1, expected: "1 hr, 0.00 min")
         verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "0 hr, 59.50 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   increment: 0.5, expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, increment: 0.5, expected: "1 hr, 0.00 min")
         verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, increment: 0.8, expected: "0 hr, 59.20 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   increment: 0.8, expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, increment: 0.8, expected: "1 hr, 0.00 min")
         verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, increment: 1.0, expected: "0 hr, 59.00 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   increment: 1.0, expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 499, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, increment: 1.0, expected: "1 hr, 0.00 min")
 
         verify(seconds: minute * 59 + 59, milliseconds: 994, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, expected: "0 hr, 59.99 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 994, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 994, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, expected: "1 hr, 0.00 min")
 
         verify(seconds: minute * 59 + 59, milliseconds: 995, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .down, expected: "0 hr, 59.99 min")
-        verify(seconds: minute * 59 + 59, milliseconds: 995, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up,   expected: "1 hr, 0.00 min")
+        verify(seconds: minute * 59 + 59, milliseconds: 995, allowedUnits: [.hours, .minutes], fractionalSecondsLength: 2, rounding: .up, expected: "1 hr, 0.00 min")
 
         let w3_d5_h4_m59 = week * 3 + day * 5 + hour * 4 + minute * 59
 
         // weeks - 3.7439 weeks
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .up,   expected: "3.75 wks")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .down, expected: "3.74 wks")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .up,   increment: 0.5, expected: "4.00 wks")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3.50 wks")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .up, expected: "3.75 wks")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .down, expected: "3.74 wks")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .up, increment: 0.5, expected: "4.00 wks")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3.50 wks")
 
         // weeks, days - 3 wks, 5.207 days
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .up,   expected: "3 wks, 5.21 days")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 5.20 days")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .up,   increment: 0.5, expected: "3 wks, 5.50 days")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 5.00 days")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .up,   increment: 1, expected: "3 wks, 6.00 days")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .down, increment: 1, expected: "3 wks, 5.00 days")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .up, expected: "3 wks, 5.21 days")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 5.20 days")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .up, increment: 0.5, expected: "3 wks, 5.50 days")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 5.00 days")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .up, increment: 1, expected: "3 wks, 6.00 days")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .down, increment: 1, expected: "3 wks, 5.00 days")
 
         // weeks, days, hours - 3 wks, 5 days, 4.983 hrs
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .up,   expected: "3 wks, 5 days, 4.99 hr")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 5 days, 4.98 hr")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .up,   increment: 0.5, expected: "3 wks, 5 days, 5.00 hr")
-        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 5 days, 4.50 hr")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .up, expected: "3 wks, 5 days, 4.99 hr")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 5 days, 4.98 hr")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .up, increment: 0.5, expected: "3 wks, 5 days, 5.00 hr")
+        verify(seconds: w3_d5_h4_m59, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 5 days, 4.50 hr")
 
         let w3_d6_h23_m59_s30 = week * 3 + day * 6 + hour * 23 + minute * 59 + 30
 
         // weeks - 3.99995 weeks
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .up,   expected: "4.00 wks")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .down, expected: "3.99 wks")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .up,   increment: 0.5, expected: "4.00 wks")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks ], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3.50 wks")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .up, expected: "4.00 wks")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .down, expected: "3.99 wks")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .up, increment: 0.5, expected: "4.00 wks")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3.50 wks")
 
         // weeks, days - 3 wks, 6.999652 days
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .up,   expected: "4 wks, 0.00 days")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 6.99 days")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .up,   increment: 0.5, expected: "4 wks, 0.00 days")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 6.50 days")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .up,   increment: 1, expected: "4 wks, 0.00 days")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days ], fractionalSecondsLength: 2, rounding: .down, increment: 1, expected: "3 wks, 6.00 days")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .up, expected: "4 wks, 0.00 days")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 6.99 days")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .up, increment: 0.5, expected: "4 wks, 0.00 days")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 6.50 days")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .up, increment: 1, expected: "4 wks, 0.00 days")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days], fractionalSecondsLength: 2, rounding: .down, increment: 1, expected: "3 wks, 6.00 days")
 
         // weeks, days, hours - 3 wks, 6 days, 23.9916666 hours
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .up,   expected: "4 wks, 0 days, 0.00 hr")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 6 days, 23.99 hr")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .up,   increment: 0.5, expected: "4 wks, 0 days, 0.00 hr")
-        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 6 days, 23.50 hr")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .up, expected: "4 wks, 0 days, 0.00 hr")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .down, expected: "3 wks, 6 days, 23.99 hr")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .up, increment: 0.5, expected: "4 wks, 0 days, 0.00 hr")
+        verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [.weeks, .days, .hours], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 6 days, 23.50 hr")
     }
 
     @Test func durationUnitsFormatStyleAPI_largerThanDay() {
 
         var duration: Duration!
         let allowedUnits: Set<Duration.UnitsFormatStyle.Unit> = [.weeks, .days, .hours]
-        func assertZeroValueUnit(_ zeroFormat: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
-                                  sourceLocation: SourceLocation = #_sourceLocation) {
+        func assertZeroValueUnit(
+            _ zeroFormat: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
 
-        func assertMaxUnitCount(_ maxUnitCount: Int, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy, _ expected: String,
-                                  sourceLocation: SourceLocation = #_sourceLocation) {
+        func assertMaxUnitCount(
+            _ maxUnitCount: Int, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy, _ expected: String,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, maximumUnitCount: maxUnitCount, fractionalPart: fractionalPart).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
 
@@ -338,7 +345,7 @@ private struct DurationUnitsFormatStyleTests {
 
         do {
             duration = Duration.milliseconds(999)
-            allowedUnits =  [.seconds, .milliseconds]
+            allowedUnits = [.seconds, .milliseconds]
 
             test(.hide, "999 milliseconds")
             test(.show(length: 0), "999 milliseconds")
@@ -349,7 +356,7 @@ private struct DurationUnitsFormatStyleTests {
             test(.show(length: -1), "999 milliseconds") // negative value is treated as `hide`
 
 
-            allowedUnits =  [.seconds, .milliseconds, .microseconds]
+            allowedUnits = [.seconds, .milliseconds, .microseconds]
 
             test(.hide, "999 milliseconds")
             test(.show(length: 0), "999 milliseconds")
@@ -358,7 +365,7 @@ private struct DurationUnitsFormatStyleTests {
             test(.show(length: 3), "000 seconds, 999 milliseconds, 000 microseconds")
             test(.show(length: 4), "0,000 seconds, 0,999 milliseconds, 0,000 microseconds")
 
-            allowedUnits =  [.minutes, .seconds]
+            allowedUnits = [.minutes, .seconds]
 
             test(.hide, "1 second")
             test(.show(length: 0), "1 second")
@@ -370,7 +377,7 @@ private struct DurationUnitsFormatStyleTests {
 
         do {
             duration = Duration.nanoseconds(999)
-            allowedUnits =  [.seconds, .milliseconds ]
+            allowedUnits = [.seconds, .milliseconds]
 
             test(.hide, "0 milliseconds")
             test(.show(length: 0), "0 milliseconds")
@@ -379,7 +386,7 @@ private struct DurationUnitsFormatStyleTests {
             test(.show(length: 3), "000 seconds, 000 milliseconds")
             test(.show(length: 4), "0,000 seconds, 0,000 milliseconds")
 
-            allowedUnits =  [.seconds, .milliseconds, .microseconds ]
+            allowedUnits = [.seconds, .milliseconds, .microseconds]
 
             test(.hide, "1 microsecond")
             test(.show(length: 0), "1 microsecond")
@@ -388,7 +395,7 @@ private struct DurationUnitsFormatStyleTests {
             test(.show(length: 3), "000 seconds, 000 milliseconds, 001 microsecond")
             test(.show(length: 4), "0,000 seconds, 0,000 milliseconds, 0,001 microsecond")
 
-            allowedUnits =  [.seconds, .milliseconds, .microseconds, .nanoseconds ]
+            allowedUnits = [.seconds, .milliseconds, .microseconds, .nanoseconds]
 
             test(.hide, "999 nanoseconds")
             test(.show(length: 0), "999 nanoseconds")
@@ -400,7 +407,7 @@ private struct DurationUnitsFormatStyleTests {
 
         do {
             duration = Duration.microseconds(99) + Duration.nanoseconds(999)
-            allowedUnits =  [.seconds, .milliseconds ]
+            allowedUnits = [.seconds, .milliseconds]
 
             test(.hide, "0 milliseconds")
             test(.show(length: 0), "0 milliseconds")
@@ -409,7 +416,7 @@ private struct DurationUnitsFormatStyleTests {
             test(.show(length: 3), "000 seconds, 000 milliseconds")
             test(.show(length: 4), "0,000 seconds, 0,000 milliseconds")
 
-            allowedUnits =  [.seconds, .milliseconds, .microseconds ]
+            allowedUnits = [.seconds, .milliseconds, .microseconds]
 
             test(.hide, "100 microseconds")
             test(.show(length: 0), "100 microseconds")
@@ -418,7 +425,7 @@ private struct DurationUnitsFormatStyleTests {
             test(.show(length: 3), "000 seconds, 000 milliseconds, 100 microseconds")
             test(.show(length: 4), "0,000 seconds, 0,000 milliseconds, 0,100 microseconds")
 
-            allowedUnits =  [.seconds, .milliseconds, .microseconds, .nanoseconds ]
+            allowedUnits = [.seconds, .milliseconds, .microseconds, .nanoseconds]
 
             test(.hide, "99 microseconds, 999 nanoseconds")
             test(.show(length: 0), "99 microseconds, 999 nanoseconds")
@@ -429,12 +436,17 @@ private struct DurationUnitsFormatStyleTests {
         }
     }
 
-    func assertEqual(_ duration: Duration,
-                     allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, maximumUnitCount: Int? = nil, roundSmallerParts: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalPartLength: Int = Int.max, roundingIncrement: Double? = nil, dropZeroUnits: Bool = false,
-                     expected: (units: [Duration.UnitsFormatStyle.Unit], values: [Double]),
-                     sourceLocation: SourceLocation = #_sourceLocation) {
+    func assertEqual(
+        _ duration: Duration,
+        allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, maximumUnitCount: Int? = nil, roundSmallerParts: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalPartLength: Int = Int.max, roundingIncrement: Double? = nil,
+        dropZeroUnits: Bool = false,
+        expected: (units: [Duration.UnitsFormatStyle.Unit], values: [Double]),
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) {
 
-        let (units, values) = Duration.UnitsFormatStyle.unitsToUse(duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: roundSmallerParts, trailingFractionalPartLength: trailingFractionalPartLength, roundingIncrement: roundingIncrement, dropZeroUnits: dropZeroUnits)
+        let (units, values) = Duration.UnitsFormatStyle.unitsToUse(
+            duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: roundSmallerParts, trailingFractionalPartLength: trailingFractionalPartLength, roundingIncrement: roundingIncrement,
+            dropZeroUnits: dropZeroUnits)
         guard values.count == expected.values.count else {
             Issue.record("\(values) is not equal to \(expected.values)", sourceLocation: sourceLocation)
             return
@@ -448,7 +460,7 @@ private struct DurationUnitsFormatStyleTests {
 
     @Test func maximumUnitCounts() {
         let duration = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
-        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , maximumUnitCount: nil, expected: ([.hours, .minutes, .seconds], [2, 43, 24]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds], maximumUnitCount: nil, expected: ([.hours, .minutes, .seconds], [2, 43, 24]))
         assertEqual(duration, allowedUnits: [.hours, .minutes], maximumUnitCount: nil, expected: ([.hours, .minutes], [2, 43.4]))
         assertEqual(duration, allowedUnits: [.hours], maximumUnitCount: nil, expected: ([.hours], [2.723]))
 
@@ -458,33 +470,33 @@ private struct DurationUnitsFormatStyleTests {
 
     @Test func rounding() {
         let duration = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
-        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , roundSmallerParts: .down, expected: ([.hours, .minutes, .seconds], [2, 43, 24]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds], roundSmallerParts: .down, expected: ([.hours, .minutes, .seconds], [2, 43, 24]))
 
-        assertEqual(duration, allowedUnits: [.hours, .minutes] , roundSmallerParts: .up, trailingFractionalPartLength: 1, expected: ([.hours, .minutes], [2, 43.4]))
-        assertEqual(duration, allowedUnits: [.hours, .minutes] , roundSmallerParts: .down, trailingFractionalPartLength: 0, expected: ([.hours, .minutes], [2, 43]))
-        assertEqual(duration, allowedUnits: [.hours, .minutes] , roundSmallerParts: .up, trailingFractionalPartLength: 0, expected: ([.hours, .minutes], [2, 44]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes], roundSmallerParts: .up, trailingFractionalPartLength: 1, expected: ([.hours, .minutes], [2, 43.4]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes], roundSmallerParts: .down, trailingFractionalPartLength: 0, expected: ([.hours, .minutes], [2, 43]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes], roundSmallerParts: .up, trailingFractionalPartLength: 0, expected: ([.hours, .minutes], [2, 44]))
 
-        assertEqual(duration, allowedUnits: [.hours] , roundSmallerParts: .up,   trailingFractionalPartLength: 3, expected: ([.hours], [2.724]))
-        assertEqual(duration, allowedUnits: [.hours] , roundSmallerParts: .down, trailingFractionalPartLength: 3, expected: ([.hours], [2.723]))
+        assertEqual(duration, allowedUnits: [.hours], roundSmallerParts: .up, trailingFractionalPartLength: 3, expected: ([.hours], [2.724]))
+        assertEqual(duration, allowedUnits: [.hours], roundSmallerParts: .down, trailingFractionalPartLength: 3, expected: ([.hours], [2.723]))
 
-        assertEqual(duration, allowedUnits: [.hours] , roundSmallerParts: .up,   trailingFractionalPartLength: 0, expected: ([.hours], [3]))
-        assertEqual(duration, allowedUnits: [.hours] , roundSmallerParts: .down, trailingFractionalPartLength: 0, expected: ([.hours], [2]))
+        assertEqual(duration, allowedUnits: [.hours], roundSmallerParts: .up, trailingFractionalPartLength: 0, expected: ([.hours], [3]))
+        assertEqual(duration, allowedUnits: [.hours], roundSmallerParts: .down, trailingFractionalPartLength: 0, expected: ([.hours], [2]))
     }
 
     @Test func zeroUnitsDisplay() {
         let duration = Duration.seconds(2 * 3600 + 24) // 2hr 0min 24s
-        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , dropZeroUnits: false, expected: ([.hours, .minutes, .seconds], [2, 0, 24]))
-        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , dropZeroUnits: true, expected: ([.hours, .seconds], [2, 24]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds], dropZeroUnits: false, expected: ([.hours, .minutes, .seconds], [2, 0, 24]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds], dropZeroUnits: true, expected: ([.hours, .seconds], [2, 24]))
 
-        assertEqual(duration, allowedUnits: [.hours, .minutes] , dropZeroUnits: false, expected: ([.hours, .minutes], [2, 0.4]))
-        assertEqual(duration, allowedUnits: [.hours, .minutes] , dropZeroUnits: true, expected: ([.hours, .minutes], [2, 0.4]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes], dropZeroUnits: false, expected: ([.hours, .minutes], [2, 0.4]))
+        assertEqual(duration, allowedUnits: [.hours, .minutes], dropZeroUnits: true, expected: ([.hours, .minutes], [2, 0.4]))
 
         let duration0 = Duration.seconds(0)
-        assertEqual(duration0, allowedUnits: [.hours, .minutes, .seconds] , dropZeroUnits: false, expected: ([.hours, .minutes, .seconds], [0, 0, 0]))
-        assertEqual(duration0, allowedUnits: [.hours, .minutes, .seconds] , dropZeroUnits: true, expected: ([], []))
+        assertEqual(duration0, allowedUnits: [.hours, .minutes, .seconds], dropZeroUnits: false, expected: ([.hours, .minutes, .seconds], [0, 0, 0]))
+        assertEqual(duration0, allowedUnits: [.hours, .minutes, .seconds], dropZeroUnits: true, expected: ([], []))
 
-        assertEqual(duration0, allowedUnits: [.hours, .minutes] , dropZeroUnits: false, expected: ([.hours, .minutes], [0, 0]))
-        assertEqual(duration0, allowedUnits: [.hours, .minutes] , dropZeroUnits: true, expected: ([], []))
+        assertEqual(duration0, allowedUnits: [.hours, .minutes], dropZeroUnits: false, expected: ([.hours, .minutes], [0, 0]))
+        assertEqual(duration0, allowedUnits: [.hours, .minutes], dropZeroUnits: true, expected: ([], []))
     }
 
     @Test func lengthRangeExpression() {
@@ -497,9 +509,11 @@ private struct DurationUnitsFormatStyleTests {
             let formatted = style.format(duration)
             #expect(formatted == expected, sourceLocation: sourceLocation)
         }
-        let oneThousandWithMaxPadding = "000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,001,000"
+        let oneThousandWithMaxPadding =
+            "000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,001,000"
 
-        let padding996 = "000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000"
+        let padding996 =
+            "000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000"
 
         // There are 998 "0"s, the maximum allowed length
         let maxFractionalTrailing = String(repeating: "0", count: 998)
@@ -512,45 +526,45 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
 
             allowedUnits = [.weeks]
-            verify(intLimits: Int.min...,   fracLimits: Int.min...Int.min, "0 wks")
-            verify(intLimits: 5...,         fracLimits: Int.min...Int.min, "00,000 wks")
+            verify(intLimits: Int.min..., fracLimits: Int.min...Int.min, "0 wks")
+            verify(intLimits: 5..., fracLimits: Int.min...Int.min, "00,000 wks")
             // Total integer length is 999, the maximum allowed by us and ICU
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.min, "\(padding996),000 wks")
+            verify(intLimits: Int.max..., fracLimits: Int.min...Int.min, "\(padding996),000 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: 5...5, ".00165 wks")
-            verify(intLimits: 5...,         fracLimits: 5...5, "00,000.00165 wks")
-            verify(intLimits: Int.max...,   fracLimits: 5...5, "\(padding996),000.00165 wks")
+            verify(intLimits: Int.min..., fracLimits: 5...5, ".00165 wks")
+            verify(intLimits: 5..., fracLimits: 5...5, "00,000.00165 wks")
+            verify(intLimits: Int.max..., fracLimits: 5...5, "\(padding996),000.00165 wks")
 
             // Total fractional digit length is 998, the maximum allowed by us and ICU
-            verify(intLimits: Int.min...,   fracLimits: Int.max...Int.max, ".0016534391534391533\(trailing979) wks")
-            verify(intLimits: 5...,         fracLimits: Int.max...Int.max, "00,000.0016534391534391533\(trailing979) wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...Int.max, "\(padding996),000.0016534391534391533\(trailing979) wks")
+            verify(intLimits: Int.min..., fracLimits: Int.max...Int.max, ".0016534391534391533\(trailing979) wks")
+            verify(intLimits: 5..., fracLimits: Int.max...Int.max, "00,000.0016534391534391533\(trailing979) wks")
+            verify(intLimits: Int.max..., fracLimits: Int.max...Int.max, "\(padding996),000.0016534391534391533\(trailing979) wks")
 
             allowedUnits = [.minutes]
-            verify(intLimits: Int.min...,   fracLimits: Int.min...Int.min, "17 min")
-            verify(intLimits: 5...,         fracLimits: Int.min...Int.min, "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.min, "\(padding996),017 min")
+            verify(intLimits: Int.min..., fracLimits: Int.min...Int.min, "17 min")
+            verify(intLimits: 5..., fracLimits: Int.min...Int.min, "00,017 min")
+            verify(intLimits: Int.max..., fracLimits: Int.min...Int.min, "\(padding996),017 min")
 
-            verify(intLimits: Int.min...,   fracLimits: 5...5, "16.66667 min")
-            verify(intLimits: 5...,         fracLimits: 5...5, "00,016.66667 min")
-            verify(intLimits: Int.max...,   fracLimits: 5...5, "\(padding996),016.66667 min")
+            verify(intLimits: Int.min..., fracLimits: 5...5, "16.66667 min")
+            verify(intLimits: 5..., fracLimits: 5...5, "00,016.66667 min")
+            verify(intLimits: Int.max..., fracLimits: 5...5, "\(padding996),016.66667 min")
 
-            verify(intLimits: Int.min...,   fracLimits: Int.max...Int.max, "16.666666666666668\(trailing983) min")
-            verify(intLimits: 5...,         fracLimits: Int.max...Int.max, "00,016.666666666666668\(trailing983) min")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...Int.max, "\(padding996),016.666666666666668\(trailing983) min")
+            verify(intLimits: Int.min..., fracLimits: Int.max...Int.max, "16.666666666666668\(trailing983) min")
+            verify(intLimits: 5..., fracLimits: Int.max...Int.max, "00,016.666666666666668\(trailing983) min")
+            verify(intLimits: Int.max..., fracLimits: Int.max...Int.max, "\(padding996),016.666666666666668\(trailing983) min")
 
             allowedUnits = [.seconds]
-            verify(intLimits: Int.min...,   fracLimits: Int.min...Int.min, "1,000 sec")
-            verify(intLimits: 5...,         fracLimits: Int.min...Int.min, "01,000 sec")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.min, "\(oneThousandWithMaxPadding) sec")
+            verify(intLimits: Int.min..., fracLimits: Int.min...Int.min, "1,000 sec")
+            verify(intLimits: 5..., fracLimits: Int.min...Int.min, "01,000 sec")
+            verify(intLimits: Int.max..., fracLimits: Int.min...Int.min, "\(oneThousandWithMaxPadding) sec")
 
-            verify(intLimits: Int.min...,   fracLimits: 5...5, "1,000.00000 sec")
-            verify(intLimits: 5...,         fracLimits: 5...5, "01,000.00000 sec")
-            verify(intLimits: Int.max...,   fracLimits: 5...5, "\(oneThousandWithMaxPadding).00000 sec")
+            verify(intLimits: Int.min..., fracLimits: 5...5, "1,000.00000 sec")
+            verify(intLimits: 5..., fracLimits: 5...5, "01,000.00000 sec")
+            verify(intLimits: Int.max..., fracLimits: 5...5, "\(oneThousandWithMaxPadding).00000 sec")
 
-            verify(intLimits: Int.min...,   fracLimits: Int.max...Int.max, "1,000.\(maxFractionalTrailing) sec")
-            verify(intLimits: 5...,         fracLimits: Int.max...Int.max, "01,000.\(maxFractionalTrailing) sec")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...Int.max, "\(oneThousandWithMaxPadding).\(maxFractionalTrailing) sec")
+            verify(intLimits: Int.min..., fracLimits: Int.max...Int.max, "1,000.\(maxFractionalTrailing) sec")
+            verify(intLimits: 5..., fracLimits: Int.max...Int.max, "01,000.\(maxFractionalTrailing) sec")
+            verify(intLimits: Int.max..., fracLimits: Int.max...Int.max, "\(oneThousandWithMaxPadding).\(maxFractionalTrailing) sec")
         }
 
         // Fractional limits: PartialRangeFrom
@@ -558,45 +572,45 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
             allowedUnits = [.weeks]
 
-            verify(intLimits: Int.min...,   fracLimits: Int.min...,   ".0016534391534391533 wks")
-            verify(intLimits: 5...,         fracLimits: Int.min...,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.min..., fracLimits: Int.min..., ".0016534391534391533 wks")
+            verify(intLimits: 5..., fracLimits: Int.min..., "00,000.0016534391534391533 wks")
+            verify(intLimits: Int.max..., fracLimits: Int.min..., "\(padding996),000.0016534391534391533 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: 2...,   ".0016534391534391533 wks")
-            verify(intLimits: 5...,         fracLimits: 2...,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: 2...,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.min..., fracLimits: 2..., ".0016534391534391533 wks")
+            verify(intLimits: 5..., fracLimits: 2..., "00,000.0016534391534391533 wks")
+            verify(intLimits: Int.max..., fracLimits: 2..., "\(padding996),000.0016534391534391533 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: Int.max...,   ".0016534391534391533\(trailing979) wks")
-            verify(intLimits: 5...,         fracLimits: Int.max...,   "00,000.0016534391534391533\(trailing979) wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...,   "\(padding996),000.0016534391534391533\(trailing979) wks")
+            verify(intLimits: Int.min..., fracLimits: Int.max..., ".0016534391534391533\(trailing979) wks")
+            verify(intLimits: 5..., fracLimits: Int.max..., "00,000.0016534391534391533\(trailing979) wks")
+            verify(intLimits: Int.max..., fracLimits: Int.max..., "\(padding996),000.0016534391534391533\(trailing979) wks")
 
             allowedUnits = [.minutes] // 1000 sec ~= 16.666666666666 mins
 
-            verify(intLimits: Int.min...,   fracLimits: Int.min...,   "16.666666666666668 min")
-            verify(intLimits: 5...,         fracLimits: Int.min...,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.min..., fracLimits: Int.min..., "16.666666666666668 min")
+            verify(intLimits: 5..., fracLimits: Int.min..., "00,016.666666666666668 min")
+            verify(intLimits: Int.max..., fracLimits: Int.min..., "\(padding996),016.666666666666668 min")
 
-            verify(intLimits: Int.min...,   fracLimits: 2...,   "16.666666666666668 min")
-            verify(intLimits: 5...,         fracLimits: 2...,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: 2...,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.min..., fracLimits: 2..., "16.666666666666668 min")
+            verify(intLimits: 5..., fracLimits: 2..., "00,016.666666666666668 min")
+            verify(intLimits: Int.max..., fracLimits: 2..., "\(padding996),016.666666666666668 min")
 
-            verify(intLimits: Int.min...,   fracLimits: Int.max...,   "16.666666666666668\(trailing983) min")
-            verify(intLimits: 5...,         fracLimits: Int.max...,   "00,016.666666666666668\(trailing983) min")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...,   "\(padding996),016.666666666666668\(trailing983) min")
+            verify(intLimits: Int.min..., fracLimits: Int.max..., "16.666666666666668\(trailing983) min")
+            verify(intLimits: 5..., fracLimits: Int.max..., "00,016.666666666666668\(trailing983) min")
+            verify(intLimits: Int.max..., fracLimits: Int.max..., "\(padding996),016.666666666666668\(trailing983) min")
 
             allowedUnits = [.seconds]
 
-            verify(intLimits: Int.min...,   fracLimits: Int.min...,   "1,000 sec")
-            verify(intLimits: 5...,         fracLimits: Int.min...,   "01,000 sec")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...,   "\(oneThousandWithMaxPadding) sec")
+            verify(intLimits: Int.min..., fracLimits: Int.min..., "1,000 sec")
+            verify(intLimits: 5..., fracLimits: Int.min..., "01,000 sec")
+            verify(intLimits: Int.max..., fracLimits: Int.min..., "\(oneThousandWithMaxPadding) sec")
 
-            verify(intLimits: Int.min...,   fracLimits: 2...,   "1,000.00 sec")
-            verify(intLimits: 5...,         fracLimits: 2...,   "01,000.00 sec")
-            verify(intLimits: Int.max...,   fracLimits: 2...,   "\(oneThousandWithMaxPadding).00 sec")
+            verify(intLimits: Int.min..., fracLimits: 2..., "1,000.00 sec")
+            verify(intLimits: 5..., fracLimits: 2..., "01,000.00 sec")
+            verify(intLimits: Int.max..., fracLimits: 2..., "\(oneThousandWithMaxPadding).00 sec")
 
-            verify(intLimits: Int.min...,   fracLimits: Int.max...,   "1,000.\(maxFractionalTrailing) sec")
-            verify(intLimits: 5...,         fracLimits: Int.max...,   "01,000.\(maxFractionalTrailing) sec")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...,   "\(oneThousandWithMaxPadding).\(maxFractionalTrailing) sec")
+            verify(intLimits: Int.min..., fracLimits: Int.max..., "1,000.\(maxFractionalTrailing) sec")
+            verify(intLimits: 5..., fracLimits: Int.max..., "01,000.\(maxFractionalTrailing) sec")
+            verify(intLimits: Int.max..., fracLimits: Int.max..., "\(oneThousandWithMaxPadding).\(maxFractionalTrailing) sec")
         }
 
         // Fractional limits: PartialRangeThrough
@@ -604,146 +618,146 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
 
             allowedUnits = [.weeks]
-            verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "0 wks")
-            verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,000 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),000 wks")
+            verify(intLimits: Int.min..., fracLimits: ...Int.min, "0 wks")
+            verify(intLimits: 5..., fracLimits: ...Int.min, "00,000 wks")
+            verify(intLimits: Int.max..., fracLimits: ...Int.min, "\(padding996),000 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: ...5,   ".00165 wks")
-            verify(intLimits: 5...,         fracLimits: ...5,   "00,000.00165 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...5,   "\(padding996),000.00165 wks")
+            verify(intLimits: Int.min..., fracLimits: ...5, ".00165 wks")
+            verify(intLimits: 5..., fracLimits: ...5, "00,000.00165 wks")
+            verify(intLimits: Int.max..., fracLimits: ...5, "\(padding996),000.00165 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.max,   ".0016534391534391533 wks")
-            verify(intLimits: 5...,         fracLimits: ...Int.max,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.min..., fracLimits: ...Int.max, ".0016534391534391533 wks")
+            verify(intLimits: 5..., fracLimits: ...Int.max, "00,000.0016534391534391533 wks")
+            verify(intLimits: Int.max..., fracLimits: ...Int.max, "\(padding996),000.0016534391534391533 wks")
 
             allowedUnits = [.minutes]
-            verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "17 min")
-            verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),017 min")
+            verify(intLimits: Int.min..., fracLimits: ...Int.min, "17 min")
+            verify(intLimits: 5..., fracLimits: ...Int.min, "00,017 min")
+            verify(intLimits: Int.max..., fracLimits: ...Int.min, "\(padding996),017 min")
 
-            verify(intLimits: Int.min...,   fracLimits: ...5,   "16.66667 min")
-            verify(intLimits: 5...,         fracLimits: ...5,   "00,016.66667 min")
-            verify(intLimits: Int.max...,   fracLimits: ...5,   "\(padding996),016.66667 min")
+            verify(intLimits: Int.min..., fracLimits: ...5, "16.66667 min")
+            verify(intLimits: 5..., fracLimits: ...5, "00,016.66667 min")
+            verify(intLimits: Int.max..., fracLimits: ...5, "\(padding996),016.66667 min")
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.max, "16.666666666666668 min")
-            verify(intLimits: 5...,         fracLimits: ...Int.max, "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max, "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.min..., fracLimits: ...Int.max, "16.666666666666668 min")
+            verify(intLimits: 5..., fracLimits: ...Int.max, "00,016.666666666666668 min")
+            verify(intLimits: Int.max..., fracLimits: ...Int.max, "\(padding996),016.666666666666668 min")
 
             allowedUnits = [.seconds]
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "1,000 sec")
-            verify(intLimits: 5...,         fracLimits: ...Int.min,   "01,000 sec")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(oneThousandWithMaxPadding) sec")
+            verify(intLimits: Int.min..., fracLimits: ...Int.min, "1,000 sec")
+            verify(intLimits: 5..., fracLimits: ...Int.min, "01,000 sec")
+            verify(intLimits: Int.max..., fracLimits: ...Int.min, "\(oneThousandWithMaxPadding) sec")
 
-            verify(intLimits: Int.min...,   fracLimits: ...5,   "1,000 sec")
-            verify(intLimits: 5...,         fracLimits: ...5,   "01,000 sec")
-            verify(intLimits: Int.max...,   fracLimits: ...5,   "\(oneThousandWithMaxPadding) sec")
+            verify(intLimits: Int.min..., fracLimits: ...5, "1,000 sec")
+            verify(intLimits: 5..., fracLimits: ...5, "01,000 sec")
+            verify(intLimits: Int.max..., fracLimits: ...5, "\(oneThousandWithMaxPadding) sec")
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.max,   "1,000 sec")
-            verify(intLimits: 5...,         fracLimits: ...Int.max,   "01,000 sec")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(oneThousandWithMaxPadding) sec")
+            verify(intLimits: Int.min..., fracLimits: ...Int.max, "1,000 sec")
+            verify(intLimits: 5..., fracLimits: ...Int.max, "01,000 sec")
+            verify(intLimits: Int.max..., fracLimits: ...Int.max, "\(oneThousandWithMaxPadding) sec")
         }
 
         // Fractional limits: PartialRangeUpTo
         do {
             duration = Duration.seconds(1_000)
 
-            allowedUnits = [ .weeks ]
-            verify(intLimits: 5...,         fracLimits: ..<Int.min, "00,000 wks")
-            verify(intLimits: 5...,         fracLimits: ..<0,       "00,000 wks")
-            verify(intLimits: 5...,         fracLimits: ..<Int.max, "00,000.0016534391534391533 wks")
+            allowedUnits = [.weeks]
+            verify(intLimits: 5..., fracLimits: ..<Int.min, "00,000 wks")
+            verify(intLimits: 5..., fracLimits: ..<0, "00,000 wks")
+            verify(intLimits: 5..., fracLimits: ..<Int.max, "00,000.0016534391534391533 wks")
 
-            allowedUnits = [ .minutes ]
-            verify(intLimits: Int.min...,   fracLimits: ..<Int.min,   "17 min")
-            verify(intLimits: 5...,         fracLimits: ..<Int.min,   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<Int.min,   "\(padding996),017 min")
+            allowedUnits = [.minutes]
+            verify(intLimits: Int.min..., fracLimits: ..<Int.min, "17 min")
+            verify(intLimits: 5..., fracLimits: ..<Int.min, "00,017 min")
+            verify(intLimits: Int.max..., fracLimits: ..<Int.min, "\(padding996),017 min")
 
-            verify(intLimits: Int.min...,   fracLimits: ..<(Int.min + 1),   "17 min")
-            verify(intLimits: 5...,         fracLimits: ..<(Int.min + 1),   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<(Int.min + 1),   "\(padding996),017 min")
+            verify(intLimits: Int.min..., fracLimits: ..<(Int.min + 1), "17 min")
+            verify(intLimits: 5..., fracLimits: ..<(Int.min + 1), "00,017 min")
+            verify(intLimits: Int.max..., fracLimits: ..<(Int.min + 1), "\(padding996),017 min")
 
-            verify(intLimits: Int.min...,   fracLimits: ..<5,   "16.6667 min")
-            verify(intLimits: 5...,         fracLimits: ..<5,   "00,016.6667 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<5,   "\(padding996),016.6667 min")
+            verify(intLimits: Int.min..., fracLimits: ..<5, "16.6667 min")
+            verify(intLimits: 5..., fracLimits: ..<5, "00,016.6667 min")
+            verify(intLimits: Int.max..., fracLimits: ..<5, "\(padding996),016.6667 min")
 
-            verify(intLimits: Int.min...,   fracLimits: ..<Int.max,   "16.666666666666668 min")
-            verify(intLimits: 5...,         fracLimits: ..<Int.max,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<Int.max,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.min..., fracLimits: ..<Int.max, "16.666666666666668 min")
+            verify(intLimits: 5..., fracLimits: ..<Int.max, "00,016.666666666666668 min")
+            verify(intLimits: Int.max..., fracLimits: ..<Int.max, "\(padding996),016.666666666666668 min")
         }
 
         // Fractional limits: PartialRangeThrough
         do {
             duration = Duration.seconds(1_000)
 
-            allowedUnits = [ .weeks ]
+            allowedUnits = [.weeks]
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "0 wks")
-            verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,000 wks")
+            verify(intLimits: Int.min..., fracLimits: ...Int.min, "0 wks")
+            verify(intLimits: 5..., fracLimits: ...Int.min, "00,000 wks")
             // The total length of a formatted unit, including zero paddings, would be 999.
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),000 wks")
+            verify(intLimits: Int.max..., fracLimits: ...Int.min, "\(padding996),000 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: ...(Int.min + 1),   "0 wks")
-            verify(intLimits: 5...,         fracLimits: ...(Int.min + 1),   "00,000 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...(Int.min + 1),   "\(padding996),000 wks")
+            verify(intLimits: Int.min..., fracLimits: ...(Int.min + 1), "0 wks")
+            verify(intLimits: 5..., fracLimits: ...(Int.min + 1), "00,000 wks")
+            verify(intLimits: Int.max..., fracLimits: ...(Int.min + 1), "\(padding996),000 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.max,   ".0016534391534391533 wks")
-            verify(intLimits: 5...,         fracLimits: ...Int.max,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.min..., fracLimits: ...Int.max, ".0016534391534391533 wks")
+            verify(intLimits: 5..., fracLimits: ...Int.max, "00,000.0016534391534391533 wks")
+            verify(intLimits: Int.max..., fracLimits: ...Int.max, "\(padding996),000.0016534391534391533 wks")
 
-            allowedUnits = [ .minutes ]
+            allowedUnits = [.minutes]
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "17 min")
-            verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,017 min")
+            verify(intLimits: Int.min..., fracLimits: ...Int.min, "17 min")
+            verify(intLimits: 5..., fracLimits: ...Int.min, "00,017 min")
             // The total length of a formatted unit, including zero paddings, would be 999.
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),017 min")
+            verify(intLimits: Int.max..., fracLimits: ...Int.min, "\(padding996),017 min")
 
-            verify(intLimits: Int.min...,   fracLimits: ...(Int.min + 1),   "17 min")
-            verify(intLimits: 5...,         fracLimits: ...(Int.min + 1),   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ...(Int.min + 1),   "\(padding996),017 min")
+            verify(intLimits: Int.min..., fracLimits: ...(Int.min + 1), "17 min")
+            verify(intLimits: 5..., fracLimits: ...(Int.min + 1), "00,017 min")
+            verify(intLimits: Int.max..., fracLimits: ...(Int.min + 1), "\(padding996),017 min")
 
-            verify(intLimits: Int.min...,   fracLimits: ...Int.max,   "16.666666666666668 min")
-            verify(intLimits: 5...,         fracLimits: ...Int.max,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.min..., fracLimits: ...Int.max, "16.666666666666668 min")
+            verify(intLimits: 5..., fracLimits: ...Int.max, "00,016.666666666666668 min")
+            verify(intLimits: Int.max..., fracLimits: ...Int.max, "\(padding996),016.666666666666668 min")
         }
 
         // Fractional limits: ClosedRange
         do {
             duration = Duration.seconds(1_000)
-            allowedUnits = [ .weeks ]
+            allowedUnits = [.weeks]
 
-            verify(intLimits: Int.min...,   fracLimits: Int.min...Int.max, ".0016534391534391533 wks")
-            verify(intLimits: 5...,         fracLimits: Int.min...Int.max, "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.max, "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.min..., fracLimits: Int.min...Int.max, ".0016534391534391533 wks")
+            verify(intLimits: 5..., fracLimits: Int.min...Int.max, "00,000.0016534391534391533 wks")
+            verify(intLimits: Int.max..., fracLimits: Int.min...Int.max, "\(padding996),000.0016534391534391533 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: Int.min...(-1),   "0 wks")
-            verify(intLimits: 5...,         fracLimits: Int.min...(-1),   "00,000 wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...(-1),   "\(padding996),000 wks")
+            verify(intLimits: Int.min..., fracLimits: Int.min...(-1), "0 wks")
+            verify(intLimits: 5..., fracLimits: Int.min...(-1), "00,000 wks")
+            verify(intLimits: Int.max..., fracLimits: Int.min...(-1), "\(padding996),000 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: 5...Int.max,   ".0016534391534391533 wks")
-            verify(intLimits: 5...,         fracLimits: 5...Int.max,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: 5...Int.max,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.min..., fracLimits: 5...Int.max, ".0016534391534391533 wks")
+            verify(intLimits: 5..., fracLimits: 5...Int.max, "00,000.0016534391534391533 wks")
+            verify(intLimits: Int.max..., fracLimits: 5...Int.max, "\(padding996),000.0016534391534391533 wks")
 
-            verify(intLimits: Int.min...,   fracLimits: 5...10, ".0016534392 wks")
-            verify(intLimits: 5...,         fracLimits: 5...10, "00,000.0016534392 wks")
-            verify(intLimits: Int.max...,   fracLimits: 5...10, "\(padding996),000.0016534392 wks")
+            verify(intLimits: Int.min..., fracLimits: 5...10, ".0016534392 wks")
+            verify(intLimits: 5..., fracLimits: 5...10, "00,000.0016534392 wks")
+            verify(intLimits: Int.max..., fracLimits: 5...10, "\(padding996),000.0016534392 wks")
 
-            allowedUnits = [ .minutes ]
+            allowedUnits = [.minutes]
 
-            verify(intLimits: Int.min...,   fracLimits: Int.min...Int.max, "16.666666666666668 min")
-            verify(intLimits: 5...,         fracLimits: Int.min...Int.max, "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.max, "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.min..., fracLimits: Int.min...Int.max, "16.666666666666668 min")
+            verify(intLimits: 5..., fracLimits: Int.min...Int.max, "00,016.666666666666668 min")
+            verify(intLimits: Int.max..., fracLimits: Int.min...Int.max, "\(padding996),016.666666666666668 min")
 
-            verify(intLimits: Int.min...,   fracLimits: Int.min...(-1),   "17 min")
-            verify(intLimits: 5...,         fracLimits: Int.min...(-1),   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...(-1),   "\(padding996),017 min")
+            verify(intLimits: Int.min..., fracLimits: Int.min...(-1), "17 min")
+            verify(intLimits: 5..., fracLimits: Int.min...(-1), "00,017 min")
+            verify(intLimits: Int.max..., fracLimits: Int.min...(-1), "\(padding996),017 min")
 
-            verify(intLimits: Int.min...,   fracLimits: 5...Int.max,   "16.666666666666668 min")
-            verify(intLimits: 5...,         fracLimits: 5...Int.max,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: 5...Int.max,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.min..., fracLimits: 5...Int.max, "16.666666666666668 min")
+            verify(intLimits: 5..., fracLimits: 5...Int.max, "00,016.666666666666668 min")
+            verify(intLimits: Int.max..., fracLimits: 5...Int.max, "\(padding996),016.666666666666668 min")
 
-            verify(intLimits: Int.min...,   fracLimits: 5...10, "16.6666666667 min")
-            verify(intLimits: 5...,         fracLimits: 5...10, "00,016.6666666667 min")
-            verify(intLimits: Int.max...,   fracLimits: 5...10, "\(padding996),016.6666666667 min")
+            verify(intLimits: Int.min..., fracLimits: 5...10, "16.6666666667 min")
+            verify(intLimits: 5..., fracLimits: 5...10, "00,016.6666666667 min")
+            verify(intLimits: Int.max..., fracLimits: 5...10, "\(padding996),016.6666666667 min")
         }
 
         // Fractional limits: PartialRangeFrom
@@ -751,12 +765,12 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
             allowedUnits = [.minutes, .seconds]
 
-            verify(intLimits: Int.min...,   fracLimits: 2...,   "16 min, 40.00 sec")
-            verify(intLimits: 0...,         fracLimits: 2...,   "16 min, 40.00 sec")
-            verify(intLimits: 1...,         fracLimits: 2...,   "16 min, 40.00 sec")
-            verify(intLimits: 5...,         fracLimits: 2...,   "00,016 min, 00,040.00 sec")
+            verify(intLimits: Int.min..., fracLimits: 2..., "16 min, 40.00 sec")
+            verify(intLimits: 0..., fracLimits: 2..., "16 min, 40.00 sec")
+            verify(intLimits: 1..., fracLimits: 2..., "16 min, 40.00 sec")
+            verify(intLimits: 5..., fracLimits: 2..., "00,016 min, 00,040.00 sec")
             // The total length of a formatted unit, including zero paddings, would be 999.
-            verify(intLimits: Int.max...,      fracLimits: 2...,   "\(padding996),016 min, \(padding996),040.00 sec")
+            verify(intLimits: Int.max..., fracLimits: 2..., "\(padding996),016 min, \(padding996),040.00 sec")
         }
 
         // Int limits: PartialRangeFrom
@@ -764,19 +778,19 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
 
             allowedUnits = [.weeks]
-            verify(intLimits: Int.min...,   fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: 5...,         fracLimits: 10...10,   "00,000.0016534392 wks")
-            verify(intLimits: Int.max...,   fracLimits: 10...10,   "\(padding996),000.0016534392 wks")
+            verify(intLimits: Int.min..., fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: 5..., fracLimits: 10...10, "00,000.0016534392 wks")
+            verify(intLimits: Int.max..., fracLimits: 10...10, "\(padding996),000.0016534392 wks")
 
             allowedUnits = [.minutes]
-            verify(intLimits: Int.min...,   fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: 5...,         fracLimits: 2...2,   "00,016.67 min")
-            verify(intLimits: Int.max...,   fracLimits: 2...2,   "\(padding996),016.67 min")
+            verify(intLimits: Int.min..., fracLimits: 2...2, "16.67 min")
+            verify(intLimits: 5..., fracLimits: 2...2, "00,016.67 min")
+            verify(intLimits: Int.max..., fracLimits: 2...2, "\(padding996),016.67 min")
 
             allowedUnits = [.seconds]
-            verify(intLimits: Int.min...,   fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: 5...,         fracLimits: 2...2,   "01,000.00 sec")
-            verify(intLimits: Int.max...,   fracLimits: 2...2,   "\(oneThousandWithMaxPadding).00 sec")
+            verify(intLimits: Int.min..., fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: 5..., fracLimits: 2...2, "01,000.00 sec")
+            verify(intLimits: Int.max..., fracLimits: 2...2, "\(oneThousandWithMaxPadding).00 sec")
 
         }
 
@@ -785,22 +799,22 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
 
             allowedUnits = [.weeks]
-            verify(intLimits: Int.min..<Int.max,    fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: Int.min..<0,          fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: Int.min..<3,          fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: 5..<Int.max,          fracLimits: 10...10,   "00,000.0016534392 wks")
+            verify(intLimits: Int.min..<Int.max, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: Int.min..<0, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: Int.min..<3, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: 5..<Int.max, fracLimits: 10...10, "00,000.0016534392 wks")
 
             allowedUnits = [.minutes]
-            verify(intLimits: Int.min..<Int.max,    fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: Int.min..<0,          fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: Int.min..<3,          fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: 5..<Int.max,          fracLimits: 2...2,   "00,016.67 min")
+            verify(intLimits: Int.min..<Int.max, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: Int.min..<0, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: Int.min..<3, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: 5..<Int.max, fracLimits: 2...2, "00,016.67 min")
 
             allowedUnits = [.seconds]
-            verify(intLimits: Int.min..<Int.max,    fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: Int.min..<0,          fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: Int.min..<3,          fracLimits: 2...2,   ".00 sec") // This is not wrong, albeit confusing: we can't fit one thousand into three digits
-            verify(intLimits: 5..<Int.max,          fracLimits: 2...2,   "01,000.00 sec")
+            verify(intLimits: Int.min..<Int.max, fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: Int.min..<0, fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: Int.min..<3, fracLimits: 2...2, ".00 sec") // This is not wrong, albeit confusing: we can't fit one thousand into three digits
+            verify(intLimits: 5..<Int.max, fracLimits: 2...2, "01,000.00 sec")
         }
 
         // Int limits: ClosedRange
@@ -808,22 +822,22 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
 
             allowedUnits = [.weeks]
-            verify(intLimits: Int.min...Int.max,    fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: Int.min...(-1),       fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: Int.min...3,          fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: 5...Int.max,          fracLimits: 10...10,   "00,000.0016534392 wks")
+            verify(intLimits: Int.min...Int.max, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: Int.min...(-1), fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: Int.min...3, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: 5...Int.max, fracLimits: 10...10, "00,000.0016534392 wks")
 
             allowedUnits = [.minutes]
-            verify(intLimits: Int.min...Int.max,    fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: Int.min...(-1),       fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: Int.min...3,          fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: 5...Int.max,          fracLimits: 2...2,   "00,016.67 min")
+            verify(intLimits: Int.min...Int.max, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: Int.min...(-1), fracLimits: 2...2, "16.67 min")
+            verify(intLimits: Int.min...3, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: 5...Int.max, fracLimits: 2...2, "00,016.67 min")
 
             allowedUnits = [.seconds]
-            verify(intLimits: Int.min...Int.max,    fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: Int.min...(-1),       fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: Int.min...3,          fracLimits: 2...2,   ".00 sec")
-            verify(intLimits: 5...Int.max,          fracLimits: 2...2,   "01,000.00 sec")
+            verify(intLimits: Int.min...Int.max, fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: Int.min...(-1), fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: Int.min...3, fracLimits: 2...2, ".00 sec")
+            verify(intLimits: 5...Int.max, fracLimits: 2...2, "01,000.00 sec")
         }
 
         // Int limits: PartialRangeThrough
@@ -831,19 +845,19 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
 
             allowedUnits = [.weeks]
-            verify(intLimits: ...Int.min,   fracLimits: 10...10,    ".0016534392 wks")
-            verify(intLimits: ...3,         fracLimits: 10...10,    ".0016534392 wks")
-            verify(intLimits: ...Int.max,   fracLimits: 10...10,    ".0016534392 wks")
+            verify(intLimits: ...Int.min, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: ...3, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: ...Int.max, fracLimits: 10...10, ".0016534392 wks")
 
             allowedUnits = [.minutes]
-            verify(intLimits: ...Int.min,   fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: ...3,         fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: ...Int.max,   fracLimits: 2...2,   "16.67 min")
+            verify(intLimits: ...Int.min, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: ...3, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: ...Int.max, fracLimits: 2...2, "16.67 min")
 
             allowedUnits = [.seconds]
-            verify(intLimits: ...Int.min,   fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: ...3,         fracLimits: 2...2,   ".00 sec")
-            verify(intLimits: ...Int.max,   fracLimits: 2...2,   "1,000.00 sec")
+            verify(intLimits: ...Int.min, fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: ...3, fracLimits: 2...2, ".00 sec")
+            verify(intLimits: ...Int.max, fracLimits: 2...2, "1,000.00 sec")
         }
 
         // Int limits: PartialRangeUpTo
@@ -851,22 +865,22 @@ private struct DurationUnitsFormatStyleTests {
             duration = Duration.seconds(1_000)
 
             allowedUnits = [.weeks]
-            verify(intLimits: ..<Int.min,   fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: ..<0,         fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: ..<3,         fracLimits: 10...10,   ".0016534392 wks")
-            verify(intLimits: ..<Int.max,   fracLimits: 10...10,   ".0016534392 wks")
+            verify(intLimits: ..<Int.min, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: ..<0, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: ..<3, fracLimits: 10...10, ".0016534392 wks")
+            verify(intLimits: ..<Int.max, fracLimits: 10...10, ".0016534392 wks")
 
             allowedUnits = [.minutes]
-            verify(intLimits: ..<Int.min,   fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: ..<0,         fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: ..<3,         fracLimits: 2...2,   "16.67 min")
-            verify(intLimits: ..<Int.max,   fracLimits: 2...2,   "16.67 min")
+            verify(intLimits: ..<Int.min, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: ..<0, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: ..<3, fracLimits: 2...2, "16.67 min")
+            verify(intLimits: ..<Int.max, fracLimits: 2...2, "16.67 min")
 
             allowedUnits = [.seconds]
-            verify(intLimits: ..<Int.min,   fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: ..<0,         fracLimits: 2...2,   "1,000.00 sec")
-            verify(intLimits: ..<3,         fracLimits: 2...2,   ".00 sec")
-            verify(intLimits: ..<Int.max,   fracLimits: 2...2,   "1,000.00 sec")
+            verify(intLimits: ..<Int.min, fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: ..<0, fracLimits: 2...2, "1,000.00 sec")
+            verify(intLimits: ..<3, fracLimits: 2...2, ".00 sec")
+            verify(intLimits: ..<Int.max, fracLimits: 2...2, "1,000.00 sec")
         }
     }
 
@@ -935,160 +949,188 @@ private struct DurationUnitAttributedFormatStyleTests {
 
         // Default configuration -- hide the field when its value is 0
 
-        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
-                       [("2", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                        (", ", nil, nil),
-                        ("43", .minutes, .value),
-                        (" ", .minutes, nil),
-                        ("minutes", .minutes, .unit),
-                        (", ", nil, nil),
-                        ("24", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed)
+                == [
+                    ("2", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                    (", ", nil, nil),
+                    ("43", .minutes, .value),
+                    (" ", .minutes, nil),
+                    ("minutes", .minutes, .unit),
+                    (", ", nil, nil),
+                    ("24", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
-                       [("43", .minutes, .value),
-                        (" ", .minutes, nil),
-                        ("minutes", .minutes, .unit),
-                        (", ", nil, nil),
-                        ("24", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed)
+                == [
+                    ("43", .minutes, .value),
+                    (" ", .minutes, nil),
+                    ("minutes", .minutes, .unit),
+                    (", ", nil, nil),
+                    ("24", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
-                       [("24", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed)
+                == [
+                    ("24", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
-                       [("0", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed)
+                == [
+                    ("0", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed) ==
-                       [("3", .weeks, .value),
-                        (" ", .weeks, nil),
-                        ("weeks", .weeks, .unit),
-                        (", ", nil, nil),
-                        ("13", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                       ].attributedString)
+        #expect(
+            d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed)
+                == [
+                    ("3", .weeks, .value),
+                    (" ", .weeks, nil),
+                    ("weeks", .weeks, .unit),
+                    (", ", nil, nil),
+                    ("13", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                ].attributedString)
 
-        #expect(d5.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed) ==
-                       [("3", .weeks, .value),
-                        (" ", .weeks, nil),
-                        ("weeks", .weeks, .unit),
-                        (", ", nil, nil),
-                        ("5", .days, .value),
-                        (" ", .days, nil),
-                        ("days", .days, .unit),
-                        (", ", nil, nil),
-                        ("4", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                       ].attributedString)
+        #expect(
+            d5.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed)
+                == [
+                    ("3", .weeks, .value),
+                    (" ", .weeks, nil),
+                    ("weeks", .weeks, .unit),
+                    (", ", nil, nil),
+                    ("5", .days, .value),
+                    (" ", .days, nil),
+                    ("days", .days, .unit),
+                    (", ", nil, nil),
+                    ("4", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                ].attributedString)
 
         // Always show zero value units
 
-        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
-                       [("0", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                        (", ", nil, nil),
-                        ("43", .minutes, .value),
-                        (" ", .minutes, nil),
-                        ("minutes", .minutes, .unit),
-                        (", ", nil, nil),
-                        ("24", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed)
+                == [
+                    ("0", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                    (", ", nil, nil),
+                    ("43", .minutes, .value),
+                    (" ", .minutes, nil),
+                    ("minutes", .minutes, .unit),
+                    (", ", nil, nil),
+                    ("24", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
-                       [("0", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                        (", ", nil, nil),
-                        ("0", .minutes, .value),
-                        (" ", .minutes, nil),
-                        ("minutes", .minutes, .unit),
-                        (", ", nil, nil),
-                        ("24", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed)
+                == [
+                    ("0", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                    (", ", nil, nil),
+                    ("0", .minutes, .value),
+                    (" ", .minutes, nil),
+                    ("minutes", .minutes, .unit),
+                    (", ", nil, nil),
+                    ("24", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
-                       [("0", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                        (", ", nil, nil),
-                        ("0", .minutes, .value),
-                        (" ", .minutes, nil),
-                        ("minutes", .minutes, .unit),
-                        (", ", nil, nil),
-                        ("0", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed)
+                == [
+                    ("0", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                    (", ", nil, nil),
+                    ("0", .minutes, .value),
+                    (" ", .minutes, nil),
+                    ("minutes", .minutes, .unit),
+                    (", ", nil, nil),
+                    ("0", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
-                       [("3", .weeks, .value),
-                        (" ", .weeks, nil),
-                        ("weeks", .weeks, .unit),
-                        (", ", nil, nil),
-                        ("0", .days, .value),
-                        (" ", .days, nil),
-                        ("days", .days, .unit),
-                        (", ", nil, nil),
-                        ("13", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                       ].attributedString)
+        #expect(
+            d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed)
+                == [
+                    ("3", .weeks, .value),
+                    (" ", .weeks, nil),
+                    ("weeks", .weeks, .unit),
+                    (", ", nil, nil),
+                    ("0", .days, .value),
+                    (" ", .days, nil),
+                    ("days", .days, .unit),
+                    (", ", nil, nil),
+                    ("13", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                ].attributedString)
 
 
         // Always show zero value units padded
 
-        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS).attributed) ==
-                       [("00", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hours", .hours, .unit),
-                        (", ", nil, nil),
-                        ("00", .minutes, .value),
-                        (" ", .minutes, nil),
-                        ("minutes", .minutes, .unit),
-                        (", ", nil, nil),
-                        ("00", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("seconds", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS).attributed)
+                == [
+                    ("00", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hours", .hours, .unit),
+                    (", ", nil, nil),
+                    ("00", .minutes, .value),
+                    (" ", .minutes, nil),
+                    ("minutes", .minutes, .unit),
+                    (", ", nil, nil),
+                    ("00", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("seconds", .seconds, .unit),
+                ].attributedString)
 
         // Test fractional parts
 
-        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS)) ==
-                       [("2.72", .hours, .value),
-                        (" ", .hours, nil),
-                        ("hr", .hours, .unit),
-                       ].attributedString)
+        #expect(
+            d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS))
+                == [
+                    ("2.72", .hours, .value),
+                    (" ", .hours, nil),
+                    ("hr", .hours, .unit),
+                ].attributedString)
 
-        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS)) ==
-                       [("0.00", .seconds, .value),
-                        (" ", .seconds, nil),
-                        ("sec", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS))
+                == [
+                    ("0.00", .seconds, .value),
+                    (" ", .seconds, nil),
+                    ("sec", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS).attributed) ==
-                       [("3.08", .weeks, .value),
-                        (" ", .weeks, nil),
-                        ("weeks", .weeks, .unit),
-                       ].attributedString)
+        #expect(
+            d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS).attributed)
+                == [
+                    ("3.08", .weeks, .value),
+                    (" ", .weeks, nil),
+                    ("weeks", .weeks, .unit),
+                ].attributedString)
     }
 
     @Test func testAttributedStyle_frFR() {
@@ -1096,17 +1138,21 @@ private struct DurationUnitAttributedFormatStyleTests {
         let d0 = Duration.seconds(0)
         let nbsp = " "
 
-        #expect(d1.formatted(.units(allowed: [.seconds], width: .wide).locale(frFR).attributed) ==
-                       [("9 804", .seconds, .value),
-                        (nbsp, .seconds, nil),
-                        ("secondes", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d1.formatted(.units(allowed: [.seconds], width: .wide).locale(frFR).attributed)
+                == [
+                    ("9 804", .seconds, .value),
+                    (nbsp, .seconds, nil),
+                    ("secondes", .seconds, .unit),
+                ].attributedString)
 
-        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(frFR).attributed) ==
-                       [("0", .seconds, .value),
-                        (nbsp, .seconds, nil),
-                        ("seconde", .seconds, .unit),
-                       ].attributedString)
+        #expect(
+            d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(frFR).attributed)
+                == [
+                    ("0", .seconds, .value),
+                    (nbsp, .seconds, nil),
+                    ("seconde", .seconds, .unit),
+                ].attributedString)
 
     }
 }
@@ -1198,11 +1244,13 @@ private struct TestDurationUnitsDiscreteConformance {
     }
 
     @Test func evaluation() {
-        func assertEvaluation(of style: Duration.UnitsFormatStyle,
-                              rounding roundingRules: [FloatingPointRoundingRule] = [.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven],
-                              in range: ClosedRange<Duration>,
-                              includes expectedExcerpts: [String]...,
-                              sourceLocation: SourceLocation = #_sourceLocation) {
+        func assertEvaluation(
+            of style: Duration.UnitsFormatStyle,
+            rounding roundingRules: [FloatingPointRoundingRule] = [.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven],
+            in range: ClosedRange<Duration>,
+            includes expectedExcerpts: [String]...,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
 
             for rule in roundingRules {
                 var style = style.locale(Locale(identifier: "en_US"))
@@ -1212,18 +1260,19 @@ private struct TestDurationUnitsDiscreteConformance {
                     contains: expectedExcerpts,
                     "lowerbound to upperbound, rounding \(rule)",
                     sourceLocation: sourceLocation)
-                
+
                 verify(
                     sequence: style.evaluate(from: range.upperBound, to: range.lowerBound).map(\.output),
-                    contains: expectedExcerpts
+                    contains:
+                        expectedExcerpts
                         .reversed()
                         .map { $0.reversed() },
                     "upperbound to lowerbound, rounding \(rule)",
                     sourceLocation: sourceLocation)
             }
         }
-        
-        
+
+
         assertEvaluation(
             of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
             in: Duration.seconds(61).symmetricRange,
@@ -1252,7 +1301,7 @@ private struct TestDurationUnitsDiscreteConformance {
                 "1m 0s",
                 "1m 1s",
             ])
-        
+
         assertEvaluation(
             of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
             in: Duration.seconds(120).symmetricRange,
@@ -1281,7 +1330,7 @@ private struct TestDurationUnitsDiscreteConformance {
                 "1m",
                 "2m",
             ])
-        
+
         assertEvaluation(
             of: .init(allowedUnits: [.hours], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
             in: Duration.seconds(3 * 3600).symmetricRange,
@@ -1294,7 +1343,7 @@ private struct TestDurationUnitsDiscreteConformance {
                 "2h",
                 "3h",
             ])
-        
+
         assertEvaluation(
             of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1)),
             in: Duration.seconds(120).symmetricRange,
@@ -1372,36 +1421,38 @@ private struct TestDurationUnitsDiscreteConformance {
                 "2.0m",
             ])
     }
-    
+
     @Test func regressions() throws {
         var style: Duration.UnitsFormatStyle
-        
+
         style = .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: .toNearestOrAwayFromZero))
-        
+
         #expect(try #require(style.discreteInput(after: Duration(secondsComponent: -75, attosecondsComponent: -535173016509531840))) <= Duration(secondsComponent: -73, attosecondsComponent: -122099659011723263))
-        
+
         style = .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1))
-        
+
         #expect(try #require(style.discreteInput(after: Duration(secondsComponent: -63, attosecondsComponent: -0))) <= Duration(secondsComponent: -59, attosecondsComponent: -900000000000000000))
     }
-    
+
     @Test func randomSamples() throws {
-        let styles: [Duration.UnitsFormatStyle] = [
-            .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
-            .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
-            .init(allowedUnits: [.hours], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
-        ] + [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
+        let styles: [Duration.UnitsFormatStyle] =
             [
-                .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: roundingRule)),
+                .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
+                .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
+                .init(allowedUnits: [.hours], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
             ]
-        }
-        
-        
+            + [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
+                [
+                    .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: roundingRule))
+                ]
+            }
+
+
         for style in styles {
             try verifyDiscreteFormatStyleConformance(style.locale(Locale(identifier: "en_US")), samples: 100, "\(style)")
         }
     }
-    
+
 }
 
 extension Duration {

@@ -130,14 +130,14 @@ extension UTF16: _URLEncoding {
 internal protocol _URLParseable {
     static var maxStringLength: Int { get }
 
-    var schemeRange:    Range<Int> { get set }
-    var userRange:      Range<Int> { get set }
-    var passwordRange:  Range<Int> { get set }
-    var hostRange:      Range<Int> { get set }
-    var portRange:      Range<Int> { get set }
-    var pathRange:      Range<Int> { get set }
-    var queryRange:     Range<Int> { get set }
-    var fragmentRange:  Range<Int> { get set }
+    var schemeRange: Range<Int> { get set }
+    var userRange: Range<Int> { get set }
+    var passwordRange: Range<Int> { get set }
+    var hostRange: Range<Int> { get set }
+    var portRange: Range<Int> { get set }
+    var pathRange: Range<Int> { get set }
+    var queryRange: Range<Int> { get set }
+    var fragmentRange: Range<Int> { get set }
 
     /// Sets the original string in the URL implementation.
     /// - Note: For `CFURL` implementations, this stores a retained `CFString`.
@@ -361,12 +361,7 @@ extension URL {
 
         // MARK: Authority
 
-        let hasAuthority = (
-            !isRelativePath &&
-            currentIndex + 1 < endIndex &&
-            buffer[currentIndex] == UInt8(ascii: "/") &&
-            buffer[currentIndex + 1] == UInt8(ascii: "/")
-        )
+        let hasAuthority = (!isRelativePath && currentIndex + 1 < endIndex && buffer[currentIndex] == UInt8(ascii: "/") && buffer[currentIndex + 1] == UInt8(ascii: "/"))
 
         if hasAuthority {
             currentIndex += 2
@@ -575,10 +570,12 @@ extension URL {
                 // Ignore the leading and trailing brackets
                 assert(host.count >= 2)
                 let innerHost = host.extracting(1..<(host.count - 1))
-                guard let isValid = validateIPLiteral(
-                    innerHost: innerHost,
-                    useModernParsing: useModernParsing
-                ) else {
+                guard
+                    let isValid = validateIPLiteral(
+                        innerHost: innerHost,
+                        useModernParsing: useModernParsing
+                    )
+                else {
                     return false
                 }
                 if !isValid {
@@ -625,9 +622,10 @@ extension URL {
                 if !isValid {
                     // Check for special-cased schemes where we allow a non-numeric port
                     guard flags.contains(.hasScheme),
-                          span.withUnsafeBufferPointer({
-                              shouldIgnorePort($0, schemeLength: impl.pointee.schemeRange.count)
-                          }) else {
+                        span.withUnsafeBufferPointer({
+                            shouldIgnorePort($0, schemeLength: impl.pointee.schemeRange.count)
+                        })
+                    else {
                         return false
                     }
                 }
@@ -715,38 +713,23 @@ extension URL {
     ) -> _URLFlags {
         switch schemeLength {
         case 2:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "w") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "s")) {
+            if ((buffer[0] | 0x20) == UInt8(ascii: "w") && (buffer[1] | 0x20) == UInt8(ascii: "s")) {
                 return .hasSpecialScheme
             }
         case 3:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "w") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "s") &&
-                (buffer[2] | 0x20) == UInt8(ascii: "s")) {
+            if ((buffer[0] | 0x20) == UInt8(ascii: "w") && (buffer[1] | 0x20) == UInt8(ascii: "s") && (buffer[2] | 0x20) == UInt8(ascii: "s")) {
                 return .hasSpecialScheme
-            } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") &&
-                       (buffer[1] | 0x20) == UInt8(ascii: "t") &&
-                       (buffer[2] | 0x20) == UInt8(ascii: "p")) {
+            } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") && (buffer[1] | 0x20) == UInt8(ascii: "t") && (buffer[2] | 0x20) == UInt8(ascii: "p")) {
                 return .hasSpecialScheme
             }
         case 4:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "h") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[2] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[3] | 0x20) == UInt8(ascii: "p")) {
+            if ((buffer[0] | 0x20) == UInt8(ascii: "h") && (buffer[1] | 0x20) == UInt8(ascii: "t") && (buffer[2] | 0x20) == UInt8(ascii: "t") && (buffer[3] | 0x20) == UInt8(ascii: "p")) {
                 return .hasSpecialScheme
-            } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") &&
-                       (buffer[1] | 0x20) == UInt8(ascii: "i") &&
-                       (buffer[2] | 0x20) == UInt8(ascii: "l") &&
-                       (buffer[3] | 0x20) == UInt8(ascii: "e")) {
+            } else if ((buffer[0] | 0x20) == UInt8(ascii: "f") && (buffer[1] | 0x20) == UInt8(ascii: "i") && (buffer[2] | 0x20) == UInt8(ascii: "l") && (buffer[3] | 0x20) == UInt8(ascii: "e")) {
                 return [.isFileURL, .hasSpecialScheme]
             }
         case 5:
-            if ((buffer[0] | 0x20) == UInt8(ascii: "h") &&
-                (buffer[1] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[2] | 0x20) == UInt8(ascii: "t") &&
-                (buffer[3] | 0x20) == UInt8(ascii: "p") &&
-                (buffer[4] | 0x20) == UInt8(ascii: "s")) {
+            if ((buffer[0] | 0x20) == UInt8(ascii: "h") && (buffer[1] | 0x20) == UInt8(ascii: "t") && (buffer[2] | 0x20) == UInt8(ascii: "t") && (buffer[3] | 0x20) == UInt8(ascii: "p") && (buffer[4] | 0x20) == UInt8(ascii: "s")) {
                 return .hasSpecialScheme
             }
         default:
@@ -766,18 +749,9 @@ extension URL {
         if T.self == UInt8.self {
             return memcmp(buffer.baseAddress!.advanced(by: pathStart), "/.file/id=", 10) == 0
         }
-        return (
-            buffer[pathStart] == UInt8(ascii: "/") &&
-            buffer[pathStart + 1] == UInt8(ascii: ".") &&
-            buffer[pathStart + 2] == UInt8(ascii: "f") &&
-            buffer[pathStart + 3] == UInt8(ascii: "i") &&
-            buffer[pathStart + 4] == UInt8(ascii: "l") &&
-            buffer[pathStart + 5] == UInt8(ascii: "e") &&
-            buffer[pathStart + 6] == UInt8(ascii: "/") &&
-            buffer[pathStart + 7] == UInt8(ascii: "i") &&
-            buffer[pathStart + 8] == UInt8(ascii: "d") &&
-            buffer[pathStart + 9] == UInt8(ascii: "=")
-        )
+        return
+            (buffer[pathStart] == UInt8(ascii: "/") && buffer[pathStart + 1] == UInt8(ascii: ".") && buffer[pathStart + 2] == UInt8(ascii: "f") && buffer[pathStart + 3] == UInt8(ascii: "i") && buffer[pathStart + 4] == UInt8(ascii: "l")
+            && buffer[pathStart + 5] == UInt8(ascii: "e") && buffer[pathStart + 6] == UInt8(ascii: "/") && buffer[pathStart + 7] == UInt8(ascii: "i") && buffer[pathStart + 8] == UInt8(ascii: "d") && buffer[pathStart + 9] == UInt8(ascii: "="))
     }
 
     static func hasDirectoryPath<T: UnsignedInteger & FixedWidthInteger>(
@@ -824,19 +798,9 @@ extension URL {
         if T.self == UInt8.self {
             return memcmp(buffer.baseAddress!, "addressbook", 11) == 0
         }
-        return (
-            buffer[0] == UInt8(ascii: "a") &&
-            buffer[1] == UInt8(ascii: "d") &&
-            buffer[2] == UInt8(ascii: "d") &&
-            buffer[3] == UInt8(ascii: "r") &&
-            buffer[4] == UInt8(ascii: "e") &&
-            buffer[5] == UInt8(ascii: "s") &&
-            buffer[6] == UInt8(ascii: "s") &&
-            buffer[7] == UInt8(ascii: "b") &&
-            buffer[8] == UInt8(ascii: "o") &&
-            buffer[9] == UInt8(ascii: "o") &&
-            buffer[10] == UInt8(ascii: "k")
-        )
+        return
+            (buffer[0] == UInt8(ascii: "a") && buffer[1] == UInt8(ascii: "d") && buffer[2] == UInt8(ascii: "d") && buffer[3] == UInt8(ascii: "r") && buffer[4] == UInt8(ascii: "e") && buffer[5] == UInt8(ascii: "s") && buffer[6] == UInt8(ascii: "s")
+            && buffer[7] == UInt8(ascii: "b") && buffer[8] == UInt8(ascii: "o") && buffer[9] == UInt8(ascii: "o") && buffer[10] == UInt8(ascii: "k"))
     }
 
     // MARK: - Encoding
@@ -857,7 +821,7 @@ extension URL {
             // so CFURL just saw the valid string that doesn't require encoding.
             flags.remove([
                 .shouldEncodeUser, .shouldEncodePassword, .shouldEncodeHost,
-                .shouldEncodePath, .shouldEncodeQuery, .shouldEncodeFragment
+                .shouldEncodePath, .shouldEncodeQuery, .shouldEncodeFragment,
             ])
         }
         #endif

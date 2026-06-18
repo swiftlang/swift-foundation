@@ -121,7 +121,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
         // This does nothing in NSCalendarBridge, but we still need to call it
         super.init(checkedCalendarIdentifier: .gregorian)
     }
-    
+
     // MARK: - Coding
 
     override var classForCoder: AnyClass {
@@ -130,7 +130,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
         }
         return NSCalendar.self
     }
-        
+
     override static var supportsSecureCoding: Bool { true }
 
     /// `NSCalendar`'s `+allocWithZone:` returns `_NSSwiftCalendar`, which results in the following implementation being called when initializing an instance from an archive.
@@ -139,17 +139,17 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
         _lock = Mutex(Calendar(identifier: .gregorian))
 
         guard coder.allowsKeyedCoding else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Cannot be decoded without keyed coding"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Cannot be decoded without keyed coding"]))
             return nil
         }
 
         guard let encodedIdentifier = coder.decodeObject(of: NSString.self, forKey: "NS.identifier") as? String else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Identifier has been corrupted"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Identifier has been corrupted"]))
             return nil
         }
 
         guard let locale = coder.decodeObject(of: NSLocale.self, forKey: "NS.locale"), locale.isKind(of: NSLocale.self) else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Locale has been corrupted!"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Locale has been corrupted!"]))
             return nil
         }
 
@@ -163,7 +163,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
         }
 
         guard let id = Calendar._fromNSCalendarIdentifier(.init(rawValue: encodedIdentifier)) else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Unknown calendar identifier"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Unknown calendar identifier"]))
             return nil
         }
 
@@ -188,7 +188,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
     }
 
     // MARK: -
-    
+
     override var debugDescription: String {
         let inner = _lock.withLock { $0.debugDescription }
         return "\(super.debugDescription) \(inner)"
@@ -206,7 +206,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
             _lock.withLock { $0.locale = newValue }
         }
     }
-    
+
     override var timeZone: TimeZone? {
         get {
             calendar.timeZone
@@ -496,7 +496,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
 
 /// Turn our more-specific options into the big bucket option set of NSCalendar
 private func _toCalendarOptions(matchingPolicy: Calendar.MatchingPolicy, repeatedTimePolicy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection) -> NSCalendar.Options {
-    var result : NSCalendar.Options = []
+    var result: NSCalendar.Options = []
 
     switch matchingPolicy {
     case .nextTime:
@@ -566,24 +566,26 @@ private func _fromNSCalendarOptions(_ options: NSCalendar.Options) -> (matchingP
 // TODO: These conversion functions could probably be written in a much more efficient manner.
 
 // Also used by Date+ComponentsFormatStyle
-internal func _toNSCalendarUnit(_ components : Set<Calendar.Component>) -> NSCalendar.Unit {
-    let componentMap : [Calendar.Component : NSCalendar.Unit] =
-        [.era : .era,
-         .year : .year,
-         .month : .month,
-         .day : .day,
-         .hour : .hour,
-         .minute : .minute,
-         .second : .second,
-         .weekday : .weekday,
-         .weekdayOrdinal : .weekdayOrdinal,
-         .quarter : .quarter,
-         .weekOfMonth : .weekOfMonth,
-         .weekOfYear : .weekOfYear,
-         .yearForWeekOfYear : .yearForWeekOfYear,
-         .nanosecond : .nanosecond,
-         .calendar : .calendar,
-         .timeZone : .timeZone]
+internal func _toNSCalendarUnit(_ components: Set<Calendar.Component>) -> NSCalendar.Unit {
+    let componentMap: [Calendar.Component: NSCalendar.Unit] =
+        [
+            .era: .era,
+            .year: .year,
+            .month: .month,
+            .day: .day,
+            .hour: .hour,
+            .minute: .minute,
+            .second: .second,
+            .weekday: .weekday,
+            .weekdayOrdinal: .weekdayOrdinal,
+            .quarter: .quarter,
+            .weekOfMonth: .weekOfMonth,
+            .weekOfYear: .weekOfYear,
+            .yearForWeekOfYear: .yearForWeekOfYear,
+            .nanosecond: .nanosecond,
+            .calendar: .calendar,
+            .timeZone: .timeZone,
+        ]
 
     var result = NSCalendar.Unit()
     for u in components {
@@ -592,7 +594,7 @@ internal func _toNSCalendarUnit(_ components : Set<Calendar.Component>) -> NSCal
     return result
 }
 
-private func _fromNSCalendarUnits(_ units : NSCalendar.Unit) -> Set<Calendar.Component> {
+private func _fromNSCalendarUnits(_ units: NSCalendar.Unit) -> Set<Calendar.Component> {
     var result = Set<Calendar.Component>()
     if units.contains(.era) { result.insert(.era) }
     if units.contains(.year) { result.insert(.year) }
@@ -612,7 +614,7 @@ private func _fromNSCalendarUnits(_ units : NSCalendar.Unit) -> Set<Calendar.Com
     if units.contains(.calendar) { result.insert(.calendar) }
     if units.contains(.timeZone) { result.insert(.timeZone) }
     if units.contains(.deprecatedWeekUnit) { result.insert(.weekOfYear) }
-    if units.contains(.isRepeatedDay) { result.insert(.isRepeatedDay)}
+    if units.contains(.isRepeatedDay) { result.insert(.isRepeatedDay) }
     return result
 }
 
@@ -656,4 +658,3 @@ extension NSRange {
 }
 
 #endif // FOUNDATION_FRAMEWORK
-

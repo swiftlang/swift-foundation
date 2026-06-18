@@ -64,7 +64,8 @@ internal struct IANACharset {
 
     func matches(_ string: String) -> Bool {
         if let preferredMIMEName = self.preferredMIMEName,
-           preferredMIMEName._isASCIICaseInsensitivelyEqual(to: string) {
+            preferredMIMEName._isASCIICaseInsensitivelyEqual(to: string)
+        {
             return true
         }
         if name._isASCIICaseInsensitivelyEqual(to: string) {
@@ -152,4 +153,3 @@ extension String.Encoding {
         return nil
     }
 }
-

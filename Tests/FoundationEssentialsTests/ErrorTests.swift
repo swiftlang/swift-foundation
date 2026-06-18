@@ -21,9 +21,9 @@ import Foundation
 @Suite("Error")
 private struct ErrorTests {
     func thisThrows() throws {
-        throw CocoaError(CocoaError.Code(rawValue: 42), userInfo: ["hi" : "there"])
+        throw CocoaError(CocoaError.Code(rawValue: 42), userInfo: ["hi": "there"])
     }
-    
+
     @Test func throwCocoaError() {
         #expect {
             try thisThrows()

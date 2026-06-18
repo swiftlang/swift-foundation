@@ -33,31 +33,31 @@ dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
-struct LocaleCache : Sendable, ~Copyable {
+struct LocaleCache: Sendable, ~Copyable {
     // MARK: - State
 
     struct State {
 
         init() {
-#if FOUNDATION_FRAMEWORK
+            #if FOUNDATION_FRAMEWORK
             // For Foundation.framework, we listen for system notifications about the system Locale changing from the Darwin notification center.
             _CFNotificationCenterInitializeDependentNotificationIfNecessary(CFNotificationName.cfLocaleCurrentLocaleDidChange!.rawValue)
-#endif
+            #endif
         }
 
-        private var cachedFixedLocales: [String : any _LocaleProtocol] = [:]
+        private var cachedFixedLocales: [String: any _LocaleProtocol] = [:]
         private var cachedFixedComponentsLocales: [String /*ICU identifier*/: any _LocaleProtocol] = [:]
 
-#if FOUNDATION_FRAMEWORK
-        private var cachedFixedIdentifierToNSLocales: [String : _NSSwiftLocale] = [:]
+        #if FOUNDATION_FRAMEWORK
+        private var cachedFixedIdentifierToNSLocales: [String: _NSSwiftLocale] = [:]
 
-        struct IdentifierAndPrefs : Hashable {
+        struct IdentifierAndPrefs: Hashable {
             let identifier: String
             let prefs: LocalePreferences?
         }
 
-        private var cachedFixedLocaleToNSLocales: [IdentifierAndPrefs : _NSSwiftLocale] = [:]
-#endif
+        private var cachedFixedLocaleToNSLocales: [IdentifierAndPrefs: _NSSwiftLocale] = [:]
+        #endif
 
         mutating func fixed(_ id: String) -> any _LocaleProtocol {
             // Note: Even if the currentLocale's identifier is the same, currentLocale may have preference overrides which are not reflected in the identifier itself.
@@ -70,7 +70,7 @@ struct LocaleCache : Sendable, ~Copyable {
             }
         }
 
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         mutating func fixedNSLocale(identifier id: String) -> _NSSwiftLocale {
             if let locale = cachedFixedIdentifierToNSLocales[id] {
                 return locale
@@ -83,7 +83,7 @@ struct LocaleCache : Sendable, ~Copyable {
             }
         }
 
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         mutating func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
             let id = IdentifierAndPrefs(identifier: locale.identifier, prefs: locale.prefs)
             if let locale = cachedFixedLocaleToNSLocales[id] {
@@ -96,9 +96,9 @@ struct LocaleCache : Sendable, ~Copyable {
                 return nsLocale
             }
         }
-#endif
+        #endif
 
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
 
         mutating func fixedComponentsWithCache(_ comps: Locale.Components) -> any _LocaleProtocol {
             let identifier = comps.icuIdentifier
@@ -111,10 +111,10 @@ struct LocaleCache : Sendable, ~Copyable {
                 return new
             }
         }
-        
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-        var identifiersWithLikelySubtags: [String : String] = [:]
-#endif
+
+        #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        var identifiersWithLikelySubtags: [String: String] = [:]
+        #endif
     }
 
     let lock: Mutex<State>
@@ -122,9 +122,9 @@ struct LocaleCache : Sendable, ~Copyable {
     static let cache = LocaleCache()
     private let _currentCache = Mutex<(any _LocaleProtocol)?>(nil)
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     private let _currentNSCache = Mutex<_NSSwiftLocale?>(nil)
-#endif
+    #endif
 
     fileprivate init() {
         lock = Mutex(State())
@@ -139,16 +139,16 @@ struct LocaleCache : Sendable, ~Copyable {
         _currentCache.withLock {
             $0 = newLocale
         }
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         _currentNSCache.withLock { $0 = nil }
-#endif
+        #endif
     }
 
     func reset() {
         _currentCache.withLock { $0 = nil }
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         _currentNSCache.withLock { $0 = nil }
-#endif
+        #endif
     }
 
     var current: any _LocaleProtocol {
@@ -188,19 +188,19 @@ struct LocaleCache : Sendable, ~Copyable {
     // This value is immutable, so we can share one instance for the whole process.
     static let autoupdatingCurrent = _LocaleAutoupdating()
 
-    static let system : any _LocaleProtocol = {
+    static let system: any _LocaleProtocol = {
         _localeICUClass().init(identifier: "", prefs: nil)
     }()
 
-#if FOUNDATION_FRAMEWORK
-    static let autoupdatingCurrentNSLocale : _NSSwiftLocale = {
+    #if FOUNDATION_FRAMEWORK
+    static let autoupdatingCurrentNSLocale: _NSSwiftLocale = {
         _NSSwiftLocale(Locale(inner: autoupdatingCurrent))
     }()
 
-    static let systemNSLocale : _NSSwiftLocale = {
+    static let systemNSLocale: _NSSwiftLocale = {
         _NSSwiftLocale(Locale(inner: system))
     }()
-#endif
+    #endif
 
     // MARK: -
 
@@ -210,16 +210,16 @@ struct LocaleCache : Sendable, ~Copyable {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     func fixedNSLocale(identifier id: String) -> _NSSwiftLocale {
         lock.withLock { $0.fixedNSLocale(identifier: id) }
     }
 
-#if canImport(_FoundationICU)
+    #if canImport(_FoundationICU)
     func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
         lock.withLock { $0.fixedNSLocale(locale) }
     }
-#endif
+    #endif
 
     func currentNSLocale() -> _NSSwiftLocale {
         if let result = _currentNSCache.withLock({ $0 }) {
@@ -247,13 +247,13 @@ struct LocaleCache : Sendable, ~Copyable {
         }
     }
 
-#endif // FOUNDATION_FRAMEWORK
+    #endif // FOUNDATION_FRAMEWORK
 
     func fixedComponents(_ comps: Locale.Components) -> any _LocaleProtocol {
         lock.withLock { $0.fixedComponentsWithCache(comps) }
     }
 
-#if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
+    #if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
     func preferences() -> (LocalePreferences, Bool) {
         // On Darwin, we check the current user preferences for Locale values
         var wouldDeadlock: DarwinBoolean = false
@@ -289,7 +289,7 @@ struct LocaleCache : Sendable, ~Copyable {
         }
         return preferredLocaleID
     }
-#else
+    #else
     func preferences() -> (LocalePreferences, Bool) {
         var prefs = LocalePreferences()
         prefs.locale = "en_001"
@@ -304,9 +304,9 @@ struct LocaleCache : Sendable, ~Copyable {
     func preferredLocale() -> String? {
         "en_001"
     }
-#endif
+    #endif
 
-#if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
+    #if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
 
@@ -316,7 +316,7 @@ struct LocaleCache : Sendable, ~Copyable {
         let inner = _LocaleICU(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
         return Locale(inner: inner)
     }
-#endif
+    #endif
 
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     func localeAsIfCurrent(name: String?, overrides: LocalePreferences? = nil, disableBundleMatching: Bool = false) -> Locale {
@@ -337,7 +337,7 @@ struct LocaleCache : Sendable, ~Copyable {
     }
 
     func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         guard !allowsMixedLocalizations else {
             let (prefs, _) = preferences()
             let inner = _LocaleICU(name: nil, prefs: prefs, disableBundleMatching: true)
@@ -356,22 +356,22 @@ struct LocaleCache : Sendable, ~Copyable {
         let (prefs, _) = preferences()
         let inner = _LocaleICU(identifier: identifier, prefs: prefs)
         return Locale(inner: inner)
-#else
+        #else
         // No way to canonicalize on this platform
         return nil
-#endif
+        #endif
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     func localeIdentifierWithLikelySubtags(_ localeID: String, cacheResult: Bool) -> String {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         let existing = lock.withLock {
             $0.identifiersWithLikelySubtags[localeID]
         }
         if let existing {
             return existing
         }
-        
+
         let result = Locale.localeIdentifierWithLikelySubtags(localeID)
         if cacheResult {
             lock.withLock {
@@ -379,9 +379,9 @@ struct LocaleCache : Sendable, ~Copyable {
             }
         }
         return result
-#else
+        #else
         return ""
-#endif
+        #endif
     }
-#endif
+    #endif
 }

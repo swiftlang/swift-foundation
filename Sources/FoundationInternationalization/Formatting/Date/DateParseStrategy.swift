@@ -17,7 +17,7 @@ import FoundationEssentials
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// Options for parsing string representations of dates to create a `Date` instance.
-    public struct ParseStrategy : Hashable, Sendable {
+    public struct ParseStrategy: Hashable, Sendable {
 
         /// Indicates whether to use heuristics when parsing the representation.
         public var isLenient: Bool
@@ -59,7 +59,9 @@ extension Date {
         }
 
         private var formatter: ICUDateFormatter? {
-            let dateFormatInfo = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale?.identifier, timeZoneIdentifier: timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format, parseLenient: isLenient, parseTwoDigitStartDate: twoDigitStartDate)
+            let dateFormatInfo = ICUDateFormatter.DateFormatInfo(
+                localeIdentifier: locale?.identifier, timeZoneIdentifier: timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek,
+                capitalizationContext: .unknown, pattern: format, parseLenient: isLenient, parseTwoDigitStartDate: twoDigitStartDate)
             return ICUDateFormatter.cachedFormatter(for: dateFormatInfo)
         }
 
@@ -71,14 +73,14 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ParseStrategy : ParseStrategy {
+extension Date.ParseStrategy: ParseStrategy {
     /// Returns a `Date` of a given string interpreted using the current settings.
     /// - Parameter value: A string representation of a date.
     /// - Throws: Throws `NSFormattingError` if the string cannot be parsed.
     /// - Returns: A `Date` represented by `value`.
     public func parse(_ value: String) throws -> Date {
         guard let formatter = self.formatter else {
-            throw CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: "Error creating icu date formatter" ])
+            throw CocoaError(CocoaError.formatting, userInfo: [NSDebugDescriptionErrorKey: "Error creating icu date formatter"])
         }
 
         guard let date = formatter.parse(value) else {
@@ -106,7 +108,7 @@ public extension ParseStrategy {
 // MARK: Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.ParseStrategy : CustomConsumingRegexComponent {
+extension Date.ParseStrategy: CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
     public typealias RegexOutput = Date
     /// Processes the input string within the specified bounds, beginning at the given index, and returns the end position of the match and the produced output.
@@ -144,7 +146,7 @@ extension RegexComponent where Self == Date.ParseStrategy {
     ///   - calendar: The calendar with which to interpret the date string. If nil, the default calendar of the specified `locale` is used.
     /// - Returns: A `RegexComponent` to match a localized date string.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public static func date(format: Date.FormatString, locale: Locale, timeZone: TimeZone, calendar: Calendar? = nil, twoDigitStartDate: Date = Date(timeIntervalSince1970: 0) ) -> Self {
+    public static func date(format: Date.FormatString, locale: Locale, timeZone: TimeZone, calendar: Calendar? = nil, twoDigitStartDate: Date = Date(timeIntervalSince1970: 0)) -> Self {
         Date.ParseStrategy(format: format.rawFormat, locale: locale, timeZone: timeZone, calendar: calendar ?? locale.calendar, isLenient: false, twoDigitStartDate: twoDigitStartDate)
     }
 

@@ -12,36 +12,36 @@
 
 extension UInt32 {
     private static var KEYPATH_HEADER_BUFFER_SIZE_MASK: UInt32 { 0x00FF_FFFF }
-    
+
     private static var COMPONENT_HEADER_KIND_MASK: UInt32 { 0x7F00_0000 }
     private static var COMPONENT_HEADER_PAYLOAD_MASK: UInt32 { 0x00FF_FFFF }
-    
+
     private static var COMPUTED_COMPONENT_PAYLOAD_ARGUMENTS_MASK: UInt32 { 0x0008_0000 }
     private static var COMPUTED_COMPONENT_PAYLOAD_SETTABLE_MASK: UInt32 { 0x0040_0000 }
-    
+
     private static var STORED_COMPONENT_PAYLOAD_MAXIMUM_INLINE_OFFSET: UInt32 { 0x007F_FFFC }
-    
+
     fileprivate var _keyPathHeader_bufferSize: Int {
         Int(self & Self.KEYPATH_HEADER_BUFFER_SIZE_MASK)
     }
-    
+
     fileprivate var _keyPathComponentHeader_kind: Int {
         Int((self & Self.COMPONENT_HEADER_KIND_MASK) >> 24)
     }
-    
+
     fileprivate var _keyPathComponentHeader_payload: UInt32 {
         self & Self.COMPONENT_HEADER_PAYLOAD_MASK
     }
-    
+
     fileprivate var _keyPathComponentHeader_storedIsInline: Bool {
         // If the payload value is greater than the maximum inline offset then it is one of the out-of-line sentinel values
         _keyPathComponentHeader_payload <= Self.STORED_COMPONENT_PAYLOAD_MAXIMUM_INLINE_OFFSET
     }
-    
+
     fileprivate var _keyPathComponentHeader_computedHasArguments: Bool {
         (_keyPathComponentHeader_payload & Self.COMPUTED_COMPONENT_PAYLOAD_ARGUMENTS_MASK) != 0
     }
-    
+
     fileprivate var _keyPathComponentHeader_computedIsSettable: Bool {
         (_keyPathComponentHeader_payload & Self.COMPUTED_COMPONENT_PAYLOAD_SETTABLE_MASK) != 0
     }
@@ -49,7 +49,7 @@ extension UInt32 {
 
 extension AnyKeyPath {
     private static var WORD_SIZE: Int { MemoryLayout<Int>.size }
-    
+
     func _validateForPredicateUsage() {
         var ptr = unsafeBitCast(self, to: UnsafeRawPointer.self)
         ptr = ptr.advanced(by: Self.WORD_SIZE * 3) // skip isa, type metadata, and KVC string pointers

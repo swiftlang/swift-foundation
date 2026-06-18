@@ -14,7 +14,7 @@
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension AttributedString {
-    public enum AttributeRunBoundaries : Hashable, Sendable {
+    public enum AttributeRunBoundaries: Hashable, Sendable {
         case paragraph
 
         // FIXME: This is semantically wrong. We do not ever want to constrain attributes on
@@ -51,14 +51,14 @@ extension AttributedString.AttributeRunBoundaries {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension AttributedString {
-    public struct AttributeInvalidationCondition : Hashable, Sendable {
-        private enum _Storage : Hashable {
+    public struct AttributeInvalidationCondition: Hashable, Sendable {
+        private enum _Storage: Hashable {
             case textChanged
             case attributeChanged(String)
         }
-        
+
         private let storage: _Storage
-        
+
         private init(_ storage: _Storage) {
             self.storage = storage
         }
@@ -76,7 +76,7 @@ extension AttributedString {
                 return string
             }
         }
-        
+
         public static let textChanged = Self(.textChanged)
 
         public static func attributeChanged<T: AttributedStringKey>(_ key: T.Type) -> Self {
@@ -86,7 +86,7 @@ extension AttributedString {
         public static func attributeChanged<T: AttributedStringKey>(_ key: KeyPath<AttributeDynamicLookup, T>) -> Self {
             Self(.attributeChanged(T.name))
         }
-        
+
         static func attributeChanged(_ name: String) -> Self {
             Self(.attributeChanged(name))
         }
@@ -121,20 +121,20 @@ extension AttributedString {
 ///
 /// After you extend ``AttributeScope`` like this, extend ``AttributeDynamicLookup`` to allow callers to use dynamic member lookup syntax, like `myAttributedString.outlineColor = .red`.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AttributedStringKey : SendableMetatype {
+public protocol AttributedStringKey: SendableMetatype {
     /// The type of the key's value.
-    associatedtype Value : Hashable
+    associatedtype Value: Hashable
     /// The name of the key.
-    static var name : String { get }
-    
+    static var name: String { get }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var runBoundaries : AttributedString.AttributeRunBoundaries? { get }
-    
+    static var runBoundaries: AttributedString.AttributeRunBoundaries? { get }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var inheritedByAddedText : Bool { get }
-    
+    static var inheritedByAddedText: Bool { get }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { get }
+    static var invalidationConditions: Set<AttributedString.AttributeInvalidationCondition>? { get }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -142,13 +142,13 @@ extension AttributedStringKey {
     public var description: String { Self.name }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public static var runBoundaries : AttributedString.AttributeRunBoundaries? { nil }
+    public static var runBoundaries: AttributedString.AttributeRunBoundaries? { nil }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public static var inheritedByAddedText : Bool { true }
+    public static var inheritedByAddedText: Bool { true }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { nil }
+    public static var invalidationConditions: Set<AttributedString.AttributeInvalidationCondition>? { nil }
 }
 
 // MARK: Attribute Scopes
@@ -180,23 +180,23 @@ public enum AttributeDynamicLookup {
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
-extension AttributeDynamicLookup : Sendable {}
+extension AttributeDynamicLookup: Sendable {}
 
 /// An attribute container that allows dynamic member lookup of its contents within the specified attribute scope.
 ///
 /// Use a ``ScopedAttributeContainer`` when you need to disambiguate between attributes that exist in several attribute scopes that your app uses.
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
-    internal var storage : AttributedString._AttributeStorage
-    
+public struct ScopedAttributeContainer<S: AttributeScope>: Sendable {
+    internal var storage: AttributedString._AttributeStorage
+
     // Record the most recently deleted key for use in AttributedString mutation subscripts that use _modify
     // Note: if ScopedAttributeContainer ever adds a mutating function that can mutate multiple attributes, this will need to record multiple removed keys
-    internal var removedKey : String?
+    internal var removedKey: String?
 
     /// Returns the value of the attribute that the specified key path indicates.
     @preconcurrency
-    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<S, T>) -> T.Value? where T.Value : Sendable {
+    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<S, T>) -> T.Value? where T.Value: Sendable {
         get { storage[T.self] }
         set {
             storage[T.self] = newValue
@@ -206,11 +206,11 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
         }
     }
 
-    internal init(_ storage : AttributedString._AttributeStorage = .init()) {
+    internal init(_ storage: AttributedString._AttributeStorage = .init()) {
         self.storage = storage
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     // TODO: Support scope-specific equality/attributes in FoundationPreview
     internal func equals(_ other: Self) -> Bool {
         for (name, _) in S.attributeKeyTypes() {
@@ -221,15 +221,15 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
         return true
     }
 
-    internal var attributes : AttributeContainer {
+    internal var attributes: AttributeContainer {
         var contents = AttributedString._AttributeStorage()
         for (name, _) in S.attributeKeyTypes() {
             contents[name] = self.storage[name]
         }
         return AttributeContainer(contents)
     }
-    
-#endif // FOUNDATION_FRAMEWORK
+
+    #endif // FOUNDATION_FRAMEWORK
 }
 
 
@@ -248,7 +248,7 @@ internal extension AttributedStringKey {
             return value as AnyObject
         }
     }
-    
+
     static func _convertFromObjectiveCValue(_ value: AnyObject) throws -> Value {
         if let convertibleType = Self.self as? any ObjectiveCConvertibleAttributedStringKey.Type {
             func project<K: ObjectiveCConvertibleAttributedStringKey>(_: K.Type) throws -> Value {

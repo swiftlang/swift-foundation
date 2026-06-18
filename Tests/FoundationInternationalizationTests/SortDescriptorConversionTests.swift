@@ -34,7 +34,7 @@ import Testing
     let uInt64: UInt64
     let uInt: UInt
     let data: Data
-    
+
     init(
         word: String = "wow",
         number: Int = 1,
@@ -64,22 +64,14 @@ import Testing
         self.uInt = uInt
         self.data = data
     }
-    
+
     override func isEqual(_ object: Any?) -> Bool {
         guard let other = object as? Root else { return false }
         return self == other
     }
-    
-    static func ==(_ lhs: Root, _ rhs: Root) -> Bool {
-        return lhs.word == rhs.word &&
-        lhs.number == rhs.number &&
-        lhs.double == rhs.double &&
-        lhs.float == rhs.float &&
-        lhs.int16 == rhs.int16 &&
-        lhs.int32 == rhs.int32 &&
-        lhs.int64 == rhs.int64 &&
-        lhs.uInt == rhs.uInt &&
-        lhs.data == rhs.data
+
+    static func == (_ lhs: Root, _ rhs: Root) -> Bool {
+        return lhs.word == rhs.word && lhs.number == rhs.number && lhs.double == rhs.double && lhs.float == rhs.float && lhs.int16 == rhs.int16 && lhs.int32 == rhs.int32 && lhs.int64 == rhs.int64 && lhs.uInt == rhs.uInt && lhs.data == rhs.data
     }
 }
 
@@ -93,7 +85,7 @@ struct SortDescriptorConversionTests {
         let nsLocalizedStandard = NSSortDescriptor(localizedStandard)
         let nsLocalized = NSSortDescriptor(localized)
         let nsLexical = NSSortDescriptor(lexical)
-        
+
         do {
             let selector = try #require(nsLocalizedStandard.selector)
             #expect(NSStringFromSelector(selector) == "localizedStandardCompare:")
@@ -157,11 +149,11 @@ struct SortDescriptorConversionTests {
         let descending = NSSortDescriptor(keyPath: \Root.word, ascending: false)
         let forward = try #require(SortDescriptor(ascending, comparing: Root.self))
         let reverse = try #require(SortDescriptor(descending, comparing: Root.self))
-        
+
         #expect(forward.order == .forward)
         #expect(reverse.order == .reverse)
     }
-    
+
     @Test func conversion_from_uninitializable_descriptor() throws {
         let nsDesc = NSSortDescriptor(key: "data", ascending: true)
         let desc = try #require(SortDescriptor(nsDesc, comparing: Root.self))
@@ -172,7 +164,7 @@ struct SortDescriptorConversionTests {
         let compareResult = desc.compare(Root(), Root())
         #expect(compareResult == .orderedSame)
     }
-    
+
     @Test func conversion_from_invalid_descriptor() throws {
         let localizedCaseInsensitive = NSSortDescriptor(key: "word", ascending: true, selector: #selector(NSString.localizedCaseInsensitiveCompare))
         let caseInsensitive = NSSortDescriptor(key: "word", ascending: true, selector: #selector(NSString.caseInsensitiveCompare))
@@ -181,7 +173,7 @@ struct SortDescriptorConversionTests {
         #expect(SortDescriptor(caseInsensitive, comparing: Root.self) == nil)
         #expect(SortDescriptor(caseInsensitiveNumeric, comparing: Root.self) == nil)
     }
-    
+
     @Test func key_path_optionality() throws {
         #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.word).keyPath != nil)
         #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeWord).keyPath != nil)
@@ -207,7 +199,7 @@ struct SortDescriptorConversionTests {
         let ns = NSSortDescriptor(key: "word", ascending: true)
         #expect(try #require(SortDescriptor(ns, comparing: Root.self)).stringComparator == nil)
     }
-    
+
     @Test func ordering() {
         let forwardInt = SortDescriptor(\Root.number)
         #expect(forwardInt.compare(Root(number: 3), Root(number: 4)) == ComparisonResult.orderedAscending)
@@ -236,7 +228,7 @@ struct SortDescriptorConversionTests {
         let a = SortDescriptor(\Root.word, comparator: .lexical)
         let b = SortDescriptor(\Root.number)
         let c = SortDescriptor(\Root.float, order: .reverse)
-        
+
         let items: [Root] = [
             Root(word: "d", number: 10),
             Root(word: "b", number: -10),
@@ -246,7 +238,7 @@ struct SortDescriptorConversionTests {
             Root(word: "d", number: 5),
             Root(word: "c", number: 500),
         ]
-        
+
         let expectedA: [Root] = [
             Root(word: "a", number: 0),
             Root(word: "b", number: -10),
@@ -256,7 +248,7 @@ struct SortDescriptorConversionTests {
             Root(word: "d", number: 20),
             Root(word: "d", number: 5),
         ]
-        
+
         let expectedAB: [Root] = [
             Root(word: "a", number: 0),
             Root(word: "b", number: -10),
@@ -266,7 +258,7 @@ struct SortDescriptorConversionTests {
             Root(word: "d", number: 10, float: 10),
             Root(word: "d", number: 20),
         ]
-        
+
         let expectedABC: [Root] = [
             Root(word: "a", number: 0),
             Root(word: "b", number: -10),
@@ -276,7 +268,7 @@ struct SortDescriptorConversionTests {
             Root(word: "d", number: 10),
             Root(word: "d", number: 20),
         ]
-        
+
         #expect(items.sorted(using: a) == expectedA)
         #expect(items.sorted(using: [a, b]) == expectedAB)
         #expect(items.sorted(using: [a, b, c]) == expectedABC)
@@ -290,12 +282,12 @@ struct SortDescriptorConversionTests {
             let decoder = JSONDecoder()
             let reconstructed = try decoder.decode(SortDescriptor<Root>.self, from: encoded)
             #expect(descriptor == reconstructed)
-            
+
             // ensure the comparison still works after reconstruction
             #expect(reconstructed.compare(Root(word: "a"), Root(word: "b")) == .orderedAscending)
         }
     }
-    
+
     @Test func decoding_dissallow_invaled() async throws {
         try await usingCurrentInternationalizationPreferences {
             var otherLocale: Locale {
@@ -305,79 +297,79 @@ struct SortDescriptorConversionTests {
                 }
                 return attempt
             }
-            
+
             let encoder = JSONEncoder()
             let localeStr = String(data: try encoder.encode(Locale.current), encoding: .utf8)!
             let otherLocaleStr = String(data: try encoder.encode(otherLocale), encoding: .utf8)!
-            
+
             let invalidRawValue = """
-            {
-                "order": true,
-                "keyString": "word",
-                "comparison": {
-                    "rawValue": 2131,
-                    "stringComparator": {
-                        "options": 1,
-                        "locale": \(localeStr),
-                        "order": true
+                {
+                    "order": true,
+                    "keyString": "word",
+                    "comparison": {
+                        "rawValue": 2131,
+                        "stringComparator": {
+                            "options": 1,
+                            "locale": \(localeStr),
+                            "order": true
+                        }
                     }
                 }
-            }
-            """.data(using: .utf8)!
-            
+                """.data(using: .utf8)!
+
             let nonStandardComparator = """
-            {
-                "order": true,
-                "keyString": "word",
-                "comparison": {
-                    "rawValue": 13,
-                    "stringComparator": {
-                        "options": 8,
-                        "locale": \(localeStr),
-                        "order": true
+                {
+                    "order": true,
+                    "keyString": "word",
+                    "comparison": {
+                        "rawValue": 13,
+                        "stringComparator": {
+                            "options": 8,
+                            "locale": \(localeStr),
+                            "order": true
+                        }
                     }
                 }
-            }
-            """.data(using: .utf8)!
-            
+                """.data(using: .utf8)!
+
             let nonStandardLocale = """
-            {
-                "order": true,
-                "keyString": "word",
-                "comparison": {
-                    "rawValue": 13,
-                    "stringComparator": {
-                        "options": 8,
-                        "locale": \(otherLocaleStr),
-                        "order": true
+                {
+                    "order": true,
+                    "keyString": "word",
+                    "comparison": {
+                        "rawValue": 13,
+                        "stringComparator": {
+                            "options": 8,
+                            "locale": \(otherLocaleStr),
+                            "order": true
+                        }
                     }
                 }
-            }
-            """.data(using: .utf8)!
-            
+                """.data(using: .utf8)!
+
             let decoder = JSONDecoder()
-            
+
             #expect(throws: (any Error).self) {
                 try decoder.decode(SortDescriptor<Root>.self, from: invalidRawValue)
             }
-            
+
             #expect(throws: (any Error).self) {
                 try decoder.decode(SortDescriptor<Root>.self, from: nonStandardComparator)
             }
-            
+
             #expect(throws: (any Error).self) {
                 let _ = try decoder.decode(SortDescriptor<Root>.self, from: nonStandardLocale)
             }
         }
     }
-    
+
     @Test func string_comparator_property_polarity() {
         // `.stringComparator?.order` should always be `.forward` regardless
         // of the value of `SortDescriptor().order`
         #expect(
             SortDescriptor(\Root.word).stringComparator?.order == .forward
         )
-        
+
         #expect(
             SortDescriptor(\Root.word, order: .reverse).stringComparator?.order == .forward
         )

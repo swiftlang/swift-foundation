@@ -79,15 +79,15 @@ extension Date {
     /// }
     /// ```
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct RelativeFormatStyle : Codable, Hashable, Sendable {
+    public struct RelativeFormatStyle: Codable, Hashable, Sendable {
         @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public typealias Field = Date.ComponentsFormatStyle.Field
 
         /// A type that represents the style to use when formatting the units of relative dates.
         ///
         /// Cases include ``wide``, ``narrow``, ``abbreviated`` and ``spellOut``.
-        public struct UnitsStyle : Codable, Hashable, Sendable {
-            enum Option : Int, Codable, Hashable {
+        public struct UnitsStyle: Codable, Hashable, Sendable {
+            enum Option: Int, Codable, Hashable {
                 case wide
                 case spellOut
                 case abbreviated
@@ -136,8 +136,8 @@ extension Date {
         }
 
         /// A type that represents the style to use when formatting relative dates, such as "1 week ago" or "last week".
-        public struct Presentation : Codable, Hashable, Sendable {
-            enum Option : Int, Codable, Hashable {
+        public struct Presentation: Codable, Hashable, Sendable {
+            enum Option: Int, Codable, Hashable {
                 case numeric
                 case named
             }
@@ -257,7 +257,10 @@ extension Date {
         }
 
         @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-        public init(allowedFields: Set<Field>, presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
+        public init(
+            allowedFields: Set<Field>, presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent,
+            capitalizationContext: FormatStyleCapitalizationContext = .unknown
+        ) {
             self.presentation = presentation
             self.unitsStyle = unitsStyle
             self.capitalizationContext = capitalizationContext
@@ -304,10 +307,10 @@ extension Date {
             return new
         }
 
-        enum ComponentAdjustmentStrategy : Codable, Hashable {
+        enum ComponentAdjustmentStrategy: Codable, Hashable {
             case alignedWithComponentBoundary
             case rounded
-            
+
             private typealias AlignedWithComponentBoundaryCodingKeys = EmptyCodingKeys
             private typealias RoundedCodingKeys = EmptyCodingKeys
         }
@@ -322,21 +325,21 @@ extension Date {
         }
 
         var sortedAllowedComponents: [Calendar.Component] {
-             ICURelativeDateFormatter.sortedAllowedComponents.filter({ component in
-                 guard let field = Date.ComponentsFormatStyle.Field.Option(component: component) else {
-                     return false
-                 }
-                 return _allowedFields.contains(.init(option: field))
-             })
-         }
+            ICURelativeDateFormatter.sortedAllowedComponents.filter({ component in
+                guard let field = Date.ComponentsFormatStyle.Field.Option(component: component) else {
+                    return false
+                }
+                return _allowedFields.contains(.init(option: field))
+            })
+        }
 
-         internal func _format(_ destDate: Date, refDate: Date) -> String {
-             guard let (component, value) = _largestNonZeroComponent(destDate, reference: refDate, adjustComponent: componentAdjustmentStrategy) else {
-                 return ""
-             }
-             
-             return ICURelativeDateFormatter.formatter(for: self).format(value: value, component: component, presentation: self.presentation)!
-         }
+        internal func _format(_ destDate: Date, refDate: Date) -> String {
+            guard let (component, value) = _largestNonZeroComponent(destDate, reference: refDate, adjustComponent: componentAdjustmentStrategy) else {
+                return ""
+            }
+
+            return ICURelativeDateFormatter.formatter(for: self).format(value: value, component: component, presentation: self.presentation)!
+        }
 
         private static func _alignedComponentValue(component: Calendar.Component, for destDate: Date, reference refDate: Date, calendar: Calendar, allowedComponents: Set<Calendar.Component>) -> CalendarComponentAndValue? {
             // Calculates the value for the specified component in `destDate` by shifting (aligning) the reference date to the start or end of the specified component.
@@ -367,12 +370,16 @@ extension Date {
             // "hour: 23, minute: 50" -> "hour: 24" // only carry to the immediate previous value
             // "hour: -23, minute: -30" -> "hour: -24"
 
-            var components = calendar.dateComponents(Set(ICURelativeDateFormatter.sortedAllowedComponents.filter({
-                Date.ComponentsFormatStyle.Field.Option(component: $0)! <= Date.ComponentsFormatStyle.Field.Option(component: largestAllowedComponent)!
-            })).union([.nanosecond]), from: refDate, to: destDate)
+            var components = calendar.dateComponents(
+                Set(
+                    ICURelativeDateFormatter.sortedAllowedComponents.filter({
+                        Date.ComponentsFormatStyle.Field.Option(component: $0)! <= Date.ComponentsFormatStyle.Field.Option(component: largestAllowedComponent)!
+                    })
+                ).union([.nanosecond]), from: refDate, to: destDate)
 
             if let seconds = components.second,
-               abs(components.nanosecond!) >= 500_000_000 {
+                abs(components.nanosecond!) >= 500_000_000
+            {
                 components.second = seconds + components.nanosecond!.signum()
             }
 
@@ -389,7 +396,8 @@ extension Date {
                 }
 
                 guard let largestNonZeroComponent,
-                      let largestNonZeroField = Date.ComponentsFormatStyle.Field.Option(component: largestNonZeroComponent) else {
+                    let largestNonZeroField = Date.ComponentsFormatStyle.Field.Option(component: largestNonZeroComponent)
+                else {
                     return true
                 }
 
@@ -400,11 +408,12 @@ extension Date {
                 return nil
             }
 
-            let secondLargest = ICURelativeDateFormatter.sortedAllowedComponents.first(where: { component in
-                Date.ComponentsFormatStyle.Field.Option(component: component)! < Date.ComponentsFormatStyle.Field.Option(component: largest)!
-            }).map { component in
-                (component: component, value: components.value(for: component) ?? 0)
-            } ?? (.nanosecond, components.nanosecond!)
+            let secondLargest =
+                ICURelativeDateFormatter.sortedAllowedComponents.first(where: { component in
+                    Date.ComponentsFormatStyle.Field.Option(component: component)! < Date.ComponentsFormatStyle.Field.Option(component: largest)!
+                }).map { component in
+                    (component: component, value: components.value(for: component) ?? 0)
+                } ?? (.nanosecond, components.nanosecond!)
 
             var roundedLargest = (component: largest, value: components.value(for: largest) ?? 0)
 
@@ -445,12 +454,13 @@ extension Date {
 
             let comp = largest.component
             if comp == .hour || comp == .minute || comp == .second {
-                compAndValue = Self._roundedLargestComponentValue(
-                    refDate: refDate,
-                    for: destDate,
-                    calendar: calendar,
-                    allowedComponents: allowedComponents,
-                    largestAllowedComponent: comp) ?? largest
+                compAndValue =
+                    Self._roundedLargestComponentValue(
+                        refDate: refDate,
+                        for: destDate,
+                        calendar: calendar,
+                        allowedComponents: allowedComponents,
+                        largestAllowedComponent: comp) ?? largest
             } else {
                 compAndValue = Self._alignedComponentValue(component: largest.component, for: destDate, reference: refDate, calendar: calendar, allowedComponents: allowedComponents) ?? largest
             }
@@ -461,7 +471,7 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.RelativeFormatStyle : FormatStyle {}
+extension Date.RelativeFormatStyle: FormatStyle {}
 
 extension DateComponents {
     var nonZeroComponentsAndValue: [CalendarComponentAndValue] {
@@ -502,6 +512,6 @@ public extension FormatStyle where Self == Date.RelativeFormatStyle {
     /// - Returns: A relative date format style customized with the specified presentation and
     ///   unit styles.
     static func relative(presentation: Date.RelativeFormatStyle.Presentation, unitsStyle: Date.RelativeFormatStyle.UnitsStyle = .wide) -> Self {
-            .init(presentation: presentation, unitsStyle: unitsStyle)
+        .init(presentation: presentation, unitsStyle: unitsStyle)
     }
 }

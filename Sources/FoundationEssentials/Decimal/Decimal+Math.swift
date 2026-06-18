@@ -198,8 +198,7 @@ extension Decimal {
         var carry: UInt32 = 0
         var index: UInt32 = 0
         while index < result._length {
-            let acc = UInt32(result[index]) *
-            UInt32(multiplicand) + carry
+            let acc = UInt32(result[index]) * UInt32(multiplicand) + carry
             carry = acc >> 16
             result[index] = UInt16(acc & 0xFFFF)
             index += 1
@@ -270,7 +269,7 @@ extension Decimal {
         result._exponent = secureExponent
         return result
     }
-    
+
     internal func _multiplyBy10AndAdd(
         number: UInt16
     ) throws -> Decimal {
@@ -687,7 +686,7 @@ extension Decimal {
         }
         var value = self.significand
 
-        for _ in 0 ..< abs(self._exponent) {
+        for _ in 0..<abs(self._exponent) {
             if self._exponent < 0 {
                 if let result = try? value._divide(by: 10) {
                     value = result.result
@@ -731,15 +730,15 @@ extension Decimal {
         }
         return value
     }
-    
+
     #if FOUNDATION_FRAMEWORK
     #else
     @_spi(SwiftCorelibsFoundation)
     public var _int64Value: Int64 { int64Value }
-    
+
     @_spi(SwiftCorelibsFoundation)
     public var _uint64Value: UInt64 { uint64Value }
-    
+
     @_spi(SwiftCorelibsFoundation)
     public var _doubleValue: Double { doubleValue }
     #endif
@@ -924,7 +923,7 @@ extension Decimal {
     private static func _integerAddShort(_ lhs: VariableLengthInteger, rhs: UInt32, maxResultLength: Int? = nil) throws -> VariableLengthInteger {
         var carry: UInt32 = rhs
         var result = VariableLengthInteger(repeating: 0, count: lhs.count)
-        for index in 0 ..< lhs.count {
+        for index in 0..<lhs.count {
             let acc = UInt32(lhs[index]) + carry
             carry = acc >> 16
             result[index] = UInt16(acc & 0xFFFF)
@@ -992,7 +991,7 @@ extension Decimal {
         var carry: UInt32 = 0
         var acc: UInt32 = 0
         var result = VariableLengthInteger(repeating: 0, count: dividend.count)
-        for directIndex in 0 ..< dividend.count {
+        for directIndex in 0..<dividend.count {
             let index = dividend.count - directIndex - 1
             acc = (UInt32(dividend[index]) + carry * (1 << 16))
             result[index] = UInt16(acc / divisor)
@@ -1059,7 +1058,7 @@ extension Decimal {
         var result = VariableLengthInteger(repeating: 0, count: maxResultLength)
         // D2: Initialize j
         // On each pass, build a single value for the quotient
-        for j in 0 ..< quotientLength {
+        for j in 0..<quotientLength {
             // D3: calculate q^
             let tmp: UInt32 = (UInt32(normalizedDividend[dividendLength - j - 1]) << 16) + UInt32(normalizedDividend[dividendLength - j - 2])
             var tmpRemainder = UInt32(tmp % v1)
@@ -1067,21 +1066,18 @@ extension Decimal {
 
             // This test catches all cases where q is really q+2 and
             // most where it is q+1
-            if (q == (1 << 16)) ||
-                (v2 * q > (tmpRemainder << 16) + UInt32(normalizedDividend[dividendLength - j - 3]))  {
+            if (q == (1 << 16)) || (v2 * q > (tmpRemainder << 16) + UInt32(normalizedDividend[dividendLength - j - 3])) {
                 q -= 1
                 tmpRemainder += v1
 
-                if (tmpRemainder < (1 << 16)) &&
-                    ((q == (1 << 16) ) ||
-                     ( v2 * q > (tmpRemainder << 16) + UInt32(normalizedDividend[dividendLength - j - 3]))) {
+                if (tmpRemainder < (1 << 16)) && ((q == (1 << 16)) || (v2 * q > (tmpRemainder << 16) + UInt32(normalizedDividend[dividendLength - j - 3]))) {
                     q -= 1
                 }
             }
             // D4: multiply and subtract
             var multiplyCarry: UInt32 = 0
             var subtractCarry: UInt32 = 1
-            for i in 0 ..< divivisorLength + 1 {
+            for i in 0..<divivisorLength + 1 {
                 // Multiply
                 var acc = q * UInt32(normalizedDivisor[i]) + multiplyCarry
                 multiplyCarry = acc >> 16
@@ -1099,7 +1095,7 @@ extension Decimal {
                 var additionCarry: UInt32 = 0
                 // Subtract one from quotient digit
                 q -= 1
-                for i in 0 ..< divivisorLength {
+                for i in 0..<divivisorLength {
                     let acc = UInt32(normalizedDivisor[i]) + UInt32(normalizedDividend[dividendLength - divivisorLength + i - j - 1]) + additionCarry
                     additionCarry = acc >> 16
                     normalizedDividend[dividendLength - divivisorLength + i - j - 1] = UInt16(acc & 0xFFFF)
@@ -1130,14 +1126,14 @@ extension Decimal {
         }
         var result = VariableLengthInteger(repeating: 0, count: resultLength)
         var carry: UInt32 = 0
-        for j in 0 ..< rhs.count {
+        for j in 0..<rhs.count {
             carry = 0
-            for i in 0 ..< lhs.count {
+            for i in 0..<lhs.count {
                 if i + j < resultLength {
                     let acc = carry + UInt32(result[j + i]) + UInt32(rhs[j]) * UInt32(lhs[i])
                     carry = acc >> 16
                     // FIXME: Check if truncate is okay here
-                    result[j + i] = UInt16(truncatingIfNeeded:acc) & 0xFFFF
+                    result[j + i] = UInt16(truncatingIfNeeded: acc) & 0xFFFF
                 } else if carry != 0 || (rhs[j] > 0 && lhs[i] > 0) {
                     throw _CalculationError.overflow
                 }
@@ -1169,7 +1165,7 @@ extension Decimal {
         }
         var result = VariableLengthInteger(repeating: 0, count: lhs.count)
         var carry: UInt32 = 0
-        for index in 0 ..< lhs.count {
+        for index in 0..<lhs.count {
             let acc = UInt32(lhs[index]) * mulplicand + carry
             carry = acc >> 16
             result[index] = UInt16(acc & 0xFFFF)
@@ -1250,7 +1246,7 @@ extension Decimal {
             return .orderedAscending
         }
 
-        for index in (1 ..< lhs.count + 1).reversed() {
+        for index in (1..<lhs.count + 1).reversed() {
             let left = lhs[index - 1]
             let right = rhs[index - 1]
             if left > right {

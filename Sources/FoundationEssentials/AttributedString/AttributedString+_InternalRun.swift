@@ -73,7 +73,7 @@ extension AttributedString._InternalRun: RopeElement {
 }
 
 extension AttributedString._InternalRun {
-    internal func get<T: AttributedStringKey>(_ k: T.Type) -> T.Value? where T.Value : Sendable {
+    internal func get<T: AttributedStringKey>(_ k: T.Type) -> T.Value? where T.Value: Sendable {
         attributes[k]
     }
 }

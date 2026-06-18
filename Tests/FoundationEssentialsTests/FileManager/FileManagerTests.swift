@@ -43,11 +43,11 @@ extension FileManager {
     }
 }
 
-private struct DelegateCaptures : Equatable, Sendable {
-    struct Operation : Equatable, CustomStringConvertible, Comparable {
+private struct DelegateCaptures: Equatable, Sendable {
+    struct Operation: Equatable, CustomStringConvertible, Comparable {
         let src: String
         let dst: String?
-        
+
         var description: String {
             if let dst {
                 "'\(src)' --> '\(dst)'"
@@ -56,25 +56,25 @@ private struct DelegateCaptures : Equatable, Sendable {
             }
         }
 
-        static func <(lhs: Operation, rhs: Operation) -> Bool {
-          lhs.src < rhs.src || lhs.dst == nil || (rhs.dst != nil && lhs.dst! < rhs.dst!)
+        static func < (lhs: Operation, rhs: Operation) -> Bool {
+            lhs.src < rhs.src || lhs.dst == nil || (rhs.dst != nil && lhs.dst! < rhs.dst!)
         }
-        
+
         init(_ src: String, _ dst: String? = nil) {
             self.src = src
             self.dst = dst
         }
     }
-    
-    struct ErrorOperation : Equatable, CustomStringConvertible {
+
+    struct ErrorOperation: Equatable, CustomStringConvertible {
         let op: Operation
         let code: CocoaError.Code?
-        
+
         init(_ src: String, _ dst: String? = nil, code: CocoaError.Code?) {
             self.op = Operation(src, dst)
             self.code = code
         }
-        
+
         var description: String {
             if let code {
                 "\(op.description) {\(code.rawValue)}"
@@ -91,97 +91,97 @@ private struct DelegateCaptures : Equatable, Sendable {
     var shouldProceedAfterLinkError: [ErrorOperation] = []
     var shouldRemove: [Operation] = []
     var shouldProceedAfterRemoveError: [ErrorOperation] = []
-    
+
     var isEmpty: Bool {
         self == DelegateCaptures()
     }
 }
 
 #if FOUNDATION_FRAMEWORK
-class CapturingFileManagerDelegate : NSObject, FileManagerDelegate, @unchecked Sendable {
+class CapturingFileManagerDelegate: NSObject, FileManagerDelegate, @unchecked Sendable {
     // Sendable note: This is only used on one thread during testing
     fileprivate nonisolated(unsafe) var captures = DelegateCaptures()
-    
+
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldCopy.append(.init(srcPath, dstPath))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, copyingItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldProceedAfterCopyError.append(.init(srcPath, dstPath, code: (error as? CocoaError)?.code))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldMoveItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldMove.append(.init(srcPath, dstPath))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, movingItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldProceedAfterMoveError.append(.init(srcPath, dstPath, code: (error as? CocoaError)?.code))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldLinkItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldLink.append(.init(srcPath, dstPath))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, linkingItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldProceedAfterLinkError.append(.init(srcPath, dstPath, code: (error as? CocoaError)?.code))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldRemoveItemAtPath path: String) -> Bool {
         captures.shouldRemove.append(.init(path))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, removingItemAtPath path: String) -> Bool {
         captures.shouldProceedAfterRemoveError.append(DelegateCaptures.ErrorOperation(path, code: (error as? CocoaError)?.code))
         return true
     }
 }
 #else
-final class CapturingFileManagerDelegate : FileManagerDelegate, Sendable {
+final class CapturingFileManagerDelegate: FileManagerDelegate, Sendable {
     // Sendable note: This is only used on one thread during testing
     fileprivate nonisolated(unsafe) var captures = DelegateCaptures()
-    
+
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldCopy.append(.init(srcPath, dstPath))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, copyingItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldProceedAfterCopyError.append(.init(srcPath, dstPath, code: (error as? CocoaError)?.code))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldMoveItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldMove.append(.init(srcPath, dstPath))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, movingItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldProceedAfterMoveError.append(.init(srcPath, dstPath, code: (error as? CocoaError)?.code))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldLinkItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldLink.append(.init(srcPath, dstPath))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, linkingItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldProceedAfterLinkError.append(.init(srcPath, dstPath, code: (error as? CocoaError)?.code))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldRemoveItemAtPath path: String) -> Bool {
         captures.shouldRemove.append(.init(path))
         return true
     }
-    
+
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: any Error, removingItemAtPath path: String) -> Bool {
         captures.shouldProceedAfterRemoveError.append(DelegateCaptures.ErrorOperation(path, code: (error as? CocoaError)?.code))
         return true
@@ -191,7 +191,7 @@ final class CapturingFileManagerDelegate : FileManagerDelegate, Sendable {
 
 @Suite("FileManager")
 private struct FileManagerTests {
-    
+
     private static var isUnixRoot: Bool {
         #if !os(Windows)
         getuid() == 0
@@ -199,7 +199,7 @@ private struct FileManagerTests {
         false
         #endif
     }
-    
+
     private static var isWindows: Bool {
         #if os(Windows)
         true
@@ -207,7 +207,7 @@ private struct FileManagerTests {
         false
         #endif
     }
-    
+
     private static var isDarwin: Bool {
         #if canImport(Darwin)
         true
@@ -215,7 +215,7 @@ private struct FileManagerTests {
         false
         #endif
     }
-    
+
     private static var isLinux: Bool {
         #if os(Linux)
         true
@@ -223,11 +223,11 @@ private struct FileManagerTests {
         false
         #endif
     }
-    
+
     private func randomData(count: Int = 10000) -> Data {
-        Data((0 ..< count).map { _ in UInt8.random(in: .min ..< .max) })
+        Data((0..<count).map { _ in UInt8.random(in: .min ..< .max) })
     }
-    
+
     @Test func contentsAtPath() async throws {
         let data = randomData()
         try await FilePlayground {
@@ -236,7 +236,7 @@ private struct FileManagerTests {
             #expect($0.contents(atPath: "test") == data)
         }
     }
-    
+
     @Test func contentsEqualAtPaths() async throws {
         try await FilePlayground {
             Directory("dir1") {
@@ -289,7 +289,7 @@ private struct FileManagerTests {
         // Create files with sizes that are NOT multiples of 8KB (the internal buffer size)
         // This exercises the case where the last read returns fewer bytes than the buffer size.
         let sizes = [1, 100, 1000, 8191, 8193, 10000, 16385]
-        
+
         for size in sizes {
             let data = Data((0..<size).map { _ in UInt8.random(in: .min ... .max) })
             try await FilePlayground {
@@ -588,7 +588,7 @@ private struct FileManagerTests {
     @Test func copyItemAtPathToPath() async throws {
         let data = randomData()
         try await FilePlayground {
-            Directory("dir", attributes: [.posixPermissions : 0o777]) {
+            Directory("dir", attributes: [.posixPermissions: 0o777]) {
                 File("foo", contents: data)
                 "bar"
             }
@@ -599,16 +599,16 @@ private struct FileManagerTests {
             #expect(try fileManager.subpathsOfDirectory(atPath: ".").sorted() == ["dir", "dir/bar", "dir/foo", "dir2", "dir2/bar", "dir2/foo", "other_file"])
             #expect(fileManager.contents(atPath: "dir/foo") == data)
             #expect(fileManager.contents(atPath: "dir2/foo") == data)
-#if os(Windows)
+            #if os(Windows)
             #expect(fileManager.delegateCaptures.shouldCopy == [.init("dir", "dir2"), .init("dir/bar", "dir2/bar"), .init("dir/foo", "dir2/foo")])
-#else
+            #else
             var shouldCopy = fileManager.delegateCaptures.shouldCopy
             #expect(shouldCopy.removeFirst() == .init("dir", "dir2"))
             #expect(shouldCopy.sorted() == [.init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")].sorted())
 
             // Specifically for non-Windows (where copying directory metadata takes a special path) double check that the metadata was copied exactly
             #expect(try fileManager.attributesOfItem(atPath: "dir2")[.posixPermissions] as? UInt == 0o777)
-#endif
+            #endif
             #expect {
                 try fileManager.copyItem(atPath: "does_not_exist", toPath: "dir3")
             } throws: {
@@ -756,7 +756,7 @@ private struct FileManagerTests {
             #expect(!$0.fileExists(atPath: "link_to_nonexistent"))
         }
     }
-    
+
     @Test(.disabled(if: isUnixRoot, "This test is not available when running as the root user - root users can always access anything"))
     func fileAccessAtPath() async throws {
         try await FilePlayground {
@@ -807,7 +807,7 @@ private struct FileManagerTests {
             }
         }
     }
-    
+
     @Test(.enabled(if: isDarwin || isLinux))
     func fileExtendedAttributes() async throws {
         try await FilePlayground {
@@ -819,9 +819,9 @@ private struct FileManagerTests {
             let key = "org.swift.foundation.testattribute"
             #endif
             let value = Data("Hello, world".utf8)
-            try $0.setAttributes([._extendedAttributes : [key : value]], ofItemAtPath: "Foo")
+            try $0.setAttributes([._extendedAttributes: [key: value]], ofItemAtPath: "Foo")
             let attrs = try $0.attributesOfItem(atPath: "Foo")
-            let xattrs = try #require(attrs[._extendedAttributes] as? [String : Data])
+            let xattrs = try #require(attrs[._extendedAttributes] as? [String: Data])
             #expect(xattrs.count == 1)
             #expect(xattrs[key] == value)
         }
@@ -844,17 +844,17 @@ private struct FileManagerTests {
 
             // Test get current directory path when it's parent directory was removed.
             #expect(fileManager.changeCurrentDirectoryPath("dir"))
-#if os(Windows)
+            #if os(Windows)
             // Removing the current working directory fails on Windows because the directory is in use.
             #expect {
                 try fileManager.removeItem(atPath: fileManager.currentDirectoryPath)
             } throws: {
                 ($0 as? CocoaError)?.code == .fileWriteNoPermission
             }
-#else
+            #else
             try fileManager.removeItem(atPath: fileManager.currentDirectoryPath)
             #expect(fileManager.currentDirectoryPath == "")
-#endif
+            #endif
         }
     }
 
@@ -870,7 +870,7 @@ private struct FileManagerTests {
                 ("none", false, false),
                 ("immutable", true, false),
                 ("appendOnly", false, true),
-                ("immutable_appendOnly", true, true)
+                ("immutable_appendOnly", true, true),
             ]
 
             for test in tests {
@@ -915,7 +915,7 @@ private struct FileManagerTests {
             #expect(try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date == sentinelDate)
             for value in [Double.infinity, -Double.infinity, Double.nan] {
                 // Malformed modification dates should be dropped instead of throwing or crashing
-                try $0.setAttributes([.modificationDate : Date(timeIntervalSince1970: value)], ofItemAtPath: "foo")
+                try $0.setAttributes([.modificationDate: Date(timeIntervalSince1970: value)], ofItemAtPath: "foo")
             }
             #expect(try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date == sentinelDate)
         }
@@ -923,7 +923,7 @@ private struct FileManagerTests {
 
     @Test func implicitlyConvertibleFileAttributes() async throws {
         try await FilePlayground {
-            File("foo", attributes: [.posixPermissions : UInt16(0o644)])
+            File("foo", attributes: [.posixPermissions: UInt16(0o644)])
         }.test {
             let attributes = try $0.attributesOfItem(atPath: "foo")
 
@@ -950,9 +950,9 @@ private struct FileManagerTests {
     @Test(.enabled(if: isDarwin, "This test is not applicable on this platform"))
     func standardizingPathAutomount() async throws {
         let tests = [
-            "/private/System" : "/private/System",
-            "/private/tmp" : "/tmp",
-            "/private/System/foo" : "/private/System/foo"
+            "/private/System": "/private/System",
+            "/private/tmp": "/tmp",
+            "/private/System/foo": "/private/System/foo",
         ]
         for (input, expected) in tests {
             #expect(input.standardizingPath == expected, "Standardizing the path '\(input)' did not produce the expected result")
@@ -997,19 +997,20 @@ private struct FileManagerTests {
         }
 
         // Cross platform paths that always exist
-        assertSearchPaths([
-            .userDirectory,
-            .documentDirectory,
-            .autosavedInformationDirectory,
-            .autosavedInformationDirectory,
-            .desktopDirectory,
-            .cachesDirectory,
-            .applicationSupportDirectory,
-            .downloadsDirectory,
-            .moviesDirectory,
-            .musicDirectory,
-            .sharedPublicDirectory
-        ], exists: true)
+        assertSearchPaths(
+            [
+                .userDirectory,
+                .documentDirectory,
+                .autosavedInformationDirectory,
+                .autosavedInformationDirectory,
+                .desktopDirectory,
+                .cachesDirectory,
+                .applicationSupportDirectory,
+                .downloadsDirectory,
+                .moviesDirectory,
+                .musicDirectory,
+                .sharedPublicDirectory,
+            ], exists: true)
 
         #if canImport(Darwin)
         let isDarwin = true
@@ -1018,21 +1019,22 @@ private struct FileManagerTests {
         #endif
 
         // Darwin-only paths
-        assertSearchPaths([
-            .applicationDirectory,
-            .demoApplicationDirectory,
-            .developerApplicationDirectory,
-            .adminApplicationDirectory,
-            .libraryDirectory,
-            .developerDirectory,
-            .documentationDirectory,
-            .coreServiceDirectory,
-            .inputMethodsDirectory,
-            .preferencePanesDirectory,
-            .allApplicationsDirectory,
-            .allLibrariesDirectory,
-            .printerDescriptionDirectory
-        ], exists: isDarwin)
+        assertSearchPaths(
+            [
+                .applicationDirectory,
+                .demoApplicationDirectory,
+                .developerApplicationDirectory,
+                .adminApplicationDirectory,
+                .libraryDirectory,
+                .developerDirectory,
+                .documentationDirectory,
+                .coreServiceDirectory,
+                .inputMethodsDirectory,
+                .preferencePanesDirectory,
+                .allApplicationsDirectory,
+                .allLibrariesDirectory,
+                .printerDescriptionDirectory,
+            ], exists: isDarwin)
 
         #if os(macOS)
         let isMacOS = true
@@ -1238,11 +1240,12 @@ private struct FileManagerTests {
             #expect(throws: Never.self) { try Data("hello".utf8).write(to: URL(fileURLWithPath: dirName + "/" + fileName + ".v2")) }
             #expect(fileManager.contentsEqual(atPath: dirName + "/" + fileName, andPath: dirName + "/" + fileName + ".v2"))
 
-            #expect(try fileManager.subpathsOfDirectory(atPath: dirName).sorted() == [
-                fileName,
-                fileName + ".bat",
-                fileName + ".v2"
-            ])
+            #expect(
+                try fileManager.subpathsOfDirectory(atPath: dirName).sorted() == [
+                    fileName,
+                    fileName + ".bat",
+                    fileName + ".v2",
+                ])
 
             #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir1"), withIntermediateDirectories: false) }
 

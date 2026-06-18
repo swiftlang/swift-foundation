@@ -21,22 +21,22 @@ import Testing
 private protocol Buildable {
     func build(in path: String, using fileManager: FileManager) throws
 }
-    
-struct File : ExpressibleByStringLiteral, Buildable {
+
+struct File: ExpressibleByStringLiteral, Buildable {
     private let name: String
-    private let attributes: [FileAttributeKey : Any]?
+    private let attributes: [FileAttributeKey: Any]?
     private let contents: Data?
-    
-    init(_ name: String, attributes: [FileAttributeKey : Any]? = nil, contents: Data? = nil) {
+
+    init(_ name: String, attributes: [FileAttributeKey: Any]? = nil, contents: Data? = nil) {
         self.name = name
         self.attributes = attributes
         self.contents = contents
     }
-    
+
     init(stringLiteral value: String) {
         self.init(value)
     }
-    
+
     fileprivate func build(in path: String, using fileManager: FileManager) throws {
         guard fileManager.createFile(atPath: path.appendingPathComponent(name), contents: contents, attributes: attributes) else {
             throw CocoaError(.fileWriteUnknown)
@@ -44,15 +44,15 @@ struct File : ExpressibleByStringLiteral, Buildable {
     }
 }
 
-struct SymbolicLink : Buildable {
+struct SymbolicLink: Buildable {
     fileprivate let name: String
     private let destination: String
-    
+
     init(_ name: String, destination: String) {
         self.name = name
         self.destination = destination
     }
-    
+
     fileprivate func build(in path: String, using fileManager: FileManager) throws {
         let linkPath = path.appendingPathComponent(name)
         let destPath = path.appendingPathComponent(destination)
@@ -60,17 +60,17 @@ struct SymbolicLink : Buildable {
     }
 }
 
-struct Directory : Buildable {
+struct Directory: Buildable {
     fileprivate let name: String
-    private let attributes: [FileAttributeKey : Any]?
+    private let attributes: [FileAttributeKey: Any]?
     private let contents: [FilePlayground.Item]
-    
-    init(_ name: String, attributes: [FileAttributeKey : Any]? = nil, @FilePlayground.DirectoryBuilder _ contentsClosure: () -> [FilePlayground.Item]) {
+
+    init(_ name: String, attributes: [FileAttributeKey: Any]? = nil, @FilePlayground.DirectoryBuilder _ contentsClosure: () -> [FilePlayground.Item]) {
         self.name = name
         self.attributes = attributes
         self.contents = contentsClosure()
     }
-    
+
     fileprivate func build(in path: String, using fileManager: FileManager) throws {
         let dirPath = path.appendingPathComponent(name)
         try fileManager.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: attributes)
@@ -83,9 +83,9 @@ struct Directory : Buildable {
 @globalActor
 actor CurrentWorkingDirectoryActor: GlobalActor {
     static let shared = CurrentWorkingDirectoryActor()
-    
+
     private init() {}
-    
+
     @CurrentWorkingDirectoryActor
     static func withCurrentWorkingDirectory(
         _ path: String,
@@ -103,11 +103,11 @@ actor CurrentWorkingDirectoryActor: GlobalActor {
 }
 
 struct FilePlayground {
-    enum Item : Buildable {
+    enum Item: Buildable {
         case file(File)
         case directory(Directory)
         case symbolicLink(SymbolicLink)
-        
+
         fileprivate func build(in path: String, using fileManager: FileManager) throws {
             switch self {
             case let .file(file): try file.build(in: path, using: fileManager)
@@ -116,32 +116,32 @@ struct FilePlayground {
             }
         }
     }
-    
+
     @resultBuilder
     enum DirectoryBuilder {
         static func buildBlock(_ components: Item...) -> [Item] {
             components
         }
-        
+
         static func buildExpression(_ expression: File) -> Item {
             .file(expression)
         }
-        
+
         static func buildExpression(_ expression: Directory) -> Item {
             .directory(expression)
         }
-        
+
         static func buildExpression(_ expression: SymbolicLink) -> Item {
             .symbolicLink(expression)
         }
     }
-    
+
     private let directory: Directory
-    
+
     init(@DirectoryBuilder _ contentsClosure: () -> [Item]) {
         self.directory = Directory("FilePlayground_\(UUID().uuidString)", contentsClosure)
     }
-    
+
     func test(captureDelegateCalls: Bool = false, sourceLocation: SourceLocation = #_sourceLocation, _ tester: sending (FileManager) throws -> Void) async throws {
         let capturingDelegate = CapturingFileManagerDelegate()
         let tempDir = String.temporaryDirectoryPath

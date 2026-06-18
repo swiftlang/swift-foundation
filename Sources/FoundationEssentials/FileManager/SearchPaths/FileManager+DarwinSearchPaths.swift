@@ -37,11 +37,11 @@ private func foundation_sysdir_start_search_path_enumeration(_ directory: UInt, 
 struct _DarwinSearchPathsSequence: Sequence {
     let directory: FileManager.SearchPathDirectory
     let domainMask: FileManager.SearchPathDomainMask
-    
+
     final class Iterator: IteratorProtocol {
         let directory: FileManager.SearchPathDirectory
         let domainMask: FileManager.SearchPathDomainMask
-        
+
         private enum State {
             case sysdir(sysdir_search_path_enumeration_state)
             #if os(macOS) && FOUNDATION_FRAMEWORK
@@ -49,11 +49,11 @@ struct _DarwinSearchPathsSequence: Sequence {
             #endif
         }
         private var state: State
-        
+
         init(directory: FileManager.SearchPathDirectory, domainMask: FileManager.SearchPathDomainMask) {
             self.directory = directory
             self.domainMask = domainMask
-            
+
             switch directory {
             #if os(macOS) && FOUNDATION_FRAMEWORK
             case .trashDirectory:
@@ -61,12 +61,12 @@ struct _DarwinSearchPathsSequence: Sequence {
             case ._homeDirectory, .applicationScriptsDirectory:
                 state = .special(domainMask.intersection(.userDomainMask))
             #endif
-                
+
             default:
                 state = .sysdir(foundation_sysdir_start_search_path_enumeration(directory.rawValue, domainMask.rawValue))
             }
         }
-        
+
         func next() -> String? {
             switch state {
             case .sysdir(let sysdirState):
@@ -92,11 +92,11 @@ struct _DarwinSearchPathsSequence: Sequence {
             #endif
             }
         }
-        
+
         #if os(macOS) && FOUNDATION_FRAMEWORK
         private func _specialFindReturn(_ buffer: UnsafeMutableBufferPointer<CChar>) -> String? {
             guard buffer.baseAddress!.pointee != 0 else { return nil }
-            
+
             let path = String(cString: buffer.baseAddress!)
             // strip trailing slashes because NSPathUtilities doesn't return paths with trailing slashes.
             guard let endIndex = path.unicodeScalars.lastIndex(where: { $0 != "/" }) else {
@@ -105,10 +105,10 @@ struct _DarwinSearchPathsSequence: Sequence {
             }
             return String(path[...endIndex])
         }
-        
+
         private func _specialFind(_ directory: FileManager.SearchPathDirectory, in mask: FileManager.SearchPathDomainMask) -> String? {
             withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { cpath in
-                switch (directory, mask)  {
+                switch (directory, mask) {
                 case (.trashDirectory, .userDomainMask):
                     // get the trash relative to the home directory without checking to see if the directory exists
                     return String.homeDirectoryPath().withFileSystemRepresentation { homePathPtr -> String? in
@@ -121,7 +121,7 @@ struct _DarwinSearchPathsSequence: Sequence {
                         }
                         return nil
                     }
-                    
+
                 case (.trashDirectory, .localDomainMask):
                     // get the trash on the boot volume without checking to see if the directory exists
                     if __user_relative_dirname(geteuid(), DIRHELPER_RELATIVE_TRASH, "/", cpath.baseAddress!, FileManager.MAX_PATH_SIZE) != nil {
@@ -131,16 +131,16 @@ struct _DarwinSearchPathsSequence: Sequence {
                         }
                     }
                     return nil
-                    
+
                 case (.applicationScriptsDirectory, .userDomainMask):
                     guard let id = _NSCodeSigningIdentifierForCurrentProcess() else {
                         return nil
                     }
                     return "\("~".replacingTildeWithRealHomeDirectory)/Library/Application Scripts/\(id)"
-                    
+
                 case (._homeDirectory, .userDomainMask):
                     return "~"
-                    
+
                 default:
                     return nil
                 }
@@ -148,7 +148,7 @@ struct _DarwinSearchPathsSequence: Sequence {
         }
         #endif
     }
-    
+
     func makeIterator() -> Iterator {
         Iterator(directory: directory, domainMask: domainMask)
     }

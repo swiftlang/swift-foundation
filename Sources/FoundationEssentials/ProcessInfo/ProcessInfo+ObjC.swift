@@ -39,7 +39,7 @@ internal final class _NSSwiftProcessInfo: ProcessInfo, @unchecked Sendable {
 // MARK: - Accessing Process Information
 extension _NSSwiftProcessInfo {
     override var arguments: [String] { _processInfo.arguments }
-    override var environment: [String : String] { _processInfo.environment }
+    override var environment: [String: String] { _processInfo.environment }
     override var globallyUniqueString: String { _processInfo.globallyUniqueString }
     override var processIdentifier: Int32 { _processInfo.processIdentifier }
     override var processName: String {
@@ -52,28 +52,28 @@ extension _NSSwiftProcessInfo {
     }
 
     override var isiOSAppOnMac: Bool {
-#if os(macOS)
+        #if os(macOS)
         return dyld_get_active_platform() == PLATFORM_IOS
-#else
+        #else
         return false
-#endif
+        #endif
     }
-    
+
     override var isiOSAppOnVision: Bool {
-#if os(visionOS)
+        #if os(visionOS)
         return dyld_get_active_platform() == PLATFORM_IOS || dyld_get_active_platform() == PLATFORM_IOSSIMULATOR
-#else
+        #else
         return false
-#endif
+        #endif
     }
 }
 
 // MARK: - Accessing User Information
 extension _NSSwiftProcessInfo {
-#if os(macOS)
+    #if os(macOS)
     override var userName: String { _processInfo.userName }
     override var fullUserName: String { _processInfo.fullUserName }
-#endif
+    #endif
 }
 
 // MARK: - Getting Computer Information

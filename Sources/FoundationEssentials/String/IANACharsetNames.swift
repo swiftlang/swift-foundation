@@ -89,7 +89,7 @@ extension IANACharset {
         preferredMIMEName: "ISO-2022-JP",
         name: "ISO-2022-JP",
         aliases: [
-            "csISO2022JP",
+            "csISO2022JP"
         ]
     )
 
@@ -98,7 +98,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "UTF-8",
         aliases: [
-            "csUTF8",
+            "csUTF8"
         ]
     )
 
@@ -107,7 +107,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "UTF-16BE",
         aliases: [
-            "csUTF16BE",
+            "csUTF16BE"
         ]
     )
 
@@ -116,7 +116,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "UTF-16LE",
         aliases: [
-            "csUTF16LE",
+            "csUTF16LE"
         ]
     )
 
@@ -125,7 +125,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "UTF-16",
         aliases: [
-            "csUTF16",
+            "csUTF16"
         ]
     )
 
@@ -134,7 +134,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "UTF-32",
         aliases: [
-            "csUTF32",
+            "csUTF32"
         ]
     )
 
@@ -143,7 +143,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "UTF-32BE",
         aliases: [
-            "csUTF32BE",
+            "csUTF32BE"
         ]
     )
 
@@ -152,7 +152,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "UTF-32LE",
         aliases: [
-            "csUTF32LE",
+            "csUTF32LE"
         ]
     )
 
@@ -171,7 +171,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "windows-1250",
         aliases: [
-            "cswindows1250",
+            "cswindows1250"
         ]
     )
 
@@ -180,7 +180,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "windows-1251",
         aliases: [
-            "cswindows1251",
+            "cswindows1251"
         ]
     )
 
@@ -189,7 +189,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "windows-1252",
         aliases: [
-            "cswindows1252",
+            "cswindows1252"
         ]
     )
 
@@ -198,7 +198,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "windows-1253",
         aliases: [
-            "cswindows1253",
+            "cswindows1253"
         ]
     )
 
@@ -207,7 +207,7 @@ extension IANACharset {
         preferredMIMEName: nil,
         name: "windows-1254",
         aliases: [
-            "cswindows1254",
+            "cswindows1254"
         ]
     )
 }

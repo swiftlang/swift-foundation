@@ -41,38 +41,38 @@ private struct HebrewDSTPolicyParityTests {
 
     static let utcDateProbes: [DSTProbe] = [
         // LA fall-back 2024-11-03: 02:00 PDT -> 01:00 PST (01:00-01:59 repeats)
-        DSTProbe(label: "fall-back day, 00:30 (unambiguous PDT)",  year: 2024, month: 11, day:  3, hour:  0, minute: 30),
-        DSTProbe(label: "fall-back day, 01:00 (start of repeat)",  year: 2024, month: 11, day:  3, hour:  1, minute:  0),
-        DSTProbe(label: "fall-back day, 01:30 (mid repeat)",       year: 2024, month: 11, day:  3, hour:  1, minute: 30),
-        DSTProbe(label: "fall-back day, 01:59 (end of repeat)",    year: 2024, month: 11, day:  3, hour:  1, minute: 59),
-        DSTProbe(label: "fall-back day, 02:00 (post-transition)",  year: 2024, month: 11, day:  3, hour:  2, minute:  0),
-        DSTProbe(label: "fall-back day, 02:30 (unambiguous PST)",  year: 2024, month: 11, day:  3, hour:  2, minute: 30),
+        DSTProbe(label: "fall-back day, 00:30 (unambiguous PDT)", year: 2024, month: 11, day: 3, hour: 0, minute: 30),
+        DSTProbe(label: "fall-back day, 01:00 (start of repeat)", year: 2024, month: 11, day: 3, hour: 1, minute: 0),
+        DSTProbe(label: "fall-back day, 01:30 (mid repeat)", year: 2024, month: 11, day: 3, hour: 1, minute: 30),
+        DSTProbe(label: "fall-back day, 01:59 (end of repeat)", year: 2024, month: 11, day: 3, hour: 1, minute: 59),
+        DSTProbe(label: "fall-back day, 02:00 (post-transition)", year: 2024, month: 11, day: 3, hour: 2, minute: 0),
+        DSTProbe(label: "fall-back day, 02:30 (unambiguous PST)", year: 2024, month: 11, day: 3, hour: 2, minute: 30),
 
         // LA spring-forward 2024-03-10: 02:00 PST -> 03:00 PDT (02:00-02:59 skipped)
-        DSTProbe(label: "spring-forward, 01:30 (unambiguous PST)", year: 2024, month:  3, day: 10, hour:  1, minute: 30),
-        DSTProbe(label: "spring-forward, 01:59 (last pre-skip)",   year: 2024, month:  3, day: 10, hour:  1, minute: 59),
-        DSTProbe(label: "spring-forward, 02:00 (start of skip)",   year: 2024, month:  3, day: 10, hour:  2, minute:  0),
-        DSTProbe(label: "spring-forward, 02:30 (mid skip)",        year: 2024, month:  3, day: 10, hour:  2, minute: 30),
-        DSTProbe(label: "spring-forward, 02:59 (end of skip)",     year: 2024, month:  3, day: 10, hour:  2, minute: 59),
-        DSTProbe(label: "spring-forward, 03:00 (post-transition)", year: 2024, month:  3, day: 10, hour:  3, minute:  0),
-        DSTProbe(label: "spring-forward, 03:30 (unambiguous PDT)", year: 2024, month:  3, day: 10, hour:  3, minute: 30),
+        DSTProbe(label: "spring-forward, 01:30 (unambiguous PST)", year: 2024, month: 3, day: 10, hour: 1, minute: 30),
+        DSTProbe(label: "spring-forward, 01:59 (last pre-skip)", year: 2024, month: 3, day: 10, hour: 1, minute: 59),
+        DSTProbe(label: "spring-forward, 02:00 (start of skip)", year: 2024, month: 3, day: 10, hour: 2, minute: 0),
+        DSTProbe(label: "spring-forward, 02:30 (mid skip)", year: 2024, month: 3, day: 10, hour: 2, minute: 30),
+        DSTProbe(label: "spring-forward, 02:59 (end of skip)", year: 2024, month: 3, day: 10, hour: 2, minute: 59),
+        DSTProbe(label: "spring-forward, 03:00 (post-transition)", year: 2024, month: 3, day: 10, hour: 3, minute: 0),
+        DSTProbe(label: "spring-forward, 03:30 (unambiguous PDT)", year: 2024, month: 3, day: 10, hour: 3, minute: 30),
 
         // 2025 transitions
-        DSTProbe(label: "LA 2025 fall-back, 01:30 (mid repeat)",   year: 2025, month: 11, day:  2, hour:  1, minute: 30),
-        DSTProbe(label: "LA 2025 spring-forward, 02:30 (skipped)", year: 2025, month:  3, day:  9, hour:  2, minute: 30),
+        DSTProbe(label: "LA 2025 fall-back, 01:30 (mid repeat)", year: 2025, month: 11, day: 2, hour: 1, minute: 30),
+        DSTProbe(label: "LA 2025 spring-forward, 02:30 (skipped)", year: 2025, month: 3, day: 9, hour: 2, minute: 30),
 
         // Non-DST baseline (all 4 combinations agree, no policy effect)
-        DSTProbe(label: "non-DST baseline, 12:00 mid-summer",      year: 2024, month:  7, day: 15, hour: 12, minute:  0),
+        DSTProbe(label: "non-DST baseline, 12:00 mid-summer", year: 2024, month: 7, day: 15, hour: 12, minute: 0),
     ]
 
     static let dateFromProbes: [DSTProbe] = [
-        DSTProbe(label: "fall-back 01:30 LA",    year: 2024, month: 11, day:  3, hour:  1, minute: 30),
-        DSTProbe(label: "fall-back 02:30 LA",    year: 2024, month: 11, day:  3, hour:  2, minute: 30),
-        DSTProbe(label: "spring-forward 02:30",  year: 2024, month:  3, day: 10, hour:  2, minute: 30),
-        DSTProbe(label: "spring-forward 03:00",  year: 2024, month:  3, day: 10, hour:  3, minute:  0),
-        DSTProbe(label: "LA 2025 fall 01:30",    year: 2025, month: 11, day:  2, hour:  1, minute: 30),
-        DSTProbe(label: "LA 2025 spring 02:30",  year: 2025, month:  3, day:  9, hour:  2, minute: 30),
-        DSTProbe(label: "non-DST midsummer",     year: 2024, month:  7, day: 15, hour: 12, minute:  0),
+        DSTProbe(label: "fall-back 01:30 LA", year: 2024, month: 11, day: 3, hour: 1, minute: 30),
+        DSTProbe(label: "fall-back 02:30 LA", year: 2024, month: 11, day: 3, hour: 2, minute: 30),
+        DSTProbe(label: "spring-forward 02:30", year: 2024, month: 3, day: 10, hour: 2, minute: 30),
+        DSTProbe(label: "spring-forward 03:00", year: 2024, month: 3, day: 10, hour: 3, minute: 0),
+        DSTProbe(label: "LA 2025 fall 01:30", year: 2025, month: 11, day: 2, hour: 1, minute: 30),
+        DSTProbe(label: "LA 2025 spring 02:30", year: 2025, month: 3, day: 9, hour: 2, minute: 30),
+        DSTProbe(label: "non-DST midsummer", year: 2024, month: 7, day: 15, hour: 12, minute: 0),
     ]
 
     @Test(arguments: utcDateProbes)

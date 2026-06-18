@@ -18,7 +18,7 @@
 ///
 /// When a new instance of `DateComponents` is created, the date components are set to `nil`.
 @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct DateComponents : Hashable, Equatable, Sendable {
+public struct DateComponents: Hashable, Equatable, Sendable {
     internal var _calendar: Calendar?
     internal var _timeZone: TimeZone?
     internal var _era: Int?
@@ -41,22 +41,24 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _isRepeatedDay: Bool?
 
     /// Initializes a date components value, optionally specifying values for its fields.
-    public init(calendar: Calendar? = nil,
-         timeZone: TimeZone? = nil,
-         era: Int? = nil,
-         year: Int? = nil,
-         month: Int? = nil,
-         day: Int? = nil,
-         hour: Int? = nil,
-         minute: Int? = nil,
-         second: Int? = nil,
-         nanosecond: Int? = nil,
-         weekday: Int? = nil,
-         weekdayOrdinal: Int? = nil,
-         quarter: Int? = nil,
-         weekOfMonth: Int? = nil,
-         weekOfYear: Int? = nil,
-         yearForWeekOfYear: Int? = nil) {
+    public init(
+        calendar: Calendar? = nil,
+        timeZone: TimeZone? = nil,
+        era: Int? = nil,
+        year: Int? = nil,
+        month: Int? = nil,
+        day: Int? = nil,
+        hour: Int? = nil,
+        minute: Int? = nil,
+        second: Int? = nil,
+        nanosecond: Int? = nil,
+        weekday: Int? = nil,
+        weekdayOrdinal: Int? = nil,
+        quarter: Int? = nil,
+        weekOfMonth: Int? = nil,
+        weekOfYear: Int? = nil,
+        yearForWeekOfYear: Int? = nil
+    ) {
 
         self.calendar = calendar
         self.timeZone = timeZone
@@ -76,28 +78,30 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         self.yearForWeekOfYear = yearForWeekOfYear
         self.dayOfYear = nil
     }
-    
+
     /// Same as the public initializer, but with the dayOfYear field, and skipping the 'conversion' for callers who expect ObjC behavior (Int.max -> nil).
     @inline(__always)
-    internal init(calendar: Calendar? = nil,
-         timeZone: TimeZone? = nil,
-         rawEra: Int? = nil,
-         rawYear: Int? = nil,
-         rawMonth: Int? = nil,
-         rawDay: Int? = nil,
-         rawHour: Int? = nil,
-         rawMinute: Int? = nil,
-         rawSecond: Int? = nil,
-         rawNanosecond: Int? = nil,
-         rawWeekday: Int? = nil,
-         rawWeekdayOrdinal: Int? = nil,
-         rawQuarter: Int? = nil,
-         rawWeekOfMonth: Int? = nil,
-         rawWeekOfYear: Int? = nil,
-         rawYearForWeekOfYear: Int? = nil,
-         rawDayOfYear: Int? = nil,
-         isLeapMonth: Bool? = nil,
-         isRepeatedDay: Bool? = nil) {
+    internal init(
+        calendar: Calendar? = nil,
+        timeZone: TimeZone? = nil,
+        rawEra: Int? = nil,
+        rawYear: Int? = nil,
+        rawMonth: Int? = nil,
+        rawDay: Int? = nil,
+        rawHour: Int? = nil,
+        rawMinute: Int? = nil,
+        rawSecond: Int? = nil,
+        rawNanosecond: Int? = nil,
+        rawWeekday: Int? = nil,
+        rawWeekdayOrdinal: Int? = nil,
+        rawQuarter: Int? = nil,
+        rawWeekOfMonth: Int? = nil,
+        rawWeekOfYear: Int? = nil,
+        rawYearForWeekOfYear: Int? = nil,
+        rawDayOfYear: Int? = nil,
+        isLeapMonth: Bool? = nil,
+        isRepeatedDay: Bool? = nil
+    ) {
 
         // Be sure to set the time zone of the calendar if appropriate
         if var calendar, let timeZone {
@@ -109,7 +113,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         } else if let timeZone {
             _timeZone = timeZone
         }
-        
+
         _era = rawEra
         _year = rawYear
         _month = rawMonth
@@ -270,7 +274,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         get { _weekOfYear }
         set { _weekOfYear = converted(newValue) }
     }
-    
+
     /// A day of the year.
     /// For example, in the Gregorian calendar, can go from 1 to 365 or 1 to 366 in leap years.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
@@ -279,7 +283,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         get { _dayOfYear }
         set { _dayOfYear = converted(newValue) }
     }
-    
+
     /// This exists only for compatibility with NSDateComponents deprecated `week` value.
     package var week: Int? {
         get { _week }
@@ -424,7 +428,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         }
 
         // This is similar to the list of units and keys\. in Calendar_Enumerate.swift, but this one does not include nanosecond or leap month
-        let units : [Calendar.Component] = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear]
+        let units: [Calendar.Component] = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear]
 
         let newComponents = calendar.dateComponents(Set(units), from: date)
 
@@ -445,9 +449,9 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
         return true
     }
-    
+
     // MARK: -
-    
+
     /// Returns a new `DateComponents` where the subset of fields that can be scaled have been mulitplied by `value`.
     internal func scaled(by value: Int) -> DateComponents {
         var dc = self
@@ -493,31 +497,18 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
     // MARK: - Bridging Helpers
 
-    public static func ==(lhs : DateComponents, rhs: DateComponents) -> Bool {
-        if lhs.era != rhs.era ||
-            lhs.year != rhs.year ||
-            lhs.quarter != rhs.quarter ||
-            lhs.month != rhs.month ||
-            lhs.day != rhs.day ||
-            lhs.hour != rhs.hour ||
-            lhs.minute != rhs.minute ||
-            lhs.second != rhs.second ||
-            lhs.weekday != rhs.weekday ||
-            lhs.weekdayOrdinal != rhs.weekdayOrdinal ||
-            lhs.weekOfMonth != rhs.weekOfMonth ||
-            lhs.weekOfYear != rhs.weekOfYear ||
-            lhs.yearForWeekOfYear != rhs.yearForWeekOfYear ||
-            lhs.nanosecond != rhs.nanosecond {
+    public static func == (lhs: DateComponents, rhs: DateComponents) -> Bool {
+        if lhs.era != rhs.era || lhs.year != rhs.year || lhs.quarter != rhs.quarter || lhs.month != rhs.month || lhs.day != rhs.day || lhs.hour != rhs.hour || lhs.minute != rhs.minute || lhs.second != rhs.second || lhs.weekday != rhs.weekday
+            || lhs.weekdayOrdinal != rhs.weekdayOrdinal || lhs.weekOfMonth != rhs.weekOfMonth || lhs.weekOfYear != rhs.weekOfYear || lhs.yearForWeekOfYear != rhs.yearForWeekOfYear || lhs.nanosecond != rhs.nanosecond
+        {
             return false
         }
-        
+
         if lhs.dayOfYear != rhs.dayOfYear {
             return false
         }
 
-        if !((lhs.isLeapMonth == false && rhs.isLeapMonth == nil) ||
-             (lhs.isLeapMonth == nil && rhs.isLeapMonth == false) ||
-             (lhs.isLeapMonth == rhs.isLeapMonth)) {
+        if !((lhs.isLeapMonth == false && rhs.isLeapMonth == nil) || (lhs.isLeapMonth == nil && rhs.isLeapMonth == false) || (lhs.isLeapMonth == rhs.isLeapMonth)) {
             return false
         }
 
@@ -533,7 +524,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension DateComponents: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
 
     public var description: String {
         return self.customMirror.children.reduce(into: "") {
@@ -571,8 +562,8 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : Codable {
-    private enum CodingKeys : Int, CodingKey {
+extension DateComponents: Codable {
+    private enum CodingKeys: Int, CodingKey {
         case calendar
         case timeZone
         case era
@@ -595,46 +586,47 @@ extension DateComponents : Codable {
     }
 
     public init(from decoder: Decoder) throws {
-        let container  = try decoder.container(keyedBy: CodingKeys.self)
-        let calendar   = try container.decodeIfPresent(Calendar.self, forKey: .calendar)
-        let timeZone   = try container.decodeIfPresent(TimeZone.self, forKey: .timeZone)
-        let era        = try container.decodeIfPresent(Int.self, forKey: .era)
-        let year       = try container.decodeIfPresent(Int.self, forKey: .year)
-        let month      = try container.decodeIfPresent(Int.self, forKey: .month)
-        let day        = try container.decodeIfPresent(Int.self, forKey: .day)
-        let hour       = try container.decodeIfPresent(Int.self, forKey: .hour)
-        let minute     = try container.decodeIfPresent(Int.self, forKey: .minute)
-        let second     = try container.decodeIfPresent(Int.self, forKey: .second)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let calendar = try container.decodeIfPresent(Calendar.self, forKey: .calendar)
+        let timeZone = try container.decodeIfPresent(TimeZone.self, forKey: .timeZone)
+        let era = try container.decodeIfPresent(Int.self, forKey: .era)
+        let year = try container.decodeIfPresent(Int.self, forKey: .year)
+        let month = try container.decodeIfPresent(Int.self, forKey: .month)
+        let day = try container.decodeIfPresent(Int.self, forKey: .day)
+        let hour = try container.decodeIfPresent(Int.self, forKey: .hour)
+        let minute = try container.decodeIfPresent(Int.self, forKey: .minute)
+        let second = try container.decodeIfPresent(Int.self, forKey: .second)
         let nanosecond = try container.decodeIfPresent(Int.self, forKey: .nanosecond)
 
-        let weekday           = try container.decodeIfPresent(Int.self, forKey: .weekday)
-        let weekdayOrdinal    = try container.decodeIfPresent(Int.self, forKey: .weekdayOrdinal)
-        let quarter           = try container.decodeIfPresent(Int.self, forKey: .quarter)
-        let weekOfMonth       = try container.decodeIfPresent(Int.self, forKey: .weekOfMonth)
-        let weekOfYear        = try container.decodeIfPresent(Int.self, forKey: .weekOfYear)
+        let weekday = try container.decodeIfPresent(Int.self, forKey: .weekday)
+        let weekdayOrdinal = try container.decodeIfPresent(Int.self, forKey: .weekdayOrdinal)
+        let quarter = try container.decodeIfPresent(Int.self, forKey: .quarter)
+        let weekOfMonth = try container.decodeIfPresent(Int.self, forKey: .weekOfMonth)
+        let weekOfYear = try container.decodeIfPresent(Int.self, forKey: .weekOfYear)
         let yearForWeekOfYear = try container.decodeIfPresent(Int.self, forKey: .yearForWeekOfYear)
 
         let isLeapMonth = try container.decodeIfPresent(Bool.self, forKey: .isLeapMonth)
         let isRepeatedDay = try container.decodeIfPresent(Bool.self, forKey: .isRepeatedDay)
 
         let dayOfYear = try container.decodeIfPresent(Int.self, forKey: .dayOfYear)
-        
-        self.init(calendar: calendar,
-                  timeZone: timeZone,
-                  era: era,
-                  year: year,
-                  month: month,
-                  day: day,
-                  hour: hour,
-                  minute: minute,
-                  second: second,
-                  nanosecond: nanosecond,
-                  weekday: weekday,
-                  weekdayOrdinal: weekdayOrdinal,
-                  quarter: quarter,
-                  weekOfMonth: weekOfMonth,
-                  weekOfYear: weekOfYear,
-                  yearForWeekOfYear: yearForWeekOfYear)
+
+        self.init(
+            calendar: calendar,
+            timeZone: timeZone,
+            era: era,
+            year: year,
+            month: month,
+            day: day,
+            hour: hour,
+            minute: minute,
+            second: second,
+            nanosecond: nanosecond,
+            weekday: weekday,
+            weekdayOrdinal: weekdayOrdinal,
+            quarter: quarter,
+            weekOfMonth: weekOfMonth,
+            weekOfYear: weekOfYear,
+            yearForWeekOfYear: yearForWeekOfYear)
 
         if let isLeapMonth {
             self.isLeapMonth = isLeapMonth
@@ -643,7 +635,7 @@ extension DateComponents : Codable {
         if let isRepeatedDay {
             self.isRepeatedDay = isRepeatedDay
         }
-        
+
         if let dayOfYear {
             self.dayOfYear = dayOfYear
         }
@@ -680,7 +672,7 @@ extension DateComponents : Codable {
 internal import _ForSwiftFoundation
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
+extension DateComponents: ReferenceConvertible, _ObjectiveCBridgeable {
     public typealias ReferenceType = NSDateComponents
 
     public static func _getObjectiveCType() -> Any.Type {
@@ -708,7 +700,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
         if let _yearForWeekOfYear { ns.yearForWeekOfYear = _yearForWeekOfYear }
         if let _dayOfYear { ns.dayOfYear = _dayOfYear }
         if let _isLeapMonth { ns.isLeapMonth = _isLeapMonth }
-        if let _isRepeatedDay { ns.isRepeatedDay = _isRepeatedDay}
+        if let _isRepeatedDay { ns.isRepeatedDay = _isRepeatedDay }
         if let _week { __NSDateComponentsSetWeek(ns, _week) }
         return ns
     }
@@ -761,7 +753,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSDateComponents : _HasCustomAnyHashableRepresentation {
+extension NSDateComponents: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {

@@ -111,8 +111,8 @@ private struct BufferViewTests {
 
             // BufferView doesn't need to be aligned for accessing `BitwiseCopyable` types.
             let buffer = BufferView<Int64>(
-              unsafeBaseAddress: $0.baseAddress!.advanced(by: offset),
-              count: count
+                unsafeBaseAddress: $0.baseAddress!.advanced(by: offset),
+                count: count
             )
 
             var iterator = buffer.makeIterator()
@@ -365,7 +365,7 @@ private struct BufferViewTests {
 
 @Suite("BufferReader")
 private struct BufferReaderTests {
-    
+
     @Test("Line number counting with standalone newlines")
     func lineNumberCounting() {
         // Test case designed to expose the bug: second byte is 'A' (not a newline),
@@ -374,81 +374,81 @@ private struct BufferReaderTests {
         // the newlines at positions 3, 5, and 7.
         let testString = "A\nB\nC\nD"
         let bytes = Array(testString.utf8)
-        
+
         bytes.withUnsafeBufferPointer {
             let bufferView = BufferView(unsafeBufferPointer: $0)
             #expect(bufferView != nil)
             guard let bufferView else { return }
-            
+
             var reader = BufferReader(bytes: bufferView)
-            
+
             // Advance reader to the end to test lineNumber calculation
             while !reader.isAtEnd {
                 _ = reader.read()
             }
-            
+
             // Should count 4 lines: initial line + 3 newlines
             #expect(reader.lineNumber == 4, "Expected 4 lines, got \(reader.lineNumber)")
         }
     }
-    
+
     @Test("Line number counting with CRLF sequences")
     func lineNumberCountingWithCRLF() {
         // Test CRLF handling: \r\n should count as one line break
         let testString = "Line1\r\nLine2\r\nLine3"
         let bytes = Array(testString.utf8)
-        
+
         bytes.withUnsafeBufferPointer {
             let bufferView = BufferView(unsafeBufferPointer: $0)
             #expect(bufferView != nil)
             guard let bufferView else { return }
-            
+
             var reader = BufferReader(bytes: bufferView)
-            
+
             while !reader.isAtEnd {
                 _ = reader.read()
             }
-            
+
             // Should count 3 lines: initial line + 2 CRLF sequences
             #expect(reader.lineNumber == 3, "Expected 3 lines, got \(reader.lineNumber)")
         }
     }
-    
+
     @Test("Line number counting with mixed newlines")
     func lineNumberCountingMixed() {
         // Test mixed \n and \r\n sequences
         // Second byte is 'a' (not a newline) to ensure bug would be exposed
         let testString = "a\nb\r\nc\nd"
         let bytes = Array(testString.utf8)
-        
+
         bytes.withUnsafeBufferPointer {
             let bufferView = BufferView(unsafeBufferPointer: $0)
             #expect(bufferView != nil)
             guard let bufferView else { return }
-            
+
             var reader = BufferReader(bytes: bufferView)
-            
+
             while !reader.isAtEnd {
                 _ = reader.read()
             }
-            
+
             // Should count 4 lines: initial line + 3 line breaks (one \n, one \r\n, one \n)
             #expect(reader.lineNumber == 4, "Expected 4 lines, got \(reader.lineNumber)")
         }
     }
-    
+
     @Test("Line number at different read positions")
     func lineNumberAtPosition() {
         let testString = "Line1\nLine2\nLine3"
         let bytes = Array(testString.utf8)
-        
+
         bytes.withUnsafeBufferPointer {
             let bufferView = BufferView(unsafeBufferPointer: $0)
             #expect(bufferView != nil)
             guard let bufferView else { return }
-            
+
             var reader = BufferReader(bytes: bufferView)
-            
+
             // Read up to first newline
             while reader.readIndex < bufferView.endIndex {
                 let byte = reader.read()
@@ -457,7 +457,7 @@ private struct BufferReaderTests {
                 }
             }
             #expect(reader.lineNumber == 2, "After first newline, expected 2 lines, got \(reader.lineNumber)")
-            
+
             // Read to end
             while !reader.isAtEnd {
                 _ = reader.read()

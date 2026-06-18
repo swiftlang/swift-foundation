@@ -11,44 +11,44 @@
 //===----------------------------------------------------------------------===//
 
 protocol PlistEncodingReference {
-    static var emptyArray : Self { get }
-    static var emptyDictionary : Self { get }
-    
+    static var emptyArray: Self { get }
+    static var emptyDictionary: Self { get }
+
     func insert(_ ref: Self, for key: Self)
     func insert(_ ref: Self, at index: Int)
     func insert(_ ref: Self)
 
     var count: Int { get }
 
-    subscript (_ key: Self) -> Self? { get }
-    
-    var isBool : Bool { get }
-    var isString : Bool { get }
-    var isNumber : Bool { get }
-    var isDate : Bool { get }
-    
-    var isDictionary : Bool { get }
-    var isArray : Bool { get }
-    
+    subscript(_ key: Self) -> Self? { get }
+
+    var isBool: Bool { get }
+    var isString: Bool { get }
+    var isNumber: Bool { get }
+    var isDate: Bool { get }
+
+    var isDictionary: Bool { get }
+    var isArray: Bool { get }
+
 }
 
 protocol PlistWriting<Reference> {
-    associatedtype Reference : PlistEncodingReference
-    
+    associatedtype Reference: PlistEncodingReference
+
     init()
     mutating func serializePlist(_ ref: Reference) throws -> Data
 }
 
 protocol PlistEncodingFormat {
-    associatedtype Reference : PlistEncodingReference
+    associatedtype Reference: PlistEncodingReference
     associatedtype Writer: PlistWriting<Reference>
-    
+
     init()
-    
-    var null : Reference { get }
-    var `true` : Reference { get }
-    var `false` : Reference { get }
-    
+
+    var null: Reference { get }
+    var `true`: Reference { get }
+    var `false`: Reference { get }
+
     // Mutating because it allows the format to unique values.
     mutating func string(_ str: String) -> Reference
     mutating func number(from num: some FixedWidthInteger) -> Reference

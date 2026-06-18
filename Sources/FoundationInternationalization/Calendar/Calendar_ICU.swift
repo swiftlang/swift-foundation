@@ -32,7 +32,7 @@ internal import _FoundationICU
 internal import Synchronization
 
 #if !FOUNDATION_FRAMEWORK
-@_dynamicReplacement(for: _calendarICUClass())
+@_dynamicReplacement(for:_calendarICUClass())
 private func _calendarICUClass_localized() -> _CalendarProtocol.Type? {
     return _CalendarICU.self
 }
@@ -52,13 +52,14 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
     let customGregorianStartDate: Date?
 
-    init(identifier: Calendar.Identifier,
-                  timeZone: TimeZone?,
-                  locale: Locale?,
-                  firstWeekday: Int?,
-                  minimumDaysInFirstWeek: Int?,
-                  gregorianStartDate: Date?)
-    {
+    init(
+        identifier: Calendar.Identifier,
+        timeZone: TimeZone?,
+        locale: Locale?,
+        firstWeekday: Int?,
+        minimumDaysInFirstWeek: Int?,
+        gregorianStartDate: Date?
+    ) {
         self.identifier = identifier
 
         lock = Mutex<Void>(())
@@ -69,16 +70,19 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         customFirstWeekday = firstWeekday
         customMinimumFirstDaysInWeek = minimumDaysInFirstWeek
         customGregorianStartDate = gregorianStartDate
-        
-        ucalendar = Self.icuCalendar(identifier: identifier, timeZone: _timeZone, locale: locale ?? Locale(identifier: "", preferences: nil), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: customGregorianStartDate)
+
+        ucalendar = Self.icuCalendar(
+            identifier: identifier, timeZone: _timeZone, locale: locale ?? Locale(identifier: "", preferences: nil), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: customGregorianStartDate)
     }
 
-    static func icuCalendar(identifier: Calendar.Identifier,
-                            timeZone: TimeZone,
-                            locale: Locale,
-                            firstWeekday: Int?,
-                            minimumDaysInFirstWeek: Int?,
-                            gregorianStartDate: Date?) -> UnsafeMutablePointer<UCalendar?> {
+    static func icuCalendar(
+        identifier: Calendar.Identifier,
+        timeZone: TimeZone,
+        locale: Locale,
+        firstWeekday: Int?,
+        minimumDaysInFirstWeek: Int?,
+        gregorianStartDate: Date?
+    ) -> UnsafeMutablePointer<UCalendar?> {
         // TODO: I think this may be a waste; we always override the calendar, the rest is ignored
         let localeIdentifier = locale.identifier
         var localeComponents = Locale.Components(identifier: localeIdentifier)
@@ -101,7 +105,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if status.isSuccess {
                 gregorianChangeDate = Date(udate: udate)
             } else {
-                gregorianChangeDate = Date(timeIntervalSinceReferenceDate: -13197600000.0)  // Oct 15, 1582
+                gregorianChangeDate = Date(timeIntervalSinceReferenceDate: -13197600000.0) // Oct 15, 1582
             }
 
             ucal_setGregorianChange(calendar, gregorianChangeDate.udate, &status)
@@ -177,11 +181,11 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     private var _locked_firstWeekday: Int {
         customFirstWeekday ?? Int(ucal_getAttribute(ucalendar, UCAL_FIRST_DAY_OF_WEEK))
     }
-    
+
     var preferredFirstWeekday: Int? {
         locale?.prefs?.firstWeekday?[identifier]
     }
-    
+
     var gregorianStartDate: Date? {
         customGregorianStartDate
     }
@@ -199,7 +203,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             }
         }
     }
-    
+
     var preferredMinimumDaysInFirstweek: Int? {
         locale?.prefs?.minDaysInFirstWeek?[identifier]
     }
@@ -210,10 +214,12 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: -
 
-    func copy(changingLocale: Locale? = nil,
-              changingTimeZone: TimeZone? = nil,
-              changingFirstWeekday: Int? = nil,
-              changingMinimumDaysInFirstWeek: Int? = nil) -> any _CalendarProtocol {
+    func copy(
+        changingLocale: Locale? = nil,
+        changingTimeZone: TimeZone? = nil,
+        changingFirstWeekday: Int? = nil,
+        changingMinimumDaysInFirstWeek: Int? = nil
+    ) -> any _CalendarProtocol {
         return lock.withLock { _ in
             var newLocale = self.locale
             var newTimeZone = self.timeZone
@@ -260,12 +266,12 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             hasher.combine(preferredMinimumDaysInFirstweek)
         }
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     func bridgeToNSCalendar() -> NSCalendar {
         _NSSwiftCalendar(calendar: Calendar(inner: self))
     }
-#endif
+    #endif
 
     // MARK: -
 
@@ -614,12 +620,10 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
                 var month = 0
                 if let r = _locked_maximumRange(of: .day) {
-                    month = Int(floor(
-                        (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
-                        86400.0 /
-                        Double(r.count + 1) *
-                        0.96875
-                    ))
+                    month = Int(
+                        floor(
+                            (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0 / Double(r.count + 1) * 0.96875
+                        ))
                     // low-ball the estimate
                     month = 10 < month ? month - 10 : 0
                     // low-ball the estimate further
@@ -655,11 +659,10 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                     startUDate -= 7 * 86400.0 * 1000.0
                 }
 
-                var week = Int(floor(
-                    (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
-                    86400.0 /
-                    7.0
-                ))
+                var week = Int(
+                    floor(
+                        (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0 / 7.0
+                    ))
                 // low-ball the estimate
                 week = 10 < week ? week - 109 : 0
                 repeat {
@@ -689,11 +692,10 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                     startUDate += 86400.0 * 1000.0
                 }
 
-                var nthWeekday = Int(floor(
-                    (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
-                    86400.0 /
-                    7.0
-                ))
+                var nthWeekday = Int(
+                    floor(
+                        (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0 / 7.0
+                    ))
 
                 // Low-ball estimate
                 nthWeekday = (10 < nthWeekday) ? nthWeekday - 10 : 0
@@ -714,10 +716,11 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 ucal_clear(ucalendar)
                 ucal_setMillis(ucalendar, date.udateInSeconds, &status)
                 guard let start else { return nil }
-                let day = Int(floor(
-                    (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
-                    86400.0
-                )) + 1
+                let day =
+                    Int(
+                        floor(
+                            (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0
+                        )) + 1
                 return day
             case .hour:
                 guard let day = _locked_ordinality(of: .day, in: .era, for: date) else { return nil }
@@ -1169,9 +1172,9 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             ucal_set(ucalendar, UCAL_YEAR, 1)
             ucal_set(ucalendar, UCAL_MONTH, 0)
             ucal_set(ucalendar, UCAL_IS_LEAP_MONTH, 0)
-#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
             ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
-#endif
+            #endif
             ucal_set(ucalendar, UCAL_DAY_OF_MONTH, 1)
             ucal_set(ucalendar, UCAL_HOUR_OF_DAY, 0)
             ucal_set(ucalendar, UCAL_MINUTE, 0)
@@ -1258,18 +1261,18 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 dc.isLeapMonth = result == 0 ? false : true
             }
 
-#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
             if components.contains(.isRepeatedDay) {
                 let result = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
                 dc.isRepeatedDay = result == 0 ? false : true
             }
-#endif
+            #endif
 
             if components.contains(.timeZone) {
                 dc.timeZone = timeZone
             }
 
-        
+
             return dc
         }
     }
@@ -1406,7 +1409,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         // This shares some magic numbers with _locked_dateInterval, but the clarity at the call site of using only the start date vs needing the interval (plus the performance benefit of not calculating it if we don't need it) makes the duplication worth it.
         let capped = at.capped
 
-        let inf_ti : TimeInterval = 4398046511104.0
+        let inf_ti: TimeInterval = 4398046511104.0
         let time = capped.timeIntervalSinceReferenceDate
 
         var effectiveUnit = unit
@@ -1526,7 +1529,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     private func _locked_dateInterval(of unit: Calendar.Component, at: Date) -> DateInterval? {
         let capped = at.capped
 
-        let inf_ti : TimeInterval = 4398046511104.0
+        let inf_ti: TimeInterval = 4398046511104.0
         let time = capped.timeIntervalSinceReferenceDate
 
         var effectiveUnit = unit
@@ -1777,11 +1780,11 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         case .quarter:
             var month = ucal_get(ucalendar, UCAL_MONTH, &status)
             if identifier == .hebrew {
-                let qmonth : [Int32] = [0, 0, 0, 3, 3, 3, 3, 7, 7, 7, 10, 10, 10]
+                let qmonth: [Int32] = [0, 0, 0, 3, 3, 3, 3, 7, 7, 7, 10, 10, 10]
                 month = qmonth[Int(month)]
             } else {
                 // A lunar leap month is considered to be in the same quarter that the base month number is in.
-                let qmonth : [Int32] = [0, 0, 0, 3, 3, 3, 6, 6, 6, 9, 9, 9, 9]
+                let qmonth: [Int32] = [0, 0, 0, 3, 3, 3, 6, 6, 6, 9, 9, 9, 9]
                 month = qmonth[Int(month)]
             }
             // TODO: if there is a lunar leap month of the same number *preceeding* month N, then we should set the calendar to the leap month, not the regular month.
@@ -1825,9 +1828,9 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         case .month:
             ucal_set(ucalendar, UCAL_DAY_OF_MONTH, ucal_getLimit(ucalendar, UCAL_DAY_OF_MONTH, UCAL_ACTUAL_MINIMUM, &status))
-#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
             ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
-#endif
+            #endif
             fallthrough
 
         case .weekdayOrdinal, .weekday, .day, .dayOfYear:
@@ -1886,7 +1889,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         let useDayOfMonth = startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal
 
-#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
         if useDayOfMonth {
             let targetDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
             let targetRepeat = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
@@ -1901,7 +1904,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             } while (targetDay == currentDay) && (targetRepeat == currentRepeat)
             ucal_setMillis(ucalendar, udate, &status)
         }
-#else
+        #else
         if useDayOfMonth {
             let targetDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
             var currentDay = targetDay
@@ -1913,8 +1916,8 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             } while targetDay == currentDay
             ucal_setMillis(ucalendar, udate, &status)
         }
-#endif
-        
+        #endif
+
         udate = ucal_getMillis(ucalendar, &status)
         let start = Date(udate: udate)
 
@@ -2269,11 +2272,11 @@ extension Calendar.Component {
         case .weekOfYear: UCAL_WEEK_OF_YEAR
         case .yearForWeekOfYear: UCAL_YEAR_WOY
         case .isLeapMonth: UCAL_IS_LEAP_MONTH
-#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
         case .isRepeatedDay: UCAL_IS_REPEATED_DAY
-#else
+        #else
         case .isRepeatedDay: nil
-#endif
+        #endif
         case .dayOfYear: UCAL_DAY_OF_YEAR
         case .nanosecond: nil
         case .calendar: nil
@@ -2313,10 +2316,10 @@ extension Calendar.Component {
             self = .yearForWeekOfYear
         case UCAL_IS_LEAP_MONTH:
             self = .isLeapMonth
-#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
         case UCAL_IS_REPEATED_DAY:
             self = .isRepeatedDay
-#endif
+        #endif
         default:
             return nil
         }

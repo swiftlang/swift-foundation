@@ -24,9 +24,9 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
-    
+
     // MARK: UUID
-    
+
     Benchmark("UUIDEqual", configuration: .init(scalingFactor: .mega)) { benchmark in
         let u1 = UUID()
         let u2 = UUID()

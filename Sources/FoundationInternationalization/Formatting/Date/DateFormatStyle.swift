@@ -86,7 +86,7 @@ extension Date {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
-    internal struct DateFieldCollection : Codable, Hashable {
+    internal struct DateFieldCollection: Codable, Hashable {
         var era: Symbol.SymbolType.EraOption?
         var year: Symbol.SymbolType.YearOption?
         var quarter: Symbol.SymbolType.QuarterOption?
@@ -144,7 +144,8 @@ extension Date.FormatStyle {
                     preferredHour = .conversationalDefaultDigitsWithNarrowAMPM
                 case .twoDigitsWithNarrowAMPM:
                     preferredHour = .conversationalTwoDigitsWithNarrowAMPM
-                case .defaultDigitsNoAMPM, .twoDigitsNoAMPM, .conversationalDefaultDigitsWithAbbreviatedAMPM, .conversationalTwoDigitsWithAbbreviatedAMPM, .conversationalDefaultDigitsWithWideAMPM, .conversationalTwoDigitsWithWideAMPM, .conversationalDefaultDigitsWithNarrowAMPM, .conversationalTwoDigitsWithNarrowAMPM:
+                case .defaultDigitsNoAMPM, .twoDigitsNoAMPM, .conversationalDefaultDigitsWithAbbreviatedAMPM, .conversationalTwoDigitsWithAbbreviatedAMPM, .conversationalDefaultDigitsWithWideAMPM, .conversationalTwoDigitsWithWideAMPM,
+                    .conversationalDefaultDigitsWithNarrowAMPM, .conversationalTwoDigitsWithNarrowAMPM:
                     preferredHour = hour
                 }
             } else {
@@ -197,27 +198,16 @@ extension Date.FormatStyle {
         }
 
         var empty: Bool {
-            if era == nil &&
-                year == nil &&
-                quarter == nil &&
-                month == nil &&
-                week == nil &&
-                day == nil &&
-                dayOfYear == nil &&
-                weekday == nil &&
-                dayPeriod == nil &&
-                hour == nil &&
-                minute == nil &&
-                second == nil &&
-                secondFraction == nil &&
-                timeZoneSymbol == nil {
+            if era == nil && year == nil && quarter == nil && month == nil && week == nil && day == nil && dayOfYear == nil && weekday == nil && dayPeriod == nil && hour == nil && minute == nil && second == nil && secondFraction == nil
+                && timeZoneSymbol == nil
+            {
                 return true
             } else {
                 return false
             }
         }
 
-        func collection(date len: DateStyle)-> DateFieldCollection {
+        func collection(date len: DateStyle) -> DateFieldCollection {
             var new = self
             if len == .omitted {
                 return new
@@ -446,7 +436,7 @@ extension Date {
     /// print(outputFormat.format(productIntroDate)) // Tue, January 09, 2007
     /// }
     /// ```
-    public struct FormatStyle : Sendable {
+    public struct FormatStyle: Sendable {
 
         var _symbols: DateFieldCollection?
         var symbols: DateFieldCollection {
@@ -521,7 +511,10 @@ extension Date {
         ///   - timeZone: The time zone with which to specify date and time values.
         ///   - capitalizationContext: The capitalization formatting context used when formatting date and time values.
         /// - Note: Always specify the date style, time style, or the date components to be included in the formatted string with the symbol modifiers. Otherwise, an empty string will be returned when you use the instance to format a `Date`.
-        public init(date: DateStyle? = nil, time: TimeStyle? = nil, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, timeZone: TimeZone = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
+        public init(
+            date: DateStyle? = nil, time: TimeStyle? = nil, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, timeZone: TimeZone = .autoupdatingCurrent,
+            capitalizationContext: FormatStyleCapitalizationContext = .unknown
+        ) {
             if let dateStyle = date, dateStyle != .omitted {
                 _dateStyle = dateStyle
                 _symbols = (_symbols ?? .init()).collection(date: dateStyle)
@@ -556,16 +549,16 @@ extension Date {
     @available(iOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     @available(tvOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     @available(watchOS, deprecated: 11, introduced: 8, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
-    public struct AttributedStyle : Sendable {
+    public struct AttributedStyle: Sendable {
 
         enum InnerStyle: Codable, Hashable {
             case formatStyle(Date.FormatStyle)
             case verbatimFormatStyle(VerbatimFormatStyle)
-            
+
             private typealias FormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
             private typealias VerbatimFormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
         }
-        
+
         var innerStyle: InnerStyle
 
         init(style: InnerStyle) {
@@ -590,7 +583,7 @@ extension Date {
             guard let fm, let (str, attributes) = fm.attributedFormat(value) else {
                 return AttributedString("")
             }
-            
+
             return str._attributedStringFromPositions(attributes)
         }
 
@@ -619,7 +612,7 @@ extension Date {
 @available(iOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
 @available(tvOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
 @available(watchOS, deprecated: 11, introduced: 8, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
-extension Date.AttributedStyle : FormatStyle {}
+extension Date.AttributedStyle: FormatStyle {}
 
 // MARK: Typed Attributed Style
 
@@ -629,7 +622,7 @@ extension Date.FormatStyle {
     ///
     /// This style attributes the formatted date with the `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`.
     @dynamicMemberLookup
-    public struct Attributed : FormatStyle, Sendable {
+    public struct Attributed: FormatStyle, Sendable {
         var base: Date.FormatStyle
 
         public subscript<T>(dynamicMember key: KeyPath<Date.FormatStyle, T>) -> T {
@@ -965,7 +958,7 @@ extension Date.FormatStyle.Attributed {
 // MARK: FormatStyle Conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatStyle : FormatStyle {
+extension Date.FormatStyle: FormatStyle {
     /// Creates a locale-aware string representation from a date value.
     ///
     /// Once you create a style, you can use it to format dates multiple times.
@@ -1026,7 +1019,7 @@ extension Date.FormatStyle : FormatStyle {
 // MARK: ParseStrategy Conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatStyle : ParseStrategy {
+extension Date.FormatStyle: ParseStrategy {
     /// Parses a string into a date.
     ///
     /// The date format style guides parsing the date instance from an input
@@ -1052,7 +1045,7 @@ extension Date.FormatStyle : ParseStrategy {
     /// - Returns: An instance of `Date` parsed from the input string.
     public func parse(_ value: String) throws -> Date {
         guard let fm = ICUDateFormatter.cachedFormatter(for: self) else {
-            throw CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: "Error creating icu date formatter" ])
+            throw CocoaError(CocoaError.formatting, userInfo: [NSDebugDescriptionErrorKey: "Error creating icu date formatter"])
         }
 
         guard let date = fm.parse(value) else {
@@ -1066,7 +1059,7 @@ extension Date.FormatStyle : ParseStrategy {
 // MARK: Codable+Hashable Conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatStyle : Codable, Hashable {
+extension Date.FormatStyle: Codable, Hashable {
 
     enum CodingKeys: CodingKey {
         case symbols
@@ -1132,7 +1125,7 @@ extension Date.FormatStyle {
     ///
     ///
     /// The default date style is `numeric`.
-    public struct DateStyle : Codable, Hashable, Sendable {
+    public struct DateStyle: Codable, Hashable, Sendable {
 
         /// Excludes the date part.
         public static let omitted: DateStyle = DateStyle(rawValue: 0)
@@ -1149,7 +1142,7 @@ extension Date.FormatStyle {
         /// Shows the complete day. For example, "Wednesday, October 21, 2015".
         public static let complete: DateStyle = DateStyle(rawValue: 4)
 
-        let rawValue : UInt
+        let rawValue: UInt
     }
 
     /// Type that defines time styles varied in length or components included.
@@ -1179,7 +1172,7 @@ extension Date.FormatStyle {
     ///
     ///
     /// The default time style is ``shortened``.
-    public struct TimeStyle : Codable, Hashable, Sendable {
+    public struct TimeStyle: Codable, Hashable, Sendable {
 
         /// Excludes the time part.
         public static let omitted: TimeStyle = TimeStyle(rawValue: 0)
@@ -1193,7 +1186,7 @@ extension Date.FormatStyle {
         /// For example, `4:29:24 PM PDT`, `16:29:24 GMT`.
         public static let complete: TimeStyle = TimeStyle(rawValue: 3)
 
-        let rawValue : UInt
+        let rawValue: UInt
     }
 }
 
@@ -1287,7 +1280,7 @@ public extension ParseStrategy where Self == Date.FormatStyle {
 // MARK: DiscreteFormatStyle Conformance
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Date.FormatStyle : DiscreteFormatStyle {
+extension Date.FormatStyle: DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         guard let (bound, isIncluded) = bound(for: input, isLower: true) else {
             return nil
@@ -1324,7 +1317,7 @@ extension Date.FormatStyle : DiscreteFormatStyle {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Date.FormatStyle.Attributed : DiscreteFormatStyle {
+extension Date.FormatStyle.Attributed: DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         base.discreteInput(before: input)
     }
@@ -1448,7 +1441,8 @@ extension Calendar {
             let targetValue: Int
 
             if let higherComponent = component.nextHigherUnit,
-               let validRange = self.range(of: component, in: higherComponent, for: date), !validRange.isEmpty {
+                let validRange = self.range(of: component, in: higherComponent, for: date), !validRange.isEmpty
+            {
 
                 if additiveValue >= validRange.upperBound {
                     targetValue = validRange.lowerBound + (additiveValue % validRange.upperBound)
@@ -1552,7 +1546,7 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
 
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.FormatStyle : CustomConsumingRegexComponent {
+extension Date.FormatStyle: CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
     public typealias RegexOutput = Date
     /// Processes the input string within the specified bounds, beginning at the given index, and returns the end position of the match and the produced output.
@@ -1582,8 +1576,7 @@ extension String {
 
         var attrstr = AttributedString(self)
         for attr in positions {
-            let strRange = String.Index(utf16Offset: attr.begin, in: self) ..<
-                String.Index(utf16Offset: attr.end, in: self)
+            let strRange = String.Index(utf16Offset: attr.begin, in: self)..<String.Index(utf16Offset: attr.end, in: self)
             let range = Range<AttributedString.Index>(strRange, in: attrstr)!
 
             let field = attr.field

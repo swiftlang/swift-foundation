@@ -22,7 +22,7 @@ extension Testing.Tag {
 ///
 /// - Note: `oracle` is also checked for conformance to the
 ///   laws.
-func checkEquatable<Instances : Collection>(
+func checkEquatable<Instances: Collection>(
     _ instances: Instances,
     oracle: (Instances.Index, Instances.Index) -> Bool,
     allowBrokenTransitivity: Bool = false,
@@ -39,7 +39,7 @@ func checkEquatable<Instances : Collection>(
     )
 }
 
-func _checkEquatable<Instances : Collection>(
+func _checkEquatable<Instances: Collection>(
     _ _instances: Instances,
     oracle: (Int, Int) -> Bool,
     allowBrokenTransitivity: Bool = false,
@@ -47,26 +47,26 @@ func _checkEquatable<Instances : Collection>(
     sourceLocation: SourceLocation = #_sourceLocation
 ) where Instances.Element: Equatable {
     let instances = Array(_instances)
-    
+
     // For each index (which corresponds to an instance being tested) track the
     // set of equal instances.
     var transitivityScoreboard: [Box<Set<Int>>] =
-    instances.indices.map { _ in Box([]) }
-    
+        instances.indices.map { _ in Box([]) }
+
     for i in instances.indices {
         let x = instances[i]
         #expect(oracle(i, i), "bad oracle: broken reflexivity at index \(i)")
-        
+
         for j in instances.indices {
             let y = instances[j]
-            
+
             let predictedXY = oracle(i, j)
             #expect(
                 predictedXY == oracle(j, i),
                 "bad oracle: broken symmetry between indices \(i), \(j)",
                 sourceLocation: sourceLocation
             )
-            
+
             let isEqualXY = x == y
             #expect(
                 predictedXY == isEqualXY,
@@ -79,7 +79,7 @@ func _checkEquatable<Instances : Collection>(
                 """,
                 sourceLocation: sourceLocation
             )
-            
+
             // Not-equal is an inverse of equal.
             #expect(
                 isEqualXY != (x != y),
@@ -89,7 +89,7 @@ func _checkEquatable<Instances : Collection>(
                 """,
                 sourceLocation: sourceLocation
             )
-            
+
             if !allowBrokenTransitivity {
                 // Check transitivity of the predicate represented by the oracle.
                 // If we are adding the instance `j` into an equivalence set, check that
@@ -145,7 +145,7 @@ func checkHashable<Instances: Collection>(
         message(),
         sourceLocation: sourceLocation
     )
-    
+
     for i in instances.indices {
         let x = instances[i]
         for j in instances.indices {
@@ -238,7 +238,7 @@ public func checkHashableGroups<Groups: Collection>(
     // groupIndices[i] is the index of the element in groups that contains
     // instances[i].
     let groupIndices =
-    zip(0..., groups).flatMap { i, group in group.map { _ in i } }
+        zip(0..., groups).flatMap { i, group in group.map { _ in i } }
     func equalityOracle(_ lhs: Int, _ rhs: Int) -> Bool {
         return groupIndices[lhs] == groupIndices[rhs]
     }
@@ -254,7 +254,7 @@ public func checkHashableGroups<Groups: Collection>(
 
 private class Box<T> {
     var value: T
-    
+
     init(_ value: T) {
         self.value = value
     }

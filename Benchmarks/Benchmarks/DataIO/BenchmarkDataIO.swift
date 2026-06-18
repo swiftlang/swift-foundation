@@ -33,13 +33,13 @@ import Darwin
 func generateTestData(count: Int) -> Data {
     let memory = malloc(count)!
     let ptr = memory.bindMemory(to: UInt8.self, capacity: count)
-    
+
     // Set a few bytes so we're sure to not be all zeros
     let buf = UnsafeMutableBufferPointer(start: ptr, count: count)
     for i in 0..<128 {
         buf[i] = UInt8.random(in: UInt8.min..<UInt8.max)
     }
-    
+
     return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
 }
 
@@ -87,54 +87,57 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark("write-regularFile", configuration: .cleanupTestPathConfig) { benchmark in
         try data.write(to: testPath)
     }
-    
-#if !os(WASI) // atomic writing is unavailable on WASI
+
+    #if !os(WASI) // atomic writing is unavailable on WASI
     Benchmark("write-regularFile-atomic", configuration: .cleanupTestPathConfig) { benchmark in
         try data.write(to: testPath, options: .atomic)
     }
-#endif
-    
-    Benchmark("write-regularFile-alreadyExists",
-              configuration: .init(
-                setup: {
-                    try! Data().write(to: testPath)
-                },
-                teardown: cleanupTestPath
-              )
+    #endif
+
+    Benchmark(
+        "write-regularFile-alreadyExists",
+        configuration: .init(
+            setup: {
+                try! Data().write(to: testPath)
+            },
+            teardown: cleanupTestPath
+        )
     ) { benchmark in
         try? data.write(to: testPath)
     }
-    
-#if !os(WASI) // atomic writing is unavailable on WASI
-    Benchmark("write-regularFile-alreadyExists-atomic",
-              configuration: .init(
-                setup: {
-                    try! Data().write(to: testPath)
-                },
-                teardown: cleanupTestPath
-              )
+
+    #if !os(WASI) // atomic writing is unavailable on WASI
+    Benchmark(
+        "write-regularFile-alreadyExists-atomic",
+        configuration: .init(
+            setup: {
+                try! Data().write(to: testPath)
+            },
+            teardown: cleanupTestPath
+        )
     ) { benchmark in
         try? data.write(to: testPath, options: .atomic)
     }
-#endif
-    
-    Benchmark("read-regularFile", 
-              configuration: .init(
-                setup: {
-                    try! data.write(to: testPath)
-                },
-                teardown: cleanupTestPath
-              )
+    #endif
+
+    Benchmark(
+        "read-regularFile",
+        configuration: .init(
+            setup: {
+                try! data.write(to: testPath)
+            },
+            teardown: cleanupTestPath
+        )
     ) { benchmark in
         blackHole(try Data(contentsOf: testPath))
     }
-    
+
     Benchmark("read-nonExistentFile") { benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(try? Data(contentsOf: nonExistentPath))
         }
     }
-    
+
     Benchmark("read-nonExistentFile-userInfo") { benchmark in
         for _ in benchmark.scaledIterations {
             do {
@@ -144,14 +147,15 @@ let benchmarks: @Sendable () -> Void = {
             }
         }
     }
-    
-    Benchmark("read-hugeFile",
-              configuration: .init(
-                setup: {
-                    try! generateTestData(count: 1 << 30).write(to: testPath)
-                },
-                teardown: cleanupTestPath
-              )
+
+    Benchmark(
+        "read-hugeFile",
+        configuration: .init(
+            setup: {
+                try! generateTestData(count: 1 << 30).write(to: testPath)
+            },
+            teardown: cleanupTestPath
+        )
     ) { benchmark in
         blackHole(try Data(contentsOf: testPath))
     }

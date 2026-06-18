@@ -20,9 +20,9 @@ import FoundationEssentials
 extension Date {
 
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct ComponentsFormatStyle : Codable, Hashable, Sendable {
-        public struct Field : Codable, Hashable, Sendable {
-            enum Option : Int, Codable, Hashable, CaseIterable, Comparable {
+    public struct ComponentsFormatStyle: Codable, Hashable, Sendable {
+        public struct Field: Codable, Hashable, Sendable {
+            enum Option: Int, Codable, Hashable, CaseIterable, Comparable {
                 case year
                 case month
                 case week
@@ -71,7 +71,7 @@ extension Date {
                     }
                 }
 
-                static func <(lhs: Self, rhs: Self) -> Bool {
+                static func < (lhs: Self, rhs: Self) -> Bool {
                     lhs.rawValue > rhs.rawValue
                 }
             }

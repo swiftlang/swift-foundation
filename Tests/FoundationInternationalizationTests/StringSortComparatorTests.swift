@@ -24,14 +24,12 @@ private struct StringSortComparatorTests {
     @Test func compareOptionsDescriptor() {
         let compareOptions = String.Comparator(options: [.numeric])
         #expect(
-            compareOptions.compare("ttestest005", "test2") ==
-            "test005".compare("test2", options: [.numeric]))
+            compareOptions.compare("ttestest005", "test2") == "test005".compare("test2", options: [.numeric]))
         #expect(
-            compareOptions.compare("test2", "test005") ==
-            "test2".compare("test005", options: [.numeric]))
+            compareOptions.compare("test2", "test005") == "test2".compare("test005", options: [.numeric]))
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, only support unlocalized comparisons
     // https://github.com/apple/swift-foundation/issues/284
     @Test func locale() {
@@ -39,12 +37,12 @@ private struct StringSortComparatorTests {
         #expect(swedishComparator.compare("ă", "ã") == .orderedAscending)
         #expect(swedishComparator.locale == Locale(identifier: "sv"))
     }
-    
+
     @Test func nilLocale() {
         let swedishComparator = String.Comparator(options: [], locale: nil)
         #expect(swedishComparator.compare("ă", "ã") == .orderedDescending)
     }
-    
+
     @Test func standardLocalized() async {
         await usingCurrentInternationalizationPreferences {
             var prefs = LocalePreferences()
@@ -54,9 +52,9 @@ private struct StringSortComparatorTests {
             let localizedStandard = String.StandardComparator.localizedStandard
             #expect(localizedStandard.compare("ă", "ã") == .orderedAscending)
         }
-        
+
         let unlocalizedStandard = String.StandardComparator.lexical
         #expect(unlocalizedStandard.compare("ă", "ã") == .orderedDescending)
     }
-#endif
+    #endif
 }

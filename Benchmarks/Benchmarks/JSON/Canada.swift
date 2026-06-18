@@ -35,20 +35,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-enum ObjType : String, Codable {
+enum ObjType: String, Codable {
     case featureCollection = "FeatureCollection"
     case feature = "Feature"
     case polygon = "Polygon"
 }
 
-struct Feature : Codable {
+struct Feature: Codable {
     var type: ObjType
     var properties: [String: String]
     var geometry: Geometry
 }
 
-struct Geometry : Codable {
-    struct Coordinate : Codable {
+struct Geometry: Codable {
+    struct Coordinate: Codable {
         var latitude: Double
         var longitude: Double
 
@@ -57,7 +57,7 @@ struct Geometry : Codable {
             latitude = try container.decode(Double.self)
             longitude = try container.decode(Double.self)
         }
-        
+
         func encode(to encoder: any Encoder) throws {
             var container = encoder.unkeyedContainer()
             try container.encode(latitude)
@@ -69,8 +69,7 @@ struct Geometry : Codable {
     var coordinates: [[Coordinate]]
 }
 
-struct FeatureCollection : Codable {
+struct FeatureCollection: Codable {
     var type: ObjType
     var features: [Feature]
 }
-

@@ -35,12 +35,12 @@ extension _FileManagerImpl {
         guard url.isFileURL else {
             throw CocoaError.errorWithFilePath(.fileReadUnsupportedScheme, url)
         }
-        
+
         // If there's no scheme, then this is probably a relative URL.
         if destURL.scheme != nil && !destURL.isFileURL {
             throw CocoaError.errorWithFilePath(.fileWriteUnsupportedScheme, destURL)
         }
-        
+
         let path = url.path
         let destPath = destURL.path
         guard !path.isEmpty else {
@@ -52,12 +52,12 @@ extension _FileManagerImpl {
 
         try fileManager.createSymbolicLink(atPath: path, withDestinationPath: destPath)
     }
-    
+
     func createSymbolicLink(
         atPath path: String,
         withDestinationPath destPath: String
     ) throws {
-#if os(Windows)
+        #if os(Windows)
         var bIsDirectory = false
         let absoluteDestPath = URL(filePath: destPath, relativeTo: URL(filePath: path, directoryHint: .notDirectory)).path
         _ = fileManager.fileExists(atPath: absoluteDestPath, isDirectory: &bIsDirectory)
@@ -71,25 +71,25 @@ extension _FileManagerImpl {
                 }
             }
         }
-#else
+        #else
         try fileManager.withFileSystemRepresentation(for: path) { srcRep in
             guard let srcRep else {
                 throw CocoaError.errorWithFilePath(.fileReadUnknown, path)
             }
-            
+
             try fileManager.withFileSystemRepresentation(for: destPath) { destRep in
                 guard let destRep else {
                     throw CocoaError.errorWithFilePath(.fileReadUnknown, destPath)
                 }
-                
+
                 if symlink(destRep, srcRep) != 0 {
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
                 }
             }
         }
-#endif
+        #endif
     }
-    
+
     func linkItem(
         at srcURL: URL,
         to dstURL: URL
@@ -97,11 +97,11 @@ extension _FileManagerImpl {
         guard srcURL.isFileURL else {
             throw CocoaError.errorWithFilePath(.fileReadUnsupportedScheme, srcURL)
         }
-        
+
         guard dstURL.isFileURL else {
             throw CocoaError.errorWithFilePath(.fileWriteUnsupportedScheme, dstURL)
         }
-        
+
         let srcPath = srcURL.path
         let dstPath = dstURL.path
         guard !srcPath.isEmpty else {
@@ -110,19 +110,19 @@ extension _FileManagerImpl {
         guard !dstPath.isEmpty else {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, dstURL)
         }
-        
+
         try fileManager.linkItem(atPath: srcPath, toPath: dstPath)
     }
-    
+
     func linkItem(
         atPath srcPath: String,
         toPath dstPath: String
     ) throws {
         try _FileOperations.linkFile(srcPath, to: dstPath, with: fileManager)
     }
-    
+
     func destinationOfSymbolicLink(atPath path: String) throws -> String {
-#if os(Windows)
+        #if os(Windows)
         return try path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
@@ -194,21 +194,21 @@ extension _FileManagerImpl {
                 }
             }
         }
-#else
+        #else
         try fileManager.withFileSystemRepresentation(for: path) { rep in
             guard let rep else {
                 throw CocoaError.errorWithFilePath(.fileReadUnknown, path)
             }
-            
+
             return try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
                 let charsReturned = readlink(rep, buffer.baseAddress!, FileManager.MAX_PATH_SIZE)
                 guard charsReturned >= 0 else {
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: true)
                 }
-                
+
                 return fileManager.string(withFileSystemRepresentation: buffer.baseAddress!, length: charsReturned)
             }
         }
-#endif
+        #endif
     }
 }

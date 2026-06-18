@@ -33,7 +33,7 @@ func localeBenchmarks() {
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput, .peakMemoryResident, .peakMemoryResidentDelta]
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     let string1 = "aaA" as CFString
     let string2 = "AAà" as CFString
     let range1 = CFRange(location: 0, length: CFStringGetLength(string1))
@@ -42,11 +42,11 @@ func localeBenchmarks() {
     }
 
     Benchmark("CFStringCompareWithOptionsAndLocale", configuration: .init(scalingFactor: .mega)) { benchmark in
-            for nsLocale in nsLocales {
-                CFStringCompareWithOptionsAndLocale(string1, string2, range1, .init(rawValue: 0), nsLocale)
-            }
+        for nsLocale in nsLocales {
+            CFStringCompareWithOptionsAndLocale(string1, string2, range1, .init(rawValue: 0), nsLocale)
+        }
     }
-#endif
+    #endif
 
     let identifiers = Locale.availableIdentifiers
     let allComponents = identifiers.map { Locale.Components(identifier: $0) }

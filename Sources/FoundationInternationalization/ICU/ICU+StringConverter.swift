@@ -85,7 +85,7 @@ extension ICU.StringConverter {
         }
     }
 
-    func encode(string: String, allowLossyConversion lossy: Bool) -> Data?  {
+    func encode(string: String, allowLossyConversion lossy: Bool) -> Data? {
         return self._converter.withLock { (converter) -> Data? in
             defer {
                 ucnv_resetFromUnicode(converter)
@@ -182,10 +182,11 @@ extension ICU.StringConverter {
 
 
 #if !FOUNDATION_FRAMEWORK
-@_dynamicReplacement(for: _icuMakeStringFromBytes(_:encoding:))
+@_dynamicReplacement(for:_icuMakeStringFromBytes(_:encoding:))
 func _icuMakeStringFromBytes_impl(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
     guard let converter = ICU.StringConverter.converter(for: encoding),
-          let pointer = bytes.baseAddress else {
+        let pointer = bytes.baseAddress
+    else {
         return nil
     }
 
@@ -197,7 +198,7 @@ func _icuMakeStringFromBytes_impl(_ bytes: UnsafeBufferPointer<UInt8>, encoding:
     // in `ICU.StringConverter.decode(data:) -> String?`.
     // In addition to that, `Data` is useful here
     // because it is `Sendable` (and has CoW behavior).
-    let data =  Data(
+    let data = Data(
         bytesNoCopy: UnsafeMutableRawPointer(mutating: pointer),
         count: bytes.count,
         deallocator: .none
@@ -205,7 +206,7 @@ func _icuMakeStringFromBytes_impl(_ bytes: UnsafeBufferPointer<UInt8>, encoding:
     return converter.decode(data: data)
 }
 
-@_dynamicReplacement(for: _icuStringEncodingConvert(string:using:allowLossyConversion:))
+@_dynamicReplacement(for:_icuStringEncodingConvert(string:using:allowLossyConversion:))
 func _icuStringEncodingConvert_impl(string: String, using encoding: String.Encoding, allowLossyConversion: Bool) -> Data? {
     guard let converter = ICU.StringConverter.converter(for: encoding) else {
         return nil

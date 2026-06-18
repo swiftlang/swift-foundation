@@ -19,7 +19,7 @@ import FoundationEssentials
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// A style that formats a date with an explicitly-specified style.
-    public struct VerbatimFormatStyle : Sendable {
+    public struct VerbatimFormatStyle: Sendable {
         public var timeZone: TimeZone
         public var calendar: Calendar
 
@@ -60,7 +60,7 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.VerbatimFormatStyle : FormatStyle {}
+extension Date.VerbatimFormatStyle: FormatStyle {}
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension FormatStyle where Self == Date.VerbatimFormatStyle {
@@ -106,7 +106,7 @@ extension FormatStyle where Self == Date.VerbatimFormatStyle {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.VerbatimFormatStyle: ParseableFormatStyle {
     public var parseStrategy: Date.ParseStrategy {
-            .init(format: formatPattern, locale: locale, timeZone: timeZone, calendar: calendar, isLenient: false, twoDigitStartDate: Date(timeIntervalSince1970: 0))
+        .init(format: formatPattern, locale: locale, timeZone: timeZone, calendar: calendar, isLenient: false, twoDigitStartDate: Date(timeIntervalSince1970: 0))
     }
 }
 
@@ -118,7 +118,7 @@ extension Date.VerbatimFormatStyle {
     ///
     /// This style attributes the formatted date with the `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`.
     @dynamicMemberLookup
-    public struct Attributed : FormatStyle, Sendable {
+    public struct Attributed: FormatStyle, Sendable {
         var base: Date.VerbatimFormatStyle
 
         public subscript<T>(dynamicMember key: KeyPath<Date.VerbatimFormatStyle, T>) -> T {
@@ -164,7 +164,7 @@ extension Date.VerbatimFormatStyle {
 // MARK: MatchingCollectionConsumer
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
+extension Date.VerbatimFormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         try parseStrategy.consuming(input, startingAt: index, in: bounds)
@@ -174,7 +174,7 @@ extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
 // MARK: DiscreteFormatStyle Conformance
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Date.VerbatimFormatStyle : DiscreteFormatStyle {
+extension Date.VerbatimFormatStyle: DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         guard let (bound, isIncluded) = bound(for: input, isLower: true) else {
             return nil
@@ -211,7 +211,7 @@ extension Date.VerbatimFormatStyle : DiscreteFormatStyle {
 }
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
+extension Date.VerbatimFormatStyle.Attributed: DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         base.discreteInput(before: input)
     }

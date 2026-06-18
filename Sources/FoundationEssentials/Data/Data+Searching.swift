@@ -12,12 +12,12 @@
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     /// Options that control a data search operation.
     public typealias SearchOptions = NSData.SearchOptions
-#else
+    #else
     /// Options that control a data search operation.
-    public struct SearchOptions : OptionSet, Sendable {
+    public struct SearchOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -26,9 +26,9 @@ extension Data {
         /// Search from the end of the data object.
         public static let backwards = SearchOptions(rawValue: 1 << 0)
         /// Search is limited to start (or end, if searching backwards) of the data object.
-        public static let anchored  = SearchOptions(rawValue: 1 << 1)
+        public static let anchored = SearchOptions(rawValue: 1 << 1)
     }
-#endif
+    #endif
 
     /// Find the given `Data` in the content of this `Data`.
     ///

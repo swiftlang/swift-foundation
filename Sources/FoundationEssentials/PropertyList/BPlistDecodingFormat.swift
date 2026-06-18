@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct _BPlistDecodingFormat : PlistDecodingFormat {
+struct _BPlistDecodingFormat: PlistDecodingFormat {
     typealias Map = BPlistMap
-    
-    static func container<Key>(keyedBy type: Key.Type, for value: BPlistMap.Value, referencing decoder: _PlistDecoder<_BPlistDecodingFormat>, codingPathNode: _CodingPathNode) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
+
+    static func container<Key>(keyedBy type: Key.Type, for value: BPlistMap.Value, referencing decoder: _PlistDecoder<_BPlistDecodingFormat>, codingPathNode: _CodingPathNode) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
         switch value {
         case let .dict(dict):
             let iter = Map.DictionaryIterator.init(iter: dict.makeIterator())
@@ -22,10 +22,10 @@ struct _BPlistDecodingFormat : PlistDecodingFormat {
         case .nativeNull, .sentinelNull:
             throw DecodingError.valueNotFound([String: Any].self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Cannot get keyed decoding container -- found null value instead"))
         default:
-            throw DecodingError._typeMismatch(at: decoder.codingPath, expectation: [String : Any].self, reality: value)
+            throw DecodingError._typeMismatch(at: decoder.codingPath, expectation: [String: Any].self, reality: value)
         }
     }
-    
+
     static func unkeyedContainer(for value: BPlistMap.Value, referencing decoder: _PlistDecoder<_BPlistDecodingFormat>, codingPathNode: _CodingPathNode) throws -> UnkeyedDecodingContainer {
         switch value {
         case let .array(array):
@@ -37,29 +37,29 @@ struct _BPlistDecodingFormat : PlistDecodingFormat {
             throw DecodingError._typeMismatch(at: decoder.codingPath, expectation: [Any].self, reality: value)
         }
     }
-    
+
     static func valueIsNull(_ mapValue: BPlistMap.Value) -> Bool {
         switch mapValue {
         case .nativeNull, .sentinelNull: return true
         default: return false
         }
     }
-    
+
     static func unwrapBool(from mapValue: BPlistMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Bool {
         guard case let .boolean(value) = mapValue else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: Bool.self, reality: mapValue)
         }
         return value
     }
-    
+
     static func unwrapDate(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Date {
         return try mapValue.dateValue(in: map, for: codingPathNode, additionalKey)
     }
-    
+
     static func unwrapData(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Data {
         return try mapValue.dataValue(in: map, for: codingPathNode, additionalKey)
     }
-    
+
     static func unwrapString(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> String {
         guard case let .string(region, isAscii) = mapValue else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: String.self, reality: mapValue)
@@ -72,12 +72,12 @@ struct _BPlistDecodingFormat : PlistDecodingFormat {
         }
         return result
     }
-    
-    static func unwrapFloatingPoint<T : BinaryFloatingPoint>(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+
+    static func unwrapFloatingPoint<T: BinaryFloatingPoint>(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         try mapValue.realValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
-    
-    static func unwrapFixedWidthInteger<T>(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T where T : FixedWidthInteger {
+
+    static func unwrapFixedWidthInteger<T>(from mapValue: BPlistMap.Value, in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T where T: FixedWidthInteger {
         try mapValue.integerValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
 }

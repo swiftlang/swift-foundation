@@ -61,7 +61,7 @@ private struct StringICUEncodingTests {
         // Plane 1 Row 4 (Hiragana)
         _test_roundTripConversion(
             string: "ひらがな",
-            data:  Data([
+            data: Data([
                 0xA4, 0xD2,
                 0xA4, 0xE9,
                 0xA4, 0xAC,
@@ -118,22 +118,18 @@ private struct StringICUEncodingTests {
         #expect(onsen.data(using: .japaneseEUC) == nil)
         #expect(sushi.data(using: .japaneseEUC) == nil)
         #expect(
-            onsen.data(using: .japaneseEUC, allowLossyConversion: true) ==
-            "Onsen?".data(using: .utf8)
+            onsen.data(using: .japaneseEUC, allowLossyConversion: true) == "Onsen?".data(using: .utf8)
         )
         #if FOUNDATION_FRAMEWORK
         // NOTE: Foundation framework replaces an unsupported non-BMP character
         //       with "??"(two question marks).
         #expect(
-            sushi.data(using: .japaneseEUC, allowLossyConversion: true) ==
-            "Sushi??".data(using: .utf8)
+            sushi.data(using: .japaneseEUC, allowLossyConversion: true) == "Sushi??".data(using: .utf8)
         )
         #else
         #expect(
-            sushi.data(using: .japaneseEUC, allowLossyConversion: true) ==
-            "Sushi?".data(using: .utf8)
+            sushi.data(using: .japaneseEUC, allowLossyConversion: true) == "Sushi?".data(using: .utf8)
         )
         #endif
     }
 }
-

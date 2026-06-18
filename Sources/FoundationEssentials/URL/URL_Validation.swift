@@ -26,8 +26,9 @@ internal func validate<T: UnsignedInteger & FixedWidthInteger>(
             i += 1
         } else if codeUnit == UInt8(ascii: "%") {
             guard i + 2 < span.indices.endIndex,
-                  isHexDigit(span[i + 1]),
-                  isHexDigit(span[i + 2]) else {
+                isHexDigit(span[i + 1]),
+                isHexDigit(span[i + 2])
+            else {
                 return false
             }
             i += 3
@@ -77,15 +78,14 @@ internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
         return nil
     }
     // "%25" is the correctly-encoded zone ID delimiter for a URL
-    let isValidZoneID = (
-        i + 2 < innerHost.count
-        && innerHost[i + 1] == UInt8(ascii: "2")
-        && innerHost[i + 2] == UInt8(ascii: "5")
-        && validate(
-            span: innerHost.extracting((i + 3)...),
-            component: .hostZoneID
-        )
-    )
+    let isValidZoneID =
+        (i + 2 < innerHost.count
+            && innerHost[i + 1] == UInt8(ascii: "2")
+            && innerHost[i + 2] == UInt8(ascii: "5")
+            && validate(
+                span: innerHost.extracting((i + 3)...),
+                component: .hostZoneID
+            ))
     return isValidZoneID
 }
 
@@ -115,16 +115,16 @@ internal struct URLComponentAllowedSet: RawRepresentable {
     static var scheme: Self { Self(rawValue: UInt16(1) << 0) }
 
     // user, password, and hostIPvFuture use the same allowed character set.
-    static var user:          Self { Self(rawValue: UInt16(1) << 1) }
-    static var password:      Self { Self(rawValue: UInt16(1) << 1) }
+    static var user: Self { Self(rawValue: UInt16(1) << 1) }
+    static var password: Self { Self(rawValue: UInt16(1) << 1) }
     static var hostIPvFuture: Self { Self(rawValue: UInt16(1) << 1) }
 
     static var host: Self { Self(rawValue: UInt16(1) << 2) }
 
     // These sets are "lax" because they allow "[" and "]" during
     // validation for compatibility with old CFURL behavior.
-    static var laxPath:     Self { Self(rawValue: UInt16(1) << 3) }
-    static var laxQuery:    Self { Self(rawValue: UInt16(1) << 4) }
+    static var laxPath: Self { Self(rawValue: UInt16(1) << 3) }
+    static var laxQuery: Self { Self(rawValue: UInt16(1) << 4) }
     static var laxFragment: Self { .laxQuery } // Same set as query
 
     // hostZoneID uses the `unreserved` character set from RFC 3986.
@@ -136,8 +136,8 @@ internal struct URLComponentAllowedSet: RawRepresentable {
 
     // These differ from their non-RFC counterparts above which allow
     // "[" and "]" for compatibility with CFURL and WHATWG behavior.
-    static var rfc3986Path:     Self { Self(rawValue: UInt16(1) << 7) }
-    static var rfc3986Query:    Self { Self(rawValue: UInt16(1) << 8) }
+    static var rfc3986Path: Self { Self(rawValue: UInt16(1) << 7) }
+    static var rfc3986Query: Self { Self(rawValue: UInt16(1) << 8) }
     static var rfc3986Fragment: Self { .rfc3986Query } // Same set as query
 
     func contains<T: UnsignedInteger & FixedWidthInteger>(

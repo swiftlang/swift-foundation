@@ -16,9 +16,9 @@
 
 // Both of these error types bridge to NSError, and through the entry points they use, no further work is needed to make them localized.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension EncodingError : LocalizedError {}
+extension EncodingError: LocalizedError {}
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DecodingError : LocalizedError {}
+extension DecodingError: LocalizedError {}
 
 //===----------------------------------------------------------------------===//
 // Error Utilities
@@ -60,7 +60,7 @@ extension DecodingError {
             return "a string/data"
         } else if value is [Any] {
             return "an array"
-        } else if value is [String : Any] {
+        } else if value is [String: Any] {
             return "a dictionary"
         } else {
             return "\(type(of: value))"
@@ -78,15 +78,15 @@ import Combine
 //===----------------------------------------------------------------------===//
 
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension JSONEncoder: TopLevelEncoder { }
+extension JSONEncoder: TopLevelEncoder {}
 
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension PropertyListEncoder: TopLevelEncoder { }
+extension PropertyListEncoder: TopLevelEncoder {}
 
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension JSONDecoder: TopLevelDecoder { }
+extension JSONDecoder: TopLevelDecoder {}
 
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension PropertyListDecoder: TopLevelDecoder { }
+extension PropertyListDecoder: TopLevelDecoder {}
 
 #endif

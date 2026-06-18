@@ -19,7 +19,7 @@ import Testing
 private struct ICUPatternGeneratorTests {
 
     typealias DateFieldCollection = Date.FormatStyle.DateFieldCollection
-#if FIXED_ICU78
+    #if FIXED_ICU78
     @Test func conversationalDayPeriodsOverride() {
 
         var locale: Locale
@@ -40,42 +40,57 @@ private struct ICUPatternGeneratorTests {
             calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = .gmt
 
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
-                 expectedPattern: "y/M/d BBBBh時")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
+                expectedPattern: "y/M/d BBBBh時")
 
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "Bh:mm")
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "Bh:mm:ss")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
-                 expectedPattern: "BBBBBh時")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
-                 expectedPattern: "BBBBBh:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "Bh:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "Bh:mm:ss")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
+                expectedPattern: "BBBBBh時")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
+                expectedPattern: "BBBBBh:mm")
 
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "Bhh:mm")
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "Bhh:mm:ss")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),
-                 expectedPattern: "BBBBBhh時")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
-                 expectedPattern: "BBBBBhh:mm")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM),
-                 expectedPattern: "BBBBhh時")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
-                 expectedPattern: "BBBBhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "Bhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "Bhh:mm:ss")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM),
+                expectedPattern: "BBBBBhh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
+                expectedPattern: "BBBBBhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM),
+                expectedPattern: "BBBBhh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
+                expectedPattern: "BBBBhh:mm")
 
             // We would not get "B" if not showing AM/PM at all
             test(symbols: .init(hour: .twoDigitsNoAMPM), expectedPattern: "hh時")
             test(symbols: .init(hour: .defaultDigitsNoAMPM), expectedPattern: "h時")
-            test(symbols: .init(year: .defaultDigits),
-                 expectedPattern: "y年")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits),
-                 expectedPattern: "y/M")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
-                 expectedPattern: "y/M/d")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsNoAMPM),
-                 expectedPattern: "y/M/d h時")
+            test(
+                symbols: .init(year: .defaultDigits),
+                expectedPattern: "y年")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits),
+                expectedPattern: "y/M")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
+                expectedPattern: "y/M/d")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsNoAMPM),
+                expectedPattern: "y/M/d h時")
         }
 
         // This should also work with calendar besides gregorian
@@ -84,30 +99,41 @@ private struct ICUPatternGeneratorTests {
             calendar = Calendar(identifier: .republicOfChina)
             calendar.timeZone = .gmt
 
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
-                 expectedPattern: "G y/M/d BBBBh時")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
+                expectedPattern: "G y/M/d BBBBh時")
 
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "Bh:mm")
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "Bh:mm:ss")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
-                 expectedPattern: "BBBBBh時")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
-                 expectedPattern: "BBBBBh:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "Bh:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "Bh:mm:ss")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
+                expectedPattern: "BBBBBh時")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
+                expectedPattern: "BBBBBh:mm")
 
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "Bhh:mm")
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "Bhh:mm:ss")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),
-                 expectedPattern: "BBBBBhh時")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
-                 expectedPattern: "BBBBBhh:mm")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM),
-                 expectedPattern: "BBBBhh時")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
-                 expectedPattern: "BBBBhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "Bhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "Bhh:mm:ss")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM),
+                expectedPattern: "BBBBBhh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
+                expectedPattern: "BBBBBhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM),
+                expectedPattern: "BBBBhh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
+                expectedPattern: "BBBBhh:mm")
         }
 
         do {
@@ -115,42 +141,57 @@ private struct ICUPatternGeneratorTests {
             calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = .gmt
 
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
-                 expectedPattern: "y/M/d BBBBh時")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
+                expectedPattern: "y/M/d BBBBh時")
 
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "Bh:mm")
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "Bh:mm:ss")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
-                 expectedPattern: "BBBBBh時")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
-                 expectedPattern: "BBBBBh:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "Bh:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "Bh:mm:ss")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
+                expectedPattern: "BBBBBh時")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
+                expectedPattern: "BBBBBh:mm")
 
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "Bhh:mm")
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "Bhh:mm:ss")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),
-                 expectedPattern: "BBBBBhh時")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
-                 expectedPattern: "BBBBBhh:mm")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM),
-                 expectedPattern: "BBBBhh時")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
-                 expectedPattern: "BBBBhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "Bhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "Bhh:mm:ss")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM),
+                expectedPattern: "BBBBBhh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
+                expectedPattern: "BBBBBhh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM),
+                expectedPattern: "BBBBhh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
+                expectedPattern: "BBBBhh:mm")
 
             // We would not get "B" if not showing AM/PM at all
             test(symbols: .init(hour: .twoDigitsNoAMPM), expectedPattern: "hh時")
             test(symbols: .init(hour: .defaultDigitsNoAMPM), expectedPattern: "h時")
-            test(symbols: .init(year: .defaultDigits),
-                 expectedPattern: "y年")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits),
-                 expectedPattern: "y/M")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
-                 expectedPattern: "y/M/d")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsNoAMPM),
-                 expectedPattern: "y/M/d h時")
+            test(
+                symbols: .init(year: .defaultDigits),
+                expectedPattern: "y年")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits),
+                expectedPattern: "y/M")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
+                expectedPattern: "y/M/d")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsNoAMPM),
+                expectedPattern: "y/M/d h時")
         }
 
         // We should not see any kind of day period designator ("a" or "B") when showing 24-hour hour ("H").
@@ -162,41 +203,56 @@ private struct ICUPatternGeneratorTests {
             calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = .gmt
 
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
-                 expectedPattern: "y/M/d H時")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
+                expectedPattern: "y/M/d H時")
 
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "HH:mm")
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "HH:mm:ss")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
-                 expectedPattern: "H時")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
-                 expectedPattern: "HH:mm")
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "HH:mm")
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "HH:mm:ss")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),
-                 expectedPattern: "HH時")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
-                 expectedPattern: "HH:mm")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM),
-                 expectedPattern: "HH時")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
-                 expectedPattern: "HH:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "HH:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "HH:mm:ss")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
+                expectedPattern: "H時")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
+                expectedPattern: "HH:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "HH:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "HH:mm:ss")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM),
+                expectedPattern: "HH時")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
+                expectedPattern: "HH:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM),
+                expectedPattern: "HH時")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
+                expectedPattern: "HH:mm")
 
             // We would not get "B" if not showing AM/PM at all
             test(symbols: .init(hour: .twoDigitsNoAMPM), expectedPattern: "HH時")
             test(symbols: .init(hour: .defaultDigitsNoAMPM), expectedPattern: "H時")
-            test(symbols: .init(year: .defaultDigits),
-                 expectedPattern: "y年")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits),
-                 expectedPattern: "y/M")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
-                 expectedPattern: "y/M/d")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsNoAMPM),
-                 expectedPattern: "y/M/d H時")
+            test(
+                symbols: .init(year: .defaultDigits),
+                expectedPattern: "y年")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits),
+                expectedPattern: "y/M")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
+                expectedPattern: "y/M/d")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsNoAMPM),
+                expectedPattern: "y/M/d H時")
         }
 
         // We do not override locales other than those in TW
@@ -205,40 +261,54 @@ private struct ICUPatternGeneratorTests {
             calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = .gmt
 
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
-                 expectedPattern: "d/M/y aaaah時")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
+                expectedPattern: "d/M/y aaaah時")
 
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "ah:mm")
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "ah:mm:ss")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
-                 expectedPattern: "aaaaah時")
-            test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
-                 expectedPattern: "aaaaah:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "ah:mm")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "ah:mm:ss")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM),
+                expectedPattern: "aaaaah時")
+            test(
+                symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
+                expectedPattern: "aaaaah:mm")
 
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "ahh:mm")
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "ahh:mm:ss")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),
-                 expectedPattern: "aaaaahh時")
-            test(symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
-                 expectedPattern: "aaaaahh:mm")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM),
-                 expectedPattern: "aaaahh時")
-            test(symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
-                 expectedPattern: "aaaahh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "ahh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "ahh:mm:ss")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM),
+                expectedPattern: "aaaaahh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithNarrowAMPM, minute: .twoDigits),
+                expectedPattern: "aaaaahh:mm")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM),
+                expectedPattern: "aaaahh時")
+            test(
+                symbols: .init(hour: .twoDigitsWithWideAMPM, minute: .twoDigits),
+                expectedPattern: "aaaahh:mm")
 
             // We would not get "B" if not showing AM/PM at all
             test(symbols: .init(hour: .twoDigitsNoAMPM), expectedPattern: "hh時")
             test(symbols: .init(hour: .defaultDigitsNoAMPM), expectedPattern: "h時")
-            test(symbols: .init(year: .defaultDigits),
-                 expectedPattern: "y年")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits),
-                 expectedPattern: "M/y")
-            test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
-                 expectedPattern: "d/M/y")
+            test(
+                symbols: .init(year: .defaultDigits),
+                expectedPattern: "y年")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits),
+                expectedPattern: "M/y")
+            test(
+                symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
+                expectedPattern: "d/M/y")
         }
 
         do {
@@ -248,11 +318,13 @@ private struct ICUPatternGeneratorTests {
             calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = .gmt
 
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "h:mm a")
-            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "h:mm:ss a")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                expectedPattern: "h:mm a")
+            test(
+                symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                expectedPattern: "h:mm:ss a")
         }
     }
-#endif
+    #endif
 }

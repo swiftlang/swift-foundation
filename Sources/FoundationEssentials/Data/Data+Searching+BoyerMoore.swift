@@ -165,7 +165,8 @@ extension Data {
             // candidateEnd walks down through 0..<(needleLength - 1). The Boyer-Moore suffix invariants keep
             // matchEnd in candidateEnd..<needleLength, so the derived suffix index is in 0..<needleLength.
             if candidateEnd > matchBound,
-               suffixLengths[unchecked: candidateEnd + needleLength - 1 - matchEnd] < candidateEnd - matchBound {
+                suffixLengths[unchecked: candidateEnd + needleLength - 1 - matchEnd] < candidateEnd - matchBound
+            {
                 suffixLengths[unchecked: candidateEnd] = suffixLengths[unchecked: candidateEnd + needleLength - 1 - matchEnd]
             } else {
                 if candidateEnd < matchBound {

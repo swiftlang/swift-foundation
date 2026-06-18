@@ -47,12 +47,12 @@ extension NSLocale {
 
     @objc
     private class func _newLocaleAsIfCurrent(_ name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> NSLocale? {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         let inner = LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: overrides, disableBundleMatching: disableBundleMatching)
         return _NSSwiftLocale(inner)
-#else
+        #else
         return nil
-#endif
+        #endif
     }
 
     @objc(_currentLocaleWithBundleLocalizations:disableBundleMatching:)
@@ -73,12 +73,12 @@ extension NSLocale {
         LocaleCache.cache.preferredLanguages(forCurrentUser: forCurrentUser)
     }
 
-#if canImport(_FoundationICU)
+    #if canImport(_FoundationICU)
     @objc
     class var _availableLocaleIdentifiers: [String] {
         Locale.availableIdentifiers
     }
-#endif
+    #endif
 
     // This is internal, but silence the compiler's warnings about deprecation by deprecating this, too.
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
@@ -99,12 +99,12 @@ extension NSLocale {
         Locale.isoCurrencyCodes
     }
 
-#if canImport(_FoundationICU)
+    #if canImport(_FoundationICU)
     @objc
     class var _commonISOCurrencyCodes: [String] {
         Locale.commonISOCurrencyCodes
     }
-#endif
+    #endif
 
     @objc
     class var _preferredLanguages: [String] {
@@ -113,12 +113,12 @@ extension NSLocale {
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
     @objc(_componentsFromLocaleIdentifier:)
-    class func _components(fromLocaleIdentifier string: String) -> [String : String] {
+    class func _components(fromLocaleIdentifier string: String) -> [String: String] {
         Locale.components(fromIdentifier: string)
     }
 
     @objc(_localeIdentifierFromComponents:)
-    class func _localeIdentifier(fromComponents dict: [String : Any]) -> String {
+    class func _localeIdentifier(fromComponents dict: [String: Any]) -> String {
         // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar". We call through to a compatibility version of `Locale.identifier(fromComponents:)` to support this.
         Locale.identifier(fromAnyComponents: dict)
     }
@@ -134,7 +134,7 @@ extension NSLocale {
         Locale.canonicalLanguageIdentifier(from: string)
     }
 
-#if canImport(_FoundationICU)
+    #if canImport(_FoundationICU)
     @objc(_localeIdentifierFromWindowsLocaleCode:)
     class func _localeIdentifier(fromWindowsLocaleCode: UInt32) -> String? {
         guard let code = Int(exactly: fromWindowsLocaleCode) else {
@@ -150,8 +150,8 @@ extension NSLocale {
         }
         return 0
     }
-#endif
-    
+    #endif
+
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
     @objc(_characterDirectionForLanguage:)
     class func _characterDirection(forLanguage isoLangCode: String) -> NSLocale.LanguageDirection {
@@ -166,7 +166,7 @@ extension NSLocale {
 
     @objc(_numberingSystemForLocaleIdentifier:)
     class func _numberingSystem(forLocaleIdentifier identifier: String) -> String? {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         let components = Locale.Components(identifier: identifier)
         if let system = components.numberingSystem {
             return system.identifier
@@ -174,26 +174,26 @@ extension NSLocale {
         if let defaultSystem = Locale.NumberingSystem.defaultNumberingSystem(for: identifier) {
             return defaultSystem.identifier
         }
-#endif
+        #endif
         return nil
     }
 
     @objc(_validNumberingSystemsForLocaleIdentifier:)
     class func _validNumberingSystems(forLocaleIdentifier identifier: String) -> [String] {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         Locale.NumberingSystem.validNumberingSystems(for: identifier).map { $0.identifier }
-#else
+        #else
         []
-#endif
+        #endif
     }
 
     @objc(_localeIdentifierByReplacingLanguageCodeAndScriptCodeForLangCode:desiredComponents:)
     class func _localeIdentifierByReplacingLanguageCodeAndScriptCode(_ localeIDWithDesiredLangCode: String, desiredComponents localeIDWithDesiredComponents: String) -> String? {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         Locale.localeIdentifierByReplacingLanguageCodeAndScriptCode(localeIDWithDesiredLangCode: localeIDWithDesiredLangCode, localeIDWithDesiredComponents: localeIDWithDesiredComponents)
-#else
+        #else
         nil
-#endif
+        #endif
     }
 
     @objc(_localeIdentifierByAddingLikelySubtags:)
@@ -252,12 +252,12 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
     required init?(coder: NSCoder) {
         // TODO: This will never be invoked as long as we have a "placeholder" NSLocale in CoreFoundation
         guard coder.allowsKeyedCoding else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Cannot be decoded without keyed coding"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Cannot be decoded without keyed coding"]))
             return nil
         }
 
         guard let ident = coder.decodeObject(forKey: "NS.identifier") as? String else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Identifier has been corrupted"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Identifier has been corrupted"]))
             return nil
         }
 
@@ -271,7 +271,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
         if coder.allowsKeyedCoding {
             coder.encode(locale.identifier, forKey: "NS.identifier")
         } else {
-            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Cannot be encoded without keyed coding"]))
+            coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey: "Cannot be encoded without keyed coding"]))
         }
     }
 
@@ -286,9 +286,9 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
         case .countryCode: return self.countryCode
         case .scriptCode: return self.scriptCode
         case .variantCode: return self.variantCode
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         case .exemplarCharacterSet: return self.exemplarCharacterSet
-#endif
+        #endif
         case .calendarIdentifier: return self.calendarIdentifier
         case .calendar: return locale.calendar
         case .collationIdentifier: return self.collationIdentifier
@@ -304,10 +304,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
             switch locale.temperatureUnit {
             case .celsius: return NSLocaleTemperatureUnitCelsius
             case .fahrenheit: return NSLocaleTemperatureUnitFahrenheit
-#if !FOUNDATION_FRAMEWORK
+            #if !FOUNDATION_FRAMEWORK
             // On non-framework builds, the enum is non-closed and `package` visibility, so we need a default
             default: return NSLocaleTemperatureUnitCelsius
-#endif
+            #endif
             }
         case .decimalSeparator: return self.decimalSeparator
         case .groupingSeparator: return self.groupingSeparator
@@ -335,9 +335,9 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
         case .countryCode: return self.localizedString(forCountryCode: value)
         case .scriptCode: return self.localizedString(forScriptCode: value)
         case .variantCode: return self.localizedString(forVariantCode: value)
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         case .exemplarCharacterSet: return nil
-#endif
+        #endif
         case .calendarIdentifier, .calendar: return self.localizedString(forCalendarIdentifier: value)
         case .collationIdentifier: return self.localizedString(forCollationIdentifier: value)
         case .usesMetricSystem: return nil
@@ -441,11 +441,11 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
         locale.alternateQuotationEndDelimiter ?? ""
     }
 
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     override var exemplarCharacterSet: CharacterSet {
         locale.exemplarCharacterSet ?? CharacterSet()
     }
-#endif
+    #endif
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
     override var usesMetricSystem: Bool {
@@ -455,7 +455,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
     override func localizedString(forLocaleIdentifier localeIdentifier: String) -> String {
         _nullableLocalizedString(forLocaleIdentifier: localeIdentifier) ?? ""
     }
-    
+
     /// Some CFLocale APIs require the result to remain `nullable`. They can call this directly, where the `localizedString(forLocaleIdentifier:)` entry point can remain (correctly) non-nullable.
     private func _nullableLocalizedString(forLocaleIdentifier localeIdentifier: String) -> String? {
         locale.localizedString(forIdentifier: localeIdentifier)
@@ -525,7 +525,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
         let copy = locale.copy(newCalendarIdentifier: id)
         return _NSSwiftLocale(copy)
     }
-    
+
     @_effects(releasenone)
     override func _doesNotRequireSpecialCaseHandling() -> Bool {
         Locale.identifierDoesNotRequireSpecialCaseHandling(locale.identifier)
@@ -535,12 +535,12 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
 // MARK: - Bridging
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Locale : ReferenceConvertible {
+extension Locale: ReferenceConvertible {
     public typealias ReferenceType = NSLocale
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Locale : _ObjectiveCBridgeable {
+extension Locale: _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSLocale {
         _locale.bridgeToNSLocale()
@@ -566,7 +566,7 @@ extension Locale : _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSLocale : _HasCustomAnyHashableRepresentation {
+extension NSLocale: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {
@@ -585,11 +585,11 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     @available(watchOS, deprecated: 9, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     public static var isoLanguageCodes: [String] {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         Locale.LanguageCode._isoLanguageCodeStrings
-#else
+        #else
         []
-#endif
+        #endif
     }
 
     /// Returns a dictionary that splits an identifier into its component pieces.
@@ -597,7 +597,7 @@ extension Locale {
     @available(iOS, deprecated: 16, message: "Use `Locale.Components(identifier:)` to access components")
     @available(tvOS, deprecated: 16, message: "Use `Locale.Components(identifier:)` to access components")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Components(identifier:)` to access components")
-    public static func components(fromIdentifier string: String) -> [String : String] {
+    public static func components(fromIdentifier string: String) -> [String: String] {
         let comps = CFLocaleCreateComponentsFromLocaleIdentifier(kCFAllocatorSystemDefault, CFLocaleIdentifier(string as CFString))
         if let result = comps as? [String: String] {
             return result
@@ -613,11 +613,11 @@ extension Locale {
     @available(watchOS, deprecated: 9, message: "Use `Locale.Region.isoRegions` instead")
     public static var isoRegionCodes: [String] {
         // This was renamed from Obj-C
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         Locale.Region.isoCountries
-#else
+        #else
         []
-#endif
+        #endif
     }
 
     /// A list of available currency codes.
@@ -626,11 +626,11 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Currency.isoCurrencies` instead")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Currency.isoCurrencies` instead")
     public static var isoCurrencyCodes: [String] {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         Locale.Currency.isoCurrencies.map { $0.identifier }
-#else
+        #else
         []
-#endif
+        #endif
     }
 
     /// Returns the character direction for a specified language code.
@@ -639,12 +639,12 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Language(identifier:).characterDirection`")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Language(identifier:).characterDirection`")
     public static func characterDirection(forLanguage isoLangCode: String) -> Locale.LanguageDirection {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         let language = Locale.Language(components: .init(identifier: isoLangCode))
         return language.characterDirection
-#else
+        #else
         return .unknown
-#endif
+        #endif
     }
 
     /// Returns the line direction for a specified language code.
@@ -653,12 +653,12 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Language(identifier:).lineLayoutDirection`")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Language(identifier:).lineLayoutDirection`")
     public static func lineDirection(forLanguage isoLangCode: String) -> Locale.LanguageDirection {
-#if canImport(_FoundationICU)
+        #if canImport(_FoundationICU)
         let language = Locale.Language(components: .init(identifier: isoLangCode))
         return language.lineLayoutDirection
-#else
+        #else
         return .unknown
-#endif
+        #endif
     }
 
 }

@@ -28,21 +28,21 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
-    
+
     // MARK: Encoding strings
     let asciiSmallStr = "abcdefghijklmnopqrtuvwxyz"
     let nonAsciiSmallStr = "🛬x𝄞𝄢y👽"
-    
+
     var asciiLargeStr = ""
     for _ in 0..<10_000 {
         asciiLargeStr += asciiSmallStr
     }
-    
+
     var nonAsciiLargeStr = ""
     for _ in 0..<10_000 {
         nonAsciiLargeStr += nonAsciiSmallStr
     }
-    
+
     let asciiSmallStrDataUTF16BE = asciiSmallStr.data(using: .utf16BigEndian)!
     let asciiSmallStrDataUTF16LE = asciiSmallStr.data(using: .utf16LittleEndian)!
     let nonAsciiSmallStrDataUTF16BE = nonAsciiSmallStr.data(using: .utf16BigEndian)!
@@ -64,19 +64,19 @@ let benchmarks: @Sendable () -> Void = {
     let nonAsciiLargeStrDataUTF32LE = nonAsciiLargeStr.data(using: .utf32LittleEndian)!
 
     // MARK: - UTF16
-    
+
     Benchmark("utf16-encode") { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
                 blackHole(asciiSmallStr.data(using: .utf16BigEndian))
                 blackHole(nonAsciiSmallStr.data(using: .utf16BigEndian))
-                
+
                 blackHole(asciiLargeStr.data(using: .utf16BigEndian))
                 blackHole(nonAsciiLargeStr.data(using: .utf16BigEndian))
-                
+
                 blackHole(asciiSmallStr.data(using: .utf16LittleEndian))
                 blackHole(nonAsciiSmallStr.data(using: .utf16LittleEndian))
-                
+
                 blackHole(asciiLargeStr.data(using: .utf16LittleEndian))
                 blackHole(nonAsciiLargeStr.data(using: .utf16LittleEndian))
 
@@ -85,7 +85,7 @@ let benchmarks: @Sendable () -> Void = {
             }
         }
     }
-    
+
     Benchmark("utf16-decode") { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
@@ -107,7 +107,7 @@ let benchmarks: @Sendable () -> Void = {
             }
         }
     }
-        
+
     // MARK: - UTF32
 
     Benchmark("utf32-encode") { benchmark in
@@ -115,13 +115,13 @@ let benchmarks: @Sendable () -> Void = {
             autoreleasepool {
                 blackHole(asciiSmallStr.data(using: .utf32BigEndian))
                 blackHole(nonAsciiSmallStr.data(using: .utf32BigEndian))
-                
+
                 blackHole(asciiLargeStr.data(using: .utf32BigEndian))
                 blackHole(nonAsciiLargeStr.data(using: .utf32BigEndian))
-                
+
                 blackHole(asciiSmallStr.data(using: .utf32LittleEndian))
                 blackHole(nonAsciiSmallStr.data(using: .utf32LittleEndian))
-                
+
                 blackHole(asciiLargeStr.data(using: .utf32LittleEndian))
                 blackHole(nonAsciiLargeStr.data(using: .utf32LittleEndian))
 
@@ -130,7 +130,7 @@ let benchmarks: @Sendable () -> Void = {
             }
         }
     }
-    
+
     Benchmark("utf32-decode") { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
@@ -154,7 +154,8 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     // MARK: - I/O
-    let str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    let str =
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
     Benchmark("read-utf8") { benchmark in
         let rootURL = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)

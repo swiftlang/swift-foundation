@@ -21,12 +21,12 @@ internal import _FoundationCollections
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     /// A type that defines the behavior when merging attributes.
-    public enum AttributeMergePolicy : Sendable {
+    public enum AttributeMergePolicy: Sendable {
         /// The new value for this attribute takes precedence.
         case keepNew
         /// The existing value for this attribute takes precedence.
         case keepCurrent
-        
+
         internal var combinerClosure: (_AttributeValue, _AttributeValue) -> _AttributeValue {
             switch self {
             case .keepNew: return { _, new in new }
@@ -63,41 +63,39 @@ public protocol AttributedStringAttributeMutation {
 /// Don't declare new conformances to ``AttributedStringProtocol``. Only the ``AttributedString`` and ``AttributedSubstring`` types in the standard library are valid conforming types.
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AttributedStringProtocol
-    : AttributedStringAttributeMutation, Hashable, CustomStringConvertible, Sendable
-{
+public protocol AttributedStringProtocol: AttributedStringAttributeMutation, Hashable, CustomStringConvertible, Sendable {
     /// The position of the first character in a nonempty attributed string.
-    var startIndex : AttributedString.Index { get }
+    var startIndex: AttributedString.Index { get }
     /// A string's past-the-end position — the position one greater than the last valid subscript argument.
-    var endIndex : AttributedString.Index { get }
+    var endIndex: AttributedString.Index { get }
 
     /// The attributed runs of the attributed string, as a view into the underlying string.
     ///
     /// Runs begin and end when the attributes for the characters change. Use this property to iterate over the runs with `for`-`in` syntax.
-    var runs : AttributedString.Runs { get }
+    var runs: AttributedString.Runs { get }
     /// The characters of the attributed string, as a view into the underlying string.
     ///
     /// Use the ``AttributedStringProtocol/characters`` view when you want to look for specific string content. You can then use the resulting ranges to set attributes for specific parts of the ``AttributedString`` or ``AttributedSubstring``.
-    var characters : AttributedString.CharacterView { get }
+    var characters: AttributedString.CharacterView { get }
     /// The Unicode scalars of the attributed string, as a view into the underlying string.
     ///
     /// Use this property when you want to split the attributed string by Unicode scalar instead of grapheme cluster. This is useful when you need to carefully control insertion points or render the content.
-    var unicodeScalars : AttributedString.UnicodeScalarView { get }
-    
+    var unicodeScalars: AttributedString.UnicodeScalarView { get }
+
     @available(FoundationPreview 6.2, *)
-    var utf8 : AttributedString.UTF8View { get }
-    
+    var utf8: AttributedString.UTF8View { get }
+
     @available(FoundationPreview 6.2, *)
-    var utf16 : AttributedString.UTF16View { get }
+    var utf16: AttributedString.UTF16View { get }
 
     /// Returns an attribute value that corresponds to an attributed string key.
     ///
     /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire attributed string or substring. To find portions of an attributed string with consistent attributes, use the ``AttributedString/runs`` property.
-    @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable { get set }
+    @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable { get set }
     /// Returns an attribute value that a key path indicates.
     ///
     /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire attributed string or substring. To find portions of an attributed string with consistent attributes, use the ``AttributedStringProtocol/runs`` property.
-    @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable { get set }
+    @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value: Sendable { get set }
     /// Returns a scoped attribute container that a key path indicates.
     ///
     /// Use this subscript when you need to work with an explicit attribute scope. For example, the SwiftUI ``AttributeScopes/SwiftUIAttributes/foregroundColor`` attribute overrides the attribute in the AppKit and UIKit scopes with the same name. If you work with both the SwiftUI and UIKit scopes, you can use the syntax `myAttributedString.uiKit.foregroundColor` to disambiguate and explicitly use the UIKit attribute.
@@ -110,11 +108,11 @@ public protocol AttributedStringProtocol
 
 @available(FoundationPreview 6.2, *)
 extension AttributedStringProtocol {
-    var utf8 : AttributedString.UTF8View {
+    var utf8: AttributedString.UTF8View {
         AttributedString.UTF8View(__guts, in: Range(uncheckedBounds: (startIndex._value, endIndex._value)))
     }
-    
-    var utf16 : AttributedString.UTF16View {
+
+    var utf16: AttributedString.UTF16View {
         AttributedString.UTF16View(__guts, in: Range(uncheckedBounds: (startIndex._value, endIndex._value)))
     }
 }
@@ -138,10 +136,10 @@ extension AttributedStringProtocol {
     ///   - mergePolicy: A policy to use when resolving conflicts between this string's attributes and those in `attributes`.
     public func mergingAttributes(
         _ attributes: AttributeContainer,
-        mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew
+        mergePolicy: AttributedString.AttributeMergePolicy = .keepNew
     ) -> AttributedString {
         var new = AttributedString(self)
-        new.mergeAttributes(attributes, mergePolicy:  mergePolicy)
+        new.mergeAttributes(attributes, mergePolicy: mergePolicy)
         return new
     }
 
@@ -170,7 +168,7 @@ extension AttributedStringProtocol {
             return self.characters._guts
         }
     }
-    
+
     internal var _baseString: BigString {
         __guts.string
     }
@@ -192,7 +190,7 @@ extension AttributedString {
     internal var _baseString: BigString {
         _guts.string
     }
-    
+
     internal var _bounds: Range<AttributedString.Index> {
         Range(uncheckedBounds: (startIndex, endIndex))
     }
@@ -206,7 +204,7 @@ extension AttributedSubstring {
     internal var _baseString: BigString {
         _guts.string
     }
-    
+
     internal var _bounds: Range<AttributedString.Index> {
         let lower = AttributedString.Index(_range.lowerBound, version: _guts.version)
         let upper = AttributedString.Index(_range.upperBound, version: _guts.version)
@@ -368,7 +366,7 @@ extension AttributedStringProtocol {
         let startOffset = substring.utf8.distance(from: substring.startIndex, to: range.lowerBound) // O(1)
         let endOffset = substring.utf8.distance(from: substring.startIndex, to: range.upperBound) // O(1)
 
-        return self._utf8Index(at: startOffset) ..< self._utf8Index(at: endOffset) // O(log(n))
+        return self._utf8Index(at: startOffset)..<self._utf8Index(at: endOffset) // O(log(n))
     }
 
     /// Returns the range of a substring in the attributed string, if it exists.
@@ -381,7 +379,7 @@ extension AttributedStringProtocol {
         if locale == nil {
             return _range(of: stringToFind, options: options)
         }
-#if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK
         // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
         // Since we have secret access to the String property, go ahead and use the full implementation given by Foundation rather than the limited reimplementation we needed for CharacterView.
         // FIXME: There is no longer a `String` property. This is going to be terribly slow.
@@ -398,11 +396,10 @@ extension AttributedStringProtocol {
         let start = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8Start)
         let end = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8End)
 
-        return AttributedString.Index(start, version: self.__guts.version) ..< AttributedString.Index(end, version: self.__guts.version)
-#else
+        return AttributedString.Index(start, version: self.__guts.version)..<AttributedString.Index(end, version: self.__guts.version)
+        #else
         // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
         return _range(of: stringToFind, options: options)
-#endif // FOUNDATION_FRAMEWORK
+        #endif // FOUNDATION_FRAMEWORK
     }
 }
-

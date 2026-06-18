@@ -17,7 +17,7 @@ import FoundationEssentials
 internal import _FoundationICU
 
 extension URL {
-    final class UnicodeLookalikeTable : Sendable {
+    final class UnicodeLookalikeTable: Sendable {
         static let `default` = UnicodeLookalikeTable()
 
         static let IDNScriptAllowedList: Set<Int> = {
@@ -81,9 +81,7 @@ extension URL.UnicodeLookalikeTable {
     /// - any ignorable character, and emoji characters related to locks.
     /// We also considered the characters Mozilla disallows <http://kb.mozillazine.org/Network.IDN.blacklist_chars>.
     private func isLookalikeScalar(_ scalar: Unicode.Scalar, withPreviousScalar previousScalar: Unicode.Scalar?) -> Bool {
-        if !u_isprint(scalar.ucharValue).boolValue ||
-            u_isUWhiteSpace(scalar.ucharValue).boolValue ||
-            u_hasBinaryProperty(scalar.ucharValue, UCHAR_DEFAULT_IGNORABLE_CODE_POINT).boolValue {
+        if !u_isprint(scalar.ucharValue).boolValue || u_isUWhiteSpace(scalar.ucharValue).boolValue || u_hasBinaryProperty(scalar.ucharValue, UCHAR_DEFAULT_IGNORABLE_CODE_POINT).boolValue {
             return true
         }
         let blockCode = ublock_getCode(scalar.ucharValue)
@@ -214,7 +212,7 @@ extension URL.UnicodeLookalikeTable {
         case 0x1F510: fallthrough /* CLOSED LOCK WITH KEY */
         case 0x1F511: fallthrough /* KEY */
         case 0x1F512: fallthrough /* LOCK */
-        case 0x1F513:             /* OPEN LOCK */
+        case 0x1F513: /* OPEN LOCK */
             return true;
         case 0x0307: /* COMBINING DOT ABOVE */
             guard let previousScalar = previousScalar else {
@@ -230,29 +228,30 @@ extension URL.UnicodeLookalikeTable {
             return isLookalikeSequence(
                 withScalar: scalar,
                 previousScalar: previousScalar,
-                ofScriptType: .armenian) ||
-            isLookalikeSequence(
-                withScalar: scalar,
-                previousScalar: previousScalar,
-                ofScriptType: .tamil) ||
-            isLookalikeSequence(
-                withScalar: scalar,
-                previousScalar: previousScalar,
-                ofScriptType: .canadianAboriginal) ||
-            isLookalikeSequence(
-                withScalar: scalar,
-                previousScalar: previousScalar,
-                ofScriptType: .thai) ||
-            isLookalikeSequence(
-                withScalar: scalar,
-                previousScalar: previousScalar,
-                ofScriptType: .arabic)
+                ofScriptType: .armenian)
+                || isLookalikeSequence(
+                    withScalar: scalar,
+                    previousScalar: previousScalar,
+                    ofScriptType: .tamil)
+                || isLookalikeSequence(
+                    withScalar: scalar,
+                    previousScalar: previousScalar,
+                    ofScriptType: .canadianAboriginal)
+                || isLookalikeSequence(
+                    withScalar: scalar,
+                    previousScalar: previousScalar,
+                    ofScriptType: .thai)
+                || isLookalikeSequence(
+                    withScalar: scalar,
+                    previousScalar: previousScalar,
+                    ofScriptType: .arabic)
         }
     }
 
     private func isLookalikeSequence(withScalar scalar: Unicode.Scalar, previousScalar: Unicode.Scalar?, ofScriptType scriptType: UScriptCode) -> Bool {
         guard let previousScalar = previousScalar,
-              previousScalar != "/" else {
+            previousScalar != "/"
+        else {
             return false
         }
 
@@ -263,8 +262,7 @@ extension URL.UnicodeLookalikeTable {
         let isLookalikePair = { (first: Unicode.Scalar, second: Unicode.Scalar) -> Bool in
             return first.isLookalikeScalarOfScriptType(scriptType) && !(second.isOfScriptType(scriptType) || second.isASCIIDigitOrValidHostCharacter())
         }
-        return isLookalikePair(scalar, previousScalar) ||
-            isLookalikePair(previousScalar, scalar)
+        return isLookalikePair(scalar, previousScalar) || isLookalikePair(previousScalar, scalar)
     }
 
     private func isLookalikeSequenceOfArabic(withScalar scalar: Unicode.Scalar, previousScalar: Unicode.Scalar?) -> Bool {
@@ -307,7 +305,7 @@ extension URL.UnicodeLookalikeTable {
         let cyrillicRF: String.UnicodeScalarView = .init([
             0x002E, // '.' FULL STOP
             0x0440, // CYRILLIC SMALL LETTER ER
-            0x0444  // CYRILLIC SMALL LETTER EF
+            0x0444, // CYRILLIC SMALL LETTER EF
         ])
         if buffer.count > cyrillicRF.count && buffer.unicodeScalars.hasSuffix(cyrillicRF) {
             return self.secondLevelDomain(
@@ -320,7 +318,7 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x0440, // CYRILLIC SMALL LETTER ER
             0x0443, // CYRILLIC SMALL LETTER U
-            0x0441  // CYRILLIC SMALL LETTER ES
+            0x0441, // CYRILLIC SMALL LETTER ES
         ])
         if buffer.count > cyrillicRUS.count && buffer.unicodeScalars.hasSuffix(cyrillicRUS) {
             return self.secondLevelDomain(
@@ -336,7 +334,7 @@ extension URL.UnicodeLookalikeTable {
             0x0441, // CYRILLIC SMALL LETTER ES
             0x043A, // CYRILLIC SMALL LETTER KA
             0x0432, // CYRILLIC SMALL LETTER VE
-            0x0430  // CYRILLIC SMALL LETTER A
+            0x0430, // CYRILLIC SMALL LETTER A
         ])
         if buffer.count > cyrillicMOSKVA.count && buffer.unicodeScalars.hasSuffix(cyrillicMOSKVA) {
             return self.secondLevelDomain(
@@ -350,7 +348,7 @@ extension URL.UnicodeLookalikeTable {
             0x0434, // CYRILLIC SMALL LETTER DE
             0x0435, // CYRILLIC SMALL LETTER IE
             0x0442, // CYRILLIC SMALL LETTER TE
-            0x0438  // CYRILLIC SMALL LETTER I
+            0x0438, // CYRILLIC SMALL LETTER I
         ])
         if buffer.count > cyrillicDETI.count && buffer.unicodeScalars.hasSuffix(cyrillicDETI) {
             return self.secondLevelDomain(
@@ -369,7 +367,7 @@ extension URL.UnicodeLookalikeTable {
             0x043B, // CYRILLIC SMALL LETTER EL
             0x0430, // CYRILLIC SMALL LETTER A
             0x0439, // CYRILLIC SMALL LETTER SHORT I
-            0x043D  // CYRILLIC SMALL LETTER EN
+            0x043D, // CYRILLIC SMALL LETTER EN
         ])
         if buffer.count > cyrillicONLAYN.count && buffer.unicodeScalars.hasSuffix(cyrillicONLAYN) {
             return self.secondLevelDomain(
@@ -383,7 +381,7 @@ extension URL.UnicodeLookalikeTable {
             0x0441, // CYRILLIC SMALL LETTER ES
             0x0430, // CYRILLIC SMALL LETTER A
             0x0439, // CYRILLIC SMALL LETTER SHORT I
-            0x0442  // CYRILLIC SMALL LETTER TE
+            0x0442, // CYRILLIC SMALL LETTER TE
         ])
         if buffer.count > cyrillicSAYT.count && buffer.unicodeScalars.hasSuffix(cyrillicSAYT) {
             return self.secondLevelDomain(
@@ -399,7 +397,7 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x043E, // CYRILLIC SMALL LETTER O
             0x0440, // CYRILLIC SMALL LETTER ER
-            0x0433  // CYRILLIC SMALL LETTER GHE
+            0x0433, // CYRILLIC SMALL LETTER GHE
         ])
         if buffer.count > cyrillicORG.count && buffer.unicodeScalars.hasSuffix(cyrillicORG) {
             return self.secondLevelDomain(
@@ -412,16 +410,14 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x0431, // CYRILLIC SMALL LETTER BE
             0x0435, // CYRILLIC SMALL LETTER IE
-            0x043B  // CYRILLIC SMALL LETTER EL
+            0x043B, // CYRILLIC SMALL LETTER EL
         ])
         if buffer.count > cyrillicBEL.count && buffer.unicodeScalars.hasSuffix(cyrillicBEL) {
             return self.secondLevelDomain(
                 buffer.unicodeScalars.dropLast(cyrillicBEL.count),
                 allowedBy: {
                     // Russian and Byelorussian letters, digits and dashes are allowed.
-                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 ||
-                        $0.value == 0x0456 || $0.value == 0x045E || $0.value == 0x2019 ||
-                        $0.isASCIIDigit() || $0 == "-"
+                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 || $0.value == 0x0456 || $0.value == 0x045E || $0.value == 0x2019 || $0.isASCIIDigit() || $0 == "-"
                 })
         }
 
@@ -430,18 +426,15 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x049B, // CYRILLIC SMALL LETTER KA WITH DESCENDER
             0x0430, // CYRILLIC SMALL LETTER A
-            0x0437  // CYRILLIC SMALL LETTER ZE
+            0x0437, // CYRILLIC SMALL LETTER ZE
         ])
         if buffer.count > cyrillicKAZ.count && buffer.unicodeScalars.hasSuffix(cyrillicKAZ) {
             return self.secondLevelDomain(
                 buffer.unicodeScalars.dropLast(cyrillicKAZ.count),
                 allowedBy: {
                     // Kazakh letters, digits and dashes are allowed.
-                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 ||
-                        $0.value == 0x04D9 || $0.value == 0x0493 || $0.value == 0x049B ||
-                        $0.value == 0x04A3 || $0.value == 0x04E9 || $0.value == 0x04B1 ||
-                        $0.value == 0x04AF || $0.value == 0x04BB || $0.value == 0x0456 ||
-                        $0.isASCIIDigit() || $0 == "-"
+                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 || $0.value == 0x04D9 || $0.value == 0x0493 || $0.value == 0x049B || $0.value == 0x04A3 || $0.value == 0x04E9 || $0.value == 0x04B1 || $0.value == 0x04AF
+                        || $0.value == 0x04BB || $0.value == 0x0456 || $0.isASCIIDigit() || $0 == "-"
                 })
         }
 
@@ -450,16 +443,14 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x0443, // CYRILLIC SMALL LETTER U
             0x043A, // CYRILLIC SMALL LETTER KA
-            0x0440  // CYRILLIC SMALL LETTER ER
+            0x0440, // CYRILLIC SMALL LETTER ER
         ])
         if buffer.count > cyrillicUKR.count && buffer.unicodeScalars.hasSuffix(cyrillicUKR) {
             return self.secondLevelDomain(
                 buffer.unicodeScalars.dropLast(cyrillicUKR.count),
                 allowedBy: {
                     // Russian and Ukrainian letters, digits and dashes are allowed.
-                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 ||
-                        $0.value == 0x0491 || $0.value == 0x0404 || $0.value == 0x0456 ||
-                        $0.value == 0x0457 || $0.isASCIIDigit() || $0 == "-"
+                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 || $0.value == 0x0491 || $0.value == 0x0404 || $0.value == 0x0456 || $0.value == 0x0457 || $0.isASCIIDigit() || $0 == "-"
                 })
         }
 
@@ -468,17 +459,15 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x0441, // CYRILLIC SMALL LETTER ES
             0x0440, // CYRILLIC SMALL LETTER ER
-            0x0431  // CYRILLIC SMALL LETTER BE
+            0x0431, // CYRILLIC SMALL LETTER BE
         ])
         if buffer.count > cyrillicSRB.count && buffer.unicodeScalars.hasSuffix(cyrillicSRB) {
             return self.secondLevelDomain(
                 buffer.unicodeScalars.dropLast(cyrillicSRB.count),
                 allowedBy: {
                     // Serbian letters, digits and dashes are allowed.
-                    return ($0.value >= 0x0430 && $0.value <= 0x0438) || ($0.value >= 0x043A && $0.value <= 0x0448) ||
-                        $0.value == 0x0452 || $0.value == 0x0458 || $0.value == 0x0459 ||
-                        $0.value == 0x045A || $0.value == 0x045B || $0.value == 0x045F ||
-                        $0.isASCIIDigit() || $0 == "-"
+                    return ($0.value >= 0x0430 && $0.value <= 0x0438) || ($0.value >= 0x043A && $0.value <= 0x0448) || $0.value == 0x0452 || $0.value == 0x0458 || $0.value == 0x0459 || $0.value == 0x045A || $0.value == 0x045B || $0.value == 0x045F
+                        || $0.isASCIIDigit() || $0 == "-"
                 })
         }
 
@@ -487,17 +476,15 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x043C, // CYRILLIC SMALL LETTER EM
             0x043A, // CYRILLIC SMALL LETTER KA
-            0x0434  // CYRILLIC SMALL LETTER DE
+            0x0434, // CYRILLIC SMALL LETTER DE
         ])
         if buffer.count > cyrillicMKD.count && buffer.unicodeScalars.hasSuffix(cyrillicMKD) {
             return self.secondLevelDomain(
                 buffer.unicodeScalars.dropLast(cyrillicMKD.count),
                 allowedBy: {
                     // Macedonian letters, digits and dashes are allowed.
-                    return ($0.value >= 0x0430 && $0.value <= 0x0438) || ($0.value >= 0x043A && $0.value <= 0x0448) ||
-                        $0.value == 0x0453 || $0.value == 0x0455 || $0.value == 0x0458 ||
-                        $0.value == 0x0459 || $0.value == 0x045A || $0.value == 0x045C ||
-                        $0.value == 0x045F || $0.isASCIIDigit() || $0 == "-"
+                    return ($0.value >= 0x0430 && $0.value <= 0x0438) || ($0.value >= 0x043A && $0.value <= 0x0448) || $0.value == 0x0453 || $0.value == 0x0455 || $0.value == 0x0458 || $0.value == 0x0459 || $0.value == 0x045A || $0.value == 0x045C
+                        || $0.value == 0x045F || $0.isASCIIDigit() || $0 == "-"
                 })
         }
 
@@ -506,16 +493,14 @@ extension URL.UnicodeLookalikeTable {
             0x002E, // '.' FULL STOP
             0x043C, // CYRILLIC SMALL LETTER EM
             0x043E, // CYRILLIC SMALL LETTER O
-            0x043D  // CYRILLIC SMALL LETTER EN
+            0x043D, // CYRILLIC SMALL LETTER EN
         ])
         if buffer.count > cyrillicMON.count && buffer.unicodeScalars.hasSuffix(cyrillicMON) {
             return self.secondLevelDomain(
                 buffer.unicodeScalars.dropLast(cyrillicMON.count),
                 allowedBy: {
                     // Mongolian letters, digits and dashes are allowed.
-                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 ||
-                        $0.value == 0x04E9 || $0.value == 0x04AF || $0.isASCIIDigit() ||
-                        $0 == "-"
+                    return ($0.value >= 0x0430 && $0.value <= 0x044f) || $0.value == 0x0451 || $0.value == 0x04E9 || $0.value == 0x04AF || $0.isASCIIDigit() || $0 == "-"
                 })
         }
 
@@ -523,15 +508,13 @@ extension URL.UnicodeLookalikeTable {
         let cyrillicBG: String.UnicodeScalarView = .init([
             0x002E, // '.' FULL STOP
             0x0431, // CYRILLIC SMALL LETTER BE
-            0x0433 // CYRILLIC SMALL LETTER GHE
+            0x0433, // CYRILLIC SMALL LETTER GHE
         ])
         if buffer.count > cyrillicBG.count && buffer.unicodeScalars.hasSuffix(cyrillicBG) {
             return self.secondLevelDomain(
                 buffer.unicodeScalars.dropLast(cyrillicBG.count),
                 allowedBy: {
-                    return ($0.value >= 0x0430 && $0.value <= 0x044A) || $0.value == 0x044C ||
-                        ($0.value >= 0x044E && $0.value <= 0x0450) || $0.value == 0x045D ||
-                        $0.isASCIIDigit() || $0 == "-"
+                    return ($0.value >= 0x0430 && $0.value <= 0x044A) || $0.value == 0x044C || ($0.value >= 0x044E && $0.value <= 0x0450) || $0.value == 0x045D || $0.isASCIIDigit() || $0 == "-"
                 })
         }
 
@@ -597,7 +580,7 @@ extension Unicode.Scalar {
         case 0x0578: fallthrough /* ARMENIAN SMALL LETTER VO */
         case 0x057D: fallthrough /* ARMENIAN SMALL LETTER SEH */
         case 0x0581: fallthrough /* ARMENIAN SMALL LETTER CO */
-        case 0x0585:             /* ARMENIAN SMALL LETTER OH */
+        case 0x0585: /* ARMENIAN SMALL LETTER OH */
             return true
         default:
             return false
@@ -620,7 +603,7 @@ extension Unicode.Scalar {
         case 0x15F1: fallthrough /* CANADIAN SYLLABICS CARRIER GE */
         case 0x15F4: fallthrough /* CANADIAN SYLLABICS CARRIER GA */
         case 0x166D: fallthrough /* CANADIAN SYLLABICS CHI SIGN */
-        case 0x166E:             /* CANADIAN SYLLABICS FULL STOP */
+        case 0x166E: /* CANADIAN SYLLABICS FULL STOP */
             return true
         default:
             return false
@@ -629,7 +612,7 @@ extension Unicode.Scalar {
 
     fileprivate func isLookalikeScalarOfThai() -> Bool {
         switch self.value {
-        case 0x0E01:             /* THAI CHARACTER KO KAI */
+        case 0x0E01: /* THAI CHARACTER KO KAI */
             return true
         default:
             return false
@@ -645,9 +628,7 @@ extension Unicode.Scalar {
 
     fileprivate func isRussianDomainNameCharacter() -> Bool {
         // Only modern Russian letters, digits and dashes are allowed.
-        return (self.value >= 0x0430 && self.value <= 0x044f) ||
-            self.value == 0x0451 || self.isASCIIDigit() ||
-            self == "-"
+        return (self.value >= 0x0430 && self.value <= 0x044f) || self.value == 0x0451 || self.isASCIIDigit() || self == "-"
     }
 
     fileprivate func isASCIIDigit() -> Bool {
@@ -663,9 +644,7 @@ extension Unicode.Scalar {
     }
 
     private func isASCIIDigitOrPunctuation() -> Bool {
-        return (self >= "!" && self <= "@") ||
-            (self >= "[" && self <= "`") ||
-            (self >= "{" && self <= "~")
+        return (self >= "!" && self <= "@") || (self >= "[" && self <= "`") || (self >= "{" && self <= "~")
     }
 
     private func isValidHostCharacter() -> Bool {
@@ -687,7 +666,7 @@ extension Unicode.Scalar {
 }
 
 extension String.UnicodeScalarView {
-    fileprivate init<S>(_ elements: S) where S : Sequence, S.Element == UInt32 {
+    fileprivate init<S>(_ elements: S) where S: Sequence, S.Element == UInt32 {
         self.init(elements.map { Unicode.Scalar($0)! })
     }
 
@@ -696,7 +675,7 @@ extension String.UnicodeScalarView {
             return false
         }
 
-        let target = self[self.index(self.endIndex, offsetBy: -suffix.count) ..< self.endIndex]
+        let target = self[self.index(self.endIndex, offsetBy: -suffix.count)..<self.endIndex]
         return String.UnicodeScalarView(target).elementsEqual(suffix)
     }
 }

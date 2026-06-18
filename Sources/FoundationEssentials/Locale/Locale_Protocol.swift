@@ -11,20 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 // Required to be `AnyObject` because it optimizes the call sites in the `struct` wrapper for efficient function dispatch.
-package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvertible {
+package protocol _LocaleProtocol: AnyObject, Sendable, CustomDebugStringConvertible {
 
     init(identifier: String, prefs: LocalePreferences?)
     init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool)
     init(components: Locale.Components)
-        
+
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol
-    
+
     var debugDescription: String { get }
     var isAutoupdating: Bool { get }
     var isBridged: Bool { get }
-    
+
     var identifier: String { get }
-    
+
     func identifierDisplayName(for value: String) -> String?
     func languageCodeDisplayName(for value: String) -> String?
     func countryCodeDisplayName(for regionCode: String) -> String?
@@ -35,15 +35,15 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     func currencySymbolDisplayName(for value: String) -> String?
     func collationIdentifierDisplayName(for value: String) -> String?
     func collatorIdentifierDisplayName(for collatorIdentifier: String) -> String?
-    
+
     var languageCode: String? { get }
     var scriptCode: String? { get }
     var variantCode: String? { get }
     var regionCode: String? { get }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     var exemplarCharacterSet: CharacterSet? { get }
-#endif
+    #endif
 
     var calendar: Calendar { get }
     var calendarIdentifier: Calendar.Identifier { get }
@@ -81,37 +81,37 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int?
     var forceMeasurementSystem: Locale.MeasurementSystem? { get }
     var forceTemperatureUnit: LocalePreferences.TemperatureUnit? { get }
-    
+
     var prefs: LocalePreferences? { get }
-    
+
     var identifierCapturingPreferences: String { get }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     func pref(for key: String) -> Any?
-    
+
     func bridgeToNSLocale() -> NSLocale
-    
-#if !NO_FORMATTERS
+
+    #if !NO_FORMATTERS
     // This is framework-only because Date.FormatStyle.DateStlye is Internationalization-only
     func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String?
-#endif
-#endif
+    #endif
+    #endif
 }
 
 extension _LocaleProtocol {
-    
+
     package var regionCode: String? {
         region?.identifier
     }
-    
+
     package var debugDescription: String {
         identifier
     }
-    
+
     package var isAutoupdating: Bool {
         false
     }
-    
+
     package var isBridged: Bool {
         false
     }

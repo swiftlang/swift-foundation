@@ -27,25 +27,25 @@ let foundationModuleName = "Foundation"
 let foundationModuleName = "FoundationEssentials"
 #endif
 
-struct DiagnosticTest : ExpressibleByStringLiteral, Hashable, CustomStringConvertible {
-    struct FixItTest : Hashable {
+struct DiagnosticTest: ExpressibleByStringLiteral, Hashable, CustomStringConvertible {
+    struct FixItTest: Hashable {
         let message: String
         let result: String
-        
+
         init(_ message: String, result: String) {
             self.message = message
             self.result = result
         }
-        
+
         func matches(_ fixIt: FixIt) -> Bool {
             fixIt.message.message == message && fixIt.changes.first?._result == result
         }
     }
-    
+
     let message: String
     let fixIts: [FixItTest]
     var description: String { message }
-    
+
     var mappedToExpression: Self {
         DiagnosticTest(
             message.replacing("Predicate", with: "Expression").replacing("predicate", with: "expression"),
@@ -54,17 +54,17 @@ struct DiagnosticTest : ExpressibleByStringLiteral, Hashable, CustomStringConver
             }
         )
     }
-    
+
     init(stringLiteral value: StringLiteralType) {
         message = value
         fixIts = []
     }
-    
+
     init(_ message: String, fixIts: [FixItTest] = []) {
         self.message = message
         self.fixIts = fixIts
     }
-    
+
     func matches(_ diagnostic: Diagnostic) -> Bool {
         func hasProducedFixIt(_ fixIt: FixItTest) -> Bool {
             diagnostic.fixIts.contains { produced in
@@ -76,10 +76,8 @@ struct DiagnosticTest : ExpressibleByStringLiteral, Hashable, CustomStringConver
                 expected.matches(fixIt)
             }
         }
-        
-        return diagnostic.debugDescription == message &&
-                diagnostic.fixIts.allSatisfy(hasExpectedFixIt) &&
-                fixIts.allSatisfy(hasProducedFixIt)
+
+        return diagnostic.debugDescription == message && diagnostic.fixIts.allSatisfy(hasExpectedFixIt) && fixIts.allSatisfy(hasProducedFixIt)
     }
 }
 
@@ -122,13 +120,16 @@ extension DiagnosticTest {
     }
 }
 
-func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], buildConfiguration: (any BuildConfiguration)? = nil, sourceLocation: Testing.SourceLocation = #_sourceLocation) {
+func AssertMacroExpansion(
+    macros: [String: Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], buildConfiguration: (any BuildConfiguration)? = nil,
+    sourceLocation: Testing.SourceLocation = #_sourceLocation
+) {
     let origSourceFile = Parser.parse(source: source)
     let expandedSourceFile: Syntax
     let context: BasicMacroExpansionContext
     do {
         let foldedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).cast(SourceFileSyntax.self)
-        context = BasicMacroExpansionContext(sourceFiles: [foldedSourceFile : .init(moduleName: testModuleName, fullFilePath: testFileName)], buildConfiguration: buildConfiguration)
+        context = BasicMacroExpansionContext(sourceFiles: [foldedSourceFile: .init(moduleName: testModuleName, fullFilePath: testFileName)], buildConfiguration: buildConfiguration)
         expandedSourceFile = foldedSourceFile.expand(macros: macros) {
             BasicMacroExpansionContext(sharingWith: context, lexicalContext: [$0])
         }
@@ -164,7 +165,7 @@ func AssertPredicateExpansion(_ source: String, _ result: String = "", diagnosti
         sourceLocation: sourceLocation
     )
     AssertMacroExpansion(
-        macros: ["Expression" : FoundationMacros.ExpressionMacro.self],
+        macros: ["Expression": FoundationMacros.ExpressionMacro.self],
         source.replacing("#Predicate", with: "#Expression"),
         result.replacing(".Predicate", with: ".Expression"),
         diagnostics: Set(diagnostics.map(\.mappedToExpression)),

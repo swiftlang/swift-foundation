@@ -25,7 +25,7 @@ extension String {
         guard let casemap = ICU.CaseMap.caseMappingForLocale(locale?.identifier) else {
             return capitalized
         }
-        
+
         // Theoretically "." is a case-ignorable character, so the character after "." is not uppercased. This results in "D.c." for "D.C".
         // Handle this special case by splitting the string with "." and titlecasing each substring individually.
         var result = ""

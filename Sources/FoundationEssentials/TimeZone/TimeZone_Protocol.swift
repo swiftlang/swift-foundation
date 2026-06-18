@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 // Required to be `AnyObject` because it optimizes the call sites in the `struct` wrapper for efficient function dispatch.
-package protocol _TimeZoneProtocol : AnyObject, Sendable, CustomDebugStringConvertible {
+package protocol _TimeZoneProtocol: AnyObject, Sendable, CustomDebugStringConvertible {
     init?(secondsFromGMT: Int)
     init?(identifier: String)
-    
+
     var identifier: String { get }
     func secondsFromGMT(for date: Date) -> Int
-    
+
     /// If the time zone does not observe daylight savings, then return the constant offset from GMT. Otherwise, returns nil.
     var fixedOffsetFromGMT: Int? { get }
 
@@ -30,41 +30,41 @@ package protocol _TimeZoneProtocol : AnyObject, Sendable, CustomDebugStringConve
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval
     func nextDaylightSavingTimeTransition(after date: Date) -> Date?
     func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String?
-    
+
     // Used by legacy ObjC clients only
     var data: Data? { get }
     var isAutoupdating: Bool { get }
     var debugDescription: String { get }
     func hash(into hasher: inout Hasher)
-#if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK
     func bridgeToNSTimeZone() -> NSTimeZone
-#endif
+    #endif
 }
 
 extension _TimeZoneProtocol {
     package var data: Data? {
         nil
     }
-    
+
     package var isAutoupdating: Bool {
         false
     }
-    
+
     package var fixedOffsetFromGMT: Int? {
         nil
     }
-    
+
     package var debugDescription: String {
         identifier
     }
-    
+
     package func hash(into hasher: inout Hasher) {
         hasher.combine(identifier)
     }
-    
-#if FOUNDATION_FRAMEWORK
+
+    #if FOUNDATION_FRAMEWORK
     package func bridgeToNSTimeZone() -> NSTimeZone {
         _NSSwiftTimeZone(timeZone: TimeZone(inner: self))
     }
-#endif
+    #endif
 }

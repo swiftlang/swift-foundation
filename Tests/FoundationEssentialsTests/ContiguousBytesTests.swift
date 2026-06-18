@@ -43,7 +43,7 @@ func acceptContiguousBytes<T: ContiguousBytes & ~Escapable & ~Copyable>(_ bytes:
     }
 }
 
-struct NC: ~Copyable { }
+struct NC: ~Copyable {}
 
 @Suite("ContiguousBytesTests")
 private struct ContiguousBytesTests {
