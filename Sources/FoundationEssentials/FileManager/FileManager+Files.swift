@@ -155,7 +155,7 @@ extension stat {
     
     var creationDate: Date {
         #if canImport(Darwin)
-        Date(seconds: TimeInterval(st_ctimespec.tv_sec), nanoSeconds: TimeInterval(st_ctimespec.tv_nsec))
+        Date(seconds: TimeInterval(st_birthtimespec.tv_sec), nanoSeconds: TimeInterval(st_birthtimespec.tv_nsec))
         #else
         Date(seconds: TimeInterval(st_ctim.tv_sec), nanoSeconds: TimeInterval(st_ctim.tv_nsec))
         #endif
