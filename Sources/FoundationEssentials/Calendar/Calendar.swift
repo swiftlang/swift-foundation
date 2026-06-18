@@ -1281,6 +1281,14 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
     }
 
+    internal func _calendarNextDate(after date: Date, matching components: DateComponents, direction: SearchDirection) -> Date? {
+        _calendar.nextDate(after: date, matching: components, direction: direction)
+    }
+
+    internal func _supportsNextDateFastPath(for components: DateComponents) -> Bool {
+        _calendar.supportsNextDateFastPath(for: components)
+    }
+
     /// Computes the dates which match (or most closely match) a given set of components, and calls the closure once for each of them, until the enumeration is stopped.
     ///
     /// There will be at least one intervening date which does not match all the components (or the given date itself must not match) between the given date and any result.
@@ -1298,15 +1306,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter repeatedTimePolicy: Determines the behavior of the search algorithm when the input produces a time that occurs twice on a particular day.
     /// - parameter direction: Which direction in time to search. The default value is `.forward`, which means later in time.
     /// - parameter block: A closure that is called with search results.
-    internal func _calendarNextDate(after date: Date, matching components: DateComponents, direction: SearchDirection) -> Date? {
-        _calendar.nextDate(after: date, matching: components, direction: direction)
-    }
-
-    /// Whether the calendar implementation supports the `nextDate` fast path for the given pattern.
-    internal func _supportsNextDateFastPath(for components: DateComponents) -> Bool {
-        _calendar.supportsNextDateFastPath(for: components)
-    }
-
     @available(iOS 8.0, *)
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
         // Fast-path: drive the loop with direct nextDate calls when default policies are in effect.
