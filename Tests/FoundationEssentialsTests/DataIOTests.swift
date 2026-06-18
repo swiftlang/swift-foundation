@@ -231,10 +231,10 @@ private final class DataIOTests {
         let read = try Data(contentsOf: url)
         #expect(read == next)
 
-        let later = Data("later".utf8)
-        #expect(throws: (any Error).self) {
-            try later.write(to: url)
-        }
+        // Check mode bits directly. Testing by expecting `try later.write(to: url)` to throw would fail for root (e.g. in Linux CI containers), since root bypasses permission checks even on a read-only file.
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let mode = attributes[.posixPermissions] as? UInt ?? 0
+        #expect(mode == 0o400)
     }
 }
 
