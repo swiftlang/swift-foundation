@@ -331,22 +331,17 @@ private func __NSDecimalNormalize(
     _ rhs: UnsafeMutablePointer<Decimal>,
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
-    do {
-        var a = lhs.pointee
-        var b = rhs.pointee
-        let lossPrecision = try Decimal._normalize(
-            a: &a, b: &b, roundingMode: roundingMode
-        )
-        lhs.pointee = a
-        rhs.pointee = b
-        if lossPrecision {
-            return .lossOfPrecision
-        }
-        return .noError
-    } catch {
-        let converted = _convertError(error)
-        return converted
+    var a = lhs.pointee
+    var b = rhs.pointee
+    let lossOfPrecision = Decimal._normalize(
+        a: &a, b: &b, roundingMode: roundingMode
+    )
+    lhs.pointee = a
+    rhs.pointee = b
+    if lossOfPrecision {
+        return .lossOfPrecision
     }
+    return .noError
 }
 
 #if FOUNDATION_FRAMEWORK

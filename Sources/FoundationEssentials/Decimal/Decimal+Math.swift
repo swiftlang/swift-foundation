@@ -284,9 +284,9 @@ extension Decimal {
         rhs: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
         if self.isNaN || rhs.isNaN {
-            throw _CalculationError.overflow
+            throw .overflow
         }
         if self._length == 0 {
             if minExponent <= rhs._exponent { return (rhs, false) }
@@ -400,7 +400,7 @@ extension Decimal {
         rhs: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> Decimal {
+    ) throws(_CalculationError) -> Decimal {
         return try self._addReportingInexact(
             rhs: rhs,
             minExponent: minExponent,
@@ -412,7 +412,7 @@ extension Decimal {
         rhs: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
         var right = rhs
         if right._length != 0 {
             right._isNegative ^= 1
@@ -427,7 +427,7 @@ extension Decimal {
         rhs: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> Decimal {
+    ) throws(_CalculationError) -> Decimal {
         return try self._subtractReportingInexact(
             rhs: rhs,
             minExponent: minExponent,
@@ -439,9 +439,9 @@ extension Decimal {
         by multiplicand: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
         if self.isNaN || multiplicand.isNaN {
-            throw _CalculationError.overflow
+            throw .overflow
         }
         if self._length == 0 || multiplicand._length == 0 {
             return (.zero, false)
@@ -466,7 +466,7 @@ extension Decimal {
         by multiplicand: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> Decimal {
+    ) throws(_CalculationError) -> Decimal {
         return try self._multiplyReportingInexact(
             by: multiplicand,
             minExponent: minExponent,
@@ -478,9 +478,9 @@ extension Decimal {
         power: Int,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
         if self.isNaN {
-            throw _CalculationError.overflow
+            throw .overflow
         }
         if self._length == 0 {
             return (.zero, false)
@@ -494,7 +494,7 @@ extension Decimal {
             return (result, false)
         }
         if exponent >= 166 {
-            throw _CalculationError.overflow
+            throw .overflow
         }
         return try Self._assemble(
             isNegative: self._isNegative != 0,
@@ -508,7 +508,7 @@ extension Decimal {
         power: Int,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> Decimal {
+    ) throws(_CalculationError) -> Decimal {
         return try self._multiplyByPowerOfTenReportingInexact(
             power: power,
             minExponent: minExponent,
@@ -520,12 +520,12 @@ extension Decimal {
         by divisor: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
         guard !self.isNaN && !divisor.isNaN else {
-            throw _CalculationError.overflow
+            throw .overflow
         }
         guard divisor._length > 0 else {
-            throw _CalculationError.divideByZero
+            throw .divideByZero
         }
         if self._length == 0 {
             return (.zero, false)
@@ -569,7 +569,7 @@ extension Decimal {
         by divisor: Decimal,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> Decimal {
+    ) throws(_CalculationError) -> Decimal {
         return try self._divideReportingInexact(
             by: divisor,
             minExponent: minExponent,
@@ -684,12 +684,11 @@ extension Decimal {
         return result
     }
 
-    // We're keeping the signature (for now at least), but this function doesn't throw.
     internal static func _normalize(
         a: inout Decimal,
         b: inout Decimal,
         roundingMode: RoundingMode
-    ) throws -> Bool {
+    ) -> Bool {
         let diffExp = Int(a._exponent - b._exponent)
         // If the two numbers share the same exponents,
         // the normalization is already done
@@ -828,7 +827,7 @@ extension Decimal {
     internal func _roundReportingInexact(
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
         if self._length == 0 {
             return (self, false)
         }
@@ -857,7 +856,7 @@ extension Decimal {
     internal func _round(
         scale: Int,
         roundingMode: RoundingMode
-    ) throws -> Decimal {
+    ) throws(_CalculationError) -> Decimal {
         let scale = min(max(scale, -32768), 32767)
         return try _roundReportingInexact(
             minExponent: Int32(-scale),
@@ -1219,7 +1218,7 @@ extension Decimal {
 
         // Handle zero, distinguishing flush-to-zero underflow from rounding to zero.
         if low == 0 {
-            if underflowed { throw _CalculationError.underflow }
+            if underflowed { throw .underflow }
             return (.zero, inexact)
         }
 
@@ -1234,11 +1233,11 @@ extension Decimal {
             } else if k == shift &+ 1 {
                 low &*= _uint128_pow10[shift]
                 if low > 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
-                    throw _CalculationError.overflow
+                    throw .overflow
                 }
                 low &*= 10
             } else {
-                throw _CalculationError.overflow
+                throw .overflow
             }
             exponent = 127
         }

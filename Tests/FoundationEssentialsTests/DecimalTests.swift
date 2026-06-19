@@ -302,7 +302,7 @@ private struct DecimalTests {
     @Test func normalize() throws {
         var one = Decimal(1)
         var ten = Decimal(-10)
-        var lossPrecision = try Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
+        var lossPrecision = Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
         #expect(!lossPrecision)
         #expect(Decimal(1) == one)
         #expect(Decimal(-10) == ten)
@@ -310,7 +310,7 @@ private struct DecimalTests {
         #expect(1 == ten._length)
         one = Decimal(1)
         ten = Decimal(10)
-        lossPrecision = try Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
+        lossPrecision = Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
         #expect(!lossPrecision)
         #expect(Decimal(1) == one)
         #expect(Decimal(10) == ten)
@@ -324,7 +324,7 @@ private struct DecimalTests {
         var aNormalized = a
         var bNormalized = b
 
-        lossPrecision = try Decimal._normalize(
+        lossPrecision = Decimal._normalize(
             a: &aNormalized, b: &bNormalized, roundingMode: .plain)
         #expect(lossPrecision)
 
