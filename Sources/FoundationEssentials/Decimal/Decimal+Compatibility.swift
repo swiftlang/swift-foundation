@@ -418,14 +418,16 @@ internal func __NSStringToDecimal(
     processedLength: UnsafeMutablePointer<Int>,
     result: UnsafeMutablePointer<Decimal>
 ) {
-    let parsed = Decimal._decimal(
-        from: string.utf8,
-        decimalSeparator: ".".utf8,
+    if let (parsedResult, _, processedCodeUnits) = try? Decimal.__decimal(
+        from: string.utf8Span.span,
+        prevalidatedUTF8: true,
+        decimalSeparator: ".".utf8Span,
         matchEntireString: false
-    ).asOptional
-    processedLength.pointee = parsed.processedLength
-    if let parsedResult = parsed.result {
+    ) {
+        processedLength.pointee = processedCodeUnits
         result.pointee = parsedResult
+    } else {
+        processedLength.pointee = 0
     }
 }
 

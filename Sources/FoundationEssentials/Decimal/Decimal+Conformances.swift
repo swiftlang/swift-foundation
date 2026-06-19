@@ -23,9 +23,10 @@ extension Decimal : CustomStringConvertible {
     ///   - locale: A locale that indicates the formatting conventions used by `string`.
     public init?(string: __shared String, locale: __shared Locale? = nil) {
         let decimalSeparator = locale?.decimalSeparator ?? "."
-        guard case let .success(value, _) = Decimal._decimal(
-            from: string.utf8,
-            decimalSeparator: decimalSeparator.utf8,
+        guard let (value, _, _) = try? Decimal.__decimal(
+            from: string.utf8Span.span,
+            prevalidatedUTF8: true,
+            decimalSeparator: decimalSeparator.utf8Span,
             matchEntireString: false
         ) else {
             return nil

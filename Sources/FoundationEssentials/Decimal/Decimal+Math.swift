@@ -1104,7 +1104,7 @@ extension Decimal {
         exponent: Int32,
         minExponent: Int32 = Self._minExponent,
         roundingMode: RoundingMode
-    ) throws -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
         if significand == (0, 0) && tail.numerator == 0 {
             return (.zero, false)
         }

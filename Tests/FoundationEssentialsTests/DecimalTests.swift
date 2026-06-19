@@ -281,12 +281,21 @@ private struct DecimalTests {
         #expect(notDecimal == nil)
     }
 
+    @Test func decimalParseUnicodeSeparator() {
+        let arabic = "٫"
+        var (result, _) = Decimal.decimal(from: "1٫5".utf8, decimalSeparator: arabic.utf8, matchEntireString: true)
+        #expect(result == Decimal(1.5))
+        let decomposed = "\u{65}\u{301}" // 'e' + COMBINING ACUTE ACCENT
+        (result, _) = Decimal.decimal(from: "1é5e4".utf8, decimalSeparator: decomposed.utf8, matchEntireString: true)
+        #expect(result == Decimal(15000))
+    }
+
     @Test func decimalParseTruncatedMultiByteSeparator() {
-        let result = Decimal._decimal(from: "1,".utf8, decimalSeparator: ",,".utf8, matchEntireString: false)
-        switch result {
-        case .success(let d, _): #expect(d == Decimal(1))
-        case .parseFailure, .overlargeValue:
-            Issue.record("Expected Decimal._decimal to parse \"1\" successfully, got \(result)")
+        let (result, _) = Decimal.decimal(from: "1,".utf8, decimalSeparator: ",,".utf8, matchEntireString: false)
+        if let result {
+            #expect(result == Decimal(1))
+        } else {
+            Issue.record("Expected Decimal._decimal to parse \"1\" successfully, got nil")
         }
     }
 

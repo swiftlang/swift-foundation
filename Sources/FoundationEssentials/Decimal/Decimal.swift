@@ -273,7 +273,7 @@ private extension UInt64 {
 
 private extension UInt128 {
     func _ascii(_ buffer: inout MutableRawSpan) -> Range<Int> {
-        if self <= 18446744073709551615 /* UInt64.max */ {
+        if self <= 0xffff_ffff_ffff_ffff /* UInt64.max */ {
             return UInt64(truncatingIfNeeded: self)._ascii(&buffer)
         }
         var value = self
@@ -282,7 +282,7 @@ private extension UInt128 {
         (value, remainder) = value._quotientAndRemainder(dividingBy1e: 19)
         _ = UInt64(truncatingIfNeeded: remainder)._ascii(&buffer)
         var b = buffer._mutatingExtracting(unchecked: 0..<(offset &- 19))
-        if value < 10000000000000000000 {
+        if value < 10_000_000_000_000_000_000 {
             offset =
                 UInt64(truncatingIfNeeded: value)._ascii(&b).lowerBound
         } else {
@@ -320,7 +320,16 @@ extension Decimal {
         decimalSeparator: String.UTF8View,
         matchEntireString: Bool
     ) -> (result: Decimal?, processedLength: Int) {
-        _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString).asOptional
+        do {
+            let (result, _, processedCodeUnits) = try Self.__decimal(
+                from: stringView.span,
+                prevalidatedUTF8: true,
+                decimalSeparator: UTF8Span(unchecked: decimalSeparator.span),
+                matchEntireString: matchEntireString)
+            return (result, processedCodeUnits)
+        } catch {
+            return (nil, 0)
+        }
     }
 #endif
 
@@ -371,104 +380,101 @@ extension Decimal {
         }
     }
 
-    internal enum DecimalParseResult {
-        case success(Decimal, processedLength: Int)
-        case parseFailure
-        case overlargeValue
-
-        var asOptional: (result: Decimal?, processedLength: Int) {
-            switch self {
-            case let .success(decimal, processedLength): (decimal, processedLength: processedLength)
-            default: (nil, processedLength: 0)
-            }
-        }
+    internal enum _ParseError: Error {
+        case empty
+        case invalid
+        case overflow(processedCodeUnits: Int)
+        case underflow(processedCodeUnits: Int)
+        case quirkyZero(processedCodeUnits: Int) // Compatibility quirk.
     }
 
-    @_specialize(where UTF8Collection == String.UTF8View)
-    @_specialize(where UTF8Collection == BufferView<UInt8>)
-    internal static func _decimal<UTF8Collection: Collection<UTF8.CodeUnit>>(
-        from utf8: UTF8Collection,
-        decimalSeparator: String.UTF8View = ".".utf8,
-        matchEntireString: Bool,
-        lenient: Bool = false
-    ) -> DecimalParseResult {
+    internal static func __decimal(
+        from utf8: Span<UInt8>,
+        prevalidatedUTF8: Bool = false,
+        decimalSeparator: UTF8Span,
+        matchEntireString: Bool
+    ) throws(_ParseError) -> (result: Decimal, inexact: Bool, processedCodeUnits: Int) {
+        let count = utf8.count
+        guard count > 0 else { throw _ParseError.empty }
+
         @inline(__always)
-        func isASCIIWhitespace(_ b: UInt8) -> Bool {
-            b == 0x20 || (0x09...0x0D).contains(b)
+        func isWhitespace(_ codeUnit: UInt8) -> Bool {
+            codeUnit == 0x20 || (0x09...0x0D).contains(codeUnit)
             // Although *Unicode scalars* 0x85 (NEL) and 0xA0 (NO-BREAK SPACE)
             // are whitespace, as *UTF-8 code units* they're continuation bytes.
         }
 
-        func skipASCIIWhitespaces(from index: UTF8Collection.Index) -> UTF8Collection.Index {
-            var index = index
-            while index != utf8.endIndex && isASCIIWhitespace(utf8[index]) {
-                utf8.formIndex(after: &index)
+        func skipWhitespaces(from index: Int) -> Int {
+            var i = index
+            while i != count && isWhitespace(utf8[unchecked: i]) {
+                i &+= 1
             }
-            return index
+            return i
         }
 
-        func stringViewContainsDecimalSeparator(
-            at index: UTF8Collection.Index
-        ) -> UTF8Collection.Index? {
-            var index = index
-            var decimalIndex = decimalSeparator.startIndex
-            while decimalIndex != decimalSeparator.endIndex {
-                guard index != utf8.endIndex else {
-                    // Input ran out before we matched the entire separator.
+        func containsASCII(
+            at index: Int,
+            _ needle: Span<UInt8>
+        ) -> Int? {
+            var i = index
+            for j in 0..<needle.count {
+                let codeUnit = needle[unchecked: j]
+                guard i != count, codeUnit == utf8[unchecked: i] else {
                     return nil
                 }
-                if utf8[index] != decimalSeparator[decimalIndex] {
-                    return nil
-                }
-                decimalSeparator.formIndex(after: &decimalIndex)
-                utf8.formIndex(after: &index)
+                i &+= 1
             }
-            return index
+            return i
         }
 
-        func stringViewContainsLowercasedASCII(
-            at index: UTF8Collection.Index,
-            _ pattern: String.UTF8View // Must be lowercased ASCII.
-        ) -> UTF8Collection.Index? {
-            var index = index
-            for b in pattern {
-                guard index != utf8.endIndex, b == (utf8[index] | 0x20) else {
+        func containsCaseInsensitiveASCII(
+            at index: Int,
+            lowercasedAlphabetic needle: Span<UInt8> // Must be lowercased a-z.
+        ) -> Int? {
+            var i = index
+            for j in 0..<needle.count {
+                let codeUnit = needle[unchecked: j]
+                guard i != count, codeUnit == (utf8[unchecked: i] | 0x20) else {
                     return nil
                 }
-                utf8.formIndex(after: &index)
+                i &+= 1
             }
-            return index
+            return i
         }
 
-        var index = utf8.startIndex
-        index = skipASCIIWhitespaces(from: index)
+        var index = 0
+        index = skipWhitespaces(from: index)
 
         // Get the sign.
         var isNegative = false
-        if index != utf8.endIndex &&
-            (utf8[index] == UInt8._plus || utf8[index] == UInt8._minus) {
-            isNegative = (utf8[index] == UInt8._minus)
-            utf8.formIndex(after: &index)
+        if index != utf8.count
+            && (utf8[unchecked: index] == UInt8._plus
+                || utf8[unchecked: index] == UInt8._minus) {
+            isNegative = (utf8[unchecked: index] == UInt8._minus)
+            index &+= 1
         }
 
         // Handle NaN.
-        if let i = stringViewContainsLowercasedASCII(at: index, "nan".utf8) {
+        let nan: [3 of UInt8] = [0x6e, 0x61, 0x6e]
+        if let i = containsCaseInsensitiveASCII(at: index, lowercasedAlphabetic: nan.span) {
             index = i
             // If required to match the entire string, trim trailing whitespace
             // and check if we are at the end of the string.
             if matchEntireString {
-                index = skipASCIIWhitespaces(from: index)
-                guard index == utf8.endIndex else {
-                    return .parseFailure
+                index = skipWhitespaces(from: index)
+                guard index == utf8.count else {
+                    throw _ParseError.invalid
                 }
             }
-            let processedLength = utf8.distance(from: utf8.startIndex, to: index)
-            return .success(.nan, processedLength: processedLength)
+            return (.nan, false, index)
         }
 
         // Build mantissa and exponent.
         var significand: UInt128 = 0
-        var full = false // We're 'full' if the significand is at capacity and further digits need to be dropped.
+        var low: UInt64 = 0
+        var full = false
+        // We're 'full' if the significand is at capacity and further digits need to be dropped.
+        var halfFull = false
         var round = 0
         var sticky = false
         var exponent = 0
@@ -481,10 +487,19 @@ extension Decimal {
                 if !fraction { exponent += 1 }
                 return
             }
-            if significand == 0 && digit == 0 {
-                // Decrement exponent if a fractional digit.
-                if fraction { exponent -= 1 }
-                return
+            if !halfFull {
+                if low == 0 && digit == 0 {
+                    // Decrement exponent if a fractional digit.
+                    if fraction { exponent -= 1 }
+                    return
+                }
+                if low < 1_000_000_000_000_000_000 {
+                    low = low &* 10 &+ UInt64(truncatingIfNeeded:  digit)
+                    if fraction { exponent -= 1 }
+                    return
+                }
+                significand = UInt128(truncatingIfNeeded: low)
+                halfFull = true
             }
             let (product, ov1) = significand.multipliedReportingOverflow(by: 10)
             let (sum, ov2) = product.addingReportingOverflow(UInt128(truncatingIfNeeded: digit))
@@ -500,50 +515,86 @@ extension Decimal {
             if fraction { exponent -= 1 }
         }
 
-        while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
-            defer { utf8.formIndex(after: &index) }
-            consume(digitValue, false)
+        @inline(__always)
+        func digit(_ codeUnit: UInt8) -> Int? {
+            guard codeUnit >= 0x30 && codeUnit <= 0x39 else { return nil }
+            return Int(truncatingIfNeeded: codeUnit ^ 0x30)
         }
-        // Get the decimal point.
-        if let i = stringViewContainsDecimalSeparator(at: index) {
-            index = i
-            // Continue building the mantissa.
-            while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
-                defer { utf8.formIndex(after: &index) }
-                consume(digitValue, true)
+
+        while index != utf8.count, let digitValue = digit(utf8[unchecked: index]) {
+            consume(digitValue, false)
+            index &+= 1
+        }
+        // Get the decimal separator.
+        let i: Int?
+        let separator = decimalSeparator.span
+        if separator.count == 1 && (separator[unchecked: 0] < 0x80) {
+            i = containsASCII(at: index, separator)
+        } else {
+            do throws(UTF8.ValidationError) {
+                var needle = decimalSeparator.makeCharacterIterator()
+                var haystack = prevalidatedUTF8
+                    ? UTF8Span(unchecked: utf8.extracting(unchecked: index..<count))
+                        .makeCharacterIterator()
+                    : try UTF8Span(validating: utf8.extracting(unchecked: index..<count))
+                        .makeCharacterIterator()
+                var unmatched = false
+                while let n = needle.next() {
+                    guard let h = haystack.next(), n == h else {
+                        unmatched = true
+                        break
+                    }
+                }
+                i = unmatched ? nil : index + haystack.currentCodeUnitOffset
+            } catch {
+                throw _ParseError.invalid
             }
         }
+        if let i {
+            index = i
+            // Continue building the mantissa.
+            while index != utf8.count, let digitValue = digit(utf8[unchecked: index]) {
+                consume(digitValue, true)
+                index &+= 1
+            }
+        }
+        if !halfFull {
+            significand = UInt128(truncatingIfNeeded: low)
+        }
         // Get the exponent, if any.
-        if index < utf8.endIndex && (utf8[index] == UInt8._E || utf8[index] == UInt8._e) {
-            utf8.formIndex(after: &index)
+        let e: [1 of UInt8] = [0x65]
+        if let i = containsCaseInsensitiveASCII(at: index, lowercasedAlphabetic: e.span) {
+            index = i
             var eIsNegative = false
             var eIsOverlarge = false
-            var e = 0
+            var e_ = 0
             // Preserve parsing quirk: if there is no content or invalid content after 'e',
             // deem the exponent as '0' rather than rejecting the string as invalid.
-            if index != utf8.endIndex && (utf8[index] == UInt8._minus || utf8[index] == UInt8._plus) {
-                eIsNegative = utf8[index] == UInt8._minus
-                utf8.formIndex(after: &index)
+            if index != utf8.count
+                && (utf8[unchecked: index] == UInt8._minus
+                    || utf8[unchecked: index] == UInt8._plus) {
+                eIsNegative = (utf8[unchecked: index] == UInt8._minus)
+                index &+= 1
             }
             var combined = exponent
             if eIsNegative {
-                while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
+                while index != utf8.count, let digitValue = digit(utf8[unchecked: index]) {
                     if !eIsOverlarge {
-                        e = e * 10 + digitValue
-                        combined = exponent - e
+                        e_ = e_ &* 10 &+ digitValue
+                        combined = exponent - e_
                         if combined < -32768 { eIsOverlarge = true }
                     }
-                    utf8.formIndex(after: &index)
+                    index &+= 1
                 }
                 exponent = eIsOverlarge ? -32768 : combined
             } else {
-                while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
+                while index != utf8.count, let digitValue = digit(utf8[unchecked: index]) {
                     if !eIsOverlarge {
-                        e = e * 10 + digitValue
-                        combined = exponent + e
+                        e_ = e_ &* 10 &+ digitValue
+                        combined = exponent + e_
                         if combined > 32767 { eIsOverlarge = true }
                     }
-                    utf8.formIndex(after: &index)
+                    index &+= 1
                 }
                 exponent = eIsOverlarge ? 32767 : combined
             }
@@ -552,26 +603,24 @@ extension Decimal {
         // If required to match the entire string, trim trailing whitespace
         // and check if we are at the end of the string.
         if matchEntireString {
-            index = skipASCIIWhitespaces(from: index)
-            guard index == utf8.endIndex else {
-                return .parseFailure
+            index = skipWhitespaces(from: index)
+            guard index == utf8.count else {
+                throw _ParseError.invalid
             }
         }
         // If nothing was consumed, the entire string isn't a valid decimal.
         // Preserve parsing quirk: if only "e" was consumed, it's not a failure.
-        if index == utf8.startIndex {
-            return .parseFailure
-        }
-        let processedLength = utf8.distance(from: utf8.startIndex, to: index)
+        if index == 0 { throw _ParseError.invalid }
         if significand == 0 {
-            if lenient || (-128...127).contains(exponent) {
-                return .success(.zero, processedLength: processedLength)
+            if (-128...127).contains(exponent) {
+                return (.zero, false, index)
             }
-            return .overlargeValue // Compatibility behavior is to reject "0e1000".
+            // Compatibility behavior is to reject "0e1000".
+            throw _ParseError.quirkyZero(processedCodeUnits: index)
         }
 
-        do {
-            let (result, _) = try Self._assemble(
+        do throws(_CalculationError) {
+            let (result, inexact) = try Self._assemble(
                 isNegative: isNegative,
                 significand: (0, significand),
                 tail: (UInt128(truncatingIfNeeded: round &<< 1) | (sticky ? 1 : 0), 20),
@@ -581,14 +630,43 @@ extension Decimal {
                 minExponent: -128,
                 // Round ties to even irrespective of the default rounding mode for arithmetic operations:
                 roundingMode: .bankers)
-            return .success(result, processedLength: processedLength)
-        } catch _CalculationError.underflow {
-            if lenient {
-                return .success(.zero, processedLength: processedLength)
-            }
-            return .overlargeValue // Compatibility behavior is to reject.
+            return (result, inexact, index)
+        } catch .underflow {
+            throw _ParseError.underflow(processedCodeUnits: index)
+        } catch .overflow {
+            throw _ParseError.overflow(processedCodeUnits: index)
         } catch {
+            fatalError() // Unreachable.
+        }
+    }
+
+    internal enum DecimalParseResult {
+        case success(Decimal, processedLength: Int)
+        case parseFailure
+        case overlargeValue
+
+        var asOptional: (result: Decimal?, processedLength: Int) {
+            switch self {
+            case let .success(decimal, processedLength): (decimal, processedLength: processedLength)
+            default: (nil, processedLength: 0)
+            }
+        }
+    }
+
+    internal static func _decimal(
+        from utf8: BufferView<UInt8>,
+        matchEntireString: Bool
+    ) -> DecimalParseResult {
+        do {
+            let (result, _, processedCodeUnits) = try Self.__decimal(
+                from: utf8.span,
+                decimalSeparator: ".".utf8Span,
+                matchEntireString: matchEntireString)
+            return .success(result, processedLength: processedCodeUnits)
+        } catch _ParseError.underflow, _ParseError.overflow, _ParseError.quirkyZero {
             return .overlargeValue
+        } catch {
+            return .parseFailure
         }
     }
 }
