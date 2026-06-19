@@ -386,199 +386,209 @@ extension Decimal {
 
     @_specialize(where UTF8Collection == String.UTF8View)
     @_specialize(where UTF8Collection == BufferView<UInt8>)
-    internal static func _decimal<UTF8Collection: Collection>(
-        from utf8View: UTF8Collection,
+    internal static func _decimal<UTF8Collection: Collection<UTF8.CodeUnit>>(
+        from utf8: UTF8Collection,
         decimalSeparator: String.UTF8View = ".".utf8,
-        matchEntireString: Bool
-    ) -> DecimalParseResult where UTF8Collection.Element == UTF8.CodeUnit {
-        func multiplyBy10AndAdd(
-            _ decimal: Decimal,
-            number: UInt16
-        ) throws -> Decimal {
-            do {
-                var result = try decimal._multiply(byShort: 10)
-                result = try result._add(number)
-                return result
-            } catch {
-                throw _CalculationError.overflow
-            }
+        matchEntireString: Bool,
+        lenient: Bool = false
+    ) -> DecimalParseResult {
+        @inline(__always)
+        func isASCIIWhitespace(_ b: UInt8) -> Bool {
+            b == 0x20 || (0x09...0x0D).contains(b)
+            // Although *Unicode scalars* 0x85 (NEL) and 0xA0 (NO-BREAK SPACE)
+            // are whitespace, as *UTF-8 code units* they're continuation bytes.
         }
 
-        func skipWhiteSpaces(from index: UTF8Collection.Index) -> UTF8Collection.Index {
-            var i = index
-            while i != utf8View.endIndex &&
-                Character(utf8Scalar: utf8View[i]).isWhitespace {
-                utf8View.formIndex(after: &i)
+        func skipASCIIWhitespaces(from index: UTF8Collection.Index) -> UTF8Collection.Index {
+            var index = index
+            while index != utf8.endIndex && isASCIIWhitespace(utf8[index]) {
+                utf8.formIndex(after: &index)
             }
-            return i
+            return index
         }
 
-        func stringViewContainsDecimalSeparator(at index: UTF8Collection.Index) -> Bool {
-            var stringIndex = index
+        func stringViewContainsDecimalSeparator(
+            at index: UTF8Collection.Index
+        ) -> UTF8Collection.Index? {
+            var index = index
             var decimalIndex = decimalSeparator.startIndex
             while decimalIndex != decimalSeparator.endIndex {
-                guard stringIndex != utf8View.endIndex else {
+                guard index != utf8.endIndex else {
                     // Input ran out before we matched the entire separator.
-                    return false
+                    return nil
                 }
-                if utf8View[stringIndex] != decimalSeparator[decimalIndex] {
-                    return false
+                if utf8[index] != decimalSeparator[decimalIndex] {
+                    return nil
                 }
-                utf8View.formIndex(after: &stringIndex)
                 decimalSeparator.formIndex(after: &decimalIndex)
+                utf8.formIndex(after: &index)
             }
-            return true
+            return index
         }
 
-        var result = Decimal()
-        var index = utf8View.startIndex
-        index = skipWhiteSpaces(from: index)
-        // Get the sign
-        if index != utf8View.endIndex &&
-            (utf8View[index] == UInt8._plus ||
-             utf8View[index] == UInt8._minus) {
-            result._isNegative = (utf8View[index] == UInt8._minus) ? 1 : 0
-            // Advance over the sign
-            utf8View.formIndex(after: &index)
+        func stringViewContainsLowercasedASCII(
+            at index: UTF8Collection.Index,
+            _ pattern: String.UTF8View // Must be lowercased ASCII.
+        ) -> UTF8Collection.Index? {
+            var index = index
+            for b in pattern {
+                guard index != utf8.endIndex, b == (utf8[index] | 0x20) else {
+                    return nil
+                }
+                utf8.formIndex(after: &index)
+            }
+            return index
         }
-        // Build mantissa
-        var tooBigToFit = false
 
-        while index != utf8View.endIndex,
-            let digitValue = utf8View[index].digitValue {
-            defer {
-                utf8View.formIndex(after: &index)
-            }
-            // Multiply the value by 10 and add the current digit
-            func incrementExponent(_ decimal: inout Decimal) {
-                // Before incrementing the exponent, we need to check
-                // if it's still possible to increment.
-                if decimal._exponent == Int8.max {
-                    decimal = .nan
-                    return
-                }
-                decimal._exponent += 1
-            }
+        var index = utf8.startIndex
+        index = skipASCIIWhitespaces(from: index)
 
-            if tooBigToFit {
-                incrementExponent(&result)
-                if result.isNaN {
-                    return .overlargeValue
-                }
-                continue
-            }
-            guard let product = try? result._multiplyBy10AndAdd(number: UInt16(digitValue)
-            ) else {
-                tooBigToFit = true
-                incrementExponent(&result)
-                if result.isNaN {
-                    return .overlargeValue
-                }
-                continue
-            }
-            result = product
+        // Get the sign.
+        var isNegative = false
+        if index != utf8.endIndex &&
+            (utf8[index] == UInt8._plus || utf8[index] == UInt8._minus) {
+            isNegative = (utf8[index] == UInt8._minus)
+            utf8.formIndex(after: &index)
         }
-        // Get the decimal point
-        if index < utf8View.endIndex && stringViewContainsDecimalSeparator(at: index) {
-            utf8View.formIndex(&index, offsetBy: decimalSeparator.count)
-            // Continue to build the mantissa
-            while index != utf8View.endIndex,
-                  let digitValue = utf8View[index].digitValue {
-                defer {
-                    utf8View.formIndex(after: &index)
+
+        // Handle NaN.
+        if let i = stringViewContainsLowercasedASCII(at: index, "nan".utf8) {
+            index = i
+            // If required to match the entire string, trim trailing whitespace
+            // and check if we are at the end of the string.
+            if matchEntireString {
+                index = skipASCIIWhitespaces(from: index)
+                guard index == utf8.endIndex else {
+                    return .parseFailure
                 }
-                guard !tooBigToFit else {
-                    continue
-                }
-                guard let product = try? result._multiplyBy10AndAdd(number: UInt16(digitValue)
-                ) else {
-                    tooBigToFit = true
-                    continue
-                }
-                result = product
-                // Before decrementing the exponent, we need to check
-                // if it's still possible to decrement.
-                if result._exponent == Int8.min {
-                    return .overlargeValue
-                }
-                result._exponent -= 1
+            }
+            let processedLength = utf8.distance(from: utf8.startIndex, to: index)
+            return .success(.nan, processedLength: processedLength)
+        }
+
+        // Build mantissa and exponent.
+        var significand: UInt128 = 0
+        var full = false // We're 'full' if the significand is at capacity and further digits need to be dropped.
+        var round = 0
+        var sticky = false
+        var exponent = 0
+
+        @inline(__always)
+        func consume(_ digit: Int, _ fraction: Bool) {
+            if full {
+                if digit != 0 { sticky = true }
+                // Increment exponent if dropping a non-fractional digit.
+                if !fraction { exponent += 1 }
+                return
+            }
+            if significand == 0 && digit == 0 {
+                // Decrement exponent if a fractional digit.
+                if fraction { exponent -= 1 }
+                return
+            }
+            let (product, ov1) = significand.multipliedReportingOverflow(by: 10)
+            let (sum, ov2) = product.addingReportingOverflow(UInt128(truncatingIfNeeded: digit))
+            if ov1 || ov2 {
+                full = true
+                round = digit
+                // Increment exponent if dropping a non-fractional digit.
+                if !fraction { exponent += 1 }
+                return
+            }
+            significand = sum
+            // Decrement exponent if a fractional digit.
+            if fraction { exponent -= 1 }
+        }
+
+        while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
+            defer { utf8.formIndex(after: &index) }
+            consume(digitValue, false)
+        }
+        // Get the decimal point.
+        if let i = stringViewContainsDecimalSeparator(at: index) {
+            index = i
+            // Continue building the mantissa.
+            while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
+                defer { utf8.formIndex(after: &index) }
+                consume(digitValue, true)
             }
         }
-        // Get the exponent if any
-        if index < utf8View.endIndex && (utf8View[index] == UInt8._E || utf8View[index] == UInt8._e) {
-            utf8View.formIndex(after: &index)
-            // If there is no content after e, the string is invalid
-            guard index != utf8View.endIndex else {
-                // Normally we should return .parseFailure
-                // However, NSDecimal historically parses any
-                // - Invalid strings starting with `e` as 0
-                //    - "en" -> 0
-                //    - "e" -> 0
-                // - Strings ending with `e` but nothing after as valid
-                //    - "1234e" -> 1234
-                // So let's keep that behavior here as well
-                let processedLength = utf8View.distance(from: utf8View.startIndex, to: index)
-                return .success(result, processedLength: processedLength)
+        // Get the exponent, if any.
+        if index < utf8.endIndex && (utf8[index] == UInt8._E || utf8[index] == UInt8._e) {
+            utf8.formIndex(after: &index)
+            var eIsNegative = false
+            var eIsOverlarge = false
+            var e = 0
+            // Preserve parsing quirk: if there is no content or invalid content after 'e',
+            // deem the exponent as '0' rather than rejecting the string as invalid.
+            if index != utf8.endIndex && (utf8[index] == UInt8._minus || utf8[index] == UInt8._plus) {
+                eIsNegative = utf8[index] == UInt8._minus
+                utf8.formIndex(after: &index)
             }
-            var exponentIsNegative = false
-            var exponent = 0
-            // Get the exponent sign
-            if utf8View[index] == UInt8._minus || utf8View[index] == UInt8._plus {
-                exponentIsNegative = utf8View[index] == UInt8._minus
-                utf8View.formIndex(after: &index)
-            }
-            // Build the exponent
-            while index != utf8View.endIndex,
-                  let digitValue = utf8View[index].digitValue {
-                exponent = 10 * exponent + digitValue
-                if exponent > 2 * Int(Int8.max) {
-                    // Too big to fit
-                    return .overlargeValue
+            var combined = exponent
+            if eIsNegative {
+                while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
+                    if !eIsOverlarge {
+                        e = e * 10 + digitValue
+                        combined = exponent - e
+                        if combined < -32768 { eIsOverlarge = true }
+                    }
+                    utf8.formIndex(after: &index)
                 }
-                utf8View.formIndex(after: &index)
+                exponent = eIsOverlarge ? -32768 : combined
+            } else {
+                while index != utf8.endIndex, let digitValue = utf8[index].digitValue {
+                    if !eIsOverlarge {
+                        e = e * 10 + digitValue
+                        combined = exponent + e
+                        if combined > 32767 { eIsOverlarge = true }
+                    }
+                    utf8.formIndex(after: &index)
+                }
+                exponent = eIsOverlarge ? 32767 : combined
             }
-            if exponentIsNegative {
-                exponent = -exponent
-            }
-            // Check to see if it will fit into the exponent field
-            exponent += Int(result._exponent)
-            if exponent > Int8.max || exponent < Int8.min {
-                return .overlargeValue
-            }
-            result._exponent = Int32(exponent)
         }
-        // If we are required to match the entire string,
-        // "trim" the end whitespaces and check if we are
-        // at the end of the string
+
+        // If required to match the entire string, trim trailing whitespace
+        // and check if we are at the end of the string.
         if matchEntireString {
-            // Trim end spaces
-            index = skipWhiteSpaces(from: index)
-            guard index == utf8View.endIndex else {
-                // Any unprocessed content means the string
-                // contains something not valid
+            index = skipASCIIWhitespaces(from: index)
+            guard index == utf8.endIndex else {
                 return .parseFailure
             }
         }
-        if index == utf8View.startIndex {
-            // If we weren't able to process any character
-            // the entire string isn't a valid decimal
+        // If nothing was consumed, the entire string isn't a valid decimal.
+        // Preserve parsing quirk: if only "e" was consumed, it's not a failure.
+        if index == utf8.startIndex {
             return .parseFailure
         }
-        result.compact()
-        let processedLength = utf8View.distance(from: utf8View.startIndex, to: index)
-        // if we get to this point, and have NaN,
-        // then the input string was probably "-0"
-        // or some variation on that, and
-        // normalize that to zero.
-        if result.isNaN {
-            return .success(Decimal(0), processedLength: processedLength)
+        let processedLength = utf8.distance(from: utf8.startIndex, to: index)
+        if significand == 0 {
+            if lenient || (-128...127).contains(exponent) {
+                return .success(.zero, processedLength: processedLength)
+            }
+            return .overlargeValue // Compatibility behavior is to reject "0e1000".
         }
-        return .success(result, processedLength: processedLength)
-    }
-}
 
-private extension Character {
-    init(utf8Scalar: UTF8.CodeUnit) {
-        self.init(Unicode.Scalar(utf8Scalar))
+        do {
+            let (result, _) = try Self._assemble(
+                isNegative: isNegative,
+                significand: (0, significand),
+                tail: (UInt128(truncatingIfNeeded: round &<< 1) | (sticky ? 1 : 0), 20),
+                // See `_assemble` itself for more on handling the round digit and sticky bit.
+                exponent: Int32(exponent),
+                // Use the minimum exponent for *storage* irrespective of the default scale for arithmetic operations:
+                minExponent: -128,
+                // Round ties to even irrespective of the default rounding mode for arithmetic operations:
+                roundingMode: .bankers)
+            return .success(result, processedLength: processedLength)
+        } catch _CalculationError.underflow {
+            if lenient {
+                return .success(.zero, processedLength: processedLength)
+            }
+            return .overlargeValue // Compatibility behavior is to reject.
+        } catch {
+            return .overlargeValue
+        }
     }
 }

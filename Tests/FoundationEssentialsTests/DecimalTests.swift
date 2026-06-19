@@ -258,7 +258,7 @@ private struct DecimalTests {
         #expect(zeroE.isZero)
         zeroE = try #require(Decimal(string: "e"))
         #expect(zeroE.isZero)
-        // Partitally valid strings ending with e shold be parsed
+        // Partitally valid strings ending with e should be parsed
         let notZero = try #require(Decimal(string: "123e"))
         #expect(notZero == Decimal(123))
     }

@@ -280,18 +280,6 @@ extension Decimal {
         case divideByZero
     }
 
-    internal func _add(
-        rhs: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws -> Decimal {
-        return try self._addReportingInexact(
-            rhs: rhs,
-            minExponent: minExponent,
-            roundingMode: roundingMode
-        ).result
-    }
-
     internal func _addReportingInexact(
         rhs: Decimal,
         minExponent: Int32 = Self._minExponent,
@@ -408,12 +396,16 @@ extension Decimal {
             roundingMode: roundingMode)
     }
 
-    internal func _add(_ amount: UInt16) throws -> Decimal {
-        let (sum, carry) = self._significand.addingReportingOverflow(UInt128(amount))
-        if carry { throw _CalculationError.overflow }
-        var result = self
-        result._significand = sum
-        return result
+    internal func _add(
+        rhs: Decimal,
+        minExponent: Int32 = Self._minExponent,
+        roundingMode: RoundingMode
+    ) throws -> Decimal {
+        return try self._addReportingInexact(
+            rhs: rhs,
+            minExponent: minExponent,
+            roundingMode: roundingMode
+        ).result
     }
 
     internal func _subtractReportingInexact(
@@ -441,32 +433,6 @@ extension Decimal {
             minExponent: minExponent,
             roundingMode: roundingMode
         ).result
-    }
-
-    internal func _multiply(byShort multiplicand: UInt16) throws -> Decimal {
-        var result = self
-        if multiplicand == 0 {
-            result._length = 0
-            return result
-        }
-        var carry: UInt32 = 0
-        var index: UInt32 = 0
-        while index < result._length {
-            let acc = UInt32(result[index]) *
-            UInt32(multiplicand) + carry
-            carry = acc >> 16
-            result[index] = UInt16(acc & 0xFFFF)
-            index += 1
-        }
-        if carry != 0 {
-            if result._length >= Decimal.maxSize {
-                throw _CalculationError.overflow
-            }
-            result[index] = UInt16(carry)
-            index += 1
-        }
-        result._length = index
-        return result
     }
 
     internal func _multiplyReportingInexact(
@@ -548,26 +514,6 @@ extension Decimal {
             minExponent: minExponent,
             roundingMode: roundingMode
         ).result
-    }
-
-    internal func _multiplyBy10AndAdd(
-        number: UInt16
-    ) throws -> Decimal {
-        do {
-            var result = try _multiply(byShort: 10)
-            result = try result._add(number)
-            return result
-        } catch {
-            throw _CalculationError.overflow
-        }
-    }
-
-    internal func _divide(by divisor: UInt16) throws -> (result: Decimal, remainder: UInt16) {
-        guard divisor != 0 else { throw _CalculationError.divideByZero }
-        let (q, r) = self._significand.quotientAndRemainder(dividingBy: UInt128(divisor))
-        var result = self
-        result._significand = q
-        return (result, UInt16(r))
     }
 
     internal func _divideReportingInexact(
@@ -1003,6 +949,40 @@ extension FixedWidthInteger {
 // preserved for their quirks--they exhibit unspecified behavior for some inputs
 // and aren't performant.
 extension Decimal {
+    private func _multiply(byShort multiplicand: UInt16) throws -> Decimal {
+        var result = self
+        if multiplicand == 0 {
+            result._length = 0
+            return result
+        }
+        var carry: UInt32 = 0
+        var index: UInt32 = 0
+        while index < result._length {
+            let acc = UInt32(result[index]) *
+            UInt32(multiplicand) + carry
+            carry = acc >> 16
+            result[index] = UInt16(acc & 0xFFFF)
+            index += 1
+        }
+        if carry != 0 {
+            if result._length >= Decimal.maxSize {
+                throw _CalculationError.overflow
+            }
+            result[index] = UInt16(carry)
+            index += 1
+        }
+        result._length = index
+        return result
+    }
+
+    private func _divide(by divisor: UInt16) throws -> (result: Decimal, remainder: UInt16) {
+        guard divisor != 0 else { throw _CalculationError.divideByZero }
+        let (q, r) = self._significand.quotientAndRemainder(dividingBy: UInt128(divisor))
+        var result = self
+        result._significand = q
+        return (result, UInt16(r))
+    }
+
     private var _unsignedInt64Value: UInt64 {
         // Quick check if number if has too many zeros before decimal point or too many trailing zeros after decimal point.
         // Log10 (2^64) ~ 19, log10 (2^128) ~ 38
@@ -1117,7 +1097,7 @@ extension Decimal {
         }
     }
 
-    private static func _assemble(
+    internal static func _assemble(
         isNegative: Bool,
         significand: (high: UInt128, low: UInt128),
         tail: (numerator: UInt128, denominator: UInt128) = (0, 1),
