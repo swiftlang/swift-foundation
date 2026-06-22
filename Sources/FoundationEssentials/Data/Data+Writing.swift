@@ -436,9 +436,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
             let preRenameAttributes: DWORD = {
                 let dwAttributes = GetFileAttributesW(pwszPath)
                 guard dwAttributes != INVALID_FILE_ATTRIBUTES else { return 0 }
-
-                // Hand-pick the necessary attributes. Also, not all attributes can be set with SetFileAttributesW.
-                return dwAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_ARCHIVE)
+                return dwAttributes & FILE_ATTRIBUTE_READONLY
             }()
 
             let cchLength = wcslen(pwszPath)
@@ -538,7 +536,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         var preRenameStat = stat()
 
         if stat(inPathFileSystemRep, &preRenameStat) == 0 {
-            mode = preRenameStat.st_mode & 0o7777
+            mode = preRenameStat.st_mode & ~S_IFMT
         } else if (errno != ENOENT) && (errno != ENAMETOOLONG) { // Not checking for ENOTCAPABLE since AT_UNIQUE was not passed to stat.
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
