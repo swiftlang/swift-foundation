@@ -193,6 +193,8 @@ extension Data {
             precondition(startIndex <= subrange.lowerBound, "index \(subrange.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             precondition(subrange.upperBound <= endIndex, "index \(subrange.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
 
+            if subrange.isEmpty && cnt == 0 { return }
+
             ensureUniqueReference()
             let upper = _slice.upperBound
             let nsRange = (

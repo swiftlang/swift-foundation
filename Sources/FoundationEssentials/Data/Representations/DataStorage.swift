@@ -297,7 +297,9 @@ internal final class __DataStorage : @unchecked Sendable {
             if isExternallyOwned {
                 let newCapacity = malloc_good_size(_length)
                 let newBytes = __DataStorage.allocate(newCapacity, false)
-                __DataStorage.move(newBytes!, _bytes!, _length)
+                if let bytes = _bytes {
+                    __DataStorage.move(newBytes!, bytes, _length)
+                }
                 _freeBytes()
                 _bytes = newBytes
                 _capacity = newCapacity
