@@ -535,9 +535,7 @@ enum _FileOperations {
         }
 
         #if os(Emscripten)
-        // Emscripten doesn't have fts.h; recursive directory removal is not yet supported.
-        // The rmdir above handles empty directories. For non-empty ones, we need a
-        // recursive implementation that doesn't depend on FTS.
+        // Emscripten doesn't have fts.h; recursive directory removal is not yet supported. The `rmdir` above handles empty directories. For non-empty ones, we need a recursive implementation that doesn't depend on FTS.
         throw CocoaError.removeFileError(ENOSYS, resolve(path: pathStr))
         #else
         let seq = _FTSSequence(path, FTS_PHYSICAL | FTS_XDEV | FTS_NOCHDIR | FTS_NOSTAT)
