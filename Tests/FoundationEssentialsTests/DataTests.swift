@@ -2992,7 +2992,13 @@ extension DataTests {
         }
         #expect(mutateMe == expected)
     }
-    
+
+    @Test func emptyDataRemoveSubrange() {
+        var empty = Data()
+        empty.removeSubrange(0 ..< 0)
+        #expect(empty.count == 0)
+    }
+
     @Test func rangeOfSlice() throws {
         let data = try #require("FooBar".data(using: .ascii))
         let slice = data[3...] // Bar

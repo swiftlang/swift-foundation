@@ -90,19 +90,24 @@ extension Locale {
             self.components = Components(languageCode: languageCode, script: script, region: region)
         }
 
-        /// An array of the system's supported languages.
-        ///
-        /// The returned array includes the languages of all product localizations for the current platform.
-        public static var systemLanguages: [Language] {
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        private static let _systemLanguages: [Language] = {
             NSLocale.systemLanguages().map {
                 let comp = Components(identifier: $0 as! String)
                 return Language(components: comp)
             }
+        }()
 #else
-            // TODO: Read language list for other platforms
-            return []
+        // TODO: Read language list for other platforms
+        private static let _systemLanguages: [Language] = []
 #endif
+        
+
+        /// An array of the system's supported languages.
+        ///
+        /// The returned array includes the languages of all product localizations for the current platform.
+        public static var systemLanguages: [Language] {
+            _systemLanguages
         }
     }
 }
