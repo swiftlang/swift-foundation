@@ -12,7 +12,7 @@
 
 /*
 
- Swift script that reads CLDR XML and emits a Swift source file containing
+ Swift script that reads CLDR XML and emits a JSON file containing
  list-formatting pattern tables for ListFormatStyle. Invoked by the
  update-list-format-data shell wrapper, which sets up CLDR_PATH and prepends
  the license/auto-generated header.
@@ -247,10 +247,10 @@ func generate() throws -> String {
         throw GenerationError.missingDirectory(mainURL)
     }
 
-    FileHandle.standardError.write("  loading parent map…\n".data(using: .utf8)!)
+    print("  loading parent map…", to: &standardError)
     let parentMap = try loadParentMap(supplementalURL: supplementalURL)
 
-    FileHandle.standardError.write("  scanning locale files…\n".data(using: .utf8)!)
+    print("  scanning locale files…", to: &standardError)
     let xmlFiles = try FileManager.default.contentsOfDirectory(at: mainURL,
                                                                includingPropertiesForKeys: nil)
         .filter { $0.pathExtension == "xml" }
@@ -263,8 +263,7 @@ func generate() throws -> String {
         allLocales.append(locale)
         // Cheap pre-filter: most files have no <listPatterns> block.
         // Parsing every CLDR file via XMLDocument is slow; skip when possible.
-        guard let bytes = try? Data(contentsOf: file),
-              let s = String(data: bytes, encoding: .utf8),
+        guard let s = try? String(contentsOf: file, encoding: .utf8),
               s.contains("<listPatterns>") else {
             data[locale] = LocaleData()
             continue
@@ -273,7 +272,7 @@ func generate() throws -> String {
         data[locale] = ld
     }
 
-    FileHandle.standardError.write("  resolving \(allLocales.count) locales × \(slots.count) slots…\n".data(using: .utf8)!)
+    print("  resolving \(allLocales.count) locales × \(slots.count) slots…", to: &standardError)
 
     // For each slot, build [locale: Row].
     var slotTables: [(type: String, width: String, table: [String: Row])] = []
@@ -286,7 +285,7 @@ func generate() throws -> String {
                   let pair   = resolve(part: "2",      in: slot.cldrType, for: locale, data: data, parentMap: parentMap) else {
                 // root must define every slot. If we ever hit this, root's data is
                 // incomplete for this CLDR type and we should know.
-                FileHandle.standardError.write("  warning: \(locale) \(slot.cldrType) unresolved\n".data(using: .utf8)!)
+                print("  warning: \(locale) \(slot.cldrType) unresolved", to: &standardError)
                 continue
             }
             table[locale] = Row(start: start, middle: middle, end: end, pair: pair)
@@ -294,7 +293,7 @@ func generate() throws -> String {
         slotTables.append((slot.type, slot.width, table))
     }
 
-    FileHandle.standardError.write("  emitting Swift…\n".data(using: .utf8)!)
+    print("  emitting JSON…", to: &standardError)
     var simplifiedParentMap = parentMap
     simplifyParentMap(&simplifiedParentMap, slotTables: slotTables)
     return emit(slotTables: slotTables,
@@ -468,9 +467,8 @@ func simplifyParentMap(
             }
         }
     }
-    FileHandle.standardError.write(
-        "  parent map: \(originalParentCount) → \(parentMap.count) entries (\(passes) pass(es))\n"
-            .data(using: .utf8)!)
+    print("  parent map: \(originalParentCount) → \(parentMap.count) entries (\(passes) pass(es))",
+          to: &standardError)
     _ = emissions  // silenced; emit() recomputes from the simplified parentMap
 }
 
@@ -562,7 +560,7 @@ do {
     let code = try generate()
     print(code, terminator: "")
 } catch {
-    FileHandle.standardError.write("error: \(error)\n".data(using: .utf8)!)
+    print("error: \(error)", to: &standardError)
     exit(1)
 }
 #endif
