@@ -282,6 +282,10 @@ final class ICUDateFormatter : @unchecked Sendable {
         cachedFormatter(for: .init(format))
     }
 
+    static func cachedFormatter(forParsing format: Date.FormatStyle) -> ICUDateFormatter? {
+        cachedFormatter(for: .init(format, forParsing: true))
+    }
+
     static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter? {
         cachedFormatter(for: .init(format))
     }
@@ -293,7 +297,7 @@ final class ICUDateFormatter : @unchecked Sendable {
 }
 
 extension ICUDateFormatter.DateFormatInfo {
-    init(_ format: Date.FormatStyle) {
+    init(_ format: Date.FormatStyle, forParsing: Bool = false) {
         let calendarIdentifier = format.calendar.identifier
         let datePatternOverride: String?
 #if FOUNDATION_FRAMEWORK
@@ -323,6 +327,13 @@ extension ICUDateFormatter.DateFormatInfo {
             }
         }
 
+        let dateFormatPattern: String
+        if forParsing {
+            dateFormatPattern = Self.parsePattern(for: pattern, calendarIdentifier: calendarIdentifier)
+        } else {
+            dateFormatPattern = pattern
+        }
+
         let firstWeekday: Int
         if let forceFirstWeekday = format.locale.forceFirstWeekday(calendarIdentifier) {
             firstWeekday = forceFirstWeekday.icuIndex
@@ -330,7 +341,7 @@ extension ICUDateFormatter.DateFormatInfo {
             firstWeekday = format.calendar.firstWeekday
         }
 
-        self.init(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
+        self.init(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: dateFormatPattern, parseLenient: format.parseLenient)
     }
 
     init(_ format: Date.VerbatimFormatStyle) {
@@ -342,6 +353,77 @@ extension ICUDateFormatter.DateFormatInfo {
         // Currently this always uses `.unknown` for capitalization. We should
         // consider allowing customization with rdar://71815286
         self.init(localeIdentifier: calendar.locale?.identifier, timeZoneIdentifier: calendar.timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: "")
+    }
+
+    static func parsePattern(for pattern: String, calendarIdentifier: Calendar.Identifier) -> String {
+        guard calendarIdentifier == .japanese || calendarIdentifier == .republicOfChina else {
+            return pattern
+        }
+        guard containsUnquotedField("G", in: pattern) else {
+            return pattern
+        }
+
+        // Era years are already scoped by the parsed era. Use a wider year
+        // field for parsing to avoid applying ICU's two-digit year window to
+        // Japanese and ROC year-of-era values.
+        return replacingUnquotedFieldRuns(in: pattern, matching: "y") { count in
+            String(repeating: "y", count: max(count, 4))
+        }
+    }
+
+    private static func containsUnquotedField(_ field: Character, in pattern: String) -> Bool {
+        var found = false
+        forEachUnquotedFieldRun(in: pattern) { runField, _ in
+            if runField == field {
+                found = true
+            }
+        }
+        return found
+    }
+
+    private static func replacingUnquotedFieldRuns(in pattern: String, matching field: Character, with replacement: (Int) -> String) -> String {
+        var result = ""
+        forEachUnquotedFieldRun(in: pattern) { runField, runLength in
+            if runField == field {
+                result += replacement(runLength)
+            } else {
+                result += String(repeating: String(runField), count: runLength)
+            }
+        } quotedRun: { quotedText in
+            result += quotedText
+        }
+        return result
+    }
+
+    private static func forEachUnquotedFieldRun(in pattern: String, _ body: (Character, Int) -> Void, quotedRun: ((String) -> Void)? = nil) {
+        var index = pattern.startIndex
+        var isInQuote = false
+
+        while index < pattern.endIndex {
+            let character = pattern[index]
+            if character == "'" {
+                let next = pattern.index(after: index)
+                if next < pattern.endIndex && pattern[next] == "'" {
+                    quotedRun?("''")
+                    index = pattern.index(after: next)
+                } else {
+                    quotedRun?("'")
+                    isInQuote.toggle()
+                    index = next
+                }
+            } else if isInQuote {
+                quotedRun?(String(character))
+                index = pattern.index(after: index)
+            } else {
+                let runStart = index
+                var runLength = 0
+                repeat {
+                    runLength += 1
+                    index = pattern.index(after: index)
+                } while index < pattern.endIndex && pattern[index] == character
+                body(pattern[runStart], runLength)
+            }
+        }
     }
 }
 

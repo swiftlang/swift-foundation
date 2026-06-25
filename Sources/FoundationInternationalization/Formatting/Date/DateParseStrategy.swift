@@ -59,7 +59,8 @@ extension Date {
         }
 
         private var formatter: ICUDateFormatter? {
-            let dateFormatInfo = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale?.identifier, timeZoneIdentifier: timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format, parseLenient: isLenient, parseTwoDigitStartDate: twoDigitStartDate)
+            let parsePattern = ICUDateFormatter.DateFormatInfo.parsePattern(for: format, calendarIdentifier: calendar.identifier)
+            let dateFormatInfo = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale?.identifier, timeZoneIdentifier: timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: parsePattern, parseLenient: isLenient, parseTwoDigitStartDate: twoDigitStartDate)
             return ICUDateFormatter.cachedFormatter(for: dateFormatInfo)
         }
 
