@@ -77,7 +77,7 @@ let bytes: Data
 do {
     bytes = try Data(contentsOf: URL(fileURLWithPath: inputPath))
 } catch {
-    FileHandle.standardError.write("error: failed to read \(inputPath): \(error)\n".data(using: .utf8)!)
+    print("error: failed to read \(inputPath): \(error)", to: &standardError)
     exit(1)
 }
 
@@ -87,7 +87,7 @@ let data: ListFormatDataSchema
 do {
     data = try decoder.decode(ListFormatDataSchema.self, from: bytes)
 } catch {
-    FileHandle.standardError.write("error: failed to decode \(inputPath): \(error)\n".data(using: .utf8)!)
+    print("error: failed to decode \(inputPath): \(error)", to: &standardError)
     exit(1)
 }
 
@@ -119,9 +119,9 @@ for (child, parent) in data.parents where isKept(child) {
     filteredParents[child] = parent
 }
 
-FileHandle.standardError.write("  patterns: \(data.patterns.count), rows: \(data.rows.count)\n".data(using: .utf8)!)
-FileHandle.standardError.write("  slot entries kept: \(filteredSlots.values.reduce(0) { $0 + $1.count })\n".data(using: .utf8)!)
-FileHandle.standardError.write("  parent entries kept: \(filteredParents.count)\n".data(using: .utf8)!)
+print("  patterns: \(data.patterns.count), rows: \(data.rows.count)", to: &standardError)
+print("  slot entries kept: \(filteredSlots.values.reduce(0) { $0 + $1.count })", to: &standardError)
+print("  parent entries kept: \(filteredParents.count)", to: &standardError)
 
 // MARK: - Transitive row + pattern filter
 
@@ -177,8 +177,8 @@ do {
     }
 }
 
-FileHandle.standardError.write("  patterns reachable: \(filteredPatterns.count)\n".data(using: .utf8)!)
-FileHandle.standardError.write("  rows reachable: \(filteredRows.count)\n".data(using: .utf8)!)
+print("  patterns reachable: \(filteredPatterns.count)", to: &standardError)
+print("  rows reachable: \(filteredRows.count)", to: &standardError)
 
 // MARK: - Locale pool
 
@@ -199,7 +199,7 @@ do {
 }
 let localeID: [String: Int] = Dictionary(uniqueKeysWithValues: localePool.enumerated().map { ($1, $0) })
 
-FileHandle.standardError.write("  unique locale strings: \(localePool.count)\n".data(using: .utf8)!)
+print("  unique locale strings: \(localePool.count)", to: &standardError)
 
 // MARK: - Emit
 
@@ -336,7 +336,7 @@ do {
     try header.write(to: URL(fileURLWithPath: outputHeaderPath), atomically: true, encoding: .utf8)
     try source.write(to: URL(fileURLWithPath: outputSourcePath), atomically: true, encoding: .utf8)
 } catch {
-    FileHandle.standardError.write("error: failed to write output: \(error)\n".data(using: .utf8)!)
+    print("error: failed to write output: \(error)", to: &standardError)
     exit(1)
 }
 
