@@ -10,6 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal // NOTE: internal because BufferView is internal, `parseError` below is `package`
+func parseError(
+    _ value: BufferView<UInt8>, exampleFormattedString: String?, extendedDescription: String? = nil
+) -> CocoaError {
+    // TODO: change to UTF8Span, and prototype string append and interpolation taking UTF8Span
+    parseError(String(decoding: value, as: UTF8.self), exampleFormattedString: exampleFormattedString, extendedDescription: extendedDescription)
+}
+
+@available(FoundationSpan 6.2, *)
+func parseError(
+    _ value: UTF8Span, exampleFormattedString: String?, extendedDescription: String? = nil
+) -> CocoaError {
+    // TODO: change to UTF8Span, and prototype string append and interpolation taking UTF8Span
+    parseError(String(copying: value), exampleFormattedString: exampleFormattedString, extendedDescription: extendedDescription)
+}
+
+
 package func parseError(_ value: String, exampleFormattedString: String?, extendedDescription: String? = nil) -> CocoaError {
     let errorStr: String
     if let exampleFormattedString = exampleFormattedString {
@@ -24,30 +41,127 @@ func isASCIIDigit(_ x: UInt8) -> Bool {
     x >= UInt8(ascii: "0") && x <= UInt8(ascii: "9")
 }
 
-extension BufferViewIterator<UInt8> {
-    mutating func expectCharacter(_ expected: UInt8, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
-        guard let parsed = next(), parsed == expected else {
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+
+@available(FoundationSpan 6.2, *)
+extension UTF8Span {
+    // This is just an iterator style type, though for UTF8 we can
+    // load scalars and Characters, presumably.
+    //
+    // NOTE: I'm calling this "Cursor" temporarily as "Iterator" might
+    // end up being taken for other reasons.
+    struct Cursor: ~Escapable {
+        var span: UTF8Span
+        var currentOffset: Int
+
+        @lifetime(copy span)
+        init(_ span: UTF8Span) {
+            self.span = span
+            self.currentOffset = 0
         }
     }
-    
-    mutating func expectOneOrMoreCharacters(_ expected: UInt8, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
-        guard let parsed = next(), parsed == expected else {
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
-        }
-        
-        while let parsed = peek(), parsed == expected {
-            advance()
-        }
+
+    @lifetime(copy self) // copy or borrow?
+    func makeCursor() -> Cursor {
+        .init(self)
     }
-    
-    mutating func expectZeroOrMoreCharacters(_ expected: UInt8) {
-        while let parsed = peek(), parsed == expected {
-            advance()
-        }
+}
+
+@available(FoundationSpan 6.2, *)
+extension UTF8Span.Cursor {
+    @lifetime(self: copy self)
+    mutating func uncheckedAdvance() {
+        assert(self.currentOffset < span.count)
+        self.currentOffset += 1
     }
-            
-    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
+
+    func peek() -> UInt8? {
+        guard !isEmpty else { return nil }
+        return span.span[unchecked: self.currentOffset]
+    }
+
+    @lifetime(self: copy self)
+    mutating func next() -> UInt8? {
+        guard !isEmpty else { return nil }
+        defer { uncheckedAdvance() }
+        return peek()
+    }
+
+    var isEmpty: Bool { self.currentOffset >= span.count }
+
+    @lifetime(self: copy self)
+    mutating func consume(_ byte: UInt8) -> Bool {
+        guard peek() == byte else {
+            return false
+        }
+        uncheckedAdvance()
+        return true
+    }
+
+}
+
+@available(FoundationSpan 6.2, *)
+extension UTF8Span.Cursor {
+    // Returns the next byte if there is one and it
+    // matches the predicate, otherwise false
+    func peek(_ f: (UInt8) -> Bool) -> UInt8? {
+        guard let b = peek(), f(b) else {
+            return nil
+        }
+        return b
+    }
+
+    @lifetime(self: copy self)
+    mutating func matchByte(_ expected: UInt8) -> Bool {
+        if peek() == expected {
+            uncheckedAdvance()
+            return true
+        }
+        return false
+    }
+
+    @lifetime(self: copy self)
+    mutating func matchPredicate(_ f: (UInt8) -> Bool) -> UInt8? {
+        guard let b = peek(f) else {
+            return nil
+        }
+        uncheckedAdvance()
+        return b
+    }
+
+    /**
+     NOTE: We want a `match(anyOf:)` operation that takes an Array or Set
+     literal (or String literal, clearly delineated to mean ASCII), but is guaranteed not to actually materialize a  runtime managed object.
+
+     For example, that would handle this pattern from ISO8601:
+     ```
+        if let next = it.peek(), (next == UInt8(ascii: "+") || next == UInt8(ascii: "-")) {
+            if next == UInt8(ascii: "+") { positive = true }
+            else { positive = false }
+            it.uncheckedAdvance()
+     ```
+     */
+
+    @lifetime(self: copy self)
+    @discardableResult
+    mutating func matchZeroOrMore(_ expected: UInt8) -> Int {
+        var count = 0
+        while matchByte(expected) {
+            count += 1
+        }
+        return count
+    }
+
+    @lifetime(self: copy self)
+    @discardableResult
+    mutating func matchOneOrMore(_ expected: UInt8) -> Int? {
+        let c = matchZeroOrMore(expected)
+        return c == 0 ? nil : c
+    }
+
+    // TODO: I think it would be cleaner to separate out
+    // nanosecond handling here...
+    @lifetime(self: copy self)
+    mutating func parseNumber(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false) -> Int? {
         // Consume all leading zeros, parse until we no longer see a digit
         var result = 0
         var count = 0
@@ -57,21 +171,21 @@ extension BufferViewIterator<UInt8> {
             let digit = Int(next - UInt8(ascii: "0"))
             result *= 10
             result += digit
-            advance()
+            uncheckedAdvance()
             count += 1
             if count >= max { break }
         }
-        
+
         guard count > 0 else {
             // No digits actually found
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+            return nil
         }
-        
+
         if let minDigits, count < minDigits {
             // Too few digits found
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+            return nil
         }
-        
+
         if nanoseconds {
             // Keeps us in the land of integers
             if count == 1 { return result * 100_000_000 }
@@ -83,13 +197,11 @@ extension BufferViewIterator<UInt8> {
             if count == 7 { return result * 100 }
             if count == 8 { return result * 10 }
             if count == 9 { return result }
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+            return nil
         }
 
         return result
     }
-    
-
 }
 
 // Formatting helpers
