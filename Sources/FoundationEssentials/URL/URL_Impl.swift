@@ -1391,8 +1391,8 @@ extension _URL {
     var description: String {
         var urlString = relativeString
         if isDataURL && urlString.utf8.count > 128 {
-            let prefix = urlString.utf8.prefix(120)
-            let suffix = urlString.utf8.suffix(8)
+            let prefix = Substring(urlString.utf8.prefix(120))
+            let suffix = Substring(urlString.utf8.suffix(8))
             urlString = "\(prefix) ... \(suffix)"
         }
         if let _baseURL {
