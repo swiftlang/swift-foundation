@@ -46,7 +46,7 @@ extension OutputSpan where Element == UInt8 {
 /// wrapping, which isolates any item containing a character of the opposite
 /// direction to the list, matching `ListFormatter::needsBidiIsolates`).
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class NativeListFormatter: @unchecked Sendable {
+internal final class NativeListFormatter: Sendable {
 
     struct Signature: Hashable {
         let localeIdentifier: String
