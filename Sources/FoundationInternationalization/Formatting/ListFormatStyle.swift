@@ -154,10 +154,10 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
     /// - Returns: A string representation of the provided sequence.
     public func format(_ value: Base) -> String {
         let strings = value.map(memberStyle.format(_:))
-        #if FOUNDATION_LIST_FORMAT_NATIVE
-        return NativeListFormatter.formatter(for: self).format(strings: strings)
-        #else
+        #if FOUNDATION_LIST_FORMAT_ICU
         return ICUListFormatter.formatter(for: self).format(strings: strings)
+        #else
+        return NativeListFormatter.formatter(for: self).format(strings: strings)
         #endif
     }
 
