@@ -16,6 +16,8 @@
 import FoundationEssentials
 #endif
 
+internal import Synchronization
+
 extension OutputSpan where Element == UInt8 {
     /// Append `source`'s bytes onto this output span. Stand-in for a stdlib
     /// `append(copying:)`-style API; previewed as `_append(copying:)` in
@@ -67,7 +69,7 @@ internal final class NativeListFormatter: Sendable {
         let connectorEndsWithSpace: Bool
     }
 
-    internal static let cache = FormatterCache<Signature, NativeListFormatter>()
+    private static let cache = Mutex<[Signature: NativeListFormatter]>([:])
 
     private let signature: Signature
     private let patterns: ListPatterns
@@ -496,8 +498,19 @@ internal final class NativeListFormatter: Sendable {
         let signature = Signature(localeIdentifier: style.locale.identifier,
                                   listType: ListFormatType(style.listType),
                                   width: ListFormatWidth(style.width))
-        return cache.formatter(for: signature) {
-            NativeListFormatter(signature: signature)
+        if let existing = cache.withLock({ $0[signature] }) {
+            return existing
+        }
+        // Build the formatter outside the lock so a slow construction doesn't
+        // block lookups for other signatures.
+        let formatter = NativeListFormatter(signature: signature)
+        return cache.withLock {
+            if let existing = $0[signature] {
+                // Another thread beat us to it; use the existing instance.
+                return existing
+            }
+            $0[signature] = formatter
+            return formatter
         }
     }
 }
