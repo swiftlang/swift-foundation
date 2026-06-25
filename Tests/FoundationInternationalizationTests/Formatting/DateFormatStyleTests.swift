@@ -187,6 +187,25 @@ private struct DateFormatStyleTests {
         #expect(parsed.formatted(style) == format)
     }
 
+    @Test func eraYearParsePatternOnlyWidensAffectedYearFields() {
+        func parsePattern(_ pattern: String, calendarIdentifier: Calendar.Identifier = .japanese) -> String {
+            ICUDateFormatter.DateFormatInfo.parsePattern(for: pattern, calendarIdentifier: calendarIdentifier)
+        }
+
+        #expect(parsePattern("y年M月d日") == "y年M月d日")
+        #expect(parsePattern("Gy年M月d日") == "Gyyyy年M月d日")
+        #expect(parsePattern("Gyy年M月d日") == "Gyyyy年M月d日")
+        #expect(parsePattern("Gyyy年M月d日") == "Gyyy年M月d日")
+        #expect(parsePattern("Gyyyy年M月d日") == "Gyyyy年M月d日")
+        #expect(parsePattern("G 'y' y年M月d日") == "G 'y' yyyy年M月d日")
+        #expect(parsePattern("'G' y年M月d日") == "'G' y年M月d日")
+        #expect(parsePattern("G '' y年M月d日") == "G '' yyyy年M月d日")
+        #expect(parsePattern("G 'it''s y' y年M月d日") == "G 'it''s y' yyyy年M月d日")
+
+        #expect(parsePattern("Gy年M月d日", calendarIdentifier: .republicOfChina) == "Gyyyy年M月d日")
+        #expect(parsePattern("Gy年M月d日", calendarIdentifier: .gregorian) == "Gy年M月d日")
+    }
+
     @Test func leadingDotSyntax() async {
         let date = Date.now
         let locale = Locale(identifier: "es_ES")
