@@ -17,7 +17,7 @@
 
 #include "ListFormatData.h"
 
-#if FOUNDATION_LIST_FORMAT_NATIVE
+#if !FOUNDATION_LIST_FORMAT_ICU
 
 const char * const _ListFormatPatterns[352] = {
     "{0}, {1}",
@@ -2567,4 +2567,4 @@ const _ListFormatParentEntry _ListFormatParents[141] = {
     { 329, 275 },
 };
 
-#endif // FOUNDATION_LIST_FORMAT_NATIVE
+#endif // !FOUNDATION_LIST_FORMAT_ICU

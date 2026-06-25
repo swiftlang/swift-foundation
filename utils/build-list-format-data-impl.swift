@@ -46,7 +46,7 @@
      search
    - A `_ListFormatFallbackLocale` constant holding the configured fallback
 
- The declarations and definitions are wrapped in `#if FOUNDATION_LIST_FORMAT_NATIVE`.
+ The declarations and definitions are wrapped in `#if !FOUNDATION_LIST_FORMAT_ICU`.
 
  */
 
@@ -238,7 +238,7 @@ func bannerComment() -> String {
 
 var header = bannerComment()
 header += "#include \"InternationalizationDataMacros.h\"\n\n"
-header += "#if FOUNDATION_LIST_FORMAT_NATIVE\n\n"
+header += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
 header += "#include <stdint.h>\n\n"
 
 // Struct typedefs (shared by the .c definitions and the Swift importer).
@@ -278,13 +278,13 @@ header += "\n"
 header += "// Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.\n"
 header += "INTERNAL const _ListFormatParentEntry _ListFormatParents[\(filteredParents.count)];\n\n"
 
-header += "#endif // FOUNDATION_LIST_FORMAT_NATIVE\n"
+header += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
 
 // MARK: Source — array definitions
 
 var source = bannerComment()
 source += "#include \"ListFormatData.h\"\n\n"
-source += "#if FOUNDATION_LIST_FORMAT_NATIVE\n\n"
+source += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
 
 // Pattern pool — every unique pattern string lives here exactly once.
 source += "const char * const _ListFormatPatterns[\(filteredPatterns.count)] = {\n"
@@ -328,7 +328,7 @@ for child in filteredParents.keys.sorted() {
 }
 source += "};\n\n"
 
-source += "#endif // FOUNDATION_LIST_FORMAT_NATIVE\n"
+source += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
 
 // MARK: - Write
 

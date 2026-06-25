@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_LIST_FORMAT_NATIVE
+#if !FOUNDATION_LIST_FORMAT_ICU
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -35,8 +35,8 @@ extension OutputSpan where Element == UInt8 {
     }
 }
 
-/// Swift list formatter, used in place of `ICUListFormatter` when the
-/// `FOUNDATION_LIST_FORMAT_NATIVE` build flag is on.
+/// Swift list formatter, used in place of `ICUListFormatter` unless the
+/// `FOUNDATION_LIST_FORMAT_ICU` build flag is set.
 ///
 /// Reimplements Apple-ICU's `i18n/listformatter.cpp`
 /// (`ListFormatter::formatStringsToValue` and its `PatternHandler` family):
@@ -502,4 +502,4 @@ internal final class NativeListFormatter: @unchecked Sendable {
     }
 }
 
-#endif // FOUNDATION_LIST_FORMAT_NATIVE
+#endif // !FOUNDATION_LIST_FORMAT_ICU
