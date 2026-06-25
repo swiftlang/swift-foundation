@@ -363,11 +363,14 @@ extension ICUDateFormatter.DateFormatInfo {
             return pattern
         }
 
-        // Era years are already scoped by the parsed era. Use a wider year
-        // field for parsing to avoid applying ICU's two-digit year window to
-        // Japanese and ROC year-of-era values.
+        // ICU applies its two-digit year window only to year fields narrower
+        // than 3. Era years are already scoped by the parsed era, so widen
+        // only those affected fields for parsing.
         return replacingUnquotedFieldRuns(in: pattern, matching: "y") { count in
-            String(repeating: "y", count: max(count, 4))
+            guard count < 3 else {
+                return String(repeating: "y", count: count)
+            }
+            return "yyyy"
         }
     }
 
