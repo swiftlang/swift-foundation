@@ -168,7 +168,7 @@ private struct ListFormatStyleTests {
     @Test func malayalam() {
         let s = style("ml")
         #expect(["Alice"].formatted(s) == "Alice")
-        #if FOUNDATION_LIST_FORMAT_NATIVE
+        #if !FOUNDATION_LIST_FORMAT_ICU
         #expect(["Alice", "Bob"].formatted(s) == "Alice, Bob")
         #expect(["Alice", "Bob", "Charlie"].formatted(s) == "Alice, Bob, Charlie")
         #expect(["Alice", "Bob", "Charlie", "Delta"].formatted(s) == "Alice, Bob, Charlie, Delta")
@@ -445,7 +445,7 @@ private struct ListFormatStyleTests {
 
     // MARK: - Internal pattern parser
 
-    #if FOUNDATION_LIST_FORMAT_NATIVE
+    #if !FOUNDATION_LIST_FORMAT_ICU
     /// `NativeListFormatter.parse(_:)` decomposes patterns into prefix /
     /// connector / suffix at formatter init. The format tests cover this
     /// indirectly; these cases pin the parser's contract directly.

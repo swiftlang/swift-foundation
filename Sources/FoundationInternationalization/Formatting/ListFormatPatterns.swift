@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_LIST_FORMAT_NATIVE
+#if !FOUNDATION_LIST_FORMAT_ICU
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -277,4 +277,4 @@ internal func _thaiNeedsSpace(adjacentScalar: Unicode.Scalar?) -> Bool {
     return !(0x0E00...0x0E7F).contains(s.value)
 }
 
-#endif // FOUNDATION_LIST_FORMAT_NATIVE
+#endif // !FOUNDATION_LIST_FORMAT_ICU

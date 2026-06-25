@@ -17,7 +17,7 @@
 
 #include "InternationalizationDataMacros.h"
 
-#if FOUNDATION_LIST_FORMAT_NATIVE
+#if !FOUNDATION_LIST_FORMAT_ICU
 
 #include <stdint.h>
 
@@ -69,4 +69,4 @@ INTERNAL const _ListFormatSlotEntry _ListFormatSlot_UnitNarrow[158];
 // Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.
 INTERNAL const _ListFormatParentEntry _ListFormatParents[141];
 
-#endif // FOUNDATION_LIST_FORMAT_NATIVE
+#endif // !FOUNDATION_LIST_FORMAT_ICU
