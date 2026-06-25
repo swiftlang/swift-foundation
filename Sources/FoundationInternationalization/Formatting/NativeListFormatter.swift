@@ -50,8 +50,8 @@ internal final class NativeListFormatter: Sendable {
 
     struct Signature: Hashable {
         let localeIdentifier: String
-        let listType: Int
-        let width: Int
+        let listType: ListFormatType
+        let width: ListFormatWidth
     }
 
     /// A list pattern of the form `<prefix>{0}<connector>{1}<suffix>` parsed
@@ -103,7 +103,7 @@ internal final class NativeListFormatter: Sendable {
         let language = Self.language(of: signature.localeIdentifier)
         self.language = language
         self.listDirection = Locale.Language(identifier: signature.localeIdentifier).characterDirection
-        self.isThaiAnd = (language == "th") && (signature.listType == 0)
+        self.isThaiAnd = (language == "th") && (signature.listType == .and)
         let type = signature.listType
         self.startCondition = _listPatternCondition(language: language, type: type, defaultPattern: patterns.start)
         self.middleCondition = _listPatternCondition(language: language, type: type, defaultPattern: patterns.middle)
@@ -494,8 +494,8 @@ internal final class NativeListFormatter: Sendable {
 
     internal static func formatter<Style, Base>(for style: ListFormatStyle<Style, Base>) -> NativeListFormatter {
         let signature = Signature(localeIdentifier: style.locale.identifier,
-                                  listType: style.listType.rawValue,
-                                  width: style.width.rawValue)
+                                  listType: ListFormatType(style.listType),
+                                  width: ListFormatWidth(style.width))
         return cache.formatter(for: signature) {
             NativeListFormatter(signature: signature)
         }

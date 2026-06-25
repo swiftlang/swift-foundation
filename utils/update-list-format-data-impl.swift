@@ -54,6 +54,10 @@ let partNames = ["start", "middle", "end", "2"]
 
 // (CLDR <listPattern type="..."> attribute, our type name, our width name)
 // A missing type attribute in CLDR means "standard".
+// Note: CLDR also defines "unit" list patterns (for lists of measurement
+// units), but they aren't reachable through the public ListFormatStyle API
+// (ListType is only .and/.or), so we don't extract them — keeping the shipped
+// data smaller.
 let slots: [(cldrType: String, type: String, width: String)] = [
     ("standard",        "and",  "wide"),
     ("standard-short",  "and",  "short"),
@@ -61,9 +65,6 @@ let slots: [(cldrType: String, type: String, width: String)] = [
     ("or",              "or",   "wide"),
     ("or-short",        "or",   "short"),
     ("or-narrow",       "or",   "narrow"),
-    ("unit",            "unit", "wide"),
-    ("unit-short",      "unit", "short"),
-    ("unit-narrow",     "unit", "narrow"),
 ]
 
 // MARK: - Errors
@@ -523,12 +524,15 @@ func emit(slotTables: [(type: String, width: String, table: [String: Row])],
         return i
     }
 
-    // Build slot maps using global row indexes.
+    // Build slot maps using global row indexes. Iterate locales in sorted order
+    // so pattern/row interning (and thus the pool ordering) is stable across
+    // runs — dictionary iteration order is otherwise randomized per process.
     var slots: [String: [String: Int]] = [:]
     for (i, slot) in slotTables.enumerated() {
         let emission = emissions[i]
         var map: [String: Int] = [:]
-        for (locale, localRowIdx) in emission.sparseIndex {
+        for locale in emission.sparseIndex.keys.sorted() {
+            let localRowIdx = emission.sparseIndex[locale]!
             let row = emission.uniqueRows[localRowIdx]
             map[locale] = internRow(row)
         }
