@@ -31,29 +31,26 @@ typedef struct { uint16_t locale; uint16_t row; } _ListFormatSlotEntry;
 // Parent-locale entry: child and parent are indexes into _ListFormatLocales.
 typedef struct { uint16_t child; uint16_t parent; } _ListFormatParentEntry;
 
-static const uint16_t _ListFormatPatternCount = 352;
-static const uint16_t _ListFormatRowCount = 335;
-static const uint16_t _ListFormatLocaleCount = 331;
+static const uint16_t _ListFormatPatternCount = 344;
+static const uint16_t _ListFormatRowCount = 295;
+static const uint16_t _ListFormatLocaleCount = 329;
 static const uint16_t _ListFormatSlot_AndWide_Count = 179;
 static const uint16_t _ListFormatSlot_AndShort_Count = 184;
 static const uint16_t _ListFormatSlot_AndNarrow_Count = 133;
 static const uint16_t _ListFormatSlot_OrWide_Count = 150;
 static const uint16_t _ListFormatSlot_OrShort_Count = 148;
 static const uint16_t _ListFormatSlot_OrNarrow_Count = 149;
-static const uint16_t _ListFormatSlot_UnitWide_Count = 130;
-static const uint16_t _ListFormatSlot_UnitShort_Count = 119;
-static const uint16_t _ListFormatSlot_UnitNarrow_Count = 158;
 static const uint16_t _ListFormatParentCount = 141;
 static const char * const _ListFormatFallbackLocale = "root";
 
 // Pattern string pool. Rows reference these by index.
-INTERNAL const char * const _ListFormatPatterns[352];
+INTERNAL const char * const _ListFormatPatterns[344];
 
 // Row table. Each row is four indexes into _ListFormatPatterns.
-INTERNAL const _ListFormatRow _ListFormatRows[335];
+INTERNAL const _ListFormatRow _ListFormatRows[295];
 
 // Locale string pool. Slot and parent entries reference these by index.
-INTERNAL const char * const _ListFormatLocales[331];
+INTERNAL const char * const _ListFormatLocales[329];
 
 // Sparse slot tables, one per (type, width), sorted by locale.
 INTERNAL const _ListFormatSlotEntry _ListFormatSlot_AndWide[179];
@@ -62,9 +59,6 @@ INTERNAL const _ListFormatSlotEntry _ListFormatSlot_AndNarrow[133];
 INTERNAL const _ListFormatSlotEntry _ListFormatSlot_OrWide[150];
 INTERNAL const _ListFormatSlotEntry _ListFormatSlot_OrShort[148];
 INTERNAL const _ListFormatSlotEntry _ListFormatSlot_OrNarrow[149];
-INTERNAL const _ListFormatSlotEntry _ListFormatSlot_UnitWide[130];
-INTERNAL const _ListFormatSlotEntry _ListFormatSlot_UnitShort[119];
-INTERNAL const _ListFormatSlotEntry _ListFormatSlot_UnitNarrow[158];
 
 // Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.
 INTERNAL const _ListFormatParentEntry _ListFormatParents[141];

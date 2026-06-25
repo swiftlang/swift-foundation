@@ -39,12 +39,43 @@ internal enum ListPatternCondition: Sendable, Hashable {
     case thaiContextual
 }
 
+/// The list type dimension of the data (cumulative vs alternative). The public
+/// `ListFormatStyle.ListType` maps onto this; kept as a separate internal type
+/// because the data layer is independent of the public API surface.
+internal enum ListFormatType: Hashable {
+    case and
+    case or
+
+    init<Style, Base>(_ listType: ListFormatStyle<Style, Base>.ListType) {
+        switch listType {
+        case .and: self = .and
+        case .or: self = .or
+        }
+    }
+}
+
+/// The list width dimension of the data. The public `ListFormatStyle.Width`
+/// maps onto this — note its `.standard` case corresponds to `.wide` here, the
+/// name CLDR and the data tables use.
+internal enum ListFormatWidth: Hashable {
+    case wide
+    case short
+    case narrow
+
+    init<Style, Base>(_ width: ListFormatStyle<Style, Base>.Width) {
+        switch width {
+        case .standard: self = .wide
+        case .short: self = .short
+        case .narrow: self = .narrow
+        }
+    }
+}
+
 // MARK: - Locale lookup
 
 /// Resolve `(locale, type, width)` to a `ListPatterns` row by walking the
-/// parent chain across the packed C data tables. `type` is 0/1/2 for and/or/unit;
-/// `width` is 0/1/2 for wide/short/narrow (matching the public enum raw values).
-internal func _listPatterns(locale: String, type: Int, width: Int) -> ListPatterns {
+/// parent chain across the packed C data tables.
+internal func _listPatterns(locale: String, type: ListFormatType, width: ListFormatWidth) -> ListPatterns {
     // Walk the parent chain looking for the first ancestor that has data for
     // this slot. If the walk exhausts without a match, retry from the
     // configured fallback locale.
@@ -64,7 +95,7 @@ internal func _listPatterns(locale: String, type: Int, width: Int) -> ListPatter
 /// ancestor with an entry in the given slot. Returns nil if the walk reaches
 /// root (or beyond) without finding anything — caller falls back to the
 /// configured fallback locale.
-private func _walkSlot(locale: String, type: Int, width: Int) -> UInt16? {
+private func _walkSlot(locale: String, type: ListFormatType, width: ListFormatWidth) -> UInt16? {
     var current: String? = locale
     while let l = current {
         if let row = _searchSlot(locale: l, type: type, width: width) {
@@ -89,56 +120,23 @@ internal func _listFormatParent(of locale: String) -> String? {
 // MARK: - Binary search over the C tables
 
 /// Look up `locale` in the slot table for `(type, width)`. Returns the row
-/// index if present.
-private func _searchSlot(locale: String, type: Int, width: Int) -> UInt16? {
+/// index if present. The switch only selects which table and count to use; the
+/// common pointer/search code lives in the local `search` helper.
+private func _searchSlot(locale: String, type: ListFormatType, width: ListFormatWidth) -> UInt16? {
+    func search<T>(_ table: borrowing T, _ count: UInt16) -> UInt16? {
+        withUnsafePointer(to: table) { ptr in
+            _bsearchSlot(target: locale,
+                         base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
+                         count: Int(count))
+        }
+    }
     switch (type, width) {
-    case (0, 0):
-        return withUnsafePointer(to: _ListFormatSlot_AndWide) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_AndWide_Count))
-        }
-    case (0, 1):
-        return withUnsafePointer(to: _ListFormatSlot_AndShort) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_AndShort_Count))
-        }
-    case (0, 2):
-        return withUnsafePointer(to: _ListFormatSlot_AndNarrow) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_AndNarrow_Count))
-        }
-    case (1, 0):
-        return withUnsafePointer(to: _ListFormatSlot_OrWide) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_OrWide_Count))
-        }
-    case (1, 1):
-        return withUnsafePointer(to: _ListFormatSlot_OrShort) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_OrShort_Count))
-        }
-    case (1, 2):
-        return withUnsafePointer(to: _ListFormatSlot_OrNarrow) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_OrNarrow_Count))
-        }
-    case (2, 0):
-        return withUnsafePointer(to: _ListFormatSlot_UnitWide) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_UnitWide_Count))
-        }
-    case (2, 1):
-        return withUnsafePointer(to: _ListFormatSlot_UnitShort) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_UnitShort_Count))
-        }
-    case (2, 2):
-        return withUnsafePointer(to: _ListFormatSlot_UnitNarrow) { ptr in
-            _bsearchSlot(target: locale, base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(_ListFormatSlot_UnitNarrow_Count))
-        }
-    default:
-        return nil
+    case (.and, .wide):   return search(_ListFormatSlot_AndWide, _ListFormatSlot_AndWide_Count)
+    case (.and, .short):  return search(_ListFormatSlot_AndShort, _ListFormatSlot_AndShort_Count)
+    case (.and, .narrow): return search(_ListFormatSlot_AndNarrow, _ListFormatSlot_AndNarrow_Count)
+    case (.or, .wide):    return search(_ListFormatSlot_OrWide, _ListFormatSlot_OrWide_Count)
+    case (.or, .short):   return search(_ListFormatSlot_OrShort, _ListFormatSlot_OrShort_Count)
+    case (.or, .narrow):  return search(_ListFormatSlot_OrNarrow, _ListFormatSlot_OrNarrow_Count)
     }
 }
 
@@ -218,19 +216,19 @@ private func _pattern(at index: UInt16) -> String {
 
 /// Returns the contextual rule that applies to a given `(language, type,
 /// default-pattern)`, or `nil` if no rule applies.
-internal func _listPatternCondition(language: String, type: Int, defaultPattern: String) -> ListPatternCondition? {
+internal func _listPatternCondition(language: String, type: ListFormatType, defaultPattern: String) -> ListPatternCondition? {
     if language == "es" {
-        if (type == 0 || type == 2) && defaultPattern == "{0} y {1}" {
+        if type == .and && defaultPattern == "{0} y {1}" {
             return .spanishYToE
         }
-        if type == 1 && defaultPattern == "{0} o {1}" {
+        if type == .or && defaultPattern == "{0} o {1}" {
             return .spanishOToU
         }
     }
     if language == "he" || language == "iw", defaultPattern == "{0} \u{05D5}{1}" {
         return .hebrewNonHebrewPrefix
     }
-    if language == "th", type == 0 {
+    if language == "th", type == .and {
         return .thaiContextual
     }
     return nil

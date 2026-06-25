@@ -62,5 +62,4 @@ internal struct ListFormatDataSchema: Codable {
 internal let listFormatSlotNames: [String] = [
     "and_wide", "and_short", "and_narrow",
     "or_wide",  "or_short",  "or_narrow",
-    "unit_wide", "unit_short", "unit_narrow",
 ]
