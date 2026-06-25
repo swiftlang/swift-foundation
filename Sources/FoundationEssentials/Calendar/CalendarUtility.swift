@@ -71,8 +71,7 @@ internal enum _CalendarUtility {
     // MARK: - isDateInWeekend
 
     /// Whether `weekday` + `timeInDay` falls within `weekendRange`.
-    static func isDateInWeekend(weekday: Int, timeInDay: TimeInterval,
-                                 weekendRange: WeekendRange) -> Bool {
+    static func isDateInWeekend(weekday: Int, timeInDay: TimeInterval, weekendRange: WeekendRange) -> Bool {
         if weekendRange.start == weekendRange.end && weekday != weekendRange.start {
             return false
         } else if weekendRange.start < weekendRange.end && (weekday < weekendRange.start || weekday > weekendRange.end) {

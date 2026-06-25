@@ -1285,7 +1285,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar.nextDate(after: date, matching: components, direction: direction)
     }
 
-    internal func _supportsNextDateFastPath(for components: DateComponents) -> Bool {
+    internal func _supportsNextDateFastPath(for components: ComponentSet) -> Bool {
         _calendar.supportsNextDateFastPath(for: components)
     }
 
@@ -1309,7 +1309,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     @available(iOS 8.0, *)
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
         // Fast-path: drive the loop with direct nextDate calls when default policies are in effect.
-        if matchingPolicy == .nextTime && repeatedTimePolicy == .first, _supportsNextDateFastPath(for: components) {
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first, _supportsNextDateFastPath(for: components._populatedComponentSet) {
             var current = start
             var stop = false
             while !stop {

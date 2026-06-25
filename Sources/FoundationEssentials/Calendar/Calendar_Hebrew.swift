@@ -92,18 +92,26 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         return _CalendarHebrew(identifier: identifier, timeZone: args.timeZone, locale: args.locale, firstWeekday: args.firstWeekday, minimumDaysInFirstWeek: args.minimumDaysInFirstWeek, gregorianStartDate: nil)
     }
 
-    // hash(into:) uses the `_CalendarProtocol` default impl.
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(identifier)
+        hasher.combine(timeZone)
+        hasher.combine(firstWeekday)
+        hasher.combine(minimumDaysInFirstWeek)
+        hasher.combine(localeIdentifier)
+        hasher.combine(preferredFirstWeekday)
+        hasher.combine(preferredMinimumDaysInFirstweek)
+    }
 
-    func supportsNextDateFastPath(for components: DateComponents) -> Bool {
-        if components.era != nil || components.year != nil || components.weekOfYear != nil || components.yearForWeekOfYear != nil || components.dayOfYear != nil {
+    func supportsNextDateFastPath(for components: Calendar.ComponentSet) -> Bool {
+        if components.contains(.era) || components.contains(.year) || components.contains(.weekOfYear) || components.contains(.yearForWeekOfYear) || components.contains(.dayOfYear) {
             return false
         }
 
-        let hasMonth = components.month != nil
-        let hasDay = components.day != nil
-        let hasWeekday = components.weekday != nil
-        let hasWdOrd = components.weekdayOrdinal != nil
-        let hasWeekOfMonth = components.weekOfMonth != nil
+        let hasMonth = components.contains(.month)
+        let hasDay = components.contains(.day)
+        let hasWeekday = components.contains(.weekday)
+        let hasWdOrd = components.contains(.weekdayOrdinal)
+        let hasWeekOfMonth = components.contains(.weekOfMonth)
 
         if hasWeekOfMonth && !(hasMonth && hasWeekday && !hasDay && !hasWdOrd) { return false }
         if hasWdOrd && !(hasWeekday && !hasDay && !hasWeekOfMonth) { return false }
@@ -112,7 +120,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
         let timeOnly = !hasMonth && !hasDay && !hasWeekday
         if timeOnly {
-            guard components.hour != nil, components.minute != nil, components.second != nil else { return false }
+            guard components.contains(.hour), components.contains(.minute), components.contains(.second) else { return false }
         }
 
         return true
@@ -974,7 +982,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     package func nextDate(after date: Date, matching components: DateComponents,
                           direction: Calendar.SearchDirection) -> Date? {
-        guard supportsNextDateFastPath(for: components) else { return nil }
+        guard supportsNextDateFastPath(for: components._populatedComponentSet) else { return nil }
 
         let hasMonth = components.month != nil
         let hasDay = components.day != nil

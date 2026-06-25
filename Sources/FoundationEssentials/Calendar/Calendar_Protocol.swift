@@ -54,7 +54,7 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date?
 
     /// Whether this calendar can fast path the given pattern. Default returns false; calendar implementations override for patterns they handle.
-    func supportsNextDateFastPath(for components: DateComponents) -> Bool
+    func supportsNextDateFastPath(for components: Calendar.ComponentSet) -> Bool
 
 #if FOUNDATION_FRAMEWORK
     func bridgeToNSCalendar() -> NSCalendar
@@ -66,7 +66,7 @@ extension _CalendarProtocol {
         nil
     }
 
-    package func supportsNextDateFastPath(for components: DateComponents) -> Bool { false }
+    package func supportsNextDateFastPath(for components: Calendar.ComponentSet) -> Bool { false }
 
     package var preferredFirstWeekday: Int? { nil }
     package var preferredMinimumDaysInFirstweek: Int? { nil }
@@ -80,17 +80,6 @@ extension _CalendarProtocol {
     package var localeIdentifier: String {
         // We use this to provide a consistent answer for hashing and equality -- null is equal to an empty string
         locale?.identifier ?? ""
-    }
-
-    /// Default `hash(into:)` for the standard calendar identity tuple. Calendars with non-standard hashing (e.g. `_CalendarAutoupdating`, `_CalendarICU`, `_CalendarBridged`) override this.
-    package func hash(into hasher: inout Hasher) {
-        hasher.combine(identifier)
-        hasher.combine(timeZone)
-        hasher.combine(firstWeekday)
-        hasher.combine(minimumDaysInFirstWeek)
-        hasher.combine(localeIdentifier)
-        hasher.combine(preferredFirstWeekday)
-        hasher.combine(preferredMinimumDaysInFirstweek)
     }
 }
 
