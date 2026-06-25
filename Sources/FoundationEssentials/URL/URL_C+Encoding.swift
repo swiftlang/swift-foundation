@@ -109,13 +109,13 @@ extension NSURL {
         return URLEncoder.percentEncode(string: path, encoding: encoding, component: component, skipAlreadyEncoded: false)
     }
 
-    static func __copySwiftEncodedFSRPath(_ path: String) -> String? {
+    static func __copySwiftEncodedFSRPath(_ path: String) -> Unmanaged<CFString>? {
         guard !path.isEmpty else {
-            return path
+            return _createCFStringFromASCIIString(path)
         }
         // Convert path to its decomposed file system representation then encode
         let maxFSRSize = 3 * path.utf8.count
-        return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxFSRSize) { pathBuffer -> String? in
+        return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxFSRSize) { pathBuffer in
             guard var pathLength = path._decomposed(.hfsPlus, into: pathBuffer) else {
                 return nil
             }
@@ -124,15 +124,14 @@ extension NSURL {
             while pathLength > rootLength && pathBuffer[pathLength - 1] == UInt8(ascii: "/") {
                 pathLength -= 1
             }
-            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 3 * pathLength) { encodedBuffer in
-                let encodedLength = URLEncoder.percentEncodeUnchecked(
+            return _createCFStringFromASCIIBuffer(capacity: 3 * pathLength) { encodedBuffer in
+                URLEncoder.percentEncodeUnchecked(
                     input: UnsafeBufferPointer(rebasing: pathBuffer[..<pathLength]),
                     output: encodedBuffer,
                     // Encode ";" for compatibility
                     component: .pathNoSemicolon,
                     skipAlreadyEncoded: false
                 )
-                return String(decoding: encodedBuffer[..<encodedLength], as: UTF8.self)
             }
         }
     }
