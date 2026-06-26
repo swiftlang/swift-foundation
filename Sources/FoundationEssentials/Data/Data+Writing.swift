@@ -204,7 +204,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: borrowing s
             }
 #else
             @diagnose(DeprecatedDeclaration, as: ignored)
-            func _mktemp(_ templateFileSystemRep: UnsafeMutablePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+            func _mktemp(_ templateFileSystemRep: UnsafeMutablePointer<CChar>!) -> UnsafeMutablePointer<CChar>! {
                 mktemp(templateFileSystemRep)
             }
             
