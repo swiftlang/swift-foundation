@@ -27,13 +27,13 @@ import Foundation
 /// A `TextOutputStream` over standard error, so the generators can use
 /// `print(..., to: &standardError)` for progress/diagnostics instead of the
 /// more verbose `FileHandle.standardError.write(...data(using:)...)`.
-struct StandardError: TextOutputStream {
+internal struct StandardError: TextOutputStream {
     mutating func write(_ string: String) {
         guard let data = string.data(using: .utf8) else { return }
         FileHandle.standardError.write(data)
     }
 }
-var standardError = StandardError()
+internal var standardError = StandardError()
 
 internal struct ListFormatDataSchema: Codable {
     /// Human-readable provenance string (e.g. "CLDR 48.0"). Echoed into the
