@@ -28,17 +28,6 @@ internal struct ListPatterns: Hashable, Sendable {
     let pair: String
 }
 
-/// A locale-specific contextual rule that may modify the `end`/`pair` pattern
-/// based on the surrounding text. Application happens in
-/// `NativeListFormatter.apply`; the data tables don't carry the tag because
-/// it's determined by `(locale.language, type, default-pattern)` at format time.
-internal enum ListPatternCondition: Sendable, Hashable {
-    case spanishYToE
-    case spanishOToU
-    case hebrewNonHebrewPrefix
-    case thaiContextual
-}
-
 /// The list type dimension of the data (cumulative vs alternative). The public
 /// `ListFormatStyle.ListType` maps onto this; kept as a separate internal type
 /// because the data layer is independent of the public API surface.
@@ -210,69 +199,6 @@ private func _pattern(at index: UInt16) -> String {
         let base = UnsafeRawPointer(ptr).assumingMemoryBound(to: UnsafePointer<CChar>?.self)
         return String(cString: base[Int(index)]!)
     }
-}
-
-// MARK: - Contextual conditions
-
-/// Returns the contextual rule that applies to a given `(language, type,
-/// default-pattern)`, or `nil` if no rule applies.
-internal func _listPatternCondition(language: String, type: ListFormatType, defaultPattern: String) -> ListPatternCondition? {
-    if language == "es" {
-        if type == .and && defaultPattern == "{0} y {1}" {
-            return .spanishYToE
-        }
-        if type == .or && defaultPattern == "{0} o {1}" {
-            return .spanishOToU
-        }
-    }
-    if language == "he" || language == "iw", defaultPattern == "{0} \u{05D5}{1}" {
-        return .hebrewNonHebrewPrefix
-    }
-    if language == "th", type == .and {
-        return .thaiContextual
-    }
-    return nil
-}
-
-// MARK: - Predicate implementations
-
-internal func _spanishYToEFires(on text: String) -> Bool {
-    var iter = text.unicodeScalars.makeIterator()
-    guard let c0 = iter.next() else { return false }
-    if c0 == "i" || c0 == "I" { return true }
-    if c0 != "h" && c0 != "H" { return false }
-    guard let c1 = iter.next() else { return false }
-    if c1 != "i" && c1 != "I" { return false }
-    guard let c2 = iter.next() else { return true }
-    return c2 != "a" && c2 != "A" && c2 != "e" && c2 != "E"
-}
-
-internal func _spanishOToUFires(on text: String) -> Bool {
-    var iter = text.unicodeScalars.makeIterator()
-    guard let c0 = iter.next() else { return false }
-    if c0 == "o" || c0 == "O" || c0 == "8" { return true }
-    if c0 == "h" || c0 == "H" {
-        if let c1 = iter.next(), c1 == "o" || c1 == "O" { return true }
-        return false
-    }
-    if c0 == "1" {
-        guard let c1 = iter.next(), c1 == "1" else { return false }
-        guard let c2 = iter.next() else { return true }
-        return c2 == " "
-    }
-    return false
-}
-
-internal func _hebrewVavDashFires(on text: String) -> Bool {
-    guard let scalar = text.unicodeScalars.first else { return false }
-    let v = scalar.value
-    let isHebrewBlock = (0x0590...0x05FF).contains(v) || (0xFB1D...0xFB4F).contains(v)
-    return !isHebrewBlock
-}
-
-internal func _thaiNeedsSpace(adjacentScalar: Unicode.Scalar?) -> Bool {
-    guard let s = adjacentScalar else { return false }
-    return !(0x0E00...0x0E7F).contains(s.value)
 }
 
 #endif // !FOUNDATION_LIST_FORMAT_ICU

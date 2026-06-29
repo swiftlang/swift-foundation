@@ -78,12 +78,16 @@ internal final class NativeListFormatter: Sendable {
     /// Whether this formatter's locale + type combination triggers the Thai
     /// contextual joiner rule. Cached to avoid re-deciding per format call.
     private let isThaiAnd: Bool
-    /// Cached condition decisions per slot so format calls don't re-classify
-    /// the rule per call. `nil` means no contextual rule applies for this slot.
-    private let startCondition: ListPatternCondition?
-    private let middleCondition: ListPatternCondition?
-    private let endCondition: ListPatternCondition?
-    private let pairCondition: ListPatternCondition?
+    /// The contextual substitution rule for this locale, if any (Spanish y→e /
+    /// o→u, Hebrew non-Hebrew prefix). `alternativeCondition` tests the item
+    /// following the connector; when it fires, `alternativeParsed` is used in
+    /// place of the normal end/pair pattern. These rules only affect the end and
+    /// pair patterns, which are identical in the affected languages, so a single
+    /// condition + pattern covers both positions. `nil` for most locales. Thai
+    /// is excluded — its joiner is dynamic spacing, not a static substitution
+    /// (see `applyThai`).
+    private let alternativeCondition: (@Sendable (String) -> Bool)?
+    private let alternativeParsed: ParsedPattern?
     private let startParsed: ParsedPattern?
     private let middleParsed: ParsedPattern?
     private let endParsed: ParsedPattern?
@@ -106,11 +110,14 @@ internal final class NativeListFormatter: Sendable {
         self.language = language
         self.listDirection = Locale.Language(identifier: signature.localeIdentifier).characterDirection
         self.isThaiAnd = (language == "th") && (signature.listType == .and)
-        let type = signature.listType
-        self.startCondition = _listPatternCondition(language: language, type: type, defaultPattern: patterns.start)
-        self.middleCondition = _listPatternCondition(language: language, type: type, defaultPattern: patterns.middle)
-        self.endCondition = _listPatternCondition(language: language, type: type, defaultPattern: patterns.end)
-        self.pairCondition = _listPatternCondition(language: language, type: type, defaultPattern: patterns.pair)
+        if let rule = Self.alternativeRule(language: language, type: signature.listType,
+                                           endPattern: patterns.end) {
+            self.alternativeCondition = rule.condition
+            self.alternativeParsed = Self.parse(rule.pattern)
+        } else {
+            self.alternativeCondition = nil
+            self.alternativeParsed = nil
+        }
         let startParsed = Self.parse(patterns.start)
         let middleParsed = Self.parse(patterns.middle)
         let endParsed = Self.parse(patterns.end)
@@ -138,24 +145,22 @@ internal final class NativeListFormatter: Sendable {
             if isThaiAnd, let parsed = pairParsed {
                 return applyThai(parsed: parsed, isPair: true, before: a, after: b)
             }
-            if pairCondition == nil, let parsed = pairParsed {
-                return interpolate(layout: parsed, a, b)
+            // Spanish/Hebrew: if the contextual rule fires for the second item,
+            // use the alternative pattern; otherwise the normal pair pattern.
+            if let alt = alternativePattern(forNextItem: strings[1]) {
+                return interpolate(layout: alt, a, b)
             }
-            return apply(patterns.pair, condition: pairCondition, parsed: pairParsed,
-                         isPair: true, before: a, after: b)
+            return interpolate(pairParsed, patterns.pair, a, b)
         default:
-            // Fast path: simple patterns + no contextual rule. Build the
+            // Fast path: simple patterns, no contextual rule, not Thai. Build the
             // result in one buffer in a single pass (O(N) total work) rather
-            // than producing N intermediate strings. `wrapBidi` is inlined
-            // so we don't allocate an intermediate `[String]` for the wrapped
-            // items.
-            if canBuildLinearly,
-               startCondition == nil, middleCondition == nil, endCondition == nil,
+            // than producing N intermediate strings. `wrapBidi` is inlined so we
+            // don't allocate an intermediate `[String]` for the wrapped items.
+            if canBuildLinearly, alternativeCondition == nil, !isThaiAnd,
                let startP = startParsed, let middleP = middleParsed, let endP = endParsed {
                 return buildLinear(items: strings, start: startP, middle: middleP, end: endP)
             }
             let wrapped = strings.map(wrapBidi)
-            // Thai or contextual or non-simple-pattern locale: per-call apply.
             if isThaiAnd,
                let startP = startParsed,
                let middleP = middleParsed,
@@ -169,15 +174,29 @@ internal final class NativeListFormatter: Sendable {
                 return applyThai(parsed: endP, isPair: false,
                                  before: result, after: wrapped[wrapped.count - 1])
             }
-            var result = apply(patterns.start, condition: startCondition, parsed: startParsed,
-                               isPair: false, before: wrapped[0], after: wrapped[1])
+            // Start and middle joins never carry a contextual rule (those only
+            // affect the end/pair patterns), so they're plain interpolation.
+            var result = interpolate(startParsed, patterns.start, wrapped[0], wrapped[1])
             for i in 2..<(wrapped.count - 1) {
-                result = apply(patterns.middle, condition: middleCondition, parsed: middleParsed,
-                               isPair: false, before: result, after: wrapped[i])
+                result = interpolate(middleParsed, patterns.middle, result, wrapped[i])
             }
-            return apply(patterns.end, condition: endCondition, parsed: endParsed,
-                         isPair: false, before: result, after: wrapped[wrapped.count - 1])
+            let last = wrapped.count - 1
+            if let alt = alternativePattern(forNextItem: strings[last]) {
+                return interpolate(layout: alt, result, wrapped[last])
+            }
+            return interpolate(endParsed, patterns.end, result, wrapped[last])
         }
+    }
+
+    /// The replacement pattern for the end/pair join when this formatter's
+    /// contextual substitution rule fires for `nextItem` (the item that follows
+    /// the connector); `nil` if there's no rule or it doesn't fire.
+    private func alternativePattern(forNextItem nextItem: String) -> ParsedPattern? {
+        guard let condition = alternativeCondition, let parsed = alternativeParsed,
+              condition(nextItem) else {
+            return nil
+        }
+        return parsed
     }
 
     /// Linear single-buffer build for 3+ item lists with simple patterns and no
@@ -245,58 +264,14 @@ internal final class NativeListFormatter: Sendable {
         }
     }
 
-    /// Apply a contextual rule (if any) to `pattern`, then interpolate.
-    /// `before` substitutes for `{0}`; `after` for `{1}`. Top-level fast paths
-    /// in `format(strings:)` cover the no-condition case for simple patterns
-    /// and the Thai case; this path handles Spanish/Hebrew, plus the
-    /// no-condition case for non-simple patterns (those with a non-empty
-    /// prefix/suffix), plus a fallback for malformed data.
-    private func apply(_ pattern: String, condition: ListPatternCondition?,
-                       parsed: ParsedPattern?, isPair: Bool,
-                       before: String, after: String) -> String {
-        guard let cond = condition else {
-            if let parsed = parsed { return interpolate(layout: parsed, before, after) }
-            return interpolate(pattern, before, after)
+    /// Interpolate using the cached parsed layout, or fall back to scanning the
+    /// raw pattern when parsing failed (malformed data).
+    private func interpolate(_ parsed: ParsedPattern?, _ pattern: String,
+                             _ s0: String, _ s1: String) -> String {
+        if let parsed {
+            return interpolate(layout: parsed, s0, s1)
         }
-        switch cond {
-        case .spanishYToE:
-            if _spanishYToEFires(on: after) {
-                return concat3(before, " e ", after)
-            }
-            if let parsed = parsed { return interpolate(layout: parsed, before, after) }
-            return interpolate(pattern, before, after)
-        case .spanishOToU:
-            if _spanishOToUFires(on: after) {
-                return concat3(before, " u ", after)
-            }
-            if let parsed = parsed { return interpolate(layout: parsed, before, after) }
-            return interpolate(pattern, before, after)
-        case .hebrewNonHebrewPrefix:
-            if _hebrewVavDashFires(on: after) {
-                return concat3(before, " \u{05D5}-", after)
-            }
-            if let parsed = parsed { return interpolate(layout: parsed, before, after) }
-            return interpolate(pattern, before, after)
-        case .thaiContextual:
-            // Reached only when the parsed-pattern fast path was bypassed
-            // (malformed pattern); fall back to interpolating as written.
-            return interpolate(pattern, before, after)
-        }
-    }
-
-    /// Concatenate three strings into a single freshly-allocated `String`.
-    /// Used by the Spanish/Hebrew contextual rules when they fire and the
-    /// rewritten pattern is a known `{0}<connector>{1}` constant — emitting
-    /// the result directly is cheaper than going through `interpolate`.
-    private func concat3(_ a: String, _ b: String, _ c: String) -> String {
-        let total = a.utf8.count + b.utf8.count + c.utf8.count
-        return String(unsafeUninitializedCapacity: total) { buffer in
-            var output = OutputSpan(buffer: buffer, initializedCount: 0)
-            output.append(copying: a.utf8Span.span)
-            output.append(copying: b.utf8Span.span)
-            output.append(copying: c.utf8Span.span)
-            return output.finalize(for: buffer)
-        }
+        return interpolate(pattern, s0, s1)
     }
 
     /// Fast interpolation using the cached parsed layout. Skips the per-call
@@ -488,6 +463,31 @@ internal final class NativeListFormatter: Sendable {
         }
     }
 
+    /// The contextual substitution rule for a `(language, type)`, if any: a
+    /// predicate on the item following the connector, plus the replacement
+    /// pattern to use when it fires. Covers Spanish y→e / o→u and the Hebrew
+    /// non-Hebrew prefix — all of which only affect the end/pair patterns
+    /// (identical in these languages). Guarded on the end pattern so a locale
+    /// that overrode it doesn't pick up the wrong rule. Thai is intentionally
+    /// excluded: its joiner is a dynamic spacing rule, not a static pattern
+    /// substitution (see `applyThai`).
+    private static func alternativeRule(
+        language: String, type: ListFormatType, endPattern: String
+    ) -> (condition: @Sendable (String) -> Bool, pattern: String)? {
+        if language == "es" {
+            if type == .and, endPattern == "{0} y {1}" {
+                return (_spanishYToEFires, "{0} e {1}")
+            }
+            if type == .or, endPattern == "{0} o {1}" {
+                return (_spanishOToUFires, "{0} u {1}")
+            }
+        }
+        if language == "he" || language == "iw", endPattern == "{0} \u{05D5}{1}" {
+            return (_hebrewVavDashFires, "{0} \u{05D5}-{1}")
+        }
+        return nil
+    }
+
     private static func language(of locale: String) -> String {
         if let u = locale.firstIndex(of: "_") { return String(locale[..<u]) }
         if let u = locale.firstIndex(of: "-") { return String(locale[..<u]) }
@@ -513,6 +513,62 @@ internal final class NativeListFormatter: Sendable {
             return formatter
         }
     }
+}
+
+// MARK: - Contextual-rule predicates
+//
+// The runtime checks for the locale-specific contextual rules. Spanish/Hebrew
+// drive `alternativeRule`; Thai drives `applyThai`. Translated from Apple-ICU's
+// `i18n/listformatter.cpp` (`shouldChangeToE`/`shouldChangeToU`, the Hebrew
+// prefix handler, and `ThaiHandler`).
+
+/// Whether the Spanish "y" → "e" change applies before `text` (the item that
+/// follows the connector): true when it begins with an /i/ sound — an "i"/"hi"
+/// not continuing into "hia"/"hie".
+private func _spanishYToEFires(on text: String) -> Bool {
+    var iter = text.unicodeScalars.makeIterator()
+    guard let c0 = iter.next() else { return false }
+    if c0 == "i" || c0 == "I" { return true }
+    if c0 != "h" && c0 != "H" { return false }
+    guard let c1 = iter.next() else { return false }
+    if c1 != "i" && c1 != "I" { return false }
+    guard let c2 = iter.next() else { return true }
+    return c2 != "a" && c2 != "A" && c2 != "e" && c2 != "E"
+}
+
+/// Whether the Spanish "o" → "u" change applies before `text`: true when it
+/// begins with an /o/ sound ("o", "ho", "8", or "11" as a standalone token).
+private func _spanishOToUFires(on text: String) -> Bool {
+    var iter = text.unicodeScalars.makeIterator()
+    guard let c0 = iter.next() else { return false }
+    if c0 == "o" || c0 == "O" || c0 == "8" { return true }
+    if c0 == "h" || c0 == "H" {
+        if let c1 = iter.next(), c1 == "o" || c1 == "O" { return true }
+        return false
+    }
+    if c0 == "1" {
+        guard let c1 = iter.next(), c1 == "1" else { return false }
+        guard let c2 = iter.next() else { return true }
+        return c2 == " "
+    }
+    return false
+}
+
+/// Whether the Hebrew non-Hebrew prefix change applies before `text`: true when
+/// its first scalar is outside the Hebrew blocks (so the vav prefix gains a
+/// hyphen).
+private func _hebrewVavDashFires(on text: String) -> Bool {
+    guard let scalar = text.unicodeScalars.first else { return false }
+    let v = scalar.value
+    let isHebrewBlock = (0x0590...0x05FF).contains(v) || (0xFB1D...0xFB4F).contains(v)
+    return !isHebrewBlock
+}
+
+/// Whether the Thai contextual joiner needs a space next to the connector: true
+/// when the adjacent scalar is non-Thai (outside the Thai block).
+private func _thaiNeedsSpace(adjacentScalar: Unicode.Scalar?) -> Bool {
+    guard let s = adjacentScalar else { return false }
+    return !(0x0E00...0x0E7F).contains(s.value)
 }
 
 #endif // !FOUNDATION_LIST_FORMAT_ICU
