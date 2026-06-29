@@ -446,11 +446,11 @@ private struct ListFormatStyleTests {
     // MARK: - Internal pattern parser
 
     #if !FOUNDATION_LIST_FORMAT_ICU
-    /// `NativeListFormatter.parse(_:)` decomposes patterns into prefix /
-    /// connector / suffix at formatter init. The format tests cover this
-    /// indirectly; these cases pin the parser's contract directly.
+    /// `SimpleFormatter` decomposes patterns into prefix / connector / suffix at
+    /// formatter init. The format tests cover this indirectly; these cases pin
+    /// the parser's contract directly.
     @Test func parseCanonicalPattern() {
-        let p = NativeListFormatter.parse("{0}, {1}")
+        let p = SimpleFormatter("{0}, {1}")
         #expect(p?.prefix == "")
         #expect(p?.connector == ", ")
         #expect(p?.suffix == "")
@@ -459,14 +459,14 @@ private struct ListFormatStyleTests {
     }
 
     @Test func parseSpanishPattern() {
-        let p = NativeListFormatter.parse("{0} y {1}")
+        let p = SimpleFormatter("{0} y {1}")
         #expect(p?.connector == " y ")
         #expect(p?.connectorStartsWithSpace == true)
         #expect(p?.connectorEndsWithSpace == true)
     }
 
     @Test func parseWithPrefixAndSuffix() {
-        let p = NativeListFormatter.parse("foo{0}…{1}bar")
+        let p = SimpleFormatter("foo{0}…{1}bar")
         #expect(p?.prefix == "foo")
         #expect(p?.connector == "…")
         #expect(p?.suffix == "bar")
@@ -475,11 +475,11 @@ private struct ListFormatStyleTests {
     }
 
     @Test func parseRejectsMalformed() {
-        #expect(NativeListFormatter.parse("garbage") == nil)
-        #expect(NativeListFormatter.parse("{0}") == nil)            // missing {1}
-        #expect(NativeListFormatter.parse("{1}, {0}") == nil)       // wrong order
-        #expect(NativeListFormatter.parse("{0, {1}") == nil)        // unclosed brace
-        #expect(NativeListFormatter.parse("") == nil)
+        #expect(SimpleFormatter("garbage") == nil)
+        #expect(SimpleFormatter("{0}") == nil)            // missing {1}
+        #expect(SimpleFormatter("{1}, {0}") == nil)       // wrong order
+        #expect(SimpleFormatter("{0, {1}") == nil)        // unclosed brace
+        #expect(SimpleFormatter("") == nil)
     }
     #endif
 }

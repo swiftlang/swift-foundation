@@ -37,6 +37,75 @@ extension OutputSpan where Element == UInt8 {
     }
 }
 
+/// A compiled `<prefix>{0}<connector>{1}<suffix>` pattern — a minimal Swift
+/// analogue of ICU's `SimpleFormatter`. The positional placeholders are parsed
+/// once (`init?`), then formatting appends into a caller-supplied buffer (ICU's
+/// `appendTo` model) so a whole list can be built in a single allocation.
+///
+/// Internal for now, but shaped to graduate into a shared formatter utility:
+/// `Duration+UnitsFormatStyle` open-codes the same `{0}`/`{1}` substitution, and
+/// other CLDR-driven formatters will want it too.
+internal struct SimpleFormatter: Equatable {
+    let prefix: String
+    let connector: String
+    let suffix: String
+    let connectorStartsWithSpace: Bool
+    let connectorEndsWithSpace: Bool
+
+    /// Parse `<prefix>{0}<connector>{1}<suffix>`. Returns `nil` when the shape
+    /// doesn't match — a defensive guard against malformed data. CLDR list
+    /// patterns use exactly the two placeholders `{0}` and `{1}`.
+    init?(_ pattern: String) {
+        let scalars = pattern.unicodeScalars
+        guard let zeroOpen = scalars.firstIndex(of: "{") else { return nil }
+        let zeroDigit = scalars.index(after: zeroOpen)
+        guard zeroDigit < scalars.endIndex, scalars[zeroDigit] == "0" else { return nil }
+        let zeroClose = scalars.index(after: zeroDigit)
+        guard zeroClose < scalars.endIndex, scalars[zeroClose] == "}" else { return nil }
+        let connectorStart = scalars.index(after: zeroClose)
+        guard let oneOpen = scalars[connectorStart...].firstIndex(of: "{") else { return nil }
+        let oneDigit = scalars.index(after: oneOpen)
+        guard oneDigit < scalars.endIndex, scalars[oneDigit] == "1" else { return nil }
+        let oneClose = scalars.index(after: oneDigit)
+        guard oneClose < scalars.endIndex, scalars[oneClose] == "}" else { return nil }
+        let suffixStart = scalars.index(after: oneClose)
+
+        let connector = String(scalars[connectorStart..<oneOpen])
+        self.prefix = String(scalars[..<zeroOpen])
+        self.connector = connector
+        self.suffix = String(scalars[suffixStart...])
+        self.connectorStartsWithSpace = connector.unicodeScalars.first == " "
+        self.connectorEndsWithSpace = connector.unicodeScalars.last == " "
+    }
+
+    /// UTF-8 byte count of formatting two arguments of the given byte lengths.
+    func utf8Count(_ arg0Bytes: Int, _ arg1Bytes: Int) -> Int {
+        prefix.utf8.count + arg0Bytes + connector.utf8.count + arg1Bytes + suffix.utf8.count
+    }
+
+    /// Append `prefix + s0 + connector + s1 + suffix` into `output`. The caller
+    /// is responsible for having reserved enough capacity (see `utf8Count`).
+    @inline(__always)
+    func format(_ s0: borrowing UTF8Span, _ s1: borrowing UTF8Span,
+                into output: inout OutputSpan<UInt8>) {
+        output.append(copying: prefix.utf8Span.span)
+        output.append(copying: s0.span)
+        output.append(copying: connector.utf8Span.span)
+        output.append(copying: s1.span)
+        output.append(copying: suffix.utf8Span.span)
+    }
+
+    /// Format two arguments into a freshly allocated `String`.
+    func format(_ s0: String, _ s1: String) -> String {
+        let total = utf8Count(s0.utf8.count, s1.utf8.count)
+        return String(unsafeUninitializedCapacity: total) { buffer in
+            var output = OutputSpan(buffer: buffer, initializedCount: 0)
+            format(s0.utf8Span, s1.utf8Span, into: &output)
+            return output.finalize(for: buffer)
+        }
+    }
+}
+
 /// Swift list formatter, used in place of `ICUListFormatter` unless the
 /// `FOUNDATION_LIST_FORMAT_ICU` build flag is set.
 ///
@@ -54,19 +123,6 @@ internal final class NativeListFormatter: Sendable {
         let localeIdentifier: String
         let listType: ListFormatType
         let width: ListFormatWidth
-    }
-
-    /// A list pattern of the form `<prefix>{0}<connector>{1}<suffix>` parsed
-    /// once at formatter-construction time. The Thai fast path uses this to
-    /// avoid re-scanning the pattern on every format call. Slices are
-    /// materialized into concrete `String`s so format-time concatenation can
-    /// take the fast byte-copy path rather than scalar-by-scalar append.
-    internal struct ParsedPattern: Equatable {
-        let prefix: String
-        let connector: String
-        let suffix: String
-        let connectorStartsWithSpace: Bool
-        let connectorEndsWithSpace: Bool
     }
 
     private static let cache = Mutex<[Signature: NativeListFormatter]>([:])
@@ -87,11 +143,11 @@ internal final class NativeListFormatter: Sendable {
     /// is excluded — its joiner is dynamic spacing, not a static substitution
     /// (see `applyThai`).
     private let alternativeCondition: (@Sendable (String) -> Bool)?
-    private let alternativeParsed: ParsedPattern?
-    private let startParsed: ParsedPattern?
-    private let middleParsed: ParsedPattern?
-    private let endParsed: ParsedPattern?
-    private let pairParsed: ParsedPattern?
+    private let alternativeFormatter: SimpleFormatter?
+    private let startFormatter: SimpleFormatter?
+    private let middleFormatter: SimpleFormatter?
+    private let endFormatter: SimpleFormatter?
+    private let pairFormatter: SimpleFormatter?
     /// True when the start, middle, and end patterns parsed cleanly and have
     /// empty prefix/suffix (the `{0}<connector>{1}` shape). When also paired
     /// with no contextual rule, the 3+ item path in `format(strings:)` can
@@ -113,20 +169,20 @@ internal final class NativeListFormatter: Sendable {
         if let rule = Self.alternativeRule(language: language, type: signature.listType,
                                            endPattern: patterns.end) {
             self.alternativeCondition = rule.condition
-            self.alternativeParsed = Self.parse(rule.pattern)
+            self.alternativeFormatter = SimpleFormatter(rule.pattern)
         } else {
             self.alternativeCondition = nil
-            self.alternativeParsed = nil
+            self.alternativeFormatter = nil
         }
-        let startParsed = Self.parse(patterns.start)
-        let middleParsed = Self.parse(patterns.middle)
-        let endParsed = Self.parse(patterns.end)
-        let pairParsed = Self.parse(patterns.pair)
-        self.startParsed = startParsed
-        self.middleParsed = middleParsed
-        self.endParsed = endParsed
-        self.pairParsed = pairParsed
-        if let s = startParsed, let m = middleParsed, let e = endParsed,
+        let startFormatter = SimpleFormatter(patterns.start)
+        let middleFormatter = SimpleFormatter(patterns.middle)
+        let endFormatter = SimpleFormatter(patterns.end)
+        let pairFormatter = SimpleFormatter(patterns.pair)
+        self.startFormatter = startFormatter
+        self.middleFormatter = middleFormatter
+        self.endFormatter = endFormatter
+        self.pairFormatter = pairFormatter
+        if let s = startFormatter, let m = middleFormatter, let e = endFormatter,
            s.prefix.isEmpty, s.suffix.isEmpty,
            m.prefix.isEmpty, m.suffix.isEmpty,
            e.prefix.isEmpty, e.suffix.isEmpty {
@@ -142,79 +198,87 @@ internal final class NativeListFormatter: Sendable {
         case 1: return wrapBidi(strings[0])
         case 2:
             let a = wrapBidi(strings[0]), b = wrapBidi(strings[1])
-            if isThaiAnd, let parsed = pairParsed {
-                return applyThai(parsed: parsed, isPair: true, before: a, after: b)
+            if isThaiAnd, let f = pairFormatter {
+                return applyThai(f, isPair: true, before: a, after: b)
             }
             // Spanish/Hebrew: if the contextual rule fires for the second item,
             // use the alternative pattern; otherwise the normal pair pattern.
-            if let alt = alternativePattern(forNextItem: strings[1]) {
-                return interpolate(layout: alt, a, b)
+            if let alt = firedAlternative(forNextItem: strings[1]) {
+                return alt.format(a, b)
             }
-            return interpolate(pairParsed, patterns.pair, a, b)
+            if let f = pairFormatter { return f.format(a, b) }
+            return interpolate(patterns.pair, a, b)
         default:
-            // Fast path: simple patterns, no contextual rule, not Thai. Build the
-            // result in one buffer in a single pass (O(N) total work) rather
-            // than producing N intermediate strings. `wrapBidi` is inlined so we
-            // don't allocate an intermediate `[String]` for the wrapped items.
-            if canBuildLinearly, alternativeCondition == nil, !isThaiAnd,
-               let startP = startParsed, let middleP = middleParsed, let endP = endParsed {
-                return buildLinear(items: strings, start: startP, middle: middleP, end: endP)
+            // Fast path: simple patterns, not Thai. Build the result in one
+            // buffer in a single pass (O(N) total work) rather than producing N
+            // intermediate strings. `wrapBidi` is inlined so we don't allocate an
+            // intermediate `[String]` for the wrapped items. A contextual rule
+            // (Spanish/Hebrew) only changes which connector the final join uses,
+            // so it stays on this path.
+            if canBuildLinearly, !isThaiAnd,
+               let startF = startFormatter, let middleF = middleFormatter, let endF = endFormatter {
+                let lastJoin = firedAlternative(forNextItem: strings[strings.count - 1]) ?? endF
+                return buildLinear(items: strings, start: startF, middle: middleF, end: lastJoin)
             }
             let wrapped = strings.map(wrapBidi)
             if isThaiAnd,
-               let startP = startParsed,
-               let middleP = middleParsed,
-               let endP = endParsed {
-                var result = applyThai(parsed: startP, isPair: false,
+               let startF = startFormatter,
+               let middleF = middleFormatter,
+               let endF = endFormatter {
+                var result = applyThai(startF, isPair: false,
                                        before: wrapped[0], after: wrapped[1])
                 for i in 2..<(wrapped.count - 1) {
-                    result = applyThai(parsed: middleP, isPair: false,
+                    result = applyThai(middleF, isPair: false,
                                        before: result, after: wrapped[i])
                 }
-                return applyThai(parsed: endP, isPair: false,
+                return applyThai(endF, isPair: false,
                                  before: result, after: wrapped[wrapped.count - 1])
             }
-            // Start and middle joins never carry a contextual rule (those only
-            // affect the end/pair patterns), so they're plain interpolation.
-            var result = interpolate(startParsed, patterns.start, wrapped[0], wrapped[1])
+            // Fallback for non-simple patterns (non-empty prefix/suffix — not
+            // present in real CLDR data). Start and middle joins never carry a
+            // contextual rule, so only the end join consults the alternative.
+            var result = interpolate(startFormatter, patterns.start, wrapped[0], wrapped[1])
             for i in 2..<(wrapped.count - 1) {
-                result = interpolate(middleParsed, patterns.middle, result, wrapped[i])
+                result = interpolate(middleFormatter, patterns.middle, result, wrapped[i])
             }
             let last = wrapped.count - 1
-            if let alt = alternativePattern(forNextItem: strings[last]) {
-                return interpolate(layout: alt, result, wrapped[last])
+            if let alt = firedAlternative(forNextItem: strings[last]) {
+                return alt.format(result, wrapped[last])
             }
-            return interpolate(endParsed, patterns.end, result, wrapped[last])
+            return interpolate(endFormatter, patterns.end, result, wrapped[last])
         }
     }
 
-    /// The replacement pattern for the end/pair join when this formatter's
-    /// contextual substitution rule fires for `nextItem` (the item that follows
-    /// the connector); `nil` if there's no rule or it doesn't fire.
-    private func alternativePattern(forNextItem nextItem: String) -> ParsedPattern? {
-        guard let condition = alternativeCondition, let parsed = alternativeParsed,
+    /// The formatter for the end/pair join when this formatter's contextual
+    /// substitution rule fires for `nextItem` (the item that follows the
+    /// connector); `nil` if there's no rule or it doesn't fire.
+    private func firedAlternative(forNextItem nextItem: String) -> SimpleFormatter? {
+        guard let condition = alternativeCondition, let formatter = alternativeFormatter,
               condition(nextItem) else {
             return nil
         }
-        return parsed
+        return formatter
     }
 
-    /// Linear single-buffer build for 3+ item lists with simple patterns and no
-    /// contextual rule. Concatenates items and connectors directly:
+    /// Linear single-buffer build for 3+ item lists with simple patterns.
+    /// Concatenates items and connectors directly:
     ///
     ///     items[0] <start.connector> items[1] <middle.connector> items[2]
     ///         <middle.connector> ... <middle.connector> items[N-2]
     ///         <end.connector> items[N-1]
     ///
-    /// Pre-classifies bidi conflicts in a sizing pass (using a stack-allocated
-    /// `Bool` buffer via `withUnsafeTemporaryAllocation`), then writes UTF-8
-    /// bytes directly into a `String(unsafeUninitializedCapacity:)` buffer
-    /// wrapped in an `OutputSpan`. Skips the per-`+=` UTF-8 validity checks
-    /// and copy-on-write uniqueness checks `String +=` paid on every append.
+    /// `end` is the chosen final-join formatter — normally the end pattern, but
+    /// the contextual alternative (Spanish/Hebrew) when its rule fires, since
+    /// those patterns are also simple. Pre-classifies bidi conflicts in a sizing
+    /// pass (using a stack-allocated `Bool` buffer via
+    /// `withUnsafeTemporaryAllocation`), then writes UTF-8 bytes directly into a
+    /// `String(unsafeUninitializedCapacity:)` buffer wrapped in an `OutputSpan`.
+    /// Skips the per-`+=` UTF-8 validity checks and copy-on-write uniqueness
+    /// checks `String +=` paid on every append.
     private func buildLinear(items: [String],
-                             start: ParsedPattern,
-                             middle: ParsedPattern,
-                             end: ParsedPattern) -> String {
+                             start: SimpleFormatter,
+                             middle: SimpleFormatter,
+                             end: SimpleFormatter) -> String {
         return withUnsafeTemporaryAllocation(of: Bool.self, capacity: items.count) { conflicts in
             var total = 0
             for i in items.indices {
@@ -264,86 +328,43 @@ internal final class NativeListFormatter: Sendable {
         }
     }
 
-    /// Interpolate using the cached parsed layout, or fall back to scanning the
-    /// raw pattern when parsing failed (malformed data).
-    private func interpolate(_ parsed: ParsedPattern?, _ pattern: String,
+    /// Format with the compiled formatter, or fall back to scanning the raw
+    /// pattern when parsing failed (malformed data).
+    private func interpolate(_ formatter: SimpleFormatter?, _ pattern: String,
                              _ s0: String, _ s1: String) -> String {
-        if let parsed {
-            return interpolate(layout: parsed, s0, s1)
+        if let formatter {
+            return formatter.format(s0, s1)
         }
         return interpolate(pattern, s0, s1)
-    }
-
-    /// Fast interpolation using the cached parsed layout. Skips the per-call
-    /// placeholder scan that `interpolate(_:_:_:)` does.
-    private func interpolate(layout p: ParsedPattern, _ s0: String, _ s1: String) -> String {
-        let total = p.prefix.utf8.count + s0.utf8.count + p.connector.utf8.count
-            + s1.utf8.count + p.suffix.utf8.count
-        return String(unsafeUninitializedCapacity: total) { buffer in
-            var output = OutputSpan(buffer: buffer, initializedCount: 0)
-            output.append(copying: p.prefix.utf8Span.span)
-            output.append(copying: s0.utf8Span.span)
-            output.append(copying: p.connector.utf8Span.span)
-            output.append(copying: s1.utf8Span.span)
-            output.append(copying: p.suffix.utf8Span.span)
-            return output.finalize(for: buffer)
-        }
     }
 
     /// Single-pass Thai formatter: emit the final string directly using the
     /// pre-parsed pattern decomposition, with any contextually-required spaces
     /// adjacent to the connector inserted.
-    private func applyThai(parsed: ParsedPattern, isPair: Bool,
+    private func applyThai(_ formatter: SimpleFormatter, isPair: Bool,
                            before: String, after: String) -> String {
         let spaceBefore = isPair && _thaiNeedsSpace(adjacentScalar: before.unicodeScalars.last)
         let spaceAfter = _thaiNeedsSpace(adjacentScalar: after.unicodeScalars.first)
-        let needsLeading = spaceBefore && !parsed.connectorStartsWithSpace
-        let needsTrailing = spaceAfter && !parsed.connectorEndsWithSpace
+        let needsLeading = spaceBefore && !formatter.connectorStartsWithSpace
+        let needsTrailing = spaceAfter && !formatter.connectorEndsWithSpace
         let extra = (needsLeading ? 1 : 0) + (needsTrailing ? 1 : 0)
-        let total = parsed.prefix.utf8.count + before.utf8.count + parsed.connector.utf8.count
-            + after.utf8.count + parsed.suffix.utf8.count + extra
+        let total = formatter.prefix.utf8.count + before.utf8.count + formatter.connector.utf8.count
+            + after.utf8.count + formatter.suffix.utf8.count + extra
         return String(unsafeUninitializedCapacity: total) { buffer in
             var output = OutputSpan(buffer: buffer, initializedCount: 0)
-            output.append(copying: parsed.prefix.utf8Span.span)
+            output.append(copying: formatter.prefix.utf8Span.span)
             output.append(copying: before.utf8Span.span)
             if needsLeading {
                 output.append(0x20) // ASCII space
             }
-            output.append(copying: parsed.connector.utf8Span.span)
+            output.append(copying: formatter.connector.utf8Span.span)
             if needsTrailing {
                 output.append(0x20)
             }
             output.append(copying: after.utf8Span.span)
-            output.append(copying: parsed.suffix.utf8Span.span)
+            output.append(copying: formatter.suffix.utf8Span.span)
             return output.finalize(for: buffer)
         }
-    }
-
-    /// Parse a `<prefix>{0}<connector>{1}<suffix>` pattern. Returns `nil` when
-    /// the shape doesn't match — a defensive fallback for malformed data.
-    internal static func parse(_ pattern: String) -> ParsedPattern? {
-        let scalars = pattern.unicodeScalars
-        guard let zeroOpen = scalars.firstIndex(of: "{") else { return nil }
-        let zeroDigit = scalars.index(after: zeroOpen)
-        guard zeroDigit < scalars.endIndex, scalars[zeroDigit] == "0" else { return nil }
-        let zeroClose = scalars.index(after: zeroDigit)
-        guard zeroClose < scalars.endIndex, scalars[zeroClose] == "}" else { return nil }
-        let connectorStart = scalars.index(after: zeroClose)
-        guard let oneOpen = scalars[connectorStart...].firstIndex(of: "{") else { return nil }
-        let oneDigit = scalars.index(after: oneOpen)
-        guard oneDigit < scalars.endIndex, scalars[oneDigit] == "1" else { return nil }
-        let oneClose = scalars.index(after: oneDigit)
-        guard oneClose < scalars.endIndex, scalars[oneClose] == "}" else { return nil }
-        let suffixStart = scalars.index(after: oneClose)
-
-        let connector = String(scalars[connectorStart..<oneOpen])
-        return ParsedPattern(
-            prefix: String(scalars[..<zeroOpen]),
-            connector: connector,
-            suffix: String(scalars[suffixStart...]),
-            connectorStartsWithSpace: connector.unicodeScalars.first == " ",
-            connectorEndsWithSpace: connector.unicodeScalars.last == " "
-        )
     }
 
     /// Substitute `{0}` and `{1}` in `pattern`. Other braces are emitted
