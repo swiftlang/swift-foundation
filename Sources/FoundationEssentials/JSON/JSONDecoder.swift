@@ -1063,10 +1063,7 @@ extension JSONDecoderImpl: Decoder {
                 return try Self._slowpath_unwrapFixedWidthInteger(as: type, json5: json5, numberBuffer: numberBuffer, fullSource: fullSource, digitBeginning: digitBeginning, for: codingPathNode, additionalKey)
             }
         } catch JSONError.numberIsNotRepresentableInSwift(let parsed) {
-            // A valid JSON number that doesn't fit the requested integer type is a
-            // decoding failure at this coding path, not malformed input. Convert the
-            // raw JSONError into a DecodingError carrying the path, so it does not
-            // reach the top-level "not valid JSON" handler with an empty coding path.
+            // A valid JSON number that doesn't fit the requested integer type is a decoding failure at this coding path, not malformed input. Converting the raw JSONError into a DecodingError keeps the path, so it doesn't reach the top-level "not valid JSON" handler with an empty coding path.
             throw DecodingError.dataCorrupted(.init(
                 codingPath: codingPathNode.path(byAppending: additionalKey),
                 debugDescription: "Parsed JSON number <\(parsed)> does not fit in \(type)."
