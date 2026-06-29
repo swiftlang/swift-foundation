@@ -563,6 +563,32 @@ private struct JSONEncoderTests {
         }
     }
 
+    @Test func decodingIntegerFromNonIntegerNumberReportsCodingPath() {
+        // A valid JSON number that does not fit the requested integer type is a decoding failure at the value's coding path, not malformed input. The error should name the offending number and carry the key, rather than collapsing into a generic "not valid JSON" error with an empty path.
+        func isExpected(_ error: any Error, key: String) -> Bool {
+            guard case DecodingError.dataCorrupted(let context) = error else {
+                return false
+            }
+            return (1 == context.codingPath.count)
+                && (key == context.codingPath[0].stringValue)
+                && context.debugDescription.contains("does not fit in")
+        }
+
+        let decimalAsInt = "{\"foo\":123.45}".data(using: .utf8)!
+        #expect {
+            try JSONDecoder().decode([String: Int].self, from: decimalAsInt)
+        } throws: {
+            isExpected($0, key: "foo")
+        }
+
+        let negativeAsUInt = "{\"bar\":-123}".data(using: .utf8)!
+        #expect {
+            try JSONDecoder().decode([String: UInt].self, from: negativeAsUInt)
+        } throws: {
+            isExpected($0, key: "bar")
+        }
+    }
+
     private struct DecodeFailure : Decodable {
         var intValue: Int
     }

@@ -1034,32 +1034,40 @@ extension JSONDecoderImpl: Decoder {
             throw self.createTypeMismatchError(type: type, for: codingPathNode.path(byAppending: additionalKey), value: value)
         }
         let json5 = options.json5
-        return try withBuffer(for: region) { numberBuffer, fullSource in
-            let digitBeginning: BufferViewIndex<UInt8>
-            if json5 {
-                let isHex : Bool
-                let isSpecialFloatValue: Bool
-                (digitBeginning, isHex, isSpecialFloatValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, fullSource: fullSource)
+        do {
+            return try withBuffer(for: region) { numberBuffer, fullSource in
+                let digitBeginning: BufferViewIndex<UInt8>
+                if json5 {
+                    let isHex : Bool
+                    let isSpecialFloatValue: Bool
+                    (digitBeginning, isHex, isSpecialFloatValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, fullSource: fullSource)
 
-                // This is the fast pass. Number directly convertible to desired integer type.
-                if let integer = T(prevalidatedJSON5Buffer: numberBuffer, isHex: isHex) {
-                    return integer
+                    // This is the fast pass. Number directly convertible to desired integer type.
+                    if let integer = T(prevalidatedJSON5Buffer: numberBuffer, isHex: isHex) {
+                        return integer
+                    }
+
+                    // NaN and Infinity values are not representable as Integers.
+                    if isSpecialFloatValue {
+                        throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                    }
+                } else {
+                    digitBeginning = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, fullSource: fullSource)
+
+                    // This is the fast pass. Number directly convertible to Integer.
+                    if let integer = T(prevalidatedBuffer: numberBuffer) {
+                        return integer
+                    }
                 }
 
-                // NaN and Infinity values are not representable as Integers.
-                if isSpecialFloatValue {
-                    throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
-                }
-            } else {
-                digitBeginning = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, fullSource: fullSource)
-
-                // This is the fast pass. Number directly convertible to Integer.
-                if let integer = T(prevalidatedBuffer: numberBuffer) {
-                    return integer
-                }
+                return try Self._slowpath_unwrapFixedWidthInteger(as: type, json5: json5, numberBuffer: numberBuffer, fullSource: fullSource, digitBeginning: digitBeginning, for: codingPathNode, additionalKey)
             }
-
-            return try Self._slowpath_unwrapFixedWidthInteger(as: type, json5: json5, numberBuffer: numberBuffer, fullSource: fullSource, digitBeginning: digitBeginning, for: codingPathNode, additionalKey)
+        } catch JSONError.numberIsNotRepresentableInSwift(let parsed) {
+            // A valid JSON number that doesn't fit the requested integer type is a decoding failure at this coding path, not malformed input. Converting the raw JSONError into a DecodingError keeps the path, so it doesn't reach the top-level "not valid JSON" handler with an empty coding path.
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: codingPathNode.path(byAppending: additionalKey),
+                debugDescription: "Parsed JSON number <\(parsed)> does not fit in \(type)."
+            ))
         }
     }
 
