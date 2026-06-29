@@ -35,15 +35,13 @@ extension NSURL {
             assert(false, "Unexpected path style: \(pathStyle)")
             return false
         }
-        guard let urlString else {
+        guard let urlString, let cfString = _createCFStringFromASCIIString(urlString) else {
             return false
         }
 
         assert(flags.isDisjoint(with: .nonFileImplFlags))
         impl.pointee._header._flags = flags
-        impl.pointee._header._string = Unmanaged<CFString>.passRetained(
-            urlString as CFString
-        )
+        impl.pointee._header._string = cfString
         return true
     }
 
@@ -55,15 +53,14 @@ extension NSURL {
 
         var flags = __CFURLFlags.fileImplFlags
         let buffer = UnsafeBufferPointer(start: fsr, count: length)
-        guard let urlString = parseFileSystemRepresentation(buffer: buffer, flags: &flags, isDirectory: isDirectory) else {
+        guard let urlString = parseFileSystemRepresentation(buffer: buffer, flags: &flags, isDirectory: isDirectory),
+              let cfString = _createCFStringFromASCIIString(urlString) else {
             return false
         }
 
         assert(flags.isDisjoint(with: .nonFileImplFlags))
         impl.pointee._header._flags = flags
-        impl.pointee._header._string = Unmanaged<CFString>.passRetained(
-            urlString as CFString
-        )
+        impl.pointee._header._string = cfString
         return true
     }
 
