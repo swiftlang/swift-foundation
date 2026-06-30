@@ -279,6 +279,7 @@ internal final class NativeListFormatter: Sendable {
                              start: SimpleFormatter,
                              middle: SimpleFormatter,
                              end: SimpleFormatter) -> String {
+        // TODO: use withTemporaryAllocation once swift-tools-version is 6.4 or higher
         return withUnsafeTemporaryAllocation(of: Bool.self, capacity: items.count) { conflicts in
             var total = 0
             for i in items.indices {
