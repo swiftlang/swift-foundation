@@ -699,7 +699,7 @@ extension Calendar {
         // necessarily occur in the first week of the month.
         
         /// The component where we set the week number, if we are targeting only
-        /// a particular occurence of a weekday
+        /// a particular occurrence of a weekday
         let weekComponent: Calendar.Component = if parent == .month {
             .weekOfMonth
         } else {
