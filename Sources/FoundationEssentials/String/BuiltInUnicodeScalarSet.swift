@@ -60,7 +60,7 @@ internal struct BuiltInUnicodeScalarSet {
         case decomposable
     }
 
-    var charset: SetType
+    let charset: SetType
     init(type: SetType) {
         charset = type
     }
@@ -120,7 +120,7 @@ internal struct BuiltInUnicodeScalarSet {
             return nil
         }
     }
-    
+
     enum BitmapResult {
         case bitmapFilled // kCFUniCharBitmapFilled
         case bitmapEmpty // kCFUniCharBitmapEmpty
@@ -295,7 +295,7 @@ internal struct BuiltInUnicodeScalarSet {
     // Full version used internally; the `shouldInvert` flag indicates that the stored bitmap
     // is the LEGAL set (for illegal charset) and callers must invert membership results.
     @_lifetime(immortal)
-    private func _bitmapPtrForPlane(_ plane: Int) -> (span: Span<UInt8>, shouldInvert: Bool)? {
+    internal func _bitmapPtrForPlane(_ plane: Int) -> (span: Span<UInt8>, shouldInvert: Bool)? {
         switch charset {
         case .whitespace, .whitespaceAndNewline, .newline:
             return nil
@@ -307,12 +307,8 @@ internal struct BuiltInUnicodeScalarSet {
             guard tableIndex < __CFUniCharNumberOfBitmaps else {
                 return nil
             }
-
-            let data = withUnsafePointer(to: __CFUniCharBitmapDataArray) { ptr in
-                ptr.withMemoryRebound(to: __CFUniCharBitmapData.self, capacity: Int(__CFUniCharNumberOfBitmaps)) { bitmapDataPtr in
-                    bitmapDataPtr.advanced(by: tableIndex).pointee
-                }
-            }
+            
+            let data = getCFUniCharBitmapDataArray().advanced(by: tableIndex).pointee
 
             guard plane < data._numPlanes, let planePtr = data._planes[plane] else {
                 return nil
@@ -435,22 +431,17 @@ internal struct BuiltInUnicodeScalarSet {
             return 17
         default:
             precondition(_bitmapTableIndex != nil)
-            let data = withUnsafePointer(to: __CFUniCharBitmapDataArray) { ptr in
-                ptr.withMemoryRebound(to: __CFUniCharBitmapData.self, capacity: Int(__CFUniCharNumberOfBitmaps)) { bitmapDataPtr in
-                    bitmapDataPtr.advanced(by: _bitmapTableIndex!).pointee
-                }
-            }
-            
+            let data = getCFUniCharBitmapDataArray().advanced(by: _bitmapTableIndex!).pointee
             return Int(data._numPlanes)
         }
     }
     
     // MARK: Helper methods
-    private func isWhitespace(_ scalar: Unicode.Scalar) -> Bool {
+    internal func isWhitespace(_ scalar: Unicode.Scalar) -> Bool {
         return (scalar.value == 0x0020) || (scalar.value == 0x0009) || (scalar.value == 0x00A0) || (scalar.value == 0x1680) || (scalar.value >= 0x2000 && scalar.value <= 0x200B) || (scalar.value == 0x202F) || (scalar.value == 0x205F) || (scalar.value == 0x3000)
     }
     
-    private func isNewline(_ scalar: Unicode.Scalar) -> Bool {
+    internal func isNewline(_ scalar: Unicode.Scalar) -> Bool {
         return ((scalar.value >= 0x000A && scalar.value <= 0x000D) || (scalar.value == 0x0085) || (scalar.value == 0x2028) || (scalar.value == 0x2029))
     }
 
