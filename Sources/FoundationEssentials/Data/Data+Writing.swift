@@ -203,7 +203,12 @@ private func createTemporaryFile(at destinationPath: String, inPath: borrowing s
                 openFileDescriptorProtected(path: $0, flags: _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR, options: options)
             }
 #else
-            guard mktemp(templateFileSystemRep) != nil else {
+            @diagnose(DeprecatedDeclaration, as: ignored)
+            func _mktemp(_ templateFileSystemRep: UnsafeMutablePointer<CChar>!) -> UnsafeMutablePointer<CChar>! {
+                mktemp(templateFileSystemRep)
+            }
+            
+            guard _mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
             let fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
