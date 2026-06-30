@@ -32,8 +32,6 @@ private struct AutoDictionary<Value> {
     
     // Effectively O(1), worst case O(n)
     mutating func insert(_ value: Value) -> UInt64 {
-        guard storage.count <= UInt64.max else { fatalError("Exceeded maximum storage size") }
-
         var key = salvagedKeys.popLast()
         while(key != nil) {
             if let key, storage[key] == nil {
