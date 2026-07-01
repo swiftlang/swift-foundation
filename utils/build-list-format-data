@@ -79,14 +79,20 @@ else
 fi
 echo "  fallback: ${FALLBACK}" 1>&2
 
-# Compose schema + impl into a single source file and run as a script.
-combined=$(mktemp -t "${commandName}.XXXXXX.swift")
-trap 'rm -f "${combined}"' EXIT
-cat "${utilsDir}/list-format-data-schema.swift" \
+# Compile the schema + impl as a two-file module and run the result. Building a
+# real module with swiftc (rather than piping both files through `swift` in
+# immediate mode) keeps compilation deterministic and makes diagnostics point at
+# the original files with correct line numbers. `-parse-as-library` lets the
+# impl's `@main` provide the entry point instead of top-level script code.
+bindir=$(mktemp -d -t "${commandName}.XXXXXX")
+trap 'rm -rf "${bindir}"' EXIT
+tool="${bindir}/${commandName}"
+swiftc -parse-as-library \
+    "${utilsDir}/list-format-data-schema.swift" \
     "${utilsDir}/${commandName}-impl.swift" \
-    > "${combined}"
+    -o "${tool}"
 
 env LOCALES="${LOCALES}" FALLBACK="${FALLBACK}" INPUT="${INPUT}" OUTPUT_H="${OUTPUT_H}" OUTPUT_C="${OUTPUT_C}" \
-  swift "${combined}"
+  "${tool}"
 
 echo "Done." 1>&2
