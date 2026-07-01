@@ -433,6 +433,12 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         }
 
         try inPath.path.withNTPathRepresentation { pwszPath in
+            let preRenameAttributes: DWORD = {
+                let dwAttributes = GetFileAttributesW(pwszPath)
+                guard dwAttributes != INVALID_FILE_ATTRIBUTES else { return 0 }
+                return dwAttributes & FILE_ATTRIBUTE_READONLY
+            }()
+
             let cchLength = wcslen(pwszPath)
             let cbSize = cchLength * MemoryLayout<WCHAR>.size
             let dwSize = DWORD(MemoryLayout<FILE_RENAME_INFO>.size + cbSize + MemoryLayout<WCHAR>.size)
@@ -475,22 +481,24 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                     _ = CloseHandle(hFile)
                     hFile = INVALID_HANDLE_VALUE
 
-                    if renameOk {
-                        return
-                    }
+                    if !renameOk {
+                        guard dwError == ERROR_NOT_SAME_DEVICE
+                            || dwError == ERROR_NOT_SUPPORTED
+                            || dwError == ERROR_FILE_SYSTEM_LIMITATION
+                            || dwError == ERROR_INVALID_PARAMETER else {
+                            throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
+                        }
 
-                    guard dwError == ERROR_NOT_SAME_DEVICE
-                        || dwError == ERROR_NOT_SUPPORTED
-                        || dwError == ERROR_FILE_SYSTEM_LIMITATION
-                        || dwError == ERROR_INVALID_PARAMETER else {
-                        throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
-                    }
-
-                    // The move is across volumes or on Volumes that don't support FILE_RENAME_FLAG_POSIX_SEMANTICS, like exFat.
-                    guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) else {
-                        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+                        // The move is across volumes or on Volumes that don't support FILE_RENAME_FLAG_POSIX_SEMANTICS, like exFat.
+                        guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) else {
+                            throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+                        }
                     }
                 }
+            }
+
+            if preRenameAttributes != 0 {
+                _ = SetFileAttributesW(pwszPath, preRenameAttributes) // Don't fail the write if reapply fails.
             }
         }
     }
@@ -525,6 +533,13 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         }
 #else
         let newPath = inPath.path
+        var preRenameStat = stat()
+
+        if stat(inPathFileSystemRep, &preRenameStat) == 0 {
+            mode = preRenameStat.st_mode & ~S_IFMT
+        } else if (errno != ENOENT) && (errno != ENAMETOOLONG) { // Not checking for ENOTCAPABLE since AT_UNIQUE was not passed to stat.
+            throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+        }
 #endif
         
         var (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: newPath, inPath: inPath, options: options, variant: "Folder")
