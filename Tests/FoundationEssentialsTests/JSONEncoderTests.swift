@@ -541,12 +541,15 @@ private struct JSONEncoderTests {
     }
 
     @Test func decodingDictionaryStringKeyConversionUntouched() throws {
-        let input = "{\"leave_me_alone\":\"test\"}".data(using: .utf8)!
+        // String dictionary keys should NOT be converted by key decoding strategy,
+        // but nested struct properties should still be converted.
+        let input = "{\"leave_me_alone\":{\"this_is_camel_case\":\"test\"}}".data(using: .utf8)!
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let result = try decoder.decode([String: String].self, from: input)
+        let result = try decoder.decode([String: DecodeMe3].self, from: input)
 
-        #expect(["leave_me_alone": "test"] == result)
+        let value = try #require(result["leave_me_alone"])
+        #expect(value.thisIsCamelCase == "test")
     }
 
     @Test func decodingDictionaryFailureKeyPath() {
@@ -2323,8 +2326,10 @@ extension JSONEncoderTests {
     }
 
     @Test func encodingDictionaryStringKeyConversionUntouched() throws {
-        let expected = "{\"leaveMeAlone\":\"test\"}"
-        let toEncode: [String: String] = ["leaveMeAlone": "test"]
+        // String dictionary keys should NOT be converted by key encoding strategy,
+        // but nested struct properties should still be converted.
+        let expected = "{\"leaveMeAlone\":{\"this_is_camel_case\":\"test\"}}"
+        let toEncode: [String: DecodeMe3] = ["leaveMeAlone": DecodeMe3(thisIsCamelCase: "test")]
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
