@@ -187,6 +187,25 @@ private struct DateFormatStyleTests {
         #expect(parsed.formatted(style) == format)
     }
 
+    @Test func eraYearParsePatternOnlyWidensAffectedYearFields() {
+        func parsePattern(_ pattern: String, calendarIdentifier: Calendar.Identifier = .japanese) -> String {
+            ICUDateFormatter.DateFormatInfo.parsePattern(for: pattern, calendarIdentifier: calendarIdentifier)
+        }
+
+        #expect(parsePattern("y年M月d日") == "y年M月d日")
+        #expect(parsePattern("Gy年M月d日") == "Gyyyy年M月d日")
+        #expect(parsePattern("Gyy年M月d日") == "Gyyyy年M月d日")
+        #expect(parsePattern("Gyyy年M月d日") == "Gyyy年M月d日")
+        #expect(parsePattern("Gyyyy年M月d日") == "Gyyyy年M月d日")
+        #expect(parsePattern("G 'y' y年M月d日") == "G 'y' yyyy年M月d日")
+        #expect(parsePattern("'G' y年M月d日") == "'G' y年M月d日")
+        #expect(parsePattern("G '' y年M月d日") == "G '' yyyy年M月d日")
+        #expect(parsePattern("G 'it''s y' y年M月d日") == "G 'it''s y' yyyy年M月d日")
+
+        #expect(parsePattern("Gy年M月d日", calendarIdentifier: .republicOfChina) == "Gyyyy年M月d日")
+        #expect(parsePattern("Gy年M月d日", calendarIdentifier: .gregorian) == "Gy年M月d日")
+    }
+
     @Test func leadingDotSyntax() async {
         let date = Date.now
         let locale = Locale(identifier: "es_ES")
@@ -901,6 +920,48 @@ private struct DateVerbatimFormatStyleTests {
         try verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)) o'clock", expectedString: "2021_1_23 at 2 o'clock", expectedDate: Date(timeIntervalSinceReferenceDate: 633060000.0))
         // dateFormatter.date(from: "2021-01-23 14:00:00")!
         try verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased))", expectedString: "2021_1_23 at 14", expectedDate: Date(timeIntervalSinceReferenceDate: 633103200.0))
+    }
+
+    @Test func parseableEraYearsDoNotUseTwoDigitYearWindow() throws {
+        let timeZone = TimeZone.gmt
+        var gregorianCalendar = Calendar(identifier: .gregorian)
+        gregorianCalendar.timeZone = timeZone
+
+        func date(_ year: Int, _ month: Int, _ day: Int) throws -> Date {
+            try #require(gregorianCalendar.date(from: DateComponents(timeZone: timeZone, year: year, month: month, day: day)))
+        }
+
+        let japaneseLocale = Locale(identifier: "ja_JP@calendar=japanese")
+        var japaneseCalendar = Calendar(identifier: .japanese)
+        japaneseCalendar.locale = japaneseLocale
+        japaneseCalendar.timeZone = timeZone
+
+        let japaneseFormat: Date.FormatString = "\(era: .wide)\(year: .defaultDigits)年\(month: .defaultDigits)月\(day: .defaultDigits)日"
+        let japaneseStrategy = Date.ParseStrategy(format: japaneseFormat, locale: japaneseLocale, timeZone: timeZone, calendar: japaneseCalendar, isLenient: false)
+        #expect(try japaneseStrategy.parse("平成09年1月1日") == date(1997, 1, 1))
+        #expect(try japaneseStrategy.parse("平成10年1月1日") == date(1998, 1, 1))
+        #expect(try japaneseStrategy.parse("令和01年5月1日") == date(2019, 5, 1))
+
+        let japaneseVerbatim = Date.VerbatimFormatStyle(format: japaneseFormat, locale: japaneseLocale, timeZone: timeZone, calendar: japaneseCalendar)
+        #expect(try japaneseVerbatim.parseStrategy.parse("平成10年1月1日") == date(1998, 1, 1))
+
+        let japaneseStyle = Date.FormatStyle(locale: japaneseLocale, calendar: japaneseCalendar, timeZone: timeZone)
+            .era(.wide)
+            .year(.defaultDigits)
+            .month(.defaultDigits)
+            .day(.defaultDigits)
+        #expect(try japaneseStyle.parse("平成10/01/01") == date(1998, 1, 1))
+
+        let rocLocale = Locale(identifier: "zh_TW@calendar=roc")
+        var rocCalendar = Calendar(identifier: .republicOfChina)
+        rocCalendar.locale = rocLocale
+        rocCalendar.timeZone = timeZone
+
+        let rocFormat: Date.FormatString = "\(era: .wide)\(year: .defaultDigits)年\(month: .defaultDigits)月\(day: .defaultDigits)日"
+        let rocStrategy = Date.ParseStrategy(format: rocFormat, locale: rocLocale, timeZone: timeZone, calendar: rocCalendar, isLenient: false)
+        #expect(try rocStrategy.parse("民國01年1月1日") == date(1912, 1, 1))
+        #expect(try rocStrategy.parse("民國58年1月1日") == date(1969, 1, 1))
+        #expect(try rocStrategy.parse("民國59年1月1日") == date(1970, 1, 1))
     }
 
     // Test parsing strings containing `abbreviated` names
