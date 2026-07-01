@@ -127,9 +127,7 @@ internal final class NativeListFormatter: Sendable {
 
     private static let cache = Mutex<[Signature: NativeListFormatter]>([:])
 
-    private let signature: Signature
     private let patterns: ListPatterns
-    private let language: String
     private let listDirection: Locale.LanguageDirection
     /// Whether this formatter's locale + type combination triggers the Thai
     /// contextual joiner rule. Cached to avoid re-deciding per format call.
@@ -157,14 +155,13 @@ internal final class NativeListFormatter: Sendable {
     private let canBuildLinearly: Bool
 
     private init(signature: Signature) {
-        self.signature = signature
         let patterns = _listPatterns(locale: signature.localeIdentifier,
                                      type: signature.listType,
                                      width: signature.width)
         self.patterns = patterns
-        let language = Self.language(of: signature.localeIdentifier)
-        self.language = language
-        self.listDirection = Locale.Language(identifier: signature.localeIdentifier).characterDirection
+        let localeLanguage = Locale.Language(identifier: signature.localeIdentifier)
+        self.listDirection = localeLanguage.characterDirection
+        let language = localeLanguage.languageCode?.identifier ?? signature.localeIdentifier
         self.isThaiAnd = (language == "th") && (signature.listType == .and)
         if let rule = Self.alternativeRule(language: language, type: signature.listType,
                                            endPattern: patterns.end) {
@@ -508,12 +505,6 @@ internal final class NativeListFormatter: Sendable {
             return (_hebrewVavDashFires, "{0} \u{05D5}-{1}")
         }
         return nil
-    }
-
-    private static func language(of locale: String) -> String {
-        if let u = locale.firstIndex(of: "_") { return String(locale[..<u]) }
-        if let u = locale.firstIndex(of: "-") { return String(locale[..<u]) }
-        return locale
     }
 
     internal static func formatter<Style, Base>(for style: ListFormatStyle<Style, Base>) -> NativeListFormatter {
