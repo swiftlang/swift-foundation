@@ -52,96 +52,126 @@
 
 import Foundation
 
+// MARK: - Options
+
+// The five inputs, read from the environment by `readOptions()`.
+struct Options {
+    let inputPath: String
+    let outputHeaderPath: String
+    let outputSourcePath: String
+    let requestedLocales: Set<String>?   // nil = include all locales
+    let fallback: String
+}
+
+// MARK: - Packed data
+
+// Everything the emitters need, after subsetting, transitive pruning, and
+// locale pooling. `pack()` produces one of these; `renderHeader`/`renderSource`
+// consume it.
+struct PackedData {
+    let patterns: [String]
+    let rows: [ListFormatDataSchema.Row]
+    let localePool: [String]
+    let localeID: [String: Int]
+    let slots: [(cName: String, map: [String: Int])]
+    let parents: [String: String]
+    let cldrVersion: String
+    let keepAll: Bool
+    let keptLocalesSorted: [String]   // for the banner; empty when keepAll
+    let fallback: String
+}
+
 // MARK: - Inputs
 
-let env = ProcessInfo.processInfo.environment
-guard let inputPath = env["INPUT"], !inputPath.isEmpty else {
-    fatalError("INPUT environment variable not set")
+func readOptions() -> Options {
+    let env = ProcessInfo.processInfo.environment
+    guard let inputPath = env["INPUT"], !inputPath.isEmpty else {
+        fatalError("INPUT environment variable not set")
+    }
+    guard let outputHeaderPath = env["OUTPUT_H"], !outputHeaderPath.isEmpty else {
+        fatalError("OUTPUT_H environment variable not set")
+    }
+    guard let outputSourcePath = env["OUTPUT_C"], !outputSourcePath.isEmpty else {
+        fatalError("OUTPUT_C environment variable not set")
+    }
+    let localesArg = env["LOCALES"] ?? ""
+    let fallback = env["FALLBACK"] ?? "root"
+    let requestedLocales: Set<String>? = localesArg.isEmpty
+        ? nil
+        : Set(localesArg.split(separator: ",").map(String.init))
+    return Options(inputPath: inputPath,
+                   outputHeaderPath: outputHeaderPath,
+                   outputSourcePath: outputSourcePath,
+                   requestedLocales: requestedLocales,
+                   fallback: fallback)
 }
-guard let outputHeaderPath = env["OUTPUT_H"], !outputHeaderPath.isEmpty else {
-    fatalError("OUTPUT_H environment variable not set")
-}
-guard let outputSourcePath = env["OUTPUT_C"], !outputSourcePath.isEmpty else {
-    fatalError("OUTPUT_C environment variable not set")
-}
-let localesArg = env["LOCALES"] ?? ""
-let fallback = env["FALLBACK"] ?? "root"
-
-let requestedLocales: Set<String>? = localesArg.isEmpty
-    ? nil
-    : Set(localesArg.split(separator: ",").map(String.init))
 
 // MARK: - Load JSON
 
-let bytes: Data
-do {
-    bytes = try Data(contentsOf: URL(fileURLWithPath: inputPath))
-} catch {
-    print("error: failed to read \(inputPath): \(error)", to: &standardError)
-    exit(1)
-}
-
-let decoder = JSONDecoder()
-decoder.keyDecodingStrategy = .convertFromSnakeCase
-let data: ListFormatDataSchema
-do {
-    data = try decoder.decode(ListFormatDataSchema.self, from: bytes)
-} catch {
-    print("error: failed to decode \(inputPath): \(error)", to: &standardError)
-    exit(1)
-}
-
-// MARK: - Subset
-
-// Build the set of locales to retain. `root` is always kept (terminating the
-// runtime walk); the fallback locale is auto-included so callers don't have
-// to remember to list it.
-let keepAll = requestedLocales == nil
-var kept: Set<String> = requestedLocales ?? []
-if !keepAll {
-    kept.insert(fallback)
-    kept.insert("root")
-}
-
-func isKept(_ locale: String) -> Bool { keepAll || kept.contains(locale) }
-
-var filteredSlots: [String: [String: Int]] = [:]
-for (name, map) in data.slots {
-    var filtered: [String: Int] = [:]
-    for (locale, rowId) in map where isKept(locale) {
-        filtered[locale] = rowId
+func loadData(_ path: String) -> ListFormatDataSchema {
+    let bytes: Data
+    do {
+        bytes = try Data(contentsOf: URL(fileURLWithPath: path))
+    } catch {
+        print("error: failed to read \(path): \(error)", to: &standardError)
+        exit(1)
     }
-    filteredSlots[name] = filtered
+
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    do {
+        return try decoder.decode(ListFormatDataSchema.self, from: bytes)
+    } catch {
+        print("error: failed to decode \(path): \(error)", to: &standardError)
+        exit(1)
+    }
 }
 
-var filteredParents: [String: String] = [:]
-for (child, parent) in data.parents where isKept(child) {
-    filteredParents[child] = parent
-}
+// MARK: - Pack
 
-print("  patterns: \(data.patterns.count), rows: \(data.rows.count)", to: &standardError)
-print("  slot entries kept: \(filteredSlots.values.reduce(0) { $0 + $1.count })", to: &standardError)
-print("  parent entries kept: \(filteredParents.count)", to: &standardError)
+// Subset to the requested locales, transitively prune the row and pattern pools
+// to what those locales still reach, and pool the locale strings. Progress
+// counts go to stderr as the work proceeds.
+func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
+    // Build the set of locales to retain. `root` is always kept (terminating the
+    // runtime walk); the fallback locale is auto-included so callers don't have
+    // to remember to list it.
+    let keepAll = options.requestedLocales == nil
+    var kept: Set<String> = options.requestedLocales ?? []
+    if !keepAll {
+        kept.insert(options.fallback)
+        kept.insert("root")
+    }
+    func isKept(_ locale: String) -> Bool { keepAll || kept.contains(locale) }
 
-// MARK: - Transitive row + pattern filter
+    var filteredSlots: [String: [String: Int]] = [:]
+    for (name, map) in data.slots {
+        var filtered: [String: Int] = [:]
+        for (locale, rowId) in map where isKept(locale) {
+            filtered[locale] = rowId
+        }
+        filteredSlots[name] = filtered
+    }
 
-// Walk the kept slot entries to find which rows are actually reachable, then
-// walk those rows to find which patterns are actually referenced. Drop the
-// rest and renumber what's left. When --locales is given, this is where the
-// big wins come from: the all-locales pattern pool (352) and row table (335)
-// can collapse to a few dozen entries when only a handful of locales remain.
-var keptRowOldIDs: [Int] = []
-var keptPatternOldIDs: [Int] = []
-let rowOldToNew: [Int: Int]
-let patternOldToNew: [Int: Int]
-let filteredRows: [ListFormatDataSchema.Row]
-let filteredPatterns: [String]
-do {
+    var filteredParents: [String: String] = [:]
+    for (child, parent) in data.parents where isKept(child) {
+        filteredParents[child] = parent
+    }
+
+    print("  patterns: \(data.patterns.count), rows: \(data.rows.count)", to: &standardError)
+    print("  slot entries kept: \(filteredSlots.values.reduce(0) { $0 + $1.count })", to: &standardError)
+    print("  parent entries kept: \(filteredParents.count)", to: &standardError)
+
+    // Walk the kept slot entries to find which rows are actually reachable, then
+    // walk those rows to find which patterns are actually referenced. Drop the
+    // rest and renumber what's left. When --locales is given, this is where the
+    // big wins come from: the all-locales pattern pool (352) and row table (335)
+    // can collapse to a few dozen entries when only a handful of locales remain.
     var rowSet = Set<Int>()
     for (_, map) in filteredSlots {
         for rowID in map.values { rowSet.insert(rowID) }
     }
-    keptRowOldIDs = rowSet.sorted()
+    let keptRowOldIDs = rowSet.sorted()
 
     var patternSet = Set<Int>()
     for oldID in keptRowOldIDs {
@@ -151,13 +181,13 @@ do {
         patternSet.insert(r.end)
         patternSet.insert(r.pair)
     }
-    keptPatternOldIDs = patternSet.sorted()
+    let keptPatternOldIDs = patternSet.sorted()
 
-    rowOldToNew = Dictionary(uniqueKeysWithValues: keptRowOldIDs.enumerated().map { ($1, $0) })
-    patternOldToNew = Dictionary(uniqueKeysWithValues: keptPatternOldIDs.enumerated().map { ($1, $0) })
+    let rowOldToNew = Dictionary(uniqueKeysWithValues: keptRowOldIDs.enumerated().map { ($1, $0) })
+    let patternOldToNew = Dictionary(uniqueKeysWithValues: keptPatternOldIDs.enumerated().map { ($1, $0) })
 
-    filteredPatterns = keptPatternOldIDs.map { data.patterns[$0] }
-    filteredRows = keptRowOldIDs.map { oldID in
+    let filteredPatterns = keptPatternOldIDs.map { data.patterns[$0] }
+    let filteredRows = keptRowOldIDs.map { oldID -> ListFormatDataSchema.Row in
         let r = data.rows[oldID]
         return ListFormatDataSchema.Row(
             start: patternOldToNew[r.start]!,
@@ -175,41 +205,49 @@ do {
         }
         filteredSlots[name] = rewritten
     }
-}
 
-print("  patterns reachable: \(filteredPatterns.count)", to: &standardError)
-print("  rows reachable: \(filteredRows.count)", to: &standardError)
+    print("  patterns reachable: \(filteredPatterns.count)", to: &standardError)
+    print("  rows reachable: \(filteredRows.count)", to: &standardError)
 
-// MARK: - Locale pool
-
-// Every locale string referenced by a slot or parent entry lives in a single
-// pool; slot/parent rows reference it by index. The pool is sorted
-// alphabetically so it's easy to diff across builds.
-var localePool: [String] = []
-do {
-    var set = Set<String>()
+    // Every locale string referenced by a slot or parent entry lives in a single
+    // pool; slot/parent rows reference it by index. The pool is sorted
+    // alphabetically so it's easy to diff across builds.
+    var localeSet = Set<String>()
     for (_, map) in filteredSlots {
-        for locale in map.keys { set.insert(locale) }
+        for locale in map.keys { localeSet.insert(locale) }
     }
     for (child, parent) in filteredParents {
-        set.insert(child)
-        set.insert(parent)
+        localeSet.insert(child)
+        localeSet.insert(parent)
     }
-    localePool = set.sorted()
-}
-let localeID: [String: Int] = Dictionary(uniqueKeysWithValues: localePool.enumerated().map { ($1, $0) })
+    let localePool = localeSet.sorted()
+    let localeID: [String: Int] = Dictionary(uniqueKeysWithValues: localePool.enumerated().map { ($1, $0) })
 
-print("  unique locale strings: \(localePool.count)", to: &standardError)
+    print("  unique locale strings: \(localePool.count)", to: &standardError)
+
+    // Slot C identifiers, paired with their entry maps, in the canonical order.
+    let slots: [(cName: String, map: [String: Int])] = listFormatSlotNames.map { slotName in
+        let cName = "_ListFormatSlot_\(slotName.split(separator: "_").map { $0.capitalized }.joined())"
+        return (cName, filteredSlots[slotName] ?? [:])
+    }
+
+    return PackedData(
+        patterns: filteredPatterns,
+        rows: filteredRows,
+        localePool: localePool,
+        localeID: localeID,
+        slots: slots,
+        parents: filteredParents,
+        cldrVersion: data.cldrVersion,
+        keepAll: keepAll,
+        keptLocalesSorted: keepAll ? [] : kept.sorted(),
+        fallback: options.fallback
+    )
+}
 
 // MARK: - Emit
 
-// Slot C identifiers, paired with their entry maps, in the canonical order.
-let slots: [(cName: String, map: [String: Int])] = listFormatSlotNames.map { slotName in
-    let cName = "_ListFormatSlot_\(slotName.split(separator: "_").map { $0.capitalized }.joined())"
-    return (cName, filteredSlots[slotName] ?? [:])
-}
-
-func bannerComment() -> String {
+func banner(_ p: PackedData) -> String {
     var s = ""
     s += "//===----------------------------------------------------------------------===//\n"
     s += "//\n"
@@ -223,121 +261,126 @@ func bannerComment() -> String {
     s += "//\n"
     s += "//===----------------------------------------------------------------------===//\n"
     s += "// Generated by utils/build-list-format-data — do not edit by hand.\n"
-    s += "// CLDR version: \(data.cldrVersion)\n"
-    if keepAll {
+    s += "// CLDR version: \(p.cldrVersion)\n"
+    if p.keepAll {
         s += "// Locales: all\n"
     } else {
-        s += "// Locales: \(kept.sorted().joined(separator: ", "))\n"
+        s += "// Locales: \(p.keptLocalesSorted.joined(separator: ", "))\n"
     }
-    s += "// Fallback: \(fallback)\n"
+    s += "// Fallback: \(p.fallback)\n"
     s += "//===----------------------------------------------------------------------===//\n\n"
     return s
 }
 
-// MARK: Header — typedefs, counts, and extern declarations
+// Header — typedefs, counts, and extern declarations.
+func renderHeader(_ p: PackedData) -> String {
+    var header = banner(p)
+    header += "#include \"InternationalizationDataMacros.h\"\n\n"
+    header += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
+    header += "#include <stdint.h>\n\n"
 
-var header = bannerComment()
-header += "#include \"InternationalizationDataMacros.h\"\n\n"
-header += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
-header += "#include <stdint.h>\n\n"
+    // Struct typedefs (shared by the .c definitions and the Swift importer).
+    header += "// Row table. Each row is four indexes into _ListFormatPatterns.\n"
+    header += "typedef struct { uint16_t start; uint16_t middle; uint16_t end; uint16_t pair; } _ListFormatRow;\n\n"
+    header += "// Sparse slot entry: maps a locale (by index into _ListFormatLocales)\n"
+    header += "// to a row index. Entries are sorted by locale for binary search.\n"
+    header += "typedef struct { uint16_t locale; uint16_t row; } _ListFormatSlotEntry;\n\n"
+    header += "// Parent-locale entry: child and parent are indexes into _ListFormatLocales.\n"
+    header += "typedef struct { uint16_t child; uint16_t parent; } _ListFormatParentEntry;\n\n"
 
-// Struct typedefs (shared by the .c definitions and the Swift importer).
-header += "// Row table. Each row is four indexes into _ListFormatPatterns.\n"
-header += "typedef struct { uint16_t start; uint16_t middle; uint16_t end; uint16_t pair; } _ListFormatRow;\n\n"
-header += "// Sparse slot entry: maps a locale (by index into _ListFormatLocales)\n"
-header += "// to a row index. Entries are sorted by locale for binary search.\n"
-header += "typedef struct { uint16_t locale; uint16_t row; } _ListFormatSlotEntry;\n\n"
-header += "// Parent-locale entry: child and parent are indexes into _ListFormatLocales.\n"
-header += "typedef struct { uint16_t child; uint16_t parent; } _ListFormatParentEntry;\n\n"
+    // Element counts and the fallback locale stay in the header as small scalars
+    // so the Swift side reads them as plain constants (no link-time symbol).
+    header += "static const uint16_t _ListFormatPatternCount = \(p.patterns.count);\n"
+    header += "static const uint16_t _ListFormatRowCount = \(p.rows.count);\n"
+    header += "static const uint16_t _ListFormatLocaleCount = \(p.localePool.count);\n"
+    for (cName, map) in p.slots {
+        header += "static const uint16_t \(cName)_Count = \(map.count);\n"
+    }
+    header += "static const uint16_t _ListFormatParentCount = \(p.parents.count);\n"
+    header += "static const char * const _ListFormatFallbackLocale = \(cStringLiteral(p.fallback));\n\n"
 
-// Element counts and the fallback locale stay in the header as small scalars
-// so the Swift side reads them as plain constants (no link-time symbol).
-header += "static const uint16_t _ListFormatPatternCount = \(filteredPatterns.count);\n"
-header += "static const uint16_t _ListFormatRowCount = \(filteredRows.count);\n"
-header += "static const uint16_t _ListFormatLocaleCount = \(localePool.count);\n"
-for (cName, map) in slots {
-    header += "static const uint16_t \(cName)_Count = \(map.count);\n"
+    // Extern declarations of the large arrays. The bounds matter: the Swift
+    // importer maps a bounded C array to a fixed-size tuple, which the runtime
+    // lookup takes the address of. The definitions live in ListFormatData.c.
+    header += "// Pattern string pool. Rows reference these by index.\n"
+    header += "INTERNAL const char * const _ListFormatPatterns[\(p.patterns.count)];\n\n"
+    header += "// Row table. Each row is four indexes into _ListFormatPatterns.\n"
+    header += "INTERNAL const _ListFormatRow _ListFormatRows[\(p.rows.count)];\n\n"
+    header += "// Locale string pool. Slot and parent entries reference these by index.\n"
+    header += "INTERNAL const char * const _ListFormatLocales[\(p.localePool.count)];\n\n"
+    header += "// Sparse slot tables, one per (type, width), sorted by locale.\n"
+    for (cName, map) in p.slots {
+        header += "INTERNAL const _ListFormatSlotEntry \(cName)[\(map.count)];\n"
+    }
+    header += "\n"
+    header += "// Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.\n"
+    header += "INTERNAL const _ListFormatParentEntry _ListFormatParents[\(p.parents.count)];\n\n"
+
+    header += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
+    return header
 }
-header += "static const uint16_t _ListFormatParentCount = \(filteredParents.count);\n"
-header += "static const char * const _ListFormatFallbackLocale = \(cStringLiteral(fallback));\n\n"
 
-// Extern declarations of the large arrays. The bounds matter: the Swift
-// importer maps a bounded C array to a fixed-size tuple, which the runtime
-// lookup takes the address of. The definitions live in ListFormatData.c.
-header += "// Pattern string pool. Rows reference these by index.\n"
-header += "INTERNAL const char * const _ListFormatPatterns[\(filteredPatterns.count)];\n\n"
-header += "// Row table. Each row is four indexes into _ListFormatPatterns.\n"
-header += "INTERNAL const _ListFormatRow _ListFormatRows[\(filteredRows.count)];\n\n"
-header += "// Locale string pool. Slot and parent entries reference these by index.\n"
-header += "INTERNAL const char * const _ListFormatLocales[\(localePool.count)];\n\n"
-header += "// Sparse slot tables, one per (type, width), sorted by locale.\n"
-for (cName, map) in slots {
-    header += "INTERNAL const _ListFormatSlotEntry \(cName)[\(map.count)];\n"
-}
-header += "\n"
-header += "// Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.\n"
-header += "INTERNAL const _ListFormatParentEntry _ListFormatParents[\(filteredParents.count)];\n\n"
+// Source — array definitions.
+func renderSource(_ p: PackedData) -> String {
+    var source = banner(p)
+    source += "#include \"ListFormatData.h\"\n\n"
+    source += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
 
-header += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
-
-// MARK: Source — array definitions
-
-var source = bannerComment()
-source += "#include \"ListFormatData.h\"\n\n"
-source += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
-
-// Pattern pool — every unique pattern string lives here exactly once.
-source += "const char * const _ListFormatPatterns[\(filteredPatterns.count)] = {\n"
-for p in filteredPatterns {
-    source += "    \(cStringLiteral(p)),\n"
-}
-source += "};\n\n"
-
-// Row table — every unique (start, middle, end, pair) combination lives here once.
-source += "const _ListFormatRow _ListFormatRows[\(filteredRows.count)] = {\n"
-for r in filteredRows {
-    source += "    { \(r.start), \(r.middle), \(r.end), \(r.pair) },\n"
-}
-source += "};\n\n"
-
-// Locale string pool — sorted alphabetically so the locale IDs assigned below
-// follow alphabetical order, keeping the slot tables sortable by ID without
-// changing their lookup order.
-source += "const char * const _ListFormatLocales[\(localePool.count)] = {\n"
-for locale in localePool {
-    source += "    \(cStringLiteral(locale)),\n"
-}
-source += "};\n\n"
-
-// Per-slot sparse tables. Sorted by locale ID (mirroring alphabetical order of
-// the pooled strings) so binary search can compare via
-// `strcmp(target, _ListFormatLocales[entry.locale])`.
-for (cName, map) in slots {
-    source += "const _ListFormatSlotEntry \(cName)[\(map.count)] = {\n"
-    for locale in map.keys.sorted() {
-        source += "    { \(localeID[locale]!), \(map[locale]!) },\n"
+    // Pattern pool — every unique pattern string lives here exactly once.
+    source += "const char * const _ListFormatPatterns[\(p.patterns.count)] = {\n"
+    for pattern in p.patterns {
+        source += "    \(cStringLiteral(pattern)),\n"
     }
     source += "};\n\n"
-}
 
-// Parent map — sorted by child for binary search. Both child and parent pull
-// their string from _ListFormatLocales.
-source += "const _ListFormatParentEntry _ListFormatParents[\(filteredParents.count)] = {\n"
-for child in filteredParents.keys.sorted() {
-    source += "    { \(localeID[child]!), \(localeID[filteredParents[child]!]!) },\n"
-}
-source += "};\n\n"
+    // Row table — every unique (start, middle, end, pair) combination lives here once.
+    source += "const _ListFormatRow _ListFormatRows[\(p.rows.count)] = {\n"
+    for r in p.rows {
+        source += "    { \(r.start), \(r.middle), \(r.end), \(r.pair) },\n"
+    }
+    source += "};\n\n"
 
-source += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
+    // Locale string pool — sorted alphabetically so the locale IDs assigned below
+    // follow alphabetical order, keeping the slot tables sortable by ID without
+    // changing their lookup order.
+    source += "const char * const _ListFormatLocales[\(p.localePool.count)] = {\n"
+    for locale in p.localePool {
+        source += "    \(cStringLiteral(locale)),\n"
+    }
+    source += "};\n\n"
+
+    // Per-slot sparse tables. Sorted by locale ID (mirroring alphabetical order of
+    // the pooled strings) so binary search can compare via
+    // `strcmp(target, _ListFormatLocales[entry.locale])`.
+    for (cName, map) in p.slots {
+        source += "const _ListFormatSlotEntry \(cName)[\(map.count)] = {\n"
+        for locale in map.keys.sorted() {
+            source += "    { \(p.localeID[locale]!), \(map[locale]!) },\n"
+        }
+        source += "};\n\n"
+    }
+
+    // Parent map — sorted by child for binary search. Both child and parent pull
+    // their string from _ListFormatLocales.
+    source += "const _ListFormatParentEntry _ListFormatParents[\(p.parents.count)] = {\n"
+    for child in p.parents.keys.sorted() {
+        source += "    { \(p.localeID[child]!), \(p.localeID[p.parents[child]!]!) },\n"
+    }
+    source += "};\n\n"
+
+    source += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
+    return source
+}
 
 // MARK: - Write
 
-do {
-    try header.write(to: URL(fileURLWithPath: outputHeaderPath), atomically: true, encoding: .utf8)
-    try source.write(to: URL(fileURLWithPath: outputSourcePath), atomically: true, encoding: .utf8)
-} catch {
-    print("error: failed to write output: \(error)", to: &standardError)
-    exit(1)
+func writeFile(_ contents: String, to path: String) {
+    do {
+        try contents.write(to: URL(fileURLWithPath: path), atomically: true, encoding: .utf8)
+    } catch {
+        print("error: failed to write output: \(error)", to: &standardError)
+        exit(1)
+    }
 }
 
 // MARK: - Helpers
@@ -363,4 +406,23 @@ func cStringLiteral(_ s: String) -> String {
     }
     out += "\""
     return out
+}
+
+// MARK: - Driver
+
+func build() {
+    let options = readOptions()
+    let data = loadData(options.inputPath)
+    let packed = pack(data, options: options)
+    writeFile(renderHeader(packed), to: options.outputHeaderPath)
+    writeFile(renderSource(packed), to: options.outputSourcePath)
+}
+
+// MARK: - Entry
+
+@main
+struct BuildListFormatData {
+    static func main() {
+        build()
+    }
 }
