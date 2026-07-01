@@ -663,7 +663,155 @@ extension Calendar {
         var minutes: [Int]? = nil
         var seconds: [Int]? = nil
     }
-    
+
+    /// Expand `_DateComponentCombinations` into a flat array of single-valued `DateComponents` for the fast path. Negative ordinals are translated to `{month, weekday, weekOfMonth}` using `anchor`'s month structure. Returns nil if the pattern can't be expanded.
+    fileprivate func _fastPathDateComponents(_ c: _DateComponentCombinations, anchor: Date? = nil, maxCombinations: Int = 64) -> [DateComponents]? {
+        var hasNegativeOrdinal = false
+        if let weekdays = c.weekdays {
+            for w in weekdays {
+                switch w {
+                case .every:
+                    return nil
+                case .nth(let n, _):
+                    if n == 0 { return nil }
+                    if n < 0 {
+                        guard anchor != nil else { return nil }
+                        hasNegativeOrdinal = true
+                    }
+                }
+            }
+        }
+
+        let monthsCount = c.months?.count ?? 1
+        let weekdaysCount = c.weekdays?.count ?? 1
+        let daysOfMonthCount = c.daysOfMonth?.count ?? 1
+        let daysOfYearCount = c.daysOfYear?.count ?? 1
+        let weeksOfYearCount = c.weeksOfYear?.count ?? 1
+        let hoursCount = c.hours?.count ?? 1
+        let minutesCount = c.minutes?.count ?? 1
+        let secondsCount = c.seconds?.count ?? 1
+
+        let counts = [monthsCount, weekdaysCount, daysOfMonthCount, daysOfYearCount, weeksOfYearCount, hoursCount, minutesCount, secondsCount]
+        var total = 1
+        for count in counts {
+            let (product, overflow) = total.multipliedReportingOverflow(by: count)
+            if overflow || product > maxCombinations { return nil }
+            total = product
+        }
+        if total < 1 { return nil }
+
+        var negOrdMonth = 0
+        var negOrdIsLeap = false
+        var negOrdDay1Weekday = 0
+        var negOrdDaysInMonth = 0
+        var negOrdFirstWeekday = 0
+        var negOrdMinDays = 0
+        if hasNegativeOrdinal, let anchor = anchor {
+            let targetMonth: Int
+            let targetIsLeap: Bool
+            let targetYear: Int
+            if let ms = c.months, ms.count == 1 {
+                targetMonth = ms[0].index
+                targetIsLeap = ms[0].isLeap
+                targetYear = self.component(.year, from: anchor)
+            } else if c.months == nil || c.months!.isEmpty {
+                targetMonth = self.component(.month, from: anchor)
+                targetIsLeap = false
+                targetYear = self.component(.year, from: anchor)
+            } else {
+                return nil
+            }
+            var monthStartComps = DateComponents()
+            monthStartComps.year = targetYear
+            monthStartComps.month = targetMonth
+            monthStartComps.day = 1
+            if targetIsLeap { monthStartComps.isLeapMonth = true }
+            guard let monthStart = self.date(from: monthStartComps), let dayRange = self.range(of: .day, in: .month, for: monthStart) else { return nil }
+            negOrdMonth = targetMonth
+            negOrdIsLeap = targetIsLeap
+            negOrdDay1Weekday = self.component(.weekday, from: monthStart)
+            negOrdDaysInMonth = dayRange.upperBound - 1
+            negOrdFirstWeekday = self.firstWeekday
+            negOrdMinDays = self.minimumDaysInFirstWeek
+        }
+
+        var base = DateComponents()
+        if let ms = c.months, ms.count == 1 { base.month = ms[0].index; base.isLeapMonth = ms[0].isLeap }
+        if let woy = c.weeksOfYear, woy.count == 1 { base.weekOfYear = woy[0] }
+        if let doy = c.daysOfYear, doy.count == 1 { base.dayOfYear = doy[0] }
+        if let dom = c.daysOfMonth, dom.count == 1 { base.day = dom[0] }
+        if let hs = c.hours, hs.count == 1 { base.hour = hs[0] }
+        if let mins = c.minutes, mins.count == 1 { base.minute = mins[0] }
+        if let secs = c.seconds, secs.count == 1 { base.second = secs[0] }
+
+        var seeds: [DateComponents]
+        if let wds = c.weekdays {
+            if wds.count == 1 {
+                guard Self._translateWeekday(wds[0], into: &base, hasNegativeOrdinal: hasNegativeOrdinal, month: negOrdMonth, isLeapMonth: negOrdIsLeap, day1Weekday: negOrdDay1Weekday, daysInMonth: negOrdDaysInMonth, firstWeekday: negOrdFirstWeekday, minDays: negOrdMinDays) else { return nil }
+                seeds = [base]
+            } else {
+                seeds = []
+                seeds.reserveCapacity(wds.count)
+                for wd in wds {
+                    var wdBase = base
+                    guard Self._translateWeekday(wd, into: &wdBase, hasNegativeOrdinal: hasNegativeOrdinal, month: negOrdMonth, isLeapMonth: negOrdIsLeap, day1Weekday: negOrdDay1Weekday, daysInMonth: negOrdDaysInMonth, firstWeekday: negOrdFirstWeekday, minDays: negOrdMinDays) else { return nil }
+                    seeds.append(wdBase)
+                }
+            }
+        } else {
+            seeds = [base]
+        }
+
+        // Expand multi valued axes by cloning and setting each value directly.
+        if let ms = c.months, ms.count > 1 { seeds = seeds.flatMap { seed in ms.map { m in var dc = seed; dc.month = m.index; dc.isLeapMonth = m.isLeap; return dc } } }
+        if let woy = c.weeksOfYear, woy.count > 1 { seeds = seeds.flatMap { seed in woy.map { v in var dc = seed; dc.weekOfYear = v; return dc } } }
+        if let doy = c.daysOfYear, doy.count > 1 { seeds = seeds.flatMap { seed in doy.map { v in var dc = seed; dc.dayOfYear = v; return dc } } }
+        if let dom = c.daysOfMonth, dom.count > 1 { seeds = seeds.flatMap { seed in dom.map { v in var dc = seed; dc.day = v; return dc } } }
+        if let hs = c.hours, hs.count > 1 { seeds = seeds.flatMap { seed in hs.map { v in var dc = seed; dc.hour = v; return dc } } }
+        if let mins = c.minutes, mins.count > 1 { seeds = seeds.flatMap { seed in mins.map { v in var dc = seed; dc.minute = v; return dc } } }
+        if let secs = c.seconds, secs.count > 1 { seeds = seeds.flatMap { seed in secs.map { v in var dc = seed; dc.second = v; return dc } } }
+
+        return seeds
+    }
+
+    /// Translate a `.nth(N, day)` weekday entry into DateComponents fields. Returns false if out of range.
+    private static func _translateWeekday(_ entry: RecurrenceRule.Weekday, into dc: inout DateComponents, hasNegativeOrdinal: Bool, month: Int, isLeapMonth: Bool, day1Weekday: Int, daysInMonth: Int, firstWeekday: Int, minDays: Int) -> Bool {
+        guard case .nth(let n, let dayOfWeek) = entry else { return false }
+        let wdIdx = dayOfWeek.icuIndex
+        if n > 0 {
+            dc.weekdayOrdinal = n
+            dc.weekday = wdIdx
+            return true
+        }
+        guard hasNegativeOrdinal else { return false }
+        let firstOcc = 1 + ((wdIdx - day1Weekday + 7) % 7)
+        let totalOcc = (daysInMonth - firstOcc) / 7 + 1
+        let kthFromLast = -n
+        let dayOfMonth = firstOcc + (totalOcc - kthFromLast) * 7
+        guard dayOfMonth >= 1, dayOfMonth <= daysInMonth else { return false }
+        let periodStart = ((day1Weekday - firstWeekday) % 7 + 7) % 7
+        let correction = (7 - periodStart) >= minDays ? 1 : 0
+        let weekOfMonth = (dayOfMonth + periodStart - 1) / 7 + correction
+        dc.month = month
+        dc.isLeapMonth = isLeapMonth
+        dc.weekday = wdIdx
+        dc.weekOfMonth = weekOfMonth
+        return true
+    }
+
+    /// Probe all expanded DateComponents via the fast path. Returns sorted results or nil if any DC isn't fast-pathable.
+    private func _probeAllFastPath(_ allDCs: [DateComponents], after startDate: Date) -> [(Date, DateComponents)]? {
+        guard allDCs.allSatisfy({ _supportsNextDateFastPath(for: $0._populatedComponentSet) }) else { return nil }
+        var results: [(Date, DateComponents)] = []
+        results.reserveCapacity(allDCs.count)
+        for dc in allDCs {
+            guard let fast = _calendarNextDate(after: startDate, matching: dc, direction: .forward) else { return nil }
+            results.append((fast, dc))
+        }
+        results.sort { $0.0 < $1.0 }
+        return results
+    }
+
 
     /// Find date components which can be used to filter or enumerate each given
     /// weekday in a range
@@ -827,6 +975,14 @@ extension Calendar {
                                       matching combinationComponents: _DateComponentCombinations,
                                       matchingPolicy: MatchingPolicy,
                                       repeatedTimePolicy: RepeatedTimePolicy) throws -> [(Date, DateComponents)]? {
+
+        // Fast-path: _probeAllFastPath checks supportsNextDateFastPath per pattern.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first {
+            if let allDCs = _fastPathDateComponents(combinationComponents, anchor: startDate),
+               let results = _probeAllFastPath(allDCs, after: startDate) {
+                return results
+            }
+        }
 
         let isStrictMatching = matchingPolicy == .strict
 

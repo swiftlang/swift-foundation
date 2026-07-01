@@ -1295,6 +1295,14 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
     }
 
+    internal func _calendarNextDate(after date: Date, matching components: DateComponents, direction: SearchDirection) -> Date? {
+        _calendar.nextDate(after: date, matching: components, direction: direction)
+    }
+
+    internal func _supportsNextDateFastPath(for components: ComponentSet) -> Bool {
+        _calendar.supportsNextDateFastPath(for: components)
+    }
+
     /// Computes the dates which match (or most closely match) a given set of components, and calls the closure once for each of them, until the enumeration is stopped.
     ///
     /// There will be at least one intervening date which does not match all the components (or the given date itself must not match) between the given date and any result.
@@ -1314,13 +1322,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter block: A closure that is called with search results.
     @available(iOS 8.0, *)
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
-        // Fast-path: if the calendar implementation has a direct answer for the
-        // first match AND default policies are in effect, drive the loop with
-        // repeated nextDate(after:matching:) calls instead of the generic
-        // enumerate framework. The fast path opts out (returns nil) for any
-        // pattern it can't handle, so this is safe.
-        if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
-           let _ = _calendar.nextDate(after: start, matching: components, direction: direction) {
+        // Fast-path: drive the loop with direct nextDate calls when default policies are in effect.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first, _supportsNextDateFastPath(for: components._populatedComponentSet) {
             var current = start
             var stop = false
             while !stop {
