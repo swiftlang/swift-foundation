@@ -545,35 +545,21 @@ internal final class NativeListFormatter: Sendable {
 // prefix handler, and `ThaiHandler`).
 
 /// Whether the Spanish "y" → "e" change applies before `text` (the item that
-/// follows the connector): true when it begins with an /i/ sound — an "i"/"hi"
-/// not continuing into "hia"/"hie".
+/// follows the connector): true when it begins with an /i/ sound — "i", or
+/// "hi" not continuing into "hia"/"hie".
 private func _spanishYToEFires(on text: String) -> Bool {
-    var iter = text.unicodeScalars.makeIterator()
-    guard let c0 = iter.next() else { return false }
-    if c0 == "i" || c0 == "I" { return true }
-    if c0 != "h" && c0 != "H" { return false }
-    guard let c1 = iter.next() else { return false }
-    if c1 != "i" && c1 != "I" { return false }
-    guard let c2 = iter.next() else { return true }
-    return c2 != "a" && c2 != "A" && c2 != "e" && c2 != "E"
+    let lc = text.lowercased()
+    if lc.hasPrefix("i") { return true }
+    return lc.hasPrefix("hi") && !lc.hasPrefix("hia") && !lc.hasPrefix("hie")
 }
 
 /// Whether the Spanish "o" → "u" change applies before `text`: true when it
-/// begins with an /o/ sound ("o", "ho", "8", or "11" as a standalone token).
+/// begins with an /o/ sound — "o", "ho", "8", or the token "11" (alone or
+/// followed by a space).
 private func _spanishOToUFires(on text: String) -> Bool {
-    var iter = text.unicodeScalars.makeIterator()
-    guard let c0 = iter.next() else { return false }
-    if c0 == "o" || c0 == "O" || c0 == "8" { return true }
-    if c0 == "h" || c0 == "H" {
-        if let c1 = iter.next(), c1 == "o" || c1 == "O" { return true }
-        return false
-    }
-    if c0 == "1" {
-        guard let c1 = iter.next(), c1 == "1" else { return false }
-        guard let c2 = iter.next() else { return true }
-        return c2 == " "
-    }
-    return false
+    let lc = text.lowercased()
+    if lc.hasPrefix("o") || lc.hasPrefix("8") || lc.hasPrefix("ho") { return true }
+    return lc == "11" || lc.hasPrefix("11 ")
 }
 
 /// Whether the Hebrew non-Hebrew prefix change applies before `text`: true when
