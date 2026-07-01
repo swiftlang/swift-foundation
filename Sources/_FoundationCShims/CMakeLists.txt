@@ -43,10 +43,9 @@ install(DIRECTORY
             lib/${install_directory}/_FoundationCShims)
 
 if(NOT BUILD_SHARED_LIBS)
-    get_swift_host_os(swift_os)
     install(TARGETS _FoundationCShims
-        ARCHIVE DESTINATION lib/${install_directory}/${swift_os}
-        LIBRARY DESTINATION lib/${install_directory}/${swift_os}
+        ARCHIVE DESTINATION lib/${install_directory}/${SwiftFoundation_PLATFORM}$<$<BOOL:${SwiftFoundation_INSTALL_ARCH_SUBDIR}>:/${SwiftFoundation_ARCH}>
+        LIBRARY DESTINATION lib/${install_directory}/${SwiftFoundation_PLATFORM}$<$<BOOL:${SwiftFoundation_INSTALL_ARCH_SUBDIR}>:/${SwiftFoundation_ARCH}>
         RUNTIME DESTINATION bin)
 endif()
 
