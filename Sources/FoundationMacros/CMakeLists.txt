@@ -96,4 +96,9 @@ if(NOT FoundationMacros_BuildLocalExecutable)
     install(TARGETS FoundationMacros
         LIBRARY DESTINATION lib/swift/host/plugins
         RUNTIME DESTINATION bin)
+    if(MSVC)
+        install(FILES $<TARGET_FILE_DIR:FoundationMacros>/$<TARGET_FILE_BASE_NAME:FoundationMacros>.pdb
+            DESTINATION bin
+            OPTIONAL)
+    endif()
 endif()
