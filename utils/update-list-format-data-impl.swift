@@ -555,12 +555,15 @@ func emit(slotTables: [(type: String, width: String, table: [String: Row])],
 
 // MARK: - Entry
 
-#if PRINT_CODE
-do {
-    let code = try generate()
-    print(code, terminator: "")
-} catch {
-    print("error: \(error)", to: &standardError)
-    exit(1)
+@main
+struct GenerateListFormatData {
+    static func main() {
+        do {
+            let code = try generate()
+            print(code, terminator: "")
+        } catch {
+            print("error: \(error)", to: &standardError)
+            exit(1)
+        }
+    }
 }
-#endif
