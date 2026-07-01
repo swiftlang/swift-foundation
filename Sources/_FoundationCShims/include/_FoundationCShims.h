@@ -23,7 +23,6 @@
 #include "io_shims.h"
 #include "platform_shims.h"
 #include "filemanager_shims.h"
-#include "uuid.h"
 
 #if FOUNDATION_FRAMEWORK && !TARGET_OS_EXCLAVEKIT
 #include "sandbox_shims.h"
