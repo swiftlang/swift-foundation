@@ -5,7 +5,7 @@
 * Review Manager: TBD
 * Status: **Awaiting review**
 * Implementation: TBD
-* Review: TBD
+* Review: ([pitch](https://forums.swift.org/t/pitch-data-manipulation-with-spans/87952))
 
 ## Introduction/Motivation
 
