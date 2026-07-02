@@ -67,6 +67,24 @@ private func openatFileDescriptorProtected(dirfd: Int32, name: UnsafePointer<CCh
 #endif
 #endif
 
+#if !os(Windows)
+private var minimalOpenFlagsForDirectories: Int32 {
+#if canImport(Darwin)
+    O_SEARCH
+#else
+    O_DIRECTORY | O_PATH
+#endif
+}
+#endif
+
+#if !os(Windows)
+private typealias TemporaryFilePermissions = mode_t
+#else
+// Presently unimplemented on Windows
+private typealias TemporaryFilePermissions = Void
+#endif
+
+
 private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, reportProgress: Bool) throws -> Int {
     // Fetch this once
     let length = buffer.byteCount
@@ -149,7 +167,7 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
 #if os(WASI)
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
-private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, mode: mode_t, variant: String? = nil) throws -> (Int32, String) {
+private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, permissions: TemporaryFilePermissions, variant: String? = nil) throws -> (Int32, String) {
 #if os(WASI)
     // WASI does not have temp directories
     throw CocoaError(.featureUnsupported)
@@ -192,7 +210,7 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
                         errno = EINVAL
                         return -1
                     }
-                    return openatFileDescriptorProtected(dirfd: destDirfd, name: basenameRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options, mode: mode)
+                    return openatFileDescriptorProtected(dirfd: destDirfd, name: basenameRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options, mode: permissions)
                 }
             }
             if fd >= 0 {
@@ -245,7 +263,7 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
             if destDirfd == -1 {
                 fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
             } else {
-                fd = openatFileDescriptorProtected(dirfd: destDirfd, name: templateFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options, mode: mode)
+                fd = openatFileDescriptorProtected(dirfd: destDirfd, name: templateFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options, mode: permissions)
             }
 #endif
 
@@ -283,7 +301,7 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
 #if os(WASI)
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
-private func createProtectedTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, mode: mode_t, variant: String? = nil) throws -> (fd: Int32, name: String, tempDirfd: Int32, cleanupPath: String?) {
+private func createProtectedTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, permissions: TemporaryFilePermissions, variant: String? = nil) throws -> (fd: Int32, name: String, tempDirfd: Int32, cleanupPath: String?) {
 #if os(WASI)
     // WASI does not have temp directories
     throw CocoaError(.featureUnsupported)
@@ -314,7 +332,7 @@ private func createProtectedTemporaryFile(destDirfd: Int32, destinationPath: Str
                 errno = EINVAL
                 return -1
             }
-            return open(rep, O_SEARCH)
+            return open(rep, minimalOpenFlagsForDirectories)
         }
         if openedDirfd < 0 {
             let savedErrno = errno
@@ -326,7 +344,7 @@ private func createProtectedTemporaryFile(destDirfd: Int32, destinationPath: Str
                 errno = EINVAL
                 return -1
             }
-            return openatFileDescriptorProtected(dirfd: openedDirfd, name: basenameRep, flags: O_CREAT | O_EXCL | O_RDWR, options: updatedOptions, mode: mode)
+            return openatFileDescriptorProtected(dirfd: openedDirfd, name: basenameRep, flags: O_CREAT | O_EXCL | O_RDWR, options: updatedOptions, mode: permissions)
         }
         if fd < 0 {
             let savedErrno = errno
@@ -338,7 +356,7 @@ private func createProtectedTemporaryFile(destDirfd: Int32, destinationPath: Str
     }
 #endif
 
-    let (fd, name) = try createTemporaryFile(destDirfd: destDirfd, destinationPath: destinationPath, inPath: inPath, options: options, mode: mode, variant: variant)
+    let (fd, name) = try createTemporaryFile(destDirfd: destDirfd, destinationPath: destinationPath, inPath: inPath, options: options, permissions: permissions, variant: variant)
     return (fd, name, destDirfd, nil)
 #endif // os(WASI)
 }
@@ -434,7 +452,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
     // TODO: Somehow avoid copying back and forth to a String to hold the path
 
 #if os(Windows)
-    var (fd, auxPath, _, temporaryDirectoryPath) = try createProtectedTemporaryFile(destDirfd: -1, destinationPath: inPath.path, inPath: inPath, options: options, mode: 0, variant: "Folder")
+    var (fd, auxPath, _, temporaryDirectoryPath) = try createProtectedTemporaryFile(destDirfd: -1, destinationPath: inPath.path, inPath: inPath, options: options, permissions: (), variant: "Folder")
 
     // Cleanup temporary directory
     defer { cleanupTemporaryDirectory(at: temporaryDirectoryPath) }
@@ -562,7 +580,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         guard let parentFSRep else {
             throw CocoaError(.fileWriteInvalidFileName)
         }
-        let fd = open(parentFSRep, O_SEARCH)
+        let fd = open(parentFSRep, minimalOpenFlagsForDirectories)
         guard fd >= 0 else {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: "Folder")
         }
@@ -577,18 +595,18 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
 
         var mode: mode_t?
         var preRenameState = stat()
-        let result = fstatat(destDirfd, basenameRep, &preRenameState, AT_SYMLINK_NOFOLLOW | AT_RESOLVE_BENEATH)
+        let result = fstatat(destDirfd, basenameRep, &preRenameState, AT_SYMLINK_NOFOLLOW)
         if result == 0 {
             mode = preRenameState.st_mode & ~S_IFMT
-        } else if (errno != ENOENT) && (errno != ENAMETOOLONG) && (errno != ENOTCAPABLE) {
+        } else if (errno != ENOENT) && (errno != ENAMETOOLONG) {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
 
         // If we captured an existing file's mode, open the temp at the most restrictive mode that still lets us write to it (0o200) so other users' processes can't read or modify the half-written contents; fchmod restores the real mode after rename. For a brand-new file, use 0666 (subject to umask) so open(2)'s usual semantics apply.
-        let tempOpenMode: mode_t = (mode != nil) ? 0o200 : 0o666
+        let tempOpenMode: TemporaryFilePermissions = (mode != nil) ? 0o200 : 0o666
 
         // tempDirfd is the file descriptor of the temporary file's parent directory, which COULD be the same exact file descriptor as destDirfd.
-        let (fd, auxName, tempDirfd, temporaryDirectoryPath) = try createProtectedTemporaryFile(destDirfd: destDirfd, destinationPath: newPath, inPath: inPath, options: options, mode: tempOpenMode, variant: "Folder")
+        let (fd, auxName, tempDirfd, temporaryDirectoryPath) = try createProtectedTemporaryFile(destDirfd: destDirfd, destinationPath: newPath, inPath: inPath, options: options, permissions: tempOpenMode, variant: "Folder")
 
         guard fd >= 0 else {
             let savedErrno = errno
@@ -640,7 +658,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                     // Makes "atomically" next to meaningless, but...
                     // We try a little harder but this is not thread-safe nor atomic
                     
-                    let (fd2, auxName2, tempDirfd2, temporaryDirectoryPath2) = try createProtectedTemporaryFile(destDirfd: destDirfd, destinationPath: newPath, inPath: inPath, options: options, mode: tempOpenMode)
+                    let (fd2, auxName2, tempDirfd2, temporaryDirectoryPath2) = try createProtectedTemporaryFile(destDirfd: destDirfd, destinationPath: newPath, inPath: inPath, options: options, permissions: tempOpenMode)
                     close(fd2)
                     try auxName2.withFileSystemRepresentation { auxName2Rep in
                         guard let auxName2Rep else {
