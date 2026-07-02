@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 
 extension PredicateCodableConfiguration {
@@ -91,3 +93,5 @@ extension Expression : CodableWithConfiguration {
 }
 
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !$Embedded

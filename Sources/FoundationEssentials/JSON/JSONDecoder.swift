@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -1942,3 +1944,5 @@ fileprivate extension JSONDecoder.KeyDecodingStrategy {
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 #endif
 extension JSONDecoder : @unchecked Sendable {}
+
+#endif // !$Embedded

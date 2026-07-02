@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if os(Windows)
 
 import WinSDK
@@ -492,3 +494,5 @@ struct _POSIXDirectoryContentsSequence: Sequence {
 }
 
 #endif
+
+#endif // !$Embedded

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 internal struct JSONWriter {
 
     // Structures with container nesting deeper than this limit are not valid.
@@ -350,3 +352,5 @@ internal struct JSONWriter {
         }
     }
 }
+
+#endif // !$Embedded

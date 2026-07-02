@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @preconcurrency
@@ -955,3 +957,5 @@ extension AttributedString.Runs {
 }
 
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !$Embedded

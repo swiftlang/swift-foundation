@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -423,3 +425,5 @@ extension AttributedString {
         self.transformingAttributes(K1.self, K2.self, K3.self, K4.self, K5.self, c)
     }
 }
+
+#endif // !$Embedded

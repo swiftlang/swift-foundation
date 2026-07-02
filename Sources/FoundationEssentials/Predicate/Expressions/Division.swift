@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct IntDivision<
@@ -183,3 +185,5 @@ extension PredicateExpressions.IntRemainder : Sendable where LHS : Sendable, RHS
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.IntDivision : Sendable where LHS : Sendable, RHS : Sendable {}
+
+#endif // !$Embedded

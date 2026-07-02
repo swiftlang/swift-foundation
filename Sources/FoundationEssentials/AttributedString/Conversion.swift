@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 
 #if FOUNDATION_FRAMEWORK
 import Darwin
@@ -655,3 +657,5 @@ extension Range where Bound == String.Index {
 #endif // FOUNDATION_FRAMEWORK
 }
 
+
+#endif // !$Embedded

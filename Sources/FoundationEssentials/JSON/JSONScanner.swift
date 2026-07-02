@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 /*
  A JSONMap is created by a JSON scanner to describe the values found in a JSON payload, including their size, location, and contents, without copying any of the non-structural data. It is used by the JSONDecoder, which will fully parse only those values that are required to decode the requested Decodable types.
 
@@ -1389,3 +1391,5 @@ enum JSONError: Swift.Error, Equatable {
     }
 #endif // FOUNDATION_FRAMEWORK
 }
+
+#endif // !$Embedded

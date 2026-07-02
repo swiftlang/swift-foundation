@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
@@ -71,3 +73,5 @@ extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Cod
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : Sendable where Condition : Sendable, repeat each Input : Sendable {}
 #endif
+
+#endif // !$Embedded

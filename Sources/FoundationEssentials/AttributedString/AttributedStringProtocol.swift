@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -406,3 +408,5 @@ extension AttributedStringProtocol {
     }
 }
 
+
+#endif // !$Embedded

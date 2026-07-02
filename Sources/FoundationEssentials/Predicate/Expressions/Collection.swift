@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct CollectionIndexSubscript<
@@ -201,3 +203,5 @@ extension PredicateExpressions.CollectionContainsCollection : Codable where Base
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.CollectionContainsCollection : StandardPredicateExpression where Base : StandardPredicateExpression, Other : StandardPredicateExpression {}
+
+#endif // !$Embedded

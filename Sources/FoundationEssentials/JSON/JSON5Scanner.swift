@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -1248,3 +1250,5 @@ extension UnicodeScalar {
         }
     }
 }
+
+#endif // !$Embedded

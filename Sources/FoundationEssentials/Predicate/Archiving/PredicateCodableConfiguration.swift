@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 
 #if canImport(ReflectionInternal)
@@ -549,3 +551,5 @@ extension PredicateCodableConfiguration {
 
 #endif // canImport(ReflectionInternal)
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !$Embedded

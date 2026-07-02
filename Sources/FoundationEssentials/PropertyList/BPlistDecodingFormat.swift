@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 struct _BPlistDecodingFormat : PlistDecodingFormat {
     typealias Map = BPlistMap
     
@@ -81,3 +83,5 @@ struct _BPlistDecodingFormat : PlistDecodingFormat {
         try mapValue.integerValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
 }
+
+#endif // !$Embedded
