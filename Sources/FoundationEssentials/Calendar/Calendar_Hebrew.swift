@@ -400,10 +400,10 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         case .era:
             // Hebrew has a single AM era spanning from epoch to effectively forever.
             // Matches ICU's reported start (Hebrew epoch, -181,778,083,200 s before
-            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (Calendar._inf_ti).
+            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (Calendar._maxDateIntervalDuration).
             return DateInterval(
                 start: Date(timeIntervalSinceReferenceDate: -181_778_083_200.0),
-                duration: Calendar._inf_ti
+                duration: Calendar._maxDateIntervalDuration
             )
         case .year:
             // Tishri 1 of this year → Tishri 1 of next year.
@@ -546,8 +546,8 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let comps = dateComponents([.weekday, .hour, .minute, .second], from: date, in: self.timeZone)
         guard let dayOfWeek = comps.weekday else { return false }
         let timeInDay = TimeInterval(
-            (comps.hour ?? 0) * Calendar._kSecondsInHour
-            + (comps.minute ?? 0) * 60
+            (comps.hour ?? 0) * Calendar._secondsInHour
+            + (comps.minute ?? 0) * Calendar._secondsInMinute
             + (comps.second ?? 0)
         )
         return _CalendarUtility.isDateInWeekend(weekday: dayOfWeek, timeInDay: timeInDay, weekendRange: weekendRange)
@@ -1001,14 +1001,14 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let forward = direction == .forward
 
         if timeOnly {
-            return nextTimeOfDayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
+            return nextTimeOfDayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
                                       targetSecsInDay: secsInDay,
                                       forward: forward, tz: tz)
         }
 
         if hasWeekOfMonth {
             return nextMonthWeekdayWeekOfMonthMatch(
-                rd: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
+                rataDie: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
                 targetMonth: components.month!,
                 targetWeekday: components.weekday!,
                 targetWeekOfMonth: components.weekOfMonth!,
@@ -1018,14 +1018,14 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         if hasWdOrd {
             if hasMonth {
                 return nextMonthWeekdayOrdinalMatch(
-                    rd: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
+                    rataDie: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
                     targetMonth: components.month!,
                     targetWeekday: components.weekday!,
                     targetWdOrd: components.weekdayOrdinal!,
                     targetSecsInDay: secsInDay, forward: forward, tz: tz)
             } else {
                 return nextWeekdayOrdinalMatch(
-                    rd: rd, currentSecsInDay: currentSecsInDay,
+                    rataDie: rd, currentSecsInDay: currentSecsInDay,
                     currentYear: year, currentCivilMonth: civilMonth, currentDay: day,
                     targetWeekday: components.weekday!,
                     targetWdOrd: components.weekdayOrdinal!,
@@ -1034,12 +1034,12 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         }
 
         if hasWeekday {
-            return nextWeekdayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
+            return nextWeekdayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
                                     targetWeekday: components.weekday!,
                                     targetSecsInDay: secsInDay, forward: forward, tz: tz)
         }
 
-        return nextMonthDayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
+        return nextMonthDayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
                                  currentYear: year, currentCivilMonth: civilMonth, currentDay: day,
                                  targetMonth: components.month, targetDay: components.day,
                                  targetSecsInDay: secsInDay, forward: forward, tz: tz)
@@ -1048,7 +1048,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     /// Fast path for `{month?, day?, h?, m?, s?, ns?}` — annual recurrence at month/day.
     /// Either month or day (or both) must be set; missing month iterates months in the
     /// year, missing day defaults to 1.
-    private func nextMonthDayMatch(rd: Int64, currentSecsInDay: Double,
+    private func nextMonthDayMatch(rataDie rd: Int64, currentSecsInDay: Double,
                                    currentYear: Int32, currentCivilMonth: UInt8, currentDay: UInt8,
                                    targetMonth: Int?, targetDay: Int?,
                                    targetSecsInDay: Double, forward: Bool,
@@ -1146,7 +1146,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     }
 
     /// Fast path for `{h, mi, s, ns?}` — next date with the requested time-of-day.
-    private func nextTimeOfDayMatch(rd: Int64, currentSecsInDay: Double,
+    private func nextTimeOfDayMatch(rataDie rd: Int64, currentSecsInDay: Double,
                                     targetSecsInDay: Double,
                                     forward: Bool, tz: TimeZone) -> Date? {
         let targetRd: Int64
@@ -1161,7 +1161,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     /// Fast path for `{weekday, h?, m?, s?, ns?}` — find the next/prev RD whose
     /// weekday matches (Sun=1..Sat=7, ICU convention). Pure modular RD arithmetic.
-    private func nextWeekdayMatch(rd: Int64, currentSecsInDay: Double,
+    private func nextWeekdayMatch(rataDie rd: Int64, currentSecsInDay: Double,
                                   targetWeekday: Int,
                                   targetSecsInDay: Double, forward: Bool,
                                   tz: TimeZone) -> Date? {
@@ -1193,7 +1193,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     /// Fast path for `{month, weekday, weekdayOrdinal}` — "Nth weekday of month".
     private func nextMonthWeekdayOrdinalMatch(
-        rd: Int64, currentSecsInDay: Double, currentYear: Int32,
+        rataDie rd: Int64, currentSecsInDay: Double, currentYear: Int32,
         targetMonth: Int, targetWeekday: Int, targetWdOrd: Int,
         targetSecsInDay: Double, forward: Bool, tz: TimeZone
     ) -> Date? {
@@ -1247,7 +1247,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     /// Fast path for `{weekday, weekdayOrdinal}` (no month) — Nth weekday in the current month.
     private func nextWeekdayOrdinalMatch(
-        rd: Int64, currentSecsInDay: Double,
+        rataDie rd: Int64, currentSecsInDay: Double,
         currentYear: Int32, currentCivilMonth: UInt8, currentDay: UInt8,
         targetWeekday: Int, targetWdOrd: Int,
         targetSecsInDay: Double, forward: Bool, tz: TimeZone
@@ -1300,7 +1300,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     /// Fast path for `{month, weekday, weekOfMonth}` — "weekday in Nth week of month".
     private func nextMonthWeekdayWeekOfMonthMatch(
-        rd: Int64, currentSecsInDay: Double, currentYear: Int32,
+        rataDie rd: Int64, currentSecsInDay: Double, currentYear: Int32,
         targetMonth: Int, targetWeekday: Int, targetWeekOfMonth: Int,
         targetSecsInDay: Double, forward: Bool, tz: TimeZone
     ) -> Date? {

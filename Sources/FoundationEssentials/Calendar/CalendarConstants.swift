@@ -12,11 +12,11 @@
 
 extension Calendar {
     /// Time unit constants shared across calendar implementations.
-    static let _kSecondsInWeek = 604_800
-    static let _kSecondsInDay = 86400
-    static let _kSecondsInHour = 3600
-    static let _kSecondsInMinute = 60
+    static let _secondsInWeek = 604_800
+    static let _secondsInDay = 86400
+    static let _secondsInHour = 3600
+    static let _secondsInMinute = 60
 
-    /// Sentinel used by unbounded range loops in date arithmetic.
-    static let _inf_ti: TimeInterval = 4398046511104.0
+    /// Upper bound for date interval durations in unbounded range loops.
+    static let _maxDateIntervalDuration: TimeInterval = 4398046511104.0
 }
