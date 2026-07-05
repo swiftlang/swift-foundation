@@ -106,6 +106,7 @@ private struct LocaleTests {
         await usingCurrentInternationalizationPreferences {
             withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "en_US.UTF-8") {
                 LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_US")
                 #expect(Locale.current.identifier == "en_US")
                 #expect(Locale.current.region?.identifier == "US")
                 #expect(Locale.preferredLanguages == ["en-US"])
@@ -113,6 +114,7 @@ private struct LocaleTests {
 
             withLocaleEnvironment(lcAll: nil, lcMessages: "zh_CN.UTF-8", lang: "en_US.UTF-8") {
                 LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "zh_CN")
                 #expect(Locale.current.identifier == "zh_CN")
                 #expect(Locale.current.region?.identifier == "CN")
                 #expect(Locale.preferredLanguages == ["zh-CN"])
@@ -120,6 +122,7 @@ private struct LocaleTests {
 
             withLocaleEnvironment(lcAll: "de_DE.UTF-8", lcMessages: "zh_CN.UTF-8", lang: "en_US.UTF-8") {
                 LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "de_DE")
                 #expect(Locale.current.identifier == "de_DE")
                 #expect(Locale.current.region?.identifier == "DE")
                 #expect(Locale.preferredLanguages == ["de-DE"])
@@ -127,6 +130,7 @@ private struct LocaleTests {
 
             withLocaleEnvironment(lcAll: "C", lcMessages: "zh_CN.UTF-8", lang: "en_US.UTF-8") {
                 LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
                 #expect(Locale.current.identifier == "en_001")
                 #expect(Locale.current.region?.identifier == "001")
                 #expect(Locale.preferredLanguages == ["en-001"])
@@ -134,9 +138,42 @@ private struct LocaleTests {
 
             withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "pt-BR.UTF-8") {
                 LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "pt_BR")
                 #expect(Locale.current.identifier == "pt_BR")
                 #expect(Locale.current.region?.identifier == "BR")
                 #expect(Locale.preferredLanguages == ["pt-BR"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "fr_FR.utf8@euro") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "fr_FR")
+                #expect(Locale.current.identifier == "fr_FR")
+                #expect(Locale.current.region?.identifier == "FR")
+                #expect(Locale.preferredLanguages == ["fr-FR"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "en_US/UTF-8") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
+                #expect(Locale.current.identifier == "en_001")
+                #expect(Locale.current.region?.identifier == "001")
+                #expect(Locale.preferredLanguages == ["en-001"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "en_US_é") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
+                #expect(Locale.current.identifier == "en_001")
+                #expect(Locale.current.region?.identifier == "001")
+                #expect(Locale.preferredLanguages == ["en-001"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: String(repeating: "a", count: 157)) {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
+                #expect(Locale.current.identifier == "en_001")
+                #expect(Locale.current.region?.identifier == "001")
+                #expect(Locale.preferredLanguages == ["en-001"])
             }
         }
     }

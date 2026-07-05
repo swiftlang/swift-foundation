@@ -291,9 +291,22 @@ struct LocaleCache : Sendable, ~Copyable {
     }
 #else
     private static let fallbackLocaleIdentifier = "en_001"
+    private static let maximumPOSIXLocaleIdentifierUTF8Count = 156 // Source: ICU's ULOC_FULLNAME_CAPACITY - 1.
+    private static let allowedPOSIXLocaleIdentifierScalars = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.@".unicodeScalars)
 
+    // Source: ICU's POSIX default-locale lookup uses LC_MESSAGES, indirectly
+    // following POSIX setlocale(3)'s category order: LC_ALL, the category
+    // variable, then LANG. POSIX locale names commonly use
+    // language[_territory][.codeset][@modifier]; Foundation's locale identifier
+    // for this fallback only needs the base language/territory/variant portion.
     private static func _localeIdentifier(fromPOSIXLocaleIdentifier identifier: String) -> String? {
         guard !identifier.isEmpty && identifier != "C" && identifier != "POSIX" else {
+            return nil
+        }
+        guard identifier.utf8.count <= Self.maximumPOSIXLocaleIdentifierUTF8Count else {
+            return nil
+        }
+        guard identifier.unicodeScalars.allSatisfy(Self.allowedPOSIXLocaleIdentifierScalars.contains) else {
             return nil
         }
 
