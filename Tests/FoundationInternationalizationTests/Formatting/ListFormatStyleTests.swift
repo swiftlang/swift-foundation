@@ -318,6 +318,22 @@ private struct ListFormatStyleTests {
         #expect(["ข้อความธรรมดา", "ข้อความธรรมดา", "1 ภาพ"].formatted(s) == "ข้อความธรรมดา, ข้อความธรรมดา หรือ 1 ภาพ")
     }
 
+    /// Thai `.or` at `.short`/`.narrow`: the pair pattern is `{0}หรือ{1}` with no
+    /// surrounding spaces, so the Thai joiner must inject a space next to a
+    /// non-Thai neighbor, matching Apple-ICU's `ThaiHandler`. The joiner applies
+    /// to all Thai list types, not just `.and`; expected values are Apple-ICU's.
+    @Test func contextualThaiOrShortNarrow() {
+        for width in [Style.Width.short, .narrow] {
+            let s = style("th", type: .or, width: width)
+            // Second item starts with a non-Thai digit -> space before it.
+            #expect(["ข้อความธรรมดา", "1 ภาพ"].formatted(s) == "ข้อความธรรมดาหรือ 1 ภาพ", "width=\(width)")
+            // First item ends with a non-Thai digit -> space after it (before หรือ).
+            #expect(["ภาพ 1", "ข้อความธรรมดา"].formatted(s) == "ภาพ 1 หรือข้อความธรรมดา", "width=\(width)")
+            // All-Thai pair -> no space injected.
+            #expect(["ข้อความธรรมดา", "ข้อความธรรมดา"].formatted(s) == "ข้อความธรรมดาหรือข้อความธรรมดา", "width=\(width)")
+        }
+    }
+
     // MARK: - Edge cases
 
     /// Items containing literal `{0}` placeholders must be passed through verbatim. Ported from ICU `Test9946`.

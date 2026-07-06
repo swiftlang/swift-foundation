@@ -129,9 +129,13 @@ internal final class ListFormatterImpl: Sendable {
 
     private let patterns: ListFormatPatterns
     private let listDirection: Locale.LanguageDirection
-    /// Whether this formatter's locale + type combination triggers the Thai
-    /// contextual joiner rule. Cached to avoid re-deciding per format call.
-    private let isThaiAnd: Bool
+    /// Whether this formatter's locale triggers the Thai contextual joiner rule.
+    /// Cached to avoid re-deciding per format call. Applies to all Thai list types
+    /// (`.and` and `.or`): Apple-ICU installs `ThaiHandler` for any Thai list, and
+    /// the space injection is a no-op when the connector already has surrounding
+    /// spaces (see `applyThai`), so it only changes output for patterns that lack
+    /// them — notably the `.or` pair pattern at `.short`/`.narrow` (`{0}หรือ{1}`).
+    private let isThai: Bool
     /// The contextual substitution rule for this locale, if any (Spanish y→e /
     /// o→u, Hebrew non-Hebrew prefix). `alternativeCondition` tests the item
     /// following the connector; when it fires, `alternativeParsed` is used in
@@ -162,7 +166,7 @@ internal final class ListFormatterImpl: Sendable {
         let localeLanguage = Locale.Language(identifier: signature.localeIdentifier)
         self.listDirection = localeLanguage.characterDirection
         let language = localeLanguage.languageCode?.identifier ?? signature.localeIdentifier
-        self.isThaiAnd = (language == "th") && (signature.listType == .and)
+        self.isThai = (language == "th")
         if let rule = Self.alternativeRule(language: language, type: signature.listType,
                                            endPattern: patterns.end) {
             self.alternativeCondition = rule.condition
@@ -195,7 +199,7 @@ internal final class ListFormatterImpl: Sendable {
         case 1: return wrapBidi(strings[0])
         case 2:
             let a = wrapBidi(strings[0]), b = wrapBidi(strings[1])
-            if isThaiAnd, let f = pairFormatter {
+            if isThai, let f = pairFormatter {
                 return applyThai(f, isPair: true, before: a, after: b)
             }
             // Spanish/Hebrew: if the contextual rule fires for the second item,
@@ -212,13 +216,13 @@ internal final class ListFormatterImpl: Sendable {
             // intermediate `[String]` for the wrapped items. A contextual rule
             // (Spanish/Hebrew) only changes which connector the final join uses,
             // so it stays on this path.
-            if canBuildLinearly, !isThaiAnd,
+            if canBuildLinearly, !isThai,
                let startF = startFormatter, let middleF = middleFormatter, let endF = endFormatter {
                 let lastJoin = firedAlternative(forNextItem: strings[strings.count - 1]) ?? endF
                 return buildLinear(items: strings, start: startF, middle: middleF, end: lastJoin)
             }
             let wrapped = strings.map(wrapBidi)
-            if isThaiAnd,
+            if isThai,
                let startF = startFormatter,
                let middleF = middleFormatter,
                let endF = endFormatter {
