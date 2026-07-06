@@ -47,7 +47,7 @@ target_sources(FoundationInternationalization PRIVATE
     ICUListFormatter.swift
     ListFormatPatterns.swift
     ListFormatStyle.swift
+    ListFormatterImpl.swift
     Measurement+FormatStyle+Stub.swift
-    NativeListFormatter.swift
     URLFormatStyle.swift
     URLParseStrategy.swift)
