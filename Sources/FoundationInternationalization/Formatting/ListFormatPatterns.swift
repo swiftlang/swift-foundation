@@ -21,7 +21,7 @@ internal import _FoundationInternationalizationData
 // MARK: - Types
 
 /// Resolved list-formatting patterns for one (type, width) slot, parameterized by locale.
-internal struct ListPatterns: Hashable, Sendable {
+internal struct ListFormatPatterns: Hashable, Sendable {
     let start: String
     let middle: String
     let end: String
@@ -62,9 +62,9 @@ internal enum ListFormatWidth: Hashable {
 
 // MARK: - Locale lookup
 
-/// Resolve `(locale, type, width)` to a `ListPatterns` row by walking the
+/// Resolve `(locale, type, width)` to a `ListFormatPatterns` row by walking the
 /// parent chain across the packed C data tables.
-internal func _listPatterns(locale: String, type: ListFormatType, width: ListFormatWidth) -> ListPatterns {
+internal func _listFormatPatterns(locale: String, type: ListFormatType, width: ListFormatWidth) -> ListFormatPatterns {
     // Walk the parent chain looking for the first ancestor that has data for
     // this slot. If the walk exhausts without a match, retry from the
     // configured fallback locale.
@@ -77,7 +77,7 @@ internal func _listPatterns(locale: String, type: ListFormatType, width: ListFor
     }
     // Genuinely no data — return an empty placeholder. In practice this only
     // happens if root itself is missing from the data set, which is invalid.
-    return ListPatterns(start: "{0}, {1}", middle: "{0}, {1}", end: "{0}, {1}", pair: "{0}, {1}")
+    return ListFormatPatterns(start: "{0}, {1}", middle: "{0}, {1}", end: "{0}, {1}", pair: "{0}, {1}")
 }
 
 /// Walk the parent chain for `locale`, returning the row index of the first
@@ -178,15 +178,15 @@ private func _parentLookup(child: String) -> String? {
     }
 }
 
-/// Materialize a `ListPatterns` row by indexing into the row table and the
+/// Materialize a `ListFormatPatterns` row by indexing into the row table and the
 /// pattern pool. Allocates four Swift strings per call; cache the result if
 /// you'll use it many times.
-private func _row(at index: UInt16) -> ListPatterns {
+private func _row(at index: UInt16) -> ListFormatPatterns {
     let rowData = withUnsafePointer(to: _ListFormatRows) { ptr in
         let base = UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatRow.self)
         return base[Int(index)]
     }
-    return ListPatterns(
+    return ListFormatPatterns(
         start: _pattern(at: rowData.start),
         middle: _pattern(at: rowData.middle),
         end: _pattern(at: rowData.end),
