@@ -117,7 +117,7 @@ internal struct SimpleFormatter: Equatable {
 /// wrapping, which isolates any item containing a character of the opposite
 /// direction to the list, matching `ListFormatter::needsBidiIsolates`).
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class NativeListFormatter: Sendable {
+internal final class ListFormatterImpl: Sendable {
 
     struct Signature: Hashable {
         let localeIdentifier: String
@@ -125,9 +125,9 @@ internal final class NativeListFormatter: Sendable {
         let width: ListFormatWidth
     }
 
-    private static let cache = Mutex<[Signature: NativeListFormatter]>([:])
+    private static let cache = Mutex<[Signature: ListFormatterImpl]>([:])
 
-    private let patterns: ListPatterns
+    private let patterns: ListFormatPatterns
     private let listDirection: Locale.LanguageDirection
     /// Whether this formatter's locale + type combination triggers the Thai
     /// contextual joiner rule. Cached to avoid re-deciding per format call.
@@ -155,7 +155,7 @@ internal final class NativeListFormatter: Sendable {
     private let canBuildLinearly: Bool
 
     private init(signature: Signature) {
-        let patterns = _listPatterns(locale: signature.localeIdentifier,
+        let patterns = _listFormatPatterns(locale: signature.localeIdentifier,
                                      type: signature.listType,
                                      width: signature.width)
         self.patterns = patterns
@@ -507,7 +507,7 @@ internal final class NativeListFormatter: Sendable {
         return nil
     }
 
-    internal static func formatter<Style, Base>(for style: ListFormatStyle<Style, Base>) -> NativeListFormatter {
+    internal static func formatter<Style, Base>(for style: ListFormatStyle<Style, Base>) -> ListFormatterImpl {
         let signature = Signature(localeIdentifier: style.locale.identifier,
                                   listType: ListFormatType(style.listType),
                                   width: ListFormatWidth(style.width))
@@ -516,7 +516,7 @@ internal final class NativeListFormatter: Sendable {
         }
         // Build the formatter outside the lock so a slow construction doesn't
         // block lookups for other signatures.
-        let formatter = NativeListFormatter(signature: signature)
+        let formatter = ListFormatterImpl(signature: signature)
         return cache.withLock {
             if let existing = $0[signature] {
                 // Another thread beat us to it; use the existing instance.

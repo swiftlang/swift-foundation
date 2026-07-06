@@ -157,7 +157,7 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
         #if FOUNDATION_LIST_FORMAT_ICU
         return ICUListFormatter.formatter(for: self).format(strings: strings)
         #else
-        return NativeListFormatter.formatter(for: self).format(strings: strings)
+        return ListFormatterImpl.formatter(for: self).format(strings: strings)
         #endif
     }
 
