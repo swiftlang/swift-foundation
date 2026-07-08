@@ -252,8 +252,8 @@ let result = try await run(
     return lineCount
 }
 
-print(result.closureResult)         // The line count returned from the closure (streaming output).
-print(result.standardError ?? "")   // The captured standard error (collected output).
+print(result.closureResult)  // The line count returned from the closure (streaming output).
+print(result.standardError)  // The captured standard error (collected output).
 ```
 
 
@@ -539,6 +539,41 @@ let monitorResult = try await Subprocess.run(
         }
     }
 }
+```
+
+
+## Narrow `StringOutput` to a Non-Optional `String`
+
+In SF-0007, the `StringOutput` type declared its `OutputType` as an *optional* `String?`, since converting raw bytes to String may not always succeed due to invalid bytes. This design decision meant that developers would always have to pay the cost of unwrapping the collected string value, even if it succeeds most of the time. We propose narrowing `StringOutput` to a non-optional `String` and using `String(decoding:as:)` as the underlying method to construct the `String`s:
+
+```swift
+public struct StringOutput<Encoding: Unicode.Encoding>: OutputProtocol, ErrorOutputProtocol {
+    public typealias OutputType = String
+    ...
+}
+```
+
+`String(decoding:as:)` always succeeds and replaces invalid bytes with the Unicode replacement character (U+FFFD). Developers could still detect the replacement character if they wish to, while the majority of use cases no longer have to pay the price of unwrapping.
+
+```swift
+// Before (SF-0007): `standardOutput` is `String?`, so every access unwraps first.
+let result = try await run(
+    .path("/bin/echo"),
+    arguments: ["Hello, world!"],
+    output: .string(limit: 1024)
+)
+guard let output = result.standardOutput else { return }
+print(output.trimmingCharacters(in: .whitespacesAndNewlines))
+// ...or the equally common `(result.standardOutput ?? "").trimming...`
+// and `result.standardOutput?.trimming...` idioms.
+
+// After: `standardOutput` is a non-optional `String`.
+let result = try await run(
+    .path("/bin/echo"),
+    arguments: ["Hello, world!"],
+    output: .string(limit: 1024)
+)
+print(result.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines))
 ```
 
 
