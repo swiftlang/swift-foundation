@@ -606,7 +606,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         var preRenameState = stat()
         let result = fstatat(destDirfd, basenameRep, &preRenameState, AT_SYMLINK_NOFOLLOW)
         if result == 0 {
-            mode = mode_t(preRenameState.st_mode & ~S_IFMT)
+            mode = mode_t(preRenameState.st_mode) & ~S_IFMT
         } else if (errno != ENOENT) && (errno != ENAMETOOLONG) {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
