@@ -912,8 +912,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     var description: String {
         var urlString = relativeString
         if let scheme, scheme.lowercased().utf8.elementsEqual(Self.dataSchemeUTF8), urlString.utf8.count > 128 {
-            let prefix = urlString.utf8.prefix(120)
-            let suffix = urlString.utf8.suffix(8)
+            let prefix = Substring(urlString.utf8.prefix(120))
+            let suffix = Substring(urlString.utf8.suffix(8))
             urlString = "\(prefix) ... \(suffix)"
         }
         if let baseURL {

@@ -4483,6 +4483,31 @@ private struct URLTests {
         #expect(absoluteURL.absoluteString == "https://example.com/dir/caf%C3%A9")
     }
 
+    @Test func dataURLDescriptionTruncation() throws {
+        // Short data: URLs are described in full
+        let shortDataURL = try #require(URL(string: "data:text/plain,hello"))
+        #expect(shortDataURL.description == shortDataURL.absoluteString)
+        #expect(shortDataURL.debugDescription == shortDataURL.description)
+
+        // data: URLs longer than 128 bytes are truncated
+        // as "<120-byte prefix> ... <8-byte suffix>".
+        let payload = String(repeating: "A", count: 200)
+        let longDataURL = try #require(URL(string: "data:text/plain;base64,\(payload)"))
+        #expect(longDataURL.absoluteString.utf8.count > 128)
+
+        let description = longDataURL.description
+        #expect(description.utf8.count == 133)
+        #expect(description.hasPrefix("data:text/plain;base64,"))
+        #expect(description.hasSuffix(" ... AAAAAAAA"))
+        #expect(description != longDataURL.absoluteString)
+        #expect(longDataURL.debugDescription == description)
+
+        // Non-data URLs are never truncated, even when longer than 128 bytes
+        let longHTTPURL = try #require(URL(string: "https://example.com/\(payload)"))
+        #expect(longHTTPURL.absoluteString.utf8.count > 128)
+        #expect(longHTTPURL.description == longHTTPURL.absoluteString)
+    }
+
 #if FOUNDATION_FRAMEWORK
     @Test func componentsBridging() {
         var nsURLComponents = NSURLComponents(
