@@ -74,6 +74,12 @@ extension _URLFlags {
     static var didEncodeFragment:   Self { .shouldEncodeFragment }
 }
 
+private extension _URLFlags {
+    mutating func set(_ flags: _URLFlags, _ value: Bool) {
+        if value { insert(flags) } else { remove(flags) }
+    }
+}
+
 internal struct _URLInfo: _URLParseable, _URLHeader {
     static var maxStringLength: Int { Int.max }
     var string: String
@@ -114,7 +120,6 @@ internal struct _URLInfo: _URLParseable, _URLHeader {
         return s.withUTF8 { block($0.span) }
     }
 
-    @inline(__always)
     private func substring(_ range: Range<Int>) -> Substring {
         let start = string.utf8.index(string.startIndex, offsetBy: range.startIndex)
         let end = string.utf8.index(string.startIndex, offsetBy: range.endIndex)
@@ -214,7 +219,6 @@ extension _URLInfo {
         )
     }
 
-    @inline(__always)
     private static func resolveBaseURL(_ base: URL?, updating flags: inout _URLFlags) -> URL? {
         if flags.contains(.hasScheme) {
             // Absolute file path, drop the base URL
@@ -282,7 +286,7 @@ extension _URLInfo {
                 isDirectory: isDirectory
             )
             let path = buffer.span.extracting(first: finalLength)
-            return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, encodeSemicolons: false)
+            return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: .swiftURL)
         }
 
         let base = resolveBaseURL(base, updating: &flags)
@@ -306,101 +310,130 @@ extension _URLInfo {
         case unknown
     }
 
-    func replacing(
-        path: borrowing Span<UInt8>,
-        encodingState: PathEncodingState = .unknown
+    func replacingPath(
+        unsafeUninitializedCapacity capacity: Int,
+        initializingWith initializer: (
+            _ buffer: UnsafeMutableBufferPointer<UInt8>
+        ) -> (initializedCount: Int, encodingState: PathEncodingState)
     ) -> _URLInfo {
-        let isDirectory = path.withUnsafeBufferPointer {
-            URL.hasDirectoryPath($0, pathEnd: $0.count, pathLength: $0.count)
-        }
-        return replacing(path: path, isDirectory: isDirectory, encodingState: encodingState)
-    }
+        withSpan { stringSpan in
+            // Values the String closure reports back to us
+            var pathLength = 0
+            var hasAbsolutePath = false
+            var hasDirectoryPath = false
+            var hasEncodedPath = false
 
-    func replacing(
-        path newPath: borrowing Span<UInt8>,
-        isDirectory: Bool,
-        encodingState: PathEncodingState
-    ) -> _URLInfo {
-        let pathDelta = newPath.count - pathRange.count
-        let newString = withSpan { stringSpan in
-            let newLength = stringSpan.count + pathDelta
-            return String(unsafeUninitializedCapacity: newLength) { buffer in
+            let newCapacity = stringSpan.count - pathRange.count + capacity
+            let newString = String(unsafeUninitializedCapacity: newCapacity) { buffer in
                 var writeIndex = buffer.initialize(
                     fromSpan: stringSpan.extracting(..<pathRange.startIndex)
                 )
-                writeIndex = buffer[writeIndex...].initialize(
-                    fromSpan: newPath
+                let pathAllocation = UnsafeMutableBufferPointer(
+                    rebasing: buffer[writeIndex..<(writeIndex + capacity)]
                 )
-                writeIndex = buffer[writeIndex...].initialize(
+                let (initializedCount, encodingState) = initializer(pathAllocation)
+                pathLength = initializedCount
+                writeIndex += pathLength
+
+                let path = UnsafeBufferPointer(rebasing: pathAllocation[..<pathLength])
+                hasAbsolutePath = (path.first == ._slash)
+                hasDirectoryPath = path.hasDirectoryPath
+                hasEncodedPath = switch encodingState {
+                case .notEncoded: false
+                case .encoded: true
+                case .unknown: path.contains(UInt8(ascii: "%"))
+                }
+                assert(hasEncodedPath == path.contains(UInt8(ascii: "%")))
+
+                return buffer[writeIndex...].initialize(
                     fromSpan: stringSpan.extracting(pathRange.endIndex...)
                 )
-                return writeIndex
+            }
+
+            var flags = flags
+            if hasAbsolutePath {
+                flags.insert([.hasOldPath, .isDecomposable])
+            } else if pathLength == 0 {
+                flags.set(.hasOldPath, flags.contains(.hasOldNetLocation))
+            } else {
+                flags.set(.hasOldPath, flags.contains(.isDecomposable))
+            }
+            flags.set(.hasDirectoryPath, hasDirectoryPath)
+            flags.set(.hasEncodedPath, hasEncodedPath)
+            // Remove all .didEncode flags since we're treating this
+            // as a new, validly percent-encoded (UTF8) URL string.
+            flags.remove([
+                .hasNonUTF8Encoding,
+                .didEncodeUser, .didEncodePassword, .didEncodeHost,
+                .didEncodePath, .didEncodeQuery, .didEncodeFragment
+            ])
+
+            let pathDelta = pathLength - pathRange.count
+
+            var result = self
+            result.string = newString
+            result.flags = flags
+            result.pathRange = pathRange.extended(by: pathDelta)
+
+            // Shift the query and fragment ranges to account for the new path
+            if flags.contains(.hasQuery) {
+                result.queryRange = queryRange.shifted(by: pathDelta)
+            }
+            if flags.contains(.hasFragment) {
+                result.fragmentRange = fragmentRange.shifted(by: pathDelta)
+            }
+
+            // We should have the exact same ranges and flags if we re-parse
+            assert(result.isEquivalent(to: _URLInfo.parse(string: newString, encodingInvalidCharacters: false)))
+            return result
+        }
+    }
+
+    private func isEquivalent(to other: _URLInfo?) -> Bool {
+        guard let other else { return false }
+        // Don't include the Impl type flags or flags that might depend
+        // on the base URL such as .isFileURL and .isFileReferenceURL.
+        let flagsToIgnore: _URLFlags = [.implTypeMask, .isFileURL, .isFileReferenceURL]
+        return string == other.string
+        && flags.subtracting(flagsToIgnore) == other.flags.subtracting(flagsToIgnore)
+        && schemeRange == other.schemeRange
+        && hostRange == other.hostRange
+        && portRange == other.portRange
+        && pathRange == other.pathRange
+        && queryRange == other.queryRange
+        && fragmentRange == other.fragmentRange
+        && userRange == other.userRange
+        && passwordRange == other.passwordRange
+    }
+
+    func appendingTrailingSlash() -> _URLInfo {
+        withSpan { stringSpan in
+            let path = stringSpan.extracting(pathRange)
+            guard path.last != UInt8(ascii: "/") else {
+                return self
+            }
+            return replacingPath(unsafeUninitializedCapacity: path.count + 1) { buffer in
+                let pathLength = buffer.initialize(fromSpan: path)
+                buffer[pathLength] = UInt8(ascii: "/")
+                return (pathLength + 1, flags.contains(.hasEncodedPath) ? .encoded : .notEncoded)
             }
         }
-
-        // Update flags for the new path
-        var flags = flags
-        if (!newPath.isEmpty && flags.contains(.isDecomposable)) ||
-            (newPath.isEmpty && flags.contains(.hasOldNetLocation)) {
-            flags.insert(.hasOldPath)
-        } else {
-            flags.remove(.hasOldPath)
-        }
-
-        assert(isDirectory == newPath.withUnsafeBufferPointer {
-            URL.hasDirectoryPath($0, pathEnd: $0.count, pathLength: $0.count)
-        })
-        if isDirectory {
-            flags.insert(.hasDirectoryPath)
-        } else {
-            flags.remove(.hasDirectoryPath)
-        }
-
-        let hasEncodedPath: Bool
-        switch encodingState {
-        case .notEncoded:
-            assert(!newPath.contains(UInt8(ascii: "%")))
-            hasEncodedPath = false
-        case .encoded:
-            assert(newPath.contains(UInt8(ascii: "%")))
-            hasEncodedPath = true
-        case .unknown:
-            hasEncodedPath = newPath.contains(UInt8(ascii: "%"))
-        }
-
-        if hasEncodedPath {
-            flags.insert(.hasEncodedPath)
-        } else {
-            flags.remove(.hasEncodedPath)
-        }
-
-        // Remove all .didEncode flags since we're treating this
-        // as a new, validly percent-encoded (UTF8) URL string.
-        flags.remove([
-            .hasNonUTF8Encoding,
-            .didEncodeUser, .didEncodePassword, .didEncodeHost,
-            .didEncodePath, .didEncodeQuery, .didEncodeFragment
-        ])
-
-        var result = self
-        result.string = newString
-        result.flags = flags
-        result.pathRange = pathRange.startIndex..<(pathRange.startIndex + newPath.count)
-
-        // Shift the query and fragment ranges to account for the new path
-        if flags.contains(.hasQuery) {
-            result.queryRange = queryRange.shifted(by: pathDelta)
-        }
-        if flags.contains(.hasFragment) {
-            result.fragmentRange = fragmentRange.shifted(by: pathDelta)
-        }
-        return result
     }
 }
 
 private extension Range<Int> {
+    func extended(by delta: Int) -> Range<Int> {
+        lowerBound..<(upperBound + delta)
+    }
+
     func shifted(by delta: Int) -> Range<Int> {
-        return (lowerBound + delta)..<(upperBound + delta)
+        (lowerBound + delta)..<(upperBound + delta)
+    }
+}
+
+private extension UnsafeBufferPointer<UInt8> {
+    var hasDirectoryPath: Bool {
+        URL.hasDirectoryPath(self, pathEnd: count, pathLength: count)
     }
 }
 

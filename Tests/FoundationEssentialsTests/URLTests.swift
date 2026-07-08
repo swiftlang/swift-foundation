@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift project authors
+// Copyright (c) 2024-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -561,6 +561,45 @@ private struct URLTests {
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
+    @Test func fileURLWithPathDirectoryHintConversion() throws {
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+
+        // URL(fileURLWithPath:isDirectory:relativeTo:) must forward
+        // `isDirectory` to URL(filePath:directoryHint:relativeTo:).
+        let dir = URL(fileURLWithPath: "sub", isDirectory: true, relativeTo: base)
+        #expect(dir.hasDirectoryPath)
+        #expect(dir == URL(filePath: "sub", directoryHint: .isDirectory, relativeTo: base))
+
+        let notDir = URL(fileURLWithPath: "sub", isDirectory: false, relativeTo: base)
+        #expect(!notDir.hasDirectoryPath)
+        #expect(notDir == URL(filePath: "sub", directoryHint: .notDirectory, relativeTo: base))
+
+        let absDir = URL(fileURLWithPath: "/abs/path", isDirectory: true)
+        #expect(absDir.hasDirectoryPath)
+        #expect(absDir.absoluteString == "file:///abs/path/")
+
+        let absNotDir = URL(fileURLWithPath: "/abs/path", isDirectory: false)
+        #expect(!absNotDir.hasDirectoryPath)
+        #expect(absNotDir.absoluteString == "file:///abs/path")
+
+        // An empty path is converted to "." before calling URL(filePath:).
+        let emptyDir = URL(fileURLWithPath: "", isDirectory: true, relativeTo: base)
+        #expect(emptyDir == URL(filePath: ".", directoryHint: .isDirectory, relativeTo: base))
+
+        // URL(fileURLWithPath:relativeTo:) infers directory-ness:
+        // a trailing slash maps to .isDirectory, otherwise .checkFileSystem.
+        let inferredDir = URL(fileURLWithPath: "sub/", relativeTo: base)
+        #expect(inferredDir.hasDirectoryPath)
+        #expect(inferredDir == URL(filePath: "sub/", directoryHint: .isDirectory, relativeTo: base))
+
+        // Without a trailing slash it maps to .checkFileSystem
+        let checked = URL(fileURLWithPath: "sub", relativeTo: base)
+        #expect(checked == URL(filePath: "sub", directoryHint: .checkFileSystem, relativeTo: base))
+
+        let emptyChecked = URL(fileURLWithPath: "", relativeTo: base)
+        #expect(emptyChecked == URL(filePath: ".", directoryHint: .checkFileSystem, relativeTo: base))
+    }
+
     @Test func filePathAPIsWithSemicolon() throws {
         // The NSURL and CFURL file path APIs encode ";" in file paths
         // for compatibility. URL and other modern parsers do not.
@@ -575,6 +614,57 @@ private struct URLTests {
         url.appendPathExtension("some;ext")
         #expect(url.path == "/path;to/file/hello;world.some;ext")
         #expect(url.relativeString == "file:///path;to/file/hello;world.some;ext")
+    }
+
+    @Test func filePathAPIMisuse() throws {
+        // Note: this exercises the new (non-compatibility) path
+        var url = URL(filePath: "file:///some/path")
+        #expect(url.relativePath == "file:///some/path")
+        #expect(url.relativePath(percentEncoded: true) == "file%3A///some/path")
+        #expect(url.relativeString == "file%3A///some/path")
+
+        url.append(path: "hello")
+        #expect(url.relativePath == "file:///some/path/hello")
+        #expect(url.relativePath(percentEncoded: true) == "file%3A///some/path/hello")
+        #expect(url.relativeString == "file%3A///some/path/hello")
+
+        url = URL(filePath: "http://example.com")
+        #expect(url.relativePath == "http://example.com")
+        #expect(url.relativePath(percentEncoded: true) == "http%3A//example.com")
+        #expect(url.relativeString == "http%3A//example.com")
+    }
+
+    @Test func filePathFirstSegmentColon() throws {
+        // Any ":" in the first segment of a relative path is encoded
+        // so the path can't be re-parsed as "scheme:..."
+        var url = URL(filePath: "foo:bar")
+        #expect(url.relativeString == "foo%3Abar")
+        #expect(url.relativePath == "foo:bar")
+        #expect(URL(string: url.relativeString)?.scheme == nil)
+
+        // The encoding survives standardization
+        #expect(url.standardized.relativeString == "foo%3Abar")
+
+        // Absolute paths are unambiguous, so ":" is left alone
+        url = URL(filePath: "/foo:bar")
+        #expect(url.relativeString == "file:///foo:bar")
+        #expect(url.path() == "/foo:bar")
+
+        // Only the first segment needs to be considered
+        url = URL(filePath: "foo/bar:baz")
+        #expect(url.relativeString == "foo/bar:baz")
+        #expect(URL(string: url.relativeString)?.scheme == nil)
+
+        // Every ":" in the first segment is encoded, even when the prefix
+        // could not be a valid scheme (e.g. starts with a digit or "%").
+        #expect(URL(filePath: "1:bar").relativeString == "1%3Abar")
+        #expect(URL(filePath: "%43:bar").relativeString == "%2543%3Abar")
+
+        // Multiple colons in the first segment are all encoded
+        url = URL(filePath: "a:b:c")
+        #expect(url.relativeString == "a%3Ab%3Ac")
+        #expect(url.relativePath == "a:b:c")
+        #expect(URL(string: url.relativeString)?.scheme == nil)
     }
 
     #if FOUNDATION_FRAMEWORK
@@ -734,6 +824,44 @@ private struct URLTests {
     }
     #endif
 
+    @Test func appendingPathWithNull() throws {
+        // FSR decomposition fails when there's an embedded null byte,
+        // so URL falls back to percent-encoding the input as-is.
+        let base = URL(filePath: "/base/")
+        var appended = base.appending(path: "bar\u{0}baz")
+        #expect(appended.path() == "/base/bar%00baz")
+
+        appended = base.appending(path: "\u{0}baz")
+        #expect(appended.path() == "/base/%00baz")
+
+        // Decomposition fails, so é remains in NFC form
+        appended = base.appending(path: "caf\u{E9}\u{0}bar")
+        #expect(appended.path() == "/base/caf%C3%A9%00bar")
+
+        // Trailing null bytes are stripped
+        appended = base.appending(path: "bar\u{0}")
+        #expect(appended.path() == "/base/bar")
+
+        appended = base.appending(path: "bar\u{0}\u{0}")
+        #expect(appended.path() == "/base/bar")
+
+        appended = base.appending(path: "\u{0}")
+        #expect(appended.path() == "/base/")
+
+        appended = base.appending(component: "bar\u{0}")
+        #expect(appended.path() == "/base/bar")
+
+        // File path initializer should also strip trailing null bytes
+        // for compatibility with previous NSURL/CFURL behavior
+        #expect(URL(filePath: "/base\u{0}").path() == "/base")
+        #expect(URL(filePath: "/base\u{0}\u{0}").path() == "/base")
+
+        // Non-file URLs keep nulls percent-encoded instead of stripping
+        let httpURL = URL(string: "https://example.com/base")!
+        #expect(httpURL.appending(path: "x\u{0}").path() == "/base/x%00")
+        #expect(httpURL.appending(component: "x\u{0}").path() == "/base/x%00")
+    }
+
     #if os(Windows)
     @Test func windowsDriveLetterPath() throws {
         var url = URL(filePath: #"C:\test\path"#, directoryHint: .notDirectory)
@@ -764,17 +892,9 @@ private struct URLTests {
 
         let base = URL(filePath: #"\d:\path\"#, directoryHint: .isDirectory)
         url = URL(filePath: #"%43:\fake\letter"#, directoryHint: .notDirectory, relativeTo: base)
-        if foundation_swift_url_v2_enabled() {
-            // More compatible with the old implementation recognizing that
-            // non-scheme characters like "%" cannot be interpreted as part
-            // of a scheme and must instead represent a relative path.
-            #expect(url.relativeString == "%2543:/fake/letter")
-            #expect(url.path() == "/d:/path/%2543:/fake/letter")
-        } else {
-            // ":" is encoded to "%3A" in the first path segment so it's not mistaken as the scheme separator
-            #expect(url.relativeString == "%2543%3A/fake/letter")
-            #expect(url.path() == "/d:/path/%2543%3A/fake/letter")
-        }
+        // ":" is encoded to "%3A" in the first path segment so it's not mistaken as the scheme separator
+        #expect(url.relativeString == "%2543%3A/fake/letter")
+        #expect(url.path() == "/d:/path/%2543%3A/fake/letter")
         #expect(url.path == "d:/path/%43:/fake/letter")
         #expect(url.fileSystemPath() == "d:/path/%43:/fake/letter")
 
@@ -829,6 +949,10 @@ private struct URLTests {
         #expect(
             base.appending(component: "AC/DC").absoluteString ==
             "https://www.example.com/AC%2FDC"
+        )
+        #expect(
+            base.appending(component: "AC/DC/").absoluteString ==
+            "https://www.example.com/AC%2FDC%2F"
         )
         var testAppendComponent = base
         testAppendComponent.append(component: "AC/DC")
@@ -946,6 +1070,1465 @@ private struct URLTests {
         )
         #expect(builder(tempDirectory).hasDirectoryPath)
         try FileManager.default.removeItem(at: builder(tempDirectory))
+    }
+
+    @Test func appendingComponent() throws {
+        var url = try #require(URL(string: "https://example.com/api"))
+        var result = url.appending(component: "AC/DC", directoryHint: .isDirectory)
+        #expect(result.absoluteString == "https://example.com/api/AC%2FDC/")
+
+        result = url.appending(component: "/leading")
+        #expect(result.absoluteString == "https://example.com/api/%2Fleading")
+
+        result = url.appending(component: "//double//")
+        #expect(result.absoluteString == "https://example.com/api/%2F%2Fdouble%2F%2F")
+
+        // A trailing slash is encoded, so it never implies a directory.
+        result = url.appending(component: "x/")
+        #expect(result.absoluteString == "https://example.com/api/x%2F")
+
+        // For a non-file URL, .checkFileSystem degrades to .inferFromPath.
+        // Since the trailing "/" is percent-encoded, it shouldn't be treated
+        // as a directory hint, so .checkFileSystem matches .inferFromPath
+        // (no trailing slash) rather than honoring the slash.
+        let checkFileSystem = url.appending(component: "x/", directoryHint: .checkFileSystem)
+        let inferFromPath = url.appending(component: "x/", directoryHint: .inferFromPath)
+        #expect(checkFileSystem.absoluteString == "https://example.com/api/x%2F")
+        #expect(checkFileSystem.absoluteString == inferFromPath.absoluteString)
+
+        // The explicit .isDirectory hint still appends a trailing slash.
+        result = url.appending(component: "x/", directoryHint: .isDirectory)
+        #expect(result.absoluteString == "https://example.com/api/x%2F/")
+
+        result = url.appending(component: "100%")
+        #expect(result.absoluteString == "https://example.com/api/100%25")
+
+        result = url.appending(component: "", directoryHint: .isDirectory)
+        #expect(result.absoluteString == "https://example.com/api/")
+
+        // Dot components are encoded literally for non-file URLs (not treated as dot segments)
+        result = url.appending(component: "..")
+        #expect(result.absoluteString == "https://example.com/api/..")
+
+        result = url.appending(component: ".")
+        #expect(result.absoluteString == "https://example.com/api/.")
+
+        // Empty component with notDirectory hint preserves trailing slash
+        url = try #require(URL(string: "https://example.com/api/"))
+        result = url.appending(component: "", directoryHint: .notDirectory)
+        #expect(result.absoluteString == "https://example.com/api/")
+
+        url = try #require(URL(string: "https://example.com"))
+        result = url.appending(component: "café")
+        #expect(result.absoluteString == "https://example.com/caf%C3%A9")
+    }
+
+    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
+    func appendingPathComponentFileCases() throws {
+        func check(
+            _ base: URL,
+            _ component: String,
+            notDirectory expectedNotDir: String,
+            isDirectory expectedIsDir: String,
+            inferFromPath expectedInferred: String,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
+            func sourceOffset(_ offset: Int) -> SourceLocation {
+                var l = sourceLocation
+                l.line += offset
+                return l
+            }
+            var result = base.appending(path: component, directoryHint: .notDirectory)
+            #expect(result.absoluteString == expectedNotDir, Comment(rawValue: result.absoluteString), sourceLocation: sourceOffset(1))
+            #expect(result.host == base.host, Comment(rawValue: result.host ?? "nil"), sourceLocation: sourceOffset(1))
+            result = base.appending(path: component, directoryHint: .isDirectory)
+            #expect(result.absoluteString == expectedIsDir, Comment(rawValue: result.absoluteString), sourceLocation: sourceOffset(2))
+            #expect(result.host == base.host, Comment(rawValue: result.host ?? "nil"), sourceLocation: sourceOffset(2))
+            result = base.appending(path: component, directoryHint: .inferFromPath)
+            #expect(result.absoluteString == expectedInferred, Comment(rawValue: result.absoluteString), sourceLocation: sourceOffset(3))
+            #expect(result.host == base.host, Comment(rawValue: result.host ?? "nil"), sourceLocation: sourceOffset(3))
+        }
+
+        // Base file URL with no trailing slash
+        var base = URL(filePath: "/file/path", directoryHint: .notDirectory)
+
+        check(base, "",
+              notDirectory:     "file:///file/path/",
+              isDirectory:      "file:///file/path/",
+              inferFromPath:    "file:///file/path/")
+        check(base, "/",
+              notDirectory:     "file:///file/path/",
+              isDirectory:      "file:///file/path/",
+              inferFromPath:    "file:///file/path/")
+        check(base, "//",
+              notDirectory:     "file:///file/path/",
+              isDirectory:      "file:///file/path//",
+              inferFromPath:    "file:///file/path//")
+        check(base, ".",
+              notDirectory:     "file:///file/path/.",
+              isDirectory:      "file:///file/path/./",
+              inferFromPath:    "file:///file/path/.")
+        check(base, "..",
+              notDirectory:     "file:///file/path/..",
+              isDirectory:      "file:///file/path/../",
+              inferFromPath:    "file:///file/path/..")
+        check(base, "/.",
+              notDirectory:     "file:///file/path/.",
+              isDirectory:      "file:///file/path/./",
+              inferFromPath:    "file:///file/path/.")
+        check(base, "/..",
+              notDirectory:     "file:///file/path/..",
+              isDirectory:      "file:///file/path/../",
+              inferFromPath:    "file:///file/path/..")
+        check(base, "./",
+              notDirectory:     "file:///file/path/.",
+              isDirectory:      "file:///file/path/./",
+              inferFromPath:    "file:///file/path/./")
+        check(base, "../",
+              notDirectory:     "file:///file/path/..",
+              isDirectory:      "file:///file/path/../",
+              inferFromPath:    "file:///file/path/../")
+        check(base, "a",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a/",
+              inferFromPath:    "file:///file/path/a")
+        check(base, "/a",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a/",
+              inferFromPath:    "file:///file/path/a")
+        check(base, "a/",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a/",
+              inferFromPath:    "file:///file/path/a/")
+        check(base, "a//",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a//",
+              inferFromPath:    "file:///file/path/a//")
+        check(base, "//a",
+              notDirectory:     "file:///file/path//a",
+              isDirectory:      "file:///file/path//a/",
+              inferFromPath:    "file:///file/path//a")
+        #if FOUNDATION_FRAMEWORK
+        check(base, "é",
+              notDirectory:     "file:///file/path/e%CC%81",
+              isDirectory:      "file:///file/path/e%CC%81/",
+              inferFromPath:    "file:///file/path/e%CC%81")
+        #endif
+
+        // Base file URL with trailing slash
+        base = URL(filePath: "/file/path/", directoryHint: .isDirectory)
+
+        check(base, "",
+              notDirectory:     "file:///file/path/",
+              isDirectory:      "file:///file/path/",
+              inferFromPath:    "file:///file/path/")
+        check(base, "/",
+              notDirectory:     "file:///file/path/",
+              isDirectory:      "file:///file/path/",
+              inferFromPath:    "file:///file/path/")
+        check(base, "//",
+              notDirectory:     "file:///file/path//",
+              isDirectory:      "file:///file/path//",
+              inferFromPath:    "file:///file/path//")
+        check(base, ".",
+              notDirectory:     "file:///file/path/.",
+              isDirectory:      "file:///file/path/./",
+              inferFromPath:    "file:///file/path/.")
+        check(base, "..",
+              notDirectory:     "file:///file/path/..",
+              isDirectory:      "file:///file/path/../",
+              inferFromPath:    "file:///file/path/..")
+        check(base, "/.",
+              notDirectory:     "file:///file/path/.",
+              isDirectory:      "file:///file/path/./",
+              inferFromPath:    "file:///file/path/.")
+        check(base, "/..",
+              notDirectory:     "file:///file/path/..",
+              isDirectory:      "file:///file/path/../",
+              inferFromPath:    "file:///file/path/..")
+        check(base, "./",
+              notDirectory:     "file:///file/path/.",
+              isDirectory:      "file:///file/path/./",
+              inferFromPath:    "file:///file/path/./")
+        check(base, "../",
+              notDirectory:     "file:///file/path/..",
+              isDirectory:      "file:///file/path/../",
+              inferFromPath:    "file:///file/path/../")
+        check(base, "a",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a/",
+              inferFromPath:    "file:///file/path/a")
+        check(base, "/a",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a/",
+              inferFromPath:    "file:///file/path/a")
+        check(base, "a/",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a/",
+              inferFromPath:    "file:///file/path/a/")
+        check(base, "a//",
+              notDirectory:     "file:///file/path/a",
+              isDirectory:      "file:///file/path/a//",
+              inferFromPath:    "file:///file/path/a//")
+        check(base, "//a",
+              notDirectory:     "file:///file/path//a",
+              isDirectory:      "file:///file/path//a/",
+              inferFromPath:    "file:///file/path//a")
+        #if FOUNDATION_FRAMEWORK
+        check(base, "é",
+              notDirectory:     "file:///file/path/e%CC%81",
+              isDirectory:      "file:///file/path/e%CC%81/",
+              inferFromPath:    "file:///file/path/e%CC%81")
+        #endif
+
+        // Base file URL with two trailing slashes
+        base = URL(filePath: "/file/path//", directoryHint: .isDirectory)
+
+        check(base, "",
+              notDirectory:     "file:///file/path//",
+              isDirectory:      "file:///file/path//",
+              inferFromPath:    "file:///file/path//")
+        check(base, "/",
+              notDirectory:     "file:///file/path//",
+              isDirectory:      "file:///file/path//",
+              inferFromPath:    "file:///file/path//")
+        check(base, "//",
+              notDirectory:     "file:///file/path///",
+              isDirectory:      "file:///file/path///",
+              inferFromPath:    "file:///file/path///")
+        check(base, ".",
+              notDirectory:     "file:///file/path//.",
+              isDirectory:      "file:///file/path//./",
+              inferFromPath:    "file:///file/path//.")
+        check(base, "..",
+              notDirectory:     "file:///file/path//..",
+              isDirectory:      "file:///file/path//../",
+              inferFromPath:    "file:///file/path//..")
+        check(base, "/.",
+              notDirectory:     "file:///file/path//.",
+              isDirectory:      "file:///file/path//./",
+              inferFromPath:    "file:///file/path//.")
+        check(base, "/..",
+              notDirectory:     "file:///file/path//..",
+              isDirectory:      "file:///file/path//../",
+              inferFromPath:    "file:///file/path//..")
+        check(base, "./",
+              notDirectory:     "file:///file/path//.",
+              isDirectory:      "file:///file/path//./",
+              inferFromPath:    "file:///file/path//./")
+        check(base, "../",
+              notDirectory:     "file:///file/path//..",
+              isDirectory:      "file:///file/path//../",
+              inferFromPath:    "file:///file/path//../")
+        check(base, "a",
+              notDirectory:     "file:///file/path//a",
+              isDirectory:      "file:///file/path//a/",
+              inferFromPath:    "file:///file/path//a")
+        check(base, "/a",
+              notDirectory:     "file:///file/path//a",
+              isDirectory:      "file:///file/path//a/",
+              inferFromPath:    "file:///file/path//a")
+        check(base, "a/",
+              notDirectory:     "file:///file/path//a",
+              isDirectory:      "file:///file/path//a/",
+              inferFromPath:    "file:///file/path//a/")
+        check(base, "a//",
+              notDirectory:     "file:///file/path//a",
+              isDirectory:      "file:///file/path//a//",
+              inferFromPath:    "file:///file/path//a//")
+        check(base, "//a",
+              notDirectory:     "file:///file/path///a",
+              isDirectory:      "file:///file/path///a/",
+              inferFromPath:    "file:///file/path///a")
+        #if FOUNDATION_FRAMEWORK
+        check(base, "é",
+              notDirectory:     "file:///file/path//e%CC%81",
+              isDirectory:      "file:///file/path//e%CC%81/",
+              inferFromPath:    "file:///file/path//e%CC%81")
+
+        // Base file URL whose existing path contains an encoded character
+        base = URL(filePath: "/file/páth/", directoryHint: .isDirectory)
+
+        check(base, "",
+              notDirectory:     "file:///file/pa%CC%81th/",
+              isDirectory:      "file:///file/pa%CC%81th/",
+              inferFromPath:    "file:///file/pa%CC%81th/")
+        check(base, "/",
+              notDirectory:     "file:///file/pa%CC%81th/",
+              isDirectory:      "file:///file/pa%CC%81th/",
+              inferFromPath:    "file:///file/pa%CC%81th/")
+        check(base, "//",
+              notDirectory:     "file:///file/pa%CC%81th//",
+              isDirectory:      "file:///file/pa%CC%81th//",
+              inferFromPath:    "file:///file/pa%CC%81th//")
+        check(base, ".",
+              notDirectory:     "file:///file/pa%CC%81th/.",
+              isDirectory:      "file:///file/pa%CC%81th/./",
+              inferFromPath:    "file:///file/pa%CC%81th/.")
+        check(base, "..",
+              notDirectory:     "file:///file/pa%CC%81th/..",
+              isDirectory:      "file:///file/pa%CC%81th/../",
+              inferFromPath:    "file:///file/pa%CC%81th/..")
+        check(base, "/.",
+              notDirectory:     "file:///file/pa%CC%81th/.",
+              isDirectory:      "file:///file/pa%CC%81th/./",
+              inferFromPath:    "file:///file/pa%CC%81th/.")
+        check(base, "/..",
+              notDirectory:     "file:///file/pa%CC%81th/..",
+              isDirectory:      "file:///file/pa%CC%81th/../",
+              inferFromPath:    "file:///file/pa%CC%81th/..")
+        check(base, "./",
+              notDirectory:     "file:///file/pa%CC%81th/.",
+              isDirectory:      "file:///file/pa%CC%81th/./",
+              inferFromPath:    "file:///file/pa%CC%81th/./")
+        check(base, "../",
+              notDirectory:     "file:///file/pa%CC%81th/..",
+              isDirectory:      "file:///file/pa%CC%81th/../",
+              inferFromPath:    "file:///file/pa%CC%81th/../")
+        check(base, "a",
+              notDirectory:     "file:///file/pa%CC%81th/a",
+              isDirectory:      "file:///file/pa%CC%81th/a/",
+              inferFromPath:    "file:///file/pa%CC%81th/a")
+        check(base, "/a",
+              notDirectory:     "file:///file/pa%CC%81th/a",
+              isDirectory:      "file:///file/pa%CC%81th/a/",
+              inferFromPath:    "file:///file/pa%CC%81th/a")
+        check(base, "a/",
+              notDirectory:     "file:///file/pa%CC%81th/a",
+              isDirectory:      "file:///file/pa%CC%81th/a/",
+              inferFromPath:    "file:///file/pa%CC%81th/a/")
+        check(base, "a//",
+              notDirectory:     "file:///file/pa%CC%81th/a",
+              isDirectory:      "file:///file/pa%CC%81th/a//",
+              inferFromPath:    "file:///file/pa%CC%81th/a//")
+        check(base, "//a",
+              notDirectory:     "file:///file/pa%CC%81th//a",
+              isDirectory:      "file:///file/pa%CC%81th//a/",
+              inferFromPath:    "file:///file/pa%CC%81th//a")
+        check(base, "é",
+              notDirectory:     "file:///file/pa%CC%81th/e%CC%81",
+              isDirectory:      "file:///file/pa%CC%81th/e%CC%81/",
+              inferFromPath:    "file:///file/pa%CC%81th/e%CC%81")
+        #endif
+
+        // Base file URL with empty host and path
+        base = try #require(URL(string: "file://"))
+
+        check(base, "",
+              notDirectory:     "file:///",
+              isDirectory:      "file:///",
+              inferFromPath:    "file:///")
+        check(base, "/",
+              notDirectory:     "file:///",
+              isDirectory:      "file:///",
+              inferFromPath:    "file:///")
+        check(base, "//",
+              notDirectory:     "file:///",
+              isDirectory:      "file:////",
+              inferFromPath:    "file:////")
+        check(base, ".",
+              notDirectory:     "file:///.",
+              isDirectory:      "file:///./",
+              inferFromPath:    "file:///.")
+        check(base, "..",
+              notDirectory:     "file:///..",
+              isDirectory:      "file:///../",
+              inferFromPath:    "file:///..")
+        check(base, "/.",
+              notDirectory:     "file:///.",
+              isDirectory:      "file:///./",
+              inferFromPath:    "file:///.")
+        check(base, "/..",
+              notDirectory:     "file:///..",
+              isDirectory:      "file:///../",
+              inferFromPath:    "file:///..")
+        check(base, "./",
+              notDirectory:     "file:///.",
+              isDirectory:      "file:///./",
+              inferFromPath:    "file:///./")
+        check(base, "../",
+              notDirectory:     "file:///..",
+              isDirectory:      "file:///../",
+              inferFromPath:    "file:///../")
+        check(base, "a",
+              notDirectory:     "file:///a",
+              isDirectory:      "file:///a/",
+              inferFromPath:    "file:///a")
+        check(base, "/a",
+              notDirectory:     "file:///a",
+              isDirectory:      "file:///a/",
+              inferFromPath:    "file:///a")
+        check(base, "a/",
+              notDirectory:     "file:///a",
+              isDirectory:      "file:///a/",
+              inferFromPath:    "file:///a/")
+        check(base, "a//",
+              notDirectory:     "file:///a",
+              isDirectory:      "file:///a//",
+              inferFromPath:    "file:///a//")
+        check(base, "//a",
+              notDirectory:     "file:////a",
+              isDirectory:      "file:////a/",
+              inferFromPath:    "file:////a")
+        #if FOUNDATION_FRAMEWORK
+        check(base, "é",
+              notDirectory:     "file:///e%CC%81",
+              isDirectory:      "file:///e%CC%81/",
+              inferFromPath:    "file:///e%CC%81")
+        #endif
+
+        // Base file URL with non-standard root path
+        // Make sure we don't append a host component
+        base = try #require(URL(string: "file:/"))
+
+        check(base, "",
+              notDirectory:     "file:/",
+              isDirectory:      "file:/",
+              inferFromPath:    "file:/")
+        check(base, "/",
+              notDirectory:     "file:/",
+              isDirectory:      "file:/",
+              inferFromPath:    "file:/")
+        check(base, "//",
+              notDirectory:     "file:/",
+              isDirectory:      "file:/",
+              inferFromPath:    "file:/")
+        check(base, ".",
+              notDirectory:     "file:/.",
+              isDirectory:      "file:/./",
+              inferFromPath:    "file:/.")
+        check(base, "..",
+              notDirectory:     "file:/..",
+              isDirectory:      "file:/../",
+              inferFromPath:    "file:/..")
+        check(base, "/.",
+              notDirectory:     "file:/.",
+              isDirectory:      "file:/./",
+              inferFromPath:    "file:/.")
+        check(base, "/..",
+              notDirectory:     "file:/..",
+              isDirectory:      "file:/../",
+              inferFromPath:    "file:/..")
+        check(base, "./",
+              notDirectory:     "file:/.",
+              isDirectory:      "file:/./",
+              inferFromPath:    "file:/./")
+        check(base, "../",
+              notDirectory:     "file:/..",
+              isDirectory:      "file:/../",
+              inferFromPath:    "file:/../")
+        check(base, "a",
+              notDirectory:     "file:/a",
+              isDirectory:      "file:/a/",
+              inferFromPath:    "file:/a")
+        check(base, "/a",
+              notDirectory:     "file:/a",
+              isDirectory:      "file:/a/",
+              inferFromPath:    "file:/a")
+        check(base, "a/",
+              notDirectory:     "file:/a",
+              isDirectory:      "file:/a/",
+              inferFromPath:    "file:/a/")
+        check(base, "a//",
+              notDirectory:     "file:/a",
+              isDirectory:      "file:/a//",
+              inferFromPath:    "file:/a//")
+        check(base, "//a",
+              notDirectory:     "file:/a",
+              isDirectory:      "file:/a/",
+              inferFromPath:    "file:/a")
+        #if FOUNDATION_FRAMEWORK
+        check(base, "é",
+              notDirectory:     "file:/e%CC%81",
+              isDirectory:      "file:/e%CC%81/",
+              inferFromPath:    "file:/e%CC%81")
+        #endif
+    }
+
+    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
+    func appendingPathComponentNonFileCases() throws {
+        func check(
+            _ base: URL,
+            _ component: String,
+            notDirectory expectedNotDir: String,
+            isDirectory expectedIsDir: String,
+            inferFromPath expectedInferred: String,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
+            func sourceOffset(_ offset: Int) -> SourceLocation {
+                var l = sourceLocation
+                l.line += offset
+                return l
+            }
+            var result = base.appending(path: component, directoryHint: .notDirectory)
+            #expect(result.absoluteString == expectedNotDir, Comment(rawValue: result.absoluteString), sourceLocation: sourceOffset(1))
+            #expect(result.host == base.host, Comment(rawValue: result.host ?? "nil"), sourceLocation: sourceOffset(1))
+            result = base.appending(path: component, directoryHint: .isDirectory)
+            #expect(result.absoluteString == expectedIsDir, Comment(rawValue: result.absoluteString), sourceLocation: sourceOffset(2))
+            #expect(result.host == base.host, Comment(rawValue: result.host ?? "nil"), sourceLocation: sourceOffset(2))
+            result = base.appending(path: component, directoryHint: .inferFromPath)
+            #expect(result.absoluteString == expectedInferred, Comment(rawValue: result.absoluteString), sourceLocation: sourceOffset(3))
+            #expect(result.host == base.host, Comment(rawValue: result.host ?? "nil"), sourceLocation: sourceOffset(3))
+        }
+
+        // Single dot relative URL
+        var base = try #require(URL(string: "."))
+
+        check(base, "",
+              notDirectory:     "./",
+              isDirectory:      "./",
+              inferFromPath:    "./")
+        check(base, "/",
+              notDirectory:     "./",
+              isDirectory:      "./",
+              inferFromPath:    "./")
+        check(base, "//",
+              notDirectory:     "./",
+              isDirectory:      ".//",
+              inferFromPath:    ".//")
+        check(base, ".",
+              notDirectory:     "./.",
+              isDirectory:      "././",
+              inferFromPath:    "./.")
+        check(base, "..",
+              notDirectory:     "./..",
+              isDirectory:      "./../",
+              inferFromPath:    "./..")
+        check(base, "/.",
+              notDirectory:     "./.",
+              isDirectory:      "././",
+              inferFromPath:    "./.")
+        check(base, "/..",
+              notDirectory:     "./..",
+              isDirectory:      "./../",
+              inferFromPath:    "./..")
+        check(base, "./",
+              notDirectory:     "./.",
+              isDirectory:      "././",
+              inferFromPath:    "././")
+        check(base, "../",
+              notDirectory:     "./..",
+              isDirectory:      "./../",
+              inferFromPath:    "./../")
+        check(base, "a",
+              notDirectory:     "./a",
+              isDirectory:      "./a/",
+              inferFromPath:    "./a")
+        check(base, "/a",
+              notDirectory:     "./a",
+              isDirectory:      "./a/",
+              inferFromPath:    "./a")
+        check(base, "a/",
+              notDirectory:     "./a",
+              isDirectory:      "./a/",
+              inferFromPath:    "./a/")
+        check(base, "a//",
+              notDirectory:     "./a",
+              isDirectory:      "./a//",
+              inferFromPath:    "./a//")
+        check(base, "//a",
+              notDirectory:     ".//a",
+              isDirectory:      ".//a/",
+              inferFromPath:    ".//a")
+        check(base, "é",
+              notDirectory:     "./%C3%A9",
+              isDirectory:      "./%C3%A9/",
+              inferFromPath:    "./%C3%A9")
+
+        // Single dot relative URL with directory slash
+        base = try #require(URL(string: "./"))
+
+        check(base, "",
+              notDirectory:     "./",
+              isDirectory:      "./",
+              inferFromPath:    "./")
+        check(base, "/",
+              notDirectory:     "./",
+              isDirectory:      "./",
+              inferFromPath:    "./")
+        check(base, "//",
+              notDirectory:     ".//",
+              isDirectory:      ".//",
+              inferFromPath:    ".//")
+        check(base, ".",
+              notDirectory:     "./.",
+              isDirectory:      "././",
+              inferFromPath:    "./.")
+        check(base, "..",
+              notDirectory:     "./..",
+              isDirectory:      "./../",
+              inferFromPath:    "./..")
+        check(base, "/.",
+              notDirectory:     "./.",
+              isDirectory:      "././",
+              inferFromPath:    "./.")
+        check(base, "/..",
+              notDirectory:     "./..",
+              isDirectory:      "./../",
+              inferFromPath:    "./..")
+        check(base, "./",
+              notDirectory:     "./.",
+              isDirectory:      "././",
+              inferFromPath:    "././")
+        check(base, "../",
+              notDirectory:     "./..",
+              isDirectory:      "./../",
+              inferFromPath:    "./../")
+        check(base, "a",
+              notDirectory:     "./a",
+              isDirectory:      "./a/",
+              inferFromPath:    "./a")
+        check(base, "/a",
+              notDirectory:     "./a",
+              isDirectory:      "./a/",
+              inferFromPath:    "./a")
+        check(base, "a/",
+              notDirectory:     "./a",
+              isDirectory:      "./a/",
+              inferFromPath:    "./a/")
+        check(base, "a//",
+              notDirectory:     "./a",
+              isDirectory:      "./a//",
+              inferFromPath:    "./a//")
+        check(base, "//a",
+              notDirectory:     ".//a",
+              isDirectory:      ".//a/",
+              inferFromPath:    ".//a")
+        check(base, "é",
+              notDirectory:     "./%C3%A9",
+              isDirectory:      "./%C3%A9/",
+              inferFromPath:    "./%C3%A9")
+
+        // Non-decomposable with empty path
+        base = try #require(URL(string: "scheme:"))
+
+        check(base, "",
+              notDirectory:     "scheme:",
+              isDirectory:      "scheme:/",
+              inferFromPath:    "scheme:")
+        check(base, "/",
+              notDirectory:     "scheme:/",
+              isDirectory:      "scheme:/",
+              inferFromPath:    "scheme:/")
+        check(base, "//",
+              notDirectory:     "scheme:/",
+              isDirectory:      "scheme:/",
+              inferFromPath:    "scheme:/")
+        check(base, ".",
+              notDirectory:     "scheme:.",
+              isDirectory:      "scheme:./",
+              inferFromPath:    "scheme:.")
+        check(base, "..",
+              notDirectory:     "scheme:..",
+              isDirectory:      "scheme:../",
+              inferFromPath:    "scheme:..")
+        check(base, "/.",
+              notDirectory:     "scheme:/.",
+              isDirectory:      "scheme:/./",
+              inferFromPath:    "scheme:/.")
+        check(base, "/..",
+              notDirectory:     "scheme:/..",
+              isDirectory:      "scheme:/../",
+              inferFromPath:    "scheme:/..")
+        check(base, "./",
+              notDirectory:     "scheme:.",
+              isDirectory:      "scheme:./",
+              inferFromPath:    "scheme:./")
+        check(base, "../",
+              notDirectory:     "scheme:..",
+              isDirectory:      "scheme:../",
+              inferFromPath:    "scheme:../")
+        check(base, "a",
+              notDirectory:     "scheme:a",
+              isDirectory:      "scheme:a/",
+              inferFromPath:    "scheme:a")
+        check(base, "/a",
+              notDirectory:     "scheme:/a",
+              isDirectory:      "scheme:/a/",
+              inferFromPath:    "scheme:/a")
+        check(base, "a/",
+              notDirectory:     "scheme:a",
+              isDirectory:      "scheme:a/",
+              inferFromPath:    "scheme:a/")
+        check(base, "a//",
+              notDirectory:     "scheme:a",
+              isDirectory:      "scheme:a//",
+              inferFromPath:    "scheme:a//")
+        check(base, "//a",
+              notDirectory:     "scheme:/a",
+              isDirectory:      "scheme:/a/",
+              inferFromPath:    "scheme:/a")
+        check(base, "é",
+              notDirectory:     "scheme:%C3%A9",
+              isDirectory:      "scheme:%C3%A9/",
+              inferFromPath:    "scheme:%C3%A9")
+
+        // Non-decomposable with non-empty path
+        base = try #require(URL(string: "scheme:path"))
+
+        check(base, "",
+              notDirectory:     "scheme:path/",
+              isDirectory:      "scheme:path/",
+              inferFromPath:    "scheme:path/")
+        check(base, "/",
+              notDirectory:     "scheme:path/",
+              isDirectory:      "scheme:path/",
+              inferFromPath:    "scheme:path/")
+        check(base, "//",
+              notDirectory:     "scheme:path/",
+              isDirectory:      "scheme:path//",
+              inferFromPath:    "scheme:path//")
+        check(base, ".",
+              notDirectory:     "scheme:path/.",
+              isDirectory:      "scheme:path/./",
+              inferFromPath:    "scheme:path/.")
+        check(base, "..",
+              notDirectory:     "scheme:path/..",
+              isDirectory:      "scheme:path/../",
+              inferFromPath:    "scheme:path/..")
+        check(base, "/.",
+              notDirectory:     "scheme:path/.",
+              isDirectory:      "scheme:path/./",
+              inferFromPath:    "scheme:path/.")
+        check(base, "/..",
+              notDirectory:     "scheme:path/..",
+              isDirectory:      "scheme:path/../",
+              inferFromPath:    "scheme:path/..")
+        check(base, "./",
+              notDirectory:     "scheme:path/.",
+              isDirectory:      "scheme:path/./",
+              inferFromPath:    "scheme:path/./")
+        check(base, "../",
+              notDirectory:     "scheme:path/..",
+              isDirectory:      "scheme:path/../",
+              inferFromPath:    "scheme:path/../")
+        check(base, "a",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a/",
+              inferFromPath:    "scheme:path/a")
+        check(base, "/a",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a/",
+              inferFromPath:    "scheme:path/a")
+        check(base, "a/",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a/",
+              inferFromPath:    "scheme:path/a/")
+        check(base, "a//",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a//",
+              inferFromPath:    "scheme:path/a//")
+        check(base, "//a",
+              notDirectory:     "scheme:path//a",
+              isDirectory:      "scheme:path//a/",
+              inferFromPath:    "scheme:path//a")
+        check(base, "é",
+              notDirectory:     "scheme:path/%C3%A9",
+              isDirectory:      "scheme:path/%C3%A9/",
+              inferFromPath:    "scheme:path/%C3%A9")
+
+        // Non-decomposable with non-empty directory path
+        base = try #require(URL(string: "scheme:path/"))
+
+        check(base, "",
+              notDirectory:     "scheme:path/",
+              isDirectory:      "scheme:path/",
+              inferFromPath:    "scheme:path/")
+        check(base, "/",
+              notDirectory:     "scheme:path/",
+              isDirectory:      "scheme:path/",
+              inferFromPath:    "scheme:path/")
+        check(base, "//",
+              notDirectory:     "scheme:path//",
+              isDirectory:      "scheme:path//",
+              inferFromPath:    "scheme:path//")
+        check(base, ".",
+              notDirectory:     "scheme:path/.",
+              isDirectory:      "scheme:path/./",
+              inferFromPath:    "scheme:path/.")
+        check(base, "..",
+              notDirectory:     "scheme:path/..",
+              isDirectory:      "scheme:path/../",
+              inferFromPath:    "scheme:path/..")
+        check(base, "/.",
+              notDirectory:     "scheme:path/.",
+              isDirectory:      "scheme:path/./",
+              inferFromPath:    "scheme:path/.")
+        check(base, "/..",
+              notDirectory:     "scheme:path/..",
+              isDirectory:      "scheme:path/../",
+              inferFromPath:    "scheme:path/..")
+        check(base, "./",
+              notDirectory:     "scheme:path/.",
+              isDirectory:      "scheme:path/./",
+              inferFromPath:    "scheme:path/./")
+        check(base, "../",
+              notDirectory:     "scheme:path/..",
+              isDirectory:      "scheme:path/../",
+              inferFromPath:    "scheme:path/../")
+        check(base, "a",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a/",
+              inferFromPath:    "scheme:path/a")
+        check(base, "/a",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a/",
+              inferFromPath:    "scheme:path/a")
+        check(base, "a/",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a/",
+              inferFromPath:    "scheme:path/a/")
+        check(base, "a//",
+              notDirectory:     "scheme:path/a",
+              isDirectory:      "scheme:path/a//",
+              inferFromPath:    "scheme:path/a//")
+        check(base, "//a",
+              notDirectory:     "scheme:path//a",
+              isDirectory:      "scheme:path//a/",
+              inferFromPath:    "scheme:path//a")
+        check(base, "é",
+              notDirectory:     "scheme:path/%C3%A9",
+              isDirectory:      "scheme:path/%C3%A9/",
+              inferFromPath:    "scheme:path/%C3%A9")
+
+        // Decomposable with host and empty path
+        base = try #require(URL(string: "http://example.com"))
+
+        check(base, "",
+              notDirectory:     "http://example.com/",
+              isDirectory:      "http://example.com/",
+              inferFromPath:    "http://example.com/")
+        check(base, "/",
+              notDirectory:     "http://example.com/",
+              isDirectory:      "http://example.com/",
+              inferFromPath:    "http://example.com/")
+        check(base, "//",
+              notDirectory:     "http://example.com/",
+              isDirectory:      "http://example.com//",
+              inferFromPath:    "http://example.com//")
+        check(base, ".",
+              notDirectory:     "http://example.com/.",
+              isDirectory:      "http://example.com/./",
+              inferFromPath:    "http://example.com/.")
+        check(base, "..",
+              notDirectory:     "http://example.com/..",
+              isDirectory:      "http://example.com/../",
+              inferFromPath:    "http://example.com/..")
+        check(base, "/.",
+              notDirectory:     "http://example.com/.",
+              isDirectory:      "http://example.com/./",
+              inferFromPath:    "http://example.com/.")
+        check(base, "/..",
+              notDirectory:     "http://example.com/..",
+              isDirectory:      "http://example.com/../",
+              inferFromPath:    "http://example.com/..")
+        check(base, "./",
+              notDirectory:     "http://example.com/.",
+              isDirectory:      "http://example.com/./",
+              inferFromPath:    "http://example.com/./")
+        check(base, "../",
+              notDirectory:     "http://example.com/..",
+              isDirectory:      "http://example.com/../",
+              inferFromPath:    "http://example.com/../")
+        check(base, "a",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a/",
+              inferFromPath:    "http://example.com/a")
+        check(base, "/a",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a/",
+              inferFromPath:    "http://example.com/a")
+        check(base, "a/",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a/",
+              inferFromPath:    "http://example.com/a/")
+        check(base, "a//",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a//",
+              inferFromPath:    "http://example.com/a//")
+        check(base, "//a",
+              notDirectory:     "http://example.com//a",
+              isDirectory:      "http://example.com//a/",
+              inferFromPath:    "http://example.com//a")
+        check(base, "é",
+              notDirectory:     "http://example.com/%C3%A9",
+              isDirectory:      "http://example.com/%C3%A9/",
+              inferFromPath:    "http://example.com/%C3%A9")
+
+        // Decomposable with host and root path
+        base = try #require(URL(string: "http://example.com/"))
+
+        check(base, "",
+              notDirectory:     "http://example.com/",
+              isDirectory:      "http://example.com/",
+              inferFromPath:    "http://example.com/")
+        check(base, "/",
+              notDirectory:     "http://example.com/",
+              isDirectory:      "http://example.com/",
+              inferFromPath:    "http://example.com/")
+        check(base, "//",
+              notDirectory:     "http://example.com//",
+              isDirectory:      "http://example.com//",
+              inferFromPath:    "http://example.com//")
+        check(base, ".",
+              notDirectory:     "http://example.com/.",
+              isDirectory:      "http://example.com/./",
+              inferFromPath:    "http://example.com/.")
+        check(base, "..",
+              notDirectory:     "http://example.com/..",
+              isDirectory:      "http://example.com/../",
+              inferFromPath:    "http://example.com/..")
+        check(base, "/.",
+              notDirectory:     "http://example.com/.",
+              isDirectory:      "http://example.com/./",
+              inferFromPath:    "http://example.com/.")
+        check(base, "/..",
+              notDirectory:     "http://example.com/..",
+              isDirectory:      "http://example.com/../",
+              inferFromPath:    "http://example.com/..")
+        check(base, "./",
+              notDirectory:     "http://example.com/.",
+              isDirectory:      "http://example.com/./",
+              inferFromPath:    "http://example.com/./")
+        check(base, "../",
+              notDirectory:     "http://example.com/..",
+              isDirectory:      "http://example.com/../",
+              inferFromPath:    "http://example.com/../")
+        check(base, "a",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a/",
+              inferFromPath:    "http://example.com/a")
+        check(base, "/a",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a/",
+              inferFromPath:    "http://example.com/a")
+        check(base, "a/",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a/",
+              inferFromPath:    "http://example.com/a/")
+        check(base, "a//",
+              notDirectory:     "http://example.com/a",
+              isDirectory:      "http://example.com/a//",
+              inferFromPath:    "http://example.com/a//")
+        check(base, "//a",
+              notDirectory:     "http://example.com//a",
+              isDirectory:      "http://example.com//a/",
+              inferFromPath:    "http://example.com//a")
+        check(base, "é",
+              notDirectory:     "http://example.com/%C3%A9",
+              isDirectory:      "http://example.com/%C3%A9/",
+              inferFromPath:    "http://example.com/%C3%A9")
+
+        // Decomposable with host and non-empty path
+        base = try #require(URL(string: "http://example.com/path"))
+
+        check(base, "",
+              notDirectory:     "http://example.com/path/",
+              isDirectory:      "http://example.com/path/",
+              inferFromPath:    "http://example.com/path/")
+        check(base, "/",
+              notDirectory:     "http://example.com/path/",
+              isDirectory:      "http://example.com/path/",
+              inferFromPath:    "http://example.com/path/")
+        check(base, "//",
+              notDirectory:     "http://example.com/path/",
+              isDirectory:      "http://example.com/path//",
+              inferFromPath:    "http://example.com/path//")
+        check(base, ".",
+              notDirectory:     "http://example.com/path/.",
+              isDirectory:      "http://example.com/path/./",
+              inferFromPath:    "http://example.com/path/.")
+        check(base, "..",
+              notDirectory:     "http://example.com/path/..",
+              isDirectory:      "http://example.com/path/../",
+              inferFromPath:    "http://example.com/path/..")
+        check(base, "/.",
+              notDirectory:     "http://example.com/path/.",
+              isDirectory:      "http://example.com/path/./",
+              inferFromPath:    "http://example.com/path/.")
+        check(base, "/..",
+              notDirectory:     "http://example.com/path/..",
+              isDirectory:      "http://example.com/path/../",
+              inferFromPath:    "http://example.com/path/..")
+        check(base, "./",
+              notDirectory:     "http://example.com/path/.",
+              isDirectory:      "http://example.com/path/./",
+              inferFromPath:    "http://example.com/path/./")
+        check(base, "../",
+              notDirectory:     "http://example.com/path/..",
+              isDirectory:      "http://example.com/path/../",
+              inferFromPath:    "http://example.com/path/../")
+        check(base, "a",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a/",
+              inferFromPath:    "http://example.com/path/a")
+        check(base, "/a",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a/",
+              inferFromPath:    "http://example.com/path/a")
+        check(base, "a/",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a/",
+              inferFromPath:    "http://example.com/path/a/")
+        check(base, "a//",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a//",
+              inferFromPath:    "http://example.com/path/a//")
+        check(base, "//a",
+              notDirectory:     "http://example.com/path//a",
+              isDirectory:      "http://example.com/path//a/",
+              inferFromPath:    "http://example.com/path//a")
+        check(base, "é",
+              notDirectory:     "http://example.com/path/%C3%A9",
+              isDirectory:      "http://example.com/path/%C3%A9/",
+              inferFromPath:    "http://example.com/path/%C3%A9")
+
+        // Decomposable with host and non-empty directory path
+        base = try #require(URL(string: "http://example.com/path/"))
+
+        check(base, "",
+              notDirectory:     "http://example.com/path/",
+              isDirectory:      "http://example.com/path/",
+              inferFromPath:    "http://example.com/path/")
+        check(base, "/",
+              notDirectory:     "http://example.com/path/",
+              isDirectory:      "http://example.com/path/",
+              inferFromPath:    "http://example.com/path/")
+        check(base, "//",
+              notDirectory:     "http://example.com/path//",
+              isDirectory:      "http://example.com/path//",
+              inferFromPath:    "http://example.com/path//")
+        check(base, ".",
+              notDirectory:     "http://example.com/path/.",
+              isDirectory:      "http://example.com/path/./",
+              inferFromPath:    "http://example.com/path/.")
+        check(base, "..",
+              notDirectory:     "http://example.com/path/..",
+              isDirectory:      "http://example.com/path/../",
+              inferFromPath:    "http://example.com/path/..")
+        check(base, "/.",
+              notDirectory:     "http://example.com/path/.",
+              isDirectory:      "http://example.com/path/./",
+              inferFromPath:    "http://example.com/path/.")
+        check(base, "/..",
+              notDirectory:     "http://example.com/path/..",
+              isDirectory:      "http://example.com/path/../",
+              inferFromPath:    "http://example.com/path/..")
+        check(base, "./",
+              notDirectory:     "http://example.com/path/.",
+              isDirectory:      "http://example.com/path/./",
+              inferFromPath:    "http://example.com/path/./")
+        check(base, "../",
+              notDirectory:     "http://example.com/path/..",
+              isDirectory:      "http://example.com/path/../",
+              inferFromPath:    "http://example.com/path/../")
+        check(base, "a",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a/",
+              inferFromPath:    "http://example.com/path/a")
+        check(base, "/a",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a/",
+              inferFromPath:    "http://example.com/path/a")
+        check(base, "a/",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a/",
+              inferFromPath:    "http://example.com/path/a/")
+        check(base, "a//",
+              notDirectory:     "http://example.com/path/a",
+              isDirectory:      "http://example.com/path/a//",
+              inferFromPath:    "http://example.com/path/a//")
+        check(base, "//a",
+              notDirectory:     "http://example.com/path//a",
+              isDirectory:      "http://example.com/path//a/",
+              inferFromPath:    "http://example.com/path//a")
+        check(base, "é",
+              notDirectory:     "http://example.com/path/%C3%A9",
+              isDirectory:      "http://example.com/path/%C3%A9/",
+              inferFromPath:    "http://example.com/path/%C3%A9")
+
+        // Decomposable with empty host
+        base = try #require(URL(string: "http://"))
+
+        check(base, "",
+              notDirectory:     "http:///",
+              isDirectory:      "http:///",
+              inferFromPath:    "http:///")
+        check(base, "/",
+              notDirectory:     "http:///",
+              isDirectory:      "http:///",
+              inferFromPath:    "http:///")
+        check(base, "//",
+              notDirectory:     "http:///",
+              isDirectory:      "http:////",
+              inferFromPath:    "http:////")
+        check(base, ".",
+              notDirectory:     "http:///.",
+              isDirectory:      "http:///./",
+              inferFromPath:    "http:///.")
+        check(base, "..",
+              notDirectory:     "http:///..",
+              isDirectory:      "http:///../",
+              inferFromPath:    "http:///..")
+        check(base, "/.",
+              notDirectory:     "http:///.",
+              isDirectory:      "http:///./",
+              inferFromPath:    "http:///.")
+        check(base, "/..",
+              notDirectory:     "http:///..",
+              isDirectory:      "http:///../",
+              inferFromPath:    "http:///..")
+        check(base, "./",
+              notDirectory:     "http:///.",
+              isDirectory:      "http:///./",
+              inferFromPath:    "http:///./")
+        check(base, "../",
+              notDirectory:     "http:///..",
+              isDirectory:      "http:///../",
+              inferFromPath:    "http:///../")
+        check(base, "a",
+              notDirectory:     "http:///a",
+              isDirectory:      "http:///a/",
+              inferFromPath:    "http:///a")
+        check(base, "/a",
+              notDirectory:     "http:///a",
+              isDirectory:      "http:///a/",
+              inferFromPath:    "http:///a")
+        check(base, "a/",
+              notDirectory:     "http:///a",
+              isDirectory:      "http:///a/",
+              inferFromPath:    "http:///a/")
+        check(base, "a//",
+              notDirectory:     "http:///a",
+              isDirectory:      "http:///a//",
+              inferFromPath:    "http:///a//")
+        check(base, "//a",
+              notDirectory:     "http:////a",
+              isDirectory:      "http:////a/",
+              inferFromPath:    "http:////a")
+        check(base, "é",
+              notDirectory:     "http:///%C3%A9",
+              isDirectory:      "http:///%C3%A9/",
+              inferFromPath:    "http:///%C3%A9")
+
+        // Decomposable with no host and root path
+        base = try #require(URL(string: "scheme:/"))
+
+        check(base, "",
+              notDirectory:     "scheme:/",
+              isDirectory:      "scheme:/",
+              inferFromPath:    "scheme:/")
+        check(base, "/",
+              notDirectory:     "scheme:/",
+              isDirectory:      "scheme:/",
+              inferFromPath:    "scheme:/")
+        check(base, "//",
+              notDirectory:     "scheme:/",
+              isDirectory:      "scheme:/",
+              inferFromPath:    "scheme:/")
+        check(base, ".",
+              notDirectory:     "scheme:/.",
+              isDirectory:      "scheme:/./",
+              inferFromPath:    "scheme:/.")
+        check(base, "..",
+              notDirectory:     "scheme:/..",
+              isDirectory:      "scheme:/../",
+              inferFromPath:    "scheme:/..")
+        check(base, "/.",
+              notDirectory:     "scheme:/.",
+              isDirectory:      "scheme:/./",
+              inferFromPath:    "scheme:/.")
+        check(base, "/..",
+              notDirectory:     "scheme:/..",
+              isDirectory:      "scheme:/../",
+              inferFromPath:    "scheme:/..")
+        check(base, "./",
+              notDirectory:     "scheme:/.",
+              isDirectory:      "scheme:/./",
+              inferFromPath:    "scheme:/./")
+        check(base, "../",
+              notDirectory:     "scheme:/..",
+              isDirectory:      "scheme:/../",
+              inferFromPath:    "scheme:/../")
+        check(base, "a",
+              notDirectory:     "scheme:/a",
+              isDirectory:      "scheme:/a/",
+              inferFromPath:    "scheme:/a")
+        check(base, "/a",
+              notDirectory:     "scheme:/a",
+              isDirectory:      "scheme:/a/",
+              inferFromPath:    "scheme:/a")
+        check(base, "a/",
+              notDirectory:     "scheme:/a",
+              isDirectory:      "scheme:/a/",
+              inferFromPath:    "scheme:/a/")
+        check(base, "a//",
+              notDirectory:     "scheme:/a",
+              isDirectory:      "scheme:/a//",
+              inferFromPath:    "scheme:/a//")
+        check(base, "//a",
+              notDirectory:     "scheme:/a",
+              isDirectory:      "scheme:/a/",
+              inferFromPath:    "scheme:/a")
+        check(base, "é",
+              notDirectory:     "scheme:/%C3%A9",
+              isDirectory:      "scheme:/%C3%A9/",
+              inferFromPath:    "scheme:/%C3%A9")
+
+        // Decomposable with empty relative path
+        base = try #require(URL(string: "?query"))
+
+        check(base, "",
+              notDirectory:     "?query",
+              isDirectory:      "./?query",
+              inferFromPath:    "?query")
+        check(base, "/",
+              notDirectory:     "./?query",
+              isDirectory:      "./?query",
+              inferFromPath:    "./?query")
+        check(base, "//",
+              notDirectory:     "./?query",
+              isDirectory:      ".//?query",
+              inferFromPath:    ".//?query")
+        check(base, ".",
+              notDirectory:     "./.?query",
+              isDirectory:      "././?query",
+              inferFromPath:    "./.?query")
+        check(base, "..",
+              notDirectory:     "./..?query",
+              isDirectory:      "./../?query",
+              inferFromPath:    "./..?query")
+        check(base, "/.",
+              notDirectory:     "./.?query",
+              isDirectory:      "././?query",
+              inferFromPath:    "./.?query")
+        check(base, "/..",
+              notDirectory:     "./..?query",
+              isDirectory:      "./../?query",
+              inferFromPath:    "./..?query")
+        check(base, "./",
+              notDirectory:     "./.?query",
+              isDirectory:      "././?query",
+              inferFromPath:    "././?query")
+        check(base, "../",
+              notDirectory:     "./..?query",
+              isDirectory:      "./../?query",
+              inferFromPath:    "./../?query")
+        check(base, "a",
+              notDirectory:     "./a?query",
+              isDirectory:      "./a/?query",
+              inferFromPath:    "./a?query")
+        check(base, "/a",
+              notDirectory:     "./a?query",
+              isDirectory:      "./a/?query",
+              inferFromPath:    "./a?query")
+        check(base, "a/",
+              notDirectory:     "./a?query",
+              isDirectory:      "./a/?query",
+              inferFromPath:    "./a/?query")
+        check(base, "a//",
+              notDirectory:     "./a?query",
+              isDirectory:      "./a//?query",
+              inferFromPath:    "./a//?query")
+        check(base, "//a",
+              notDirectory:     ".//a?query",
+              isDirectory:      ".//a/?query",
+              inferFromPath:    ".//a?query")
+        check(base, "é",
+              notDirectory:     "./%C3%A9?query",
+              isDirectory:      "./%C3%A9/?query",
+              inferFromPath:    "./%C3%A9?query")
+
+        // Decomposable with query and fragment
+        base = try #require(URL(string: "https://example.com?q=1#f"))
+        check(base, "",
+              notDirectory:     "https://example.com/?q=1#f",
+              isDirectory:      "https://example.com/?q=1#f",
+              inferFromPath:    "https://example.com/?q=1#f")
+        check(base, "more",
+              notDirectory:     "https://example.com/more?q=1#f",
+              isDirectory:      "https://example.com/more/?q=1#f",
+              inferFromPath:    "https://example.com/more?q=1#f")
+        check(base, "more/",
+              notDirectory:     "https://example.com/more?q=1#f",
+              isDirectory:      "https://example.com/more/?q=1#f",
+              inferFromPath:    "https://example.com/more/?q=1#f")
+
+        base = try #require(URL(string: "https://example.com/p?q=1#f"))
+        check(base, "",
+              notDirectory:     "https://example.com/p/?q=1#f",
+              isDirectory:      "https://example.com/p/?q=1#f",
+              inferFromPath:    "https://example.com/p/?q=1#f")
+        check(base, "more",
+              notDirectory:     "https://example.com/p/more?q=1#f",
+              isDirectory:      "https://example.com/p/more/?q=1#f",
+              inferFromPath:    "https://example.com/p/more?q=1#f")
+        check(base, "more/",
+              notDirectory:     "https://example.com/p/more?q=1#f",
+              isDirectory:      "https://example.com/p/more/?q=1#f",
+              inferFromPath:    "https://example.com/p/more/?q=1#f")
+
+        // Decomposable with more authority components
+        base = try #require(URL(string: "https://user:pass@example.com:8080/a"))
+        check(base, "b",
+              notDirectory:     "https://user:pass@example.com:8080/a/b",
+              isDirectory:      "https://user:pass@example.com:8080/a/b/",
+              inferFromPath:    "https://user:pass@example.com:8080/a/b")
+
+        // Percent-encoded path remains encoded
+        base = try #require(URL(string: "https://example.com/a%20b"))
+        check(base, "c",
+              notDirectory:     "https://example.com/a%20b/c",
+              isDirectory:      "https://example.com/a%20b/c/",
+              inferFromPath:    "https://example.com/a%20b/c")
+
+        // Components with special characters that should be percent-encoded
+        base = try #require(URL(string: "https://example.com/a"))
+        check(base, " spaced ",
+              notDirectory:     "https://example.com/a/%20spaced%20",
+              isDirectory:      "https://example.com/a/%20spaced%20/",
+              inferFromPath:    "https://example.com/a/%20spaced%20")
+        check(base, "?",
+              notDirectory:     "https://example.com/a/%3F",
+              isDirectory:      "https://example.com/a/%3F/",
+              inferFromPath:    "https://example.com/a/%3F")
+
+        // Already-percent-encoded sequences are re-encoded literally
+        check(base, "%2F",
+              notDirectory:     "https://example.com/a/%252F",
+              isDirectory:      "https://example.com/a/%252F/",
+              inferFromPath:    "https://example.com/a/%252F")
+        #if !os(Windows)
+        check(base, "back\\slash",
+              notDirectory:     "https://example.com/a/back%5Cslash",
+              isDirectory:      "https://example.com/a/back%5Cslash/",
+              inferFromPath:    "https://example.com/a/back%5Cslash")
+        #endif
+
+        base = try #require(URL(string: "mailto:"))
+        check(base, "user@example.com",
+              notDirectory:     "mailto:user@example.com",
+              isDirectory:      "mailto:user@example.com/",
+              inferFromPath:    "mailto:user@example.com")
+    }
+
+    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
+    func appendingPathComponentCheckFilesystem() async throws {
+        // For file URLs, .checkFileSystem uses lstat() to decide directory-ness.
+        try await FilePlayground {
+            Directory("dir") {
+                "nestedFile"
+            }
+            File("file.txt")
+            SymbolicLink("symlinkToFile", destination: "file.txt")
+            SymbolicLink("symlinkToDir", destination: "dir")
+            SymbolicLink("danglingSymlink", destination: "doesNotExist")
+        }.test {
+            let base = URL(filePath: $0.currentDirectoryPath, directoryHint: .isDirectory)
+            let basePrefix = base.absoluteString
+
+            func checkFile(
+                _ component: String,
+                absoluteSuffix: String,
+                hasDirectoryPath: Bool,
+                sourceLocation: SourceLocation = #_sourceLocation
+            ) {
+                let expected = basePrefix + absoluteSuffix
+                var appended = base.appending(path: component, directoryHint: .checkFileSystem)
+                #expect(appended.absoluteString == expected, sourceLocation: sourceLocation)
+                #expect(appended.hasDirectoryPath == hasDirectoryPath, sourceLocation: sourceLocation)
+
+                // .appendingPathComponent(_:) defaults to .checkFileSystem
+                appended = base.appendingPathComponent(component)
+                #expect(appended.absoluteString == expected, sourceLocation: sourceLocation)
+                #expect(appended.hasDirectoryPath == hasDirectoryPath, sourceLocation: sourceLocation)
+            }
+
+            // Existing regular file -> not a directory.
+            checkFile("file.txt",
+                      absoluteSuffix: "file.txt",
+                      hasDirectoryPath: false)
+            checkFile("file.txt/",
+                      absoluteSuffix: "file.txt",
+                      hasDirectoryPath: false)
+
+            // Existing directory -> directory.
+            checkFile("dir",
+                      absoluteSuffix: "dir/",
+                      hasDirectoryPath: true)
+            checkFile("dir/",
+                      absoluteSuffix: "dir/",
+                      hasDirectoryPath: true)
+
+            // Existing nested file inside a directory -> not a directory.
+            checkFile("dir/nestedFile",
+                      absoluteSuffix: "dir/nestedFile",
+                      hasDirectoryPath: false)
+            checkFile("dir/nestedFile/",
+                      absoluteSuffix: "dir/nestedFile",
+                      hasDirectoryPath: false)
+
+            // Existing symlink to a regular file -> not a directory.
+            checkFile("symlinkToFile",
+                      absoluteSuffix: "symlinkToFile",
+                      hasDirectoryPath: false)
+            checkFile("symlinkToFile/",
+                      absoluteSuffix: "symlinkToFile",
+                      hasDirectoryPath: false)
+
+            // Existing symlink to a directory -> not a directory.
+            // URL uses lstat() which does not follow the trailing symlink.
+            checkFile("symlinkToDir",
+                      absoluteSuffix: "symlinkToDir",
+                      hasDirectoryPath: false)
+            checkFile("symlinkToDir/",
+                      absoluteSuffix: "symlinkToDir",
+                      hasDirectoryPath: false)
+
+            // Existing dangling symlink (target missing) -> not a directory.
+            // lstat() sees the symlink itself, so the trailing slash is dropped.
+            checkFile("danglingSymlink",
+                      absoluteSuffix: "danglingSymlink",
+                      hasDirectoryPath: false)
+            checkFile("danglingSymlink/",
+                      absoluteSuffix: "danglingSymlink",
+                      hasDirectoryPath: false)
+
+            // Non-existent path with no trailing slash -> not a directory.
+            checkFile("missing",
+                      absoluteSuffix: "missing",
+                      hasDirectoryPath: false)
+
+            // Non-existent path with trailing slash -> trailing slash honored.
+            checkFile("missing/",
+                      absoluteSuffix: "missing/",
+                      hasDirectoryPath: true)
+        }
+
+        // For non-file URLs, .checkFileSystem is treated as .inferFromPath.
+        let httpBase = try #require(URL(string: "https://example.com/base/"))
+
+        func checkHTTP(
+            _ component: String,
+            absoluteString: String,
+            hasDirectoryPath: Bool,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
+            var appended = httpBase.appending(path: component, directoryHint: .checkFileSystem)
+            #expect(appended.absoluteString == absoluteString, sourceLocation: sourceLocation)
+            #expect(appended.hasDirectoryPath == hasDirectoryPath, sourceLocation: sourceLocation)
+
+            appended = httpBase.appendingPathComponent(component)
+            #expect(appended.absoluteString == absoluteString, sourceLocation: sourceLocation)
+            #expect(appended.hasDirectoryPath == hasDirectoryPath, sourceLocation: sourceLocation)
+        }
+
+        checkHTTP("a/b",
+                  absoluteString: "https://example.com/base/a/b",
+                  hasDirectoryPath: false)
+        checkHTTP("a/b/",
+                  absoluteString: "https://example.com/base/a/b/",
+                  hasDirectoryPath: true)
     }
 
     @Test(arguments: [
@@ -1158,6 +2741,110 @@ private struct URLTests {
 
         schemeRelative.deleteLastPathComponent()
         #expect(schemeRelative.relativePath == "")
+
+        // Deleting from an empty path is a no-op and keeps any query and fragment.
+        url = try #require(URL(string: "scheme:"))
+        var result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "scheme:")
+
+        url = try #require(URL(string: "https://example.com?q=1#f"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "https://example.com?q=1#f")
+
+        // Scheme-only URLs with paths
+        url = try #require(URL(string: "scheme:relative/"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "scheme:")
+
+        url = try #require(URL(string: "scheme:a/b/c"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "scheme:a/b/")
+
+        // All-slashes paths stay at the root after delete
+        url = try #require(URL(string: "scheme:////"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "scheme:///")
+
+        // Single-character relative URL: delete leaves "./"
+        url = try #require(URL(string: "a"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "./")
+
+        // Trailing "." or ".." should not be deleted like a regular
+        // component. Replace "." with "..", or append ".." to an existing "..".
+        url = try #require(URL(string: ".."))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "../../")
+
+        url = try #require(URL(string: "."))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "../")
+
+        if foundation_swift_url_v2_enabled() {
+            // v1 implementation deletes the "." and ".." right out
+            url = try #require(URL(string: "https://example.com/a/."))
+            result = url.deletingLastPathComponent()
+            #expect(result.absoluteString == "https://example.com/a/../")
+
+            url = try #require(URL(string: "https://example.com/a/.."))
+            result = url.deletingLastPathComponent()
+            #expect(result.absoluteString == "https://example.com/a/../../")
+        }
+
+        // Trailing slashes are stripped before searching for the last component
+        url = try #require(URL(string: "https://example.com/a/b///"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "https://example.com/a/")
+
+        // Query and fragment are preserved across delete
+        url = try #require(URL(string: "https://example.com/a/b?q=1#f"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "https://example.com/a/?q=1#f")
+        #expect(result.query() == "q=1")
+        #expect(result.fragment() == "f")
+
+        // Empty relative path: delete prepends ".." and preserves query/fragment
+        url = try #require(URL(string: "?query#frag"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "../?query#frag")
+
+        // Percent-encoded paths preserve their encoding
+        url = try #require(URL(string: "https://example.com/a%20b/c"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "https://example.com/a%20b/")
+        #expect(result.path(percentEncoded: false) == "/a b/")
+
+        // %2E (encoded dot) is treated literally, not as a dot segment
+        url = try #require(URL(string: "https://example.com/x/%2E"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "https://example.com/x/")
+
+        // %2F (encoded slash) is preserved as part of the component, not a separator
+        url = try #require(URL(string: "https://example.com/a/b%2Fc"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "https://example.com/a/")
+
+        // Relative URL with base
+        let httpBase = try #require(URL(string: "https://example.com/base/dir/"))
+        let httpRel = try #require(URL(string: "sub/file", relativeTo: httpBase))
+        result = httpRel.deletingLastPathComponent()
+        #expect(result.relativeString == "sub/")
+        #expect(result.absoluteString == "https://example.com/base/dir/sub/")
+        #expect(result.path == "/base/dir/sub")
+
+        url = try #require(URL(string: "scheme:ab"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "scheme:")
+
+        url = try #require(URL(string: "a:b"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "a:")
+
+        url = try #require(URL(string: "scheme:a/b"))
+        result = url.deletingLastPathComponent()
+        #expect(result.absoluteString == "scheme:a/")
+        result = result.deletingLastPathComponent()
+        #expect(result.absoluteString == "scheme:")
     }
 
     @Test func deletingLastPathComponentWithBase() throws {
@@ -1370,7 +3057,13 @@ private struct URLTests {
 
         emptyHost.append(path: "")
         #expect(emptyHost.host() == nil)
-        #expect(emptyHost.path().isEmpty)
+        if foundation_swift_url_v2_enabled() {
+            // Treat "scheme://" the same as other URLs with an authority
+            // component and insert a "/" to separate authority from path.
+            #expect(emptyHost.path() == "/")
+        } else {
+            #expect(emptyHost.path().isEmpty)
+        }
 
         emptyHost.append(path: "foo")
         #expect(emptyHost.host()?.isEmpty ?? true)
@@ -1388,6 +3081,32 @@ private struct URLTests {
         // Old behavior appends to the string, but is missing the path
         checkBehavior(schemeOnly.path(), new: "foo", old: "")
         #expect(schemeOnly.absoluteString == "scheme:foo")
+    }
+
+    // A scheme-less relative reference with an empty path ("?q", "#frag") must
+    // keep the appended component as a relative path. A bare component that
+    // looks like a scheme ("foo:bar") would otherwise re-parse as one.
+    @Test func appendingToRelativeReferenceWithEmptyPath() throws {
+        func expectNoScheme(_ url: URL, _ string: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(url.absoluteString == string, sourceLocation: sourceLocation)
+            #expect(url.scheme == nil, sourceLocation: sourceLocation)
+            // Re-parsing the result must not introduce a scheme
+            #expect(URL(string: url.absoluteString)?.scheme == nil, sourceLocation: sourceLocation)
+        }
+
+        var base = try #require(URL(string: "?q"))
+        expectNoScheme(base.appending(path: "foo:bar"), "./foo:bar?q")
+        #expect(base.appending(path: "foo").absoluteString == "./foo?q")
+
+        base = try #require(URL(string: "#frag"))
+        expectNoScheme(base.appending(path: "foo:bar"), "./foo:bar#frag")
+        expectNoScheme(base.appending(component: "foo:bar"), "./foo:bar#frag")
+        #expect(base.appending(path: "foo", directoryHint: .isDirectory).absoluteString == "./foo/#frag")
+
+        // ":" is allowed in a relative path if a scheme already exists
+        let schemeOnly = try #require(URL(string: "scheme:")).appending(path: "foo:bar")
+        #expect(schemeOnly.absoluteString == "scheme:foo:bar")
+        #expect(schemeOnly.scheme == "scheme")
     }
 
     @Test func emptySchemeCompatibility() throws {
@@ -1445,42 +3164,54 @@ private struct URLTests {
 
         #expect(url.user() == "%3Auser")
         #expect(url.user(percentEncoded: false) == ":user")
+        #expect(url.user == ":user")
 
         #expect(url.password() == "%3Apassword")
         #expect(url.password(percentEncoded: false) == ":password")
+        #expect(url.password == "%3Apassword")
 
         #expect(url.host() == "%3A.com")
         #expect(url.host(percentEncoded: false) == ":.com")
+        #expect(url.host == ":.com")
 
         #expect(url.path() == "/%3Apath")
         #expect(url.path(percentEncoded: false) == "/:path")
+        #expect(url.path == "/:path")
 
         #expect(url.query() == "%3Aquery=%3A")
         #expect(url.query(percentEncoded: false) == ":query=:")
+        #expect(url.query == "%3Aquery=%3A")
 
         #expect(url.fragment() == "%3Afragment")
         #expect(url.fragment(percentEncoded: false) == ":fragment")
+        #expect(url.fragment == "%3Afragment")
 
         // Lowercase input
         url = URL(string: "https://%3auser:%3apassword@%3a.com/%3apath?%3aquery=%3a#%3afragment")!
 
         #expect(url.user() == "%3auser")
         #expect(url.user(percentEncoded: false) == ":user")
+        #expect(url.user == ":user")
 
         #expect(url.password() == "%3apassword")
         #expect(url.password(percentEncoded: false) == ":password")
+        #expect(url.password == "%3apassword")
 
         #expect(url.host() == "%3a.com")
         #expect(url.host(percentEncoded: false) == ":.com")
+        #expect(url.host == ":.com")
 
         #expect(url.path() == "/%3apath")
         #expect(url.path(percentEncoded: false) == "/:path")
+        #expect(url.path == "/:path")
 
         #expect(url.query() == "%3aquery=%3a")
         #expect(url.query(percentEncoded: false) == ":query=:")
+        #expect(url.query == "%3aquery=%3a")
 
         #expect(url.fragment() == "%3afragment")
         #expect(url.fragment(percentEncoded: false) == ":fragment")
+        #expect(url.fragment == "%3afragment")
     }
 
     @Test func componentsUppercasePercentEncoding() throws {
@@ -1875,16 +3606,13 @@ private struct URLTests {
         #expect(comp.path == "/my\u{0}path")
     }
 
-    @Test func standardizedDotSegments() throws {
-        var standardized = try #require(URL(string: "../../../")).standardized
-        // URL should not remove leading dot segments until it's actually
-        // resolved against a base (longstanding CFURL behavior, too).
-        #expect(standardized.path() == "../../../")
-
+    @Test func standardizedAfterAppending() throws {
+        // After appending ".." to a relative URL with a base, standardizing
+        // resolves the dot segment against the resolved absolute path.
         let base = URL(filePath: "/base/directory/")
         let relative = URL(filePath: "dev", relativeTo: base)
         let combined = relative.appending(path: "../thing")
-        standardized = combined.standardized
+        let standardized = combined.standardized
         let expected = URL(filePath: "thing", relativeTo: base)
 
         #expect(standardized == expected)
@@ -1896,12 +3624,31 @@ private struct URLTests {
         #expect(standardized.absoluteURL.path() == "/base/directory/thing")
     }
 
-    @Test func standardizedEdgeCases() throws {
+    @Test func standardized() throws {
+        // No-op for empty or non-decomposable URLs
+        var url = try #require(URL(string: "https://example.com"))
+        #expect(url.standardized.absoluteString == "https://example.com")
+        #expect(url.standardized.path() == "")
+
+        url = try #require(URL(string: "scheme:"))
+        #expect(url.standardized.absoluteString == "scheme:")
+
+        url = try #require(URL(string: "scheme:relative/path"))
+        #expect(url.standardized.absoluteString == "scheme:relative/path")
+
+        url = try #require(URL(string: "."))
+        #expect(url.standardized.absoluteString == ".")
+
         // Empty path with empty authority standardizes to "/"
-        var url = try #require(URL(string: "https://"))
+        url = try #require(URL(string: "https://"))
         #expect(url.standardized.relativeString == "https:///")
         #expect(url.standardized.path() == "/")
 
+        // Non-decomposable URL returns self
+        url = try #require(URL(string: "mailto:user@example.com"))
+        #expect(url.standardized.absoluteString == "mailto:user@example.com")
+
+        // Dot segment resolution
         url = try #require(URL(string: "https://example.com/a/b/../c/./d"))
         #expect(url.standardized.path() == "/a/c/d")
 
@@ -1911,9 +3658,33 @@ private struct URLTests {
         url = try #require(URL(string: "https://example.com/a/b/.."))
         #expect(url.standardized.path() == "/a/")
 
+        // %2E is treated literally and is NOT a dot segment
+        url = try #require(URL(string: "https://example.com/a/%2E/b"))
+        #expect(url.standardized.absoluteString == "https://example.com/a/%2E/b")
+
+        // Multiple consecutive slashes are preserved (not collapsed)
+        url = try #require(URL(string: "https://example.com/a//b"))
+        #expect(url.standardized.absoluteString == "https://example.com/a//b")
+
+        // Percent-encoding is preserved through dot resolution
+        url = try #require(URL(string: "https://example.com/a%20b/./c"))
+        var result = url.standardized
+        #expect(result.absoluteString == "https://example.com/a%20b/c")
+        #expect(result.path(percentEncoded: false) == "/a b/c")
+
+        // Query and fragment are preserved through dot resolution
+        url = try #require(URL(string: "https://example.com/a/b/../c?q=1#frag"))
+        result = url.standardized
+        #expect(result.absoluteString == "https://example.com/a/c?q=1#frag")
+        #expect(result.query() == "q=1")
+        #expect(result.fragment() == "frag")
+
         // Preserve leading dot segments until resolution (RFC 1808)
         url = try #require(URL(string: "https://example.com/../../a"))
         #expect(url.standardized.path() == "/../../a")
+
+        url = try #require(URL(string: "../../../"))
+        #expect(url.standardized.path() == "../../../")
 
         url = try #require(URL(string: "../../a/b"))
         #expect(url.standardized.path() == "../../a/b")
@@ -1936,11 +3707,61 @@ private struct URLTests {
         #expect(url.relativeString == "..")
         #expect(url.hasDirectoryPath)
 
-        #if FOUNDATION_FRAMEWORK
-        // Non-decomposable URL returns self
-        url = try #require(URL(string: "mailto:user@example.com"))
-        #expect(url.standardized.absoluteString == "mailto:user@example.com")
-        #endif
+        // Relative URL with base resolves dot segments via the base
+        let httpBase = try #require(URL(string: "https://example.com/base/dir/"))
+        let httpRel = try #require(URL(string: "../sibling", relativeTo: httpBase))
+        result = httpRel.standardized
+        #expect(result.relativeString == "../sibling")
+        #expect(result.absoluteString == "https://example.com/base/sibling")
+
+        // Schemes with absolute path are given an empty authority "//"
+        url = try #require(URL(string: "file:/"))
+        #expect(url.standardized.absoluteString == "file:///")
+
+        url = try #require(URL(string: "file:/path"))
+        #expect(url.standardized.absoluteString == "file:///path")
+
+        // Canonicalization and dot resolution happen in one pass
+        url = try #require(URL(string: "file:/a/./b/../c"))
+        #expect(url.standardized.absoluteString == "file:///a/c")
+
+        url = try #require(URL(string: "custom:/path/./more"))
+        #expect(url.standardized.absoluteString == "custom:///path/more")
+
+        // Standardizing dot segments must not introduce an authority
+        url = try #require(URL(string: "foo/..///host"))
+        #expect(url.standardized.absoluteString == "host")
+        #expect(url.standardized.host() == nil)
+        #expect(URL(string: url.standardized.absoluteString)?.host() == nil)
+
+        url = try #require(URL(string: "scheme:/a/..///host"))
+        #expect(url.standardized.absoluteString == "scheme://///host")
+        #expect(url.standardized.host() == nil)
+        #expect(URL(string: url.standardized.absoluteString)?.host() == nil)
+
+        // Dot resolution can move a colon-bearing segment to the front of a
+        // scheme-less path. The result must not re-parse as having a scheme.
+        if foundation_swift_url_v2_enabled() {
+            url = try #require(URL(string: "./foo:bar"))
+            #expect(url.standardized.relativeString == "./foo:bar")
+            #expect(url.standardized.scheme == nil)
+            #expect(URL(string: url.standardized.absoluteString)?.scheme == nil)
+
+            url = try #require(URL(string: "a/../b:c"))
+            #expect(url.standardized.relativeString == "./b:c")
+            #expect(url.standardized.scheme == nil)
+            #expect(URL(string: url.standardized.absoluteString)?.scheme == nil)
+
+            url = try #require(URL(string: "a/../:b"))
+            #expect(url.standardized.relativeString == "./:b")
+            #expect(url.standardized.scheme == nil)
+            #expect(URL(string: url.standardized.absoluteString)?.scheme == nil)
+
+            url = try #require(URL(string: "a/../12:34"))
+            #expect(url.standardized.relativeString == "./12:34")
+            #expect(url.standardized.scheme == nil)
+            #expect(URL(string: url.standardized.absoluteString)?.scheme == nil)
+        }
     }
 
     @Test func pathComponents() throws {
@@ -2178,7 +3999,7 @@ private struct URLTests {
         #expect(url.lastPathComponent == "c")
     }
 
-    @Test func pathExtensionsContinued() throws {
+    @Test func pathExtensionProperty() throws {
         var url = URL(filePath: "/file")
         #expect(url.pathExtension == "")
 
@@ -2274,6 +4095,13 @@ private struct URLTests {
         extended = url.appendingPathExtension("txt")
         #expect(extended.path() == "/file.txt")
 
+        if foundation_swift_url_v2_enabled() {
+            extended = url.appendingPathExtension("txt\u{0}")
+            #expect(extended.path() == "/file.txt")
+            extended = url.appendingPathExtension("txt\u{0}\u{0}")
+            #expect(extended.path() == "/file.txt")
+        }
+
         // Preserves trailing slash for directories
         url = URL(filePath: "/dir/file", directoryHint: .isDirectory)
         extended = url.appendingPathExtension("txt")
@@ -2300,6 +4128,9 @@ private struct URLTests {
         #expect(extended.query() == "q=1")
         #expect(extended.fragment() == "frag")
 
+        extended = url.appendingPathExtension("txt\u{0}")
+        #expect(extended.path() == "/file.txt%00")
+
         // Relative path with base
         let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
         url = URL(filePath: "file", relativeTo: base)
@@ -2309,6 +4140,68 @@ private struct URLTests {
         url = try #require(URL(string: "scheme:file"))
         extended = url.appendingPathExtension("txt")
         #expect(extended.absoluteString == "scheme:file.txt")
+
+        // All-slashes path returns self
+        url = try #require(URL(string: "https://example.com//"))
+        extended = url.appendingPathExtension("ext")
+        if foundation_swift_url_v2_enabled() {
+            #expect(extended.absoluteString == "https://example.com//")
+        } else {
+            #expect(extended.absoluteString == "https://example.com/.ext/")
+        }
+
+        // Leading-dot extension just inserts the dot separator
+        url = URL(filePath: "/file")
+        extended = url.appendingPathExtension(".tar")
+        #expect(extended.absoluteString == "file:///file..tar")
+
+        // Multiple trailing slashes
+        url = try #require(URL(string: "https://example.com/dir//"))
+        extended = url.appendingPathExtension("ext")
+        #expect(extended.absoluteString == "https://example.com/dir.ext/")
+
+        url = try #require(URL(string: "https://example.com/a%20b"))
+        extended = url.appendingPathExtension("txt")
+        #expect(extended.absoluteString == "https://example.com/a%20b.txt")
+        #expect(extended.path(percentEncoded: false) == "/a b.txt")
+
+        url = try #require(URL(string: "scheme:dir/"))
+        extended = url.appendingPathExtension("ext")
+        #expect(extended.absoluteString == "scheme:dir.ext/")
+
+        let httpBase = try #require(URL(string: "https://example.com/base/"))
+        let httpRel = try #require(URL(string: "sub/file", relativeTo: httpBase))
+        extended = httpRel.appendingPathExtension("txt")
+        #expect(extended.relativeString == "sub/file.txt")
+        #expect(extended.absoluteString == "https://example.com/base/sub/file.txt")
+
+        // Last component is "." or ".."
+        url = try #require(URL(string: "https://example.com/a/."))
+        extended = url.appendingPathExtension("ext")
+        #expect(extended.absoluteString == "https://example.com/a/..ext")
+
+        url = try #require(URL(string: "https://example.com/a/.."))
+        extended = url.appendingPathExtension("ext")
+        #expect(extended.absoluteString == "https://example.com/a/...ext")
+
+        url = URL(filePath: "/file")
+        extended = url.appendingPathExtension("ßeta")
+        #expect(extended.absoluteString == "file:///file.%C3%9Feta")
+
+        // Extension with percent-encoded characters is re-encoded
+        url = URL(filePath: "/file")
+        extended = url.appendingPathExtension("a%20b")
+        #expect(extended.absoluteString == "file:///file.a%2520b")
+
+        // Appending an extension with ":" to a relative path must
+        // not cause the path to be interpreted as a scheme.
+        if foundation_swift_url_v2_enabled() {
+            url = try #require(URL(string: "fake"))
+            extended = url.appendingPathExtension("scheme:path")
+            #expect(extended.scheme == nil)
+            #expect(extended.path() == "./fake.scheme:path")
+            #expect(extended.absoluteString == "./fake.scheme:path")
+        }
     }
 
     @Test func deletingPathExtension() throws {
@@ -2390,6 +4283,42 @@ private struct URLTests {
         #expect(url.pathExtension == "framework") // From the absolute path
         #expect(url.deletingPathExtension() == url)
         #expect(url.deletingPathExtension().path() == "/path/dir.framework/")
+
+        // All-slashes path returns self (no component to strip)
+        url = try #require(URL(string: "https://example.com///"))
+        #expect(url.deletingPathExtension().absoluteString == "https://example.com///")
+
+        // Multi-dot single component: only the last extension is removed
+        url = URL(filePath: "/a/b.c.d.e")
+        #expect(url.deletingPathExtension().absoluteString == "file:///a/b.c.d")
+
+        // %2E is treated literally and is not recognized as the extension separator
+        url = try #require(URL(string: "https://example.com/file%2Etxt"))
+        #expect(url.deletingPathExtension().absoluteString == "https://example.com/file%2Etxt")
+
+        // Non-file URL: %2F decodes, so "name%2F.hidden" has no extension
+        url = try #require(URL(string: "https://example.com/name%2F.hidden"))
+        #expect(url.deletingPathExtension().absoluteString == "https://example.com/name%2F")
+
+        // File URL: %2F is preserved as part of the component, so "name%2F.txt" has extension "txt"
+        url = try #require(URL(string: "file:///dir/name%2F.txt"))
+        #expect(url.deletingPathExtension().absoluteString == "file:///dir/name%2F")
+
+        url = try #require(URL(string: "scheme:dir/file.txt"))
+        #expect(url.deletingPathExtension().absoluteString == "scheme:dir/file")
+
+        let httpBase = try #require(URL(string: "https://example.com/base/dir/"))
+        let httpRel = try #require(URL(string: "sub/file.txt", relativeTo: httpBase))
+        deleted = httpRel.deletingPathExtension()
+        #expect(deleted.relativeString == "sub/file")
+        #expect(deleted.absoluteString == "https://example.com/base/dir/sub/file")
+
+        // Last component is "." or ".." - treated as having no extension
+        url = try #require(URL(string: "https://example.com/."))
+        #expect(url.deletingPathExtension().absoluteString == "https://example.com/.")
+
+        url = try #require(URL(string: "https://example.com/.."))
+        #expect(url.deletingPathExtension().absoluteString == "https://example.com/..")
     }
 
     @Test func hasDirectoryPathDotSegments() throws {
