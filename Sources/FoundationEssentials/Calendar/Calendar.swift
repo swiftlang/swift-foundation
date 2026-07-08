@@ -22,6 +22,8 @@ internal import os
 import CRT
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -467,6 +469,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter identifier: The kind of calendar to use.
     public init(identifier: __shared Identifier) {
         _calendar = CalendarCache.cache.fixed(identifier)
+    }
+
+    /// Returns a new Calendar using optional, non-default values.
+    ///
+    /// - parameter identifier: The kind of calendar to use.
+    /// - parameter timeZone: A `TimeZone` to use, instead of the default.
+    /// - parameter locale: A `Locale` to use, instead of the default.
+    /// - parameter firstWeekday: A first day of the week to use, instead of the default.
+    /// - parameter minimumDaysInFirstWeek: A number of minimum days in the first week to use, instead of the default.
+    @available(FoundationPreview 6.5, *)
+    public init(identifier: Identifier, timeZone: TimeZone? = nil, locale: Locale? = nil, firstWeekday: Int? = nil, minimumDaysInFirstWeek: Int? = nil) {
+        _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
@@ -1300,6 +1314,25 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter block: A closure that is called with search results.
     @available(iOS 8.0, *)
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
+        // Fast-path: if the calendar implementation has a direct answer for the
+        // first match AND default policies are in effect, drive the loop with
+        // repeated nextDate(after:matching:) calls instead of the generic
+        // enumerate framework. The fast path opts out (returns nil) for any
+        // pattern it can't handle, so this is safe.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first,
+           let _ = _calendar.nextDate(after: start, matching: components, direction: direction) {
+            var current = start
+            var stop = false
+            while !stop {
+                guard let next = _calendar.nextDate(after: current, matching: components, direction: direction) else {
+                    block(nil, false, &stop)
+                    return
+                }
+                block(next, true, &stop)
+                current = next
+            }
+            return
+        }
         _enumerateDates(startingAfter: start, matching: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction, using: block)
     }
     
@@ -1340,6 +1373,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A `Date` representing the result of the search, or `nil` if a result could not be found.
     @available(iOS 8.0, *)
     public func nextDate(after date: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward) -> Date? {
+        // Fast-path: ask the calendar implementation if it can answer directly.
+        // Currently only honored for the most common case — default policies.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first {
+            if let fast = _calendar.nextDate(after: date, matching: components, direction: direction) {
+                return fast
+            }
+        }
         var result: Date?
         enumerateDates(startingAfter: date, matching: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction) { date, exactMatch, stop in
             result = date

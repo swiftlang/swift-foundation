@@ -281,6 +281,15 @@ private struct DecimalTests {
         #expect(notDecimal == nil)
     }
 
+    @Test func decimalParseTruncatedMultiByteSeparator() {
+        let result = Decimal._decimal(from: "1,".utf8, decimalSeparator: ",,".utf8, matchEntireString: false)
+        switch result {
+        case .success(let d, _): #expect(d == Decimal(1))
+        case .parseFailure, .overlargeValue:
+            Issue.record("Expected Decimal._decimal to parse \"1\" successfully, got \(result)")
+        }
+    }
+
     @Test func normalize() throws {
         var one = Decimal(1)
         var ten = Decimal(-10)

@@ -33,6 +33,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if !NO_FILESYSTEM
@@ -71,7 +73,7 @@ private func openatFileDescriptorProtected(dirfd: Int32, name: UnsafePointer<CCh
 private var minimalOpenFlagsForDirectories: Int32 {
 #if canImport(Darwin)
     O_SEARCH
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
     O_DIRECTORY | O_RDONLY
 #else
     O_DIRECTORY | O_PATH
@@ -166,12 +168,12 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
 
 /// Creates a temporary file for atomic writing of `inPath` in the destination's parent directory.
 /// If `destDirfd` is -1, then `destinationPath` should be the full path.
-#if os(WASI)
+#if os(WASI) || os(Emscripten)
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
 private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, permissions: TemporaryFilePermissions, variant: String? = nil) throws -> (Int32, String) {
-#if os(WASI)
-    // WASI does not have temp directories
+#if os(WASI) || os(Emscripten)
+    // WASI/Emscripten does not have temp directories
     throw CocoaError(.featureUnsupported)
 #else
     // When `destDirfd == -1`, build a full-path template and open the file by path.
@@ -250,7 +252,12 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
 #else
-            guard mktemp(templateFileSystemRep) != nil else {
+            @diagnose(DeprecatedDeclaration, as: ignored)
+            func _mktemp(_ templateFileSystemRep: UnsafeMutablePointer<CChar>!) -> UnsafeMutablePointer<CChar>! {
+                mktemp(templateFileSystemRep)
+            }
+            
+            guard _mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
 #endif
@@ -300,12 +307,12 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
 /// Returns `(file descriptor, temporary file name, temporary directory file descriptor, temporary directory path)`
 /// Caller is responsible for calling `close` on the `fd: Int32` file descriptor and calling `cleanupTemporaryDirectory` on the temporary directory path. The temporary directory path may be nil, if it does not need to be cleaned up.
 /// Caller must also close the `tempDirfd: Int32` file descriptor if it's different than `fd`.
-#if os(WASI)
+#if os(WASI) || os(Emscripten)
 @available(*, unavailable, message: "WASI does not have temporary directories")
 #endif
 private func createProtectedTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, permissions: TemporaryFilePermissions, variant: String? = nil) throws -> (fd: Int32, name: String, tempDirfd: Int32, cleanupPath: String?) {
-#if os(WASI)
-    // WASI does not have temp directories
+#if os(WASI) || os(Emscripten)
+    // WASI/Emscripten does not have temp directories
     throw CocoaError(.featureUnsupported)
 #else
 #if FOUNDATION_FRAMEWORK
@@ -429,7 +436,7 @@ extension NSData {
 #endif
 
 internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
-#if os(WASI) // `.atomic` is unavailable on WASI
+#if os(WASI) || os(Emscripten) // `.atomic` is unavailable on WASI/Emscripten
     try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
 #else
     if options.contains(.atomic) {
@@ -441,12 +448,12 @@ internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & 
 }
 
 /// Create a new file out of `Data` at a path, using atomic writing.
-#if os(WASI)
-@available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#if os(WASI) || os(Emscripten)
+@available(*, unavailable, message: "atomic writing is unavailable in WASI/Emscripten because temporary files are not supported")
 #endif
 private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
-#if os(WASI)
-    // `.atomic` is unavailable on WASI
+#if os(WASI) || os(Emscripten)
+    // `.atomic` is unavailable on WASI/Emscripten
     throw CocoaError(.featureUnsupported)
 #else
     assert(options.contains(.atomic))
@@ -710,7 +717,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
 private func writeToFileNoAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
+#if !os(WASI) && !os(Emscripten) // `.atomic` is unavailable on WASI/Emscripten
     assert(!options.contains(.atomic))
 #endif
 
@@ -816,8 +823,8 @@ extension Data {
         public init(rawValue: UInt) { self.rawValue = rawValue }
         
         /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
-#if os(WASI)
-        @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#if os(WASI) || os(Emscripten)
+        @available(*, unavailable, message: "atomic writing is unavailable in WASI/Emscripten because temporary files are not supported")
 #endif
         public static let atomic = WritingOptions(rawValue: 1 << 0)
         
@@ -847,7 +854,7 @@ extension Data {
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
+#if !os(WASI) && !os(Emscripten) // `.atomic` is unavailable on WASI/Emscripten
         if options.contains(.withoutOverwriting) && options.contains(.atomic) {
             fatalError("withoutOverwriting is not supported with atomic")
         }
