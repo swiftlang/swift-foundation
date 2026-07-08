@@ -4,7 +4,7 @@
 
 ## Code Style
 
-**Do not manually wrap comments or DocC.**
+**Do not manually wrap comments or DocC.** Keep it on one line unless splitting genuinely improves readability.
 
 **Add a comment when the *why* is non-obvious:** non-obvious assumptions, platform workarounds, deliberately unusual choices (e.g. two enum raw values with the same raw value on purpose).
 
@@ -17,13 +17,31 @@
 
 **DocC must be accurate.** Do not mention parameters in documentation that do not affect the described behavior.
 
+**Do not leave a brace, keyword, or condition orphaned on its own line** when it can be joined with the adjacent line without hurting readability.
+
+**Avoid abbreviations** Prefer full descriptive names. If a domain term has a conventional abbreviation, name the public parameter in full and reserve the abbreviation for internal use only.
+
+**Avoid C-style prefixes on constant names** (e.g. `_kMyConstant`). Use descriptive names instead.
+
 ---
 
 ## Code Structure
 
 **Factor out shared constants and logic.** If two or more implementations share constants or logic, extract them.
 
+**Consolidate near-duplicate logic.** If two functions do almost the same thing, or one check is always immediately followed by another that repeats it, merge them into a single implementation.
+
 **Decompose complex features into smaller, focused PRs.**
+
+**Move struct-building logic into the type's own initializer.** If a block of code exists only to populate the fields of a type before constructing it, make it an `init` on that type instead of leaving it as free-floating setup code at the call site.
+
+---
+
+## API Design
+
+**A function's `nil` return should have one unambiguous meaning.** Do not overload `nil` to mean both "not applicable here" and "no result found."
+
+**Do not provide a default protocol-witness implementation when existing conformances already diverge in real behavior.** There is no single "standard" behavior to default to, and a default makes divergence easy to overlook. Require each conformance to implement it explicitly.
 
 ---
 
@@ -40,6 +58,14 @@
 **`@unchecked Sendable`, `nonisolated(unsafe)`**: If you need to use these, add:
 - a code or PR comment explaining why the suppression is safe
 - `// TODO:` with a migration path to remove the annotation if applicable
+
+**Avoid constructing expensive value types repeatedly inside nested loops.** Restructure to build shared state once and only vary what actually changes across iterations.
+
+**Avoid `KeyPath` for performance-critical property access.** It involves runtime dispatch. Profile against direct property accessors before choosing `KeyPath` in a hot path.
+
+**Check for overflow in multiplications used for size or capacity calculations** (e.g. with `multipliedReportingOverflow`) and bail out rather than letting it silently wrap or trap.
+
+**Avoid capturing outer-scope variables in helper functions or closures.** Pass them as explicit parameters so the dependency is traceable at the call site.
 
 ---
 
