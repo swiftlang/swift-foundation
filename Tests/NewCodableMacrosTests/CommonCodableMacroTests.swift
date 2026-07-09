@@ -479,7 +479,33 @@ struct CommonCodableMacroTests {
             macros: codableTestMacros
         )
     }
-
+    
+    @Test func varWithoutTypeAnnotationProducesDiagnostic() {
+        AssertMacroExpansion(
+            """
+            @CommonCodable
+            struct Config {
+                let name: String
+                var locale = "en"
+            }
+            """,
+            expandedSource: """
+            struct Config {
+                let name: String
+                var locale = "en"
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "@CommonCodable requires all stored properties to have explicit type annotations",
+                    line: 4,
+                    column: 9
+                )
+            ],
+            macros: codableTestMacros
+        )
+    }
+    
     @Test func aliasFullRoundtrip() {
         AssertMacroExpansion(
             """
