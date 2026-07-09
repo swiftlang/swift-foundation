@@ -373,14 +373,16 @@ func extractDetailedStoredProperties(
                 isOptional = false
                 typeName = type.trimmedDescription
             }
-
+          
+            let resolvedDefaultExpr = defaultExpr ?? binding.initializer?.value.trimmedDescription
+          
             properties.append(DetailedStoredProperty(
                 name: propertyName,
                 key: key,
                 aliases: aliases,
                 typeName: typeName,
                 isOptional: isOptional,
-                defaultExpr: defaultExpr,
+                defaultExpr: resolvedDefaultExpr,
                 encodingStrategy: encodingStrat,
                 decodingStrategy: decodingStrat
             ))
