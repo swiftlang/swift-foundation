@@ -41,13 +41,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     }()
 #endif
 
-    let kSecondsInWeek = 604_800
-    let kSecondsInDay = 86400
-    let kSecondsInHour = 3600
-    let kSecondsInMinute = 60
-
-    let inf_ti: TimeInterval = 4398046511104.0
-
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         // .hebrew is the only identifier this class handles. `gregorianStartDate`
         // is ignored (only the Gregorian/Julian cutover calendar uses it).
@@ -79,66 +72,24 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     var _firstWeekday: Int?
     var firstWeekday: Int {
-        set {
-            precondition(newValue >= 1 && newValue <= 7, "Weekday should be in the range of 1...7")
-            _firstWeekday = newValue
-        }
-        get {
-            if let _firstWeekday {
-                return _firstWeekday
-            } else if let locale {
-                return locale.firstDayOfWeek.icuIndex
-            } else {
-                return 1
-            }
-        }
+        set { _firstWeekday = _CalendarUtility.validatedFirstWeekday(newValue) }
+        get { _CalendarUtility.resolveFirstWeekday(stored: _firstWeekday, locale: locale) }
     }
 
     var _minimumDaysInFirstWeek: Int?
     var minimumDaysInFirstWeek: Int {
-        set {
-            if newValue < 1 {
-                _minimumDaysInFirstWeek = 1
-            } else if newValue > 7 {
-                _minimumDaysInFirstWeek = 7
-            } else {
-                _minimumDaysInFirstWeek = newValue
-            }
-        }
-        get {
-            if let _minimumDaysInFirstWeek {
-                return _minimumDaysInFirstWeek
-            } else if let locale {
-                return locale.minimumDaysInFirstWeek
-            } else {
-                return 1
-            }
-        }
+        set { _minimumDaysInFirstWeek = _CalendarUtility.clampedMinimumDaysInFirstWeek(newValue) }
+        get { _CalendarUtility.resolveMinimumDaysInFirstWeek(stored: _minimumDaysInFirstWeek, locale: locale) }
     }
 
     func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> _CalendarProtocol {
-        let newTimeZone = changingTimeZone ?? self.timeZone
-        let newLocale = changingLocale ?? self.locale
-
-        let newFirstWeekday: Int?
-        if let changingFirstWeekday {
-            newFirstWeekday = changingFirstWeekday
-        } else if let _firstWeekday {
-            newFirstWeekday = _firstWeekday
-        } else {
-            newFirstWeekday = nil
-        }
-
-        let newMinDays: Int?
-        if let changingMinimumDaysInFirstWeek {
-            newMinDays = changingMinimumDaysInFirstWeek
-        } else if let _minimumDaysInFirstWeek {
-            newMinDays = _minimumDaysInFirstWeek
-        } else {
-            newMinDays = nil
-        }
-
-        return _CalendarHebrew(identifier: identifier, timeZone: newTimeZone, locale: newLocale, firstWeekday: newFirstWeekday, minimumDaysInFirstWeek: newMinDays, gregorianStartDate: nil)
+        let args = _CalendarUtility.resolvedCopyArgs(
+            currentTimeZone: timeZone, changingTimeZone: changingTimeZone,
+            currentLocale: locale, changingLocale: changingLocale,
+            currentFirstWeekday: _firstWeekday, changingFirstWeekday: changingFirstWeekday,
+            currentMinimumDaysInFirstWeek: _minimumDaysInFirstWeek, changingMinimumDaysInFirstWeek: changingMinimumDaysInFirstWeek
+        )
+        return _CalendarHebrew(identifier: identifier, timeZone: args.timeZone, locale: args.locale, firstWeekday: args.firstWeekday, minimumDaysInFirstWeek: args.minimumDaysInFirstWeek, gregorianStartDate: nil)
     }
 
     func hash(into hasher: inout Hasher) {
@@ -149,6 +100,30 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         hasher.combine(localeIdentifier)
         hasher.combine(preferredFirstWeekday)
         hasher.combine(preferredMinimumDaysInFirstweek)
+    }
+
+    func supportsNextDateFastPath(for components: Calendar.ComponentSet) -> Bool {
+        if components.contains(.era) || components.contains(.year) || components.contains(.weekOfYear) || components.contains(.yearForWeekOfYear) || components.contains(.dayOfYear) {
+            return false
+        }
+
+        let hasMonth = components.contains(.month)
+        let hasDay = components.contains(.day)
+        let hasWeekday = components.contains(.weekday)
+        let hasWdOrd = components.contains(.weekdayOrdinal)
+        let hasWeekOfMonth = components.contains(.weekOfMonth)
+
+        if hasWeekOfMonth && !(hasMonth && hasWeekday && !hasDay && !hasWdOrd) { return false }
+        if hasWdOrd && !(hasWeekday && !hasDay && !hasWeekOfMonth) { return false }
+        if hasWeekday && hasDay { return false }
+        if hasWeekday && hasMonth && !hasWdOrd && !hasWeekOfMonth { return false }
+
+        let timeOnly = !hasMonth && !hasDay && !hasWeekday
+        if timeOnly {
+            guard components.contains(.hour), components.contains(.minute), components.contains(.second) else { return false }
+        }
+
+        return true
     }
 
     // MARK: - Range
@@ -425,10 +400,10 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         case .era:
             // Hebrew has a single AM era spanning from epoch to effectively forever.
             // Matches ICU's reported start (Hebrew epoch, -181,778,083,200 s before
-            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (inf_ti).
+            // Date reference = year 1 AM, Tishrei 1, midnight UTC) and duration (Calendar._maxDateIntervalDuration).
             return DateInterval(
                 start: Date(timeIntervalSinceReferenceDate: -181_778_083_200.0),
-                duration: inf_ti
+                duration: Calendar._maxDateIntervalDuration
             )
         case .year:
             // Tishri 1 of this year → Tishri 1 of next year.
@@ -566,47 +541,16 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Weekend queries
 
-    // TODO: Factor out into shared utility; identical to _CalendarGregorian.isDateInWeekend.
     func isDateInWeekend(_ date: Date) -> Bool {
-        let weekendRange: WeekendRange
-        if let localeWeekendRange = locale?.weekendRange {
-            weekendRange = localeWeekendRange
-        } else {
-            // Weekend range for 001 region (world default).
-            weekendRange = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
-        }
-
-        let comps = dateComponents([.weekday], from: date, in: self.timeZone)
+        let weekendRange = locale?.weekendRange ?? _CalendarUtility.defaultWeekendRange
+        let comps = dateComponents([.weekday, .hour, .minute, .second], from: date, in: self.timeZone)
         guard let dayOfWeek = comps.weekday else { return false }
-
-        if weekendRange.start == weekendRange.end && dayOfWeek != weekendRange.start {
-            return false
-        } else if weekendRange.start < weekendRange.end && (dayOfWeek < weekendRange.start || dayOfWeek > weekendRange.end) {
-            return false
-        } else if weekendRange.start > weekendRange.end && (dayOfWeek > weekendRange.end && dayOfWeek < weekendRange.start) {
-            return false
-        }
-
-        // Day matches; now check time-in-day if this day is the weekend start or end.
-        let tz = self.timeZone
-        let (tzOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: date, repeatedTimePolicy: .former, skippedTimePolicy: .former)
-        let localSeconds = date.timeIntervalSinceReferenceDate + Double(tzOffset) + dstOffset
-        let daysSinceRef = (localSeconds / 86400).rounded(.down)
-        let timeInDay = localSeconds - daysSinceRef * 86400
-
-        if dayOfWeek == weekendRange.start {
-            guard let onsetTime = weekendRange.onsetTime, onsetTime != 0 else {
-                return true
-            }
-            return timeInDay >= onsetTime
-        } else if dayOfWeek == weekendRange.end {
-            guard let ceaseTime = weekendRange.ceaseTime, ceaseTime < 86400 else {
-                return true
-            }
-            return timeInDay < ceaseTime
-        } else {
-            return true
-        }
+        let timeInDay = TimeInterval(
+            (comps.hour ?? 0) * Calendar._secondsInHour
+            + (comps.minute ?? 0) * Calendar._secondsInMinute
+            + (comps.second ?? 0)
+        )
+        return _CalendarUtility.isDateInWeekend(weekday: dayOfWeek, timeInDay: timeInDay, weekendRange: weekendRange)
     }
 
     // MARK: - Date ↔ DateComponents
@@ -1038,28 +982,14 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     package func nextDate(after date: Date, matching components: DateComponents,
                           direction: Calendar.SearchDirection) -> Date? {
-        // Reject anything that requires the generic enumerate framework.
-        // Time-of-day fields (hour/minute/second/nanosecond) ARE allowed and preserved.
-        if components.era != nil || components.year != nil ||
-           components.weekOfMonth != nil || components.weekOfYear != nil ||
-           components.yearForWeekOfYear != nil ||
-           components.dayOfYear != nil {
-            return nil
-        }
+        guard supportsNextDateFastPath(for: components._populatedComponentSet) else { return nil }
 
         let hasMonth = components.month != nil
         let hasDay = components.day != nil
         let hasWeekday = components.weekday != nil
         let hasWdOrd = components.weekdayOrdinal != nil
-
-        // weekdayOrdinal is only fast-pathed for {month, weekday, weekdayOrdinal}
-        // (e.g. "4th Thursday of November" / "last Friday of Adar"). Any other shape
-        // falls through to the generic enumerate framework.
-        if hasWdOrd && !(hasMonth && hasWeekday && !hasDay) { return nil }
-        // {weekday, day} and {weekday, month} (without wdOrd) aren't fast-pathed.
-        if hasWeekday && hasDay { return nil }
-        if hasWeekday && hasMonth && !hasWdOrd { return nil }
-        if !hasMonth && !hasDay && !hasWeekday { return nil }
+        let hasWeekOfMonth = components.weekOfMonth != nil
+        let timeOnly = !hasMonth && !hasDay && !hasWeekday
 
         let tz = self.timeZone
         let totalOffset = tz.secondsFromGMT(for: date)
@@ -1070,22 +1000,46 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let secsInDay = Self.secondsInDay(from: components)
         let forward = direction == .forward
 
-        if hasWdOrd {
-            return nextMonthWeekdayOrdinalMatch(
-                rd: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
+        if timeOnly {
+            return nextTimeOfDayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
+                                      targetSecsInDay: secsInDay,
+                                      forward: forward, tz: tz)
+        }
+
+        if hasWeekOfMonth {
+            return nextMonthWeekdayWeekOfMonthMatch(
+                rataDie: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
                 targetMonth: components.month!,
                 targetWeekday: components.weekday!,
-                targetWdOrd: components.weekdayOrdinal!,
+                targetWeekOfMonth: components.weekOfMonth!,
                 targetSecsInDay: secsInDay, forward: forward, tz: tz)
         }
 
+        if hasWdOrd {
+            if hasMonth {
+                return nextMonthWeekdayOrdinalMatch(
+                    rataDie: rd, currentSecsInDay: currentSecsInDay, currentYear: year,
+                    targetMonth: components.month!,
+                    targetWeekday: components.weekday!,
+                    targetWdOrd: components.weekdayOrdinal!,
+                    targetSecsInDay: secsInDay, forward: forward, tz: tz)
+            } else {
+                return nextWeekdayOrdinalMatch(
+                    rataDie: rd, currentSecsInDay: currentSecsInDay,
+                    currentYear: year, currentCivilMonth: civilMonth, currentDay: day,
+                    targetWeekday: components.weekday!,
+                    targetWdOrd: components.weekdayOrdinal!,
+                    targetSecsInDay: secsInDay, forward: forward, tz: tz)
+            }
+        }
+
         if hasWeekday {
-            return nextWeekdayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
+            return nextWeekdayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
                                     targetWeekday: components.weekday!,
                                     targetSecsInDay: secsInDay, forward: forward, tz: tz)
         }
 
-        return nextMonthDayMatch(rd: rd, currentSecsInDay: currentSecsInDay,
+        return nextMonthDayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
                                  currentYear: year, currentCivilMonth: civilMonth, currentDay: day,
                                  targetMonth: components.month, targetDay: components.day,
                                  targetSecsInDay: secsInDay, forward: forward, tz: tz)
@@ -1094,7 +1048,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     /// Fast path for `{month?, day?, h?, m?, s?, ns?}` — annual recurrence at month/day.
     /// Either month or day (or both) must be set; missing month iterates months in the
     /// year, missing day defaults to 1.
-    private func nextMonthDayMatch(rd: Int64, currentSecsInDay: Double,
+    private func nextMonthDayMatch(rataDie rd: Int64, currentSecsInDay: Double,
                                    currentYear: Int32, currentCivilMonth: UInt8, currentDay: UInt8,
                                    targetMonth: Int?, targetDay: Int?,
                                    targetSecsInDay: Double, forward: Bool,
@@ -1191,9 +1145,23 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         return nil
     }
 
+    /// Fast path for `{h, mi, s, ns?}` — next date with the requested time-of-day.
+    private func nextTimeOfDayMatch(rataDie rd: Int64, currentSecsInDay: Double,
+                                    targetSecsInDay: Double,
+                                    forward: Bool, tz: TimeZone) -> Date? {
+        let targetRd: Int64
+        if forward {
+            targetRd = (targetSecsInDay > currentSecsInDay) ? rd : rd + 1
+        } else {
+            targetRd = (targetSecsInDay < currentSecsInDay) ? rd : rd - 1
+        }
+        return utcDate(fromRataDie: targetRd, secondsInDay: targetSecsInDay, in: tz,
+                      repeatedTimePolicy: .former, skippedTimePolicy: .former)
+    }
+
     /// Fast path for `{weekday, h?, m?, s?, ns?}` — find the next/prev RD whose
     /// weekday matches (Sun=1..Sat=7, ICU convention). Pure modular RD arithmetic.
-    private func nextWeekdayMatch(rd: Int64, currentSecsInDay: Double,
+    private func nextWeekdayMatch(rataDie rd: Int64, currentSecsInDay: Double,
                                   targetWeekday: Int,
                                   targetSecsInDay: Double, forward: Bool,
                                   tz: TimeZone) -> Date? {
@@ -1225,7 +1193,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
     /// Fast path for `{month, weekday, weekdayOrdinal}` — "Nth weekday of month".
     private func nextMonthWeekdayOrdinalMatch(
-        rd: Int64, currentSecsInDay: Double, currentYear: Int32,
+        rataDie rd: Int64, currentSecsInDay: Double, currentYear: Int32,
         targetMonth: Int, targetWeekday: Int, targetWdOrd: Int,
         targetSecsInDay: Double, forward: Bool, tz: TimeZone
     ) -> Date? {
@@ -1259,6 +1227,110 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         var y = currentYear
         for _ in 0..<6 {
             if let (bib, d) = dayForOrdinal(in: y) {
+                let cRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: d)
+                if forward {
+                    if cRd > rd || (cRd == rd && targetSecsInDay > currentSecsInDay) {
+                        return utcDate(fromRataDie: cRd, secondsInDay: targetSecsInDay, in: tz,
+                                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
+                    }
+                } else {
+                    if cRd < rd || (cRd == rd && targetSecsInDay < currentSecsInDay) {
+                        return utcDate(fromRataDie: cRd, secondsInDay: targetSecsInDay, in: tz,
+                                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
+                    }
+                }
+            }
+            y += forward ? 1 : -1
+        }
+        return nil
+    }
+
+    /// Fast path for `{weekday, weekdayOrdinal}` (no month) — Nth weekday in the current month.
+    private func nextWeekdayOrdinalMatch(
+        rataDie rd: Int64, currentSecsInDay: Double,
+        currentYear: Int32, currentCivilMonth: UInt8, currentDay: UInt8,
+        targetWeekday: Int, targetWdOrd: Int,
+        targetSecsInDay: Double, forward: Bool, tz: TimeZone
+    ) -> Date? {
+        guard targetWeekday >= 1, targetWeekday <= 7 else { return nil }
+        guard targetWdOrd >= 1 else { return nil }
+
+        // Day-of-month for (weekday, ordinal) in a given month, or nil if out of range.
+        func dayForOrdinal(year y: Int32, civilMonth cm: UInt8) -> (bib: UInt8, day: UInt8)? {
+            if cm == 6 && !HebrewArithmetic.isLeapYear(y) { return nil }
+            guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
+            let firstRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: 1)
+            var firstWd = firstRd % 7
+            if firstWd < 0 { firstWd += 7 }
+            let firstWeekday = Int(firstWd) + 1                              // 1..7
+            let firstOcc = 1 + ((targetWeekday - firstWeekday + 7) % 7)      // 1..7
+            let dim = Int(HebrewArithmetic.lastDayOfMonth(y, month: bib))
+            let day = firstOcc + (targetWdOrd - 1) * 7
+            guard day >= 1, day <= dim else { return nil }
+            return (bib, UInt8(day))
+        }
+
+        // Walk months until we find the target ordinal in range.
+        var y = currentYear
+        var cm = currentCivilMonth
+        for _ in 0..<14 {
+            if let (bib, d) = dayForOrdinal(year: y, civilMonth: cm) {
+                let cRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: d)
+                if forward {
+                    if cRd > rd || (cRd == rd && targetSecsInDay > currentSecsInDay) {
+                        return utcDate(fromRataDie: cRd, secondsInDay: targetSecsInDay, in: tz,
+                                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
+                    }
+                } else {
+                    if cRd < rd || (cRd == rd && targetSecsInDay < currentSecsInDay) {
+                        return utcDate(fromRataDie: cRd, secondsInDay: targetSecsInDay, in: tz,
+                                       repeatedTimePolicy: .former, skippedTimePolicy: .former)
+                    }
+                }
+            }
+            // Advance / retreat civil month.
+            if forward {
+                (y, cm) = Self.nextCivilMonthForward(year: y, civilMonth: cm)
+            } else {
+                (y, cm) = Self.prevCivilMonthBackward(year: y, civilMonth: cm)
+            }
+        }
+        return nil
+    }
+
+    /// Fast path for `{month, weekday, weekOfMonth}` — "weekday in Nth week of month".
+    private func nextMonthWeekdayWeekOfMonthMatch(
+        rataDie rd: Int64, currentSecsInDay: Double, currentYear: Int32,
+        targetMonth: Int, targetWeekday: Int, targetWeekOfMonth: Int,
+        targetSecsInDay: Double, forward: Bool, tz: TimeZone
+    ) -> Date? {
+        guard targetMonth >= 1, targetMonth <= 13 else { return nil }
+        guard targetWeekday >= 1, targetWeekday <= 7 else { return nil }
+        guard targetWeekOfMonth >= 1 else { return nil }
+        let cm = UInt8(targetMonth)
+        let firstWd = self.firstWeekday
+        let minDays = self.minimumDaysInFirstWeek
+        let dayOffsetInWeek = ((targetWeekday - firstWd) % 7 + 7) % 7   // 0..6
+
+        // Day-of-month for (weekOfMonth, weekday) in a given year, or nil if out of range.
+        func dayForWeekOfMonth(in y: Int32) -> (bib: UInt8, day: UInt8)? {
+            if cm == 6 && !HebrewArithmetic.isLeapYear(y) { return nil }
+            guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
+            let firstDayRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: 1)
+            var firstDayWd = firstDayRd % 7
+            if firstDayWd < 0 { firstDayWd += 7 }
+            let firstDayWeekday = Int(firstDayWd) + 1                             // 1..7
+            let periodStart = ((firstDayWeekday - firstWd) % 7 + 7) % 7           // 0..6 (offset of day 1 within its week)
+            let correction = (7 - periodStart) >= minDays ? 1 : 0
+            let day = 7 * (targetWeekOfMonth - correction) + dayOffsetInWeek - periodStart + 1
+            let dim = Int(HebrewArithmetic.lastDayOfMonth(y, month: bib))
+            guard day >= 1, day <= dim else { return nil }
+            return (bib, UInt8(day))
+        }
+
+        var y = currentYear
+        for _ in 0..<6 {
+            if let (bib, d) = dayForWeekOfMonth(in: y) {
                 let cRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: d)
                 if forward {
                     if cRd > rd || (cRd == rd && targetSecsInDay > currentSecsInDay) {
