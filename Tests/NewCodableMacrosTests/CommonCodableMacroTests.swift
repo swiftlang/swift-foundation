@@ -394,6 +394,91 @@ struct CommonCodableMacroTests {
             macros: codableTestMacros
         )
     }
+    
+    @Test func varDefaultValue() {
+        AssertMacroExpansion(
+            """
+            @CommonCodable
+            struct Config {
+                let name: String
+                var locale: String = "en"
+            }
+            """,
+            expandedSource: """
+            struct Config {
+                let name: String
+                var locale: String = "en"
+            }
+            
+            extension Config {
+                enum CommonCodingFields: StaticStringCodingField {
+                    case name
+                    case locale
+                    case unknown
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .name:
+                            "name"
+                        case .locale:
+                            "locale"
+                        case .unknown:
+                            fatalError()
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CommonCodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "name":
+                            .name
+                        case "locale":
+                            .locale
+                        default:
+                            .unknown
+                        }
+                    }
+                }
+            }
+
+            extension Config: CommonEncodable {
+                func encode(to encoder: inout some CommonEncoder & ~Copyable & ~Escapable) throws(CodingError.Encoding) {
+                    try encoder.encodeStructFields(count: 2) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(field: CommonCodingFields.name, value: self.name)
+                        try structEncoder.encode(field: CommonCodingFields.locale, value: self.locale)
+                    }
+                }
+            }
+
+            extension Config: CommonDecodable {
+                static func decode(from decoder: inout some CommonDecoder & ~Escapable) throws(CodingError.Decoding) -> Config {
+                    try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                        var name: String?
+                        var locale: String?
+                        var _codingField: CommonCodingFields?
+                        try structDecoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                            _codingField = try fieldDecoder.decode(CommonCodingFields.self)
+                        } andValue: { valueDecoder throws(CodingError.Decoding) in
+                            switch _codingField! {
+                            case .name:
+                                name = try valueDecoder.decode(String.self)
+                            case .locale:
+                                locale = try valueDecoder.decode(String.self)
+                            case .unknown:
+                                break
+                            }
+                        }
+                        guard let name else {
+                            throw CodingError.dataCorrupted(debugDescription: "Missing required field 'name'")
+                        }
+                        return Config(name: name, locale: locale ?? "en")
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
 
     @Test func aliasFullRoundtrip() {
         AssertMacroExpansion(
