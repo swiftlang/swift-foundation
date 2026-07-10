@@ -297,15 +297,18 @@ extension Decimal {
         }
 
         func stringViewContainsDecimalSeparator(at index: UTF8Collection.Index) -> Bool {
-            for indexOffset in 0 ..< decimalSeparator.count {
-                let stringIndex = utf8View.index(index, offsetBy: indexOffset)
-                let decimalIndex = decimalSeparator.index(
-                    decimalSeparator.startIndex,
-                    offsetBy: indexOffset
-                )
+            var stringIndex = index
+            var decimalIndex = decimalSeparator.startIndex
+            while decimalIndex != decimalSeparator.endIndex {
+                guard stringIndex != utf8View.endIndex else {
+                    // Input ran out before we matched the entire separator.
+                    return false
+                }
                 if utf8View[stringIndex] != decimalSeparator[decimalIndex] {
                     return false
                 }
+                utf8View.formIndex(after: &stringIndex)
+                decimalSeparator.formIndex(after: &decimalIndex)
             }
             return true
         }

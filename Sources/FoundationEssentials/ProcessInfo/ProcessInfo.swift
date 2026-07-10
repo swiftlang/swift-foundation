@@ -26,6 +26,8 @@ import unistd
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if !NO_PROCESS
@@ -189,8 +191,8 @@ final class _ProcessInfo: Sendable {
             return username
         }
         return ""
-#elseif os(WASI)
-        // WASI does not have user concept
+#elseif os(WASI) || os(Emscripten)
+        // WASI/Emscripten does not have user concept
         return ""
 #elseif os(Windows)
         var dwSize: DWORD = 0
@@ -223,7 +225,7 @@ final class _ProcessInfo: Sendable {
             return fullName
         }
         return ""
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
         return ""
 #elseif os(Windows)
         var ulLength: ULONG = 0
@@ -360,6 +362,8 @@ extension _ProcessInfo {
         return "Haiku"
 #elseif os(WASI)
         return "WASI"
+#elseif os(Emscripten)
+        return "Emscripten"
 #else
         // On other systems at least return something.
         return "Unknown"

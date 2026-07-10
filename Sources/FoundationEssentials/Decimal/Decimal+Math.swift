@@ -22,6 +22,8 @@ import Darwin
 import CRT
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 private let powerOfTen: [Decimal.VariableLengthInteger] = [

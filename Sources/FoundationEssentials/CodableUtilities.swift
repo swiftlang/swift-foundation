@@ -16,6 +16,12 @@ import Darwin
 @preconcurrency import Bionic
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(WASILibc)
+@preconcurrency import WASILibc
+#elseif canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
 #endif
 
 //===----------------------------------------------------------------------===//
