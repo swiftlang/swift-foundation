@@ -24,6 +24,17 @@
 // See getattrlist for an explanation of the layout of these structs.
 
 #pragma pack(push, 1)
+typedef struct PreRenameAttributes {
+    u_int32_t length;
+    fsobj_type_t fileType;
+    u_int32_t mode;
+    attrreference_t fullPathAttr;
+    u_int32_t nlink;
+    char fullPathBuf[PATH_MAX];
+} PreRenameAttributes;
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 typedef struct FullPathAttributes {
     u_int32_t length;
     attrreference_t fullPathAttr;
