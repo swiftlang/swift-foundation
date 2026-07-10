@@ -3,7 +3,7 @@
 * Proposal: [SF-0037](0037-subprocess-1.0.md)
 * Authors: [Charles Hu](https://github.com/iCharlesHu)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Second review: 2026-07-09...2026-07-16**
+* Status: **Second review: 2026-07-10...2026-07-17**
 * Implementation: https://github.com/swiftlang/swift-subprocess
 
 ## Introduction
