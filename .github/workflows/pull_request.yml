@@ -25,6 +25,7 @@ jobs:
       enable_cross_pr_testing: true
       enable_android_sdk_build: true
       android_sdk_versions: '["nightly-main"]'
+      enable_macos_swiftly_checks: true
 
   cmake_build:
     name: Build (CMake)
