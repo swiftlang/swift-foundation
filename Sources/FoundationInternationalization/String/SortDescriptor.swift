@@ -19,10 +19,10 @@ import FoundationEssentials
 public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {    
     /// The set of supported safely serializable comparisons.
     enum AllowedComparison: Hashable, Codable, Sendable {
-        /// Compare `String` by retrieving from key path, using using the given standard string comparator.
+        /// Compare `String` by retrieving from key path, using the given standard string comparator.
         case comparableString(String.StandardComparator, KeyPath<Compared, String> & Sendable)
         
-        /// Compare `String?` by retrieving from key path, using using the given standard string comparator.
+        /// Compare `String?` by retrieving from key path, using the given standard string comparator.
         case comparableOptionalString(String.StandardComparator, KeyPath<Compared, String?> & Sendable)
         
         /// Compares using `Swift.Comparable` implementation.
