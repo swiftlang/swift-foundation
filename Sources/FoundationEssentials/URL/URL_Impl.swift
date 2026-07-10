@@ -26,8 +26,9 @@ import WinSDK
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
-#if canImport(Synchronization)
 internal import Synchronization
+#if canImport(os)
+internal import os
 #endif
 #endif
 
@@ -45,11 +46,7 @@ final class _URL: Sendable {
     #if FOUNDATION_FRAMEWORK
     // Note: We use a lock instead of a lazy var to ensure that we always
     // bridge to the same NSURL even if the URL was copied across threads.
-    #if canImport(Synchronization)
     private let _nsurlLock = Mutex<NSURL?>(nil)
-    #else
-    private let _nsurlLock = LockedState<NSURL?>(initialState: nil)
-    #endif
     private var _nsurl: NSURL {
         return _nsurlLock.withLock {
             if let nsurl = $0 { return nsurl }
@@ -60,7 +57,6 @@ final class _URL: Sendable {
     }
     #endif
 
-    @inline(__always)
     private init(_info: _URLInfo, _baseURL: URL._Impl?) {
         // We shouldn't be passing a base URL if we have a scheme
         assert(_baseURL == nil || !_info.hasScheme)
@@ -73,7 +69,6 @@ final class _URL: Sendable {
 extension _URL: _URLProtocol {}
 #endif
 
-@inline(__always)
 private func hasTrailingSeparator(_ path: String) -> Bool {
     #if os(Windows)
     path.utf8.last == ._backslash || path.utf8.last == ._slash
@@ -83,17 +78,14 @@ private func hasTrailingSeparator(_ path: String) -> Bool {
 }
 
 extension _URL {
-    @inline(__always)
     private var url: URL {
         URL(self)
     }
 
-    @inline(__always)
     private var flags: _URLFlags {
         _info.flags
     }
 
-    @inline(__always)
     private func replacing(info: _URLInfo) -> _URL {
         _URL(_info: info, _baseURL: _baseURL)
     }
@@ -108,12 +100,10 @@ extension _URL {
         }
     }
 
-    @inline(__always)
     private convenience init(url: _URL) {
         self.init(_info: url._info, _baseURL: url._baseURL)
     }
 
-    @inline(__always)
     private convenience init?(_ string: String, relativeTo base: URL? = nil, encodingInvalidCharacters: Bool = true) {
         guard let parseInfo = _URLInfo.parse(
             string: string,
@@ -178,6 +168,48 @@ extension _URL {
     }
 
     private convenience init(filePath path: String, pathStyle: URL.PathStyle, directoryHint: URL.DirectoryHint = .inferFromPath, relativeTo base: URL? = nil) {
+        #if FOUNDATION_FRAMEWORK
+        var path = path
+        // Linked-on-or-after check for apps which incorrectly pass a full URL
+        // string with a scheme. In the old implementation, this could work
+        // rarely if the app immediately called .appendingPathComponent(_:),
+        // which used to accidentally interpret a relative path starting with
+        // "scheme:" as an absolute "scheme:" URL string.
+        if URL.compatibility1 {
+            // Best-effort fixes for lowercase "http(s)" and "file" schemes
+            enum SchemeMisuse { case http, file(String), none }
+            let misuse: SchemeMisuse = path.withUTF8 { utf8 in
+                let span = utf8.span
+                if span.starts(with: "http:") || span.starts(with: "https:") {
+                    return .http
+                }
+                if span.starts(with: "file:") {
+                    return .file(span.extracting(droppingFirst: 5).slashCompressedString())
+                }
+                return .none
+            }
+            switch misuse {
+            case .http:
+                #if canImport(os)
+                URL.logger.error("API MISUSE: URL(filePath:) called with an HTTP URL string. Using URL(string:) instead.")
+                #endif
+                // Drop any base URL since we have an HTTP scheme
+                if let url = _URL(string: path) {
+                    self.init(url: url)
+                    return
+                }
+                // Fall through to file path handling
+            case .file(let compressed):
+                #if canImport(os)
+                URL.logger.error("API MISUSE: URL(filePath:) called with a \"file:\" scheme. Input must only contain a path. Dropping \"file:\" scheme.")
+                #endif
+                path = compressed
+            case .none:
+                break
+            }
+        }
+        #endif // FOUNDATION_FRAMEWORK
+
         var directoryHint = directoryHint
         if directoryHint == .checkFileSystem {
             #if NO_FILESYSTEM
@@ -191,8 +223,7 @@ extension _URL {
             #endif
         }
 
-        @inline(__always)
-        func hasTrailingSeparator(_ path: String) -> Bool {
+        func hasTrailingSeparator() -> Bool {
             path.utf8.last == ._slash || (pathStyle == .windows && path.utf8.last == ._backslash)
         }
 
@@ -200,7 +231,7 @@ extension _URL {
         case .isDirectory: true
         case .notDirectory: false
         case .checkFileSystem: nil
-        case .inferFromPath: hasTrailingSeparator(path)
+        case .inferFromPath: hasTrailingSeparator()
         }
 
         var (info, base) = _URLInfo.parse(
@@ -222,16 +253,14 @@ extension _URL {
         // Now we must check the file system
         let url = _URL(info: info, relativeTo: base)
         let resourceIsDirectory = url.checkResourceIsDirectory()
-        if resourceIsDirectory == false || (resourceIsDirectory == nil && !hasTrailingSeparator(path)) {
+        if resourceIsDirectory == false || (resourceIsDirectory == nil && !hasTrailingSeparator()) {
             self.init(url: url)
             return
         }
 
-        // Append a directory slash
-        info.string += "/"
-        info.flags.insert(.hasDirectoryPath)
-        info.pathRange = info.pathRange.startIndex..<(info.pathRange.endIndex + 1)
-        self.init(info: info, relativeTo: base)
+        // Checked the file system and path points to a directory, or
+        // it's non-existent and we're honoring the trailing slash.
+        self.init(url: url.appendingTrailingSlash())
         #endif
     }
 
@@ -336,12 +365,10 @@ extension _URL {
     }
 
     // True for an absolute file URL created via a file path initializer
-    @inline(__always)
     private var isCanonicalFileURL: Bool {
         flags.intersection([.implTypeMask, .hasScheme]) == [_URLFlags(type: .file), .hasScheme]
     }
 
-    @inline(__always)
     internal var hasAuthority: Bool {
         flags.contains(.hasHost)
     }
@@ -444,17 +471,10 @@ extension _URL {
 
     // MARK: - Path Info
 
-    @inline(__always)
     private var pathIsEmpty: Bool {
         _info.pathRange.isEmpty
     }
 
-    @inline(__always)
-    private var pathIsRelative: Bool {
-        _info.path.utf8.first != ._slash
-    }
-
-    @inline(__always)
     private var hasEncodedPath: Bool {
         flags.contains(.hasEncodedPath)
     }
@@ -569,7 +589,6 @@ extension _URL {
 
     // MARK: - File Paths
 
-    @inline(__always)
     private static func fileSystemPath(
         for urlPath: borrowing Span<UInt8>,
         isKnownUnencoded: Bool = false,
@@ -790,37 +809,59 @@ extension _URL {
 
     // MARK: - Helpers for Path Manipulation
 
-    @inline(__always)
+    private func replacing(
+        path: borrowing Span<UInt8>,
+        encodingState: _URLInfo.PathEncodingState
+    ) -> URL {
+        let info = _info.replacingPath(unsafeUninitializedCapacity: path.count) {
+            ($0.initialize(fromSpan: path), encodingState)
+        }
+        return replacing(info: info).url
+    }
+
     private func replacing(
         path: StaticString,
-        isDirectory: Bool,
-        encodingState: _URLInfo.PathEncodingState = .unknown
+        encodingState: _URLInfo.PathEncodingState
     ) -> URL {
-        let span = Span(_unsafeStart: path.utf8Start, count: path.utf8CodeUnitCount)
-        return replacing(path: span, isDirectory: isDirectory, encodingState: encodingState)
-    }
-
-    @inline(__always)
-    private func replacing(
-        path: borrowing Span<UInt8>,
-        encodingState: _URLInfo.PathEncodingState = .unknown
-    ) -> URL {
-        let info = _info.replacing(path: path, encodingState: encodingState)
+        let info = _info.replacingPath(unsafeUninitializedCapacity: path.utf8CodeUnitCount) { buffer in
+            path.withUTF8Buffer { (buffer.initialize(fromContentsOf: $0), encodingState) }
+        }
         return replacing(info: info).url
     }
 
-    @inline(__always)
-    private func replacing(
-        path: borrowing Span<UInt8>,
-        isDirectory: Bool,
-        encodingState: _URLInfo.PathEncodingState = .unknown
-    ) -> URL {
-        let info = _info.replacing(
-            path: path,
-            isDirectory: isDirectory,
-            encodingState: encodingState
-        )
-        return replacing(info: info).url
+    // Prepends "./" to a relative path whose first segment would
+    // otherwise be mistaken for a scheme (RFC 3986 Section 4.2).
+    // Returns the final path length.
+    private func prependDotSlashIfNeeded(
+        _ buffer: UnsafeMutableBufferPointer<UInt8>,
+        pathLength: Int
+    ) -> Int {
+        // Callers must reserve 2 spare bytes
+        assert(pathLength + 2 <= buffer.count)
+        guard flags.isDisjoint(with: [.hasScheme, .hasHost]) else {
+            return pathLength
+        }
+        let hasColonInFirstSegment = {
+            for i in 0..<pathLength {
+                let byte = buffer[i]
+                if byte == ._slash {
+                    return false
+                } else if byte == ._colon {
+                    return true
+                }
+            }
+            return false
+        }()
+        guard hasColonInFirstSegment else {
+            return pathLength
+        }
+        // Shift path by 2 and prepend "./"
+        for i in (0..<pathLength).reversed() {
+            buffer[i + 2] = buffer[i]
+        }
+        buffer[0] = ._dot
+        buffer[1] = ._slash
+        return pathLength + 2
     }
 
     private static func withEncodedURLPath<R>(
@@ -829,7 +870,6 @@ extension _URL {
         isFileURL: Bool,
         block: (borrowing Span<UInt8>) -> R
     ) -> R {
-        @inline(__always)
         func withPercentEncoded(_ input: UnsafeBufferPointer<UInt8>) -> R {
             return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 3 * input.count) {
                 let length = URLEncoder.percentEncodeUnchecked(
@@ -899,11 +939,6 @@ extension _URL {
     }
 
     private func appending<S: StringProtocol>(path toAppend: S, directoryHint: URL.DirectoryHint, encodingSlashes: Bool) -> URL? {
-        // Appending "" to "http://example.com" returns "http://example.com/"
-        guard !toAppend.isEmpty || flags.contains(.hasOldPath) else {
-            return nil
-        }
-
         var directoryHint = directoryHint
         if directoryHint == .checkFileSystem {
             #if NO_FILESYSTEM
@@ -915,170 +950,215 @@ extension _URL {
             #endif
         }
 
-        var s = String(toAppend)
-        return s.withUTF8 {
-            let spanToAppend = $0.span
+        // When encodeSlashes is true, "component/" becomes "component%2F".
+        // Since "/" is part of the encoded component, it shouldn't also serve
+        // as a directory-ness hint, so treat .inferFromPath as .notDirectory.
+        // This matters especially because .inferFromPath is the default, which
+        // would otherwise make base.appending(component: "folder/") confusing.
+        if encodingSlashes && directoryHint == .inferFromPath {
+            directoryHint = .notDirectory
+        }
+
+        var stringToAppend = _specialize(toAppend, for: String.self) ?? String(toAppend)
+        return stringToAppend.withUTF8 {
+            let spanToAppend = $0.span(trailingNullsRemoved: isFileURL)
+
+            func hasTrailingSeparator() -> Bool {
+                #if os(Windows)
+                spanToAppend.last == ._backslash || spanToAppend.last == ._slash
+                #else
+                spanToAppend.last == ._slash
+                #endif
+            }
 
             let isDirectory: Bool? = switch directoryHint {
             case .isDirectory: true
             case .notDirectory: false
             case .checkFileSystem: nil
-            case .inferFromPath:
-                #if os(Windows)
-                spanToAppend.count > 0 && (
-                    spanToAppend[spanToAppend.count - 1] == ._backslash ||
-                    spanToAppend[spanToAppend.count - 1] == ._slash
-                )
-                #else
-                spanToAppend.count > 0 && spanToAppend[spanToAppend.count - 1] == ._slash
-                #endif
+            case .inferFromPath: hasTrailingSeparator()
             }
 
-            if !encodingSlashes && strictValidate(path: spanToAppend) {
+            let url = if !encodingSlashes && strictValidate(path: spanToAppend) {
                 // If we're not encoding slashes and the appended component is
                 // valid, the resulting path keeps the current encoding state.
-                return appending(
+                appending(
                     span: spanToAppend,
-                    isDirectory: isDirectory,
-                    encodingState: hasEncodedPath ? .encoded : .notEncoded
+                    encodingState: hasEncodedPath ? .encoded : .notEncoded,
+                    // Strip trailing slashes before checking the file system
+                    isDirectory: isDirectory ?? false
                 )
-            }
-
-            return Self.withEncodedURLPath(for: spanToAppend, encodingSlashes: encodingSlashes, isFileURL: isFileURL) {
+            } else {
                 // If encodingSlashes is false, we know validation failed above,
                 // so we must have encoded the appended path; however, Windows
                 // paths may have backslashes that fail strictValidate but are
                 // now converted to "/", leaving a possibly un-encoded path.
-                #if os(Windows)
-                let state = _URLInfo.PathEncodingState.unknown
-                #else
-                let state: _URLInfo.PathEncodingState = encodingSlashes ? .unknown : .encoded
-                #endif
-                return appending(
-                    span: $0,
-                    isDirectory: isDirectory,
-                    encodingState: state
-                )
+                Self.withEncodedURLPath(for: spanToAppend, encodingSlashes: encodingSlashes, isFileURL: isFileURL) {
+                    #if os(Windows)
+                    let state: _URLInfo.PathEncodingState = .unknown
+                    #else
+                    let state: _URLInfo.PathEncodingState = encodingSlashes ? .unknown : .encoded
+                    #endif
+                    return appending(
+                        span: $0,
+                        encodingState: state,
+                        isDirectory: isDirectory ?? false
+                    )
+                }
             }
+
+            guard let url else {
+                return nil
+            }
+
+            #if NO_FILESYSTEM
+            return url.url
+            #else
+            if isDirectory != nil {
+                return url.url
+            }
+
+            let resourceIsDirectory = url.checkResourceIsDirectory()
+            if resourceIsDirectory == false || (resourceIsDirectory == nil && !hasTrailingSeparator()) {
+                return url.url
+            }
+
+            // Checked the file system and path points to a directory, or
+            // it's non-existent and we're honoring the trailing slash.
+            return url.appendingTrailingSlash().url
+            #endif
         }
     }
 
-    private func appending(span: borrowing Span<UInt8>, isDirectory: Bool?, encodingState: _URLInfo.PathEncodingState) -> URL {
-        return withPathSpan { path in
-            // Max size occurs for "" with directory: "." + "/" + span + "/"
-            let maxLength = 1 + path.count + 1 + span.count + 1
-            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxLength) { buffer in
-                @inline(__always)
-                func isSeparator(_ byte: UInt8) -> Bool {
-                    #if os(Windows)
-                    byte == ._backslash || byte == ._slash
-                    #else
-                    byte == ._slash
-                    #endif
-                }
+    private func appendingTrailingSlash() -> _URL {
+        replacing(info: _info.appendingTrailingSlash())
+    }
 
-                var pathLength: Int = {
-                    var writeIndex = 0
-
-                    if !path.isEmpty {
-                        writeIndex = buffer.initialize(fromSpan: path)
-                        guard !span.isEmpty else {
-                            return writeIndex
-                        }
-                        let twoSlashes = (path.last == ._slash && isSeparator(span[0]))
-                        let noSlash = (path.last != ._slash && !isSeparator(span[0]))
-                        if noSlash {
-                            buffer[writeIndex] = ._slash
-                            writeIndex += 1
-                        }
-                        // Compiler complains if we try to ternary this
-                        if twoSlashes {
-                            writeIndex = buffer[writeIndex...].initialize(
-                                fromSpan: span.extracting(droppingFirst: 1)
-                            )
-                        } else {
-                            writeIndex = buffer[writeIndex...].initialize(
-                                fromSpan: span
-                            )
-                        }
-                    } else if hasAuthority {
-                        // Current path is empty and we have an authority
-                        if span.isEmpty || !isSeparator(span[0]) {
-                            // Prepend a slash to separate the relative path from
-                            // the authority component, e.g. "http://example.com"
-                            buffer[writeIndex] = ._slash
-                            writeIndex += 1
-                        }
-                        writeIndex = buffer[writeIndex...].initialize(fromSpan: span)
-                    } else if span.isEmpty {
-                        // Current path and path to append are both empty
-                        return 0
-                    } else if isSeparator(span[0]) || !_info.hasScheme {
-                        // Treat our current empty path as "."
-                        buffer[writeIndex] = ._dot
-                        writeIndex += 1
-                        if !isSeparator(span[0]) {
-                            buffer[writeIndex] = ._slash
-                            writeIndex += 1
-                        }
-                        writeIndex = buffer[writeIndex...].initialize(fromSpan: span)
-                    } else {
-                        // Scheme only, append directly to the empty path, e.g.
-                        // URL("scheme:").appending("path") == "scheme:path"
-                        writeIndex = buffer.initialize(fromSpan: span)
-                    }
-
-                    #if os(Windows)
-                    // Only replace backslashes in the appended portion
-                    for i in path.count..<writeIndex where buffer[i] == ._backslash {
-                        buffer[i] = ._slash
-                    }
-                    #endif
-
-                    return writeIndex
-                }()
-
-                if isDirectory != true {
-                    // Note: if isDirectory is nil, we still want to strip
-                    // trailing slashes before checking the file system.
-                    let rootLength = isFileURL ? rootLength(pathBuffer: .init(buffer), length: pathLength) : 1
-                    while pathLength > rootLength && buffer[pathLength - 1] == ._slash {
-                        pathLength -= 1
-                    }
-                } else if pathLength > 0 && buffer[pathLength - 1] != ._slash {
-                    buffer[pathLength] = ._slash
-                    pathLength += 1
-                }
-
-                let newInfo = _info.replacing(
-                    path: buffer.span.extracting(first: pathLength),
-                    encodingState: encodingState
+    private func appending(
+        span: borrowing Span<UInt8>,
+        encodingState: _URLInfo.PathEncodingState,
+        isDirectory: Bool
+    ) -> _URL? {
+        if pathIsEmpty && !hasAuthority {
+            // E.g. "scheme:" or "scheme:?query" or "?query"
+            if _info.hasScheme {
+                return appendingToSchemeOnly(
+                    span: span,
+                    encodingState: encodingState,
+                    isDirectory: isDirectory
                 )
-                let url = replacing(info: newInfo)
-                #if NO_FILESYSTEM
-                return url.url
-                #else
-                if isDirectory != nil {
-                    return url.url
-                }
+            }
 
-                let resourceIsDirectory = url.checkResourceIsDirectory()
-                if resourceIsDirectory == false || (resourceIsDirectory == nil && (span.isEmpty || !isSeparator(span.last!))) {
-                    return url.url
-                }
+            if span.isEmpty && !isDirectory {
+                return nil // Return the URL unchanged
+            }
 
-                // Checked the file system and path points to a directory, or
-                // it's non-existent and we're honoring the trailing slash.
-                buffer[pathLength] = ._slash
-                pathLength += 1
-                return replacing(
-                    path: buffer.span.extracting(first: pathLength),
-                    isDirectory: true,
-                    encodingState: encodingState
+            // E.g. "?query" or "#fragment". A few cases of ambiguity to avoid:
+            // - Appending "//path" shouldn't interpret "//" as the authority
+            // - Appending "/path" shouldn't change a relative path to absolute
+            // - Appending "foo:bar" shouldn't interpret "foo" as the scheme
+            // To achieve this, we always treat the current empty path as "."
+            return ("." as StaticString).withUTF8Buffer { dotBuffer in
+                appending(
+                    currentPath: dotBuffer.span,
+                    toAppend: span,
+                    encodingState: encodingState,
+                    isDirectory: isDirectory
                 )
-                #endif
             }
         }
+        return withPathSpan { path in
+            appending(
+                currentPath: path,
+                toAppend: span,
+                encodingState: encodingState,
+                isDirectory: isDirectory
+            )
+        }
+    }
+
+    private func appendingToSchemeOnly(
+        span: borrowing Span<UInt8>,
+        encodingState: _URLInfo.PathEncodingState,
+        isDirectory: Bool
+    ) -> _URL? {
+        // E.g. "scheme:" or "scheme:?query", append directly such that
+        // URL(string: "mailto:").appending(path: "user@example.com")
+        // returns "mailto:user@example.com"
+        assert(_info.hasScheme)
+        assert(!hasAuthority)
+        assert(pathIsEmpty)
+        guard !span.isEmpty else {
+            // Empty path + empty component: return the URL unchanged,
+            // or with "/" path for consistency with isDirectory: true.
+            return isDirectory ? appendingTrailingSlash() : nil
+        }
+
+        let info = _info.replacingPath(unsafeUninitializedCapacity: span.count + 1) { buffer in
+            var offset = 0
+            // Compress leading slashes so "//" isn't mistaken as an authority
+            if span[0] == ._slash {
+                while offset + 1 < span.count, span[offset + 1] == ._slash {
+                    offset += 1
+                }
+            }
+            var writeIndex = buffer.initialize(fromSpan: span.extracting(offset...))
+            if !isDirectory {
+                while writeIndex > 1, buffer[writeIndex - 1] == ._slash {
+                    writeIndex -= 1
+                }
+            } else if buffer[writeIndex - 1] != ._slash {
+                buffer[writeIndex] = ._slash
+                writeIndex += 1
+            }
+            return (writeIndex, encodingState)
+        }
+        return replacing(info: info)
+    }
+
+    private func appending(
+        currentPath path: borrowing Span<UInt8>,
+        toAppend: borrowing Span<UInt8>,
+        encodingState: _URLInfo.PathEncodingState,
+        isDirectory: Bool
+    ) -> _URL {
+        // Backslashes should be encoded, or converted to "/" on Windows
+        assert(!toAppend.contains(._backslash))
+
+        let maxLength = path.count + toAppend.count + 2
+        let info = _info.replacingPath(unsafeUninitializedCapacity: maxLength) { buffer in
+            var writeIndex = buffer.initialize(fromSpan: path)
+            var offset = 0
+            if path.last != ._slash && toAppend.first != ._slash {
+                // Insert a slash if one doesn't already exist
+                buffer[writeIndex] = ._slash
+                writeIndex += 1
+            } else if path.last == ._slash && toAppend.first == ._slash {
+                // Skip a slash if both parties already have one
+                offset += 1
+                if path.count == 1 && !hasAuthority {
+                    // path is "/". Strip leading slashes from toAppend
+                    // so that "//" isn't mistaken as an authority.
+                    while offset < toAppend.count, toAppend[offset] == ._slash {
+                        offset += 1
+                    }
+                }
+            }
+            writeIndex = buffer[writeIndex...].initialize(
+                fromSpan: toAppend.extracting(offset...)
+            )
+            if !isDirectory {
+                // Strip component's trailing slashes
+                while writeIndex > path.count + 1, buffer[writeIndex - 1] == ._slash {
+                    writeIndex -= 1
+                }
+            } else if writeIndex == 0 || buffer[writeIndex - 1] != ._slash {
+                // Append a trailing slash if one doesn't already exist
+                buffer[writeIndex] = ._slash
+                writeIndex += 1
+            }
+            return (writeIndex, encodingState)
+        }
+        return replacing(info: info)
     }
 
     #if !NO_FILESYSTEM
@@ -1124,14 +1204,13 @@ extension _URL {
             assert(path.count > 0 && path[path.count - 1] == ._slash)
             return replacing(
                 path: path,
-                isDirectory: true,
                 encodingState: hasEncodedPath ? .unknown : .notEncoded
             )
         }
 
         @inline(__always)
         func result(path: StaticString) -> URL? {
-            return replacing(path: path, isDirectory: true, encodingState: .notEncoded)
+            return replacing(path: path, encodingState: .notEncoded)
         }
 
         guard !pathIsEmpty else {
@@ -1143,7 +1222,7 @@ extension _URL {
             return result(path: "../")
         }
 
-        return withPathSpan { path in
+        return withPathSpan { path -> URL? in
             // First check common cases of last component length, then
             // fall back to checking "." and ".." edge cases where we
             // need to replace or append another ".." component.
@@ -1156,7 +1235,7 @@ extension _URL {
                     // Note we cannot have a host with a relative path.
                     if _info.hasScheme {
                         // Don't append "." or ".." to a lone "scheme:"
-                        return replacing(path: "", isDirectory: false, encodingState: .notEncoded)
+                        return result(path: "")
                     }
                     // Replace a single component like "path" with "./"
                     return result(path: "./")
@@ -1196,7 +1275,7 @@ extension _URL {
                component[0] == ._dot,
                component[1] == ._dot {
                 // ".." - append another "/../"
-                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: componentRange.endIndex + 4) { buffer in
+                let info = _info.replacingPath(unsafeUninitializedCapacity: componentRange.endIndex + 4) { buffer in
                     let writeIndex = buffer.initialize(
                         fromSpan: path.extracting(..<componentRange.endIndex)
                     )
@@ -1205,28 +1284,30 @@ extension _URL {
                     buffer[writeIndex + 2] = ._dot
                     buffer[writeIndex + 3] = ._slash
                     assert(writeIndex + 4 == buffer.count)
-                    return result(path: buffer.span)
+                    return (writeIndex + 4, hasEncodedPath ? .unknown : .notEncoded)
                 }
+                return replacing(info: info).url
             }
 
             if component.count == 1, component[0] == ._dot {
                 // "." - replace with "../" by appending "./"
-                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: componentRange.endIndex + 2) { buffer in
+                let info = _info.replacingPath(unsafeUninitializedCapacity: componentRange.endIndex + 2) { buffer in
                     let writeIndex = buffer.initialize(
                         fromSpan: path.extracting(..<componentRange.endIndex)
                     )
                     buffer[writeIndex + 0] = ._dot
                     buffer[writeIndex + 1] = ._slash
                     assert(writeIndex + 2 == buffer.count)
-                    return result(path: buffer.span)
+                    return (writeIndex + 2, hasEncodedPath ? .unknown : .notEncoded)
                 }
+                return replacing(info: info).url
             }
 
             // Non-dot component of length 1 or 2
             if componentRange.startIndex == 0 {
                 if _info.hasScheme {
                     // Don't append "." or ".." to a lone "scheme:"
-                    return replacing(path: "", isDirectory: false, encodingState: .notEncoded)
+                    return result(path: "")
                 }
                 // Replace a single component like "path" with "./"
                 return result(path: "./")
@@ -1249,16 +1330,17 @@ extension _URL {
 
             var s = pathExtension
             return s.withUTF8 {
-                let pathExtension = $0.span
+                let pathExtension = $0.span(trailingNullsRemoved: isFileURL)
                 guard pathExtension.isValidPathExtension else {
                     return nil
                 }
                 let isDirectory = (path.last == ._slash)
 
-                @inline(__always)
                 func append(_ ext: borrowing Span<UInt8>, encodingState: _URLInfo.PathEncodingState) -> URL {
-                    // Append ".\(pathExtension)" with a potential trailing slash
-                    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: componentRange.endIndex + ext.count + 2) { buffer in
+                    // Append ".\(pathExtension)" with a potential trailing
+                    // slash and extra room to prepend "./" if needed.
+                    let maxLength = componentRange.endIndex + ext.count + 4
+                    let info = _info.replacingPath(unsafeUninitializedCapacity: maxLength) { buffer in
                         var writeIndex = buffer.initialize(
                             fromSpan: path.extracting(first: componentRange.endIndex)
                         )
@@ -1271,12 +1353,10 @@ extension _URL {
                             buffer[writeIndex] = ._slash
                             writeIndex += 1
                         }
-                        return replacing(
-                            path: buffer.span.extracting(first: writeIndex),
-                            isDirectory: isDirectory,
-                            encodingState: encodingState
-                        )
+                        let finalLength = prependDotSlashIfNeeded(buffer, pathLength: writeIndex)
+                        return (finalLength, encodingState)
                     }
+                    return replacing(info: info).url
                 }
 
                 // Fast path for the common case that doesn't require encoding
@@ -1300,7 +1380,7 @@ extension _URL {
                 return nil
             }
             let isDirectory = (path.last == ._slash)
-            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: dotIndex + 1) { buffer in
+            let info = _info.replacingPath(unsafeUninitializedCapacity: dotIndex + 1) { buffer in
                 var writeIndex = buffer.initialize(
                     fromSpan: path.extracting(first: dotIndex)
                 )
@@ -1308,12 +1388,9 @@ extension _URL {
                     buffer[writeIndex] = ._slash
                     writeIndex += 1
                 }
-                return replacing(
-                    path: buffer.span.extracting(first: writeIndex),
-                    isDirectory: isDirectory,
-                    encodingState: hasEncodedPath ? .unknown : .notEncoded
-                )
+                return (writeIndex, hasEncodedPath ? .unknown : .notEncoded)
             }
+            return replacing(info: info).url
         }
     }
 
@@ -1321,7 +1398,7 @@ extension _URL {
         guard flags.contains(.isDecomposable) else {
             return nil
         }
-        return withPathSpan { path in
+        return withPathSpan { path -> URL? in
             #if FOUNDATION_FRAMEWORK
             // Compatibility path for apps that loop on:
             // while !url.path.isEmpty {
@@ -1332,25 +1409,55 @@ extension _URL {
             // URL("/").deletingLastPathComponent == URL("/../")
             // URL("/../").standardized == URL("")
             if URL.compatibility1, path.count == 4, path.starts(with: "/../") {
-                return replacing(path: "", isDirectory: false, encodingState: .notEncoded)
+                return replacing(path: "", encodingState: .notEncoded)
             }
             #endif
             guard !path.isEmpty else {
                 if flags.contains([.hasScheme, .hasHost]) && !flags.contains(.hasOldNetLocation) {
                     // Standardize "scheme://" to "scheme:///"
-                    return replacing(path: "/", isDirectory: true, encodingState: .notEncoded)
+                    return replacing(path: "/", encodingState: .notEncoded)
                 }
                 return nil
             }
-            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: path.count) { buffer in
-                _ = buffer.initialize(fromSpan: path)
-                let pathLength = resolveDotSegmentsInPlace(buffer: buffer, useRFC1808: true)
-                let span = buffer.span.extracting(first: pathLength)
-                return replacing(
-                    path: span,
-                    encodingState: hasEncodedPath ? .unknown : .notEncoded
-                )
+            var info = _info
+            if flags.contains(.hasScheme) && !flags.contains(.hasHost) && path[0] == ._slash {
+                // Standardize e.g. "file:/path" -> "file:///path"
+                let newString = _info.withSpan { stringSpan in
+                    // Note: the new string must be path-preserving, since the
+                    // resolution code below uses the original path span.
+                    String(unsafeUninitializedCapacity: stringSpan.count + 2) { buffer in
+                        var writeIndex = buffer.initialize(
+                            fromSpan: stringSpan.extracting(info.schemeRange)
+                        )
+                        buffer[writeIndex + 0] = ._colon
+                        buffer[writeIndex + 1] = ._slash
+                        buffer[writeIndex + 2] = ._slash
+                        writeIndex = buffer[(writeIndex + 3)...].initialize(
+                            fromSpan: stringSpan.extracting((info.schemeRange.endIndex + 1)...)
+                        )
+                        assert(writeIndex == buffer.count)
+                        return writeIndex
+                    }
+                }
+                info = _URLInfo.parse(string: newString, encodingInvalidCharacters: true) ?? info
             }
+            // The potential re-parse above must preserve the path bytes
+            assert(path.count == info.pathRange.count)
+            // + 2 reserves room to prepend "./" if needed
+            let newInfo = info.replacingPath(unsafeUninitializedCapacity: path.count + 2) { buffer in
+                _ = buffer.initialize(fromSpan: path)
+                let resolvedLength = resolveDotSegmentsInPlace(
+                    buffer: buffer[..<path.count],
+                    useRFC1808: true
+                )
+                // resolvedLength == path.count iff no resolution occurred
+                guard resolvedLength != path.count else {
+                    return (resolvedLength, hasEncodedPath ? .unknown : .notEncoded)
+                }
+                let finalLength = prependDotSlashIfNeeded(buffer, pathLength: resolvedLength)
+                return (finalLength, hasEncodedPath ? .unknown : .notEncoded)
+            }
+            return replacing(info: newInfo).url
         }
     }
 
@@ -1391,8 +1498,8 @@ extension _URL {
     var description: String {
         var urlString = relativeString
         if isDataURL && urlString.utf8.count > 128 {
-            let prefix = urlString.utf8.prefix(120)
-            let suffix = urlString.utf8.suffix(8)
+            let prefix = Substring(urlString.utf8.prefix(120))
+            let suffix = Substring(urlString.utf8.suffix(8))
             urlString = "\(prefix) ... \(suffix)"
         }
         if let _baseURL {
