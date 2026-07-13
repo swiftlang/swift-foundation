@@ -99,7 +99,6 @@ internal struct SimpleFormatter: Equatable {
 
     /// Append `prefix + s0 + connector + s1 + suffix` into `output`. The caller
     /// is responsible for having reserved enough capacity (see `utf8Count`).
-    @inline(__always)
     func format(_ s0: borrowing UTF8Span, _ s1: borrowing UTF8Span,
                 into output: inout OutputSpan<UInt8>) {
         output.append(copying: prefix.utf8Span.span)
@@ -473,7 +472,6 @@ internal final class ListFormatterImpl: Sendable {
     /// Whether `scalar` is a strong left-to-right character (UAX #9 class `L`),
     /// approximated as "a letter that isn't strong-RTL". Strong-RTL is the
     /// `BuiltInUnicodeScalarSet(.strongRightToLeft)` bitmap.
-    @inline(__always)
     private func isStrongLTR(_ scalar: Unicode.Scalar) -> Bool {
         let v = scalar.value
         // ASCII fast path: ASCII letters are strong LTR; nothing else in the
@@ -508,7 +506,6 @@ internal final class ListFormatterImpl: Sendable {
     /// CFUniChar bitmaps cover the strong-RTL set used by `_isStrongRTL` but
     /// carry no Arabic-number / bidi-class data, so the ranges are maintained by
     /// hand for now (and don't cover the SMP `AN` ranges, e.g. Rumi numerals).
-    @inline(__always)
     private func isArabicNumber(_ scalar: Unicode.Scalar) -> Bool {
         switch scalar.value {
         case 0x0600...0x0605,  // Arabic number signs
