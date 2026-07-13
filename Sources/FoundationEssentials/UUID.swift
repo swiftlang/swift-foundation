@@ -28,7 +28,7 @@ internal import Synchronization
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
-private extension OutputSpan where Element: BitwiseCopyable {
+private extension OutputSpan where Element: ConvertibleFromBytes {
     // Placeholder for SE-0525 follow-up.
     mutating func append<E: Error>(
         elements n: Int,
@@ -118,14 +118,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     @available(FoundationPreview 6.5, *)
     public init(copying span: RawSpan) {
         precondition(span.byteCount == 16, "UUID requires exactly 16 bytes, but \(span.byteCount) were provided")
-        // Is this safe? Probably not because we don't know the alignment of span
-        // let pieces = Span<UInt64>(viewing: span)
-        // _storage = [pieces[0], pieces[1]]
-        self.init { outputRawSpan in
-            for i in 0..<span.byteCount {
-                outputRawSpan.append(span[i])
-            }
-        }
+        _storage = span.load(fromByteOffset: 0, as: InlineArray<2, UInt64>.self)
     }
 
     /// Creates a UUID by filling its 16 bytes using a closure that writes into an `OutputRawSpan`.
