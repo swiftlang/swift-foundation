@@ -49,7 +49,7 @@ private extension OutputSpan where Element: ConvertibleFromBytes {
 /// A universally unique value to identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
 public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
-    internal var _storage = InlineArray<2, UInt64>(repeating: 0)
+    internal var _storage: [16 of UInt8]
 
     /// Returns the UUID as bytes.
     public var uuid: uuid_t {
@@ -57,7 +57,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
             return unsafeBitCast(_storage, to: uuid_t.self)
         }
         set {
-            _storage = unsafeBitCast(newValue, to: InlineArray<2, UInt64>.self)
+            _storage = unsafeBitCast(newValue, to: [16 of UInt8].self)
         }
     }
 
@@ -73,43 +73,48 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     ///
     /// - Parameter string: The string representation of a UUID, such as `E621E1F8-C36C-495A-93FC-0C247A3E6E5F`.
     public init?(uuidString string: __shared String) {
-        let utf8 = string.utf8Span
-        guard utf8.count == 36 else {
+        let utf8Span = string.utf8Span
+        guard utf8Span.count == 36 else {
             return nil
         }
         
         var charIdx = 0
         var byteIdx = 0
+        
+        let utf8Bytes = utf8Span.span.bytes
+        
+        var storage = [16 of UInt8](repeating: 0)
+        var mutableSpan = storage.mutableSpan
+        var mutableBytes = mutableSpan.mutableBytes
+        
         while charIdx < 36 {
             switch charIdx {
             case 8, 13, 18, 23:
-                guard utf8.span.bytes[charIdx] == UInt8(ascii: "-") else {
+                guard utf8Bytes[charIdx] == UInt8(ascii: "-") else {
                     return nil
                 }
                 charIdx += 1
             default:
                 // from CodableUtilities.swift
-                guard let b1 = utf8.span.bytes[charIdx].hexDigitValue else {
+                guard let b1 = utf8Bytes[charIdx].hexDigitValue else {
                     return nil
                 }
-                guard let b2 = utf8.span.bytes[charIdx + 1].hexDigitValue else {
+                guard let b2 = utf8Bytes[charIdx + 1].hexDigitValue else {
                     return nil
                 }
-                // Will be: _storage.mutableSpan.mutableBytes[byteIdx] = b1 << 4 | b2
-                var mutableSpan = _storage.mutableSpan
-                var mutableBytes = mutableSpan.mutableBytes
                 mutableBytes[byteIdx] = b1 << 4 | b2
                 byteIdx += 1
                 charIdx += 2
             }
         }
+        _storage = storage
     }
 
     /// Creates a UUID from the uuid C-language structure.
     ///
     /// - Parameter uuid: The C-language structure of a UUID.
     public init(uuid: uuid_t) {
-        self._storage = unsafeBitCast(uuid, to: InlineArray<2, UInt64>.self)
+        self._storage = unsafeBitCast(uuid, to: [16 of UInt8].self)
     }
 
     /// Creates a UUID by copying exactly 16 bytes from a `RawSpan`.
@@ -118,18 +123,16 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     @available(FoundationPreview 6.5, *)
     public init(copying span: RawSpan) {
         precondition(span.byteCount == 16, "UUID requires exactly 16 bytes, but \(span.byteCount) were provided")
-        _storage = span.load(fromByteOffset: 0, as: InlineArray<2, UInt64>.self)
+        _storage = span.load(fromByteOffset: 0, as: [16 of UInt8].self)
     }
 
     /// Creates a UUID by filling its 16 bytes using a closure that writes into an `OutputRawSpan`.
     ///
     /// The closure must write exactly 16 bytes into the output span.
     @available(FoundationPreview 6.5, *)
-    public init<E: Error>(
-        initializingWith initializer: (inout OutputRawSpan) throws(E) -> ()
-    ) throws(E) {
-        _storage = try InlineArray<2, UInt64>(initializingWith: { outputSpan throws(E) -> Void in
-            try outputSpan.append(elements: 2) { outputRawSpan throws(E) in
+    public init<E: Error>(initializingWith initializer: (inout OutputRawSpan) throws(E) -> ()) throws(E) {
+        _storage = try [16 of UInt8](initializingWith: { outputSpan throws(E) -> Void in
+            try outputSpan.append(elements: 16) { outputRawSpan throws(E) in
                 try initializer(&outputRawSpan)
                 let count = outputRawSpan.byteCount
                 precondition(count == 16, "UUID requires exactly 16 bytes, but \(count) were provided")
@@ -142,10 +145,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     private static let _lowerHex: StaticString = "0123456789abcdef"
 
     /// Writes the UUID as a 36-character hex string into `buffer` using the given hex digit lookup table. Returns 36.
-    private func _unparse(
-        into buffer: UnsafeMutableBufferPointer<UInt8>,
-        hexTable: StaticString
-    ) -> Int {
+    private func _unparse(into buffer: UnsafeMutableBufferPointer<UInt8>, hexTable: StaticString) -> Int {
         hexTable.withUTF8Buffer { hex in
             var o = 0
             for i in 0..<16 {
@@ -193,9 +193,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     /// - Parameter generator: The random number generator to use when creating the new random value.
     /// - Returns: A random UUID.
     @available(FoundationPreview 6.3, *)
-    public static func random(
-        using generator: inout some RandomNumberGenerator
-    ) -> UUID {
+    public static func random(using generator: inout some RandomNumberGenerator) -> UUID {
         let first = UInt64.random(in: .min ... .max, using: &generator)
         let second = UInt64.random(in: .min ... .max, using: &generator)
 
@@ -224,14 +222,13 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 
     public static func ==(lhs: UUID, rhs: UUID) -> Bool {
         // Implementation note: This operation is designed to avoid short-circuited early exits, so that comparison of any two UUID values is done in the same amount of time.
-//        withUnsafeBytes(of: lhs._storage) { lhsPtr in
-//            withUnsafeBytes(of: rhs._storage) { rhsPtr in
-//                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
-//                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
-//                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
-//            }
-//        }
-        return lhs._storage[0] ^ rhs._storage[0] | (lhs._storage[1] ^ rhs._storage[1]) == 0
+        withUnsafeBytes(of: lhs._storage) { lhsPtr in
+            withUnsafeBytes(of: rhs._storage) { rhsPtr in
+                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
+            }
+        }
     }
 }
 
@@ -372,11 +369,7 @@ extension UUID {
     /// - Parameter date: The date to encode in the timestamp field. If `nil`, the current time is used. When provided, the monotonicity guarantee does not apply.
     /// - Parameter offset: A duration to add to the timestamp before encoding. Defaults to zero. If `date` is provided, it will be added to the value of that argument.
     /// - Returns: A version 7 UUID.
-    public static func version7(
-        using generator: inout some RandomNumberGenerator,
-        at date: Date? = nil,
-        offset: Duration = .zero
-    ) -> UUID {
+    public static func version7(using generator: inout some RandomNumberGenerator, at date: Date? = nil, offset: Duration = .zero) -> UUID {
         // The most significant 48 bits contain a millisecond-precision Unix timestamp.
         // The 12 bits following the version field (`rand_a`) encode sub-millisecond timestamp precision per RFC 9562 Section 6.2, Method 3.
         // The remaining 62 bits (`rand_b`, after the variant field) are filled using `generator`.
@@ -420,7 +413,8 @@ extension UUID {
     /// - Note: Even though this implementation, or others, may choose to encode more precision into other bytes of the `UUID`, this method may only return the portion of the timestamp stored in the RFC-specified bytes.
     public var date: Date? {
         guard version == 7 else { return nil }
-        let ms: UInt64 = (_storage[0].bigEndian & 0xFFFFFFFFFFFF0000) >> 16
+        let first = withUnsafeBytes(of: _storage) { $0.loadUnaligned(as: UInt64.self) }
+        let ms: UInt64 = (first.bigEndian & 0xFFFF_FFFF_FFFF_0000) >> 16
         return Date(timeIntervalSince1970: Double(ms) / 1000.0)
     }
 

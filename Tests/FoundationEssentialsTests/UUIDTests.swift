@@ -31,7 +31,7 @@ private struct UUIDTests {
             var uuid: UUID = UUID()
         }
         let container = Misaligned()
-        let halves = Span<UInt64>(_bytes: container.uuid.bytes)
+        let halves = Span<UInt8>(_bytes: container.uuid.bytes)
         #expect(halves.bytes.byteCount == 16)
      }
 
