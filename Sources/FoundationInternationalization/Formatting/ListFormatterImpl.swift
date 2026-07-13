@@ -55,27 +55,41 @@ internal struct SimpleFormatter: Equatable {
     /// Parse `<prefix>{0}<connector>{1}<suffix>`. Returns `nil` when the shape
     /// doesn't match — a defensive guard against malformed data. CLDR list
     /// patterns use exactly the two placeholders `{0}` and `{1}`.
+    ///
+    /// The placeholder syntax and the space we probe for are all ASCII, so the
+    /// scan runs over the pattern's contiguous UTF-8 buffer (`withUTF8`) rather
+    /// than decoding Unicode scalars.
     init?(_ pattern: String) {
-        let scalars = pattern.unicodeScalars
-        guard let zeroOpen = scalars.firstIndex(of: "{") else { return nil }
-        let zeroDigit = scalars.index(after: zeroOpen)
-        guard zeroDigit < scalars.endIndex, scalars[zeroDigit] == "0" else { return nil }
-        let zeroClose = scalars.index(after: zeroDigit)
-        guard zeroClose < scalars.endIndex, scalars[zeroClose] == "}" else { return nil }
-        let connectorStart = scalars.index(after: zeroClose)
-        guard let oneOpen = scalars[connectorStart...].firstIndex(of: "{") else { return nil }
-        let oneDigit = scalars.index(after: oneOpen)
-        guard oneDigit < scalars.endIndex, scalars[oneDigit] == "1" else { return nil }
-        let oneClose = scalars.index(after: oneDigit)
-        guard oneClose < scalars.endIndex, scalars[oneClose] == "}" else { return nil }
-        let suffixStart = scalars.index(after: oneClose)
-
-        let connector = String(scalars[connectorStart..<oneOpen])
-        self.prefix = String(scalars[..<zeroOpen])
-        self.connector = connector
-        self.suffix = String(scalars[suffixStart...])
-        self.connectorStartsWithSpace = connector.unicodeScalars.first == " "
-        self.connectorEndsWithSpace = connector.unicodeScalars.last == " "
+        let openBrace = UInt8(ascii: "{"), closeBrace = UInt8(ascii: "}"), space = UInt8(ascii: " ")
+        var pattern = pattern
+        let parsed = pattern.withUTF8 {
+            utf8 -> (prefix: String, connector: String, suffix: String,
+                     startsSpace: Bool, endsSpace: Bool)? in
+            // Locate "{0}".
+            guard let zeroOpen = utf8.firstIndex(of: openBrace),
+                  zeroOpen + 2 < utf8.count,
+                  utf8[zeroOpen + 1] == UInt8(ascii: "0"),
+                  utf8[zeroOpen + 2] == closeBrace else { return nil }
+            let connectorStart = zeroOpen + 3
+            // Locate "{1}" following the connector.
+            guard let oneOpen = utf8[connectorStart...].firstIndex(of: openBrace),
+                  oneOpen + 2 < utf8.count,
+                  utf8[oneOpen + 1] == UInt8(ascii: "1"),
+                  utf8[oneOpen + 2] == closeBrace else { return nil }
+            let suffixStart = oneOpen + 3
+            let connector = utf8[connectorStart..<oneOpen]
+            return (prefix: String(decoding: utf8[..<zeroOpen], as: UTF8.self),
+                    connector: String(decoding: connector, as: UTF8.self),
+                    suffix: String(decoding: utf8[suffixStart...], as: UTF8.self),
+                    startsSpace: connector.first == space,
+                    endsSpace: connector.last == space)
+        }
+        guard let parsed else { return nil }
+        self.prefix = parsed.prefix
+        self.connector = parsed.connector
+        self.suffix = parsed.suffix
+        self.connectorStartsWithSpace = parsed.startsSpace
+        self.connectorEndsWithSpace = parsed.endsSpace
     }
 
     /// UTF-8 byte count of formatting two arguments of the given byte lengths.
@@ -373,28 +387,33 @@ internal final class ListFormatterImpl: Sendable {
     /// literally (CLDR list patterns use exactly the two placeholders, but
     /// items themselves may contain literal braces — see the
     /// `literalBracePlaceholders` test).
+    ///
+    /// The placeholder syntax is ASCII, so the scan runs over the pattern's
+    /// contiguous UTF-8 buffer (`withUTF8`); literal (including non-ASCII)
+    /// content is copied through byte-for-byte.
     private func interpolate(_ pattern: String, _ s0: String, _ s1: String) -> String {
-        var result = ""
-        result.reserveCapacity(pattern.count + s0.count + s1.count)
-        let scalars = pattern.unicodeScalars
-        var i = scalars.startIndex
-        while i < scalars.endIndex {
-            let c = scalars[i]
-            if c == "{" {
-                let n1 = scalars.index(after: i)
-                let n2 = n1 < scalars.endIndex ? scalars.index(after: n1) : scalars.endIndex
-                if n2 < scalars.endIndex,
-                   (scalars[n1] == "0" || scalars[n1] == "1"),
-                   scalars[n2] == "}" {
-                    result += (scalars[n1] == "0") ? s0 : s1
-                    i = scalars.index(after: n2)
+        let openBrace = UInt8(ascii: "{"), closeBrace = UInt8(ascii: "}")
+        let zero = UInt8(ascii: "0"), one = UInt8(ascii: "1")
+        var pattern = pattern
+        var result = [UInt8]()
+        result.reserveCapacity(pattern.utf8.count + s0.utf8.count + s1.utf8.count)
+        pattern.withUTF8 { utf8 in
+            let n = utf8.count
+            var i = 0
+            while i < n {
+                let b = utf8[i]
+                if b == openBrace, i + 2 < n,
+                   (utf8[i + 1] == zero || utf8[i + 1] == one),
+                   utf8[i + 2] == closeBrace {
+                    result.append(contentsOf: (utf8[i + 1] == zero ? s0 : s1).utf8)
+                    i += 3
                     continue
                 }
+                result.append(b)
+                i += 1
             }
-            result.unicodeScalars.append(c)
-            i = scalars.index(after: i)
         }
-        return result
+        return String(decoding: result, as: UTF8.self)
     }
 
     /// Wrap an item in FSI/PDI isolates when it contains directional content
@@ -417,15 +436,33 @@ internal final class ListFormatterImpl: Sendable {
     /// without materializing the wrapped strings.
     @inline(__always)
     private func shouldWrapBidi(_ item: String) -> Bool {
+        // Everything that can disturb the list — strong-RTL characters, Arabic
+        // numbers, and (in an RTL list) anything but a Latin letter — is either
+        // outside ASCII or trivially classified by byte, so branch on the cheap
+        // `isKnownASCII` bit first and only decode scalars when we must.
+        let isASCII = item.utf8Span.isKnownASCII
         if listDirection == .rightToLeft {
+            // Only a strong-LTR character (`L`) disturbs an RTL list. Within
+            // ASCII that means a Latin letter, so scan the UTF-8 bytes directly
+            // and skip scalar decoding entirely.
+            if isASCII {
+                for byte in item.utf8 where (0x41...0x5A).contains(byte) || (0x61...0x7A).contains(byte) {
+                    return true
+                }
+                return false
+            }
             for scalar in item.unicodeScalars where isStrongLTR(scalar) {
                 return true
             }
         } else {
+            // Strong-RTL characters and Arabic numbers are all outside ASCII, so
+            // an all-ASCII item can never disturb an LTR list (the common case).
+            if isASCII { return false }
             for scalar in item.unicodeScalars {
-                // ASCII is never strong-RTL and never an Arabic number, so skip
-                // the bitmap/range checks for it (the common case) — calling
-                // `_isStrongRTL` per ASCII scalar would pay a full bitmap lookup.
+                // The item is non-ASCII overall but may still mix ASCII and
+                // non-ASCII scalars (e.g. "David <hebrew>"); skip its ASCII runs
+                // so we don't pay `_isStrongRTL`'s bitmap lookup on scalars that
+                // can be neither strong-RTL nor an Arabic number.
                 if scalar.value < 0x80 { continue }
                 if scalar._isStrongRTL || isArabicNumber(scalar) { return true }
             }
