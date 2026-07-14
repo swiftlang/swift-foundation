@@ -33,6 +33,14 @@ import AppKit
 #endif
 #endif
 
+func createManyAttributesString() -> AttributedString {
+    var str = AttributedString("a")
+    for i in 0..<10000 {
+        str += AttributedString("a", attributes: AttributeContainer().testInt(i))
+    }
+    return str
+}
+
 /// Regression and coverage tests for `AttributedString` and its associated objects
 @Suite("AttributedString")
 private struct  AttributedStringTests {
@@ -360,6 +368,15 @@ private struct  AttributedStringTests {
         #expect(a2.characters.elementsEqual(a3.characters))
     }
 
+    @Test func attributedStringIdentical() {
+        let manyAttributesString = createManyAttributesString()
+        let manyAttributesString2 = createManyAttributesString()
+        #expect(manyAttributesString.isIdentical(to: manyAttributesString))
+        #expect(manyAttributesString2.isIdentical(to: manyAttributesString2))
+        #expect(!(manyAttributesString.isIdentical(to: manyAttributesString2)))
+        #expect(!(manyAttributesString2.isIdentical(to: manyAttributesString)))
+    }
+
     @Test func attributedSubstringEquality() {
         let emptyStr = AttributedString("01234567890123456789")
 
@@ -389,7 +406,19 @@ private struct  AttributedStringTests {
 
         #expect(emptyStr[index0 ..< index5] == AttributedString("01234"))
     }
-    
+
+    @Test func attributedSubstringIdentical() {
+        let manyAttributesString = createManyAttributesString()
+        let manyAttributesString2 = createManyAttributesString()
+        let manyAttributesStringRange = manyAttributesString.characters.index(manyAttributesString.startIndex, offsetBy: manyAttributesString.characters.count / 2)...
+        let manyAttributesSubstring = manyAttributesString[manyAttributesStringRange]
+        let manyAttributes2Substring = manyAttributesString2[manyAttributesStringRange]
+        #expect(manyAttributesSubstring.isIdentical(to: manyAttributesSubstring))
+        #expect(manyAttributes2Substring.isIdentical(to: manyAttributes2Substring))
+        #expect(!(manyAttributesSubstring.isIdentical(to: manyAttributes2Substring)))
+        #expect(!(manyAttributes2Substring.isIdentical(to: manyAttributesSubstring)))
+    }
+
     @Test func runEquality() {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
         attrStr += AttributedString(" ")
