@@ -23,33 +23,46 @@ public struct KeyPathComparator<Compared>: SortComparator {
 
     /// The sort order that the comparator uses to compare properties.
     public var order: SortOrder {
-        get {
-            comparator.order
-        }
-        set {
-            comparator.order = newValue
-        }
+        didSet { comparator.order = order }
     }
 
+    /// A type-erased copy of the underlying comparator, retained only for the cold paths: `==`, `hash(into:)`, and keeping `order` observable. It is never consulted by `compare(_:_:)`.
     var comparator: AnySortComparator
 
-    private let extractField: @Sendable (Compared) -> Any
+    /// The hot path: a fully-typed comparison of two `Compared` values that extracts the keyed field and compares it *in forward order*, with no `Any` boxing and no dynamic casts. `compare(_:_:)` applies the current `order` on top via `withOrder`.
+    private let _compare: @Sendable (Compared, Compared) -> ComparisonResult
 
-    /// Get the field at `cachedOffset` if there is one, otherwise
-    /// access the field directly through the keypath.
-    private static func getField<T>(ofType fieldType: T.Type, offset maybeOffset: Int?, from base: Compared, fallback keyPath: KeyPath<Compared, T>) -> T {
-        guard let offset = maybeOffset else {
-            return base[keyPath: keyPath]
-        }
+    /// Reads the field of type `T` at a known stored-property `offset` within `base`. `T` is passed as an argument rather than a metatype captured by the caller's `@Sendable` closure, which would be non-`Sendable`.
+    @inline(always)
+    private static func getField<T>(offset: Int, from base: Compared, as type: T.Type) -> T {
         return withUnsafePointer(to: base) { pointer in
-            let rawPointer = UnsafeRawPointer(pointer)
-            return rawPointer
+            UnsafeRawPointer(pointer)
                 .advanced(by: offset)
-                .assumingMemoryBound(to: fieldType)
+                .assumingMemoryBound(to: T.self)
                 .pointee
         }
     }
-    
+
+    /// Builds the fully-typed forward comparison closure for a field of type `Field` compared by `fieldComparator` (which must be in `.forward` order).
+    ///
+    /// This is the cast-free hot path: the field is read as its concrete type and `fieldComparator.compare` is invoked directly, so no value is ever boxed into `Any` and no dynamic cast occurs per comparison. When the field is a stored property (`offset != nil`) it is read at its byte offset; otherwise it is accessed through the key path.
+    private static func makeCompare<Field, FieldComparator: SortComparator>(
+        keyPath: KeyPath<Compared, Field> & Sendable,
+        offset: Int?,
+        fieldComparator: FieldComparator
+    ) -> @Sendable (Compared, Compared) -> ComparisonResult where FieldComparator.Compared == Field {
+        if let offset {
+            return { lhs, rhs in
+                let lhsField = getField(offset: offset, from: lhs, as: Field.self)
+                let rhsField = getField(offset: offset, from: rhs, as: Field.self)
+                return fieldComparator.compare(lhsField, rhsField)
+            }
+        }
+        return { lhs, rhs in
+            fieldComparator.compare(lhs[keyPath: keyPath], rhs[keyPath: keyPath])
+        }
+    }
+
     // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
     // Should be removed and the related functions should be made public when rdar://131764614 is resolved
     @_alwaysEmitIntoClient
@@ -95,26 +108,26 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /*public*/ @usableFromInline init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value>, order: SortOrder = .forward) {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
+        let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
         if Value.self is String.Type {
 #if FOUNDATION_FRAMEWORK
-            self.comparator = AnySortComparator(String.StandardComparator.localizedStandard)
+            let stringComparator = String.StandardComparator.localizedStandard
 #else
             // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, use the lexical default
             // https://github.com/apple/swift-foundation/issues/284
-            self.comparator = AnySortComparator(String.StandardComparator.lexical)
+            let stringComparator = String.StandardComparator.lexical
 #endif
+            self.comparator = AnySortComparator(stringComparator)
+            // `Value` is statically opaque but dynamically `String`; retype the key path once here (not per comparison) so the hot path is fully typed and captures no non-Sendable metatype.
+            let stringKeyPath = sendableKP as! (KeyPath<Compared, String> & Sendable)
+            self._compare = Self.makeCompare(keyPath: stringKeyPath, offset: cachedOffset, fieldComparator: stringComparator)
         } else {
-            self.comparator = AnySortComparator(ComparableComparator<Value>())
-        }
-        let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
-        self.extractField = {
-            Self.getField(
-                ofType: Value.self,
-                offset: cachedOffset,
-                from: $0,
-                fallback: sendableKP)
+            let fieldComparator = ComparableComparator<Value>()
+            self.comparator = AnySortComparator(fieldComparator)
+            self._compare = Self.makeCompare(keyPath: sendableKP, offset: cachedOffset, fieldComparator: fieldComparator)
         }
         self.order = order
+        self.comparator.order = order
     }
 
     /// Creates a `KeyPathComparator` that orders values based on an optional
@@ -133,26 +146,26 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /*public*/ @usableFromInline init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value?>, order: SortOrder = .forward) {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
+        let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
         if Value.self is String.Type {
 #if FOUNDATION_FRAMEWORK
-            self.comparator = AnySortComparator(OptionalComparator(String.StandardComparator.localizedStandard))
+            let fieldComparator = OptionalComparator(String.StandardComparator.localizedStandard)
 #else
             // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, use the lexical default
             // https://github.com/apple/swift-foundation/issues/284
-            self.comparator = AnySortComparator(OptionalComparator(String.StandardComparator.lexical))
+            let fieldComparator = OptionalComparator(String.StandardComparator.lexical)
 #endif
+            self.comparator = AnySortComparator(fieldComparator)
+            // Retype `KeyPath<Compared, Value?>` -> `KeyPath<Compared, String?>` once here so the hot path is fully typed (see the non-optional case).
+            let stringKeyPath = sendableKP as! (KeyPath<Compared, String?> & Sendable)
+            self._compare = Self.makeCompare(keyPath: stringKeyPath, offset: cachedOffset, fieldComparator: fieldComparator)
         } else {
-            self.comparator = AnySortComparator(OptionalComparator(ComparableComparator<Value>()))
-        }
-        let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
-        self.extractField = {
-            Self.getField(
-                ofType: Value?.self,
-                offset: cachedOffset,
-                from: $0,
-                fallback: sendableKP) as Any
+            let fieldComparator = OptionalComparator(ComparableComparator<Value>())
+            self.comparator = AnySortComparator(fieldComparator)
+            self._compare = Self.makeCompare(keyPath: sendableKP, offset: cachedOffset, fieldComparator: fieldComparator)
         }
         self.order = order
+        self.comparator.order = order
     }
 
     /// Creates a `KeyPathComparator` with the given `keyPath` and
@@ -167,15 +180,13 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value>, comparator: Comparator) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
-        self.comparator = AnySortComparator(comparator)
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
-        self.extractField = {
-            Self.getField(
-                ofType: Value.self,
-                offset: cachedOffset,
-                from: $0,
-                fallback: sendableKP)
-        }
+        self.comparator = AnySortComparator(comparator)
+        var forwardComparator = comparator
+        forwardComparator.order = .forward
+        self._compare = Self.makeCompare(keyPath: sendableKP, offset: cachedOffset, fieldComparator: forwardComparator)
+        self.order = comparator.order
+        self.comparator.order = comparator.order
     }
 
     /// Creates a `KeyPathComparator` with the given `keyPath` to an optional
@@ -193,15 +204,14 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
-        self.comparator = AnySortComparator(OptionalComparator(comparator))
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
-        self.extractField = {
-            Self.getField(
-                ofType: Value?.self,
-                offset: cachedOffset,
-                from: $0,
-                fallback: sendableKP) as Any
-        }
+        self.comparator = AnySortComparator(OptionalComparator(comparator))
+        var forwardComparator = comparator
+        forwardComparator.order = .forward
+        let forwardOptional = OptionalComparator(forwardComparator)
+        self._compare = Self.makeCompare(keyPath: sendableKP, offset: cachedOffset, fieldComparator: forwardOptional)
+        self.order = comparator.order
+        self.comparator.order = comparator.order
     }
 
     /// Creates a `KeyPathComparator` with the given `keyPath`,
@@ -214,16 +224,13 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
-        self.comparator = AnySortComparator(comparator)
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
-        self.extractField = {
-            Self.getField(
-                ofType: Value.self,
-                offset: cachedOffset,
-                from: $0,
-                fallback: sendableKP)
-        }
+        self.comparator = AnySortComparator(comparator)
+        var forwardComparator = comparator
+        forwardComparator.order = .forward
+        self._compare = Self.makeCompare(keyPath: sendableKP, offset: cachedOffset, fieldComparator: forwardComparator)
         self.order = order
+        self.comparator.order = order
     }
 
     /// Creates a `KeyPathComparator` with the given `keyPath`,
@@ -239,16 +246,14 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /*public*/ @usableFromInline init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         let sendableKP = keyPath._unsafeAssumeSendable
         self.keyPath = sendableKP
-        self.comparator = AnySortComparator(OptionalComparator(comparator))
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
-        self.extractField = {
-            Self.getField(
-                ofType: Value?.self,
-                offset: cachedOffset,
-                from: $0,
-                fallback: sendableKP) as Any
-        }
+        self.comparator = AnySortComparator(OptionalComparator(comparator))
+        var forwardComparator = comparator
+        forwardComparator.order = .forward
+        let forwardOptional = OptionalComparator(forwardComparator)
+        self._compare = Self.makeCompare(keyPath: sendableKP, offset: cachedOffset, fieldComparator: forwardOptional)
         self.order = order
+        self.comparator.order = order
     }
 
     /// Provides the relative ordering of two items according to the ordering of the properties that the comparator's key path references.
@@ -260,9 +265,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     ///   - rhs: The second property to compare.
     /// - Returns: The relative ordering for the compared properties.
     public func compare(_ lhs: Compared, _ rhs: Compared) -> ComparisonResult {
-        let lhsField = extractField(lhs)
-        let rhsField = extractField(rhs)
-        return self.comparator.compare(lhsField, rhsField)
+        return _compare(lhs, rhs).withOrder(order)
     }
 
     public static func ==(lhs: Self, rhs: Self) -> Bool {

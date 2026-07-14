@@ -239,6 +239,7 @@ extension Sequence {
     /// - Parameters:
     ///   - comparator: the comparator to use in ordering elements
     /// - Returns: an array of the elements sorted using `comparator`.
+    @inlinable
     public func sorted<Comparator: SortComparator>(using comparator: Comparator) -> [Element] where Comparator.Compared == Element {
         return self.sorted {
             comparator.compare($0, $1) == .orderedAscending
@@ -254,6 +255,7 @@ extension Sequence {
     ///   sorting the sequence's elements. Any subsequent comparators are used
     ///   to further refine the order of elements with equal values.
     /// - Returns: an array of the elements sorted using `comparators`.
+    @inlinable
     public func sorted<S: Sequence, Comparator: SortComparator>(using comparators: S) -> [Element] where
         S.Element == Comparator,
         Element == Comparator.Compared
@@ -273,6 +275,7 @@ extension Sequence {
     /// comparator to be used in sorting the sequence's elements. Any subsequent
     /// comparators are used to further refine the order of elements with equal
     /// values.
+    @inlinable
     public func compare<Comparator: SortComparator>(_ lhs: Comparator.Compared, _ rhs: Comparator.Compared) -> ComparisonResult where Element == Comparator {
         for comparator in self {
             let result = comparator.compare(lhs, rhs)
@@ -287,6 +290,7 @@ extension MutableCollection where Self: RandomAccessCollection {
     /// Sorts the collection using the given comparator to compare elements.
     /// - Parameters:
     ///     - comparator: the sort comparator used to compare elements.
+    @inlinable
     public mutating func sort<Comparator: SortComparator>(using comparator: Comparator) where Comparator.Compared == Element {
         self.sort {
             comparator.compare($0, $1) == .orderedAscending
@@ -301,6 +305,7 @@ extension MutableCollection where Self: RandomAccessCollection {
     ///   first comparator specifies the primary comparator to be used in
     ///   sorting the sequence's elements. Any subsequent comparators are used
     ///   to further refine the order of elements with equal values.
+    @inlinable
     public mutating func sort<S: Sequence, Comparator: SortComparator>(using comparators: S) where S.Element == Comparator, Element == Comparator.Compared {
         self.sort {
             comparators.compare($0, $1) == .orderedAscending
