@@ -210,10 +210,10 @@ internal final class ListFormatterImpl: Sendable {
         self.middleFormatter = middleFormatter
         self.endFormatter = endFormatter
         self.pairFormatter = pairFormatter
-        if let s = startFormatter, let m = middleFormatter, let e = endFormatter,
-            s.prefix.isEmpty, s.suffix.isEmpty,
-            m.prefix.isEmpty, m.suffix.isEmpty,
-            e.prefix.isEmpty, e.suffix.isEmpty
+        if let startFormatter, let middleFormatter, let endFormatter,
+            startFormatter.prefix.isEmpty, startFormatter.suffix.isEmpty,
+            middleFormatter.prefix.isEmpty, middleFormatter.suffix.isEmpty,
+            endFormatter.prefix.isEmpty, endFormatter.suffix.isEmpty
         {
             self.canBuildLinearly = true
         } else {
@@ -245,33 +245,33 @@ internal final class ListFormatterImpl: Sendable {
             // (Spanish/Hebrew) only changes which connector the final join uses,
             // so it stays on this path.
             if canBuildLinearly, !isThai,
-                let startF = startFormatter, let middleF = middleFormatter, let endF = endFormatter
+                let startFormatter, let middleFormatter, let endFormatter
             {
-                let lastJoin = firedAlternative(forNextItem: strings[strings.count - 1]) ?? endF
-                return buildLinear(items: strings, start: startF, middle: middleF, end: lastJoin)
+                let lastJoin = firedAlternative(forNextItem: strings[strings.count - 1]) ?? endFormatter
+                return buildLinear(items: strings, start: startFormatter, middle: middleFormatter, end: lastJoin)
             }
             let wrapped = strings.map(wrapBidi)
             if isThai,
-                let startF = startFormatter,
-                let middleF = middleFormatter,
-                let endF = endFormatter
+                let startFormatter,
+                let middleFormatter,
+                let endFormatter
             {
                 var result = applyThai(
-                    startF,
+                    startFormatter,
                     isPair: false,
                     before: wrapped[0],
                     after: wrapped[1]
                 )
                 for i in 2..<(wrapped.count - 1) {
                     result = applyThai(
-                        middleF,
+                        middleFormatter,
                         isPair: false,
                         before: result,
                         after: wrapped[i]
                     )
                 }
                 return applyThai(
-                    endF,
+                    endFormatter,
                     isPair: false,
                     before: result,
                     after: wrapped[wrapped.count - 1]
