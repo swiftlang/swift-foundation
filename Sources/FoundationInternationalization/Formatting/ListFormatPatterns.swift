@@ -114,9 +114,11 @@ internal func _listFormatParent(of locale: String) -> String? {
 private func _searchSlot(locale: String, type: ListFormatType, width: ListFormatWidth) -> UInt16? {
     func search<T>(_ table: borrowing T, _ count: UInt16) -> UInt16? {
         withUnsafePointer(to: table) { ptr in
-            _bsearchSlot(target: locale,
-                         base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                         count: Int(count))
+            _bsearchLocale(target: locale,
+                           base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
+                           count: Int(count),
+                           key: { $0.locale },
+                           result: { entry, _ in entry.row })
         }
     }
     switch (type, width) {
@@ -129,17 +131,32 @@ private func _searchSlot(locale: String, type: ListFormatType, width: ListFormat
     }
 }
 
-/// Binary search over a sorted slot table. Compares via `strcmp` on the C
-/// strings — locale identifiers are pure ASCII so byte-wise comparison gives
-/// the same order as Swift's String comparison without per-step allocation.
-/// Slot entries reference their locale string indirectly through
-/// `_ListFormatLocales`.
-private func _bsearchSlot(
+/// Look up a child locale's parent in the explicit override map.
+private func _parentLookup(child: String) -> String? {
+    withUnsafePointer(to: _ListFormatParents) { ptr in
+        _bsearchLocale(target: child,
+                       base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatParentEntry.self),
+                       count: Int(_ListFormatParentCount),
+                       key: { $0.child },
+                       result: { entry, pool in String(cString: pool[Int(entry.parent)]!) })
+    }
+}
+
+/// Binary search a sorted table of locale-keyed entries, shared by the slot and
+/// parent-map lookups. `key` extracts the entry's index into `_ListFormatLocales`
+/// (the value compared against `target`); `result` maps a matched entry — plus
+/// the locale pool, for entries that point at other pooled strings — to the
+/// return value. Comparison is `strcmp` on the pooled C strings: locale
+/// identifiers are pure ASCII, so byte-wise order matches Swift's String
+/// comparison without per-step allocation.
+private func _bsearchLocale<Entry, Result>(
     target: String,
-    base: UnsafePointer<_ListFormatSlotEntry>,
-    count: Int
-) -> UInt16? {
-    return target.withCString { cTarget -> UInt16? in
+    base: UnsafePointer<Entry>,
+    count: Int,
+    key: (Entry) -> UInt16,
+    result: (Entry, UnsafePointer<UnsafePointer<CChar>?>) -> Result
+) -> Result? {
+    return target.withCString { cTarget -> Result? in
         withUnsafePointer(to: _ListFormatLocales) { poolPtr in
             let pool = UnsafeRawPointer(poolPtr).assumingMemoryBound(to: UnsafePointer<CChar>?.self)
             var lo = 0
@@ -147,33 +164,11 @@ private func _bsearchSlot(
             while lo <= hi {
                 let mid = (lo &+ hi) / 2
                 let entry = base[mid]
-                let cmp = strcmp(cTarget, pool[Int(entry.locale)]!)
-                if cmp == 0 { return entry.row }
+                let cmp = strcmp(cTarget, pool[Int(key(entry))]!)
+                if cmp == 0 { return result(entry, pool) }
                 if cmp > 0 { lo = mid &+ 1 } else { hi = mid &- 1 }
             }
             return nil
-        }
-    }
-}
-
-/// Look up a child locale's parent in the explicit override map.
-private func _parentLookup(child: String) -> String? {
-    return child.withCString { cChild -> String? in
-        withUnsafePointer(to: _ListFormatParents) { ptr in
-            withUnsafePointer(to: _ListFormatLocales) { poolPtr in
-                let base = UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatParentEntry.self)
-                let pool = UnsafeRawPointer(poolPtr).assumingMemoryBound(to: UnsafePointer<CChar>?.self)
-                var lo = 0
-                var hi = Int(_ListFormatParentCount) - 1
-                while lo <= hi {
-                    let mid = (lo &+ hi) / 2
-                    let entry = base[mid]
-                    let cmp = strcmp(cChild, pool[Int(entry.child)]!)
-                    if cmp == 0 { return String(cString: pool[Int(entry.parent)]!) }
-                    if cmp > 0 { lo = mid &+ 1 } else { hi = mid &- 1 }
-                }
-                return nil
-            }
         }
     }
 }
