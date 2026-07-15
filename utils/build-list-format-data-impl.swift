@@ -10,45 +10,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-/*
-
- Stage 2 of the list-format data pipeline: reads the JSON intermediate
- produced by utils/update-list-format-data and emits the packed C data that
- backs the _FoundationInternationalizationData library — a header of extern
- declarations plus a .c of definitions.
-
- Reads five environment variables (set by the build-list-format-data wrapper):
-   - INPUT    : path to ListFormatData.json
-   - OUTPUT_H : path where ListFormatData.h (declarations) will be written
-   - OUTPUT_C : path where ListFormatData.c (definitions) will be written
-   - LOCALES  : comma-separated locale list ("" = include all)
-   - FALLBACK : locale used when a runtime lookup misses (default: "root")
-
- The fallback locale is auto-included in the kept set, as is "root" — the
- latter is required because the runtime walk always terminates there.
-
- The big arrays are declared `INTERNAL` (see InternationalizationDataMacros.h)
- in the header and defined in the .c so the data is compiled into the library
- once rather than copied into every including translation unit. The small
- scalars (counts, fallback locale) and the struct typedefs stay in the header.
-
- The C data exposes:
-   - A pattern string pool (`_ListFormatPatterns`)
-   - A locale string pool (`_ListFormatLocales`) — every locale identifier
-     referenced by a slot or parent entry lives here exactly once. Slot and
-     parent entries reference locales by `uint16_t` index into this pool.
-     Pooling drops the per-entry overhead from 16 bytes (two/one pointers
-     plus padding) down to 4 bytes.
-   - A row table (`_ListFormatRows`), each row referencing 4 pattern indexes
-   - Nine sparse slot tables (`_ListFormatSlot_<Slot>`), each sorted by
-     locale identifier for binary search
-   - A sparse parent map (`_ListFormatParents`), sorted by child for binary
-     search
-   - A `_ListFormatFallbackLocale` constant holding the configured fallback
-
- The declarations and definitions are wrapped in `#if !FOUNDATION_LIST_FORMAT_ICU`.
-
- */
+// Stage 2 of the list-format data pipeline: reads the JSON intermediate
+// produced by utils/update-list-format-data and emits the packed C data that
+// backs the _FoundationInternationalizationData library — a header of extern
+// declarations plus a .c of definitions.
+//
+// Reads five environment variables (set by the build-list-format-data wrapper):
+//   - INPUT    : path to ListFormatData.json
+//   - OUTPUT_H : path where ListFormatData.h (declarations) will be written
+//   - OUTPUT_C : path where ListFormatData.c (definitions) will be written
+//   - LOCALES  : comma-separated locale list ("" = include all)
+//   - FALLBACK : locale used when a runtime lookup misses (default: "root")
+//
+// The fallback locale is auto-included in the kept set, as is "root" — the
+// latter is required because the runtime walk always terminates there.
+//
+// The big arrays are declared `INTERNAL` (see InternationalizationDataMacros.h)
+// in the header and defined in the .c so the data is compiled into the library
+// once rather than copied into every including translation unit. The small
+// scalars (counts, fallback locale) and the struct typedefs stay in the header.
+//
+// The C data exposes:
+//   - A pattern string pool (`_ListFormatPatterns`)
+//   - A locale string pool (`_ListFormatLocales`) — every locale identifier
+//     referenced by a slot or parent entry lives here exactly once. Slot and
+//     parent entries reference locales by `uint16_t` index into this pool.
+//     Pooling drops the per-entry overhead from 16 bytes (two/one pointers
+//     plus padding) down to 4 bytes.
+//   - A row table (`_ListFormatRows`), each row referencing 4 pattern indexes
+//   - Nine sparse slot tables (`_ListFormatSlot_<Slot>`), each sorted by
+//     locale identifier for binary search
+//   - A sparse parent map (`_ListFormatParents`), sorted by child for binary
+//     search
+//   - A `_ListFormatFallbackLocale` constant holding the configured fallback
+//
+// The declarations and definitions are wrapped in `#if !FOUNDATION_LIST_FORMAT_ICU`.
 
 import Foundation
 
@@ -59,7 +55,7 @@ struct Options {
     let inputPath: String
     let outputHeaderPath: String
     let outputSourcePath: String
-    let requestedLocales: Set<String>?   // nil = include all locales
+    let requestedLocales: Set<String>? // nil = include all locales
     let fallback: String
 }
 
@@ -77,7 +73,7 @@ struct PackedData {
     let parents: [String: String]
     let cldrVersion: String
     let keepAll: Bool
-    let keptLocalesSorted: [String]   // for the banner; empty when keepAll
+    let keptLocalesSorted: [String] // for the banner; empty when keepAll
     let fallback: String
 }
 
@@ -96,14 +92,17 @@ func readOptions() -> Options {
     }
     let localesArg = env["LOCALES"] ?? ""
     let fallback = env["FALLBACK"] ?? "root"
-    let requestedLocales: Set<String>? = localesArg.isEmpty
+    let requestedLocales: Set<String>? =
+        localesArg.isEmpty
         ? nil
         : Set(localesArg.split(separator: ",").map(String.init))
-    return Options(inputPath: inputPath,
-                   outputHeaderPath: outputHeaderPath,
-                   outputSourcePath: outputSourcePath,
-                   requestedLocales: requestedLocales,
-                   fallback: fallback)
+    return Options(
+        inputPath: inputPath,
+        outputHeaderPath: outputHeaderPath,
+        outputSourcePath: outputSourcePath,
+        requestedLocales: requestedLocales,
+        fallback: fallback
+    )
 }
 
 // MARK: - Load JSON

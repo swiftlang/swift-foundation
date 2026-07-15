@@ -63,26 +63,32 @@ internal struct SimpleFormatter: Equatable {
         let openBrace = UInt8(ascii: "{"), closeBrace = UInt8(ascii: "}"), space = UInt8(ascii: " ")
         var pattern = pattern
         let parsed = pattern.withUTF8 {
-            utf8 -> (prefix: String, connector: String, suffix: String,
-                     startsSpace: Bool, endsSpace: Bool)? in
+            utf8 -> (
+                prefix: String, connector: String, suffix: String,
+                startsSpace: Bool, endsSpace: Bool
+            )? in
             // Locate "{0}".
             guard let zeroOpen = utf8.firstIndex(of: openBrace),
-                  zeroOpen + 2 < utf8.count,
-                  utf8[zeroOpen + 1] == UInt8(ascii: "0"),
-                  utf8[zeroOpen + 2] == closeBrace else { return nil }
+                zeroOpen + 2 < utf8.count,
+                utf8[zeroOpen + 1] == UInt8(ascii: "0"),
+                utf8[zeroOpen + 2] == closeBrace
+            else { return nil }
             let connectorStart = zeroOpen + 3
             // Locate "{1}" following the connector.
             guard let oneOpen = utf8[connectorStart...].firstIndex(of: openBrace),
-                  oneOpen + 2 < utf8.count,
-                  utf8[oneOpen + 1] == UInt8(ascii: "1"),
-                  utf8[oneOpen + 2] == closeBrace else { return nil }
+                oneOpen + 2 < utf8.count,
+                utf8[oneOpen + 1] == UInt8(ascii: "1"),
+                utf8[oneOpen + 2] == closeBrace
+            else { return nil }
             let suffixStart = oneOpen + 3
             let connector = utf8[connectorStart..<oneOpen]
-            return (prefix: String(decoding: utf8[..<zeroOpen], as: UTF8.self),
-                    connector: String(decoding: connector, as: UTF8.self),
-                    suffix: String(decoding: utf8[suffixStart...], as: UTF8.self),
-                    startsSpace: connector.first == space,
-                    endsSpace: connector.last == space)
+            return (
+                prefix: String(decoding: utf8[..<zeroOpen], as: UTF8.self),
+                connector: String(decoding: connector, as: UTF8.self),
+                suffix: String(decoding: utf8[suffixStart...], as: UTF8.self),
+                startsSpace: connector.first == space,
+                endsSpace: connector.last == space
+            )
         }
         guard let parsed else { return nil }
         self.prefix = parsed.prefix
@@ -99,8 +105,11 @@ internal struct SimpleFormatter: Equatable {
 
     /// Append `prefix + s0 + connector + s1 + suffix` into `output`. The caller
     /// is responsible for having reserved enough capacity (see `utf8Count`).
-    func format(_ s0: borrowing UTF8Span, _ s1: borrowing UTF8Span,
-                into output: inout OutputSpan<UInt8>) {
+    func format(
+        _ s0: borrowing UTF8Span,
+        _ s1: borrowing UTF8Span,
+        into output: inout OutputSpan<UInt8>
+    ) {
         output.append(copying: prefix.utf8Span.span)
         output.append(copying: s0.span)
         output.append(copying: connector.utf8Span.span)
@@ -172,16 +181,21 @@ internal final class ListFormatterImpl: Sendable {
     private let canBuildLinearly: Bool
 
     private init(signature: Signature) {
-        let patterns = _listFormatPatterns(locale: signature.localeIdentifier,
-                                     type: signature.listType,
-                                     width: signature.width)
+        let patterns = _listFormatPatterns(
+            locale: signature.localeIdentifier,
+            type: signature.listType,
+            width: signature.width
+        )
         self.patterns = patterns
         let localeLanguage = Locale.Language(identifier: signature.localeIdentifier)
         self.listDirection = localeLanguage.characterDirection
         let language = localeLanguage.languageCode?.identifier ?? signature.localeIdentifier
         self.isThai = (language == "th")
-        if let rule = Self.alternativeRule(language: language, type: signature.listType,
-                                           endPattern: patterns.end) {
+        if let rule = Self.alternativeRule(
+            language: language,
+            type: signature.listType,
+            endPattern: patterns.end
+        ) {
             self.alternativeCondition = rule.condition
             self.alternativeFormatter = SimpleFormatter(rule.pattern)
         } else {
@@ -197,9 +211,10 @@ internal final class ListFormatterImpl: Sendable {
         self.endFormatter = endFormatter
         self.pairFormatter = pairFormatter
         if let s = startFormatter, let m = middleFormatter, let e = endFormatter,
-           s.prefix.isEmpty, s.suffix.isEmpty,
-           m.prefix.isEmpty, m.suffix.isEmpty,
-           e.prefix.isEmpty, e.suffix.isEmpty {
+            s.prefix.isEmpty, s.suffix.isEmpty,
+            m.prefix.isEmpty, m.suffix.isEmpty,
+            e.prefix.isEmpty, e.suffix.isEmpty
+        {
             self.canBuildLinearly = true
         } else {
             self.canBuildLinearly = false
@@ -230,23 +245,37 @@ internal final class ListFormatterImpl: Sendable {
             // (Spanish/Hebrew) only changes which connector the final join uses,
             // so it stays on this path.
             if canBuildLinearly, !isThai,
-               let startF = startFormatter, let middleF = middleFormatter, let endF = endFormatter {
+                let startF = startFormatter, let middleF = middleFormatter, let endF = endFormatter
+            {
                 let lastJoin = firedAlternative(forNextItem: strings[strings.count - 1]) ?? endF
                 return buildLinear(items: strings, start: startF, middle: middleF, end: lastJoin)
             }
             let wrapped = strings.map(wrapBidi)
             if isThai,
-               let startF = startFormatter,
-               let middleF = middleFormatter,
-               let endF = endFormatter {
-                var result = applyThai(startF, isPair: false,
-                                       before: wrapped[0], after: wrapped[1])
+                let startF = startFormatter,
+                let middleF = middleFormatter,
+                let endF = endFormatter
+            {
+                var result = applyThai(
+                    startF,
+                    isPair: false,
+                    before: wrapped[0],
+                    after: wrapped[1]
+                )
                 for i in 2..<(wrapped.count - 1) {
-                    result = applyThai(middleF, isPair: false,
-                                       before: result, after: wrapped[i])
+                    result = applyThai(
+                        middleF,
+                        isPair: false,
+                        before: result,
+                        after: wrapped[i]
+                    )
                 }
-                return applyThai(endF, isPair: false,
-                                 before: result, after: wrapped[wrapped.count - 1])
+                return applyThai(
+                    endF,
+                    isPair: false,
+                    before: result,
+                    after: wrapped[wrapped.count - 1]
+                )
             }
             // Fallback for non-simple patterns (non-empty prefix/suffix — not
             // present in real CLDR data). Start and middle joins never carry a
@@ -268,7 +297,8 @@ internal final class ListFormatterImpl: Sendable {
     /// connector); `nil` if there's no rule or it doesn't fire.
     private func firedAlternative(forNextItem nextItem: String) -> SimpleFormatter? {
         guard let condition = alternativeCondition, let formatter = alternativeFormatter,
-              condition(nextItem) else {
+            condition(nextItem)
+        else {
             return nil
         }
         return formatter
@@ -289,10 +319,12 @@ internal final class ListFormatterImpl: Sendable {
     /// `String(unsafeUninitializedCapacity:)` buffer wrapped in an `OutputSpan`.
     /// Skips the per-`+=` UTF-8 validity checks and copy-on-write uniqueness
     /// checks `String +=` paid on every append.
-    private func buildLinear(items: [String],
-                             start: SimpleFormatter,
-                             middle: SimpleFormatter,
-                             end: SimpleFormatter) -> String {
+    private func buildLinear(
+        items: [String],
+        start: SimpleFormatter,
+        middle: SimpleFormatter,
+        end: SimpleFormatter
+    ) -> String {
         // TODO: use withTemporaryAllocation once swift-tools-version is 6.4 or higher
         return withUnsafeTemporaryAllocation(of: Bool.self, capacity: items.count) { conflicts in
             var total = 0
@@ -301,7 +333,8 @@ internal final class ListFormatterImpl: Sendable {
                 conflicts.initializeElement(at: i, to: wrap)
                 total += items[i].utf8.count + (wrap ? 6 : 0)
             }
-            total += start.connector.utf8.count
+            total +=
+                start.connector.utf8.count
                 + middle.connector.utf8.count * (items.count - 3)
                 + end.connector.utf8.count
 
@@ -326,8 +359,11 @@ internal final class ListFormatterImpl: Sendable {
     /// PDI (U+2069) for bidi isolation. The caller has already decided whether
     /// wrapping is needed.
     @inline(__always)
-    private static func writeItem(_ item: borrowing UTF8Span, wrapped: Bool,
-                                  into output: inout OutputSpan<UInt8>) {
+    private static func writeItem(
+        _ item: borrowing UTF8Span,
+        wrapped: Bool,
+        into output: inout OutputSpan<UInt8>
+    ) {
         if wrapped {
             // U+2068 FIRST STRONG ISOLATE (FSI) = E2 81 A8
             output.append(0xE2)
@@ -345,8 +381,12 @@ internal final class ListFormatterImpl: Sendable {
 
     /// Format with the compiled formatter, or fall back to scanning the raw
     /// pattern when parsing failed (malformed data).
-    private func interpolate(_ formatter: SimpleFormatter?, _ pattern: String,
-                             _ s0: String, _ s1: String) -> String {
+    private func interpolate(
+        _ formatter: SimpleFormatter?,
+        _ pattern: String,
+        _ s0: String,
+        _ s1: String
+    ) -> String {
         if let formatter {
             return formatter.format(s0, s1)
         }
@@ -356,14 +396,19 @@ internal final class ListFormatterImpl: Sendable {
     /// Single-pass Thai formatter: emit the final string directly using the
     /// pre-parsed pattern decomposition, with any contextually-required spaces
     /// adjacent to the connector inserted.
-    private func applyThai(_ formatter: SimpleFormatter, isPair: Bool,
-                           before: String, after: String) -> String {
+    private func applyThai(
+        _ formatter: SimpleFormatter,
+        isPair: Bool,
+        before: String,
+        after: String
+    ) -> String {
         let spaceBefore = isPair && _thaiNeedsSpace(adjacentScalar: before.unicodeScalars.last)
         let spaceAfter = _thaiNeedsSpace(adjacentScalar: after.unicodeScalars.first)
         let needsLeading = spaceBefore && !formatter.connectorStartsWithSpace
         let needsTrailing = spaceAfter && !formatter.connectorEndsWithSpace
         let extra = (needsLeading ? 1 : 0) + (needsTrailing ? 1 : 0)
-        let total = formatter.prefix.utf8.count + before.utf8.count + formatter.connector.utf8.count
+        let total =
+            formatter.prefix.utf8.count + before.utf8.count + formatter.connector.utf8.count
             + after.utf8.count + formatter.suffix.utf8.count + extra
         return String(unsafeUninitializedCapacity: total) { buffer in
             var output = OutputSpan(buffer: buffer, initializedCount: 0)
@@ -402,8 +447,9 @@ internal final class ListFormatterImpl: Sendable {
             while i < n {
                 let b = utf8[i]
                 if b == openBrace, i + 2 < n,
-                   (utf8[i + 1] == zero || utf8[i + 1] == one),
-                   utf8[i + 2] == closeBrace {
+                    (utf8[i + 1] == zero || utf8[i + 1] == one),
+                    utf8[i + 2] == closeBrace
+                {
                     result.append(contentsOf: (utf8[i + 1] == zero ? s0 : s1).utf8)
                     i += 3
                     continue
@@ -481,8 +527,12 @@ internal final class ListFormatterImpl: Sendable {
         }
         if scalar._isStrongRTL { return false }
         switch scalar.properties.generalCategory {
-        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter,
-             .modifierLetter, .otherLetter:
+        case
+            .uppercaseLetter,
+            .lowercaseLetter,
+            .titlecaseLetter,
+            .modifierLetter,
+            .otherLetter:
             return true
         default:
             return false
@@ -508,12 +558,13 @@ internal final class ListFormatterImpl: Sendable {
     /// hand for now (and don't cover the SMP `AN` ranges, e.g. Rumi numerals).
     private func isArabicNumber(_ scalar: Unicode.Scalar) -> Bool {
         switch scalar.value {
-        case 0x0600...0x0605,  // Arabic number signs
-             0x0660...0x0669,  // Arabic-Indic digits
-             0x066B...0x066C,  // Arabic decimal / thousands separators
-             0x06DD,           // Arabic end of ayah
-             0x0890...0x0891,  // Arabic pound / piastre marks
-             0x08E2:           // Arabic disputed end of ayah
+        case
+            0x0600...0x0605,  // Arabic number signs
+            0x0660...0x0669,  // Arabic-Indic digits
+            0x066B...0x066C,  // Arabic decimal / thousands separators
+            0x06DD,           // Arabic end of ayah
+            0x0890...0x0891,  // Arabic pound / piastre marks
+            0x08E2:           // Arabic disputed end of ayah
             return true
         default:
             return false
@@ -529,7 +580,9 @@ internal final class ListFormatterImpl: Sendable {
     /// excluded: its joiner is a dynamic spacing rule, not a static pattern
     /// substitution (see `applyThai`).
     private static func alternativeRule(
-        language: String, type: ListFormatType, endPattern: String
+        language: String,
+        type: ListFormatType,
+        endPattern: String
     ) -> (condition: @Sendable (String) -> Bool, pattern: String)? {
         if language == "es" {
             if type == .and, endPattern == "{0} y {1}" {
@@ -546,9 +599,11 @@ internal final class ListFormatterImpl: Sendable {
     }
 
     internal static func formatter<Style, Base>(for style: ListFormatStyle<Style, Base>) -> ListFormatterImpl {
-        let signature = Signature(localeIdentifier: style.locale.identifier,
-                                  listType: ListFormatType(style.listType),
-                                  width: ListFormatWidth(style.width))
+        let signature = Signature(
+            localeIdentifier: style.locale.identifier,
+            listType: ListFormatType(style.listType),
+            width: ListFormatWidth(style.width)
+        )
         if let existing = cache.withLock({ $0[signature] }) {
             return existing
         }
