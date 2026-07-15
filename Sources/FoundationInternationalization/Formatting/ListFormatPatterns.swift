@@ -114,31 +114,35 @@ internal func _listFormatParent(of locale: String) -> String? {
 private func _searchSlot(locale: String, type: ListFormatType, width: ListFormatWidth) -> UInt16? {
     func search<T>(_ table: borrowing T, _ count: UInt16) -> UInt16? {
         withUnsafePointer(to: table) { ptr in
-            _bsearchLocale(target: locale,
-                           base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
-                           count: Int(count),
-                           key: { $0.locale },
-                           result: { entry, _ in entry.row })
+            _bsearchLocale(
+                target: locale,
+                base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatSlotEntry.self),
+                count: Int(count),
+                key: { $0.locale },
+                result: { entry, _ in entry.row }
+            )
         }
     }
     switch (type, width) {
-    case (.and, .wide):   return search(_ListFormatSlot_AndWide, _ListFormatSlot_AndWide_Count)
-    case (.and, .short):  return search(_ListFormatSlot_AndShort, _ListFormatSlot_AndShort_Count)
+    case (.and, .wide):   return search(_ListFormatSlot_AndWide,   _ListFormatSlot_AndWide_Count)
+    case (.and, .short):  return search(_ListFormatSlot_AndShort,  _ListFormatSlot_AndShort_Count)
     case (.and, .narrow): return search(_ListFormatSlot_AndNarrow, _ListFormatSlot_AndNarrow_Count)
-    case (.or, .wide):    return search(_ListFormatSlot_OrWide, _ListFormatSlot_OrWide_Count)
-    case (.or, .short):   return search(_ListFormatSlot_OrShort, _ListFormatSlot_OrShort_Count)
-    case (.or, .narrow):  return search(_ListFormatSlot_OrNarrow, _ListFormatSlot_OrNarrow_Count)
+    case (.or, .wide):    return search(_ListFormatSlot_OrWide,    _ListFormatSlot_OrWide_Count)
+    case (.or, .short):   return search(_ListFormatSlot_OrShort,   _ListFormatSlot_OrShort_Count)
+    case (.or, .narrow):  return search(_ListFormatSlot_OrNarrow,  _ListFormatSlot_OrNarrow_Count)
     }
 }
 
 /// Look up a child locale's parent in the explicit override map.
 private func _parentLookup(child: String) -> String? {
     withUnsafePointer(to: _ListFormatParents) { ptr in
-        _bsearchLocale(target: child,
-                       base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatParentEntry.self),
-                       count: Int(_ListFormatParentCount),
-                       key: { $0.child },
-                       result: { entry, pool in String(cString: pool[Int(entry.parent)]!) })
+        _bsearchLocale(
+            target: child,
+            base: UnsafeRawPointer(ptr).assumingMemoryBound(to: _ListFormatParentEntry.self),
+            count: Int(_ListFormatParentCount),
+            key: { $0.child },
+            result: { entry, pool in String(cString: pool[Int(entry.parent)]!) }
+        )
     }
 }
 

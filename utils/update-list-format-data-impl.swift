@@ -10,36 +10,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-/*
-
- Swift script that reads CLDR XML and emits a JSON file containing
- list-formatting pattern tables for ListFormatStyle. Invoked by the
- update-list-format-data shell wrapper, which sets up CLDR_PATH and prepends
- the license/auto-generated header.
-
- Pipeline:
-   1. Parse common/supplemental/supplementalData.xml into a parent-locale map.
-   2. Walk common/main, extracting <listPatterns> for each locale .xml file.
-   3. Resolve in-file <alias source="locale" .../> redirects (transitive).
-   4. For each (locale, type, width) slot, resolve missing parts and ↑↑↑
-      markers by walking the parent chain to root.
-   5. Dedupe per-slot — many locales share resolved patterns.
-   6. Emit only the (locale, slot) entries whose resolved row differs from
-      the locale's parent's row; runtime recovers the rest by walking the
-      parent chain. The explicit parent map ships with the data.
-   7. Self-check: simulate the runtime lookup against the sparse output and
-      assert every (locale, slot) still resolves to the original row.
-   8. Globally intern pattern strings and (start, middle, end, pair) row
-      tuples across all slots (further dedup). Emit as JSON via the schema
-      defined in list-format-data-schema.swift.
-
- Contextual rules (Spanish y→e, o→u; Hebrew ו prefix; Thai joiner) are NOT
- tagged in the data. They're a function of (locale.language, type, pattern),
- so the formatter computes them at format time. This keeps the data deduped
- against the actual patterns and avoids splitting the rule definition across
- the generator and the runtime predicates.
-
- */
+// Swift script that reads CLDR XML and emits a JSON file containing
+// list-formatting pattern tables for ListFormatStyle. Invoked by the
+// update-list-format-data shell wrapper, which sets up CLDR_PATH and prepends
+// the license/auto-generated header.
+//
+// Pipeline:
+//   1. Parse common/supplemental/supplementalData.xml into a parent-locale map.
+//   2. Walk common/main, extracting <listPatterns> for each locale .xml file.
+//   3. Resolve in-file <alias source="locale" .../> redirects (transitive).
+//   4. For each (locale, type, width) slot, resolve missing parts and ↑↑↑
+//      markers by walking the parent chain to root.
+//   5. Dedupe per-slot — many locales share resolved patterns.
+//   6. Emit only the (locale, slot) entries whose resolved row differs from
+//      the locale's parent's row; runtime recovers the rest by walking the
+//      parent chain. The explicit parent map ships with the data.
+//   7. Self-check: simulate the runtime lookup against the sparse output and
+//      assert every (locale, slot) still resolves to the original row.
+//   8. Globally intern pattern strings and (start, middle, end, pair) row
+//      tuples across all slots (further dedup). Emit as JSON via the schema
+//      defined in list-format-data-schema.swift.
+//
+// Contextual rules (Spanish y→e, o→u; Hebrew ו prefix; Thai joiner) are NOT
+// tagged in the data. They're a function of (locale.language, type, pattern),
+// so the formatter computes them at format time. This keeps the data deduped
+// against the actual patterns and avoids splitting the rule definition across
+// the generator and the runtime predicates.
 
 import Foundation
 #if canImport(FoundationXML)
@@ -99,7 +95,8 @@ func loadParentMap(supplementalURL: URL) throws -> [String: String] {
     var map: [String: String] = [:]
     for case let elt as XMLElement in nodes {
         guard let parent = elt.attribute(forName: "parent")?.stringValue,
-              let locales = elt.attribute(forName: "locales")?.stringValue else { continue }
+            let locales = elt.attribute(forName: "locales")?.stringValue
+        else { continue }
         for child in locales.split(separator: " ") {
             map[String(child)] = parent
         }
@@ -155,8 +152,9 @@ func parseLocaleFile(at url: URL) throws -> LocaleData {
         let cldrType = p.attribute(forName: "type")?.stringValue ?? "standard"
 
         if let alias = p.elements(forName: "alias").first,
-           let path = alias.attribute(forName: "path")?.stringValue,
-           let target = aliasTarget(path: path) {
+            let path = alias.attribute(forName: "path")?.stringValue,
+            let target = aliasTarget(path: path)
+        {
             data.aliases[cldrType] = target
             continue
         }
@@ -196,11 +194,13 @@ func parseLocaleFile(at url: URL) throws -> LocaleData {
 // `es or-narrow` resolve to `es::or` ("{0} o {1}") rather than `root::or`
 // ("{0}, or {1}"): or-narrow → or-short → or aliases redirect the lookup,
 // and locale fallback for the final type "or" finds es first.
-func resolve(part partName: String,
-             in cldrType: String,
-             for locale: String,
-             data: [String: LocaleData],
-             parentMap: [String: String]) -> String? {
+func resolve(
+    part partName: String,
+    in cldrType: String,
+    for locale: String,
+    data: [String: LocaleData],
+    parentMap: [String: String]
+) -> String? {
     var currentType = cldrType
     var seen = Set<String>()
     while !seen.contains(currentType) {
@@ -251,10 +251,12 @@ func generate() throws -> String {
     let parentMap = try loadParentMap(supplementalURL: supplementalURL)
 
     print("  scanning locale files…", to: &standardError)
-    let xmlFiles = try FileManager.default.contentsOfDirectory(at: mainURL,
-                                                               includingPropertiesForKeys: nil)
-        .filter { $0.pathExtension == "xml" }
-        .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    let xmlFiles = try FileManager.default.contentsOfDirectory(
+        at: mainURL,
+        includingPropertiesForKeys: nil
+    )
+    .filter { $0.pathExtension == "xml" }
+    .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
     var allLocales: [String] = []
     var data: [String: LocaleData] = [:]
@@ -264,7 +266,8 @@ func generate() throws -> String {
         // Cheap pre-filter: most files have no <listPatterns> block.
         // Parsing every CLDR file via XMLDocument is slow; skip when possible.
         guard let s = try? String(contentsOf: file, encoding: .utf8),
-              s.contains("<listPatterns>") else {
+            s.contains("<listPatterns>")
+        else {
             data[locale] = LocaleData()
             continue
         }
@@ -279,10 +282,12 @@ func generate() throws -> String {
     for slot in slots {
         var table: [String: Row] = [:]
         for locale in allLocales {
-            guard let start  = resolve(part: "start",  in: slot.cldrType, for: locale, data: data, parentMap: parentMap),
-                  let middle = resolve(part: "middle", in: slot.cldrType, for: locale, data: data, parentMap: parentMap),
-                  let end    = resolve(part: "end",    in: slot.cldrType, for: locale, data: data, parentMap: parentMap),
-                  let pair   = resolve(part: "2",      in: slot.cldrType, for: locale, data: data, parentMap: parentMap) else {
+            guard
+                let start  = resolve(part: "start",  in: slot.cldrType, for: locale, data: data, parentMap: parentMap),
+                let middle = resolve(part: "middle", in: slot.cldrType, for: locale, data: data, parentMap: parentMap),
+                let end    = resolve(part: "end",    in: slot.cldrType, for: locale, data: data, parentMap: parentMap),
+                let pair   = resolve(part: "2",      in: slot.cldrType, for: locale, data: data, parentMap: parentMap)
+            else {
                 // root must define every slot. If we ever hit this, root's data is
                 // incomplete for this CLDR type and we should know.
                 print("  warning: \(locale) \(slot.cldrType) unresolved", to: &standardError)
@@ -296,9 +301,11 @@ func generate() throws -> String {
     print("  emitting JSON…", to: &standardError)
     var simplifiedParentMap = parentMap
     simplifyParentMap(&simplifiedParentMap, slotTables: slotTables)
-    return emit(slotTables: slotTables,
-                parentMap: simplifiedParentMap,
-                cldrVersion: detectCLDRVersion(cldrURL: cldrURL))
+    return emit(
+        slotTables: slotTables,
+        parentMap: simplifiedParentMap,
+        cldrVersion: detectCLDRVersion(cldrURL: cldrURL)
+    )
 }
 
 // Best-effort CLDR version sniff. Tries supplementalData.xml first (the
@@ -308,7 +315,8 @@ func generate() throws -> String {
 func detectCLDRVersion(cldrURL: URL) -> String {
     let supplementalURL = cldrURL.appendingPathComponent("common/supplemental/supplementalData.xml")
     if let doc = try? XMLDocument(contentsOf: supplementalURL),
-       let nodes = try? doc.nodes(forXPath: "//supplementalData/version") {
+        let nodes = try? doc.nodes(forXPath: "//supplementalData/version")
+    {
         for case let elt as XMLElement in nodes {
             if let v = elt.attribute(forName: "cldrVersion")?.stringValue, !v.contains("$") {
                 return v
@@ -322,8 +330,9 @@ func detectCLDRVersion(cldrURL: URL) -> String {
     if let doc = try? XMLDocument(contentsOf: pomURL) {
         // pom uses default namespace; raw element lookup avoids namespace dance.
         if let root = doc.rootElement(),
-           let version = root.elements(forName: "version").first?.stringValue,
-           !version.isEmpty {
+            let version = root.elements(forName: "version").first?.stringValue,
+            !version.isEmpty
+        {
             return version
         }
     }
@@ -366,7 +375,7 @@ private func shouldEscape(_ scalar: Unicode.Scalar) -> Bool {
     case .lineSeparator, .paragraphSeparator:
         return true
     case .spaceSeparator:
-        return scalar.value != 0x20   // ASCII space is fine; NBSP/narrow-NBSP/etc. are not
+        return scalar.value != 0x20 // ASCII space is fine; NBSP/narrow-NBSP/etc. are not
     default:
         return false
     }
@@ -389,7 +398,7 @@ struct SlotEmission {
     let width: String
     let uniqueRows: [Row]
     let rowIndex: [Row: Int]
-    let sparseIndex: [String: Int]   // omits entries equal to the parent's row
+    let sparseIndex: [String: Int] // omits entries equal to the parent's row
 }
 
 func buildSlotEmissions(
@@ -426,9 +435,15 @@ func buildSlotEmissions(
                 sparseIndex[locale] = rowIndex[row]!
             }
         }
-        result.append(SlotEmission(type: slot.type, width: slot.width,
-                                   uniqueRows: uniqueRows, rowIndex: rowIndex,
-                                   sparseIndex: sparseIndex))
+        result.append(
+            SlotEmission(
+                type: slot.type,
+                width: slot.width,
+                uniqueRows: uniqueRows,
+                rowIndex: rowIndex,
+                sparseIndex: sparseIndex
+            )
+        )
     }
     return result
 }
@@ -467,14 +482,18 @@ func simplifyParentMap(
             }
         }
     }
-    print("  parent map: \(originalParentCount) → \(parentMap.count) entries (\(passes) pass(es))",
-          to: &standardError)
-    _ = emissions  // silenced; emit() recomputes from the simplified parentMap
+    print(
+        "  parent map: \(originalParentCount) → \(parentMap.count) entries (\(passes) pass(es))",
+        to: &standardError
+    )
+    _ = emissions // silenced; emit() recomputes from the simplified parentMap
 }
 
-func emit(slotTables: [(type: String, width: String, table: [String: Row])],
-          parentMap: [String: String],
-          cldrVersion: String) -> String {
+func emit(
+    slotTables: [(type: String, width: String, table: [String: Row])],
+    parentMap: [String: String],
+    cldrVersion: String
+) -> String {
     let emissions = buildSlotEmissions(slotTables, parentMap: parentMap)
 
     // Self-check: simulate the runtime parent-walk against the sparse output
@@ -486,7 +505,8 @@ func emit(slotTables: [(type: String, width: String, table: [String: Row])],
         let runtimeIndex = emission.sparseIndex.mapValues { UInt8($0) }
         for (locale, expectedRow) in slot.table {
             guard let idx = lookup(locale, in: runtimeIndex, parentMap: parentMap),
-                  emission.uniqueRows[Int(idx)] == expectedRow else {
+                emission.uniqueRows[Int(idx)] == expectedRow
+            else {
                 fatalError("sparse-lookup mismatch for \(locale) in \(slot.type)/\(slot.width)")
             }
         }
