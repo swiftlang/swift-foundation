@@ -460,5 +460,13 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(mailLinkQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed))
         }
     }
+
+    let identifierToEncode = "com.apple.mail/INBOX/12345:fc1e8b2a-deadbeef"
+    let invertedCustomSet = CharacterSet(charactersIn: "%:").inverted
+    Benchmark("Percent-Encode With Inverted Custom Set") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(identifierToEncode.addingPercentEncoding(withAllowedCharacters: invertedCustomSet))
+        }
+    }
     #endif // FOUNDATION_FRAMEWORK
 }
