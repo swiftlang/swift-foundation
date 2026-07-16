@@ -15,6 +15,17 @@
 #if canImport(ReflectionInternal)
 internal import ReflectionInternal
 
+/// An internal marker used to look through `Optional` when recursively allowlisting key paths.
+///
+/// Conforming `Optional` to this protocol exposes its `Wrapped` metatype so that a key path whose value type is `Optional<Wrapped>` can be unwrapped to `Wrapped` before checking for `PredicateCodableKeyPathProviding` conformance.
+private protocol _PredicateOptionalProtocol {
+    static var _wrappedType: Any.Type { get }
+}
+
+extension Optional: _PredicateOptionalProtocol {
+    static var _wrappedType: Any.Type { Wrapped.self }
+}
+
 /// A type that provides the expected key paths found in an archived predicate.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol PredicateCodableKeyPathProviding {
@@ -261,19 +272,33 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
     public mutating func allowKeyPathsForPropertiesProvided<T: PredicateCodableKeyPathProviding>(by type: T.Type, recursive: Bool = false) {
         for (identifier, keyPath) in type.predicateCodableKeyPaths {
             allowKeyPath(keyPath, identifier: identifier)
-            if recursive, let valueType = Swift.type(of: keyPath).valueType as? any PredicateCodableKeyPathProviding.Type {
+            if recursive, let valueType = _providingType(forValueOf: keyPath) {
                 allowKeyPathsForPropertiesProvided(by: valueType, recursive: true)
             }
         }
     }
-    
+
     public mutating func disallowKeyPathsForPropertiesProvided<T: PredicateCodableKeyPathProviding>(by type: T.Type, recursive: Bool = false) {
         for (_, keyPath) in type.predicateCodableKeyPaths {
             disallowKeyPath(keyPath)
-            if recursive, let valueType = Swift.type(of: keyPath).valueType as? any PredicateCodableKeyPathProviding.Type {
+            if recursive, let valueType = _providingType(forValueOf: keyPath) {
                 disallowKeyPathsForPropertiesProvided(by: valueType, recursive: true)
             }
         }
+    }
+
+    /// Returns the providing type to recurse into for a key path's value, looking through one layer of `Optional` when necessary.
+    ///
+    /// A key path whose value is declared as an optional property (such as `Address?`) reports a value type of `Optional<Address>`, which does not itself conform to `PredicateCodableKeyPathProviding`. Looking through the optional lets recursive allowlisting reach the wrapped type's key paths.
+    private func _providingType(forValueOf keyPath: AnyKeyPath) -> (any PredicateCodableKeyPathProviding.Type)? {
+        let valueType = Swift.type(of: keyPath).valueType
+        if let providing = valueType as? any PredicateCodableKeyPathProviding.Type {
+            return providing
+        }
+        if let optional = valueType as? any _PredicateOptionalProtocol.Type {
+            return optional._wrappedType as? any PredicateCodableKeyPathProviding.Type
+        }
+        return nil
     }
     
     public mutating func allow(_ other: Self) {
