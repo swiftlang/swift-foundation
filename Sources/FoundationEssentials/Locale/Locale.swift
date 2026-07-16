@@ -922,15 +922,20 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 }
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Locale : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+extension Locale : CustomReflectable {
     public var customMirror : Mirror {
         var c: [(label: String?, value: Any)] = []
         c.append((label: "identifier", value: identifier))
         c.append((label: "locale", value: _locale.debugDescription))
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
+}
+#endif
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Locale : CustomDebugStringConvertible, CustomStringConvertible {
     public var description: String {
         return "\(identifier) (\(_locale.debugDescription))"
     }
@@ -940,6 +945,7 @@ extension Locale : CustomDebugStringConvertible, CustomStringConvertible, Custom
     }
 }
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Locale : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -1016,3 +1022,4 @@ extension Locale : Codable {
         try _encode(to: encoder, currentIsSentinel: true)
     }
 }
+#endif

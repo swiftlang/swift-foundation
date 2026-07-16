@@ -43,7 +43,7 @@ public protocol SortComparator<Compared>: Hashable, Sendable {
 /// The orderings that you can perform sorts with.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 @frozen
-public enum SortOrder: Hashable, Codable, Sendable {
+public enum SortOrder: Hashable, Sendable {
     /// The ordering that places the first item before the second when comparing
     /// two items using an ascending order.
     ///
@@ -58,7 +58,11 @@ public enum SortOrder: Hashable, Codable, Sendable {
     /// ``ComparisonResult`` of two items is
     /// ``ComparisonResult/orderedAscending``.
     case reverse
+}
 
+#if !$Embedded
+@available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
+extension SortOrder: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let isForward = try container.decode(Bool.self)
@@ -77,6 +81,7 @@ public enum SortOrder: Hashable, Codable, Sendable {
         }
     }
 }
+#endif
 
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 extension ComparisonResult {
@@ -89,6 +94,11 @@ extension ComparisonResult {
     }
 }
 
+#if !$Embedded
+// AnySortComparator is a type-erasing wrapper that relies on dynamic casting
+// (`as? L`) and specializing generic methods on existential values, neither of
+// which is available in Embedded Swift. It is only used by
+// FoundationInternationalization (out of scope for the embedded build).
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 package struct AnySortComparator: SortComparator, Sendable {
     var _base: any Hashable & Sendable // internal for testing
@@ -109,11 +119,11 @@ package struct AnySortComparator: SortComparator, Sendable {
         self._compare = { (base: Any, lhs: Any, rhs: Any) -> ComparisonResult in
             (base as! Comparator).compare(lhs as! Comparator.Compared, rhs as! Comparator.Compared)
         }
-        self.setOrder = { (base: inout any Hashable & Sendable, newOrder: SortOrder) -> AnyHashable in
+        self.setOrder = { (base: inout any Hashable & Sendable, newOrder: SortOrder) -> any Hashable & Sendable in
             var typedBase = base as! Comparator
             typedBase.order = newOrder
             base = typedBase
-            return AnyHashable(typedBase)
+            return typedBase
         }
         self.getOrder = { (base: Any) -> SortOrder in
             (base as! Comparator).order
@@ -148,6 +158,7 @@ package struct AnySortComparator: SortComparator, Sendable {
         return compare(lhs._base, rhs._base)
     }
 }
+#endif // !$Embedded
 
 /// A comparator that compares types according to their conformance to the comparable protocol.
 ///

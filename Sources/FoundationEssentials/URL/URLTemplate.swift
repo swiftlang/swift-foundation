@@ -131,6 +131,7 @@ extension URL {
 
 // MARK: - Parse
 
+#if !$Embedded
 @available(FoundationPreview 6.2, *)
 extension URL.Template {
     /// Creates a new template from its text form.
@@ -165,6 +166,7 @@ extension URL.Template {
         }
     }
 }
+#endif // !$Embedded
 
 // MARK: -
 

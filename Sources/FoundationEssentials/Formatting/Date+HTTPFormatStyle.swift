@@ -40,12 +40,14 @@ extension Date.HTTPFormatStyle : FormatStyle {
 @available(FoundationPreview 6.2, *)
 extension Date {
     /// Options for generating and parsing string representations of dates following the HTTP date format from [RFC 9110 § 5.6.7](https://www.rfc-editor.org/rfc/rfc9110.html#http.date).
-    public struct HTTPFormatStyle : Sendable, Hashable, Codable, ParseableFormatStyle {
+    public struct HTTPFormatStyle : Sendable, Hashable, ParseableFormatStyle {
         let componentsStyle = DateComponents.HTTPFormatStyle()
 
         public init() {}
+#if !$Embedded
         public init(from decoder: any Decoder) throws {}
-        
+#endif
+
         public func format(_ date: Date) -> String {
             // <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
             let components = Calendar(identifier: .gregorian)._dateComponents([.weekday, .day, .month, .year, .hour, .minute, .second], from: date, in: .gmt)
@@ -90,8 +92,14 @@ extension Date {
     }
 }
 
+#if !$Embedded
+@available(FoundationPreview 6.2, *)
+extension Date.HTTPFormatStyle : Codable {}
+#endif
+
 // MARK: - Regex
 
+#if !$Embedded
 @available(FoundationPreview 6.2, *)
 extension Date.HTTPFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
@@ -131,6 +139,7 @@ extension RegexComponent where Self == DateComponents.HTTPFormatStyle {
         return DateComponents.HTTPFormatStyle()
     }
 }
+#endif // !$Embedded
 
 // MARK: - Components
 
@@ -166,7 +175,7 @@ extension DateComponents {
     /// Converts `DateComponents` into RFC 9110-compatible "HTTP date" `String`, and parses in the reverse direction.
     /// This parser does not do validation on the individual values of the components. An optional date can be created from the result using `Calendar(identifier: .gregorian).date(from: ...)`.
     /// When formatting, missing or invalid fields are filled with default values: `Sun`, `01`, `Jan`, `2000`, `00:00:00`, `GMT`. Note that missing fields may result in an invalid date or time. Other values in the `DateComponents` are ignored.
-    public struct HTTPFormatStyle : Sendable, Hashable, Codable, ParseableFormatStyle {
+    public struct HTTPFormatStyle : Sendable, Hashable, ParseableFormatStyle {
         public init() {
         }
         
@@ -417,7 +426,7 @@ extension DateComponents {
             case (UInt8(ascii: "D"), UInt8(ascii: "e"), UInt8(ascii: "c")):
                 12
             default:
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Month \(String(describing: dc.month)) is out of bounds")
+                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Month \(dc.month.map { "\($0)" } ?? "nil") is out of bounds")
             }
 
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
@@ -469,4 +478,9 @@ extension DateComponents {
 
     }
 }
+
+#if !$Embedded
+@available(FoundationPreview 6.2, *)
+extension DateComponents.HTTPFormatStyle : Codable {}
+#endif
 

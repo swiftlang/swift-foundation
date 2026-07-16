@@ -17,7 +17,7 @@
 /// not support reverse intervals i.e. intervals where the duration is less than 0 and the end date
 /// occurs earlier in time than the start date.
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-public struct DateInterval : Comparable, Hashable, Codable, Sendable {
+public struct DateInterval : Comparable, Hashable, Sendable {
 
     /// The start date.
     public var start : Date
@@ -168,7 +168,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
 }
 
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         return "\(start) to \(end)"
     }
@@ -176,7 +176,14 @@ extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, 
     public var debugDescription: String {
         return description
     }
+}
 
+#if !$Embedded
+@available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
+extension DateInterval : Codable {}
+
+@available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
+extension DateInterval : CustomReflectable {
     public var customMirror: Mirror {
         var c: [(label: String?, value: Any)] = []
         c.append((label: "start", value: start))
@@ -185,6 +192,7 @@ extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, 
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK

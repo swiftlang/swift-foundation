@@ -826,7 +826,7 @@ extension Calendar {
     fileprivate func _unadjustedDates(after startDate: Date,
                                       matching combinationComponents: _DateComponentCombinations,
                                       matchingPolicy: MatchingPolicy,
-                                      repeatedTimePolicy: RepeatedTimePolicy) throws -> [(Date, DateComponents)]? {
+                                      repeatedTimePolicy: RepeatedTimePolicy) throws -> [(date: Date, components: DateComponents)]? {
 
         let isStrictMatching = matchingPolicy == .strict
 
@@ -834,7 +834,7 @@ extension Calendar {
         var lastMatchedComponent: Calendar.Component? = nil
 
         if let weeks = combinationComponents.weeksOfYear {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 try _normalizedWeeksOfYear(weeks, anchor: date).map { week in
                     var comps = comps
                     comps.weekOfYear = week
@@ -852,7 +852,7 @@ extension Calendar {
         }
 
         if let daysOfYear = combinationComponents.daysOfYear {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 try _normalizedDaysOfYear(daysOfYear, for: date).map { day in
                     var comps = comps
                     comps.dayOfYear = day
@@ -863,7 +863,7 @@ extension Calendar {
         }
 
         if let months = combinationComponents.months {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 try _normalizedMonths(months, for: date).map { month in
                     var comps = comps
                     comps.month = month.index
@@ -875,10 +875,10 @@ extension Calendar {
         }
 
         if let weekdays = combinationComponents.weekdays {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 let parentComponent: Calendar.Component = .month
                 let weekdayComponents = _weekdayComponents(for: weekdays, in: parentComponent, anchor: date)
-                let dates = try weekdayComponents!.map { comps in 
+                let dates = try weekdayComponents!.map { comps -> (date: Date, components: DateComponents) in
                     var date = date
                     if let result = try dateAfterMatchingWeekOfYear(startingAt: date, components: comps, direction: .forward) {
                         date = result
@@ -899,7 +899,7 @@ extension Calendar {
         }
 
         if let daysOfMonth = combinationComponents.daysOfMonth {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 try _normalizedDaysOfMonth(daysOfMonth, for: date).map { day in
                     var comps = comps
                     comps.day = day
@@ -910,7 +910,7 @@ extension Calendar {
         }
 
         if let hours = combinationComponents.hours {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 let searchStart: Date
                 if lastMatchedComponent == .day || lastMatchedComponent == .dayOfYear {
                     searchStart = date
@@ -927,7 +927,7 @@ extension Calendar {
         }
 
         if let minutes = combinationComponents.minutes {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 let searchStart: Date
                 if lastMatchedComponent == .hour {
                     searchStart = date
@@ -944,7 +944,7 @@ extension Calendar {
         }
 
         if let seconds = combinationComponents.seconds {
-            dates = try dates.flatMap { date, comps in
+            dates = try dates.flatMap { date, comps -> [(date: Date, components: DateComponents)] in
                 let searchStart: Date
                 if lastMatchedComponent == .minute {
                     searchStart = date

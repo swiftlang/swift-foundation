@@ -43,6 +43,13 @@ let featureSettings: [SwiftSetting] = [
 
 var dependencies: [Package.Dependency] = []
 
+let buildingForEmbedded: Bool = {
+  guard let envvar = Context.environment["SF_EMBEDDED"] else {
+    return false
+  }
+  return Bool(envvar) ?? ((Int(envvar) ?? 0) != 0)
+}()
+
 if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalDepsEnv.isEmpty {
     let root: String
     if useLocalDepsEnv == "1" {
@@ -50,7 +57,7 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
     } else {
         root = useLocalDepsEnv
     }
-    dependencies += 
+    dependencies +=
         [
             .package(
                 name: "swift-collections",
@@ -65,18 +72,34 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
 } else {
     // These dependencies should match `update-checkout`
     // See `update-checkout-config.json` for the `main` branch-scheme
-    dependencies += 
+    dependencies +=
         [
+            // SwiftCollections Needs to enable embedded mode as well
             .package(
-                url: "https://github.com/apple/swift-collections",
-                exact: "1.1.6"),
+                name: "swift-collections",
+                path: "../SwiftCollectionsEmbedded"
+            ),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
+        ]
+    if !buildingForEmbedded {
+        dependencies.append(
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
                 branch: "main")
-        ]
+        )
+    }
+}
+
+var foundationEssentialsDependencies: [Target.Dependency] = [
+    "_FoundationCShims",
+    .product(name: "_RopeModule", package: "swift-collections"),
+    .product(name: "DequeModule", package: "swift-collections"),
+    .product(name: "OrderedCollections", package: "swift-collections"),
+]
+if !buildingForEmbedded {
+    foundationEssentialsDependencies.append(Target.Dependency(stringLiteral: "FoundationMacros"))
 }
 
 let wasiLibcCSettings: [CSetting] = [
@@ -88,76 +111,71 @@ let testOnlySwiftSettings: [SwiftSetting] = [
     .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
 ]
 
-let package = Package(
-    name: "swift-foundation",
-    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
-    products: [
-        .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
-        .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
-    ],
-    dependencies: dependencies,
-    targets: [
-        // _FoundationCShims (Internal)
-        .target(
-            name: "_FoundationCShims",
-            cSettings: [
-                .define("_CRT_SECURE_NO_WARNINGS", .when(platforms: [.windows]))
-            ] + wasiLibcCSettings
-        ),
+var targets: [Target] = [
+    // _FoundationCShims (Internal)
+    .target(
+        name: "_FoundationCShims",
+        cSettings: [
+            .define("_CRT_SECURE_NO_WARNINGS", .when(platforms: [.windows]))
+        ] + wasiLibcCSettings
+    ),
 
+    // FoundationEssentials
+    .target(
+      name: "FoundationEssentials",
+      dependencies: foundationEssentialsDependencies,
+      exclude: [
+        "Formatting/CMakeLists.txt",
+        "PropertyList/CMakeLists.txt",
+        "Decimal/CMakeLists.txt",
+        "String/CMakeLists.txt",
+        "Error/CMakeLists.txt",
+        "Locale/CMakeLists.txt",
+        "Data/CMakeLists.txt",
+        "TimeZone/CMakeLists.txt",
+        "JSON/CMakeLists.txt",
+        "AttributedString/CMakeLists.txt",
+        "Calendar/CMakeLists.txt",
+        "Predicate/CMakeLists.txt",
+        "CMakeLists.txt",
+        "ProcessInfo/CMakeLists.txt",
+        "FileManager/CMakeLists.txt",
+        "URL/CMakeLists.txt",
+        "NotificationCenter/CMakeLists.txt",
+        "ProgressManager/CMakeLists.txt",
+      ],
+      cSettings: [
+        .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))
+      ] + wasiLibcCSettings,
+      swiftSettings: [
+        .enableExperimentalFeature("VariadicGenerics"),
+        .enableExperimentalFeature("Lifetimes"),
+        .enableExperimentalFeature("AddressableTypes"),
+        .enableExperimentalFeature("AllowUnsafeAttribute"),
+        .enableExperimentalFeature("BuiltinModule"),
+        .enableExperimentalFeature("AccessLevelOnImport"),
+        // Embedded Swift support is scoped to this target only. It must NOT
+        // be added to the shared `featureSettings`, since that would apply it
+        // to FoundationMacros (a SwiftSyntax compiler plugin that cannot build
+        // in embedded mode) and other host-side targets.
+        .enableExperimentalFeature("Embedded"),
+        .unsafeFlags(["-wmo"]),
+        .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
+      ] + availabilityMacros + featureSettings,
+      linkerSettings: [
+        .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
+      ]
+    ),
+]
+
+if !buildingForEmbedded {
+    targets += [
         // TestSupport (Internal)
         .target(
             name: "TestSupport",
             path: "Tests/TestSupport",
             cSettings: wasiLibcCSettings,
             swiftSettings: availabilityMacros + featureSettings
-        ),
-
-        // FoundationEssentials
-        .target(
-          name: "FoundationEssentials",
-          dependencies: [
-            "_FoundationCShims",
-            "FoundationMacros",
-            .product(name: "_RopeModule", package: "swift-collections"),
-            .product(name: "DequeModule", package: "swift-collections"),
-            .product(name: "OrderedCollections", package: "swift-collections"),
-          ],
-          exclude: [
-            "Formatting/CMakeLists.txt",
-            "PropertyList/CMakeLists.txt",
-            "Decimal/CMakeLists.txt",
-            "String/CMakeLists.txt",
-            "Error/CMakeLists.txt",
-            "Locale/CMakeLists.txt",
-            "Data/CMakeLists.txt",
-            "TimeZone/CMakeLists.txt",
-            "JSON/CMakeLists.txt",
-            "AttributedString/CMakeLists.txt",
-            "Calendar/CMakeLists.txt",
-            "Predicate/CMakeLists.txt",
-            "CMakeLists.txt",
-            "ProcessInfo/CMakeLists.txt",
-            "FileManager/CMakeLists.txt",
-            "URL/CMakeLists.txt",
-            "NotificationCenter/CMakeLists.txt",
-            "ProgressManager/CMakeLists.txt",
-          ],
-          cSettings: [
-            .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))
-          ] + wasiLibcCSettings,
-          swiftSettings: [
-            .enableExperimentalFeature("VariadicGenerics"),
-            .enableExperimentalFeature("Lifetimes"),
-            .enableExperimentalFeature("AddressableTypes"),
-            .enableExperimentalFeature("AllowUnsafeAttribute"),
-            .enableExperimentalFeature("BuiltinModule"),
-            .enableExperimentalFeature("AccessLevelOnImport"),
-            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
-          ] + availabilityMacros + featureSettings,
-          linkerSettings: [
-            .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
-          ]
         ),
         .testTarget(
             name: "FoundationEssentialsTests",
@@ -204,7 +222,7 @@ let package = Package(
                 .enableExperimentalFeature("Lifetimes"),
             ] + availabilityMacros + featureSettings
         ),
-        
+
         .testTarget(
             name: "FoundationInternationalizationTests",
             dependencies: [
@@ -213,7 +231,7 @@ let package = Package(
             ],
             swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
-        
+
         // FoundationMacros
         .macro(
             name: "FoundationMacros",
@@ -230,7 +248,7 @@ let package = Package(
                 .enableExperimentalFeature("AccessLevelOnImport")
             ] + availabilityMacros + featureSettings
         ),
-        
+
         .testTarget(
             name: "FoundationMacrosTests",
             dependencies: [
@@ -240,4 +258,20 @@ let package = Package(
             swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         )
     ]
+}
+
+var products: [Product] = [
+    .library(name: "FoundationEssentials", targets: ["FoundationEssentials"])
+]
+if !buildingForEmbedded {
+    products.append(.library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]))
+}
+
+
+let package = Package(
+    name: "swift-foundation",
+    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
+    products: products,
+    dependencies: dependencies,
+    targets: targets
 )

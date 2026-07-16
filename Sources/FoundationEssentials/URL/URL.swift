@@ -624,7 +624,7 @@ internal func foundation_swift_url_enabled() -> Bool { return true }
 internal func foundation_swift_url_v2_enabled() -> Bool { return true }
 #endif
 
-#if canImport(os)
+#if canImport(os) && !$Embedded
 internal import os
 #endif
 
@@ -650,7 +650,7 @@ internal import os
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {
 
-#if canImport(os)
+#if canImport(os) && !$Embedded
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "url")
     }()
@@ -1631,7 +1631,7 @@ extension URL {
             }
             return isAbsolute
         }
-        #if !NO_FILESYSTEM
+        #if !NO_FILESYSTEM && !$Embedded
         // Expand the tilde, but only for "~/" (no user)
         // Treat a lone "~" as a potential file name and don't expand it
         if filePath.utf8.starts(with: [UInt8(ascii: "~"), UInt8(ascii: "/")]) {
@@ -1759,7 +1759,7 @@ extension URL {
     }
 }
 
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !$Embedded
 extension URL {
     /// The working directory of the current process.
     /// Calling this property will issue a `getcwd` syscall.
@@ -1942,7 +1942,7 @@ extension URL {
     }
 #endif // FOUNDATION_FRAMEWORK
 }
-#endif // !NO_FILESYSTEM
+#endif // !NO_FILESYSTEM && !$Embedded
 
 extension URL {
     /// A hint to URL file APIs for handling paths that may reference directories.
@@ -2035,6 +2035,7 @@ extension URL: _CustomPlaygroundQuickLookable {
 }
 #endif // FOUNDATION_FRAMEWORK
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URL: Codable {
     private enum CodingKeys: Int, CodingKey {
@@ -2063,6 +2064,7 @@ extension URL: Codable {
         }
     }
 }
+#endif // !$Embedded
 
 #if FOUNDATION_FRAMEWORK
 //===----------------------------------------------------------------------===//

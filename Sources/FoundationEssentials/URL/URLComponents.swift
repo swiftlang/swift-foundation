@@ -389,10 +389,14 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 return p
             }
             let firstSlash = p.utf8.firstIndex(of: ._slash) ?? p.endIndex
-            let colonEncodedSegment = Array(p[..<firstSlash].utf8).replacing(
-                [._colon],
-                with: [UInt8(ascii: "%"), UInt8(ascii: "3"), UInt8(ascii: "A")]
-            )
+            var colonEncodedSegment = [UInt8]()
+            for byte in p[..<firstSlash].utf8 {
+                if byte == ._colon {
+                    colonEncodedSegment.append(contentsOf: [UInt8(ascii: "%"), UInt8(ascii: "3"), UInt8(ascii: "A")])
+                } else {
+                    colonEncodedSegment.append(byte)
+                }
+            }
             return String(decoding: colonEncodedSegment, as: UTF8.self) + p[firstSlash...]
         }
 
@@ -1214,13 +1218,25 @@ public struct URLComponents: Hashable, Equatable, Sendable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension URLComponents: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension URLComponents: CustomStringConvertible, CustomDebugStringConvertible {
 
     public var description: String {
         if let u = url {
             return u.description
         } else {
-            return self.customMirror.children.reduce(into: "") {
+            var c: [(label: String?, value: Any)] = []
+
+            if let s = self.scheme { c.append((label: "scheme", value: s)) }
+            if let u = self.user { c.append((label: "user", value: u)) }
+            if let pw = self.password { c.append((label: "password", value: pw)) }
+            if let h = self.host { c.append((label: "host", value: h)) }
+            if let p = self.port { c.append((label: "port", value: p)) }
+
+            c.append((label: "path", value: self.path))
+            if let qi = self.queryItems { c.append((label: "queryItems", value: qi)) }
+            if let f = self.fragment { c.append((label: "fragment", value: f)) }
+
+            return c.reduce(into: "") {
                 $0 += "\($1.label ?? ""): \($1.value) "
             }
         }
@@ -1229,7 +1245,11 @@ extension URLComponents: CustomStringConvertible, CustomDebugStringConvertible, 
     public var debugDescription: String {
         return self.description
     }
+}
 
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension URLComponents: CustomReflectable {
     public var customMirror: Mirror {
         var c: [(label: String?, value: Any)] = []
 
@@ -1246,6 +1266,7 @@ extension URLComponents: CustomStringConvertible, CustomDebugStringConvertible, 
         return m
     }
 }
+#endif // !$Embedded
 
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -1337,7 +1358,7 @@ public struct URLQueryItem: Hashable, Equatable, Sendable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension URLQueryItem: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension URLQueryItem: CustomStringConvertible, CustomDebugStringConvertible {
 
     public var description: String {
         if let v = value {
@@ -1350,7 +1371,11 @@ extension URLQueryItem: CustomStringConvertible, CustomDebugStringConvertible, C
     public var debugDescription: String {
         return self.description
     }
+}
 
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension URLQueryItem: CustomReflectable {
     public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
             ("name", name),
@@ -1359,6 +1384,7 @@ extension URLQueryItem: CustomStringConvertible, CustomDebugStringConvertible, C
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif // !$Embedded
 
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -1404,6 +1430,7 @@ extension NSURLQueryItem: _HasCustomAnyHashableRepresentation {
 }
 #endif // FOUNDATION_FRAMEWORK
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URLComponents: Codable {
     private enum CodingKeys: Int, CodingKey {
@@ -1443,3 +1470,4 @@ extension URLComponents: Codable {
         try container.encodeIfPresent(self.fragment, forKey: .fragment)
     }
 }
+#endif // !$Embedded

@@ -118,8 +118,11 @@ public extension CocoaError {
     var underlying: Error? {
 #if FOUNDATION_FRAMEWORK
         return _nsUserInfo[NSUnderlyingErrorKey as NSString] as? Error
-#else
+#elseif !$Embedded
         return userInfo[NSUnderlyingErrorKey] as? Error
+#else
+        // Casting `Any` to the `any Error` existential is not available in Embedded Swift.
+        return nil
 #endif
     }
 
@@ -140,7 +143,7 @@ public extension CocoaError {
         if let coreDataUnderlying = _nsUserInfo["NSDetailedErrors" as NSString] as? [Error] {
             result += coreDataUnderlying
         }
-#else
+#elseif !$Embedded
         if let underlying = userInfo[NSUnderlyingErrorKey] as? Error {
             result.append(underlying)
         }
@@ -149,7 +152,9 @@ public extension CocoaError {
             result += multipleUnderlying
         }
 #endif
-        
+        // In Embedded Swift, `Any as? any Error` casting is unavailable, so there
+        // is no way to extract underlying errors from `userInfo`; return empty.
+
         return result
     }
 
@@ -173,9 +178,17 @@ extension CocoaError {
         }
         return NSError(domain: NSCocoaErrorDomain, code: code.rawValue, userInfo: info)
     }
-#else
+#elseif !$Embedded
     public static func error(_ code: CocoaError.Code, userInfo: [String : AnyHashable]? = nil, url: URL? = nil) -> Error {
         var info: [String : AnyHashable] = userInfo ?? [:]
+        if let url = url {
+            info[NSURLErrorKey] = url
+        }
+        return CocoaError(code, userInfo: info)
+    }
+#else
+    public static func error(_ code: CocoaError.Code, userInfo: [String : Any]? = nil, url: URL? = nil) -> Error {
+        var info: [String : Any] = userInfo ?? [:]
         if let url = url {
             info[NSURLErrorKey] = url
         }

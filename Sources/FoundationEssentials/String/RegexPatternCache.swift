@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 internal import Synchronization
 
 struct RegexPatternCache: Sendable, ~Copyable {
@@ -45,3 +47,5 @@ struct RegexPatternCache: Sendable, ~Copyable {
         }
     }
 }
+
+#endif

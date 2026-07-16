@@ -1198,17 +1198,10 @@ extension FixedWidthInteger {
     }
 }
 
-internal extension UInt8 {
-    static var _verticalTab: UInt8 { UInt8(0x0b) }
-    static var _formFeed: UInt8 { UInt8(0x0c) }
-    static var _nbsp: UInt8 { UInt8(0xa0) }
-    static var _asterisk: UInt8 { UInt8(ascii: "*") }
-    static var _slash: UInt8 { UInt8(ascii: "/") }
-    static var _singleQuote: UInt8 { UInt8(ascii: "'") }
-    static var _dollar: UInt8 { UInt8(ascii: "$") }
-    static var _underscore: UInt8 { UInt8(ascii: "_") }
-    static var _dot: UInt8 { UInt8(ascii: ".") }
-}
+// Note: the shared `UInt8` ASCII byte helpers (`_slash`, `_dot`, `_asterisk`,
+// `_singleQuote`, `_dollar`, `_underscore`, `_nbsp`, `_verticalTab`, `_formFeed`)
+// now live in CodableUtilities.swift so they remain available to non-JSON,
+// embedded-compatible code paths (URL, String path handling, etc.).
 
 var _json5Infinity: StaticString { "Infinity" }
 var _json5NaN: StaticString { "NaN" }

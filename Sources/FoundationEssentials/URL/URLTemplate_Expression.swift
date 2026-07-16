@@ -56,6 +56,7 @@ extension URL.Template {
     }
 }
 
+#if !$Embedded
 extension Substring {
     fileprivate mutating func popPrefixMatch<Output>(_ regex: Regex<Output>) throws -> Regex<Output>.Match? {
         guard
@@ -65,6 +66,7 @@ extension Substring {
         return match
     }
 }
+#endif // !$Embedded
 
 extension URL.Template.Expression: CustomStringConvertible {
     var description: String {
@@ -78,6 +80,7 @@ extension URL.Template.Expression.Element: CustomStringConvertible {
     }
 }
 
+#if !$Embedded
 extension URL.Template.Expression {
     init(_ input: String) throws {
         var remainder = input[...]
@@ -167,6 +170,7 @@ extension URL.Template {
         }
     }
 }
+#endif // !$Embedded
 
 // .------------------------------------------------------------------.
 // |          NUL     +      .       /       ;      ?      &      #   |

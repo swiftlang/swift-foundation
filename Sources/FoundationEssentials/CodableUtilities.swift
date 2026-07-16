@@ -24,6 +24,7 @@ import Darwin
 @preconcurrency import EmscriptenLibc
 #endif
 
+#if !$Embedded
 //===----------------------------------------------------------------------===//
 // Coding Path Node
 //===----------------------------------------------------------------------===//
@@ -135,6 +136,7 @@ internal enum _CodingKey : CodingKey {
 
     internal static let `super` = _CodingKey.string("super")
 }
+#endif // !$Embedded
 
 
 //===----------------------------------------------------------------------===//
@@ -176,6 +178,18 @@ extension UInt8 {
     internal static var _period: UInt8 { UInt8(ascii: ".") }
     internal static var _e: UInt8 { UInt8(ascii: "e") }
     internal static var _E: UInt8 { UInt8(ascii: "E") }
+
+    // Shared ASCII byte helpers (also used by non-JSON paths such as URL and
+    // String path handling, so they live here rather than in the JSON scanner).
+    internal static var _verticalTab: UInt8 { UInt8(0x0b) }
+    internal static var _formFeed: UInt8 { UInt8(0x0c) }
+    internal static var _nbsp: UInt8 { UInt8(0xa0) }
+    internal static var _asterisk: UInt8 { UInt8(ascii: "*") }
+    internal static var _slash: UInt8 { UInt8(ascii: "/") }
+    internal static var _singleQuote: UInt8 { UInt8(ascii: "'") }
+    internal static var _dollar: UInt8 { UInt8(ascii: "$") }
+    internal static var _underscore: UInt8 { UInt8(ascii: "_") }
+    internal static var _dot: UInt8 { UInt8(ascii: ".") }
 
     internal var digitValue: Int? {
         guard _asciiNumbers.contains(self) else { return nil }
@@ -427,6 +441,7 @@ func _parseHexIntegerDigits<Result: FixedWidthInteger>(
 // Error handling conveniences
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
 internal
 extension DecodingError {
     static func _dataCorrupted(_ debugDescription: String, for node: _CodingPathNode, _ additionalKey: (some CodingKey)?) -> Self {
@@ -437,6 +452,7 @@ extension DecodingError {
         Self.dataCorrupted(.init(codingPath: node.path, debugDescription: debugDescription))
     }
 }
+#endif // !$Embedded
 
 //===----------------------------------------------------------------------===//
 // Shared Plist Null Representation
@@ -697,6 +713,7 @@ extension BufferView where Element == UInt8 {
     }
 }
 
+#if !$Embedded
 // Non-RawRepresentable Codable enum cases with the same number and labels of associated values all share equivalent CodingKeys, but the compiler-synthesized implementation generates a new type for each case.
 // Each of these types has their own set of `metadata instantiation cache for protocol conformance descriptor` symbols for each of 5 protocol conformances which consumes DATA space.
 // Instead of using the synthesized CodingKey types, you can make a `private typealias <CaseName>CodingKeys = <one of these types>` inside the Codable enum to reduce the amount of redundant DATA.
@@ -708,3 +725,4 @@ package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
     case _0
     case _1
 }
+#endif // !$Embedded

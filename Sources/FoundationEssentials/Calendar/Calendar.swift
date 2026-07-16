@@ -11,7 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
+#if $Embedded
+import Darwin
+#else
 internal import os
+#endif
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 #elseif canImport(Glibc)
@@ -109,7 +113,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
         
         @available(FoundationPreview 6.2, *)
         case vietnamese
-        
+
+#if !$Embedded
+        // These typealiases only exist to reduce code size of the synthesized
+        // Codable conformance, which is unavailable in Embedded Swift.
         private typealias GregorianCodingKeys = EmptyCodingKeys
         private typealias ChineseCodingKeys = EmptyCodingKeys
         private typealias BuddhistCodingKeys = EmptyCodingKeys
@@ -137,6 +144,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         private typealias VikramCodingKeys = EmptyCodingKeys
         private typealias DangiCodingKeys = EmptyCodingKeys
         private typealias VietnameseCodingKeys = EmptyCodingKeys
+#endif // !$Embedded
 
         package static let cldrKeywordKey = "ca"
         package static let legacyKeywordKey = ICULegacyKey("calendar")
@@ -1651,7 +1659,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+extension Calendar : CustomDebugStringConvertible, CustomStringConvertible {
     public var description: String {
         return "\(identifier) (\(_calendar)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
     }
@@ -1659,7 +1667,11 @@ extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, Cust
     public var debugDescription: String {
         description
     }
+}
 
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Calendar : CustomReflectable {
     public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),
@@ -1672,7 +1684,9 @@ extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, Cust
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -1739,6 +1753,7 @@ extension Calendar : Codable {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar.Identifier : Codable {}
+#endif
 
 /// Internal-use struct for holding the range of a Weekend
 package struct WeekendRange: Equatable, Hashable {
@@ -1756,6 +1771,7 @@ package struct WeekendRange: Equatable, Hashable {
     }
 }
 
+#if !$Embedded
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.MatchingPolicy: Codable {
     public init(from decoder: Decoder) throws {
@@ -1813,6 +1829,7 @@ extension Calendar.RepeatedTimePolicy: Codable {
         }
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK

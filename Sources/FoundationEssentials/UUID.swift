@@ -145,6 +145,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 }
 
+#if !$Embedded
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
 extension UUID : CustomReflectable {
     public var customMirror: Mirror {
@@ -173,6 +174,7 @@ extension UUID : Codable {
         try container.encode(self.uuidString)
     }
 }
+#endif
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension UUID : Comparable {
