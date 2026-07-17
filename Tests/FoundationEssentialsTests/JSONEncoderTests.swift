@@ -901,6 +901,122 @@ private struct JSONEncoderTests {
         _testDecodeFailure(of: DecodeFailure.self, data: toDecode.data(using: .utf8)!)
     }
 
+    @Test("Decimal to Int decoding error message regression test for issue #1604")
+    func decimalToIntDecodingErrorMessage() throws {
+        struct Object: Decodable {
+            var foo: Int
+        }
+
+        let json = """
+        {
+          "foo": 123.45
+        }
+        """.data(using: .utf8)!
+
+        do {
+            _ = try JSONDecoder().decode(Object.self, from: json)
+            Issue.record("Expected decoding error but decoding succeeded")
+        } catch let error as DecodingError {
+            guard case .dataCorrupted(let context) = error else {
+                Issue.record("Expected dataCorrupted error, got \(error)")
+                return
+            }
+
+            // Verification 1: Check if codingPath is correctly set
+            // Expected: ["foo"]
+            #expect(context.codingPath.count == 1, "codingPath should contain one element, got \(context.codingPath)")
+            if let key = context.codingPath.first {
+                #expect(key.stringValue == "foo", "codingPath should be ['foo'], got '\(key.stringValue)'")
+            }
+
+            // Verification 2: Check if debugDescription is appropriate
+            // Expected: A specific message like "Parsed JSON number <123.45> does not fit in Int."
+            #expect(
+                context.debugDescription.contains("123.45"),
+                "debugDescription should mention the number 123.45, got: \(context.debugDescription)"
+            )
+            #expect(
+                context.debugDescription.contains("Int") || context.debugDescription.contains("fit"),
+                "debugDescription should mention Int or fit, got: \(context.debugDescription)"
+            )
+
+            // Verification 3 (macOS only): Check if underlyingError is provided
+            #if FOUNDATION_FRAMEWORK
+            #expect(context.underlyingError != nil, "macOS should provide underlyingError, got nil")
+
+            if let nsError = context.underlyingError as? NSError {
+                #expect(nsError.domain == NSCocoaErrorDomain, "underlyingError domain should be NSCocoaErrorDomain")
+                #expect(nsError.code == CocoaError.propertyListReadCorrupt.rawValue, "underlyingError code should match propertyListReadCorrupt")
+
+                // Verify the error message mentions the number
+                if let debugDesc = nsError.userInfo[NSDebugDescriptionErrorKey] as? String {
+                    #expect(debugDesc.contains("123.45"), "underlyingError should mention the number 123.45")
+                }
+            }
+            #endif
+        } catch {
+            Issue.record("Expected DecodingError, got \(type(of: error)): \(error)")
+        }
+    }
+
+    @Test("Negative to UInt decoding error message regression test for issue #1604")
+    func negativeToUIntDecodingErrorMessage() throws {
+        struct Object: Decodable {
+            var foo: UInt
+        }
+
+        let json = """
+        {
+          "foo": -123
+        }
+        """.data(using: .utf8)!
+
+        do {
+            _ = try JSONDecoder().decode(Object.self, from: json)
+            Issue.record("Expected decoding error but decoding succeeded")
+        } catch let error as DecodingError {
+            guard case .dataCorrupted(let context) = error else {
+                Issue.record("Expected dataCorrupted error, got \(error)")
+                return
+            }
+
+            // Verification 1: Check if codingPath is correctly set
+            // Expected: ["foo"]
+            #expect(context.codingPath.count == 1, "codingPath should contain one element, got \(context.codingPath)")
+            if let key = context.codingPath.first {
+                #expect(key.stringValue == "foo", "codingPath should be ['foo'], got '\(key.stringValue)'")
+            }
+
+            // Verification 2: Check if debugDescription is appropriate
+            // Expected: A specific message like "Parsed JSON number <-123> does not fit in UInt."
+            #expect(
+                context.debugDescription.contains("-123"),
+                "debugDescription should mention the number -123, got: \(context.debugDescription)"
+            )
+            #expect(
+                context.debugDescription.contains("UInt") || context.debugDescription.contains("fit"),
+                "debugDescription should mention UInt or fit, got: \(context.debugDescription)"
+            )
+
+            // Verification 3 (macOS only): Check if underlyingError is provided
+            #if FOUNDATION_FRAMEWORK
+            #expect(context.underlyingError != nil, "macOS should provide underlyingError, got nil")
+
+            if let nsError = context.underlyingError as? NSError {
+                #expect(nsError.domain == NSCocoaErrorDomain, "underlyingError domain should be NSCocoaErrorDomain")
+                #expect(nsError.code == CocoaError.propertyListReadCorrupt.rawValue, "underlyingError code should match propertyListReadCorrupt")
+
+                // Verify the error message mentions the number
+                if let debugDesc = nsError.userInfo[NSDebugDescriptionErrorKey] as? String {
+                    #expect(debugDesc.contains("-123"), "underlyingError should mention the number -123")
+                }
+            }
+            #endif
+        } catch {
+            Issue.record("Expected DecodingError, got \(type(of: error)): \(error)")
+        }
+    }
+
     @Test func repeatedFailedNilChecks() {
         struct RepeatNilCheckDecodable : Decodable {
             enum Failure : Error {
