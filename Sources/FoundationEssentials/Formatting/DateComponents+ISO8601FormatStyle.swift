@@ -346,6 +346,13 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
                 
                 if includingFractionalSeconds {
                     let ns = components.nanosecond ?? 0
+                    // Format the milliseconds field by truncating the nanosecond toward zero. The
+                    // `Date` entry point already rounds to the nearest millisecond and carries any
+                    // overflow across the second boundary through the calendar, then hands this layer
+                    // a nanosecond that sits exactly on a millisecond, so truncation reads it back
+                    // correctly and can never overflow the three-digit field. A bare `DateComponents`
+                    // formatted directly has no anchoring `Date` to carry through, so it keeps the
+                    // original truncating behavior here unchanged.
                     let ms = Int((Double(ns) / 1_000_000.0).rounded(.towardZero))
                     buffer.appendElement(asciiPeriod)
                     buffer.append(ms, zeroPad: 3)
