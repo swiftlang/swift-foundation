@@ -39,16 +39,6 @@ inline static int _stringshims_LC_ALL_MASK() {
 #include <strings.h>
 #endif
 
-#if defined(TARGET_OS_ANDROID) && TARGET_OS_ANDROID
-inline int _stringshims_android_strncasecmp_l(const char *s1, const char *s2, size_t n, locale_t locale) {
-#if __ANDROID_API__ < 23
-    return strncasecmp(s1, s2, n);
-#else
-    return strncasecmp_l(s1, s2, n, locale);
-#endif
-}
-#endif
-
 #define _STRINGSHIMS_MACROMAN_MAP_SIZE 129
 INTERNAL const uint8_t _stringshims_macroman_mapping[_STRINGSHIMS_MACROMAN_MAP_SIZE][3];
 

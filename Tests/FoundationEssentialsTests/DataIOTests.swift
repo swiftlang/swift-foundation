@@ -245,8 +245,12 @@ extension LargeDataTests {
     @Test func readLargeFile() throws {
         let url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: url) }
-        // More than 2 GB
+        // More than 2 GB, if not 32-bit Android
+        #if os(Android) && arch(arm)
+        let size = 0x7FFFFFFF
+        #else
         let size = 0x80010000
+        #endif
         
         let data = generateTestData(count: size)
         

@@ -503,7 +503,7 @@ private struct NumberFormatStyleTests {
     }
 #endif // FOUNDATION_PREVIEW
 
-#if !os(watchOS) // These tests require Int to be Int64, which is not always true on watch OSs yet
+#if !os(watchOS) && !(os(Android) && arch(arm)) // These tests require Int to be Int64, which is not true on 32-bit watchOS or Android
     @Test func currency_compactName() throws {
         let baseStyle = Decimal.FormatStyle.Currency(code: "USD", locale: Locale(identifier: "en_US")).notation(.compactName)
 
@@ -737,7 +737,7 @@ private struct NumberFormatStyleTests {
         #expect( (-92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E14")
         #expect((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E15")
     }
-#endif // !os(watchOS)
+#endif // !os(watchOS) && !(os(Android) && arch(arm))
 }
 
 extension NumberFormatStyleConfiguration.Collection {
@@ -767,7 +767,7 @@ extension IntegerFormatStyle {
     }
 }
 
-#if !os(watchOS) // These tests require Int to be 64 bits, which is not always true on watch OSs yet
+#if !os(watchOS) && !(os(Android) && arch(arm)) // These tests require Int to be Int64, which is not true on 32-bit watchOS or Android
 @Suite("IntegerFormatStyle (Exhaustive)")
 private struct IntegerFormatStyleExhaustiveTests {
     let exhaustiveIntNumbers : [Int64] = [9223372036854775807, 922337203685477580, 92233720368547758, 9223372036854775, 922337203685477, 92233720368547, 9223372036854, 922337203685, 92233720368, 9223372036, 922337203, 92233720, 9223372, 922337, 92233, 9223, 922, 92, 9, 0, -9, -92, -922, -9223, -92233, -922337, -9223372, -92233720, -922337203, -9223372036, -92233720368, -922337203685, -9223372036854, -92233720368547, -922337203685477, -9223372036854775, -92233720368547758, -922337203685477580, -9223372036854775808 ]
@@ -1639,7 +1639,7 @@ private struct IntegerFormatStyleExhaustiveTests {
     }
 }
 
-#endif // !os(watchOS)
+#endif // !os(watchOS) && !(os(Android) && arch(arm))
 
 // MARK: - Attributed string
 
