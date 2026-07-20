@@ -30,7 +30,7 @@ internal enum _CalendarAstronomy {
     static let j2000 = 730120.5
     static let newMoonZero = 11.458922815770109
 
-    static func poly(_ x: Double, _ coefficients: [Double]) -> Double {
+    static func polynomial(_ x: Double, _ coefficients: [Double]) -> Double {
         var result = 0.0
         var power = 1.0
         for c in coefficients {
@@ -46,23 +46,23 @@ internal enum _CalendarAstronomy {
         return r
     }
 
-    static func sinDeg(_ d: Double) -> Double { sin(d * .pi / 180.0) }
-    static func cosDeg(_ d: Double) -> Double { cos(d * .pi / 180.0) }
+    static func sinDegrees(_ d: Double) -> Double { sin(d * .pi / 180.0) }
+    static func cosDegrees(_ d: Double) -> Double { cos(d * .pi / 180.0) }
 
     // Proleptic Gregorian y/m/d -> Rata Die (day 1 = 0001-01-01).
-    static func gregorianRD(_ y: Int, _ m: Int, _ d: Int) -> Int {
-        func fd(_ a: Int, _ b: Int) -> Int { a >= 0 ? a / b : -((-a + b - 1) / b) }
+    static func gregorianRataDie(_ y: Int, _ m: Int, _ d: Int) -> Int {
+        func floorDivide(_ a: Int, _ b: Int) -> Int { a >= 0 ? a / b : -((-a + b - 1) / b) }
         let ym1 = y - 1
-        let leap = (fd(y, 4) * 4 == y && fd(y, 100) * 100 != y) || fd(y, 400) * 400 == y
-        var r = 365 * ym1 + fd(ym1, 4) - fd(ym1, 100) + fd(ym1, 400)
-        r += fd(367 * m - 362, 12) + (m <= 2 ? 0 : (leap ? -1 : -2)) + d
+        let leap = (floorDivide(y, 4) * 4 == y && floorDivide(y, 100) * 100 != y) || floorDivide(y, 400) * 400 == y
+        var r = 365 * ym1 + floorDivide(ym1, 4) - floorDivide(ym1, 100) + floorDivide(ym1, 400)
+        r += floorDivide(367 * m - 362, 12) + (m <= 2 ? 0 : (leap ? -1 : -2)) + d
         return r
     }
 
-    static func gregorianYear(ofRD day: Int) -> Int {
+    static func gregorianYear(ofRataDie day: Int) -> Int {
         var y = Int((Double(day) / 365.2425).rounded(.down)) + 1
-        while gregorianRD(y, 1, 1) > day { y -= 1 }
-        while gregorianRD(y + 1, 1, 1) <= day { y += 1 }
+        while gregorianRataDie(y, 1, 1) > day { y -= 1 }
+        while gregorianRataDie(y + 1, 1, 1) <= day { y += 1 }
         return y
     }
 
@@ -70,7 +70,7 @@ internal enum _CalendarAstronomy {
     static func ephemerisCorrection(_ moment: Double) -> Double {
         let year = moment / 365.2425
         let yearInt = Int(year > 0 ? year + 1 : year)
-        let fixedMidYear = gregorianRD(yearInt, 7, 1)
+        let fixedMidYear = gregorianRataDie(yearInt, 7, 1)
         let c = (Double(fixedMidYear) - 693596.0) / 36525.0
         let y2000 = Double(yearInt - 2000)
         let y1700 = Double(yearInt - 1700)
@@ -85,25 +85,25 @@ internal enum _CalendarAstronomy {
         } else if (2006...2050).contains(yearInt) {
             return (62.92 + 0.32217 * y2000 + 0.005589 * y2000 * y2000) / 86400.0
         } else if (1987...2005).contains(yearInt) {
-            return poly(y2000, [63.86, 0.3345, -0.060374, 0.0017275,
+            return polynomial(y2000, [63.86, 0.3345, -0.060374, 0.0017275,
                                 0.000651814, 0.00002373599]) / 86400.0
         } else if (1900...1986).contains(yearInt) {
-            return poly(c, [-0.00002, 0.000297, 0.025184, -0.181133,
+            return polynomial(c, [-0.00002, 0.000297, 0.025184, -0.181133,
                             0.553040, -0.861938, 0.677066, -0.212591])
         } else if (1800...1899).contains(yearInt) {
-            return poly(c, [-0.000009, 0.003844, 0.083563, 0.865736,
+            return polynomial(c, [-0.000009, 0.003844, 0.083563, 0.865736,
                             4.867575, 15.845535, 31.332267, 38.291999,
                             28.316289, 11.636204, 2.043794])
         } else if (1700...1799).contains(yearInt) {
-            return poly(y1700, [8.118780842, -0.005092142, 0.003336121,
+            return polynomial(y1700, [8.118780842, -0.005092142, 0.003336121,
                                 -0.0000266484]) / 86400.0
         } else if (1600...1699).contains(yearInt) {
-            return poly(y1600, [120.0, -0.9808, -0.01532, 0.000140272128]) / 86400.0
+            return polynomial(y1600, [120.0, -0.9808, -0.01532, 0.000140272128]) / 86400.0
         } else if (500...1599).contains(yearInt) {
-            return poly(y1000, [1574.2, -556.01, 71.23472, 0.319781,
+            return polynomial(y1000, [1574.2, -556.01, 71.23472, 0.319781,
                                 -0.8503463, -0.005050998, 0.0083572073]) / 86400.0
         } else if (-499...499).contains(yearInt) {
-            return poly(y0, [10583.6, -1014.41, 33.78311, -5.952053,
+            return polynomial(y0, [10583.6, -1014.41, 33.78311, -5.952053,
                              -0.1798452, 0.022174192, 0.0090316521]) / 86400.0
         } else {
             return (-20.0 + 32.0 * y1820 * y1820) / 86400.0
@@ -121,11 +121,11 @@ internal enum _CalendarAstronomy {
     static func nutation(_ c: Double) -> Double {
         let a = 124.90 - 1934.134 * c + 0.002063 * c * c
         let b = 201.11 + 72001.5377 * c + 0.00057 * c * c
-        return -0.004778 * sinDeg(a) - 0.0003667 * sinDeg(b)
+        return -0.004778 * sinDegrees(a) - 0.0003667 * sinDegrees(b)
     }
 
     static func aberration(_ c: Double) -> Double {
-        0.0000974 * cosDeg(177.63 + 35999.01848 * c) - 0.005575
+        0.0000974 * cosDegrees(177.63 + 35999.01848 * c) - 0.005575
     }
 
     // Static so the hot lunation/solstice paths don't allocate arrays per call.
@@ -157,7 +157,7 @@ internal enum _CalendarAstronomy {
         let c = julianCenturies(moment)
         var lambda = 0.0
         for i in 0..<49 {
-            lambda += solarCoefficients[i] * sinDeg(solarAddends[i] + solarMultipliers[i] * c)
+            lambda += solarCoefficients[i] * sinDegrees(solarAddends[i] + solarMultipliers[i] * c)
         }
         lambda *= 0.000005729577951308232
         lambda += 282.7771834 + 36000.76953744 * c
@@ -212,22 +212,22 @@ internal enum _CalendarAstronomy {
         let omega = 124.7746 + (-1.56375588) * 1236.85 * c
             + 0.0020672 * c * c + 0.00000215 * c * c * c
 
-        var correction = -0.00017 * sinDeg(omega)
+        var correction = -0.00017 * sinDegrees(omega)
         for i in 0..<24 {
             let ePow = pow(e, abs(newMoonSolarFactors[i]))
             let arg = newMoonSolarFactors[i] * solarAnomaly + newMoonLunarFactors[i] * lunarAnomaly
                 + newMoonArgumentFactors[i] * moonArgument
-            correction += newMoonSineCoefficients[i] * ePow * sinDeg(arg)
+            correction += newMoonSineCoefficients[i] * ePow * sinDegrees(arg)
         }
-        let extra = 0.000325 * sinDeg(299.77 + 132.8475848 * c - 0.009173 * c * c)
+        let extra = 0.000325 * sinDegrees(299.77 + 132.8475848 * c - 0.009173 * c * c)
         var additional = 0.0
         for i in 0..<13 {
-            additional += newMoonExtraCoefficients[i] * sinDeg(newMoonExtraAddends[i] + newMoonExtraMultipliers[i] * k)
+            additional += newMoonExtraCoefficients[i] * sinDegrees(newMoonExtraAddends[i] + newMoonExtraMultipliers[i] * k)
         }
         return universalFromDynamical(approx + correction + extra + additional)
     }
 
-    static func numOfNewMoonAtOrAfter(_ moment: Double) -> Int {
+    static func numberOfNewMoonAtOrAfter(_ moment: Double) -> Int {
         let rawN = ((moment - newMoonZero) / meanSynodicMonth).rounded()
         var n = Int(rawN)
         while nthNewMoon(n) < moment { n += 1 }
@@ -236,11 +236,11 @@ internal enum _CalendarAstronomy {
     }
 
     static func newMoonAtOrAfter(_ moment: Double) -> Double {
-        nthNewMoon(numOfNewMoonAtOrAfter(moment))
+        nthNewMoon(numberOfNewMoonAtOrAfter(moment))
     }
 
     static func newMoonBefore(_ moment: Double) -> Double {
-        nthNewMoon(numOfNewMoonAtOrAfter(moment) - 1)
+        nthNewMoon(numberOfNewMoonAtOrAfter(moment) - 1)
     }
 }
 

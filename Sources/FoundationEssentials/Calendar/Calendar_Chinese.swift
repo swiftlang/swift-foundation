@@ -28,9 +28,9 @@ internal import Synchronization
 
 // Chinese lunisolar calendar engine. Years 1901-2100 come from a baked table generated from ICU (parity by construction); outside that range, month structure is computed with ICU's chnsecal rules over _CalendarAstronomy at UTC+8.
 
-// Bounded memoization caches: over the cap, evict one arbitrary entry (hash order). LRU is deliberately not attempted, a miss only recomputes.
-private func evictIfNeeded<V>(_ cache: inout [Int: V], cap: Int) {
-    if cache.count > cap, let victim = cache.keys.first {
+// Bounded memoization caches: over the capacity, evict one arbitrary entry (hash order). LRU is deliberately not attempted, a miss only recomputes.
+private func evictIfNeeded<V>(_ cache: inout [Int: V], capacity: Int) {
+    if cache.count > capacity, let victim = cache.keys.first {
         cache.removeValue(forKey: victim)
     }
 }
@@ -43,8 +43,8 @@ internal struct _ChineseRules {
     var newYearCache: [Int: Int] = [:]
 
     // Local UTC+8 midnight of an RD day, as a universal moment.
-    private func midnight(_ rd: Int) -> Double {
-        Double(rd) - 1.0 + 16.0 / 24.0
+    private func midnight(_ rataDie: Int) -> Double {
+        Double(rataDie) - 1.0 + 16.0 / 24.0
     }
 
     private func toLocalDay(_ moment: Double) -> Int {
@@ -52,16 +52,16 @@ internal struct _ChineseRules {
     }
 
     // Winter solstice day on or after Dec 1 (chnsecal winterSolstice).
-    mutating func winterSolstice(_ gyear: Int) -> Int {
-        if let cached = winterSolsticeCache[gyear] { return cached }
-        var day = _CalendarAstronomy.gregorianRD(gyear, 12, 10)
+    mutating func winterSolstice(_ gregorianYear: Int) -> Int {
+        if let cached = winterSolsticeCache[gregorianYear] { return cached }
+        var day = _CalendarAstronomy.gregorianRataDie(gregorianYear, 12, 10)
         while true {
             let lon = _CalendarAstronomy.solarLongitude(at: midnight(day + 1))
             if lon >= 270.0 && lon < 350.0 { break }
             day += 1
         }
-        evictIfNeeded(&winterSolsticeCache, cap: 32)
-        winterSolsticeCache[gyear] = day
+        evictIfNeeded(&winterSolsticeCache, capacity: 32)
+        winterSolsticeCache[gregorianYear] = day
         return day
     }
 
@@ -96,10 +96,10 @@ internal struct _ChineseRules {
         return false
     }
 
-    mutating func newYear(_ gyear: Int) -> Int {
-        if let cached = newYearCache[gyear] { return cached }
-        let solsticeBefore = winterSolstice(gyear - 1)
-        let solsticeAfter = winterSolstice(gyear)
+    mutating func newYear(_ gregorianYear: Int) -> Int {
+        if let cached = newYearCache[gregorianYear] { return cached }
+        let solsticeBefore = winterSolstice(gregorianYear - 1)
+        let solsticeAfter = winterSolstice(gregorianYear)
         let newMoon1 = newMoonNear(solsticeBefore + 1, true)
         let newMoon2 = newMoonNear(newMoon1 + Self.synodicGap, true)
         let newMoon11 = newMoonNear(solsticeAfter + 1, false)
@@ -110,20 +110,20 @@ internal struct _ChineseRules {
         } else {
             value = newMoon2
         }
-        evictIfNeeded(&newYearCache, cap: 32)
-        newYearCache[gyear] = value
+        evictIfNeeded(&newYearCache, capacity: 32)
+        newYearCache[gregorianYear] = value
         return value
     }
 
     // (month, isLeapMonth) label for the month starting at new moon `start`.
-    mutating func monthLabel(startingAt start: Int, gyear: Int) -> (month: Int, isLeap: Bool) {
+    mutating func monthLabel(startingAt start: Int, gregorianYear: Int) -> (month: Int, isLeap: Bool) {
         var solsticeBefore: Int
-        var solsticeAfter = winterSolstice(gyear)
+        var solsticeAfter = winterSolstice(gregorianYear)
         if start < solsticeAfter {
-            solsticeBefore = winterSolstice(gyear - 1)
+            solsticeBefore = winterSolstice(gregorianYear - 1)
         } else {
             solsticeBefore = solsticeAfter
-            solsticeAfter = winterSolstice(gyear + 1)
+            solsticeAfter = winterSolstice(gregorianYear + 1)
         }
         let firstMoon = newMoonNear(solsticeBefore + 1, true)
         let lastMoon = newMoonNear(solsticeAfter + 1, false)
@@ -142,8 +142,8 @@ internal struct _ChineseRules {
 // MARK: - Year structure
 
 internal struct _ChineseYear: Sendable {
-    let relatedIso: Int
-    let newYearRD: Int
+    let relatedISOYear: Int
+    let newYearRataDie: Int
     let monthLengthBits: UInt16    // bit i set = ordinal month i+1 has 30 days
     let monthCount: UInt8          // 12 or 13
     let leapDisplay: UInt8         // 0 = none; else leap month repeats this number
@@ -155,10 +155,10 @@ internal struct _ChineseYear: Sendable {
         (monthLengthBits >> (ordinal - 1)) & 1 == 1 ? 30 : 29
     }
 
-    func monthStartRD(ordinal: Int) -> Int {
-        var rd = newYearRD
-        for i in 1..<ordinal { rd += monthLength(ordinal: i) }
-        return rd
+    func monthStartRataDie(ordinal: Int) -> Int {
+        var rataDie = newYearRataDie
+        for i in 1..<ordinal { rataDie += monthLength(ordinal: i) }
+        return rataDie
     }
 
     var daysInYear: Int {
@@ -167,7 +167,7 @@ internal struct _ChineseYear: Sendable {
         return days
     }
 
-    var endRD: Int { newYearRD + daysInYear }
+    var endRataDie: Int { newYearRataDie + daysInYear }
 
     func label(ordinal: Int) -> (month: Int, isLeap: Bool) {
         guard let lo = leapOrdinal else { return (ordinal, false) }
@@ -186,12 +186,12 @@ internal struct _ChineseYear: Sendable {
     }
 
     // (ordinal, dayOfMonth) for an RD inside this year.
-    func ordinalAndDay(rd: Int) -> (ordinal: Int, day: Int)? {
-        guard rd >= newYearRD && rd < endRD else { return nil }
-        var start = newYearRD
+    func ordinalAndDay(rataDie: Int) -> (ordinal: Int, day: Int)? {
+        guard rataDie >= newYearRataDie && rataDie < endRataDie else { return nil }
+        var start = newYearRataDie
         for ordinal in 1...Int(monthCount) {
             let len = monthLength(ordinal: ordinal)
-            if rd < start + len { return (ordinal, rd - start + 1) }
+            if rataDie < start + len { return (ordinal, rataDie - start + 1) }
             start += len
         }
         return nil
@@ -260,36 +260,36 @@ internal enum _ChineseCalendarEngine {
     static let fallbackCache = Mutex<(rules: _ChineseRules, years: [Int: _ChineseYear])>(
         (_ChineseRules(), [:]))
 
-    private static func decodeTableYear(relatedIso: Int) -> _ChineseYear {
-        let v = table[relatedIso - tableStart]
+    private static func decodeTableYear(relatedISOYear: Int) -> _ChineseYear {
+        let v = table[relatedISOYear - tableStart]
         let leap = UInt8((v >> 13) & 0xF)
         return _ChineseYear(
-            relatedIso: relatedIso,
-            newYearRD: _CalendarAstronomy.gregorianRD(relatedIso, 1, 19) + Int((v >> 17) & 0x3F),
+            relatedISOYear: relatedISOYear,
+            newYearRataDie: _CalendarAstronomy.gregorianRataDie(relatedISOYear, 1, 19) + Int((v >> 17) & 0x3F),
             monthLengthBits: UInt16(v & 0x1FFF),
             monthCount: leap == 0 ? 12 : 13,
             leapDisplay: leap)
     }
 
-    static func year(relatedIso: Int) -> _ChineseYear {
-        let idx = relatedIso - tableStart
+    static func year(relatedISOYear: Int) -> _ChineseYear {
+        let idx = relatedISOYear - tableStart
         if idx >= 0 && idx < table.count {
-            return decodeTableYear(relatedIso: relatedIso)
+            return decodeTableYear(relatedISOYear: relatedISOYear)
         }
         return fallbackCache.withLock { state in
-            if let cached = state.years[relatedIso] { return cached }
+            if let cached = state.years[relatedISOYear] { return cached }
             // Tile exactly with the baked table at the seams.
             let ny: Int
-            if relatedIso == tableStart + table.count {
-                ny = decodeTableYear(relatedIso: relatedIso - 1).endRD
+            if relatedISOYear == tableStart + table.count {
+                ny = decodeTableYear(relatedISOYear: relatedISOYear - 1).endRataDie
             } else {
-                ny = state.rules.newYear(relatedIso)
+                ny = state.rules.newYear(relatedISOYear)
             }
             let nyNext: Int
-            if relatedIso + 1 == tableStart {
-                nyNext = decodeTableYear(relatedIso: tableStart).newYearRD
+            if relatedISOYear + 1 == tableStart {
+                nyNext = decodeTableYear(relatedISOYear: tableStart).newYearRataDie
             } else {
-                nyNext = state.rules.newYear(relatedIso + 1)
+                nyNext = state.rules.newYear(relatedISOYear + 1)
             }
             var starts = [ny]
             var cur = ny
@@ -303,32 +303,32 @@ internal enum _ChineseCalendarEngine {
             var leapDisplay: UInt8 = 0
             for (i, s) in starts.enumerated() {
                 let next = (i + 1 < starts.count) ? starts[i + 1] : nyNext
-                assert(next - s == 29 || next - s == 30, "non-lunation month length \(next - s) in fallback year \(relatedIso)")
+                assert(next - s == 29 || next - s == 30, "non-lunation month length \(next - s) in fallback year \(relatedISOYear)")
                 if next - s == 30 { bits |= UInt16(1) << i }
-                let label = state.rules.monthLabel(startingAt: s, gyear: _CalendarAstronomy.gregorianYear(ofRD: s))
+                let label = state.rules.monthLabel(startingAt: s, gregorianYear: _CalendarAstronomy.gregorianYear(ofRataDie: s))
                 if label.isLeap { leapDisplay = UInt8(label.month) }
             }
             let year = _ChineseYear(
-                relatedIso: relatedIso, newYearRD: ny,
+                relatedISOYear: relatedISOYear, newYearRataDie: ny,
                 monthLengthBits: bits, monthCount: UInt8(starts.count),
                 leapDisplay: leapDisplay)
-            evictIfNeeded(&state.years, cap: 16)
-            state.years[relatedIso] = year
+            evictIfNeeded(&state.years, capacity: 16)
+            state.years[relatedISOYear] = year
             return year
         }
     }
 
-    static func year(containingRD rd: Int) -> _ChineseYear {
+    static func year(containingRataDie rataDie: Int) -> _ChineseYear {
         // CNY falls Jan 19 + [2, 61]; estimate by Gregorian year and adjust.
-        var iso = _CalendarAstronomy.gregorianYear(ofRD: rd)
-        var y = year(relatedIso: iso)
-        while rd < y.newYearRD {
+        var iso = _CalendarAstronomy.gregorianYear(ofRataDie: rataDie)
+        var y = year(relatedISOYear: iso)
+        while rataDie < y.newYearRataDie {
             iso -= 1
-            y = year(relatedIso: iso)
+            y = year(relatedISOYear: iso)
         }
-        while rd >= y.endRD {
+        while rataDie >= y.endRataDie {
             iso += 1
-            y = year(relatedIso: iso)
+            y = year(relatedISOYear: iso)
         }
         return y
     }
@@ -398,37 +398,37 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Extended year model
 
     // extended year = related Gregorian year + 2637; era = 60-year cycle.
-    static let extOffset = 2637
+    static let extendedYearOffset = 2637
 
     // Supported extended-year domain (same convention as Hebrew's icuYearLowerBound/icuYearUpperBound).
-    private static let extLowerBound = -5_000_000
-    private static let extUpperBound = 5_000_000
+    private static let extendedYearLowerBound = -5_000_000
+    private static let extendedYearUpperBound = 5_000_000
 
-    private static func yearData(ext: Int) -> _ChineseYear {
-        _ChineseCalendarEngine.year(relatedIso: ext - extOffset)
+    private static func yearData(extendedYear: Int) -> _ChineseYear {
+        _ChineseCalendarEngine.year(relatedISOYear: extendedYear - extendedYearOffset)
     }
 
-    private static func rd(ext: Int, ordinal: Int, day: Int) -> Int {
-        yearData(ext: ext).monthStartRD(ordinal: ordinal) + day - 1
+    private static func rataDie(extendedYear: Int, ordinal: Int, day: Int) -> Int {
+        yearData(extendedYear: extendedYear).monthStartRataDie(ordinal: ordinal) + day - 1
     }
 
     // Foundation weekday numbering (1 = Sunday); no offset is needed because rata die day 1 (Jan 1, 1 CE) was a Monday.
-    private static func weekday(ofRD rd: Int) -> Int {
-        var r = rd % 7
+    private static func weekday(ofRataDie rataDie: Int) -> Int {
+        var r = rataDie % 7
         if r < 0 { r += 7 }
         return r + 1
     }
 
-    private static func floorDiv(_ a: Int, _ b: Int) -> Int {
+    private static func floorDivide(_ a: Int, _ b: Int) -> Int {
         a >= 0 ? a / b : -((-a + b - 1) / b)
     }
 
-    private static func eraAndYear(ext: Int) -> (era: Int, year: Int) {
-        let e = floorDiv(ext - 1, 60)
-        return (e + 1, ext - 1 - e * 60 + 1)
+    private static func eraAndYear(extendedYear: Int) -> (era: Int, year: Int) {
+        let e = floorDivide(extendedYear - 1, 60)
+        return (e + 1, extendedYear - 1 - e * 60 + 1)
     }
 
-    private static func ext(era: Int, year: Int) -> Int? {
+    private static func extendedYear(era: Int, year: Int) -> Int? {
         let (em1, sub) = era.subtractingReportingOverflow(1)
         if sub { return nil }
         let (eraYears, mul) = em1.multipliedReportingOverflow(by: 60)
@@ -453,7 +453,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         case .quarter: return 1..<5
         case .weekOfMonth: return 1..<6
         case .weekOfYear: return 1..<51
-        case .yearForWeekOfYear: return Self.extLowerBound..<(Self.extUpperBound + 1)
+        case .yearForWeekOfYear: return Self.extendedYearLowerBound..<(Self.extendedYearUpperBound + 1)
         case .nanosecond: return 0..<1_000_000_000
         case .isLeapMonth: return 0..<2
         case .isRepeatedDay: return 0..<1
@@ -477,7 +477,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         case .quarter: return 1..<5
         case .weekOfMonth: return 1..<7
         case .weekOfYear: return 1..<56
-        case .yearForWeekOfYear: return Self.extLowerBound..<(Self.extUpperBound + 1)
+        case .yearForWeekOfYear: return Self.extendedYearLowerBound..<(Self.extendedYearUpperBound + 1)
         case .nanosecond: return 0..<1_000_000_000
         case .isLeapMonth: return 0..<2
         case .isRepeatedDay: return 0..<1
@@ -520,16 +520,16 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             return 1..<13
         case (.month, .quarter):
             // ICU reports display month numbers spanned by the quarter; the span can shrink (see quarterSpan).
-            let (ext, ordinal, _) = fields(for: date, in: timeZone)
-            guard let span = Self.quarterSpan(ext: ext, ordinal: ordinal) else { return nil }
+            let (extendedYear, ordinal, _) = fields(for: date, in: timeZone)
+            guard let span = Self.quarterSpan(extendedYear: extendedYear, ordinal: ordinal) else { return nil }
             return span.firstDisplay..<(span.lastDisplay + 1)
         case (.day, .quarter):
             // ICU counts calendar days here, not 86400 s chunks, the generic interval+ordinality fallback overcounts by one in DST fall-back quarters.
-            let (ext, ordinal, _) = fields(for: date, in: timeZone)
-            guard let span = Self.quarterSpan(ext: ext, ordinal: ordinal) else { return nil }
-            let startRD = Self.rd(ext: ext, ordinal: span.startOrdinal, day: 1)
-            let endRD = Self.rd(ext: span.endExt, ordinal: span.endOrdinal, day: 1)
-            return 1..<(endRD - startRD + 1)
+            let (extendedYear, ordinal, _) = fields(for: date, in: timeZone)
+            guard let span = Self.quarterSpan(extendedYear: extendedYear, ordinal: ordinal) else { return nil }
+            let startRataDie = Self.rataDie(extendedYear: extendedYear, ordinal: span.startOrdinal, day: 1)
+            let endRataDie = Self.rataDie(extendedYear: span.endExtendedYear, ordinal: span.endOrdinal, day: 1)
+            return 1..<(endRataDie - startRataDie + 1)
         default:
             break
         }
@@ -543,53 +543,53 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Ordinality
 
     func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
-        let tz = self.timeZone
+        let timeZone = self.timeZone
         switch (smaller, larger) {
         case (.day, .year):
-            return dateComponents([.dayOfYear], from: date, in: tz).dayOfYear
+            return dateComponents([.dayOfYear], from: date, in: timeZone).dayOfYear
         case (.day, .month):
-            return dateComponents([.day], from: date, in: tz).day
+            return dateComponents([.day], from: date, in: timeZone).day
         case (.month, .year):
             // ICU returns the display month number, not the ordinal position.
-            return dateComponents([.month], from: date, in: tz).month
+            return dateComponents([.month], from: date, in: timeZone).month
         case (.quarter, .year):
             // ICU's mquarter mapping on the display month; a leap month is in the quarter of its base number.
-            guard let m = dateComponents([.month], from: date, in: tz).month else { return nil }
+            guard let m = dateComponents([.month], from: date, in: timeZone).month else { return nil }
             return (m + 2) / 3
         case (.month, .quarter):
             // ICU's mcount mapping, position of the display number in its quarter.
-            guard let m = dateComponents([.month], from: date, in: tz).month else { return nil }
+            guard let m = dateComponents([.month], from: date, in: timeZone).month else { return nil }
             return (m - 1) % 3 + 1
         case (.day, .quarter):
-            // ICU: floor of absolute seconds since the quarter start, no tz round trip.
+            // ICU: floor of absolute seconds since the quarter start, no timeZone round trip.
             guard let interval = dateInterval(of: .quarter, for: date) else { return nil }
             return Int((date.timeIntervalSince(interval.start) / 86400.0).rounded(.down)) + 1
         case (.weekOfYear, .year):
-            let comps = dateComponents([.weekday, .dayOfYear], from: date, in: tz)
+            let comps = dateComponents([.weekday, .dayOfYear], from: date, in: timeZone)
             guard let weekday = comps.weekday, let dayOfYear = comps.dayOfYear else { return nil }
             return weekOfYearNumber(dayOfYear: dayOfYear, weekday: weekday)
         case (.weekOfMonth, .month):
-            return dateComponents([.weekOfMonth], from: date, in: tz).weekOfMonth
+            return dateComponents([.weekOfMonth], from: date, in: timeZone).weekOfMonth
         case (.weekday, .year):
-            guard let dayOfYear = dateComponents([.dayOfYear], from: date, in: tz).dayOfYear else { return nil }
+            guard let dayOfYear = dateComponents([.dayOfYear], from: date, in: timeZone).dayOfYear else { return nil }
             return (dayOfYear - 1) / 7 + 1
         case (.weekday, .month), (.weekdayOrdinal, .month):
-            guard let day = dateComponents([.day], from: date, in: tz).day else { return nil }
+            guard let day = dateComponents([.day], from: date, in: timeZone).day else { return nil }
             return (day - 1) / 7 + 1
         case (.weekday, .weekOfYear):
-            guard let weekday = dateComponents([.weekday], from: date, in: tz).weekday else { return nil }
+            guard let weekday = dateComponents([.weekday], from: date, in: timeZone).weekday else { return nil }
             return ((weekday - firstWeekday + 7) % 7) + 1
         case (.hour, .day):
-            guard let hour = dateComponents([.hour], from: date, in: tz).hour else { return nil }
+            guard let hour = dateComponents([.hour], from: date, in: timeZone).hour else { return nil }
             return hour + 1
         case (.minute, .hour):
-            guard let minute = dateComponents([.minute], from: date, in: tz).minute else { return nil }
+            guard let minute = dateComponents([.minute], from: date, in: timeZone).minute else { return nil }
             return minute + 1
         case (.second, .minute):
-            guard let second = dateComponents([.second], from: date, in: tz).second else { return nil }
+            guard let second = dateComponents([.second], from: date, in: timeZone).second else { return nil }
             return second + 1
         case (.nanosecond, .second):
-            guard let nanosecond = dateComponents([.nanosecond], from: date, in: tz).nanosecond else { return nil }
+            guard let nanosecond = dateComponents([.nanosecond], from: date, in: timeZone).nanosecond else { return nil }
             return nanosecond + 1
         default:
             return nil
@@ -607,53 +607,53 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Internal field extraction
 
     /// (extended year, month ordinal, day) for a date in the given timezone.
-    private func fields(for date: Date, in tz: TimeZone) -> (ext: Int, ordinal: Int, day: Int) {
-        let (ext, ordinal, day, _) = fieldsAndTime(for: date, in: tz)
-        return (ext, ordinal, day)
+    private func fields(for date: Date, in timeZone: TimeZone) -> (extendedYear: Int, ordinal: Int, day: Int) {
+        let (extendedYear, ordinal, day, _) = fieldsAndTime(for: date, in: timeZone)
+        return (extendedYear, ordinal, day)
     }
 
     /// `fields` plus local seconds-in-day, from a single timezone-offset lookup.
-    private func fieldsAndTime(for date: Date, in tz: TimeZone) -> (ext: Int, ordinal: Int, day: Int, secondsInDay: Double) {
-        let totalOffset = tz.secondsFromGMT(for: date)
+    private func fieldsAndTime(for date: Date, in timeZone: TimeZone) -> (extendedYear: Int, ordinal: Int, day: Int, secondsInDay: Double) {
+        let totalOffset = timeZone.secondsFromGMT(for: date)
         let localSeconds = date.timeIntervalSinceReferenceDate + Double(totalOffset)
-        let (rd, secondsInDay) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
-        let y = _ChineseCalendarEngine.year(containingRD: rd)
-        guard let (ordinal, day) = y.ordinalAndDay(rd: rd) else {
-            fatalError("year(containingRD:) returned a year not containing rd \(rd)")
+        let (rataDie, secondsInDay) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
+        let y = _ChineseCalendarEngine.year(containingRataDie: rataDie)
+        guard let (ordinal, day) = y.ordinalAndDay(rataDie: rataDie) else {
+            fatalError("year(containingRataDie:) returned a year not containing rataDie \(rataDie)")
         }
-        return (y.relatedIso + Self.extOffset, ordinal, day, secondsInDay)
+        return (y.relatedISOYear + Self.extendedYearOffset, ordinal, day, secondsInDay)
     }
 
     // MARK: Date intervals
 
     // Like ICU, a leap month is not absorbed into its quarter: dates in it can fall outside their own quarter interval and the month range shrinks.
-    private static func quarterSpan(ext: Int, ordinal: Int) -> (firstDisplay: Int, startOrdinal: Int, lastDisplay: Int, endExt: Int, endOrdinal: Int)? {
-        let y = yearData(ext: ext)
+    private static func quarterSpan(extendedYear: Int, ordinal: Int) -> (firstDisplay: Int, startOrdinal: Int, lastDisplay: Int, endExtendedYear: Int, endOrdinal: Int)? {
+        let y = yearData(extendedYear: extendedYear)
         let q = (y.label(ordinal: ordinal).month + 2) / 3
         let firstDisplay = 3 * (q - 1) + 1
         guard let startOrdinal = y.ordinal(month: firstDisplay, isLeap: false) else { return nil }
-        var (ey, eo) = (ext, startOrdinal)
-        for _ in 0..<2 { (ey, eo) = nextOrdinalMonth(ext: ey, ordinal: eo) }
-        let lastDisplay = yearData(ext: ey).label(ordinal: eo).month
-        let (endExt, endOrdinal) = nextOrdinalMonth(ext: ey, ordinal: eo)
-        return (firstDisplay, startOrdinal, lastDisplay, endExt, endOrdinal)
+        var (ey, eo) = (extendedYear, startOrdinal)
+        for _ in 0..<2 { (ey, eo) = nextOrdinalMonth(extendedYear: ey, ordinal: eo) }
+        let lastDisplay = yearData(extendedYear: ey).label(ordinal: eo).month
+        let (endExtendedYear, endOrdinal) = nextOrdinalMonth(extendedYear: ey, ordinal: eo)
+        return (firstDisplay, startOrdinal, lastDisplay, endExtendedYear, endOrdinal)
     }
 
-    private static func nextOrdinalMonth(ext: Int, ordinal: Int) -> (Int, Int) {
-        let y = yearData(ext: ext)
-        if ordinal < Int(y.monthCount) { return (ext, ordinal + 1) }
-        return (ext + 1, 1)
+    private static func nextOrdinalMonth(extendedYear: Int, ordinal: Int) -> (Int, Int) {
+        let y = yearData(extendedYear: extendedYear)
+        if ordinal < Int(y.monthCount) { return (extendedYear, ordinal + 1) }
+        return (extendedYear + 1, 1)
     }
 
-    private static func prevOrdinalMonth(ext: Int, ordinal: Int) -> (Int, Int) {
-        if ordinal > 1 { return (ext, ordinal - 1) }
-        let py = yearData(ext: ext - 1)
-        return (ext - 1, Int(py.monthCount))
+    private static func prevOrdinalMonth(extendedYear: Int, ordinal: Int) -> (Int, Int) {
+        if ordinal > 1 { return (extendedYear, ordinal - 1) }
+        let py = yearData(extendedYear: extendedYear - 1)
+        return (extendedYear - 1, Int(py.monthCount))
     }
 
-    private func firstDayOfWeekYear(_ ext: Int) -> Int {
-        let rdNY = Self.yearData(ext: ext).newYearRD
-        let nyWeekday = Self.weekday(ofRD: rdNY)
+    private func firstDayOfWeekYear(_ extendedYear: Int) -> Int {
+        let rdNY = Self.yearData(extendedYear: extendedYear).newYearRataDie
+        let nyWeekday = Self.weekday(ofRataDie: rdNY)
         let rel = (nyWeekday - firstWeekday + 7) % 7
         let offset: Int
         if (7 - rel) >= minimumDaysInFirstWeek {
@@ -664,70 +664,70 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         return rdNY + offset
     }
 
-    /// Date at local midnight of (ext, ordinal, day).
-    private func localMidnight(ext: Int, ordinal: Int, day: Int, in tz: TimeZone) -> Date {
-        utcDate(fromRataDie: Self.rd(ext: ext, ordinal: ordinal, day: day), secondsInDay: 0, in: tz,
+    /// Date at local midnight of (extendedYear, ordinal, day).
+    private func localMidnight(extendedYear: Int, ordinal: Int, day: Int, in timeZone: TimeZone) -> Date {
+        utcDate(fromRataDie: Self.rataDie(extendedYear: extendedYear, ordinal: ordinal, day: day), secondsInDay: 0, in: timeZone,
                 repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
-        let tz = self.timeZone
-        let (ext, ordinal, day) = fields(for: date, in: tz)
+        let timeZone = self.timeZone
+        let (extendedYear, ordinal, day) = fields(for: date, in: timeZone)
 
         switch component {
         case .era:
             // One era = one 60-year cycle.
-            let (era, _) = Self.eraAndYear(ext: ext)
-            guard let startExt = Self.ext(era: era, year: 1) else { return nil }
-            let start = localMidnight(ext: startExt, ordinal: 1, day: 1, in: tz)
-            let end = localMidnight(ext: startExt + 60, ordinal: 1, day: 1, in: tz)
+            let (era, _) = Self.eraAndYear(extendedYear: extendedYear)
+            guard let startExt = Self.extendedYear(era: era, year: 1) else { return nil }
+            let start = localMidnight(extendedYear: startExt, ordinal: 1, day: 1, in: timeZone)
+            let end = localMidnight(extendedYear: startExt + 60, ordinal: 1, day: 1, in: timeZone)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .year:
-            let start = localMidnight(ext: ext, ordinal: 1, day: 1, in: tz)
-            let end = localMidnight(ext: ext + 1, ordinal: 1, day: 1, in: tz)
+            let start = localMidnight(extendedYear: extendedYear, ordinal: 1, day: 1, in: timeZone)
+            let end = localMidnight(extendedYear: extendedYear + 1, ordinal: 1, day: 1, in: timeZone)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .yearForWeekOfYear:
             // Deliberate divergence from ICU: ICU's chinese calendar cannot use YEAR_WOY on the fields-to-time side (chnsecal handleGetExtendedYear never reads it), so its interval degenerates to nil and its add is a no-op. We implement the Gregorian-family week-year semantics instead, like Hebrew (precedent: Japanese .era interval). If behavior identical to ICU is ever required: return nil here and delete the yearForWeekOfYear block in date(byAdding:).
-            let weekYearComps = dateComponents([.yearForWeekOfYear], from: date, in: tz)
+            let weekYearComps = dateComponents([.yearForWeekOfYear], from: date, in: timeZone)
             guard let weekYear = weekYearComps.yearForWeekOfYear else { return nil }
             let rdStart = firstDayOfWeekYear(weekYear)
             let rdEnd = firstDayOfWeekYear(weekYear + 1)
-            let start = utcDate(fromRataDie: rdStart, secondsInDay: 0, in: tz,
+            let start = utcDate(fromRataDie: rdStart, secondsInDay: 0, in: timeZone,
                                 repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let end = utcDate(fromRataDie: rdEnd, secondsInDay: 0, in: tz,
+            let end = utcDate(fromRataDie: rdEnd, secondsInDay: 0, in: timeZone,
                               repeatedTimePolicy: .former, skippedTimePolicy: .former)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .month:
-            let start = localMidnight(ext: ext, ordinal: ordinal, day: 1, in: tz)
-            let (ny, nm) = Self.nextOrdinalMonth(ext: ext, ordinal: ordinal)
-            let end = localMidnight(ext: ny, ordinal: nm, day: 1, in: tz)
+            let start = localMidnight(extendedYear: extendedYear, ordinal: ordinal, day: 1, in: timeZone)
+            let (ny, nm) = Self.nextOrdinalMonth(extendedYear: extendedYear, ordinal: ordinal)
+            let end = localMidnight(extendedYear: ny, ordinal: nm, day: 1, in: timeZone)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .weekOfYear, .weekOfMonth:
-            let rdHere = Self.rd(ext: ext, ordinal: ordinal, day: day)
-            let weekday = Self.weekday(ofRD: rdHere)
+            let rdHere = Self.rataDie(extendedYear: extendedYear, ordinal: ordinal, day: day)
+            let weekday = Self.weekday(ofRataDie: rdHere)
             var daysBack = weekday - firstWeekday
             if daysBack < 0 { daysBack += 7 }
             let rdStart = rdHere - daysBack
-            let start = utcDate(fromRataDie: rdStart, secondsInDay: 0, in: tz,
+            let start = utcDate(fromRataDie: rdStart, secondsInDay: 0, in: timeZone,
                                 repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let end = utcDate(fromRataDie: rdStart + 7, secondsInDay: 0, in: tz,
+            let end = utcDate(fromRataDie: rdStart + 7, secondsInDay: 0, in: timeZone,
                               repeatedTimePolicy: .former, skippedTimePolicy: .former)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .quarter:
             // See quarterSpan for the quarter model and its leap-month containment quirk.
-            guard let span = Self.quarterSpan(ext: ext, ordinal: ordinal) else { return nil }
-            let start = localMidnight(ext: ext, ordinal: span.startOrdinal, day: 1, in: tz)
-            let end = localMidnight(ext: span.endExt, ordinal: span.endOrdinal, day: 1, in: tz)
+            guard let span = Self.quarterSpan(extendedYear: extendedYear, ordinal: ordinal) else { return nil }
+            let start = localMidnight(extendedYear: extendedYear, ordinal: span.startOrdinal, day: 1, in: timeZone)
+            let end = localMidnight(extendedYear: span.endExtendedYear, ordinal: span.endOrdinal, day: 1, in: timeZone)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .day, .weekday, .weekdayOrdinal, .dayOfYear:
-            let rdHere = Self.rd(ext: ext, ordinal: ordinal, day: day)
-            let start = utcDate(fromRataDie: rdHere, secondsInDay: 0, in: tz,
+            let rdHere = Self.rataDie(extendedYear: extendedYear, ordinal: ordinal, day: day)
+            let start = utcDate(fromRataDie: rdHere, secondsInDay: 0, in: timeZone,
                                 repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let end = utcDate(fromRataDie: rdHere + 1, secondsInDay: 0, in: tz,
+            let end = utcDate(fromRataDie: rdHere + 1, secondsInDay: 0, in: timeZone,
                               repeatedTimePolicy: .former, skippedTimePolicy: .former)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .hour:
-            let ti = Double(tz.secondsFromGMT(for: date))
+            let ti = Double(timeZone.secondsFromGMT(for: date))
             let time = date.timeIntervalSinceReferenceDate
             var fixedTime = time + ti
             fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
@@ -763,18 +763,18 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
     internal static let rataDieAtDateReference = 730_486
 
-    private static func rataDieAndSecondsInDay(localSeconds: Double) -> (rd: Int, secondsInDay: Double) {
+    private static func rataDieAndSecondsInDay(localSeconds: Double) -> (rataDie: Int, secondsInDay: Double) {
         let totalDays = (localSeconds / 86400).rounded(.down)
-        let rd = Int(totalDays) &+ rataDieAtDateReference
+        let rataDie = Int(totalDays) &+ rataDieAtDateReference
         let secondsInDay = localSeconds - totalDays * 86400
-        return (rd, secondsInDay)
+        return (rataDie, secondsInDay)
     }
 
-    internal func utcDate(fromRataDie rd: Int, secondsInDay: Double, in timeZone: TimeZone,
+    internal func utcDate(fromRataDie rataDie: Int, secondsInDay: Double, in timeZone: TimeZone,
                           repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy,
                           skippedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> Date {
         _ = skippedTimePolicy
-        let daysSinceRef = rd &- Self.rataDieAtDateReference
+        let daysSinceRef = rataDie &- Self.rataDieAtDateReference
         let secondsAsIfUTC = Double(daysSinceRef) * 86400 + secondsInDay
         let tmpDate = Date(timeIntervalSinceReferenceDate: secondsAsIfUTC)
         let (tzOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(
@@ -789,17 +789,17 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             era = e
         } else {
             let (nowExt, _, _) = fields(for: Date.now, in: components.timeZone ?? timeZone)
-            era = Self.eraAndYear(ext: nowExt).era
+            era = Self.eraAndYear(extendedYear: nowExt).era
         }
         guard let yearValue = components.year else { return nil }
-        guard let ext = Self.ext(era: era, year: yearValue),
-              ext > Self.extLowerBound && ext < Self.extUpperBound else { return nil }
+        guard let extendedYear = Self.extendedYear(era: era, year: yearValue),
+              extendedYear > Self.extendedYearLowerBound && extendedYear < Self.extendedYearUpperBound else { return nil }
 
         let month = components.month ?? 1
         let isLeap = components.isLeapMonth ?? false
         let day = components.day ?? 1
 
-        let y = Self.yearData(ext: ext)
+        let y = Self.yearData(extendedYear: extendedYear)
         guard month >= 1 && month <= 12 else { return nil }
         // A leap month that doesn't exist in this year falls back to the regular month.
         let ordinal: Int
@@ -813,7 +813,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         let daysInMonth = y.monthLength(ordinal: ordinal)
         guard day >= 1 && day <= daysInMonth else { return nil }
 
-        let rd = y.monthStartRD(ordinal: ordinal) + day - 1
+        let rataDie = y.monthStartRataDie(ordinal: ordinal) + day - 1
 
         var secondsInDay: Double = 0
         if let hour = components.hour { secondsInDay += Double(hour) * 3600 }
@@ -821,23 +821,23 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         if let second = components.second { secondsInDay += Double(second) }
         if let nanosecond = components.nanosecond { secondsInDay += Double(nanosecond) / 1e9 }
 
-        let tz = components.timeZone ?? timeZone
-        return utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: tz,
+        let timeZone = components.timeZone ?? timeZone
+        return utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
                        repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
         let totalOffset = timeZone.secondsFromGMT(for: date)
         let localSeconds = date.timeIntervalSinceReferenceDate + Double(totalOffset)
-        let (rd, secondsInDay) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
+        let (rataDie, secondsInDay) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
 
-        let y = _ChineseCalendarEngine.year(containingRD: rd)
-        guard let (ordinal, day) = y.ordinalAndDay(rd: rd) else {
-            fatalError("year(containingRD:) returned a year not containing rd \(rd)")
+        let y = _ChineseCalendarEngine.year(containingRataDie: rataDie)
+        guard let (ordinal, day) = y.ordinalAndDay(rataDie: rataDie) else {
+            fatalError("year(containingRataDie:) returned a year not containing rataDie \(rataDie)")
         }
         let label = y.label(ordinal: ordinal)
-        let ext = y.relatedIso + Self.extOffset
-        let (era, yearInCycle) = Self.eraAndYear(ext: ext)
+        let extendedYear = y.relatedISOYear + Self.extendedYearOffset
+        let (era, yearInCycle) = Self.eraAndYear(extendedYear: extendedYear)
 
         var result = DateComponents()
 
@@ -865,11 +865,11 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         }
 
         if components.contains(.weekday) {
-            result.weekday = Self.weekday(ofRD: rd)
+            result.weekday = Self.weekday(ofRataDie: rataDie)
         }
 
         if components.contains(.dayOfYear) {
-            result.dayOfYear = rd - y.newYearRD + 1
+            result.dayOfYear = rataDie - y.newYearRataDie + 1
         }
 
         if components.contains(.timeZone) {
@@ -881,15 +881,15 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
                               components.contains(.weekOfYear) ||
                               components.contains(.yearForWeekOfYear)
         if needsWeekFields {
-            let weekday = Self.weekday(ofRD: rd)
-            let dayOfYear = rd - y.newYearRD + 1
+            let weekday = Self.weekday(ofRataDie: rataDie)
+            let dayOfYear = rataDie - y.newYearRataDie + 1
             let yearLength = y.daysInYear
             let relativeWeekday = (weekday + 7 - firstWeekday) % 7
 
             var weekOfYear = weekOfYearNumber(dayOfYear: dayOfYear, weekday: weekday)
-            var yearForWeekOfYear = ext
+            var yearForWeekOfYear = extendedYear
             if weekOfYear == 0 {
-                let previousYearLength = Self.yearData(ext: ext - 1).daysInYear
+                let previousYearLength = Self.yearData(extendedYear: extendedYear - 1).daysInYear
                 let previousDayOfYear = dayOfYear + previousYearLength
                 weekOfYear = Self.weekNumber(
                     desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday,
@@ -944,15 +944,15 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: ICU month resolution (chnsecal handleComputeMonthStart semantics)
 
     /// chnsecal month resolution: estimate CNY + (display-1)*29 days, advance to the next month start, bump once on display/leap mismatch.
-    private static func resolvedMonthStart(ext: Int, display: Int, leap: Bool) -> Int {
-        let ny = yearData(ext: ext).newYearRD
+    private static func resolvedMonthStart(extendedYear: Int, display: Int, leap: Bool) -> Int {
+        let ny = yearData(extendedYear: extendedYear).newYearRataDie
         let target = ny + (display - 1) * 29
-        var y = _ChineseCalendarEngine.year(containingRD: target)
-        guard let od = y.ordinalAndDay(rd: target) else {
-            fatalError("year(containingRD:) returned a year not containing rd \(target)")
+        var y = _ChineseCalendarEngine.year(containingRataDie: target)
+        guard let od = y.ordinalAndDay(rataDie: target) else {
+            fatalError("year(containingRataDie:) returned a year not containing rataDie \(target)")
         }
         var ordinal = od.ordinal
-        var est = y.monthStartRD(ordinal: ordinal)
+        var est = y.monthStartRataDie(ordinal: ordinal)
         if est < target {   // target mid-month: next month start
             (est, y, ordinal) = Self.nextMonthStart(after: y, ordinal: ordinal)
         }
@@ -965,10 +965,10 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
     private static func nextMonthStart(after y: _ChineseYear, ordinal: Int) -> (Int, _ChineseYear, Int) {
         if ordinal < Int(y.monthCount) {
-            return (y.monthStartRD(ordinal: ordinal + 1), y, ordinal + 1)
+            return (y.monthStartRataDie(ordinal: ordinal + 1), y, ordinal + 1)
         }
-        let ny = _ChineseCalendarEngine.year(relatedIso: y.relatedIso + 1)
-        return (ny.newYearRD, ny, 1)
+        let ny = _ChineseCalendarEngine.year(relatedISOYear: y.relatedISOYear + 1)
+        return (ny.newYearRataDie, ny, 1)
     }
 
     // MARK: Adding
@@ -985,13 +985,13 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
            (components.dayOfYear ?? 0) == 0, (components.yearForWeekOfYear ?? 0) == 0,
            (components.hour ?? 0) == 0, (components.minute ?? 0) == 0,
            (components.second ?? 0) == 0, (components.nanosecond ?? 0) == 0 {
-            let tz = self.timeZone
-            let (ext, ordinal, curDay, secondsInDay) = fieldsAndTime(for: result, in: tz)
-            let y = Self.yearData(ext: ext)
+            let timeZone = self.timeZone
+            let (extendedYear, ordinal, curDay, secondsInDay) = fieldsAndTime(for: result, in: timeZone)
+            let y = Self.yearData(extendedYear: extendedYear)
             let monthLen = y.monthLength(ordinal: ordinal)
             let newDay = ((curDay - 1 + d) % monthLen + monthLen) % monthLen + 1
-            let rd = y.monthStartRD(ordinal: ordinal) + newDay - 1
-            return utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: tz,
+            let rataDie = y.monthStartRataDie(ordinal: ordinal) + newDay - 1
+            return utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
                            repeatedTimePolicy: .former, skippedTimePolicy: .former)
         }
 
@@ -1006,53 +1006,53 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         let monthsToAdd = components.month ?? 0
 
         if yearsToAdd != 0 {
-            let tz = self.timeZone
-            let (ext, ordinal, d, secondsInDay) = fieldsAndTime(for: result, in: tz)
-            let y = Self.yearData(ext: ext)
+            let timeZone = self.timeZone
+            let (extendedYear, ordinal, d, secondsInDay) = fieldsAndTime(for: result, in: timeZone)
+            let y = Self.yearData(extendedYear: extendedYear)
             let label = y.label(ordinal: ordinal)
-            let (newExt, ovf) = ext.addingReportingOverflow(yearsToAdd)
-            guard !ovf, newExt > Self.extLowerBound, newExt < Self.extUpperBound else { return nil }
+            let (newExt, ovf) = extendedYear.addingReportingOverflow(yearsToAdd)
+            guard !ovf, newExt > Self.extendedYearLowerBound, newExt < Self.extendedYearUpperBound else { return nil }
             // ICU's add-year pin: resolve the month by single-bump, pin the day via a second resolution that keeps the source leap flag, then spill leniently (Calendar::add + getActualMaximum semantics).
-            let start0 = Self.resolvedMonthStart(ext: newExt, display: label.month, leap: label.isLeap)
-            let y1 = _ChineseCalendarEngine.year(containingRD: start0)
-            guard let od1 = y1.ordinalAndDay(rd: start0) else {
-                fatalError("year(containingRD:) returned a year not containing rd \(start0)")
+            let start0 = Self.resolvedMonthStart(extendedYear: newExt, display: label.month, leap: label.isLeap)
+            let y1 = _ChineseCalendarEngine.year(containingRataDie: start0)
+            guard let od1 = y1.ordinalAndDay(rataDie: start0) else {
+                fatalError("year(containingRataDie:) returned a year not containing rataDie \(start0)")
             }
             let ord1 = od1.ordinal
             let display1 = y1.label(ordinal: ord1).month
-            let start2 = Self.resolvedMonthStart(ext: newExt, display: display1, leap: label.isLeap)
-            let y2 = _ChineseCalendarEngine.year(containingRD: start2)
-            guard let od2 = y2.ordinalAndDay(rd: start2) else {
-                fatalError("year(containingRD:) returned a year not containing rd \(start2)")
+            let start2 = Self.resolvedMonthStart(extendedYear: newExt, display: display1, leap: label.isLeap)
+            let y2 = _ChineseCalendarEngine.year(containingRataDie: start2)
+            guard let od2 = y2.ordinalAndDay(rataDie: start2) else {
+                fatalError("year(containingRataDie:) returned a year not containing rataDie \(start2)")
             }
             let ord2 = od2.ordinal
             let maxDom = y2.monthLength(ordinal: ord2)
             let pinnedDay = min(d, maxDom)
-            let rd = start0 + pinnedDay - 1
-            result = utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: tz,
+            let rataDie = start0 + pinnedDay - 1
+            result = utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
                              repeatedTimePolicy: .former, skippedTimePolicy: .former)
         }
 
         if monthsToAdd != 0 {
-            let tz = self.timeZone
-            var (ext, ordinal, d, secondsInDay) = fieldsAndTime(for: result, in: tz)
-            // Reject adds that provably exit the ext domain before the ordinal walk: a year has at most 13 months, so the target lies at or beyond ext + monthsToAdd/13.
-            let (reach, reachOvf) = ext.addingReportingOverflow(monthsToAdd / 13)
-            guard !reachOvf, reach > Self.extLowerBound, reach < Self.extUpperBound else { return nil }
+            let timeZone = self.timeZone
+            var (extendedYear, ordinal, d, secondsInDay) = fieldsAndTime(for: result, in: timeZone)
+            // Reject adds that provably exit the extendedYear domain before the ordinal walk: a year has at most 13 months, so the target lies at or beyond extendedYear + monthsToAdd/13.
+            let (reach, reachOvf) = extendedYear.addingReportingOverflow(monthsToAdd / 13)
+            guard !reachOvf, reach > Self.extendedYearLowerBound, reach < Self.extendedYearUpperBound else { return nil }
             var remaining = monthsToAdd
             while remaining > 0 {
-                (ext, ordinal) = Self.nextOrdinalMonth(ext: ext, ordinal: ordinal)
+                (extendedYear, ordinal) = Self.nextOrdinalMonth(extendedYear: extendedYear, ordinal: ordinal)
                 remaining -= 1
             }
             while remaining < 0 {
-                (ext, ordinal) = Self.prevOrdinalMonth(ext: ext, ordinal: ordinal)
+                (extendedYear, ordinal) = Self.prevOrdinalMonth(extendedYear: extendedYear, ordinal: ordinal)
                 remaining += 1
             }
-            guard ext > Self.extLowerBound && ext < Self.extUpperBound else { return nil }
-            let ny = Self.yearData(ext: ext)
+            guard extendedYear > Self.extendedYearLowerBound && extendedYear < Self.extendedYearUpperBound else { return nil }
+            let ny = Self.yearData(extendedYear: extendedYear)
             let clampedDay = min(d, ny.monthLength(ordinal: ordinal))
-            let rd = ny.monthStartRD(ordinal: ordinal) + clampedDay - 1
-            result = utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: tz,
+            let rataDie = ny.monthStartRataDie(ordinal: ordinal) + clampedDay - 1
+            result = utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
                              repeatedTimePolicy: .former, skippedTimePolicy: .former)
         }
 
@@ -1066,21 +1066,21 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
         // Deliberate divergence from ICU (see dateInterval(.yearForWeekOfYear) note): ICU no-ops YEAR_WOY adds for chinese; we advance by week-years like Hebrew.
         if let n = components.yearForWeekOfYear, n != 0 {
-            let tz = self.timeZone
-            let localComps = dateComponents([.yearForWeekOfYear], from: result, in: tz)
+            let timeZone = self.timeZone
+            let localComps = dateComponents([.yearForWeekOfYear], from: result, in: timeZone)
             if let yy = localComps.yearForWeekOfYear {
                 let (target, overflow) = yy.addingReportingOverflow(n)
-                guard !overflow, target > Self.extLowerBound, target < Self.extUpperBound else { return nil }
+                guard !overflow, target > Self.extendedYearLowerBound, target < Self.extendedYearUpperBound else { return nil }
                 // Summed per-year week counts telescope to the distance between the two week-year anchors (both firstWeekday-aligned), so the add is O(1).
                 daysToAdd += firstDayOfWeekYear(target) - firstDayOfWeekYear(yy)
             }
         }
 
         if daysToAdd != 0 {
-            let tz = self.timeZone
-            let totalOffset1 = tz.secondsFromGMT(for: result)
+            let timeZone = self.timeZone
+            let totalOffset1 = timeZone.secondsFromGMT(for: result)
             let candidate = result + Double(daysToAdd) * 86400
-            let totalOffset2 = tz.secondsFromGMT(for: candidate)
+            let totalOffset2 = timeZone.secondsFromGMT(for: candidate)
             result = candidate - Double(totalOffset2 - totalOffset1)
         }
 
@@ -1097,7 +1097,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
         var result = DateComponents()
         var curr = start
-        for component in Self.orderedDiffComponents(components) {
+        for component in Self.orderedDifferenceComponents(components) {
             let (diff, newCurr) = difference(inComponent: component, from: curr, to: end)
             result.setValue(diff, for: component)
             curr = newCurr
@@ -1105,7 +1105,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         return result
     }
 
-    private static func orderedDiffComponents(_ components: Calendar.ComponentSet) -> [Calendar.Component] {
+    private static func orderedDifferenceComponents(_ components: Calendar.ComponentSet) -> [Calendar.Component] {
         var out: [Calendar.Component] = []
         if components.contains(.era) { out.append(.era) }
         if components.contains(.year) { out.append(.year) }
