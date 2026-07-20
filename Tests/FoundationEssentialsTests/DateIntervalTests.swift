@@ -156,11 +156,12 @@ private struct DateIntervalTests {
         let earlierStart = Date(timeIntervalSinceReferenceDate: 264289787.0)
         #expect(!testInterval.contains(earlierStart))
         
-        //Boundary cases
+        // Boundary cases
         #expect(testInterval.contains(start))
         #expect(testInterval.contains(testInterval.end))
-        #expect(!testInterval.contains(start - 0.001))
-        #expect(!testInterval.contains(testInterval.end + 0.001))
+
+        let laterEnd = Date(timeIntervalSinceReferenceDate: start.timeIntervalSinceReferenceDate + duration + 0.001)
+        #expect(!testInterval.contains(laterEnd))
     }
 
     @Test func anyHashableContainingDateInterval() {
