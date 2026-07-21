@@ -438,23 +438,23 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
     func minimumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
-        case .era: return 1..<83334          // ICU chnsecal LIMITS
-        case .year: return 1..<61
-        case .month: return 1..<13
-        case .day: return 1..<30
-        case .hour: return 0..<24
-        case .minute: return 0..<60
-        case .second: return 0..<60
-        case .weekday: return 1..<8
-        case .weekdayOrdinal: return -1..<6
-        case .quarter: return 1..<5
-        case .weekOfMonth: return 1..<6
-        case .weekOfYear: return 1..<51
-        case .yearForWeekOfYear: return Self.extendedYearLowerBound..<(Self.extendedYearUpperBound + 1)
-        case .nanosecond: return 0..<1_000_000_000
-        case .isLeapMonth: return 0..<2
-        case .isRepeatedDay: return 0..<1
-        case .dayOfYear: return 1..<354
+        case .era: return Range(1...83333)          // ICU chnsecal LIMITS
+        case .year: return Range(1...60)
+        case .month: return Range(1...12)
+        case .day: return Range(1...29)
+        case .hour: return Range(0...23)
+        case .minute: return Range(0...59)
+        case .second: return Range(0...59)
+        case .weekday: return Range(1...7)
+        case .weekdayOrdinal: return Range(-1...5)
+        case .quarter: return Range(1...4)
+        case .weekOfMonth: return Range(1...5)
+        case .weekOfYear: return Range(1...50)
+        case .yearForWeekOfYear: return Range(Self.extendedYearLowerBound...Self.extendedYearUpperBound)
+        case .nanosecond: return Range(0...999_999_999)
+        case .isLeapMonth: return Range(0...1)
+        case .isRepeatedDay: return Range(0...0)
+        case .dayOfYear: return Range(1...353)
         case .calendar, .timeZone:
             return nil
         }
@@ -462,23 +462,23 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
     func maximumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
-        case .era: return 1..<83334
-        case .year: return 1..<61
-        case .month: return 1..<13
-        case .day: return 1..<31
-        case .hour: return 0..<24
-        case .minute: return 0..<60
-        case .second: return 0..<60
-        case .weekday: return 1..<8
-        case .weekdayOrdinal: return -1..<6
-        case .quarter: return 1..<5
-        case .weekOfMonth: return 1..<7
-        case .weekOfYear: return 1..<56
-        case .yearForWeekOfYear: return Self.extendedYearLowerBound..<(Self.extendedYearUpperBound + 1)
-        case .nanosecond: return 0..<1_000_000_000
-        case .isLeapMonth: return 0..<2
-        case .isRepeatedDay: return 0..<1
-        case .dayOfYear: return 1..<386
+        case .era: return Range(1...83333)
+        case .year: return Range(1...60)
+        case .month: return Range(1...12)
+        case .day: return Range(1...30)
+        case .hour: return Range(0...23)
+        case .minute: return Range(0...59)
+        case .second: return Range(0...59)
+        case .weekday: return Range(1...7)
+        case .weekdayOrdinal: return Range(-1...5)
+        case .quarter: return Range(1...4)
+        case .weekOfMonth: return Range(1...6)
+        case .weekOfYear: return Range(1...55)
+        case .yearForWeekOfYear: return Range(Self.extendedYearLowerBound...Self.extendedYearUpperBound)
+        case .nanosecond: return Range(0...999_999_999)
+        case .isLeapMonth: return Range(0...1)
+        case .isRepeatedDay: return Range(0...0)
+        case .dayOfYear: return Range(1...385)
         case .calendar, .timeZone:
             return nil
         }
@@ -514,19 +514,19 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         switch (smaller, larger) {
         case (.month, .year):
             // Number of display months is always 12 (the leap repeats a number).
-            return 1..<13
+            return Range(1...12)
         case (.month, .quarter):
             // ICU reports display month numbers spanned by the quarter; the span can shrink (see quarterSpan).
             let (extendedYear, ordinal, _) = fields(for: date, in: timeZone)
             guard let span = Self.quarterSpan(extendedYear: extendedYear, ordinal: ordinal) else { return nil }
-            return span.firstDisplay..<(span.lastDisplay + 1)
+            return Range(span.firstDisplay...span.lastDisplay)
         case (.day, .quarter):
             // ICU counts calendar days here, not 86400 s chunks, the generic interval+ordinality fallback overcounts by one in DST fall-back quarters.
             let (extendedYear, ordinal, _) = fields(for: date, in: timeZone)
             guard let span = Self.quarterSpan(extendedYear: extendedYear, ordinal: ordinal) else { return nil }
             let startRataDie = Self.rataDie(extendedYear: extendedYear, ordinal: span.startOrdinal, day: 1)
             let endRataDie = Self.rataDie(extendedYear: span.endExtendedYear, ordinal: span.endOrdinal, day: 1)
-            return 1..<(endRataDie - startRataDie + 1)
+            return Range(1...(endRataDie - startRataDie))
         default:
             break
         }
@@ -534,7 +534,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         guard let ord1 = ordinality(of: smaller, in: larger, for: interval.start + 0.1) else { return nil }
         guard let ord2 = ordinality(of: smaller, in: larger, for: interval.start + interval.duration - 0.1) else { return nil }
         if ord2 < ord1 { return ord1..<ord1 }
-        return ord1..<(ord2 + 1)
+        return Range(ord1...ord2)
     }
 
     // MARK: Ordinality
