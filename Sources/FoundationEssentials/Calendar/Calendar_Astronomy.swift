@@ -30,11 +30,11 @@ internal enum _CalendarAstronomy {
     static let j2000 = 730120.5
     static let newMoonZero = 11.458922815770109
 
-    static func polynomial(_ x: Double, _ coefficients: [Double]) -> Double {
+    static func polynomial<let count: Int>(_ x: Double, _ coefficients: InlineArray<count, Double>) -> Double {
         var result = 0.0
         var power = 1.0
-        for c in coefficients {
-            result += c * power
+        for i in 0..<count {
+            result += coefficients[i] * power
             power *= x
         }
         return result
@@ -66,7 +66,7 @@ internal enum _CalendarAstronomy {
         return y
     }
 
-    // Dynamical-minus-universal time (fraction of a day). Meeus/NASA fits.
+    // Delta-T (dynamical minus universal time) as a fraction of a day. Espenak & Meeus polynomial expressions, published by NASA Goddard.
     static func ephemerisCorrection(_ moment: Double) -> Double {
         let year = moment / 365.2425
         let yearInt = Int(year > 0 ? year + 1 : year)
@@ -129,28 +129,56 @@ internal enum _CalendarAstronomy {
         0.0000974 * cosDegrees(177.63 + 35999.01848 * c) - 0.005575
     }
 
-    // Static so the hot lunation/solstice paths don't allocate arrays per call.
-    private static let solarCoefficients: [Double] = [
-        403406, 195207, 119433, 112392, 3891, 2819, 1721, 660, 350, 334,
-        314, 268, 242, 234, 158, 132, 129, 114, 99, 93, 86, 78, 72,
-        68, 64, 46, 38, 37, 32, 29, 28, 27, 27, 25, 24, 21, 21,
-        20, 18, 17, 14, 13, 13, 13, 12, 10, 10, 10, 10,
-    ]
-    private static let solarAddends: [Double] = [
-        270.54861, 340.19128, 63.91854, 331.26220, 317.843, 86.631, 240.052, 310.26, 247.23,
-        260.87, 297.82, 343.14, 166.79, 81.53, 3.50, 132.75, 182.95, 162.03, 29.8, 266.4,
-        249.2, 157.6, 257.8, 185.1, 69.9, 8.0, 197.1, 250.4, 65.3, 162.7, 341.5, 291.6, 98.5,
-        146.7, 110.0, 5.2, 342.6, 230.9, 256.1, 45.3, 242.9, 115.2, 151.8, 285.3, 53.3, 126.6,
-        205.7, 85.9, 146.1,
-    ]
-    private static let solarMultipliers: [Double] = [
-        0.9287892, 35999.1376958, 35999.4089666, 35998.7287385, 71998.20261, 71998.4403,
-        36000.35726, 71997.4812, 32964.4678, -19.4410, 445267.1117, 45036.8840, 3.1008,
-        22518.4434, -19.9739, 65928.9345, 9038.0293, 3034.7684, 33718.148, 3034.448,
-        -2280.773, 29929.992, 31556.493, 149.588, 9037.750, 107997.405, -4444.176, 151.771,
-        67555.316, 31556.080, -4561.540, 107996.706, 1221.655, 62894.167, 31437.369,
-        14578.298, -31931.757, 34777.243, 1221.999, 62894.511, -4442.039, 107997.909,
-        119.066, 16859.071, -4.578, 26895.292, -39.127, 12297.536, 90073.778,
+    private static let solarTerms: InlineArray<49, (coefficient: Double, addend: Double, multiplier: Double)> = [
+        (403406, 270.54861, 0.9287892),
+        (195207, 340.19128, 35999.1376958),
+        (119433, 63.91854, 35999.4089666),
+        (112392, 331.26220, 35998.7287385),
+        (3891, 317.843, 71998.20261),
+        (2819, 86.631, 71998.4403),
+        (1721, 240.052, 36000.35726),
+        (660, 310.26, 71997.4812),
+        (350, 247.23, 32964.4678),
+        (334, 260.87, -19.4410),
+        (314, 297.82, 445267.1117),
+        (268, 343.14, 45036.8840),
+        (242, 166.79, 3.1008),
+        (234, 81.53, 22518.4434),
+        (158, 3.50, -19.9739),
+        (132, 132.75, 65928.9345),
+        (129, 182.95, 9038.0293),
+        (114, 162.03, 3034.7684),
+        (99, 29.8, 33718.148),
+        (93, 266.4, 3034.448),
+        (86, 249.2, -2280.773),
+        (78, 157.6, 29929.992),
+        (72, 257.8, 31556.493),
+        (68, 185.1, 149.588),
+        (64, 69.9, 9037.750),
+        (46, 8.0, 107997.405),
+        (38, 197.1, -4444.176),
+        (37, 250.4, 151.771),
+        (32, 65.3, 67555.316),
+        (29, 162.7, 31556.080),
+        (28, 341.5, -4561.540),
+        (27, 291.6, 107996.706),
+        (27, 98.5, 1221.655),
+        (25, 146.7, 62894.167),
+        (24, 110.0, 31437.369),
+        (21, 5.2, 14578.298),
+        (21, 342.6, -31931.757),
+        (20, 230.9, 34777.243),
+        (18, 256.1, 1221.999),
+        (17, 45.3, 62894.511),
+        (14, 242.9, -4442.039),
+        (13, 115.2, 107997.909),
+        (13, 151.8, 119.066),
+        (13, 285.3, 16859.071),
+        (12, 53.3, -4.578),
+        (10, 126.6, 26895.292),
+        (10, 205.7, -39.127),
+        (10, 85.9, 12297.536),
+        (10, 146.1, 90073.778),
     ]
 
     // Solar longitude in degrees [0, 360), 49-term Bretagnon & Simon series.
@@ -158,7 +186,8 @@ internal enum _CalendarAstronomy {
         let c = julianCenturies(moment)
         var lambda = 0.0
         for i in 0..<49 {
-            lambda += solarCoefficients[i] * sinDegrees(solarAddends[i] + solarMultipliers[i] * c)
+            let term = solarTerms[i]
+            lambda += term.coefficient * sinDegrees(term.addend + term.multiplier * c)
         }
         lambda *= 0.000005729577951308232
         lambda += 282.7771834 + 36000.76953744 * c
@@ -166,30 +195,47 @@ internal enum _CalendarAstronomy {
     }
 
 
-    private static let newMoonSineCoefficients: [Double] = [
-        -0.40720, 0.17241, 0.01608, 0.01039, 0.00739, -0.00514, 0.00208, -0.00111, -0.00057,
-        0.00056, -0.00042, 0.00042, 0.00038, -0.00024, -0.00007, 0.00004, 0.00004, 0.00003,
-        0.00003, -0.00003, 0.00003, -0.00002, -0.00002, 0.00002,
+    private static let newMoonTerms: InlineArray<24, (sine: Double, solar: Double, lunar: Double, argument: Double)> = [
+        (sine: -0.40720, solar: 0, lunar: 1, argument: 0),
+        (sine: 0.17241, solar: 1, lunar: 0, argument: 0),
+        (sine: 0.01608, solar: 0, lunar: 2, argument: 0),
+        (sine: 0.01039, solar: 0, lunar: 0, argument: 2),
+        (sine: 0.00739, solar: -1, lunar: 1, argument: 0),
+        (sine: -0.00514, solar: 1, lunar: 1, argument: 0),
+        (sine: 0.00208, solar: 2, lunar: 0, argument: 0),
+        (sine: -0.00111, solar: 0, lunar: 1, argument: -2),
+        (sine: -0.00057, solar: 0, lunar: 1, argument: 2),
+        (sine: 0.00056, solar: 1, lunar: 2, argument: 0),
+        (sine: -0.00042, solar: 0, lunar: 3, argument: 0),
+        (sine: 0.00042, solar: 1, lunar: 0, argument: 2),
+        (sine: 0.00038, solar: 1, lunar: 0, argument: -2),
+        (sine: -0.00024, solar: -1, lunar: 2, argument: 0),
+        (sine: -0.00007, solar: 2, lunar: 1, argument: 0),
+        (sine: 0.00004, solar: 0, lunar: 2, argument: -2),
+        (sine: 0.00004, solar: 3, lunar: 0, argument: 0),
+        (sine: 0.00003, solar: 1, lunar: 1, argument: -2),
+        (sine: 0.00003, solar: 0, lunar: 2, argument: 2),
+        (sine: -0.00003, solar: 1, lunar: 1, argument: 2),
+        (sine: 0.00003, solar: -1, lunar: 1, argument: 2),
+        (sine: -0.00002, solar: -1, lunar: 1, argument: -2),
+        (sine: -0.00002, solar: 1, lunar: 3, argument: 0),
+        (sine: 0.00002, solar: 0, lunar: 4, argument: 0),
     ]
-    private static let newMoonSolarFactors: [Double] = [
-        0, 1, 0, 0, -1, 1, 2, 0, 0, 1, 0, 1, 1, -1, 2, 0, 3, 1, 0, 1, -1, -1, 1, 0,
-    ]
-    private static let newMoonLunarFactors: [Double] = [
-        1, 0, 2, 0, 1, 1, 0, 1, 1, 2, 3, 0, 0, 2, 1, 2, 0, 1, 2, 1, 1, 1, 3, 4,
-    ]
-    private static let newMoonArgumentFactors: [Double] = [
-        0, 0, 0, 2, 0, 0, 0, -2, 2, 0, 0, 2, -2, 0, 0, -2, 0, -2, 2, 2, 2, -2, 0, 0,
-    ]
-    private static let newMoonExtraAddends: [Double] = [
-        251.88, 251.83, 349.42, 84.66, 141.74, 207.14, 154.84, 34.52, 207.19, 291.34, 161.72, 239.56, 331.55,
-    ]
-    private static let newMoonExtraMultipliers: [Double] = [
-        0.016321, 26.651886, 36.412478, 18.206239, 53.303771, 2.453732, 7.306860, 27.261239,
-        0.121824, 1.844379, 24.198154, 25.513099, 3.592518,
-    ]
-    private static let newMoonExtraCoefficients: [Double] = [
-        0.000165, 0.000164, 0.000126, 0.000110, 0.000062, 0.000060, 0.000056, 0.000047,
-        0.000042, 0.000040, 0.000037, 0.000035, 0.000023,
+
+    private static let newMoonExtraTerms: InlineArray<13, (addend: Double, multiplier: Double, coefficient: Double)> = [
+        (addend: 251.88, multiplier: 0.016321, coefficient: 0.000165),
+        (addend: 251.83, multiplier: 26.651886, coefficient: 0.000164),
+        (addend: 349.42, multiplier: 36.412478, coefficient: 0.000126),
+        (addend: 84.66, multiplier: 18.206239, coefficient: 0.000110),
+        (addend: 141.74, multiplier: 53.303771, coefficient: 0.000062),
+        (addend: 207.14, multiplier: 2.453732, coefficient: 0.000060),
+        (addend: 154.84, multiplier: 7.306860, coefficient: 0.000056),
+        (addend: 34.52, multiplier: 27.261239, coefficient: 0.000047),
+        (addend: 207.19, multiplier: 0.121824, coefficient: 0.000042),
+        (addend: 291.34, multiplier: 1.844379, coefficient: 0.000040),
+        (addend: 161.72, multiplier: 24.198154, coefficient: 0.000037),
+        (addend: 239.56, multiplier: 25.513099, coefficient: 0.000035),
+        (addend: 331.55, multiplier: 3.592518, coefficient: 0.000023),
     ]
 
     // Moment of the nth new moon since the 24724-indexed epoch; Meeus 24+13 terms.
@@ -215,15 +261,16 @@ internal enum _CalendarAstronomy {
 
         var correction = -0.00017 * sinDegrees(omega)
         for i in 0..<24 {
-            let ePow = pow(e, abs(newMoonSolarFactors[i]))
-            let arg = newMoonSolarFactors[i] * solarAnomaly + newMoonLunarFactors[i] * lunarAnomaly
-                + newMoonArgumentFactors[i] * moonArgument
-            correction += newMoonSineCoefficients[i] * ePow * sinDegrees(arg)
+            let term = newMoonTerms[i]
+            let ePow = pow(e, abs(term.solar))
+            let arg = term.solar * solarAnomaly + term.lunar * lunarAnomaly + term.argument * moonArgument
+            correction += term.sine * ePow * sinDegrees(arg)
         }
         let extra = 0.000325 * sinDegrees(299.77 + 132.8475848 * c - 0.009173 * c * c)
         var additional = 0.0
         for i in 0..<13 {
-            additional += newMoonExtraCoefficients[i] * sinDegrees(newMoonExtraAddends[i] + newMoonExtraMultipliers[i] * k)
+            let term = newMoonExtraTerms[i]
+            additional += term.coefficient * sinDegrees(term.addend + term.multiplier * k)
         }
         return universalFromDynamical(approx + correction + extra + additional)
     }
