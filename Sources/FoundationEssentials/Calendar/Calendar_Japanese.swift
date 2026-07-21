@@ -402,10 +402,10 @@ internal final class _CalendarJapanese: _CalendarProtocol, @unchecked Sendable {
     }
 
     private func eraEntry(byIndex index: Int) -> EraEntry? {
-        for i in 0..<Self.eraCount {
-            if Self.era(at: i).index == index { return Self.era(at: i) }
-        }
-        return nil
+        let i = Self.eraCount - 1 - index
+        guard i >= 0 && i < Self.eraCount else { return nil }
+        let era = Self.era(at: i)
+        return era.index == index ? era : nil
     }
 
     private func eraInterval(containing date: Date) -> DateInterval? {
@@ -417,14 +417,9 @@ internal final class _CalendarJapanese: _CalendarProtocol, @unchecked Sendable {
         let startDC = DateComponents(year: era.startGregorianYear, month: era.startMonth, day: era.startDay, hour: 0, minute: 0, second: 0)
         guard let start = gregorian.date(from: startDC) else { return nil }
         let endDate: Date
-        var nextEra: EraEntry? = nil
-        for i in 0..<Self.eraCount {
-            if Self.era(at: i).index == era.index && i > 0 {
-                nextEra = Self.era(at: i - 1)
-                break
-            }
-        }
-        if let next = nextEra {
+        let position = Self.eraCount - 1 - era.index
+        if position > 0 {
+            let next = Self.era(at: position - 1)
             let endDC = DateComponents(year: next.startGregorianYear, month: next.startMonth, day: next.startDay, hour: 0, minute: 0, second: 0)
             guard let e = gregorian.date(from: endDC) else { return nil }
             endDate = e
