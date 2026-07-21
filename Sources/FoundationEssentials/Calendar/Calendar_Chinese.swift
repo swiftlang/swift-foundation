@@ -257,6 +257,7 @@ internal enum _ChineseCalendarEngine {
     0x00300B45, 0x001A0A8B, 0x0004549B, 0x002A04AB, // 2097-2100
     ]
 
+    // Cross-instance memoization for out-of-range years only (pre-1901 / post-2100); in-range dates read the baked table and never acquire this lock, so it stays off the hot path.
     static let fallbackCache = Mutex<(rules: _ChineseRules, years: [Int: _ChineseYear])>(
         (_ChineseRules(), [:]))
 
@@ -271,6 +272,9 @@ internal enum _ChineseCalendarEngine {
             leapDisplay: leap)
     }
 
+    /// Month structure for the Chinese year whose New Year falls in Gregorian `relatedISOYear`.
+    ///
+    /// In the baked range (1901...2100) this is a direct table decode. Outside it the structure is computed from astronomy and memoized: locate this year's New Year and the next year's, walk the new moons between them to get each month's first day, record 29- vs 30-day lengths as bits, and mark the leap month (the month carrying no major solar term). The seam years at the table edges reuse the table's own New Year so the computed and baked spans tile exactly.
     static func year(relatedISOYear: Int) -> _ChineseYear {
         let idx = relatedISOYear - tableStart
         if idx >= 0 && idx < table.count {
@@ -291,6 +295,7 @@ internal enum _ChineseCalendarEngine {
             } else {
                 nyNext = state.rules.newYear(relatedISOYear + 1)
             }
+            // Collect each month's first day: successive new moons from this New Year up to (but not including) the next year's New Year.
             var starts = [ny]
             var cur = ny
             while true {
@@ -299,6 +304,7 @@ internal enum _ChineseCalendarEngine {
                 starts.append(nxt)
                 cur = nxt
             }
+            // Pack month lengths (30-day months set a bit) and record the leap month, if any.
             var bits: UInt16 = 0
             var leapDisplay: UInt8 = 0
             for (i, s) in starts.enumerated() {

@@ -79,33 +79,34 @@ internal enum _CalendarAstronomy {
         let y0 = Double(yearInt) / 100.0
         let y1820 = Double(yearInt - 1820) / 100.0
 
-        if (2051...2150).contains(yearInt) {
+        switch yearInt {
+        case 2051...2150:
             return (-20.0 + 32.0 * Double((yearInt - 1820) * (yearInt - 1820)) / 10000.0
                     + 0.5628 * Double(2150 - yearInt)) / 86400.0
-        } else if (2006...2050).contains(yearInt) {
+        case 2006...2050:
             return (62.92 + 0.32217 * y2000 + 0.005589 * y2000 * y2000) / 86400.0
-        } else if (1987...2005).contains(yearInt) {
+        case 1987...2005:
             return polynomial(y2000, [63.86, 0.3345, -0.060374, 0.0017275,
                                 0.000651814, 0.00002373599]) / 86400.0
-        } else if (1900...1986).contains(yearInt) {
+        case 1900...1986:
             return polynomial(c, [-0.00002, 0.000297, 0.025184, -0.181133,
                             0.553040, -0.861938, 0.677066, -0.212591])
-        } else if (1800...1899).contains(yearInt) {
+        case 1800...1899:
             return polynomial(c, [-0.000009, 0.003844, 0.083563, 0.865736,
                             4.867575, 15.845535, 31.332267, 38.291999,
                             28.316289, 11.636204, 2.043794])
-        } else if (1700...1799).contains(yearInt) {
+        case 1700...1799:
             return polynomial(y1700, [8.118780842, -0.005092142, 0.003336121,
                                 -0.0000266484]) / 86400.0
-        } else if (1600...1699).contains(yearInt) {
+        case 1600...1699:
             return polynomial(y1600, [120.0, -0.9808, -0.01532, 0.000140272128]) / 86400.0
-        } else if (500...1599).contains(yearInt) {
+        case 500...1599:
             return polynomial(y1000, [1574.2, -556.01, 71.23472, 0.319781,
                                 -0.8503463, -0.005050998, 0.0083572073]) / 86400.0
-        } else if (-499...499).contains(yearInt) {
+        case -499...499:
             return polynomial(y0, [10583.6, -1014.41, 33.78311, -5.952053,
                              -0.1798452, 0.022174192, 0.0090316521]) / 86400.0
-        } else {
+        default:
             return (-20.0 + 32.0 * y1820 * y1820) / 86400.0
         }
     }
