@@ -330,13 +330,13 @@ internal final class _CalendarJapanese: _CalendarProtocol, @unchecked Sendable {
     // MARK: - Range
 
     func minimumRange(of component: Calendar.Component) -> Range<Int>? {
-        if component == .era { return 0..<(Self.era(at: Self.eraCount - 1).index + Self.eraCount) }
-        if component == .year { return 1..<2 }
+        if component == .era { return Range(0...Self.era(at: 0).index) }
+        if component == .year { return Range(1...1) }
         return gregorian.minimumRange(of: component)
     }
 
     func maximumRange(of component: Calendar.Component) -> Range<Int>? {
-        if component == .era { return 0..<(Self.era(at: 0).index + 1) }
+        if component == .era { return Range(0...Self.era(at: 0).index) }
         return gregorian.maximumRange(of: component)
     }
 

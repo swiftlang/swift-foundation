@@ -69,12 +69,12 @@ internal final class _CalendarBuddhist: _CalendarProtocol, @unchecked Sendable {
     // MARK: - Range
 
     func minimumRange(of component: Calendar.Component) -> Range<Int>? {
-        if component == .era { return 0..<1 }
+        if component == .era { return Range(0...0) }
         return gregorian.minimumRange(of: component)
     }
 
     func maximumRange(of component: Calendar.Component) -> Range<Int>? {
-        if component == .era { return 0..<1 }
+        if component == .era { return Range(0...0) }
         return gregorian.maximumRange(of: component)
     }
 
