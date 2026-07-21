@@ -13,6 +13,8 @@
 - Reference the PR or bug that motivated the change (belongs in the PR description)
 - Repeat information accessible from `git blame`
 
+**Let clear names replace comments.** Review the names of your functions and their arguments. If a name is clear on its own, drop any comment that only restates what it does. If you need a comment to explain what the code is doing, improve the name instead of adding the comment.
+
 **Using TODOs:** Remove stale TODOs when addressing them. For future refactoring opportunities you are *not* addressing in this PR, use `// TODO:`.
 
 **When you reimplement functionality that belongs in the standard library** (e.g. Unicode scalar property queries), add a `// TODO:` referencing a filed enhancement request number so the local workaround can be removed once the stdlib gains the capability.
@@ -28,6 +30,24 @@
 **Keep type names and file names in sync.** If a file defines a single primary type, name the file after that type.
 
 **Use the `if let` shorthand when unwrapping to a non-optional.** When the only purpose is to bind a non-`nil` optional to a non-optional of the same name, write `if let value` rather than `if let value = value`. This applies to each binding in a comma-separated condition list too.
+
+---
+
+## Writing Style
+
+Write comments, DocC, commit messages, and PR descriptions in plain English. Aim for prose that is clear and concise, written with the reader in mind.
+
+**Keep sentences short.** Aim for an average of 15 to 20 words and one main idea per sentence. Break a long sentence up rather than forcing everything into one.
+
+**Prefer active verbs.** Write "the parser reads the header", not "the header is read by the parser". Reserve the passive for when the doer is unknown or genuinely does not matter.
+
+**Avoid nominalizations.** Use the verb, not the noun spun from it: "we discussed the design", not "we had a discussion about the design"; "the team implemented it", not "implementation was done by the team".
+
+**Use everyday words.** Pick the simplest word that fits: "extra" over "additional", "start" over "commence", "before" over "prior to", "about" over "regarding", "use" over "utilize", "so" over "consequently". Explain any domain term the reader may not know.
+
+**Give direct instructions.** In steps and guidance, use the imperative: "call `reset()` first", not "you should call `reset()` first".
+
+**Use lists to break up dense information.** A few bullets read faster than one long, comma-heavy sentence.
 
 ---
 
