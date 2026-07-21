@@ -1,9 +1,9 @@
 # Data Manipulation with Spans
 
-* Proposal: [SF-NNNN](NNNN-data-span-apis.md)
+* Proposal: [SF-0042](0042-data-span-apis.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Review Manager: TBD
-* Status: **Awaiting review**
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Review: 2026-07-21...2026-07-28**
 * Implementation: TBD
 * Review: ([pitch](https://forums.swift.org/t/pitch-data-manipulation-with-spans/87952))
 
