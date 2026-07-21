@@ -204,7 +204,7 @@ internal enum _ChineseCalendarEngine {
     // One entry per Chinese year, indexed by the Gregorian year in which that Chinese year begins.
     // Packing: bits 0-12 month lengths (1=30d), 13-16 leap display number (0=none), 17-22 new-year offset from Jan 19 of that Gregorian year.
     static let tableStart = 1901
-    static let table: [UInt32] = [
+    static let table: InlineArray<200, UInt32> = [
     0x003E0752, 0x00280EA5, 0x0014B64A, 0x0038064B, // 1901-1904
     0x00200A9B, 0x000C9556, 0x0032056A, 0x001C0B59, // 1905-1908
     0x00065752, 0x002C0752, 0x0016DB25, 0x003C0B25, // 1909-1912
