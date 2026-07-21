@@ -29,7 +29,7 @@ internal final class _CalendarJapanese: _CalendarProtocol, @unchecked Sendable {
 
     /// 237 Japanese eras (Taika 645 → Reiwa 2019), sorted descending. Index values match ICU's era numbering.
     // Meiji (232) uses 1868-09-08 to match Apple's runtime ICU (CLDR canonical is 1868-10-23).
-    private static let eraData: InlineArray<237, (Int32, Int16, Int8, Int8)> = [
+    private static let eraData: InlineArray<237, (index: Int32, year: Int16, month: Int8, day: Int8)> = [
         (236, 2019, 5, 1),
         (235, 1989, 1, 8),
         (234, 1926, 12, 25),
@@ -273,7 +273,7 @@ internal final class _CalendarJapanese: _CalendarProtocol, @unchecked Sendable {
 
     private static func era(at i: Int) -> EraEntry {
         let raw = eraData[i]
-        return EraEntry(raw.0, raw.1, raw.2, raw.3)
+        return EraEntry(raw.index, raw.year, raw.month, raw.day)
     }
 
     private let gregorian: _CalendarGregorian
@@ -414,11 +414,7 @@ internal final class _CalendarJapanese: _CalendarProtocol, @unchecked Sendable {
         guard let era = eraEntry(forGregorianYear: y, month: m, day: d) else {
             return gregorian.dateInterval(of: .era, for: date)
         }
-        var startDC = DateComponents()
-        startDC.year = era.startGregorianYear
-        startDC.month = era.startMonth
-        startDC.day = era.startDay
-        startDC.hour = 0; startDC.minute = 0; startDC.second = 0
+        let startDC = DateComponents(year: era.startGregorianYear, month: era.startMonth, day: era.startDay, hour: 0, minute: 0, second: 0)
         guard let start = gregorian.date(from: startDC) else { return nil }
         let endDate: Date
         var nextEra: EraEntry? = nil
@@ -429,11 +425,7 @@ internal final class _CalendarJapanese: _CalendarProtocol, @unchecked Sendable {
             }
         }
         if let next = nextEra {
-            var endDC = DateComponents()
-            endDC.year = next.startGregorianYear
-            endDC.month = next.startMonth
-            endDC.day = next.startDay
-            endDC.hour = 0; endDC.minute = 0; endDC.second = 0
+            let endDC = DateComponents(year: next.startGregorianYear, month: next.startMonth, day: next.startDay, hour: 0, minute: 0, second: 0)
             guard let e = gregorian.date(from: endDC) else { return nil }
             endDate = e
         } else {
