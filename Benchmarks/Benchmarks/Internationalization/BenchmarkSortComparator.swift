@@ -179,20 +179,6 @@ private func randomString(using rng: inout SeededGenerator) -> String {
     return s
 }
 
-/// A UUID built from the generator so the whole fixture is reproducible.
-private func randomUUID(using rng: inout SeededGenerator) -> UUID {
-    let a = rng.next(), b = rng.next()
-    return UUID(uuid: (
-        UInt8(truncatingIfNeeded: a), UInt8(truncatingIfNeeded: a >> 8),
-        UInt8(truncatingIfNeeded: a >> 16), UInt8(truncatingIfNeeded: a >> 24),
-        UInt8(truncatingIfNeeded: a >> 32), UInt8(truncatingIfNeeded: a >> 40),
-        UInt8(truncatingIfNeeded: a >> 48), UInt8(truncatingIfNeeded: a >> 56),
-        UInt8(truncatingIfNeeded: b), UInt8(truncatingIfNeeded: b >> 8),
-        UInt8(truncatingIfNeeded: b >> 16), UInt8(truncatingIfNeeded: b >> 24),
-        UInt8(truncatingIfNeeded: b >> 32), UInt8(truncatingIfNeeded: b >> 40),
-        UInt8(truncatingIfNeeded: b >> 48), UInt8(truncatingIfNeeded: b >> 56)))
-}
-
 private func makeEntries(count: Int) -> [Entry] {
     var rng = SeededGenerator(seed: 0x1234_5678_9ABC_DEF0)
     // A small pool of repeated strings so string sorts see realistic ties, which
@@ -213,7 +199,7 @@ private func makeEntries(count: Int) -> [Entry] {
             str1: stringPool[Int(rng.next() % UInt64(stringPool.count))],
             str2: randomString(using: &rng),
             _computedProperty: computed,
-            id: randomUUID(using: &rng)))
+            id: UUID.random(using: &rng)))
     }
     return entries
 }
