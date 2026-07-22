@@ -451,7 +451,6 @@ internal struct BuiltInUnicodeScalarSet {
     static let hfsPlusDecomposables = Self.init(type: .hfsPlusDecomposable)
     static let graphemeExtends = Self.init(type: .graphemeExtend)
     static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
-    static let strongRightToLefts = Self.init(type: .strongRightToLeft)
 }
 
 #if !FOUNDATION_FRAMEWORK
