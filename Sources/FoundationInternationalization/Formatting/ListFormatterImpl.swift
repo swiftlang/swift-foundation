@@ -496,7 +496,7 @@ internal final class ListFormatterImpl: Sendable {
                 }
                 return false
             }
-            for scalar in item.unicodeScalars where isStrongLTR(scalar) {
+            for scalar in item.unicodeScalars where scalar._bidiClass == .leftToRight {
                 return true
             }
         } else {
@@ -506,69 +506,28 @@ internal final class ListFormatterImpl: Sendable {
             for scalar in item.unicodeScalars {
                 // The item is non-ASCII overall but may still mix ASCII and
                 // non-ASCII scalars (e.g. "David <hebrew>"); skip its ASCII runs
-                // so we don't pay `_isStrongRTL`'s bitmap lookup on scalars that
-                // can be neither strong-RTL nor an Arabic number.
+                // so we don't pay for a Bidi_Class lookup on scalars that can be
+                // neither strong-RTL nor an Arabic number.
                 if scalar.value < 0x80 { continue }
-                if scalar._isStrongRTL || isArabicNumber(scalar) { return true }
+                // Isolate on strong-RTL (`R`/`AL`) and Arabic numbers (`AN`).
+                // `AN` is included but European numbers (`EN`) are not: for
+                // neutral resolution (UAX #9 rule N1), Arabic numbers "act as if
+                // they were R", so an unwrapped `AN` item would pull the list's
+                // neutral separators (", ") to RTL and misorder them. Rule W7
+                // instead turns an `EN` preceded by strong-LTR context into `L`,
+                // so European numbers (including the Persian "extended
+                // Arabic-Indic" digits U+06F0–06F9) behave as ordinary LTR and
+                // don't disturb the separators. This matches Apple-ICU's
+                // `needsBidiIsolates` (which triggers on `AN` but not `EN`).
+                switch scalar._bidiClass {
+                case .rightToLeft, .arabicLetter, .arabicNumber:
+                    return true
+                default:
+                    break
+                }
             }
         }
         return false
-    }
-
-    /// Whether `scalar` is a strong left-to-right character (UAX #9 class `L`),
-    /// approximated as "a letter that isn't strong-RTL". Strong-RTL is the
-    /// `BuiltInUnicodeScalarSet(.strongRightToLeft)` bitmap.
-    private func isStrongLTR(_ scalar: Unicode.Scalar) -> Bool {
-        let v = scalar.value
-        // ASCII fast path: ASCII letters are strong LTR; nothing else in the
-        // ASCII range is strong-directional.
-        if v < 0x80 {
-            return (v >= 0x41 && v <= 0x5A) || (v >= 0x61 && v <= 0x7A)
-        }
-        if scalar._isStrongRTL { return false }
-        switch scalar.properties.generalCategory {
-        case
-            .uppercaseLetter,
-            .lowercaseLetter,
-            .titlecaseLetter,
-            .modifierLetter,
-            .otherLetter:
-            return true
-        default:
-            return false
-        }
-    }
-
-    /// Whether `scalar` is Bidi_Class `AN` (Arabic Number) — Arabic-Indic digits
-    /// plus the associated Arabic number signs and separators.
-    ///
-    /// These are isolated in an LTR list because, for neutral resolution (UAX #9
-    /// rule N1), Arabic numbers "act as if they were R": an unwrapped `AN` item
-    /// would pull the list's neutral separators (", ") to RTL and misorder them.
-    /// European numbers (ASCII digits, and Persian "extended Arabic-Indic" digits
-    /// U+06F0–06F9, which Unicode classes as `EN`) are deliberately *excluded*:
-    /// rule W7 turns an `EN` preceded by strong-LTR context into `L`, so they
-    /// behave as ordinary LTR and don't disturb the separators. This matches
-    /// Apple-ICU's `needsBidiIsolates` (which triggers on `AN` but not `EN`).
-    ///
-    /// TODO: Replace these hand-coded ranges with a real Bidi_Class lookup once
-    /// swift-foundation exposes one without depending on ICU. The bundled
-    /// CFUniChar bitmaps cover the strong-RTL set used by `_isStrongRTL` but
-    /// carry no Arabic-number / bidi-class data, so the ranges are maintained by
-    /// hand for now (and don't cover the SMP `AN` ranges, e.g. Rumi numerals).
-    private func isArabicNumber(_ scalar: Unicode.Scalar) -> Bool {
-        switch scalar.value {
-        case
-            0x0600...0x0605,  // Arabic number signs
-            0x0660...0x0669,  // Arabic-Indic digits
-            0x066B...0x066C,  // Arabic decimal / thousands separators
-            0x06DD,           // Arabic end of ayah
-            0x0890...0x0891,  // Arabic pound / piastre marks
-            0x08E2:           // Arabic disputed end of ayah
-            return true
-        default:
-            return false
-        }
     }
 
     /// The contextual substitution rule for a `(language, type)`, if any: a

@@ -38,13 +38,6 @@ extension UnicodeScalar {
         return BuiltInUnicodeScalarSet.canonicalDecomposables.contains(self)
     }
 
-    /// Whether this scalar is a strong right-to-left character per UAX #9
-    /// (Bidi_Class R or AL). Used by ListFormatStyle's bidi-isolate wrapping
-    /// to detect items whose direction conflicts with the surrounding list.
-    package var _isStrongRTL: Bool {
-        return BuiltInUnicodeScalarSet.strongRightToLefts.contains(self)
-    }
-
     func _stripDiacritics() -> Self {
         guard _isCanonicalDecomposable else {
             return self
