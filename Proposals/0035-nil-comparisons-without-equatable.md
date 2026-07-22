@@ -1,9 +1,9 @@
-# Support for `nil` comparisons without `Equatable` conformance
+# `PredicateExpressions` API for `nil` comparisons without `Equatable` conformance within `#Predicate`s
 
 * Proposal: [SF-0035](0035-nil-comparisons-without-equatable.md)
 * Authors: [Matthew Turk](https://github.com/MatthewTurk247)
-* Review Manager: TBD
-* Status: **Pitch**
+* Review Manager: [Jeremy Schonfeld](https://github.com/jmschonfeld)
+* Status: **Review (2026-07-22...2026-07-29**
 * Bug: [swiftlang/swift-foundation#711](https://github.com/swiftlang/swift-foundation/issues/711)
 
 ## Revision history
