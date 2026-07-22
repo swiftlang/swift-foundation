@@ -34,13 +34,25 @@ internal import _ForSwiftFoundation
 internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool {
     _foundation_swift_hebrew_calendar_feature_enabled()
 }
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool {
+    return false
+}
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool {
+    return false
+}
 #else
 internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool { return false }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
     if identifier == .gregorian || identifier == .iso8601 {
         return _CalendarGregorian.self
+    } else if foundation_swift_buddhist_calendar_feature_enabled() && identifier == .buddhist {
+        return _CalendarBuddhist.self
+    } else if foundation_swift_japanese_calendar_feature_enabled() && identifier == .japanese {
+        return _CalendarJapanese.self
     } else if foundation_swift_hebrew_calendar_feature_enabled() && identifier == .hebrew {
         return _CalendarHebrew.self
     } else {
