@@ -52,7 +52,7 @@ If both sides are `nil`, fall back to `build_Equal(lhs:rhs:)`. Note that `#Predi
 Each builder works by wrapping the non-`Equatable` variable expression in an `OptionalFlatMap`, whose initializer accepts a closure that can evaluate to different outputs based on whether a given input value is present. If a value is present, the closure should discard it and return `Value(true)`. Then, that optional result is compared to `nil` with the binary operator given by the name of the method. This approach is analogous to using a branch of an `if let` conditional binding as a comparand, for which existing API does not constrain the input to `Equatable` types.
 
 ```swift
-@available(FoundationPreview 6.4, *)
+@available(FoundationPreview 6.5, *)
 extension PredicateExpressions {
     public static func build_Equal<LHS, Wrapped>(
         lhs: LHS,
