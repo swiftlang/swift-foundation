@@ -6,5 +6,6 @@ let benchmarks: @Sendable () -> Void = {
     calendarBenchmarks()
     localeBenchmarks()
     timeZoneBenchmarks()
+    sortComparatorBenchmarks()
 }
 #endif
