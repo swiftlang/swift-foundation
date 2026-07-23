@@ -1178,14 +1178,111 @@ private struct StringTests {
         }
     }
 
-    @Test func init_contentsOfFile_usedEncoding() throws {
-        try withTemporaryStringFile { existingURL, nonExistentURL in
+    @Test(arguments: [String.Encoding.utf8, .utf16, .utf32])
+    func init_contentsOfFile_usedEncoding(encoding: String.Encoding) throws {
+        try withTemporaryStringFile(encoding: encoding) { existingURL, nonExistentURL in
             var usedEncoding = String.Encoding(rawValue: 0)
             let content = try String(contentsOfFile: existingURL.path(), usedEncoding: &usedEncoding)
-            #expect(0 != usedEncoding.rawValue)
+            #expect(usedEncoding == encoding)
             #expect(temporaryFileContents == content)
         }
+    }
 
+    @Test
+    func init_contentsOfFile_usedEncoding_unknown() throws {
+        // UTF-32 BOM (no content)
+        try withTemporaryFile(contents: Data([0xFF, 0xFE, 0x00, 0x00])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf32)
+            #expect(content.isEmpty)
+        }
+        try withTemporaryFile(contents: Data([0x00, 0x00, 0xFE, 0xFF])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf32)
+            #expect(content.isEmpty)
+        }
+
+        // UTF-32 BOM (with content)
+        try withTemporaryFile(contents: Data([0xFF, 0xFE, 0x00, 0x00, UInt8(ascii: "A"), 0x00, 0x00, 0x00])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf32)
+            #expect(content == "A")
+        }
+        try withTemporaryFile(contents: Data([0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, UInt8(ascii: "A")])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf32)
+            #expect(content == "A")
+        }
+
+        // UTF-16 BOM (no content)
+        try withTemporaryFile(contents: Data([0xFF, 0xFE])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf16)
+            #expect(content.isEmpty)
+        }
+        try withTemporaryFile(contents: Data([0xFE, 0xFF])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf16)
+            #expect(content.isEmpty)
+        }
+
+        // UTF-16 BOM (with content)
+        try withTemporaryFile(contents: Data([0xFF, 0xFE, UInt8(ascii: "A"), 0x00])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf16)
+            #expect(content == "A")
+        }
+        try withTemporaryFile(contents: Data([0xFE, 0xFF, 0x00, UInt8(ascii: "A")])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf16)
+            #expect(content == "A")
+        }
+
+        // UTF-8 BOM (no content)
+        try withTemporaryFile(contents: Data([0xEF, 0xBB, 0xBF])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf8)
+            #expect(content.isEmpty)
+        }
+
+        // UTF-8 BOM (with content)
+        try withTemporaryFile(contents: Data([0xEF, 0xBB, 0xBF, UInt8(ascii: "A")])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf8)
+            #expect(content == "A")
+        }
+
+        // No BOM (no content)
+        try withTemporaryFile(contents: Data()) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf8)
+            #expect(content.isEmpty)
+        }
+
+        // No BOM (with content)
+        try withTemporaryFile(contents: Data([UInt8(ascii: "A")])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf8)
+            #expect(content == "A")
+        }
+        try withTemporaryFile(contents: Data([UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A")])) { url in
+            var usedEncoding = String.Encoding(rawValue: 0)
+            let content = try String(contentsOfFile: url.path, usedEncoding: &usedEncoding)
+            #expect(usedEncoding == .utf8)
+            #expect(content == "AAAAA")
+        }
     }
 
 
@@ -1476,6 +1573,17 @@ func withTemporaryStringFile(encoding: String.Encoding = .utf8, _ block: (_ exis
     
     let nonExisting = rootURL.appending(path: "-NonExist", directoryHint: .notDirectory)
     try block(fileURL, nonExisting)
+    try FileManager.default.removeItem(at: rootURL)
+}
+
+func withTemporaryFile(contents: Data, block: (_ url: URL) throws -> ()) throws {
+    let rootURL = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let fileURL = rootURL.appending(path: "Test.txt", directoryHint: .notDirectory)
+    try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+
+    try contents.write(to: fileURL, options: .atomic)
+
+    try block(fileURL)
     try FileManager.default.removeItem(at: rootURL)
 }
 
