@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2020-2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2020-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -23,9 +23,6 @@ import ucrt
 /// A structure representing a base-10 number.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Decimal: Sendable {
-    @_spi(SwiftCorelibsFoundation)
-    public typealias Mantissa = (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)
-
     internal struct Storage: Sendable {
         var exponent: Int8
         // Layout:
@@ -184,6 +181,36 @@ extension Decimal {
 }
 
 #endif // !FOUNDATION_FRAMEWORK
+
+extension Decimal {
+#if FOUNDATION_FRAMEWORK
+    internal typealias Mantissa = (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)
+#else
+    @_spi(SwiftCorelibsFoundation)
+    public typealias Mantissa = (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)
+#endif
+
+    internal var _significand: UInt128 {
+        // Note that per project policy we no longer consider big-endian architectures.
+        @inline(__always) get {
+#if FOUNDATION_FRAMEWORK
+            return unsafeBitCast(_mantissa, to: UInt128.self)
+#else
+            return unsafeBitCast(storage.mantissa, to: UInt128.self)
+#endif
+        }
+        // Note that if `_significand` is set to `0` while `_isNegative == 1`, setting `_length` results in NaN.
+        @inline(__always) set {
+#if FOUNDATION_FRAMEWORK
+            _mantissa = unsafeBitCast(newValue, to: Mantissa.self)
+            _length = UInt32((128 &- newValue.leadingZeroBitCount &+ 15) / 16)
+#else
+            self.storage.mantissa = unsafeBitCast(newValue, to: Mantissa.self)
+            self._length = UInt32((128 &- newValue.leadingZeroBitCount &+ 15) / 16)
+#endif
+        }
+    }
+}
 
 // MARK: - String
 extension Decimal {

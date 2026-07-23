@@ -319,26 +319,19 @@ private struct DecimalTests {
             a: &aNormalized, b: &bNormalized, roundingMode: .plain)
         #expect(lossPrecision)
 
-        #expect(aNormalized.exponent == -31)
-        #expect(aNormalized._mantissa.0 == 0)
-        #expect(aNormalized._mantissa.1 == 21760)
-        #expect(aNormalized._mantissa.2 == 45355)
-        #expect(aNormalized._mantissa.3 == 11455)
-        #expect(aNormalized._mantissa.4 == 62709)
-        #expect(aNormalized._mantissa.5 == 14050)
-        #expect(aNormalized._mantissa.6 == 62951)
-        #expect(aNormalized._mantissa.7 == 0)
-        #expect(bNormalized.exponent == -31)
-        #expect(bNormalized._mantissa.0 == 56467)
-        #expect(bNormalized._mantissa.1 == 17616)
-        #expect(bNormalized._mantissa.2 == 59987)
-        #expect(bNormalized._mantissa.3 == 21635)
-        #expect(bNormalized._mantissa.4 == 5988)
-        #expect(bNormalized._mantissa.5 == 63852)
-        #expect(bNormalized._mantissa.6 == 1066)
-        #expect(bNormalized._length == 7)
+        #expect(aNormalized.exponent == -35)
         #expect(a == aNormalized)
-        #expect(b != bNormalized)   // b had a loss Of Precision when normalising
+        #expect(bNormalized.exponent == -35)
+        #expect(bNormalized._mantissa.0 == 18027)
+        #expect(bNormalized._mantissa.1 == 7848)
+        #expect(bNormalized._mantissa.2 == 21680)
+        #expect(bNormalized._mantissa.3 == 24817)
+        #expect(bNormalized._mantissa.4 == 48933)
+        #expect(bNormalized._mantissa.5 == 3665)
+        #expect(bNormalized._mantissa.6 == 52911)
+        #expect(bNormalized._mantissa.7 == 162)
+        #expect(bNormalized._length == 8)
+        #expect(b != bNormalized)   // b had a loss of precision when normalising
     }
 
     @Test func additionWithNormalization() throws {
@@ -392,6 +385,16 @@ private struct DecimalTests {
         #expect(lostPrecision)
         #expect("1" == result.description)
         #expect(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
+    }
+
+    @Test func additionRounding() throws {
+        let a = Decimal(
+            _exponent: 0, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0,
+            _mantissa: (0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff))
+        let b = Decimal(
+            _exponent: 0, _length: 1, _isNegative: 0, _isCompact: 0, _reserved: 0,
+            _mantissa: (10, 0, 0, 0, 0, 0, 0, 0))
+        #expect((a + b)._mantissa.0 == 39323) // Round up.
     }
 
     @Test func simpleMultiplication() throws {
@@ -470,7 +473,7 @@ private struct DecimalTests {
         _ = try multiplier._multiply(
             by: multiplicand, roundingMode: .plain)
 
-        // The following should throw .overlow
+        // The following should throw .overflow
         multiplier._exponent = 0x7F
         #expect {
             // 2e127 * max_mantissa
@@ -487,6 +490,24 @@ private struct DecimalTests {
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
+
+        // There's room to represent the result by adjusting the mantissa,
+        // so the result shouldn't be NaN.
+        let a = try #require(Decimal(string: "1234e100"))
+        let b = try #require(Decimal(string: "1e30"))
+        #expect(!(a * b).isNaN)
+        #expect((a * b)._exponent == 127)
+    }
+
+    @Test func multiplicationUnderflow() throws {
+        let a = Decimal(sign: .plus, exponent: -100, significand: Decimal(2))
+        let b = Decimal(sign: .plus, exponent: -100, significand: Decimal(3))
+        #expect {
+            _ = try a._multiplyReportingInexact(by: b, roundingMode: .plain)
+        } throws: {
+            ($0 as? Decimal._CalculationError) == .underflow
+        }
+        #expect((a * b).isZero)
     }
 
     @Test func multiplyByPowerOfTen() throws {
@@ -519,26 +540,26 @@ private struct DecimalTests {
         let repeatingNumerator = Decimal(16)
         let repeatingDenominator = Decimal(9)
         let repeating = try repeatingNumerator._divide(
-            by: repeatingDenominator, roundingMode: .plain
+            by: repeatingDenominator, roundingMode: .down
         )
         let numerator = Decimal(1010)
         let result = try numerator._divide(
-            by: repeating, roundingMode: .plain
+            by: repeating, roundingMode: .down
         )
         var expected = Decimal()
-        expected._exponent = -35
-        expected._length = 8
+        expected._exponent = -3
+        expected._length = 2
         expected._isNegative = 0
         expected._isCompact = 1
         expected._reserved = 0
-        expected._mantissa.0 = 51946
-        expected._mantissa.1 = 3
-        expected._mantissa.2 = 15549
-        expected._mantissa.3 = 55864
-        expected._mantissa.4 = 57984
-        expected._mantissa.5 = 55436
-        expected._mantissa.6 = 45186
-        expected._mantissa.7 = 10941
+        expected._mantissa.0 = 43837
+        expected._mantissa.1 = 8
+        expected._mantissa.2 = 0
+        expected._mantissa.3 = 0
+        expected._mantissa.4 = 0
+        expected._mantissa.5 = 0
+        expected._mantissa.6 = 0
+        expected._mantissa.7 = 0
         #expect(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
     }
 
@@ -551,25 +572,46 @@ private struct DecimalTests {
         let second: Decimal = Decimal(4294967295)
         let result = first / second
         let expected: Decimal = Decimal(
-            _exponent: -38,
+            _exponent: -39,
             _length: 8,
             _isNegative: 0,
             _isCompact: 1,
             _reserved: 0,
             _mantissa: (
-                58076,
-                13229,
-                12316,
-                25502,
-                15252,
-                32996,
-                11611,
-                5147
+                56474,
+                1226,
+                57626,
+                58413,
+                21451,
+                2282,
+                50579,
+                51471
             )
         )
         #expect(result == expected)
     }
 #endif
+
+    @Test func divisionRoundingAndPrecision() throws {
+        let a = Decimal(2)
+        let b = Decimal(3)
+        #expect(try! a._divideReportingInexact(by: b, roundingMode: .plain).inexact)
+        #expect((a / b).description.hasSuffix("7"))
+        #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .up).result.description.hasSuffix("6"))
+        #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .down).result.description.hasSuffix("7"))
+
+        #expect((Decimal(1) / Decimal.pi).description.hasSuffix("1830988618379067153776752674502872407")) // 0.31830988618379067153776752674502872407
+
+        let huge = try #require(Decimal(string: "340282366920938463463374607431768211455")) // UInt128.max
+        let quotient1 = Decimal(1) / huge
+        let quotient2 = Decimal(-1) / huge
+        #expect(!quotient1.isZero)
+        #expect(!quotient1.isNaN)
+        #expect(quotient1.description.hasSuffix("9387358770557187699218413430556141946")) // 2.9387358770557187699218413430556141946e-39
+        #expect(!quotient2.isZero)
+        #expect(!quotient2.isNaN)
+        #expect(quotient2 < .zero)
+    }
 
     @Test func power() throws {
         var a = Decimal(1234)
@@ -894,11 +936,11 @@ private struct DecimalTests {
             let aDivD = a / d
             let caDivD = c * aDivD
             #expect(try ab == #require(Decimal(string: "498.7509045")))
-            #expect(try aDivD == #require(Decimal(string: "0.46424522863476857959755328492004843907")))
-            #expect(try caDivD == #require(Decimal(string: "8.453441368210501065891847765109162027")))
+            #expect(try aDivD == #require(Decimal(string: "0.46424522863476857959755328492004843908")))
+            #expect(try caDivD == #require(Decimal(string: "8.4534413682105010658918477651091620272")))
 
             let result = (a * b) + (c * (a / d))
-            #expect(try result == #require(Decimal(string: "507.2043458682105010658918477651091")))
+            #expect(try result == #require(Decimal(string: "507.20434586821050106589184776510916203")))
         }
     }
 
