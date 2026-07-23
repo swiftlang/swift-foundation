@@ -11,7 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 // Required to be `AnyObject` because it optimizes the call sites in the `struct` wrapper for efficient function dispatch.
-package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvertible {
+//
+// The `CustomDebugStringConvertible` refinement is dropped in Embedded Swift (via the typealias below):
+// values of the `any CustomDebugStringConvertible` existential cannot be formed there, which would make
+// `any _LocaleProtocol` (the storage of `Locale`) unusable. The explicit `var debugDescription` requirement
+// remains, and callers already use `.debugDescription` directly.
+#if $Embedded
+package typealias _LocaleStringConvertibleRefinement = Sendable
+#else
+package typealias _LocaleStringConvertibleRefinement = CustomDebugStringConvertible
+#endif
+
+package protocol _LocaleProtocol : AnyObject, Sendable, _LocaleStringConvertibleRefinement {
 
     init(identifier: String, prefs: LocalePreferences?)
     init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool)

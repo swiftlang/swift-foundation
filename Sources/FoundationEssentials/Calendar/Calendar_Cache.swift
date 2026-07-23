@@ -17,6 +17,7 @@ import CoreFoundation
 
 internal import Synchronization
 
+#if !$Embedded
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
 internal func _calendarICUClass() -> _CalendarProtocol.Type? {
     _CalendarICU.self
@@ -26,6 +27,7 @@ dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
     nil
 }
 #endif
+#endif // !$Embedded
 
 #if FOUNDATION_FRAMEWORK
 // For feature flag
@@ -38,6 +40,7 @@ internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool {
 internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return false }
 #endif
 
+#if !$Embedded
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
     if identifier == .gregorian || identifier == .iso8601 {
         return _CalendarGregorian.self
@@ -46,6 +49,29 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
     } else {
         return _calendarICUClass()
     }
+}
+#endif // !$Embedded
+
+/// Constructs the calendar implementation backing a `Calendar` for the given identifier.
+///
+/// In Embedded Swift, only the pure-Swift Gregorian calendar (which also backs `.iso8601`) is
+/// available: it is hard-wired here, avoiding both the metatype-based class dispatch and the
+/// `dynamic` upcall to FoundationInternationalization/ICU (neither of which is supported in
+/// Embedded). Any other identifier returns `nil`, matching the existing "no available class"
+/// contract (callers force-unwrap). In non-embedded builds this preserves the original behavior
+/// exactly by routing through `_calendarClass`.
+func _makeCalendar(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> (any _CalendarProtocol)? {
+#if $Embedded
+    switch identifier {
+    case .gregorian, .iso8601:
+        return _CalendarGregorian(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+    default:
+        return nil
+    }
+#else
+    guard let calendarClass = _calendarClass(identifier: identifier) else { return nil }
+    return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+#endif
 }
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
@@ -69,8 +95,7 @@ struct CalendarCache : Sendable, ~Copyable {
                         
         let id = Locale.current._calendarIdentifier
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = _calendarClass(identifier: id)!
-        let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        let calendar = _makeCalendar(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)!
         
         return _current.withLock {
             if let current = $0 {
@@ -105,8 +130,7 @@ struct CalendarCache : Sendable, ~Copyable {
         }
         
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = _calendarClass(identifier: id)!
-        let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        let new = _makeCalendar(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)!
         
         return _fixed.withLock {
             if let existing = $0[id] {
@@ -121,8 +145,7 @@ struct CalendarCache : Sendable, ~Copyable {
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = _calendarClass(identifier: identifier)!
-        return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+        return _makeCalendar(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)!
     }
 
 }

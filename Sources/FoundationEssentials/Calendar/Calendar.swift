@@ -1661,7 +1661,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : CustomDebugStringConvertible, CustomStringConvertible {
     public var description: String {
-        return "\(identifier) (\(_calendar)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
+        return "\(identifier) (\(_calendar.debugDescription)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
     }
 
     public var debugDescription: String {
