@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+@usableFromInline
+@frozen
 struct OutputBuffer<T>: ~Copyable // ~Escapable
 {
     let start: UnsafeMutablePointer<T>

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 /// A container for attribute keys and values.
 ///
 /// ``AttributeContainer`` provides a way to store attributes and their values outside of an attributed string. You
@@ -194,3 +196,5 @@ extension AttributeContainer {
         return AttributeContainer(storage)
     }
 }
+
+#endif // !$Embedded

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 
 #if canImport(Foundation_Private.NSExpression)
@@ -600,3 +602,5 @@ extension NSExpression {
 
 #endif //canImport(Foundation_Private.NSExpression)
 #endif
+
+#endif // !$Embedded

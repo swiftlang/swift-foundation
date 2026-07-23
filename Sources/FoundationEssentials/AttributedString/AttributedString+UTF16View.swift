@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -136,3 +138,5 @@ extension AttributedString.UTF16View: BidirectionalCollection {
         return Self(_guts, in: bounds)
     }
 }
+
+#endif // !$Embedded

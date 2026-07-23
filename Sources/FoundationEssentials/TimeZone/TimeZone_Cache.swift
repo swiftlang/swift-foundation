@@ -35,6 +35,7 @@ internal import CoreFoundation_Private.CFNotificationCenter
 #endif
 
 
+#if !$Embedded
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
 internal func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
     _TimeZoneICU.self
@@ -50,6 +51,38 @@ dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMT.self
 }
 #endif
+#endif // !$Embedded
+
+// Factory helpers that construct the backing time zone implementation.
+//
+// In Embedded Swift only the pure-Swift `_TimeZoneGMT` is available; it is hard-wired here, avoiding both
+// the metatype-based class dispatch and the `dynamic` upcall to FoundationInternationalization/ICU (neither
+// is supported in Embedded). Named (Olson) time zones require ICU and are therefore unavailable in Embedded
+// (`_makeICUTimeZone` returns nil). In non-embedded builds these route through the original class dispatch,
+// preserving behavior (including ICU's dynamic replacement) exactly.
+func _makeGMTTimeZone(identifier: String) -> (any _TimeZoneProtocol)? {
+#if $Embedded
+    _TimeZoneGMT(identifier: identifier)
+#else
+    _timeZoneGMTClass().init(identifier: identifier)
+#endif
+}
+
+func _makeGMTTimeZone(secondsFromGMT: Int) -> (any _TimeZoneProtocol)? {
+#if $Embedded
+    _TimeZoneGMT(secondsFromGMT: secondsFromGMT)
+#else
+    _timeZoneGMTClass().init(secondsFromGMT: secondsFromGMT)
+#endif
+}
+
+func _makeICUTimeZone(identifier: String) -> (any _TimeZoneProtocol)? {
+#if $Embedded
+    nil
+#else
+    _timeZoneICUClass()?.init(identifier: identifier)
+#endif
+}
 
 #if os(Windows)
 dynamic package func _timeZoneIdentifier(forWindowsIdentifier windowsIdentifier: String) -> String? {
@@ -112,6 +145,8 @@ struct TimeZoneCache : Sendable, ~Copyable {
         /// Reads from environment variables `TZFILE`, `TZ` and finally the symlink pointed at by the C macro `TZDEFAULT` to figure out what the current (aka "system") time zone is.
         mutating func findCurrentTimeZone() -> TimeZone {
 #if !NO_TZFILE
+#if !$Embedded
+            // ProcessInfo (and thus environment lookup) is unavailable in Embedded Swift.
             if let tzenv = ProcessInfo.processInfo.environment["TZFILE"], let result = fixed(tzenv) {
                 return TimeZone(inner: result)
             }
@@ -126,6 +161,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
                     return TimeZone(inner: result)
                 }
             }
+#endif // !$Embedded
 
 #if os(Windows)
             var timeZoneInfo = TIME_ZONE_INFORMATION()
@@ -228,12 +264,12 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 return offsetFixed(0)
             } else if let cached = fixedTimeZones[identifier] {
                 return cached
-            } else if let innerTZ = _timeZoneGMTClass().init(identifier: identifier) {
+            } else if let innerTZ = _makeGMTTimeZone(identifier: identifier) {
                 // Identifier takes a form of GMT offset such as "GMT+8"
                 fixedTimeZones[identifier] = innerTZ
                 return innerTZ
             } else {
-                if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
+                if let innerTz = _makeICUTimeZone(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
                     return innerTz
                 } else {
@@ -248,7 +284,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
             } else {
                 // In order to avoid bloating a cache with weird time zones, only cache values that are 30min offsets (including 1hr offsets).
                 let doCache = abs(offset) % 1800 == 0
-                if let innerTz = _timeZoneGMTClass().init(secondsFromGMT: offset) {
+                if let innerTz = _makeGMTTimeZone(secondsFromGMT: offset) {
                     if doCache {
                         offsetTimeZones[offset] = innerTz
                     }
@@ -455,7 +491,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
     }
 
     var gmt: (any _TimeZoneProtocol) = {
-        _timeZoneGMTClass().init(secondsFromGMT: 0)!
+        _makeGMTTimeZone(secondsFromGMT: 0)!
     }()
     
     func offsetFixed(_ seconds: Int) -> (any _TimeZoneProtocol)? {

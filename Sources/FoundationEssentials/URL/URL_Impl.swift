@@ -1184,11 +1184,11 @@ extension _URL {
         // FileManager uses stat() to check if the file exists.
         // URL historically won't follow a symlink at the end
         // of the path, so use lstat() here instead.
-        return withUnsafeFileSystemRepresentation { fsRep in
+        return withUnsafeFileSystemRepresentation { fsRep -> Bool? in
             guard let fsRep else { return nil }
             var fileInfo = stat()
             guard lstat(fsRep, &fileInfo) == 0 else { return nil }
-            return (mode_t(fileInfo.st_mode) & S_IFMT) == S_IFDIR
+            return (mode_t(fileInfo.st_mode) & mode_t(S_IFMT)) == mode_t(S_IFDIR)
         }
         #endif
     }
@@ -1470,7 +1470,13 @@ extension _URL {
         guard !path.isEmpty else {
             return nil
         }
-        return _URL(filePath: path.standardizingPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory).url
+        #if !$Embedded
+        let standardizedPath = path.standardizingPath
+        #else
+        // `String.standardizingPath` is unavailable in Embedded Swift.
+        let standardizedPath = path
+        #endif
+        return _URL(filePath: standardizedPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory).url
     }
 
     func resolvingSymlinksInPath() -> URL? {
@@ -1481,7 +1487,13 @@ extension _URL {
         guard !path.isEmpty else {
             return nil
         }
-        return _URL(filePath: path.resolvingSymlinksInPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory).url
+        #if !$Embedded
+        let resolvedPath = path.resolvingSymlinksInPath
+        #else
+        // `String.resolvingSymlinksInPath` is unavailable in Embedded Swift.
+        let resolvedPath = path
+        #endif
+        return _URL(filePath: resolvedPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory).url
     }
     #endif
 

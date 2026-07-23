@@ -37,7 +37,7 @@ import WinSDK
 @preconcurrency import EmscriptenLibc
 #endif
 
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !$Embedded
 
 // MARK: - Helpers
 
@@ -748,7 +748,7 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
         }
     }
 }
-#endif // !NO_FILESYSTEM
+#endif // !NO_FILESYSTEM && !$Embedded
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
@@ -805,7 +805,7 @@ extension Data {
             throw CocoaError(.fileWriteUnsupportedScheme)
         }
         
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !$Embedded
         try writeToFile(path: url, buffer: self.bytes, options: options, reportProgress: true)
 #else
         throw CocoaError(.featureUnsupported)

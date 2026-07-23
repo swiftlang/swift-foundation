@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Range<
@@ -189,3 +191,5 @@ extension PredicateExpressions.RangeExpressionContains : Codable where RangeExpr
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.RangeExpressionContains : Sendable where RangeExpression : Sendable, Element : Sendable {}
+
+#endif // !$Embedded

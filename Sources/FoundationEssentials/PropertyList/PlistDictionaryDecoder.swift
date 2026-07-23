@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 // MARK: - __PlistDictionaryDecoder
 
 internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtocol {
@@ -1033,3 +1035,5 @@ extension __PlistDictionaryDecoder {
         return try type.init(from: self, configuration: configuration)
     }
 }
+
+#endif // !$Embedded

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -214,3 +216,5 @@ extension _FileManagerImpl {
 #endif
     }
 }
+
+#endif // !$Embedded

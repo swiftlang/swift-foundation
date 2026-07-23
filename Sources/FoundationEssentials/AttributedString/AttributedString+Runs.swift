@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -759,3 +761,5 @@ extension RangeSet {
         preconditionFailure("AttributedString.Runs index is out of bounds")
     }
 }
+
+#endif // !$Embedded

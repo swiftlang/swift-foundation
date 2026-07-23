@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct SequenceMaximum<
@@ -93,3 +95,5 @@ extension PredicateExpressions.SequenceMinimum : Codable where Elements : Codabl
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMinimum : Sendable where Elements : Sendable {}
+
+#endif // !$Embedded

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 internal import Synchronization
 
 extension AttributedString.Guts {
@@ -93,3 +95,5 @@ extension RangeSet<AttributedString.Index> {
         }
     }
 }
+
+#endif // !$Embedded

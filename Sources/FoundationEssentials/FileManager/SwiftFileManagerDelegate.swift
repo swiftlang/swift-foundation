@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if !FOUNDATION_FRAMEWORK
 
 public protocol FileManagerDelegate : AnyObject, Sendable {
@@ -82,3 +84,5 @@ extension FileManagerDelegate {
 }
 
 #endif
+
+#endif // !$Embedded

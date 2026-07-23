@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if !FOUNDATION_FRAMEWORK
 
 /// A collection of information about the current process.
@@ -161,3 +163,5 @@ extension ProcessInfo {
 }
 
 #endif // !FOUNDATION_FRAMEWORK
+
+#endif // !$Embedded

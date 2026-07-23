@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
@@ -131,6 +133,7 @@ extension URL {
 
 // MARK: - Parse
 
+
 @available(FoundationPreview 6.2, *)
 extension URL.Template {
     /// Creates a new template from its text form.
@@ -186,3 +189,5 @@ extension URL.Template.Element: CustomStringConvertible {
         }
     }
 }
+
+#endif // !$Embedded

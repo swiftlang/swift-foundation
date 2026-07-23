@@ -416,7 +416,18 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             case .pair(let first, let second):
                 return "[\(first), \(second)]"
             case .array(let indexes):
-                return indexes.description
+                var result = "["
+                var first = true
+                for index in indexes {
+                    if first {
+                        first = false
+                    } else {
+                        result += ", "
+                    }
+                    result += "\(index)"
+                }
+                result += "]"
+                return result
             }
         }
         
@@ -668,15 +679,19 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         return _indexes.description
     }
-    
+
     public var debugDescription: String {
         return _indexes.debugDescription
     }
-    
+}
+
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension IndexPath : CustomReflectable {
     public var customMirror: Mirror {
         return Mirror(self, unlabeledChildren: self, displayStyle: .collection)
     }
@@ -721,6 +736,7 @@ extension IndexPath : Codable {
         }
     }
 }
+#endif
 
 #if FOUNDATION_FRAMEWORK
 

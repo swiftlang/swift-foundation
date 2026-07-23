@@ -52,7 +52,7 @@ func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutab
 }
 
 private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: [String]) -> [String : Data] {
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !$Embedded
     var output: [String : Data] = [:]
     for key in attrsToRead {
         key.withCString { keyStr in
@@ -173,13 +173,18 @@ internal func readDataFromFile(path inPath: borrowing some FileSystemRepresentab
 }
 
 internal func readDataFromFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, reportProgress: Bool, maxLength: Int? = nil, options: Data.ReadingOptions = [], attributesToRead: [String], attributes: inout [String: Data]) throws -> Data {
+#if $Embedded
+    // Embedded Swift has no filesystem support.
+    throw CocoaError(.featureUnsupported)
+#else
     let result = try readBytesFromFile(path: inPath, reportProgress: reportProgress, maxLength: maxLength, options: options, attributesToRead: attributesToRead, attributes: &attributes)
-    
+
     if result.length == 0 {
         return Data()
     } else {
         return Data(bytesNoCopy: result.bytes!, count: result.length, deallocator: result.deallocator!)
     }
+#endif
 }
 
 struct ReadBytesResult {
@@ -225,6 +230,7 @@ private func read(from hFile: HANDLE, at path: borrowing some FileSystemRepresen
 }
 #endif
 
+#if !$Embedded
 internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, reportProgress: Bool, maxLength: Int?, options: Data.ReadingOptions, attributesToRead: [String], attributes: inout [String: Data]) throws -> ReadBytesResult {
     if inPath.isEmpty {
         // For compatibility, throw a different error than the perhaps-expected 'file not found' here (41646641)
@@ -517,6 +523,7 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: borrowing some FileS
         }
     }
 }
+#endif // !$Embedded
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {

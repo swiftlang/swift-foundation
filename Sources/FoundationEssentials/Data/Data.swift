@@ -1165,7 +1165,7 @@ extension Data {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension Data : CustomStringConvertible, CustomDebugStringConvertible {
     /// A human-readable description for the data.
     public var description: String {
         return "\(self.count) bytes"
@@ -1175,7 +1175,11 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
     public var debugDescription: String {
         return self.description
     }
+}
 
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data : CustomReflectable {
     public var customMirror: Mirror {
         let nBytes = self.count
         var children: [(label: String?, value: Any)] = []
@@ -1194,7 +1198,9 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
         return m
     }
 }
+#endif
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data : Codable {
     public init(from decoder: Decoder) throws {
@@ -1227,3 +1233,4 @@ extension Data : Codable {
         }
     }
 }
+#endif

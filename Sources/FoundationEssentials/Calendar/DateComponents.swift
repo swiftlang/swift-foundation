@@ -554,19 +554,9 @@ extension DateComponents {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible {
 
-    public var description: String {
-        return self.customMirror.children.reduce(into: "") {
-            $0 += "\($1.label ?? ""): \($1.value) "
-        }
-    }
-
-    public var debugDescription: String {
-        return self.description
-    }
-
-    public var customMirror: Mirror {
+    private var _children: [(label: String?, value: Any)] {
         var c: [(label: String?, value: Any)] = []
         if let r = calendar { c.append((label: "calendar", value: r.debugDescription)) }
         if let r = timeZone { c.append((label: "timeZone", value: r.debugDescription)) }
@@ -587,10 +577,30 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
         if let r = yearForWeekOfYear { c.append((label: "yearForWeekOfYear", value: r)) }
         if let r = isLeapMonth { c.append((label: "isLeapMonth", value: r)) }
         if let r = isRepeatedDay { c.append((label: "isRepeatedDay", value: r)) }
-        return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
+        return c
+    }
+
+    public var description: String {
+        return self._children.reduce(into: "") {
+            $0 += "\($1.label ?? ""): \($1.value) "
+        }
+    }
+
+    public var debugDescription: String {
+        return self.description
     }
 }
 
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension DateComponents : CustomReflectable {
+    public var customMirror: Mirror {
+        return Mirror(self, children: self._children, displayStyle: Mirror.DisplayStyle.struct)
+    }
+}
+#endif
+
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -693,6 +703,7 @@ extension DateComponents : Codable {
         try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
     }
 }
+#endif
 
 // MARK: - Bridging
 

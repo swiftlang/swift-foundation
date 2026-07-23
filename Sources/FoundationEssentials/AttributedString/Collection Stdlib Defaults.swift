@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 // Default implementations for common Collection requirements, adapted from the stdlib.
 // FIXME: The stdlib should expose these as callable entry points.
 
@@ -113,3 +115,5 @@ extension BidirectionalCollection {
     return i
   }
 }
+
+#endif // !$Embedded

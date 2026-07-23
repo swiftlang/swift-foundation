@@ -11,8 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 // Required to be `AnyObject` because it optimizes the call sites in the `struct` wrapper for efficient function dispatch.
-package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConvertible {
-    
+//
+// `_CalendarProtocol` refines `CustomDebugStringConvertible` in non-embedded builds. In Embedded Swift,
+// values of the `any CustomDebugStringConvertible` existential cannot be formed, which would make
+// `any _CalendarProtocol` (the storage type of `Calendar`) unusable. Since the protocol already declares
+// an explicit `var debugDescription: String { get }` requirement, we simply drop the marker refinement in
+// Embedded via this typealias (callers use `.debugDescription` directly).
+#if $Embedded
+package typealias _CalendarStringConvertibleRefinement = Sendable
+#else
+package typealias _CalendarStringConvertibleRefinement = CustomDebugStringConvertible
+#endif
+
+package protocol _CalendarProtocol: AnyObject, Sendable, _CalendarStringConvertibleRefinement {
+
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?)
     
     var identifier: Calendar.Identifier { get }

@@ -51,7 +51,7 @@ public struct POSIXError : _BridgedStoredNSError {
 extension POSIXErrorCode : _ErrorCodeProtocol {
     public typealias _ErrorType = POSIXError
 }
-#else
+#elseif !$Embedded
 
 /// Describes an error in the POSIX error domain.
 public struct POSIXError : Error, Hashable, Sendable {
@@ -66,11 +66,12 @@ public struct POSIXError : Error, Hashable, Sendable {
     public init(_ code: Code) {
         self.code = code
     }
-    
+
     public typealias Code = POSIXErrorCode
 }
 #endif
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension POSIXError {
     /// Operation not permitted.
@@ -689,3 +690,4 @@ extension POSIXError {
     }
     #endif
 }
+#endif

@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(os)
+#if $Embedded && canImport(Darwin)
+import Darwin
+#elseif canImport(os)
 internal import os
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
@@ -175,7 +177,7 @@ package enum GregorianCalendarError : Error {
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
 package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
-#if canImport(os)
+#if canImport(os) && !$Embedded
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "gregorian_calendar")
     }()
@@ -737,7 +739,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             let firstInstant = try _firstInstant(of: unit, at: at)
             return firstInstant
         } catch let error as GregorianCalendarError {
-#if canImport(os)
+#if canImport(os) && !$Embedded
             switch error {
             case .overflow(_, _, _):
                 _CalendarGregorian.logger.error("Overflowing in firstInstant(of:at:). unit: \(unit.debugDescription, privacy: .public), at: \(at.timeIntervalSinceReferenceDate, privacy: .public)")
@@ -931,7 +933,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         do {
             result = try _ordinality(of: smaller, in: larger, for: date)
         } catch {
-#if canImport(os)
+#if canImport(os) && !$Embedded
             switch error {
             case .overflow(_, _, _):
                 _CalendarGregorian.logger.error("Overflowing in ordinality(of:in:for:). smaller: \(smaller.debugDescription, privacy: .public), larger: \(larger.debugDescription, privacy: .public), date: \(date.timeIntervalSinceReferenceDate, privacy: .public)")
@@ -3160,7 +3162,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                         let (diffInNano, overflow) = end >= start ? diff.addingReportingOverflow(diffsInNano) : diff.subtractingReportingOverflow(diffsInNano)
 
                         if overflow {
-#if canImport(os)
+#if canImport(os) && !$Embedded
                             _CalendarGregorian.logger.error("Overflowing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public). end: \(end.timeIntervalSinceReferenceDate, privacy: .public). component: \(component.debugDescription, privacy: .public)")
 #endif
                             dc.nanosecond = diff
@@ -3172,7 +3174,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                         dc.setValue(diff, for: component)
                     }
                 } catch {
-#if canImport(os)
+#if canImport(os) && !$Embedded
                     switch error {
                     case .overflow(_, _, _):
                         _CalendarGregorian.logger.error("Overflowing in dateComponents(from:start:end:). start: \(curr.timeIntervalSinceReferenceDate, privacy: .public). end: \(end.timeIntervalSinceReferenceDate, privacy: .public). component: \(component.debugDescription, privacy: .public)")
