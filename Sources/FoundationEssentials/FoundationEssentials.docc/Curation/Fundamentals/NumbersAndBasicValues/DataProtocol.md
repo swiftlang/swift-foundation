@@ -1,4 +1,4 @@
-# ``/FoundationEssentials/DataProtocol``
+# ``FoundationEssentials/DataProtocol``
 
 ## Topics
 

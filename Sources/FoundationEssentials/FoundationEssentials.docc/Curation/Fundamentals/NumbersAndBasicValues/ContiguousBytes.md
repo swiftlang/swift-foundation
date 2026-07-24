@@ -1,4 +1,4 @@
-# ``/FoundationEssentials/ContiguousBytes``
+# ``FoundationEssentials/ContiguousBytes``
 
 ## Topics
 
