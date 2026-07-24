@@ -424,6 +424,8 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
         
         @_lifetime(self: copy self)
         public mutating func decodeEachElement(_ closure: (inout ElementDecoder) throws(CodingError.Decoding) -> Void) throws(CodingError.Decoding) {
+            // noop for empty array
+            guard hasNext else { return }
             do throws(_JSONDecodingError) {
                 repeat {
                     self.innerParser.state.currentTopCodingPathNode.pointee.incrementArrayIndex()

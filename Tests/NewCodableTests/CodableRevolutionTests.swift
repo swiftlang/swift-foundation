@@ -1954,6 +1954,31 @@ struct NewCodableTests {
         #expect(result.items[2].capturedCodingPath[1].intValue == 2)
         #expect(result.items[2].id == 300)
     }
+
+    @Test func testDecodeEachElementEmptyArray() throws {
+        struct DoubleList: JSONDecodable, Equatable {
+            var values: [Double]
+
+            static func decode(from decoder: inout some (JSONDecoderProtocol & ~Escapable)) throws(CodingError.Decoding) -> DoubleList {
+                try decoder.decodeArray { arrayDecoder throws(CodingError.Decoding) in
+                    var values: [Double] = []
+                    try arrayDecoder.decodeEachElement { elementDecoder throws(CodingError.Decoding) in
+                        values.append(try elementDecoder.decode(Double.self))
+                    }
+                    return DoubleList(values: values)
+                }
+            }
+        }
+
+        let decoder = NewJSONDecoder()
+
+        // Empty arrays must not dispatch the element closure.
+        let empty = try decoder.decode(DoubleList.self, from: Data("[]".utf8))
+        #expect(empty.values.isEmpty)
+
+        let nonEmpty = try decoder.decode(DoubleList.self, from: Data("[1.5, 2.5]".utf8))
+        #expect(nonEmpty.values == [1.5, 2.5])
+    }
 }
 
 extension Array where Element: BinaryFloatingPoint {
