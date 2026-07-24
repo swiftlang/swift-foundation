@@ -97,4 +97,51 @@ internal enum _CalendarUtility {
 
     /// Default weekend range (region 001): Sat–Sun, full day.
     static let defaultWeekendRange = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
+
+    // MARK: - Rata die arithmetic (shared by the non-ICU calendars)
+
+    /// Rata die of the Foundation reference date (2001-01-01 == RD 730486).
+    static let rataDieAtDateReference = 730_486
+
+    /// Floor division rounding toward negative infinity for any sign of divisor.
+    static func floorDiv<I: FixedWidthInteger>(_ a: I, _ b: I) -> I {
+        if (a >= 0) == (b > 0) {
+            return a / b
+        } else {
+            return (a &- b &+ 1) / b
+        }
+    }
+
+    /// Splits local-seconds-since-reference into a fixed-day rata die and the seconds within that day.
+    static func rataDieAndSecondsInDay<I: FixedWidthInteger>(localSeconds: Double) -> (rataDie: I, secondsInDay: Double) {
+        let totalDays = (localSeconds / 86400).rounded(.down)
+        let rataDie = I(totalDays) &+ I(rataDieAtDateReference)
+        let secondsInDay = localSeconds - totalDays * 86400
+        return (rataDie, secondsInDay)
+    }
+
+    /// Builds a UTC `Date` from a fixed-day rata die plus local seconds within the day, subtracting the time zone offset at that local instant.
+    static func utcDate<I: FixedWidthInteger>(fromRataDie rataDie: I, secondsInDay: Double, in timeZone: TimeZone,
+                                              repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy,
+                                              skippedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> Date {
+        _ = skippedTimePolicy   // silenced — a fixed-day representation cannot land in a skipped interval
+        let daysSinceRef = rataDie &- I(rataDieAtDateReference)
+        let secondsAsIfUTC = Double(daysSinceRef) * 86400 + secondsInDay
+        let tmpDate = Date(timeIntervalSinceReferenceDate: secondsAsIfUTC)
+        let (tzOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(
+            for: tmpDate, repeatedTimePolicy: repeatedTimePolicy)
+        return tmpDate - Double(tzOffset) - dstOffset
+    }
+
+    /// Week-of-period number using the ICU algorithm, shared across calendars.
+    static func weekNumber(desiredDay: Int, dayOfPeriod: Int, weekday: Int,
+                           firstWeekday: Int, minimumDaysInFirstWeek: Int) -> Int {
+        var periodStartDayOfWeek = (weekday - firstWeekday - dayOfPeriod + 1) % 7
+        if periodStartDayOfWeek < 0 { periodStartDayOfWeek += 7 }
+        var weekNo = (desiredDay + periodStartDayOfWeek - 1) / 7
+        if (7 - periodStartDayOfWeek) >= minimumDaysInFirstWeek {
+            weekNo += 1
+        }
+        return weekNo
+    }
 }
