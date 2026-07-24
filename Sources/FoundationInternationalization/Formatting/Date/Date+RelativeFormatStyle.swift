@@ -481,7 +481,7 @@ public extension FormatStyle where Self == Date.RelativeFormatStyle {
     ///
     /// Use this static method when the call point allows the use of
     /// ``Date/RelativeFormatStyle``. You typically do this when calling the
-    /// ``Date/formatted(_:)`` method of ``Date``.
+    /// `Date.formatted(_:)` method.
     ///
     /// The following example shows the relative format style with two different presentations.
     ///

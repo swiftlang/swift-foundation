@@ -25,7 +25,7 @@ internal import Synchronization
 
 /// An object that encodes instances of a data type as JSON objects.
 ///
-/// The example below shows how to encode an instance of a simple `GroceryProduct` type from a JSON object. The type adopts <doc://com.apple.documentation/documentation/swift/codable> so that it's encodable as JSON using a ``JSONEncoder`` instance.
+/// The example below shows how to encode an instance of a simple `GroceryProduct` type from a JSON object. The type adopts `Codable` so that it's encodable as JSON using a ``JSONEncoder`` instance.
 ///
 /// ```swift
 /// struct GroceryProduct: Codable {
@@ -130,7 +130,7 @@ open class JSONEncoder {
 
     /// The strategies for encoding nonconforming floating-point numbers, also known as IEEE 754 exceptional values.
     ///
-    /// The IEEE 754 floating-point specification defines exceptional values, which include <doc://com.apple.documentation/documentation/swift/floatingpoint/infinity> and <doc://com.apple.documentation/documentation/swift/floatingpoint/nan>.
+    /// The IEEE 754 floating-point specification defines exceptional values, which include `FloatingPoint.infinity` and `FloatingPoint.nan`.
     public enum NonConformingFloatEncodingStrategy : Sendable {
         /// The strategy that throws an error upon encoding an exceptional floating-point value. This is the default strategy.
         case `throw`
