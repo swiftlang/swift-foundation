@@ -22,8 +22,10 @@ jobs:
       enable_cross_pr_testing: true
       enable_android_sdk_build: true
       android_sdk_versions: '["nightly-main"]'
+      android_ndk_versions: '["r27d", "r28c", "r29", "r30-beta2"]'
+      android_sdk_triples: '["aarch64-unknown-linux-android23", "armv7-unknown-linux-android23", "x86_64-unknown-linux-android26"]'
+      enable_android_sdk_checks: true
       enable_macos_swiftly_checks: true
-      android_sdk_triples: '["aarch64-unknown-linux-android28", "armv7-unknown-linux-android28", "x86_64-unknown-linux-android28"]'
 
   cmake_build:
     name: Build (CMake)

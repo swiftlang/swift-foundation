@@ -23,6 +23,8 @@ import FoundationEssentials
 import Darwin
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
+#elseif canImport(Android)
+import Android
 #elseif canImport(CRT)
 import CRT
 #endif

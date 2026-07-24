@@ -18,6 +18,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Android)
+import Android
 #elseif os(WASI)
 import WASILibc
 #elseif os(Windows)
@@ -784,7 +786,7 @@ private struct DecimalTests {
         #expect(Decimal(string: "5538.0")! - Decimal(string: "2880.4")! == Decimal(string: "2657.6")!)
         #expect(Decimal(string: "2880.4")! - Decimal(5538) == Decimal(string: "-2657.6")!)
         #expect(Decimal(0x10000) - Decimal(0x1000) == Decimal(0xf000))
-#if !os(watchOS)
+#if !os(watchOS) && !(os(Android) && arch(arm))
         #expect(Decimal(0x1_0000_0000) - Decimal(0x1000) == Decimal(0xFFFFF000))
         #expect(Decimal(0x1_0000_0000_0000) - Decimal(0x1000) == Decimal(0xFFFFFFFFF000))
 #endif

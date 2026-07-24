@@ -414,8 +414,6 @@ extension Platform {
         return _strnicmp_l(s1, s2, n, Self.cLocale);
         #elseif NO_LOCALIZATION
         return strncasecmp(s1, s2, n);
-        #elseif os(Android)
-        return _stringshims_android_strncasecmp_l(s1, s2, n, Self.cLocale)
         #else
         return strncasecmp_l(s1, s2, n, Self.cLocale);
         #endif
