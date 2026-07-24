@@ -9,6 +9,7 @@
 - ``uuid_t``
 - ``init(uuidString:)``
 - ``uuid_string_t``
+- ``random(using:)``
 
 ### Getting UUID values
 
@@ -23,3 +24,13 @@
 ### Describing UUIDs
 
 - ``description``
+- ``debugDescription``
+
+### Comparing UUIDs
+
+- ``==(_:_:)``
+
+### Hashing
+
+- ``hash(into:)``
+
