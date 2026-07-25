@@ -395,7 +395,7 @@ extension Decimal {
         matchEntireString: Bool
     ) throws(_ParseError) -> (result: Decimal, inexact: Bool, processedCodeUnits: Int) {
         let count = utf8.count
-        guard count > 0 else { throw _ParseError.empty }
+        guard count > 0 else { throw .empty }
 
         @inline(__always)
         func isWhitespace(_ codeUnit: UInt8) -> Bool {
@@ -462,9 +462,7 @@ extension Decimal {
             // and check if we are at the end of the string.
             if matchEntireString {
                 index = skipWhitespaces(from: index)
-                guard index == utf8.count else {
-                    throw _ParseError.invalid
-                }
+                guard index == utf8.count else { throw .invalid }
             }
             return (.nan, false, index)
         }
@@ -547,7 +545,7 @@ extension Decimal {
                 }
                 i = unmatched ? nil : index + haystack.currentCodeUnitOffset
             } catch {
-                throw _ParseError.invalid
+                throw .invalid
             }
         }
         if let i {
@@ -604,19 +602,17 @@ extension Decimal {
         // and check if we are at the end of the string.
         if matchEntireString {
             index = skipWhitespaces(from: index)
-            guard index == utf8.count else {
-                throw _ParseError.invalid
-            }
+            guard index == utf8.count else { throw .invalid }
         }
         // If nothing was consumed, the entire string isn't a valid decimal.
         // Preserve parsing quirk: if only "e" was consumed, it's not a failure.
-        if index == 0 { throw _ParseError.invalid }
+        if index == 0 { throw .invalid }
         if significand == 0 {
             if (-128...127).contains(exponent) {
                 return (.zero, false, index)
             }
             // Compatibility behavior is to reject "0e1000".
-            throw _ParseError.quirkyZero(processedCodeUnits: index)
+            throw .quirkyZero(processedCodeUnits: index)
         }
 
         do throws(_CalculationError) {
@@ -632,9 +628,9 @@ extension Decimal {
                 roundingMode: .bankers)
             return (result, inexact, index)
         } catch .underflow {
-            throw _ParseError.underflow(processedCodeUnits: index)
+            throw .underflow(processedCodeUnits: index)
         } catch .overflow {
-            throw _ParseError.overflow(processedCodeUnits: index)
+            throw .overflow(processedCodeUnits: index)
         } catch {
             fatalError() // Unreachable.
         }
@@ -657,13 +653,13 @@ extension Decimal {
         from utf8: BufferView<UInt8>,
         matchEntireString: Bool
     ) -> DecimalParseResult {
-        do {
+        do throws(_ParseError) {
             let (result, _, processedCodeUnits) = try Self.__decimal(
                 from: utf8.span,
                 decimalSeparator: ".".utf8Span,
                 matchEntireString: matchEntireString)
             return .success(result, processedLength: processedCodeUnits)
-        } catch _ParseError.underflow, _ParseError.overflow, _ParseError.quirkyZero {
+        } catch .underflow, .overflow, .quirkyZero {
             return .overlargeValue
         } catch {
             return .parseFailure
