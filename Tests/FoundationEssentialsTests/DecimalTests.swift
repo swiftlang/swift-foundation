@@ -491,6 +491,9 @@ private struct DecimalTests {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
+        let gfm = Decimal.greatestFiniteMagnitude
+        #expect((gfm * gfm).isNaN)
+
         // There's room to represent the result by adjusting the mantissa,
         // so the result shouldn't be NaN.
         let a = try #require(Decimal(string: "1234e100"))

@@ -68,16 +68,16 @@ internal let _uint128_pow10: [39 of UInt128] = [
     100_000_000_000_000_000_000_000_000_000_000_000_000,    // 38
 ]
 
-private extension UInt128 {
+extension UInt128 {
     @inline(__always)
-    static func _compare(_ lhs: Self, _ rhs: Self) -> ComparisonResult {
+    internal static func _compare(_ lhs: Self, _ rhs: Self) -> ComparisonResult {
         if lhs == rhs { return .orderedSame }
         if lhs < rhs { return .orderedAscending }
         return .orderedDescending
     }
     
     @inline(__always)
-    func _multipliedFullWidth(by1e exponent: Int) -> (high: Self, low: Self) {
+    internal func _multipliedFullWidth(by1e exponent: Int) -> (high: Self, low: Self) {
         if exponent <= 19 && self <= 18446744073709551615 /* UInt64.max */ {
             let (hi, lo) = UInt64(truncatingIfNeeded: self)
                 .multipliedFullWidth(by: UInt64(truncatingIfNeeded: _uint128_pow10[exponent]))
@@ -86,68 +86,130 @@ private extension UInt128 {
         return self.multipliedFullWidth(by: _uint128_pow10[exponent])
     }
 
-    // Division by constant integer using multiplication and shift (cf. Granlund and Montgomery, 1991).
+    // Division by constant integer using multiplication and shift (cf. Granlund and Montgomery, 1994).
     @inline(__always)
-    func _quotientAndRemainderDividingBy10() -> (quotient: Self, remainder: Self) {
-        let m = 0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCD as UInt128
-        let q = self.multipliedFullWidth(by: m).high &>> 3
-        let r = self &- q &* 10
+    internal func _quotientAndRemainder(
+        dividingBy1e exponent: Int
+    ) -> (quotient: Self, remainder: Self) {
+        let (multiplier, shift): (UInt128, Int) = switch exponent {
+        case  1: (0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCD,  2)
+        case  2: (0xA3D70A3D70A3D70A3D70A3D70A3D70A4,  4)
+        case  3: (0x83126E978D4FDF3B645A1CAC083126EA,  6)
+        case  4: (0xD1B71758E219652BD3C36113404EA4A9,  9)
+        case  5: (0xA7C5AC471B4784230FCF80DC33721D54, 11)
+        case  6: (0x8637BD05AF6C69B5A63F9A49C2C1B110, 13)
+        case  7: (0xD6BF94D5E57A42BC3D32907604691B4D, 16)
+        case  8: (0xABCC77118461CEFCFDC20D2B36BA7C3E, 18)
+        case  9: (0x89705F4136B4A59731680A88F8953031, 20)
+        case 10: (0xDBE6FECEBDEDD5BEB573440E5A884D1C, 23)
+        case 11: (0xAFEBFF0BCB24AAFEF78F69A51539D749, 25)
+        case 12: (0x8CBCCC096F5088CBF93F87B7442E45D4, 27)
+        case 13: (0xE12E13424BB40E132865A5F206B06FBA, 30)
+        case 14: (0xB424DC35095CD80F538484C19EF38C95, 32)
+        case 15: (0x901D7CF73AB0ACD90F9D37014BF60A11, 34)
+        case 16: (0xE69594BEC44DE15B4C2EBE687989A9B4, 37)
+        case 17: (0xB877AA3236A4B44909BEFEB9FAD487C3, 39)
+        case 18: (0x9392EE8E921D5D073AFF322E62439FD0, 41)
+        case 19: (0xEC1E4A7DB69561A52B31E9E3D06C32E6, 44)
+        case 20: (0xBCE5086492111AEA88F4BB1CA6BCF585, 46)
+        case 21: (0x971DA05074DA7BEED3F6FC16EBCA5E04, 48)
+        case 22: (0xF1C90080BAF72CB15324C68B12DD6339, 51)
+        case 23: (0xC16D9A0095928A2775B7053C0F178294, 53)
+        case 24: (0x9ABE14CD44753B52C4926A9672793543, 55)
+        case 25: (0xF79687AED3EEC5513A83DDBD83F52205, 58)
+        case 26: (0xC612062576589DDA95364AFE032A819E, 60)
+        case 27: (0x9E74D1B791E07E48775EA264CF55347E, 62)
+        case 28: (0xFD87B5F28300CA0D8BCA9D6E188853FD, 65)
+        case 29: (0xCAD2F7F5359A3B3E096EE45813A04331, 67)
+        case 30: (0xA2425FF75E14FC31A1258379A94D028E, 69)
+        case 31: (0x81CEB32C4B43FCF480EACF948770CED8, 71)
+        case 32: (0xCFB11EAD453994BA67DE18EDA5814AF3, 74)
+        case 33: (0xA6274BBDD0FADD61ECB1AD8AEACDD58F, 76)
+        case 34: (0x84EC3C97DA624AB4BD5AF13BEF0B113F, 78)
+        case 35: (0xD4AD2DBFC3D07787955E4EC64B44E865, 81)
+        case 36: (0xAA242499697392D2DDE50BD1D5D0B9EA, 83)
+        case 37: (0x881CEA14545C75757E50D64177DA2E55, 85)
+        case 38: (0xD9C7DCED53C7225596E7BD358C904A22, 88)
+        default: preconditionFailure()
+        }
+        let q = (self &>> exponent).multipliedFullWidth(by: multiplier).high &>> shift
+        let r = self &- q &* _uint128_pow10[exponent]
         return (q, r)
     }
 
     @inline(__always)
-    func _quotientAndRemainderDividingBy10000() -> (quotient: Self, remainder: Self) {
-        let m = 0xD1B71758E219652BD3C36113404EA4A9 as UInt128
-        let q = self.multipliedFullWidth(by: m).high &>> 13
-        let r = self &- q &* 10000
-        return (q, r)
-    }
-
-    // Full-width division of `(high * 2**128 + low)` by a constant divisor,
-    // using a single step of schoolbook short division in base `2**128` (cf. Knuth exercise 4.3.1-16).
-    @inline(__always)
-    static func _10DividingFullWidth(
-        _ dividend: (high: Self, low: Self)
+    internal static func _quotientAndRemainder(
+        fullWidth dividend: (high: Self, low: Self),
+        dividingBy1e exponent: Int
     ) -> (quotient: Self, remainder: Self) {
-        assert(dividend.high < 10) // ...or else the result would overflow `UInt128`.
+        assert(dividend.high < _uint128_pow10[exponent])
 
-        // Since base `2**128` is not a multiple of the divisor `d`,
-        // which in this case is 10, we split the base into `q1 * d + r1`.
-        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821145, 6) // (2**128 / 10, 2**128 % 10)
+        // One round of short division in base `2**128` (cf. Knuth exercise 4.3.1-16).
+        // Requires `e <= 19` and `high < 10**e`, s.t. `high * r1` overflows at most once.
+        @inline(__always)
+        func _divide(high: Self, low: Self, by1e e: Int) -> (Self, Self) {
+            // Since base `2**128` is not a multiple of the divisor `10**e`,
+            // we split the base into `q1 * d + r1`.
+            let (q1, r1): (UInt128, UInt128) = switch e {
+            case  1: (34028236692093846346337460743176821145, 6)
+            case  2: (3402823669209384634633746074317682114, 56)
+            case  3: (340282366920938463463374607431768211, 456)
+            case  4: (34028236692093846346337460743176821, 1456)
+            case  5: (3402823669209384634633746074317682, 11456)
+            case  6: (340282366920938463463374607431768, 211456)
+            case  7: (34028236692093846346337460743176, 8211456)
+            case  8: (3402823669209384634633746074317, 68211456)
+            case  9: (340282366920938463463374607431, 768211456)
+            case 10: (34028236692093846346337460743, 1768211456)
+            case 11: (3402823669209384634633746074, 31768211456)
+            case 12: (340282366920938463463374607, 431768211456)
+            case 13: (34028236692093846346337460, 7431768211456)
+            case 14: (3402823669209384634633746,  7431768211456) // (sic)
+            case 15: (340282366920938463463374, 607431768211456)
+            case 16: (34028236692093846346337, 4607431768211456)
+            case 17: (3402823669209384634633, 74607431768211456)
+            case 18: (340282366920938463463, 374607431768211456)
+            case 19: (34028236692093846346, 3374607431768211456)
+            default: preconditionFailure()
+            }
+            // Substituting, the dividend becomes `high * (q1 * d + r1) + low`.
+            // Rearranging, `d * (high * q1) + (high * r1 + low)`.
+            //
+            // The result of full-width flooring division by `d` is then
+            // `(high * q1) + ⌊ (high * r1 + low) / d ⌋`, and the remainder is
+            // `(high * r1 + low) % d`.
+            //
+            // Compute `high * r1 + low`, which may overflow by a carry bit
+            // (`high * r1` itself can't overflow, since `high < d` and `r1 < d`
+            // and `d * d < UInt128.max`):
+            let (sum_, carry_) = low.addingReportingOverflow(high &* r1)
+            let carry: UInt128 = carry_ ? 1 : 0
+            // Compute `⌊ (high * r1 + low) / d ⌋` and `(high * r1 + low) % d`.
+            // When there's been a carry, we again use the identity
+            // `2**128 = q1 * d + r1`, giving us:
+            //
+            //     (high * r1 + low) / d = (sum_ + 2**128) / d = (sum_ + q1 * d + r1) / d = (sum_ + r1) / d + q1
+            //
+            // That is, we add `carry * r1` to the value to be divided by `d`...
+            let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainder(dividingBy1e: e)
+            // ...and we need to add `carry * q1` to the final quotient.
+            return (high &* q1 &+ carry &* q1 &+ q2, r2)
+        }
 
-        // Substituting, the dividend becomes `high * (q1 * d + r1) + low`. Rearranging, `d * (high * q1) + (high * r1 + low)`.
-        // The result of full-width flooring division by `d` is then `(high * q1) + ⌊ (high * r1 + low) / d ⌋`,
-        // and the remainder is `(high * r1 + low) % d`.
-        //
-        // Compute `high * r1 + low`, which may overflow by a single carry bit
-        // (`high * r1` itself can't overflow because `high < d` and `r1 < d` and `d * d < UInt128.max`):
-        let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
-        let carry: UInt128 = carry_ ? 1 : 0
-        // Compute `⌊ (high * r1 + low) / d ⌋` and `(high * r1 + low) % d`.
-        // When there's been a carry, we again use the identity `2**128 = q1 * d + r1`, giving us:
-        // `(high * r1 + low) / d = (sum_ + 2**128) / d = (sum_ + q1 * d + r1) / d = (sum_ + r1) / d + q1`.
-        // That is, we need to add `carry * r1` to the value to be divided by `d`...
-        let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10()
-        // ...and we need to add `carry * q1` to the final quotient.
-        return (dividend.high &* q1 &+ carry &* q1 &+ q2, r2)
-    }
-
-    @inline(__always)
-    static func _10000DividingFullWidth(
-        _ dividend: (high: Self, low: Self)
-    ) -> (quotient: Self, remainder: Self) {
-        assert(dividend.high < 10000)
-        let (q1, r1): (UInt128, UInt128) = (34028236692093846346337460743176821, 1456) // (2**128 / 10000, 2**128 % 10000)
-        let (sum_, carry_) = dividend.low.addingReportingOverflow(dividend.high &* r1)
-        let carry: UInt128 = carry_ ? 1 : 0
-        let (q2, r2) = (sum_ &+ carry &* r1)._quotientAndRemainderDividingBy10000()
-        return (dividend.high &* q1 &+ carry &* q1 &+ q2, r2)
+        if exponent <= 19 {
+            return _divide(high: dividend.high, low: dividend.low, by1e: exponent)
+        }
+        // First divide by `10**19`, then by `10**(e - 19)`.
+        let (q1, r1) = dividend.high._quotientAndRemainder(dividingBy1e: 19)
+        let (q2, r2) = _divide(high: r1, low: dividend.low, by1e: 19)
+        let (q3, r3) = _divide(high: q1, low: q2, by1e: exponent &- 19)
+        return (q3, r3 &* 10_000_000_000_000_000_000 &+ r2)
     }
 
     // Exact division by a constant (cf. Granlund and Montgomery, 1994 §9).
     // See discussion on analogous `UInt64` extensions for more.
     @inline(__always)
-    func _quotientIfExactDividingBy10() -> Self? {
+    internal func _quotientIfExactDividingBy10() -> Self? {
         let m = 0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCD as UInt128 // Inverse of 5 (mod 2**128).
         let p = self &* m
         let q = p &>> 1 | p &<< 127
@@ -156,7 +218,7 @@ private extension UInt128 {
     }
 
     @inline(__always)
-    func _quotientIfExactDividingBy100() -> Self? {
+    internal func _quotientIfExactDividingBy100() -> Self? {
         let m = 0x28F5C28F5C28F5C28F5C28F5C28F5C29 as UInt128 // Inverse of 5**2 (mod 2**128).
         let p = self &* m
         let q = p &>> 2 | p &<< 126
@@ -165,7 +227,7 @@ private extension UInt128 {
     }
 
     @inline(__always)
-    func _quotientIfExactDividingBy10000() -> Self? {
+    internal func _quotientIfExactDividingBy10000() -> Self? {
         let m = 0x495182A9930BE0DED288CE703AFB7E91 as UInt128 // Inverse of 5**4 (mod 2**128).
         let p = self &* m
         let q = p &>> 4 | p &<< 124
@@ -174,7 +236,7 @@ private extension UInt128 {
     }
 
     @inline(__always)
-    func _quotientIfExactDividingBy1e8() -> Self? {
+    internal func _quotientIfExactDividingBy1e8() -> Self? {
         let m = 0xF36B7213EE9F5A78C767074B22E90E21 as UInt128 // Inverse of 5**8 (mod 2**128).
         let p = self &* m
         let q = p &>> 8 | p &<< 120
@@ -183,7 +245,7 @@ private extension UInt128 {
     }
 
     @inline(__always)
-    func _quotientIfExactDividingBy1e16() -> Self? {
+    internal func _quotientIfExactDividingBy1e16() -> Self? {
         let m = 0xF60B3275305C1066E4A4D1417CD9A041 as UInt128 // Inverse of 5**16 (mod 2**128).
         let p = self &* m
         let q = p &>> 16 | p &<< 112
@@ -192,7 +254,7 @@ private extension UInt128 {
     }
 
     @inline(__always)
-    func _quotientIfExactDividingBy1e32() -> Self? {
+    internal func _quotientIfExactDividingBy1e32() -> Self? {
         let m = 0x62B42691AD836EB116590F420A835081 as UInt128 // Inverse of 5**32 (mod 2**128).
         let p = self &* m
         let q = p &>> 32 | p &<< 96
@@ -271,7 +333,7 @@ extension Decimal {
             (q, r) = (b._significand, 0)
         } else if shift.b < 39 {
             divisor = _uint128_pow10[shift.b]
-            (q, r) = b._significand.quotientAndRemainder(dividingBy: divisor)
+            (q, r) = b._significand._quotientAndRemainder(dividingBy1e: shift.b)
         } else {
             // A nonzero proxy value under 0.5 ulp.
             divisor = 10
@@ -501,7 +563,7 @@ extension Decimal {
             shift &+= 1
             scaled &*= 10
         }
-        let (hi, lo) = scaled.multipliedFullWidth(by: _uint128_pow10[38])
+        let (hi, lo) = scaled.multipliedFullWidth(by: 100_000_000_000_000_000_000_000_000_000_000_000_000)
         let (q1, r1) = hi.quotientAndRemainder(dividingBy: dm)
         let (q2, r2) = dm.dividingFullWidth((r1, lo))
         return try Self._assemble(
@@ -691,7 +753,7 @@ extension Decimal {
             let r: UInt128
             if shift2 < 39 {
                 divisor = _uint128_pow10[shift2]
-                (q, r) = small._significand.quotientAndRemainder(dividingBy: divisor)
+                (q, r) = small._significand._quotientAndRemainder(dividingBy1e: shift2)
             } else {
                 // A nonzero proxy value under 0.5 ulp.
                 divisor = 10
@@ -784,12 +846,11 @@ extension Decimal {
             // including when `scale` is `NSDecimalNoScale` (aka `CShort.max`).
             return self
         }
-
         let divisor: UInt128
         let (q, r): (UInt128, UInt128)
         if shift < 39 {
             divisor = _uint128_pow10[shift]
-            (q, r) = self._significand.quotientAndRemainder(dividingBy: divisor)
+            (q, r) = self._significand._quotientAndRemainder(dividingBy1e: shift)
         } else {
             // A nonzero proxy value under 0.5 ulp.
             divisor = 10
@@ -935,67 +996,85 @@ extension Decimal {
 
         var (high, low) = significand
         var exponent = exponent
-        var roundDigits = 0 as UInt128
+        var round = 0 as UInt128
         var sticky = tail.numerator != 0
         var shifted = false
         var underflowed = false
 
         // Fit significand in 128 bits.
-        while high >= 10000 {
-            if roundDigits != 0 { sticky = true }
-            let (q1, r1) = high._quotientAndRemainderDividingBy10000()
-            let (q2, r2) = UInt128._10000DividingFullWidth((r1, low))
-            high = q1
-            low = q2
-            roundDigits = r2
-            exponent += 4
-            shifted = true
-        }
-        while high != 0 {
-            if roundDigits != 0 { sticky = true }
-            let (q1, r1) = high._quotientAndRemainderDividingBy10()
-            let (q2, r2) = UInt128._10DividingFullWidth((r1, low))
-            high = q1
-            low = q2
-            roundDigits = r2
-            exponent += 1
+        if high != 0 {
+            // Use a deliberate underestimate of the decimal digit count of `high`,
+            // using 19/64 as a close (but not too close!) approximation of 1/log2(10).
+            //
+            // See:
+            // - Hacker's Delight, ch. 11
+            // - https://lemire.me/blog/2021/05/28/computing-the-number-of-digits-of-an-integer-quickly/
+            //
+            // A rational approximation `a / b` is too close if `⌊ 127 * a / b ⌋ == 38`
+            // because attempts to compute `10 ** (38 + 1)` result in overflow.
+            // But an approximation is not close enough if (as is the case with 9/32)
+            // it'd result in underestimation of the true digit count by more than 1.
+            let estimate = (((127 &- (high|1).leadingZeroBitCount) &* 19) &>> 6) &+ 1
+
+            let (q1, r1) = high._quotientAndRemainder(dividingBy1e: estimate)
+            let (q2, r2) = UInt128._quotientAndRemainder(
+                fullWidth: (r1, low), dividingBy1e: estimate)
+            if q1 != 0 {
+                if r2 != 0 { sticky = true }
+                // Correct for underestimation.
+                (low, round) = UInt128._quotientAndRemainder(
+                    fullWidth: (q1, q2), dividingBy1e: 1)
+                exponent += Int32(estimate &+ 1)
+            } else {
+                if estimate == 1 {
+                    (low, round) = (q2, r2)
+                } else {
+                    low = q2
+                    let r3: UInt128
+                    (round, r3) = r2._quotientAndRemainder(
+                        dividingBy1e: estimate &- 1)
+                    if r3 != 0 { sticky = true }
+                }
+                exponent += Int32(estimate)
+            }
+            high = 0
             shifted = true
         }
 
         // Shrink significand further, if necessary, so that `exponent >= minExponent`.
         // This step and the regrowing step below are obviously mutually exclusive.
         if exponent < minExponent {
-            var k = minExponent - exponent
-            while k > 4 {
-                if roundDigits != 0 { sticky = true }
-                (low, roundDigits) = low._quotientAndRemainderDividingBy10000()
-                exponent += 4
-                k -= 4
+            if round != 0 { sticky = true }
+            let k = Int(minExponent - exponent)
+            if k > 39 {
+                if low != 0 { sticky = true }
+                (low, round) = (0, 0)
+            } else {
+                if k == 1 {
+                    (low, round) = low._quotientAndRemainder(dividingBy1e: 1)
+                } else {
+                    let (q, r) = low._quotientAndRemainder(
+                        dividingBy1e: k &- 1)
+                    if r != 0 { sticky = true }
+                    (low, round) = q._quotientAndRemainder(dividingBy1e: 1)
+                }
             }
-            while k > 0 {
-                if roundDigits != 0 { sticky = true }
-                (low, roundDigits) = low._quotientAndRemainderDividingBy10()
-                exponent += 1
-                k -= 1
-            }
+            exponent = minExponent
             shifted = true
             underflowed = true
         }
-        assert(roundDigits < 10)
 
         // Round.
         var inexact = false
         if shifted {
-            if sticky && (roundDigits == 0 || roundDigits == 5) {
-                // Nudge `roundDigits` to break ties.
-                roundDigits += 1
-            }
-            if roundDigits != 0 {
+            // Double `round`; nudge to break ties if `sticky`.
+            round = (round &<< 1) | (sticky ? 1 : 0)
+            if round != 0 {
                 inexact = true
                 if _roundAway(
                     isNegative: isNegative,
                     isSignificandOdd: (low & 1) != 0,
-                    tail: (roundDigits, 10),
+                    tail: (round, 20),
                     roundingMode: roundingMode
                 ) {
                     if low == .max {
@@ -1030,12 +1109,23 @@ extension Decimal {
         }
 
         // Regrow significand, if necessary, so that `exponent <= maxExponent`.
-        while exponent > 127 /* maxExponent */ {
-            if low > 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
+        if exponent > 127 /* maxExponent */ {
+            let k = Int(exponent - 127)
+            // Deliberately underestimate the max "headroom" for scaling up,
+            // using 1233/4096 as a close approximation of 1/log2(10) -- cf. Hacker's Delight, ch. 11.
+            let shift = ((low|1).leadingZeroBitCount &* 1233) &>> 12
+            if k <= shift {
+                low &*= _uint128_pow10[k]
+            } else if k == shift &+ 1 {
+                low &*= _uint128_pow10[shift]
+                if low > 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
+                    throw _CalculationError.overflow
+                }
+                low &*= 10
+            } else {
                 throw _CalculationError.overflow
             }
-            low *= 10
-            exponent -= 1
+            exponent = 127
         }
 
         var result = Decimal()
