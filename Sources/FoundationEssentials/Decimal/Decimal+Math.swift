@@ -26,7 +26,7 @@ import CRT
 @preconcurrency import EmscriptenLibc
 #endif
 
-private let _pow10: [39 of UInt128] = [
+internal let _uint128_pow10: [39 of UInt128] = [
                                                       1,    //  0
                                                      10,    //  1
                                                     100,    //  2
@@ -80,10 +80,10 @@ private extension UInt128 {
     func _multipliedFullWidth(by1e exponent: Int) -> (high: Self, low: Self) {
         if exponent <= 19 && self <= 18446744073709551615 /* UInt64.max */ {
             let (hi, lo) = UInt64(truncatingIfNeeded: self)
-                .multipliedFullWidth(by: UInt64(truncatingIfNeeded: _pow10[exponent]))
+                .multipliedFullWidth(by: UInt64(truncatingIfNeeded: _uint128_pow10[exponent]))
             return (0, UInt128(truncatingIfNeeded: hi) &<< 64 | UInt128(truncatingIfNeeded: lo))
         }
-        return self.multipliedFullWidth(by: _pow10[exponent])
+        return self.multipliedFullWidth(by: _uint128_pow10[exponent])
     }
 
     // Division by constant integer using multiplication and shift (cf. Granlund and Montgomery, 1991).
@@ -214,7 +214,7 @@ extension Decimal {
             divisor = 1
             (q, r) = (b._significand, 0)
         } else if shift.b < 39 {
-            divisor = _pow10[shift.b]
+            divisor = _uint128_pow10[shift.b]
             (q, r) = b._significand.quotientAndRemainder(dividingBy: divisor)
         } else {
             // A nonzero proxy value under 0.5 ulp.
@@ -422,13 +422,13 @@ extension Decimal {
         // Deliberately underestimate the max "headroom" for scaling up,
         // using 1233/4096 as a close approximation of 1/log2(10) -- cf. Hacker's Delight, ch. 11.
         var shift = ((sm|1).leadingZeroBitCount &* 1233) &>> 12
-        var scaled = sm * _pow10[shift]
+        var scaled = sm * _uint128_pow10[shift]
         // Top up our estimate, if needed.
         if scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
             shift &+= 1
             scaled &*= 10
         }
-        let (hi, lo) = scaled.multipliedFullWidth(by: _pow10[38])
+        let (hi, lo) = scaled.multipliedFullWidth(by: _uint128_pow10[38])
         let (q1, r1) = hi.quotientAndRemainder(dividingBy: dm)
         let (q2, r2) = dm.dividingFullWidth((r1, lo))
         return try Self._assemble(
@@ -601,7 +601,7 @@ extension Decimal {
             // Deliberately underestimate the max "headroom" for scaling up the significand of the value with larger exponent,
             // using 1233/4096 as a close approximation of 1/log2(10)--cf. Hacker's Delight, ch. 11.
             var shift1 = ((lm|1).leadingZeroBitCount &* 1233) &>> 12
-            var scaled = lm * _pow10[shift1]
+            var scaled = lm * _uint128_pow10[shift1]
             // Top up our estimate, if needed.
             if scaled <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */ {
                 shift1 &+= 1
@@ -617,7 +617,7 @@ extension Decimal {
             var q: UInt128
             let r: UInt128
             if shift2 < 39 {
-                divisor = _pow10[shift2]
+                divisor = _uint128_pow10[shift2]
                 (q, r) = small._significand.quotientAndRemainder(dividingBy: divisor)
             } else {
                 // A nonzero proxy value under 0.5 ulp.
@@ -703,7 +703,7 @@ extension Decimal {
         let divisor: UInt128
         let (q, r): (UInt128, UInt128)
         if shift < 39 {
-            divisor = _pow10[shift]
+            divisor = _uint128_pow10[shift]
             (q, r) = self._significand.quotientAndRemainder(dividingBy: divisor)
         } else {
             // A nonzero proxy value under 0.5 ulp.
