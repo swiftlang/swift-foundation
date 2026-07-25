@@ -1065,32 +1065,38 @@ extension JSONDecoderImpl: Decoder {
 
     static private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, json5: Bool, numberBuffer: BufferView<UInt8>, fullSource: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         // This is the slow path... If the fast path has failed. For example for "34.0" as an integer, we try to parse as either a Decimal or a Double and then convert back, losslessly.
-        if let double = Double(prevalidatedBuffer: numberBuffer) {
-            // T.init(exactly:) guards against non-integer Double(s), but the parser may
-            // have already transformed the non-integer "1.0000000000000001" into 1, etc.
-            // Proper lossless behavior should be implemented by the parser.
-            guard let value = T(exactly: double) else {
-                throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
-            }
-
-            // The distance between Double(s) is >=2 from ±2^53.
-            // 2^53 may represent either 2^53 or 2^53+1 rounded toward zero.
-            // This code makes it so you don't get integer A from integer B.
-            // Proper lossless behavior should be implemented by the parser.
-            if double.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
-                return value
-            }
-        }
-
-        #if !NO_JSON_FOUNDATION_SPECIALIZATION
-        let decimalParseResult = Decimal._decimal(from: numberBuffer, matchEntireString: true).asOptional
-        if let decimal = decimalParseResult.result {
-            guard let value = T(decimal) else {
+        func _representable(_ value: T?) throws -> T {
+            guard let value else {
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
             }
             return value
         }
-        #endif
+        if let double = Double(prevalidatedBuffer: numberBuffer) {
+            // T.init(exactly:) guards against non-integer Double(s), but the parser may
+            // have already transformed the non-integer "1.0000000000000001" into 1, etc.
+            // Proper lossless behavior should be implemented by the parser.
+            let converted = T(exactly: double)
+            // The distance between Double(s) is >=2 from ±2^53.
+            // 2^53 may represent either 2^53 or 2^53+1 rounded toward zero.
+            // This code makes it so you don't get integer A from integer B.
+            // Proper lossless behavior should be implemented by the parser.
+            if double.magnitude < 0x1p53 {
+                return try _representable(converted)
+            }
+            #if !NO_JSON_FOUNDATION_SPECIALIZATION
+            // Try `Decimal` conversion first before calling the value unrepresentable;
+            // for example: `UInt128.max` can be exactly represented as a `Decimal`.
+            // Note that the finite range of `Decimal` is inside that of `Double`:
+            // hence nesting in the `if let double` conditional and letting `Double`
+            // have the final word on representability.
+            let decimal = Decimal._decimal(from: numberBuffer, matchEntireString: true).asOptional.result
+            if let decimal {
+                return try _representable(T(exactly: decimal))
+            }
+            #endif
+            _ = try _representable(converted)
+        }
+
         // Maybe it was just an unreadable sequence?
         if json5 {
             throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitBeginning), fullSource: fullSource)
@@ -1106,61 +1112,6 @@ extension JSONDecoderImpl: Decoder {
         ))
     }
 }
-
-#if !NO_JSON_FOUNDATION_SPECIALIZATION
-extension FixedWidthInteger {
-    init?(_ decimal: Decimal) {
-        let isNegative = decimal._isNegative != 0
-        if decimal._length == 0 && isNegative {
-            return nil
-        }
-        if isNegative {
-            guard Self.isSigned else {
-                return nil
-            }
-        }
-
-        var d : UInt64 = 0
-        for i in (0..<decimal._length).reversed() {
-            let overflow1: Bool
-            let overflow2: Bool
-            (d, overflow1) = d.multipliedReportingOverflow(by: 65536)
-            (d, overflow2) = d.addingReportingOverflow(UInt64(decimal[i]))
-            guard !overflow1 && !overflow2 else {
-                return nil
-            }
-        }
-        if (decimal._exponent < 0) {
-            for _ in 0 ..< -decimal._exponent {
-                let overflow: Bool
-                (d, overflow) = d.dividedReportingOverflow(by: 10)
-                guard !overflow else {
-                    return nil
-                }
-            }
-        } else {
-            for _ in 0 ..< decimal._exponent {
-                let overflow: Bool
-                (d, overflow) = d.multipliedReportingOverflow(by: 10)
-                guard !overflow else {
-                    return nil
-                }
-            }
-        }
-        if isNegative {
-            guard let signedAndSized = Self(exactly: d) else {
-                return nil
-            }
-            self = signedAndSized * -1
-        } else {
-            guard let sized = Self(exactly: d) else {
-                return nil
-            }
-            self = sized
-        }
-    }
-}
-#endif
 
 extension JSONDecoderImpl : SingleValueDecodingContainer {
     func decodeNil() -> Bool {

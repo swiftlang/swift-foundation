@@ -1195,7 +1195,46 @@ private struct DecimalTests {
         #expect(Decimal.nan.doubleValue.isNaN)
         #expect(Decimal(UInt64.max).doubleValue == Double(1.8446744073709552e+19))
     }
-    
+
+    @Test func integerConversion() async throws {
+        #expect(Int(Decimal(0)) == 0)
+        #expect(Int(Decimal(12345)) == 12345)
+        #expect(Int(exactly: Decimal(12345)) == 12345)
+        #expect(Int(Decimal(-12345)) == -12345)
+        #expect(Int(exactly: Decimal(-12345)) == -12345)
+        #expect(UInt8(exactly: Decimal(255)) == 255)
+        #expect(UInt8(exactly: Decimal(256)) == nil)
+
+        #expect(Int(Decimal(string: "3.9")!) == 3)
+        #expect(Int(Decimal(string: "-3.9")!) == -3)
+        #expect(Int(exactly: Decimal(string: "3.9")!) == nil)
+        #expect(Int(exactly: Decimal(string: "-3.9")!) == nil)
+
+        #expect(Int8(Decimal(-128)) == -128)
+        #expect(Int8(exactly: Decimal(-129)) == nil)
+        #expect(Int8(exactly: Decimal(-128)) == -128)
+        #expect(Int8(exactly: Decimal(127)) == 127)
+        #expect(Int8(exactly: Decimal(128)) == nil)
+        #expect(Int8(exactly: Decimal.nan) == nil)
+
+        #expect(UInt64(Decimal(UInt64.max)) == UInt64.max)
+        #expect(Int64(exactly: Decimal(Int64.min)) == Int64.min)
+        #expect(Int64(exactly: Decimal(UInt64.max)) == nil)
+
+        #expect(Int128(exactly: Decimal(string: "18446744073709551616")!) == 18446744073709551616) // 2**64
+        #expect(Int128(exactly: Decimal(string: "170141183460469231731687303715884105727")!) == .max)
+        #expect(Int128(exactly: Decimal(string: "-170141183460469231731687303715884105728")!) == .min)
+        #expect(UInt128(exactly: Decimal(string: "340282366920938463463374607431768211455")!) == .max)
+
+        #expect(Int(Decimal(sign: .plus, exponent: -38, significand: Decimal(5))) == 0)
+        let tiny = Decimal(sign: .plus, exponent: -39, significand: Decimal(5))
+        #expect(Int(tiny) == 0)
+        #expect(Int(exactly: tiny) == nil)
+
+        #expect(UInt(Decimal(string: "-0.5")!) == 0)
+        #expect(UInt(exactly: Decimal(string: "-0.5")!) == nil)
+    }
+
     @Test func decimalFromString() {
         let string = "x123x"
         let scanLocation = 1
