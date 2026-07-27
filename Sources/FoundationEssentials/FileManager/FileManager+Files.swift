@@ -776,11 +776,21 @@ extension _FileManagerImpl {
                     // For each value (total/available bytes, total/available files) report the smaller of the quota hard limit and the statfs value.
                     if quotaInfo.dqb_bhardlimit > 0 {
                         totalSizeBytes = min(quotaInfo.dqb_bhardlimit, totalSizeBytes)
-                        availSizeBytes = min(quotaInfo.dqb_bhardlimit - quotaInfo.dqb_curbytes, availSizeBytes)
+                        let remainingBytes: UInt64 = if quotaInfo.dqb_bhardlimit >= quotaInfo.dqb_curbytes {
+                            quotaInfo.dqb_bhardlimit - quotaInfo.dqb_curbytes
+                        } else {
+                            0
+                        }
+                        availSizeBytes = min(remainingBytes, availSizeBytes)
                     }
                     if (quotaInfo.dqb_ihardlimit > 0) {
                         totalFiles = min(UInt64(quotaInfo.dqb_ihardlimit), totalFiles)
-                        availFiles = min(UInt64(quotaInfo.dqb_ihardlimit - quotaInfo.dqb_curinodes), availFiles)
+                        let remaining: UInt64 = if quotaInfo.dqb_ihardlimit >= quotaInfo.dqb_curinodes {
+                            UInt64(quotaInfo.dqb_ihardlimit - quotaInfo.dqb_curinodes)
+                        } else {
+                            0
+                        }
+                        availFiles = min(remaining, availFiles)
                     }
                 }
             }
