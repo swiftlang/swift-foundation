@@ -28,16 +28,16 @@ internal import Synchronization
 
 // Chinese lunisolar calendar engine. Years 1901-2100 come from a baked table generated from ICU (parity by construction); outside that range, month structure is computed with ICU's chnsecal rules over _CalendarAstronomy at UTC+8.
 
-// Bounded memoization caches: over the capacity, evict one arbitrary entry (hash order). LRU is deliberately not attempted, a miss only recomputes.
+// Small caches of already-computed results, capped at `capacity`. Over the cap, drop one entry (whichever the dictionary lists first). We skip least-recently-used tracking on purpose: a dropped entry is just recomputed next time, and that recompute is cheap, so a smarter cache or a new dependency is not worth it.
 private func evictIfNeeded<V>(_ cache: inout [Int: V], capacity: Int) {
     if cache.count > capacity, let victim = cache.keys.first {
         cache.removeValue(forKey: victim)
     }
 }
 
-// MARK: - chnsecal rules over the astronomy (flat UTC+8, matching ICU)
+// MARK: - Month-structure rules over the astronomy engine. Days are reckoned at a fixed UTC+8 offset (no daylight saving, no historical time-zone changes), matching ICU's Chinese calendar (chnsecal).
 
-internal struct _ChineseRules {
+fileprivate struct _ChineseRules {
     static let synodicGap = 25
     var winterSolsticeCache: [Int: Int] = [:]
     var newYearCache: [Int: Int] = [:]
@@ -257,7 +257,7 @@ internal enum _ChineseCalendarEngine {
     0x00300B45, 0x001A0A8B, 0x0004549B, 0x002A04AB, // 2097-2100
     ]
 
-    // Cross-instance memoization of computed out-of-range years only (pre-1901 / post-2100); in-range dates read the baked table and never touch this. Bounded to 16 entries, so it never needs clearing.
+    // A shared cache of the month structure computed for years outside the baked table (before 1901 or after 2100). Key: the extended year. Value: that year's computed structure. In-range dates (1901-2100) read the baked table directly, so they never reach this cache. It is capped at 16 entries (over that, `evictIfNeeded` drops one), which keeps it small enough that we never need to clear it.
     static let fallbackCache = Mutex<[Int: _ChineseYear]>([:])
 
     private static func decodeTableYear(relatedISOYear: Int) -> _ChineseYear {
