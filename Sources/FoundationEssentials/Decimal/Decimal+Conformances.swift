@@ -390,9 +390,7 @@ extension Decimal /* : FloatingPoint */ {
     /// The least representable value that is greater than this decimal.
     public var nextUp: Decimal {
         if _isNegative == 1 {
-            if _exponent > -128 &&
-               (_mantissa.0, _mantissa.1, _mantissa.2, _mantissa.3) == (0x999a, 0x9999, 0x9999, 0x9999) &&
-               (_mantissa.4, _mantissa.5, _mantissa.6, _mantissa.7) == (0x9999, 0x9999, 0x9999, 0x1999) {
+            if _length != 0 && _exponent > -128 && _significand == 0x1999_9999_9999_9999_9999_9999_9999_999a {
                 return Decimal(
                     _exponent: _exponent &- 1,
                     _length: 8,
@@ -403,9 +401,7 @@ extension Decimal /* : FloatingPoint */ {
                 )
             }
         } else {
-            if _exponent < 127 &&
-               (_mantissa.0, _mantissa.1, _mantissa.2, _mantissa.3) == (0xffff, 0xffff, 0xffff, 0xffff) &&
-               (_mantissa.4, _mantissa.5, _mantissa.6, _mantissa.7) == (0xffff, 0xffff, 0xffff, 0xffff) {
+            if _length != 0 && _exponent < 127 && _significand == .max {
                 return Decimal(
                     _exponent: _exponent &+ 1,
                     _length: 8,

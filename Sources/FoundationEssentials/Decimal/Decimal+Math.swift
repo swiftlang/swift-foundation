@@ -307,6 +307,10 @@ extension Decimal {
             if a._isNegative == b._isNegative {
                 let (sum, carry) = a._significand.addingReportingOverflow(b._significand)
                 if !carry {
+                    if sum == 0 {
+                        // `sum` is nonzero unless `a` or `b` is malformed.
+                        return (.zero, false)
+                    }
                     var result = a
                     result._significand = sum
                     result._isCompact = 0
@@ -447,12 +451,13 @@ extension Decimal {
             return (.zero, false)
         }
         let product: (high: UInt128, low: UInt128)
-        if self._length <= 4 && multiplicand._length <= 4 {
-            let (hi, lo) = UInt64(truncatingIfNeeded: self._significand)
-                .multipliedFullWidth(by: UInt64(truncatingIfNeeded: multiplicand._significand))
+        let lm = self._significand, rm = multiplicand._significand
+        if lm <= 0xffff_ffff_ffff_ffff && rm <= 0xffff_ffff_ffff_ffff {
+            let (hi, lo) = UInt64(truncatingIfNeeded: lm)
+                .multipliedFullWidth(by: UInt64(truncatingIfNeeded: rm))
             product = (0, UInt128(truncatingIfNeeded: hi) &<< 64 | UInt128(truncatingIfNeeded: lo))
         } else {
-            product = self._significand.multipliedFullWidth(by: multiplicand._significand)
+            product = lm.multipliedFullWidth(by: rm)
         }
         return try Self._assemble(
             isNegative: self._isNegative != multiplicand._isNegative,
@@ -527,12 +532,17 @@ extension Decimal {
         guard divisor._length > 0 else {
             throw .divideByZero
         }
+
+        let dm = divisor._significand
+        guard dm != 0 else {
+            // `dm` is nonzero unless `divisor` is malformed.
+            throw .divideByZero
+        }
         if self._length == 0 {
             return (.zero, false)
         }
 
         let isNegative = self._isNegative != divisor._isNegative
-        let dm = divisor._significand // Nonzero.
         // Power-of-ten divisor.
         if dm == 1 {
             return try Self._assemble(
@@ -701,7 +711,25 @@ extension Decimal {
             // Don't compact.
             return false
         }
+        if a._significand == 0 {
+            // Malformed zero: set `_length` and `_isNegative`.
+            a._length = 0
+            a._isNegative = 0
+            a._exponent = b._exponent
+            a._isCompact = 0
+            // Don't compact.
+            return false
+        }
         if b._length == 0 {
+            b._exponent = a._exponent
+            b._isCompact = 0
+            // Don't compact.
+            return false
+        }
+        if b._significand == 0 {
+            // Malformed zero: set `_length` and `_isNegative`.
+            b._length = 0
+            b._isNegative = 0
             b._exponent = a._exponent
             b._isCompact = 0
             // Don't compact.
@@ -778,7 +806,7 @@ extension Decimal {
 
         var significand = self._significand
         if significand == 0 {
-            // This branch is not reachable except with invalid values, such as in the test case.
+            // This branch is not reachable except with malformed values, such as in the test case.
             self = .zero
             return
         }
@@ -869,7 +897,7 @@ extension Decimal {
 private extension Decimal {
     func _truncatingMagnitude() -> (result: Decimal, inexact: Bool) {
         if self._length == 0 {
-            return (self, false)
+            return (.zero, false)
         }
         let e = self._exponent
         var result = self

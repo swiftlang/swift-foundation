@@ -1312,6 +1312,33 @@ private struct DecimalTests {
                 Decimal.nan
             )
         }
+    }
 
+    @Test(arguments: [0, 1] as [CUnsignedInt])
+    func malformedNonzeroLengthZeroMantissa(isNegative: CUnsignedInt) throws {
+        let z = Decimal(
+            _exponent: 5,
+            _length: 5,
+            _isNegative: isNegative,
+            _isCompact: 0,
+            _reserved: 0,
+            _mantissa: (0, 0, 0, 0, 0, 0, 0, 0))
+
+        // Classical behavior:
+        #expect(!z.isNaN)
+        #expect(z.hashValue == Decimal.zero.hashValue)
+        #expect(Decimal(string: z.description) == Decimal.zero)
+        #expect(z * z == Decimal.zero)
+        #expect((2 / z).isNaN)
+        #expect((z / z).isNaN)
+
+        // Classical behavior when `_isNegative == 0`:
+        #expect(z + z == Decimal.zero)
+        #expect(z * 2 == Decimal.zero)
+        #expect(z / 2 == Decimal.zero)
+        var x = z, y = Decimal(2)
+        _ = _NSDecimalNormalize(&x, &y, .plain)
+        #expect(!x.isNaN)
+        #expect(x == Decimal.zero)
     }
 }
