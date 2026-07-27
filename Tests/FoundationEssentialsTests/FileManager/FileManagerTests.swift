@@ -819,10 +819,12 @@ private struct FileManagerTests {
             let key = "org.swift.foundation.testattribute"
             #endif
             let value = Data("Hello, world".utf8)
+            let initialAttrs = try $0.attributesOfItem(atPath: "Foo")
+            let initialCount = (initialAttrs[._extendedAttributes] as? [String : Data])?.count ?? 0
             try $0.setAttributes([._extendedAttributes : [key : value]], ofItemAtPath: "Foo")
             let attrs = try $0.attributesOfItem(atPath: "Foo")
             let xattrs = try #require(attrs[._extendedAttributes] as? [String : Data])
-            #expect(xattrs.count == 1)
+            #expect(xattrs.count == initialCount + 1)
             #expect(xattrs[key] == value)
         }
     }
