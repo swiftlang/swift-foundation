@@ -300,9 +300,12 @@ extension Decimal /* : FloatingPoint */ {
 
     /// The significand of the decimal.
     public var significand: Decimal {
-        return Decimal(
-            _exponent: 0, _length: _length, _isNegative: 0, _isCompact: _isCompact,
+        let isCompact = _isCompact
+        var result = Decimal(
+            _exponent: 0, _length: _length, _isNegative: 0, _isCompact: isCompact,
             _reserved: 0, _mantissa: _mantissa)
+        if isCompact != 0 && !result._isActuallyCompact { result._isCompact = 0 }
+        return result
     }
 
     /// The sign of the decimal.
@@ -594,6 +597,8 @@ extension Decimal : Codable {
                        _isCompact: CUnsignedInt(isCompact ? 1 : 0),
                        _reserved: 0,
                        _mantissa: mantissa)
+        // Validate compactness.
+        if isCompact && !self._isActuallyCompact { self._isCompact = 0 }
     }
 
     public func encode(to encoder: Encoder) throws {

@@ -495,6 +495,7 @@ extension Decimal {
         if exponent >= minExponent && exponent <= 127 {
             var result = self
             result._exponent = exponent
+            result._isCompact = 0
             result.compact()
             return (result, false)
         }
@@ -850,6 +851,20 @@ extension Decimal {
         self._exponent = exponent
         // Mark the value as compact.
         self._isCompact = 1
+    }
+
+    internal var _isActuallyCompact: Bool {
+        @inline(__always)
+        get {
+            // `compact()` never sets `_isCompact` when `_length == 0`.
+            if _length == 0 { return false }
+            if (_mantissa.0 & 1) != 0 { return true }
+            let significand = _significand
+            // `compact()` rewrites values with zero significand to `.zero`.
+            if significand == 0 { return false }
+            if significand._quotientIfExactDividingBy10() == nil { return true }
+            return _exponent == 127
+        }
     }
 
     internal func _roundReportingInexact(

@@ -1118,6 +1118,17 @@ private struct DecimalTests {
         let b = Decimal.greatestFiniteMagnitude
         #expect(Decimal(sign: .plus, exponent: 10, significand: b).isNaN)
         #expect(Decimal(sign: .plus, exponent: .max, significand: b).isNaN)
+
+        x = Decimal(string: "1e128")!
+        #expect(x.significand._isCompact == 0 || x.significand._isActuallyCompact)
+        #expect(x.significand.hashValue == Decimal(10).hashValue)
+
+#if FOUNDATION_FRAMEWORK
+        if Decimal.compatibility1 { return }
+#endif
+        y = Decimal(sign: .plus, exponent: -2, significand: x)
+        #expect(y._isActuallyCompact)
+        #expect(y.hashValue == Decimal(string: "1e126")!.hashValue)
     }
 
     @Test func ULP() {
