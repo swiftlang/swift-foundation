@@ -21,7 +21,7 @@ import Testing
 @Suite("Chinese Calendar")
 private struct ChineseCalendarTests {
 
-    private static func cal() -> _CalendarChinese {
+    private static func chineseCalendar() -> _CalendarChinese {
         _CalendarChinese(identifier: .chinese, timeZone: .gmt, locale: nil,
                          firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
     }
@@ -31,7 +31,7 @@ private struct ChineseCalendarTests {
     }
 
     @Test func knownDates() {
-        let c = Self.cal()
+        let c = Self.chineseCalendar()
         // (gregorian y-m-d, era, year, month, isLeap, day)
         let cases: [(Int, Int, Int, Int, Int, Int, Bool, Int)] = [
             (1901, 2, 19, 76, 38, 1, false, 1),    // CNY 1901
@@ -54,7 +54,7 @@ private struct ChineseCalendarTests {
     }
 
     @Test func roundTrips() {
-        let c = Self.cal()
+        let c = Self.chineseCalendar()
         var failures = 0
         var rataDie = _CalendarAstronomy.gregorianRataDie(1899, 1, 1)
         let end = _CalendarAstronomy.gregorianRataDie(2102, 12, 31)
@@ -82,7 +82,7 @@ private struct ChineseCalendarTests {
         }
         let leaps: [(Int, UInt8)] = [(1775, 10), (1776, 0), (1900, 8), (2147, 11), (2148, 0)]
         for (iso, want) in leaps {
-            #expect(_ChineseCalendarEngine.year(relatedISOYear: iso).leapDisplay == want, "leap \(iso)")
+            #expect(_ChineseCalendarEngine.year(relatedISOYear: iso).leapMonthNumber == want, "leap \(iso)")
         }
     }
 
@@ -94,7 +94,7 @@ private struct ChineseCalendarTests {
             if prev.endRataDie != y.newYearRataDie { failures.append("\(iso): tiling") }
             let n = Int(y.monthCount)
             if n != 12 && n != 13 { failures.append("\(iso): months \(n)") }
-            if (n == 13) != (y.leapDisplay != 0) { failures.append("\(iso): leap flag") }
+            if (n == 13) != (y.leapMonthNumber != 0) { failures.append("\(iso): leap flag") }
             var sum = 0
             for o in 1...n { sum += y.monthLength(ordinal: o) }
             if sum != y.endRataDie - y.newYearRataDie { failures.append("\(iso): bits sum") }
@@ -104,7 +104,7 @@ private struct ChineseCalendarTests {
     }
 
     @Test func rangeLimits() {
-        let c = Self.cal()
+        let c = Self.chineseCalendar()
         #expect(c.minimumRange(of: .era) == 1..<83334)
         #expect(c.maximumRange(of: .year) == 1..<61)
         #expect(c.maximumRange(of: .month) == 1..<13)
@@ -117,7 +117,7 @@ private struct ChineseCalendarTests {
 
     // Deliberate divergence from ICU, guarded: ICU's chinese calendar cannot use YEAR_WOY on the fields-to-time side (chnsecal handleGetExtendedYear ignores it), yielding a nil interval and a no-op add; we implement Gregorian-family week-year semantics instead (precedent: the Japanese calendar's .era interval). If this test is changed to expect nil/no-op, that reversion must be an explicit decision.
     @Test func weekYearSemantics() {
-        let c = Self.cal()
+        let c = Self.chineseCalendar()
         let d = Self.date(rataDie: _CalendarAstronomy.gregorianRataDie(2025, 7, 4))
         guard let interval = c.dateInterval(of: .yearForWeekOfYear, for: d) else {
             #expect(Bool(false), "week-year interval must not be nil")
@@ -134,7 +134,7 @@ private struct ChineseCalendarTests {
 
     // Deliberately identical to ICU, quirks included: a leap month is not absorbed, so a date can fall outside its own quarter interval and range(.month,.quarter) shrinks. Changing these expectations diverges from ICU, that must be an explicit decision.
     @Test func quarterSurfaces() {
-        let c = Self.cal()
+        let c = Self.chineseCalendar()
         // Chinese 2025 is a leap-6 year; CNY Jan 29, Q2 starts Apr 28.
         let normal = Self.date(rataDie: _CalendarAstronomy.gregorianRataDie(2025, 3, 5))
         #expect(c.ordinality(of: .quarter, in: .year, for: normal) == 1)
@@ -160,7 +160,7 @@ private struct ChineseCalendarTests {
 
     @Test func validDaysEverywhere() {
         // ICU emits day=0 artifacts in two 2057/2097 months; ours must not.
-        let c = Self.cal()
+        let c = Self.chineseCalendar()
         for (gy, gm, gd) in [(2057, 9, 28), (2057, 10, 5), (2097, 8, 7), (2097, 8, 20)] {
             let dc = c.dateComponents([.day], from: Self.date(rataDie: _CalendarAstronomy.gregorianRataDie(gy, gm, gd)), in: .gmt)
             #expect((dc.day ?? 0) >= 1, "\(gy)-\(gm)-\(gd)")
