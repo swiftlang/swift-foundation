@@ -79,10 +79,19 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
     }
     
     package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
-        // The GMT localized name is always the 'generic' one, as there is no variation for daylight vs standard time. Short or not depends on the style.
-        let isShort = switch style {
-        case .shortStandard, .shortDaylightSaving, .shortGeneric: true
-        default: false
+        let icuStyle: UTimeZoneDisplayNameType = switch style {
+        case .shortStandard:
+            UTIMEZONE_SHORT
+        case .shortDaylightSaving:
+            UTIMEZONE_SHORT_DST
+        case .shortGeneric:
+            UTIMEZONE_SHORT
+        case .standard:
+            UTIMEZONE_LONG
+        case .daylightSaving:
+            UTIMEZONE_LONG_DST
+        case .generic:
+            UTIMEZONE_LONG
         }
         
         // TODO: Consider implementing this ourselves
@@ -99,8 +108,9 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
             }
 
             let result: String? = _withResizingUCharBuffer { buffer, size, status in
-                uatimezone_getDisplayName(tz, isShort ? UTIMEZONE_SHORT: UTIMEZONE_LONG, locale?.identifier ?? "", buffer, size, &status)
+                uatimezone_getDisplayName(tz, icuStyle, locale?.identifier ?? "", buffer, size, &status)
             }
+
             return result
         }
 
