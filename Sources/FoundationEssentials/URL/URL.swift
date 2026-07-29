@@ -1663,7 +1663,8 @@ extension URL {
     ///
     /// This method doesn't percent-encode any path separators (`/`) in the
     /// path component before appending the component to the path. If you want
-    /// this encoding, use ``URL/appending(component:directoryHint:)`` instead.
+    /// this encoding, see ``URL/appending(component:directoryHint:)``, which
+    /// encodes separators for non-file URLs.
     ///
     /// - Parameters:
     ///   - path: The path to add.
@@ -1677,7 +1678,8 @@ extension URL {
     ///
     /// This method doesn't percent-encode any path separators (`/`) in the
     /// path component before appending the component to the path. If you want
-    /// this encoding, use ``URL/append(component:directoryHint:)`` instead.
+    /// this encoding, see ``URL/append(component:directoryHint:)``, which
+    /// encodes separators for non-file URLs.
     ///
     /// - Parameters:
     ///   - path: The path to add.
@@ -1688,8 +1690,13 @@ extension URL {
         self = appending(path: path, directoryHint: directoryHint)
     }
 
-    /// Returns a URL constructed by appending the given path component to self. The path component
-    /// is first percent-encoded before being appended to the receiver.
+    /// Returns a URL constructed by appending the given path component to self.
+    /// For non-file URLs, this method percent-encodes any path separators (`/`)
+    /// in the path component before appending.
+    ///
+    /// - Note: For compatibility, this method does not percent-encode any path
+    ///   separators (`/`) if the URL has a `file` scheme.
+    ///
     /// - Parameters:
     ///   - component: A path component to append to the receiver.
     ///   - directoryHint: A hint to whether this URL will point to a directory.
@@ -1699,8 +1706,13 @@ extension URL {
         return _url.appending(component: component, directoryHint: directoryHint) ?? self
     }
 
-    /// Appends a path component to the receiver. The path component is first
-    /// percent-encoded before being appended to the receiver.
+    /// Appends a path component to the receiver. For non-file URLs, this method
+    /// percent-encodes any path separators (`/`) in the path component before
+    /// appending.
+    ///
+    /// - Note: For compatibility, this method does not percent-encode any path
+    ///   separators (`/`) if the URL has a `file` scheme.
+    ///
     /// - Parameters:
     ///   - component: A path component to append to the receiver.
     ///   - directoryHint: A hint to whether this URL will point to a directory.
