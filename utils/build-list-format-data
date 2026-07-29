@@ -11,21 +11,20 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# Builds the list-format C data (a declarations header + a definitions .c) for
-# the _FoundationInternationalizationData library from ListFormatData.json.
+# Builds the list-format Swift data (a single ListFormatData.swift of `static
+# let` constant tables) for the _FoundationInternationalizationData library from
+# ListFormatData.json.
 #
 # Usage:
 #   build-list-format-data [--locales=en,es,...] [--fallback=en_001] \
 #                          [--input=path/to/ListFormatData.json] \
-#                          [--output-header=path/to/ListFormatData.h] \
-#                          [--output-source=path/to/ListFormatData.c]
+#                          [--output=path/to/ListFormatData.swift]
 #
 # --locales: comma-separated subset of locales to include (default: all).
 # --fallback: locale used when a runtime lookup misses; auto-included in
 #             the locale set if not already listed (default: root).
 # --input: path to the JSON intermediate (default: in the source tree).
-# --output-header: path to the generated header (default: in the source tree).
-# --output-source: path to the generated .c (default: in the source tree).
+# --output: path to the generated Swift file (default: in the source tree).
 
 set -eu
 
@@ -34,12 +33,10 @@ declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
 declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
 declare -r dataDir="${foundationRepoDir}/Sources/_FoundationInternationalizationData"
 declare -r inputDefault="${foundationRepoDir}/Sources/FoundationInternationalization/Formatting/ListFormatData.json"
-declare -r outputHeaderDefault="${dataDir}/include/ListFormatData.h"
-declare -r outputSourceDefault="${dataDir}/ListFormatData.c"
+declare -r outputSwiftDefault="${dataDir}/ListFormatData.swift"
 
 INPUT="${INPUT:-${inputDefault}}"
-OUTPUT_H="${OUTPUT_H:-${outputHeaderDefault}}"
-OUTPUT_C="${OUTPUT_C:-${outputSourceDefault}}"
+OUTPUT_SWIFT="${OUTPUT_SWIFT:-${outputSwiftDefault}}"
 LOCALES="${LOCALES:-}"
 FALLBACK="${FALLBACK:-root}"
 
@@ -48,10 +45,9 @@ for arg in "$@"; do
     --locales=*)       LOCALES="${arg#--locales=}" ;;
     --fallback=*)      FALLBACK="${arg#--fallback=}" ;;
     --input=*)         INPUT="${arg#--input=}" ;;
-    --output-header=*) OUTPUT_H="${arg#--output-header=}" ;;
-    --output-source=*) OUTPUT_C="${arg#--output-source=}" ;;
+    --output=*)        OUTPUT_SWIFT="${arg#--output=}" ;;
     --help|-h)
-      echo "Usage: ${commandName} [--locales=en,es,...] [--fallback=en_001] [--input=path] [--output-header=path] [--output-source=path]" 1>&2
+      echo "Usage: ${commandName} [--locales=en,es,...] [--fallback=en_001] [--input=path] [--output=path]" 1>&2
       exit 0
       ;;
     *)
@@ -70,8 +66,7 @@ fi
 
 echo "Building list-format data" 1>&2
 echo "  from:    ${INPUT}" 1>&2
-echo "  header:  ${OUTPUT_H}" 1>&2
-echo "  source:  ${OUTPUT_C}" 1>&2
+echo "  output:  ${OUTPUT_SWIFT}" 1>&2
 if [[ -n "${LOCALES}" ]]; then
   echo "  locales: ${LOCALES} (+ root, ${FALLBACK})" 1>&2
 else
@@ -92,7 +87,7 @@ swiftc -parse-as-library \
     "${utilsDir}/${commandName}-impl.swift" \
     -o "${tool}"
 
-env LOCALES="${LOCALES}" FALLBACK="${FALLBACK}" INPUT="${INPUT}" OUTPUT_H="${OUTPUT_H}" OUTPUT_C="${OUTPUT_C}" \
+env LOCALES="${LOCALES}" FALLBACK="${FALLBACK}" INPUT="${INPUT}" OUTPUT_SWIFT="${OUTPUT_SWIFT}" \
   "${tool}"
 
 echo "Done." 1>&2

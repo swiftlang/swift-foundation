@@ -18,6 +18,36 @@ import FoundationEssentials
 
 internal import Synchronization
 
+internal import _FoundationInternationalizationData
+
+// MARK: - Public-style bridges
+
+// `ListFormatType`/`ListFormatWidth` live in `_FoundationInternationalizationData`
+// alongside the data they index. These initializers map the public
+// `ListFormatStyle` enums onto them and stay here because they depend on the
+// public API, which the data module cannot see.
+
+extension ListFormatType {
+    init<Style, Base>(_ listType: ListFormatStyle<Style, Base>.ListType) {
+        switch listType {
+        case .and: self = .and
+        case .or: self = .or
+        }
+    }
+}
+
+extension ListFormatWidth {
+    // Note: `ListFormatStyle.Width.standard` corresponds to `.wide` here, the
+    // name CLDR and the data tables use.
+    init<Style, Base>(_ width: ListFormatStyle<Style, Base>.Width) {
+        switch width {
+        case .standard: self = .wide
+        case .short: self = .short
+        case .narrow: self = .narrow
+        }
+    }
+}
+
 extension OutputSpan where Element == UInt8 {
     /// Append `source`'s bytes onto this output span. Stand-in for a stdlib
     /// `append(copying:)`-style API; previewed as `_append(copying:)` in
