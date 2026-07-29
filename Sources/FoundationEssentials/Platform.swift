@@ -54,6 +54,7 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 internal import _FoundationDarwinExtras
 internal import _FoundationDarwinExtras._string_runtime.xlocale
 import stdlib_h
+internal import unistd
 
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(stdlib_h)
