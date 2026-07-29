@@ -11,65 +11,65 @@
 //===----------------------------------------------------------------------===//
 
 // Stage 2 of the list-format data pipeline: reads the JSON intermediate
-// produced by utils/update-list-format-data and emits the packed C data that
-// backs the _FoundationInternationalizationData library — a header of extern
-// declarations plus a .c of definitions.
+// produced by utils/update-list-format-data and emits the packed Swift data
+// that backs the _FoundationInternationalizationData library — a single
+// ListFormatData.swift of `static let` constants.
 //
-// Reads five environment variables (set by the build-list-format-data wrapper):
-//   - INPUT    : path to ListFormatData.json
-//   - OUTPUT_H : path where ListFormatData.h (declarations) will be written
-//   - OUTPUT_C : path where ListFormatData.c (definitions) will be written
-//   - LOCALES  : comma-separated locale list ("" = include all)
-//   - FALLBACK : locale used when a runtime lookup misses (default: "root")
+// Reads four environment variables (set by the build-list-format-data wrapper):
+//   - INPUT        : path to ListFormatData.json
+//   - OUTPUT_SWIFT : path where ListFormatData.swift will be written
+//   - LOCALES      : comma-separated locale list ("" = include all)
+//   - FALLBACK     : locale used when a runtime lookup misses (default: "root")
 //
 // The fallback locale is auto-included in the kept set, as is "root" — the
 // latter is required because the runtime walk always terminates there.
 //
-// The big arrays are declared `INTERNAL` (see InternationalizationDataMacros.h)
-// in the header and defined in the .c so the data is compiled into the library
-// once rather than copied into every including translation unit. The small
-// scalars (counts, fallback locale) and the struct typedefs stay in the header.
+// The tables are emitted as `static let` constants on a `_ListFormatData` enum.
+// `static let` (inside a type, not top-level `let`) lets the compiler bake the
+// numeric tables into read-only `__TEXT,__const` and the `StaticString` pools
+// into `__DATA_CONST`, with no load-time initializer and no per-access
+// `swift_once` guard in the package build. `StaticString` gives compile-time
+// UTF-8 bytes the runtime wraps into a `Span<UInt8>` with no allocation.
 //
-// The C data exposes:
-//   - A pattern string pool (`_ListFormatPatterns`)
-//   - A locale string pool (`_ListFormatLocales`) — every locale identifier
-//     referenced by a slot or parent entry lives here exactly once. Slot and
-//     parent entries reference locales by `uint16_t` index into this pool.
-//     Pooling drops the per-entry overhead from 16 bytes (two/one pointers
-//     plus padding) down to 4 bytes.
-//   - A row table (`_ListFormatRows`), each row referencing 4 pattern indexes
-//   - Nine sparse slot tables (`_ListFormatSlot_<Slot>`), each sorted by
-//     locale identifier for binary search
-//   - A sparse parent map (`_ListFormatParents`), sorted by child for binary
-//     search
-//   - A `_ListFormatFallbackLocale` constant holding the configured fallback
+// The Swift data exposes (all `internal`: the lookup code that reads them lives
+// in the same module, in a hand-written companion file, so nothing crosses the
+// module boundary — keeping the numeric tables baked in read-only data even in
+// the framework's library-evolution build):
+//   - A pattern string pool (`patterns`) as `InlineArray<N, StaticString>`
+//   - A locale string pool (`locales`) — every locale identifier referenced by
+//     a slot or parent entry lives here exactly once. Slot and parent entries
+//     reference locales by `UInt16` index into this pool. Pooling keeps the
+//     per-entry overhead down to 4 bytes.
+//   - A row table (`rows`), each `_ListFormatRow` referencing 4 pattern indexes
+//   - Six sparse slot tables (`slot<Slot>`), each sorted by locale identifier
+//     for binary search
+//   - A sparse parent map (`parents`), sorted by child for binary search
+//   - A `fallbackLocale` constant holding the configured fallback
 //
-// The declarations and definitions are wrapped in `#if !FOUNDATION_LIST_FORMAT_ICU`.
+// The declarations are wrapped in `#if !FOUNDATION_LIST_FORMAT_ICU`.
 
 import Foundation
 
 // MARK: - Options
 
-// The five inputs, read from the environment by `readOptions()`.
+// The four inputs, read from the environment by `readOptions()`.
 struct Options {
     let inputPath: String
-    let outputHeaderPath: String
-    let outputSourcePath: String
+    let outputSwiftPath: String
     let requestedLocales: Set<String>? // nil = include all locales
     let fallback: String
 }
 
 // MARK: - Packed data
 
-// Everything the emitters need, after subsetting, transitive pruning, and
-// locale pooling. `pack()` produces one of these; `renderHeader`/`renderSource`
-// consume it.
+// Everything the emitter needs, after subsetting, transitive pruning, and
+// locale pooling. `pack()` produces one of these; `renderSwift` consumes it.
 struct PackedData {
     let patterns: [String]
     let rows: [ListFormatDataSchema.Row]
     let localePool: [String]
     let localeID: [String: Int]
-    let slots: [(cName: String, map: [String: Int])]
+    let slots: [(swiftName: String, map: [String: Int])]
     let parents: [String: String]
     let cldrVersion: String
     let keepAll: Bool
@@ -84,11 +84,8 @@ func readOptions() -> Options {
     guard let inputPath = env["INPUT"], !inputPath.isEmpty else {
         fatalError("INPUT environment variable not set")
     }
-    guard let outputHeaderPath = env["OUTPUT_H"], !outputHeaderPath.isEmpty else {
-        fatalError("OUTPUT_H environment variable not set")
-    }
-    guard let outputSourcePath = env["OUTPUT_C"], !outputSourcePath.isEmpty else {
-        fatalError("OUTPUT_C environment variable not set")
+    guard let outputSwiftPath = env["OUTPUT_SWIFT"], !outputSwiftPath.isEmpty else {
+        fatalError("OUTPUT_SWIFT environment variable not set")
     }
     let localesArg = env["LOCALES"] ?? ""
     let fallback = env["FALLBACK"] ?? "root"
@@ -98,8 +95,7 @@ func readOptions() -> Options {
         : Set(localesArg.split(separator: ",").map(String.init))
     return Options(
         inputPath: inputPath,
-        outputHeaderPath: outputHeaderPath,
-        outputSourcePath: outputSourcePath,
+        outputSwiftPath: outputSwiftPath,
         requestedLocales: requestedLocales,
         fallback: fallback
     )
@@ -224,10 +220,10 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
 
     print("  unique locale strings: \(localePool.count)", to: &standardError)
 
-    // Slot C identifiers, paired with their entry maps, in the canonical order.
-    let slots: [(cName: String, map: [String: Int])] = listFormatSlotNames.map { slotName in
-        let cName = "_ListFormatSlot_\(slotName.split(separator: "_").map { $0.capitalized }.joined())"
-        return (cName, filteredSlots[slotName] ?? [:])
+    // Slot Swift identifiers, paired with their entry maps, in the canonical order.
+    let slots: [(swiftName: String, map: [String: Int])] = listFormatSlotNames.map { slotName in
+        let swiftName = "slot" + slotName.split(separator: "_").map { $0.capitalized }.joined()
+        return (swiftName, filteredSlots[slotName] ?? [:])
     }
 
     return PackedData(
@@ -271,104 +267,108 @@ func banner(_ p: PackedData) -> String {
     return s
 }
 
-// Header — typedefs, counts, and extern declarations.
-func renderHeader(_ p: PackedData) -> String {
-    var header = banner(p)
-    header += "#include \"InternationalizationDataMacros.h\"\n\n"
-    header += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
-    header += "#include <stdint.h>\n\n"
+// Swift source — struct definitions and the `static let` constant tables.
+func renderSwift(_ p: PackedData) -> String {
+    var out = banner(p)
+    out += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
 
-    // Struct typedefs (shared by the .c definitions and the Swift importer).
-    header += "// Row table. Each row is four indexes into _ListFormatPatterns.\n"
-    header += "typedef struct { uint16_t start; uint16_t middle; uint16_t end; uint16_t pair; } _ListFormatRow;\n\n"
-    header += "// Sparse slot entry: maps a locale (by index into _ListFormatLocales)\n"
-    header += "// to a row index. Entries are sorted by locale for binary search.\n"
-    header += "typedef struct { uint16_t locale; uint16_t row; } _ListFormatSlotEntry;\n\n"
-    header += "// Parent-locale entry: child and parent are indexes into _ListFormatLocales.\n"
-    header += "typedef struct { uint16_t child; uint16_t parent; } _ListFormatParentEntry;\n\n"
+    // Entry struct definitions. `package` so FoundationInternationalization can
+    // reach them across the module boundary; `Sendable` so the `static let`
+    // tables are usable from any isolation. The unlabeled initializers keep the
+    // generated table literals compact.
+    out += "// Row table entry. Each row is four indexes into the `patterns` pool.\n"
+    out += "internal struct _ListFormatRow: Sendable {\n"
+    out += "    internal let start: UInt16\n"
+    out += "    internal let middle: UInt16\n"
+    out += "    internal let end: UInt16\n"
+    out += "    internal let pair: UInt16\n"
+    out += "    internal init(_ start: UInt16, _ middle: UInt16, _ end: UInt16, _ pair: UInt16) {\n"
+    out += "        self.start = start\n"
+    out += "        self.middle = middle\n"
+    out += "        self.end = end\n"
+    out += "        self.pair = pair\n"
+    out += "    }\n"
+    out += "}\n\n"
 
-    // Element counts and the fallback locale stay in the header as small scalars
-    // so the Swift side reads them as plain constants (no link-time symbol).
-    header += "static const uint16_t _ListFormatPatternCount = \(p.patterns.count);\n"
-    header += "static const uint16_t _ListFormatRowCount = \(p.rows.count);\n"
-    header += "static const uint16_t _ListFormatLocaleCount = \(p.localePool.count);\n"
-    for (cName, map) in p.slots {
-        header += "static const uint16_t \(cName)_Count = \(map.count);\n"
-    }
-    header += "static const uint16_t _ListFormatParentCount = \(p.parents.count);\n"
-    header += "static const char * const _ListFormatFallbackLocale = \(cStringLiteral(p.fallback));\n\n"
+    out += "// Sparse slot entry: maps a locale (by index into the `locales` pool)\n"
+    out += "// to a row index. Entries are sorted by locale for binary search.\n"
+    out += "internal struct _ListFormatSlotEntry: Sendable {\n"
+    out += "    internal let locale: UInt16\n"
+    out += "    internal let row: UInt16\n"
+    out += "    internal init(_ locale: UInt16, _ row: UInt16) {\n"
+    out += "        self.locale = locale\n"
+    out += "        self.row = row\n"
+    out += "    }\n"
+    out += "}\n\n"
 
-    // Extern declarations of the large arrays. The bounds matter: the Swift
-    // importer maps a bounded C array to a fixed-size tuple, which the runtime
-    // lookup takes the address of. The definitions live in ListFormatData.c.
-    header += "// Pattern string pool. Rows reference these by index.\n"
-    header += "INTERNAL const char * const _ListFormatPatterns[\(p.patterns.count)];\n\n"
-    header += "// Row table. Each row is four indexes into _ListFormatPatterns.\n"
-    header += "INTERNAL const _ListFormatRow _ListFormatRows[\(p.rows.count)];\n\n"
-    header += "// Locale string pool. Slot and parent entries reference these by index.\n"
-    header += "INTERNAL const char * const _ListFormatLocales[\(p.localePool.count)];\n\n"
-    header += "// Sparse slot tables, one per (type, width), sorted by locale.\n"
-    for (cName, map) in p.slots {
-        header += "INTERNAL const _ListFormatSlotEntry \(cName)[\(map.count)];\n"
-    }
-    header += "\n"
-    header += "// Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.\n"
-    header += "INTERNAL const _ListFormatParentEntry _ListFormatParents[\(p.parents.count)];\n\n"
+    out += "// Parent-locale entry: child and parent are indexes into the `locales` pool.\n"
+    out += "internal struct _ListFormatParentEntry: Sendable {\n"
+    out += "    internal let child: UInt16\n"
+    out += "    internal let parent: UInt16\n"
+    out += "    internal init(_ child: UInt16, _ parent: UInt16) {\n"
+    out += "        self.child = child\n"
+    out += "        self.parent = parent\n"
+    out += "    }\n"
+    out += "}\n\n"
 
-    header += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
-    return header
-}
-
-// Source — array definitions.
-func renderSource(_ p: PackedData) -> String {
-    var source = banner(p)
-    source += "#include \"ListFormatData.h\"\n\n"
-    source += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
+    // The data itself. `static let` on an enum (rather than top-level `let`) lets
+    // the compiler bake the numeric tables into read-only `__TEXT,__const` and the
+    // `StaticString` pools into `__DATA_CONST`, with no load-time initializer and
+    // no per-access `swift_once` guard in the package build.
+    out += "internal enum _ListFormatData {\n"
+    out += "    // Locale used when a runtime lookup misses.\n"
+    out += "    internal static let fallbackLocale: StaticString = \(swiftStringLiteral(p.fallback))\n\n"
 
     // Pattern pool — every unique pattern string lives here exactly once.
-    source += "const char * const _ListFormatPatterns[\(p.patterns.count)] = {\n"
+    out += "    // Pattern string pool. Rows reference these by index.\n"
+    out += "    internal static let patterns: InlineArray<\(p.patterns.count), StaticString> = [\n"
     for pattern in p.patterns {
-        source += "    \(cStringLiteral(pattern)),\n"
+        out += "        \(swiftStringLiteral(pattern)),\n"
     }
-    source += "};\n\n"
+    out += "    ]\n\n"
 
     // Row table — every unique (start, middle, end, pair) combination lives here once.
-    source += "const _ListFormatRow _ListFormatRows[\(p.rows.count)] = {\n"
+    out += "    // Row table. Each row is four indexes into `patterns`.\n"
+    out += "    internal static let rows: InlineArray<\(p.rows.count), _ListFormatRow> = [\n"
     for r in p.rows {
-        source += "    { \(r.start), \(r.middle), \(r.end), \(r.pair) },\n"
+        out += "        _ListFormatRow(\(r.start), \(r.middle), \(r.end), \(r.pair)),\n"
     }
-    source += "};\n\n"
+    out += "    ]\n\n"
 
     // Locale string pool — sorted alphabetically so the locale IDs assigned below
     // follow alphabetical order, keeping the slot tables sortable by ID without
     // changing their lookup order.
-    source += "const char * const _ListFormatLocales[\(p.localePool.count)] = {\n"
+    out += "    // Locale string pool. Slot and parent entries reference these by index.\n"
+    out += "    internal static let locales: InlineArray<\(p.localePool.count), StaticString> = [\n"
     for locale in p.localePool {
-        source += "    \(cStringLiteral(locale)),\n"
+        out += "        \(swiftStringLiteral(locale)),\n"
     }
-    source += "};\n\n"
+    out += "    ]\n\n"
 
     // Per-slot sparse tables. Sorted by locale ID (mirroring alphabetical order of
-    // the pooled strings) so binary search can compare via
-    // `strcmp(target, _ListFormatLocales[entry.locale])`.
-    for (cName, map) in p.slots {
-        source += "const _ListFormatSlotEntry \(cName)[\(map.count)] = {\n"
+    // the pooled strings) so binary search can compare the target against
+    // `locales[entry.locale]` byte-wise.
+    out += "    // Sparse slot tables, one per (type, width), sorted by locale.\n"
+    for (swiftName, map) in p.slots {
+        out += "    internal static let \(swiftName): InlineArray<\(map.count), _ListFormatSlotEntry> = [\n"
         for locale in map.keys.sorted() {
-            source += "    { \(p.localeID[locale]!), \(map[locale]!) },\n"
+            out += "        _ListFormatSlotEntry(\(p.localeID[locale]!), \(map[locale]!)),\n"
         }
-        source += "};\n\n"
+        out += "    ]\n\n"
     }
 
     // Parent map — sorted by child for binary search. Both child and parent pull
-    // their string from _ListFormatLocales.
-    source += "const _ListFormatParentEntry _ListFormatParents[\(p.parents.count)] = {\n"
+    // their string from `locales`.
+    out += "    // Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.\n"
+    out += "    internal static let parents: InlineArray<\(p.parents.count), _ListFormatParentEntry> = [\n"
     for child in p.parents.keys.sorted() {
-        source += "    { \(p.localeID[child]!), \(p.localeID[p.parents[child]!]!) },\n"
+        out += "        _ListFormatParentEntry(\(p.localeID[child]!), \(p.localeID[p.parents[child]!]!)),\n"
     }
-    source += "};\n\n"
+    out += "    ]\n"
 
-    source += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
-    return source
+    out += "}\n\n"
+    out += "#endif // !FOUNDATION_LIST_FORMAT_ICU\n"
+    return out
 }
 
 // MARK: - Write
@@ -384,7 +384,7 @@ func writeFile(_ contents: String, to path: String) {
 
 // MARK: - Helpers
 
-func cStringLiteral(_ s: String) -> String {
+func swiftStringLiteral(_ s: String) -> String {
     var out = "\""
     for scalar in s.unicodeScalars {
         switch scalar {
@@ -394,10 +394,10 @@ func cStringLiteral(_ s: String) -> String {
         case "\r": out += "\\r"
         case "\t": out += "\\t"
         default:
-            // C strings accept UTF-8 bytes directly; escape only control
-            // characters (so the source stays reviewable).
+            // Swift string literals accept UTF-8 content directly; escape only
+            // control characters (so the source stays reviewable).
             if scalar.value < 0x20 || scalar.value == 0x7F {
-                out += String(format: "\\x%02x", scalar.value)
+                out += String(format: "\\u{%02x}", scalar.value)
             } else {
                 out += String(scalar)
             }
@@ -413,8 +413,7 @@ func build() {
     let options = readOptions()
     let data = loadData(options.inputPath)
     let packed = pack(data, options: options)
-    writeFile(renderHeader(packed), to: options.outputHeaderPath)
-    writeFile(renderSource(packed), to: options.outputSourcePath)
+    writeFile(renderSwift(packed), to: options.outputSwiftPath)
 }
 
 // MARK: - Entry
