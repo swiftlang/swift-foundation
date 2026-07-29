@@ -46,6 +46,9 @@ internal struct PercentDecodingASCIIExclusionMask: RawRepresentable {
 
     static let none = Self(rawValue: 0)
 
+    // Don't decode "%00" to "\0"
+    static let null = Self(rawValue: 0x1)
+
     // Don't decode "%2F" to "/" or "%00" to "\0"
     static let posixPath = Self(rawValue: 0x800000000001)
 

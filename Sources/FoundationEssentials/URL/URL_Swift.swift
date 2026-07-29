@@ -426,12 +426,12 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
                 return Parser.percentEncode(decoded, component: .host)
             } else if encodedComponents.contains(.host) {
                 if _parseInfo.didPercentEncodeHost {
-                    return Parser.percentDecode(encodedHost)
+                    return Parser.percentDecode(encodedHost, excluding: [0])
                 }
                 // Return IDNA-encoded host, which is technically not percent-encoded
                 return encodedHost
             } else {
-                return Parser.percentDecode(encodedHost, encoding: _encoding)
+                return Parser.percentDecode(encodedHost, excluding: [0], encoding: _encoding)
             }
         }
 
