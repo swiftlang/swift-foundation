@@ -10,7 +10,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InternationalizationDataMacros.h"
-
-// Stub for data that will be populated
-INTERNAL const char * const * _ListFormatPatterns;
+// TODO: Implement List Format Data stubs

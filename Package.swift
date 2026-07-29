@@ -176,9 +176,11 @@ let package = Package(
         // FoundationInternationalization
         .target(
             name: "_FoundationInternationalizationData",
-            dependencies: [
-                "_FoundationCShims"
-            ]
+            exclude: ["CMakeLists.txt"],
+            swiftSettings: [
+                .enableExperimentalFeature("AccessLevelOnImport"),
+                .enableExperimentalFeature("Lifetimes"),
+            ] + availabilityMacros + featureSettings
         ),
         .target(
             name: "FoundationInternationalization",
