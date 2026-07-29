@@ -23,6 +23,7 @@ Foundation Essentials provides a canonical implementation of these types, so dev
 - <doc:StringsAndText>
 - <doc:DatesAndTimes>
 - <doc:FiltersAndSorting>
+- <doc:DataFormatting>
 
 ### App support
 
