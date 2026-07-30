@@ -5,7 +5,6 @@
 ### User-relevant errors
 
 - ``LocalizedError``
-- ``CustomNSError``
 - ``CocoaError``
 - ``POSIXError``
-- ``POSIXErrorCode``
+
