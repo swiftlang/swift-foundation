@@ -722,6 +722,18 @@ private struct LocalePropertiesTests {
         let x = Locale.keywordValue(identifier: "ar_EG@vt=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", key: "vt")
         #expect(x == "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
     }
+
+    @Test func hourCycle() {
+        let frHourCycle = Locale(identifier: "fr_FR").hourCycle
+        #expect(frHourCycle == .zeroToTwentyThree)
+
+        // special case where fr_CA differs from CA
+        let frCAHourCycle = Locale(identifier: "fr_CA").hourCycle
+        #expect(frCAHourCycle == .zeroToTwentyThree)
+
+        let enCAHourCycle = Locale(identifier: "en_CA").hourCycle
+        #expect(enCAHourCycle == .oneToTwelve)
+    }
 }
 
 // MARK: - Bridging Tests
