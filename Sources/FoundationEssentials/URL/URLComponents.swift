@@ -186,7 +186,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 guard let encodedHost else { return nil }
                 guard !encodedHost.isEmpty else { return "" }
                 if didPercentEncodeHost {
-                    return Parser.percentDecode(encodedHost)
+                    return Parser.percentDecode(encodedHost, excluding: [0])
                 } else {
                     return Parser.IDNADecodeHost(encodedHost)
                 }

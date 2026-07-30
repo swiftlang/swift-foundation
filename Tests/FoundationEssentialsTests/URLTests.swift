@@ -3606,6 +3606,69 @@ private struct URLTests {
         #expect(comp.path == "/my\u{0}path")
     }
 
+    @Test func hostDoesNotDecodeNULL() throws {
+        let decodedHost = "front.host\u{0}.example.com"
+        let encodedHost = "front.host%00.example.com"
+
+        func containsNULL(_ string: String?) -> Bool {
+            string?.utf8.contains(0) ?? false
+        }
+
+        // A parsed host is kept exactly as written, so "%00" must survive both
+        // the encoded and the decoded getters.
+        let url = try #require(URL(string: "https://\(encodedHost)/"))
+        #expect(url.host(percentEncoded: true) == encodedHost)
+        #expect(url.host(percentEncoded: false) == encodedHost)
+
+        let comp = try #require(URLComponents(string: "https://\(encodedHost)/"))
+        #expect(comp.percentEncodedHost == encodedHost)
+        #expect(comp.encodedHost == encodedHost)
+        #expect(comp.host == encodedHost)
+        #expect(comp.string == "https://\(encodedHost)/")
+        #expect(comp.url?.host(percentEncoded: false) == encodedHost)
+
+        // "https" requires an IDNA-encoded host, and IDNA cannot encode a NUL
+        // byte, so setting this host may invalidate the components entirely,
+        // making `.string` and `.url` nil. Either way, the getters must return
+        // the NUL percent-encoded, never as an embedded NUL byte.
+        var httpsComponents = URLComponents()
+        httpsComponents.scheme = "https"
+        httpsComponents.percentEncodedHost = encodedHost
+        httpsComponents.path = "/"
+        #expect(httpsComponents.percentEncodedHost == encodedHost)
+        #expect(httpsComponents.encodedHost == encodedHost)
+        #expect(httpsComponents.host == encodedHost)
+        #expect(!containsNULL(httpsComponents.string))
+        #expect(!containsNULL(httpsComponents.url?.host(percentEncoded: false)))
+
+        httpsComponents.host = decodedHost
+        #expect(httpsComponents.percentEncodedHost == encodedHost)
+        #expect(httpsComponents.encodedHost == encodedHost)
+        #expect(httpsComponents.host == encodedHost)
+        #expect(!containsNULL(httpsComponents.string))
+        #expect(!containsNULL(httpsComponents.url?.host(percentEncoded: false)))
+
+        // "imap" hosts are always percent-encoded instead of IDNA-encoded, so
+        // the components stay valid and we can check the full round trip.
+        var setPercentEncoded = URLComponents()
+        setPercentEncoded.scheme = "imap"
+        setPercentEncoded.percentEncodedHost = encodedHost
+        setPercentEncoded.path = "/"
+        #expect(setPercentEncoded.percentEncodedHost == encodedHost)
+        #expect(setPercentEncoded.host == encodedHost)
+        #expect(setPercentEncoded.string == "imap://\(encodedHost)/")
+        #expect(setPercentEncoded.url?.host(percentEncoded: false) == encodedHost)
+
+        var setDecoded = URLComponents()
+        setDecoded.scheme = "imap"
+        setDecoded.host = decodedHost
+        setDecoded.path = "/"
+        #expect(setDecoded.percentEncodedHost == encodedHost)
+        #expect(setDecoded.host == encodedHost)
+        #expect(setDecoded.string == "imap://\(encodedHost)/")
+        #expect(setDecoded.url?.host(percentEncoded: false) == encodedHost)
+    }
+
     @Test func standardizedAfterAppending() throws {
         // After appending ".." to a relative URL with a base, standardizing
         // resolves the dot segment against the resolved absolute path.
