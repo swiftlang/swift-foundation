@@ -283,7 +283,7 @@ extension String {
         let bytes = data.bytes
         let len = bytes.byteCount
 
-        if len >= 4 {
+        if len >= MemoryLayout<UInt32>.size {
             let potentialBOM = bytes.load(fromByteOffset: 0, as: UInt32.self)
             if potentialBOM == 0xFFFE0000 || potentialBOM == 0x0000FEFF {
                 // Looks like UTF32
@@ -291,7 +291,7 @@ extension String {
             }
         }
 
-        if encoding == nil && len >= 2 && (len & 1) == 0 {
+        if encoding == nil && len >= MemoryLayout<UInt16>.size && (len & 1) == 0 {
             let potentialBOM = bytes.load(fromByteOffset: 0, as: UInt16.self)
             if potentialBOM == 0xFEFF || potentialBOM == 0xFFFE {
                 encoding = .unicode
