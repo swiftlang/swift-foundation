@@ -595,9 +595,9 @@ extension URL {
                         // host, it would remain in the final string, so fail now.
                         if containsInvalidASCII(host: host) { return false }
                     } else {
-                        // Don't allow an unterminated IP-literal for any scheme
+                        // Don't allow partial IP-literal brackets for any scheme.
                         assert(!host.isEmpty) // Validation failed, so host is non-empty
-                        if host[0] == UInt8(ascii: "[") { return false }
+                        if containsIPLiteralBracket(host: host) { return false }
                     }
                 }
                 flags.insert(.shouldEncodeHost)
