@@ -545,6 +545,54 @@ private final class DataTests {
         #expect(destination == [3, 5, 8, 8])
     }
 
+    @Test func copyBytesFromBytesSource_happyRange() {
+        let source = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 32)
+        _ = source.initialize(fromContentsOf: 0..<32)
+        defer { source.deallocate() }
+        let rawSource = UnsafeRawBufferPointer(source)
+
+        let destination = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 10)
+        destination.initialize(repeating: 0)
+        defer { destination.deallocate() }
+
+        rawSource.copyBytes(to: destination, from: 4..<9)
+
+        for i in 0..<5 {
+            #expect(destination[i] == UInt8(i + 4))
+        }
+        for i in 5..<10 {
+            #expect(destination[i] == 0)
+        }
+    }
+
+    @Test func copyBytesFromTypedSource_noOverflow() {
+        let source = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 32)
+        source.initialize(repeating: 0x32)
+        defer { source.deallocate() }
+
+        let buffer = UnsafeMutableRawBufferPointer.allocate(
+            byteCount: 10*MemoryLayout<UInt32>.stride,
+            alignment: MemoryLayout<UInt32>.alignment
+        )
+        buffer.initializeMemory(as: UInt32.self, repeating: 0x12121212)
+        defer { buffer.deallocate() }
+
+        let zone = 2*MemoryLayout<UInt32>.stride..<8*MemoryLayout<UInt32>.stride
+        buffer[zone].withMemoryRebound(to: UInt32.self) { destination in
+          // 32-byte source range, with lower-capacity destination
+          let source = UnsafeBufferPointer(source)
+          source.copyBytes(to: destination, from: 0..<32)
+        }
+
+        for i in buffer.indices {
+            if zone.contains(i) {
+                #expect(buffer[i] == 0x32)
+            } else {
+                #expect(buffer[i] == 0x12)
+            }
+        }
+    }
+
     @Test func genericBuffers() {
         let a : [Int32] = [1, 0, 1, 0, 1]
         var data = a.withUnsafeBufferPointer {
@@ -2174,6 +2222,34 @@ private final class DataTests {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data[100] = 4
+        }
+    }
+
+    @Test func bounding_failure_copyBytesSourceOverflow() async {
+        await #expect(processExitsWith: .failure) {
+            let backing = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 64)
+            backing.initialize(repeating: 0x32)
+
+            let typedSource = UnsafeBufferPointer(rebasing: backing.prefix(32))
+
+            let destination = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 64)
+            destination.initialize(repeating: 0x12)
+
+            typedSource.copyBytes(to: destination, from: 0..<64)
+        }
+    }
+
+    @Test func bounding_failure_copyBytesSourceUnderflow() async {
+        await #expect(processExitsWith: .failure) {
+            let backing = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 64)
+            backing.initialize(repeating: 0x32)
+
+            let typedSource = UnsafeBufferPointer(rebasing: backing.suffix(32))
+
+            let destination = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 10)
+            destination.initialize(repeating: 0x12)
+
+            typedSource.copyBytes(to: destination, from: -1..<5)
         }
     }
     #endif
