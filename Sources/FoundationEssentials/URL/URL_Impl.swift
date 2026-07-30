@@ -447,7 +447,7 @@ extension _URL {
                 // Return IDNA-encoded host, which is technically not percent-encoded
                 return encodedHost
             } else {
-                return URLEncoder.percentDecode(string: encodedHost)
+                return URLEncoder.percentDecode(string: encodedHost, excludingASCII: .null)
             }
         }()
 
