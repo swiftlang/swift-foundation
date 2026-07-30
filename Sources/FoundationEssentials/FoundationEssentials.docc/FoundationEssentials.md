@@ -28,10 +28,13 @@ Foundation Essentials provides a canonical implementation of these types, so dev
 ### App support
 
 - <doc:Resources>
+- <doc:TaskManagement>
+- <doc:Notifications>
 - <doc:ErrorsAndExceptions>
 
 ### Files and data persistence
 
+- <doc:FileSystem>
 - <doc:ArchivesAndSerialization>
 
 ### Networking
