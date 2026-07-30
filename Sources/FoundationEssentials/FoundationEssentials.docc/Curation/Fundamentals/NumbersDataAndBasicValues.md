@@ -1,5 +1,7 @@
 # Numbers, data, and basic values
 
+Work with primitive values and other fundamental types.
+
 ## Topics
 
 ### Numbers
