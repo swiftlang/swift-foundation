@@ -26,7 +26,9 @@ import CRT
 
 // Chinese lunisolar calendar engine. Years 1901-2100 come from a baked table generated from ICU (parity by construction); outside that range, month structure is computed with ICU's chnsecal rules over _CalendarAstronomy at UTC+8.
 
-// MARK: - Month-structure rules over the astronomy engine. Days are reckoned at a fixed UTC+8 offset (no daylight saving, no historical time-zone changes), matching ICU's Chinese calendar (chnsecal).
+// MARK: - Month-structure rules over the astronomy engine
+//
+// The astronomy returns moments in universal time. These rules convert a moment to the day containing it using a fixed UTC+8 offset, with no daylight saving and no historical time-zone changes. That offset places the day boundary that decides which day a new moon or solstice falls on, and so where each month begins. It is unrelated to the calendar's own `timeZone`, which is applied separately when mapping a `Date` to a day, so the month structure is the same for every caller.
 //
 // These functions compute directly, without caching, which keeps the code minimal. They only run for out-of-range years (before 1901 or after 2100); the in-range path reads the baked table and never calls them, so normal usage is unaffected.
 //
