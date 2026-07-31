@@ -360,21 +360,17 @@ struct TimeZoneCache : Sendable, ~Copyable {
             }
 
             let bridgedTZ: _NSSwiftTimeZone?
-            if let innerTZ = _TimeZoneGMT(identifier: identifier) {
-                // Identifier takes a form of GMT offset such as "GMT+8"
+            if let innerTZ = _timeZoneGMTClass().init(identifier: identifier) {
+                // Identifier takes a form of GMT offset such as "GMT+8" or UTC
                 fixedTimeZones[identifier] = innerTZ
                 bridgedTZ = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTZ))
             } else {
-#if canImport(_FoundationICU)
-                if let innerTz = _TimeZoneICU(identifier: identifier) {
+                if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
                     bridgedTZ = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTz))
                 } else {
                     bridgedTZ = nil
                 }
-#else
-                bridgedTZ = nil
-#endif
             }
 
             if let bridgedTZ {
@@ -396,11 +392,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 bridgedOffsetTimeZones[offset] = bridged
                 return bridged
             }
-#if canImport(_FoundationICU)
-            let maybeInnerTz = _TimeZoneGMTICU(secondsFromGMT: offset)
-#else
-            let maybeInnerTz = _TimeZoneGMT(secondsFromGMT: offset)
-#endif
+            let maybeInnerTz = _timeZoneGMTClass().init(secondsFromGMT: offset)
             if let innerTz = maybeInnerTz {
                 // In order to avoid bloating a cache with weird time zones, only cache values that are 30min offsets (including 1hr offsets).
                 let doCache = abs(offset) % 1800 == 0

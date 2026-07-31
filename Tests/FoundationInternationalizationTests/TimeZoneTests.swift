@@ -202,6 +202,38 @@ private struct TimeZoneTests {
                      "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9")
     }
 
+    @Test func timeZoneGMTOffset_extendedForms() throws {
+        let locale = Locale(identifier: "en_US")
+        func test(_ identifiers: [String], _ expectedIdentifier: String, _ expectedOffset: Int, _ expectedAbbreviation: String, _ long: String, _ short: String, daylightLong: String? = nil, daylightShort: String? = nil, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            let dLong = daylightLong ?? long
+            let dShort = daylightShort ?? short
+            for identifier in identifiers {
+                let tz = try #require(TimeZone(identifier: identifier), sourceLocation: sourceLocation)
+                #expect(tz.identifier == expectedIdentifier, sourceLocation: sourceLocation)
+                #expect(tz.secondsFromGMT() == expectedOffset, sourceLocation: sourceLocation)
+                #expect(tz.abbreviation() == expectedAbbreviation, sourceLocation: sourceLocation)
+                #expect(tz.isDaylightSavingTime() == false, sourceLocation: sourceLocation)
+                #expect(tz.nextDaylightSavingTimeTransition == nil, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .standard, locale: locale) == long, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .shortStandard, locale: locale) == short, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .daylightSaving, locale: locale) == dLong, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .shortDaylightSaving, locale: locale) == dShort, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .generic, locale: locale) == long, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .shortGeneric, locale: locale) == short, sourceLocation: sourceLocation)
+            }
+        }
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        try test(["UTC"], "GMT", 0, "GMT", "Greenwich Mean Time", "GMT", daylightLong: "GMT+00:00", daylightShort: "GMT+0")
+#else
+        try test(["UTC"], "GMT", 0, "GMT", "Greenwich Mean Time", "GMT", daylightLong: "GMT", daylightShort: "GMT")
+#endif
+        try test(["GMT-8", "GMT-08", "GMT-0800", "GMT-08:00"], "GMT-0800", -8*3600, "GMT-8", "GMT-08:00", "GMT-8")
+        try test(["GMT+0530", "GMT+05:30", "GMT+5:30"], "GMT+0530", 5*3600 + 30*60, "GMT+5:30", "GMT+05:30", "GMT+5:30")
+        try test(["UTC+2"], "GMT+0200", 2*3600, "GMT+2", "GMT+02:00", "GMT+2")
+        try test(["GMT+14"], "GMT+1400", 14*3600, "GMT+14", "GMT+14:00", "GMT+14")
+        try test(["GMT-11"], "GMT-1100", -11*3600, "GMT-11", "GMT-11:00", "GMT-11")
+    }
+
     @Test func secondsFromGMT_RemoteDates() {
         let date = Date(timeIntervalSinceReferenceDate: -5001243627) // "1842-07-09T05:39:33+0000"
         let europeRome = TimeZone(identifier: "Europe/Rome")!
@@ -297,8 +329,13 @@ private struct TimeZoneGMTTests {
     @Test func localizedName() {
         #expect(tz.localizedName(for: .standard, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
         #expect(tz.localizedName(for: .shortStandard, locale: Locale(identifier: "en_US")) == "GMT")
-        #expect(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        #expect(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")) == "GMT+00:00")
+        #expect(tz.localizedName(for: .shortDaylightSaving, locale: Locale(identifier: "en_US")) == "GMT+0")
+#else
+        #expect(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")) == "GMT")
         #expect(tz.localizedName(for: .shortDaylightSaving, locale: Locale(identifier: "en_US")) == "GMT")
+#endif
         #expect(tz.localizedName(for: .generic, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
         #expect(tz.localizedName(for: .shortGeneric, locale: Locale(identifier: "en_US")) == "GMT")
         

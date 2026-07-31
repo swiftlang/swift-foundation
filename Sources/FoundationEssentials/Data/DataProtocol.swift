@@ -373,7 +373,7 @@ extension DataProtocol {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DataProtocol where Self : ContiguousBytes {
+extension DataProtocol where Self: ContiguousBytes {
     /// Copies a range of the bytes from the type into a typed memory buffer.
     ///
     /// This specialization is available when the conforming type also conforms to
@@ -384,12 +384,17 @@ extension DataProtocol where Self : ContiguousBytes {
     ///   - range: The range of bytes to copy.
     public func copyBytes<DestinationType, R: RangeExpression>(to ptr: UnsafeMutableBufferPointer<DestinationType>, from range: R) where R.Bound == Index {
         precondition(ptr.baseAddress != nil)
-        
-        let concreteRange = range.relative(to: self)
+
+        let concreteRange = range.relative(to: self) // does no bounds-checking
+        precondition(
+            startIndex <= concreteRange.lowerBound && concreteRange.upperBound <= endIndex,
+            "Range out of bounds"
+        )
         withUnsafeBytes { fullBuffer in
             let adv = distance(from: startIndex, to: concreteRange.lowerBound)
             let delta = distance(from: concreteRange.lowerBound, to: concreteRange.upperBound)
-            _ = memcpy(ptr.baseAddress!, fullBuffer.baseAddress!.advanced(by: adv), delta)
+            let bytesToCopy = Swift.min(delta, ptr.count * MemoryLayout<DestinationType>.stride)
+            _ = memcpy(ptr.baseAddress!, fullBuffer.baseAddress!.advanced(by: adv), bytesToCopy)
         }
     }
 }
