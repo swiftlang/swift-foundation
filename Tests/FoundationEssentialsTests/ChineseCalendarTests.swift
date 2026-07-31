@@ -77,20 +77,20 @@ private struct ChineseCalendarTests {
             (1871, 1871, 2, 19), (1890, 1890, 1, 21), (2148, 2148, 2, 20),
         ]
         for (iso, gy, gm, gd) in pins {
-            #expect(_ChineseCalendarEngine.year(relatedISOYear: iso).newYearRataDie
+            #expect(_CalendarChinese.year(relatedISOYear: iso).newYearRataDie
                     == _CalendarAstronomy.gregorianRataDie(gy, gm, gd), "CNY \(iso)")
         }
         let leaps: [(Int, UInt8)] = [(1775, 10), (1776, 0), (1900, 8), (2147, 11), (2148, 0)]
         for (iso, want) in leaps {
-            #expect(_ChineseCalendarEngine.year(relatedISOYear: iso).leapMonthNumber == want, "leap \(iso)")
+            #expect(_CalendarChinese.year(relatedISOYear: iso).leapMonthNumber == want, "leap \(iso)")
         }
     }
 
     @Test func yearStructureInvariants() {
         var failures: [String] = []
-        var prev = _ChineseCalendarEngine.year(relatedISOYear: 1800)
+        var prev = _CalendarChinese.year(relatedISOYear: 1800)
         for iso in 1801...2300 {
-            let y = _ChineseCalendarEngine.year(relatedISOYear: iso)
+            let y = _CalendarChinese.year(relatedISOYear: iso)
             if prev.endRataDie != y.newYearRataDie { failures.append("\(iso): tiling") }
             let n = Int(y.monthCount)
             if n != 12 && n != 13 { failures.append("\(iso): months \(n)") }
