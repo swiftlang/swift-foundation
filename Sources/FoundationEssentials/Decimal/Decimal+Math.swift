@@ -667,7 +667,9 @@ extension Decimal {
             // `rhs` has the larger exponent.
             let diffExp = -diffExp
             if diffExp >= 39 {
-                result = .orderedAscending
+                result = (rhs._significand != 0) // Nonzero unless `rhs` is malformed.
+                    ? .orderedAscending
+                    : (lhs._significand == 0 ? .orderedSame : .orderedDescending)
             } else {
                 let (high, low) = rhs._significand._multipliedFullWidth(by1e: diffExp)
                 result = (high != 0) ? .orderedAscending : UInt128._compare(lhs._significand, low)
@@ -675,7 +677,9 @@ extension Decimal {
         } else {
             // `lhs` has the larger exponent.
             if diffExp >= 39 {
-                result = .orderedDescending
+                result = (lhs._significand != 0) // Nonzero unless `lhs` is malformed.
+                    ? .orderedDescending
+                    : (rhs._significand == 0 ? .orderedSame : .orderedAscending)
             } else {
                 let (high, low) = lhs._significand._multipliedFullWidth(by1e: diffExp)
                 result = (high != 0) ? .orderedDescending : UInt128._compare(low, rhs._significand)

@@ -1342,6 +1342,7 @@ private struct DecimalTests {
         #expect(z * z == Decimal.zero)
         #expect((2 / z).isNaN)
         #expect((z / z).isNaN)
+        #expect(z < z.ulp)
 
         // Classical behavior when `_isNegative == 0`:
         #expect(z + z == Decimal.zero)

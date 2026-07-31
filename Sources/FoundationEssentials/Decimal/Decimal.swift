@@ -23,6 +23,54 @@ import ucrt
 /// A structure representing a base-10 number.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Decimal: Sendable {
+    // Some notes on `Decimal` storage
+    // -------------------------------
+    //
+    // Compactness:
+    //
+    // A value that is actually 'compact' may nonetheless leave the `_isCompact`
+    // bit unset without being malformed. Arithmetic operations accept arguments
+    // that are non-compact (and actually compact but with the bit unset).
+    // Whenever reasonable, arithmetic operations *should* return compact values
+    // with the bit properly set.
+    //
+    // *A value that is not actually 'compact' is malformed if the `_isCompact`
+    // bit is erroneously set*. Operations may exhibit unspecified behavior when
+    // passed such values as arguments. For example: two values, one of which is
+    // malformed in this way, may compare equal but hash differently. Public
+    // APIs exposed on the type *should never* produce such values.
+    //
+    // Mantissa length:
+    //
+    // A value with `_length == 0` is either +0 or NaN, depending on the value
+    // of `_isNegative`. In such cases, none of the mantissa's 128 bits are part
+    // of the value. Whether the irrelevant mantissa bits of such a value are
+    // preserved by operations is unspecified. For now, `compact` preserves the
+    // mantissa bits and doesn't set `_isCompact`, and `significand` gives a
+    // zero value with the mantissa bits preserved.
+    //
+    // A value with `_length != 0` is nonzero and finite. In such cases, _all_
+    // of the mantissa's 128 bits are part of the value. To re-emphasize the
+    // point: unlike IEEE decimal types, _all_ such values are regarded as
+    // _nonzero_. Arithmetic operations accept arguments with `_length` nonzero
+    // but 'too short' _without_ masking the mantissa bits. For example,
+    // `_length == 1` and `_mantissa = (0xffff, 0xffff, 0, 0, 0, 0, 0, 0)` is
+    // treated as though `_length == 2`. Arithmetic operations *should* return
+    // values with properly set `_length`; that is, (at least) the number of
+    // 16-bit limbs required to include the most significant nonzero bit in the
+    // mantissa.
+    //
+    // The behavior of (malformed) values with `_length != 0` and `_mantissa ==
+    // (0, 0, 0, 0, 0, 0, 0, 0)` is undocumented but rationalizable. In
+    // accordance with the rule above, such values aren't classified as zero and
+    // don't compare equal to zero. (If they were and did, then the type would
+    // effectively admit representations of –0.) Rather, when compared, they
+    // behave as though the mantissa is infinitesimal, less in magnitude than
+    // its own `ulp`. In arithmetic operations, they behave like zero operands,
+    // though the exponent may participate in operand scaling. Such values are
+    // always non-compact: compaction gives canonical zero, and setting the
+    // `_isCompact` bit without compaction can lead to unspecified behavior
+    // inherent to breaking that invariant.
     internal struct Storage: Sendable {
         var exponent: Int8
         // Layout:
