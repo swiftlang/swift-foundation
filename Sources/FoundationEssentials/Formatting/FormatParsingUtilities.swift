@@ -47,7 +47,7 @@ extension BufferViewIterator<UInt8> {
         }
     }
             
-    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
+    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, range: Range<Int>?, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
         // Consume all leading zeros, parse until we no longer see a digit
         var result = 0
         var count = 0
@@ -86,10 +86,23 @@ extension BufferViewIterator<UInt8> {
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
 
+        if let range, !range.contains(result) {
+            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+        }
+        
         return result
     }
     
-
+    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, calendar: Calendar, component: Calendar.Component, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
+        
+        let result = try digits(minDigits: minDigits, maxDigits: maxDigits, nanoseconds: nanoseconds, input: input, range: nil, onFailure: onFailure(), extendedDescription: extendedDescription)
+        
+        guard calendar.maximumRange(of: component)!.contains(result) else {
+            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+        }
+        
+        return result
+    }
 }
 
 // Formatting helpers
