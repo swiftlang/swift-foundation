@@ -7,7 +7,7 @@
 
 - ``init(rawValue:)``
 
-### Constants
+### Working with comparison results
 
 - ``orderedAscending``
 - ``orderedSame``

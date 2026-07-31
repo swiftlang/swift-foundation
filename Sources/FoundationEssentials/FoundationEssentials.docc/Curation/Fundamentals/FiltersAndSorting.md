@@ -13,4 +13,5 @@
 
 ### Sorting
 
-- ``ComparisonResult``
+- ``SortComparator``
+- ``ComparableComparator``

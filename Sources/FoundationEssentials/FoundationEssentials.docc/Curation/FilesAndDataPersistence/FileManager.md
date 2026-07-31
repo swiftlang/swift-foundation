@@ -90,6 +90,7 @@
 - ``DirectoryEnumerationOptions``
 - ``FileAttributeKey``
 - ``FileAttributeType``
+- ``FileProtectionType``
 - ``ItemReplacementOptions``
 - ``UnmountOptions``
 - ``URLRelationship``
