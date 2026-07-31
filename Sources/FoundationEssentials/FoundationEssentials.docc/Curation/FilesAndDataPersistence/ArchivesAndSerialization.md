@@ -17,5 +17,11 @@ Use these APIs to convert your app’s in-memory types to representations suitab
 
 ### JSON
 
-- ``JSONDecoder``
 - ``JSONEncoder``
+- ``JSONDecoder``
+
+### Property lists
+
+- ``PropertyListEncoder``
+- ``PropertyListDecoder``
+
