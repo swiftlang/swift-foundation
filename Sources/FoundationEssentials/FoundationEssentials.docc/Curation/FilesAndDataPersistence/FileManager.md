@@ -87,7 +87,9 @@
 
 ### Supporting types
 
-- ``URLRelationship``
 - ``DirectoryEnumerationOptions``
+- ``FileAttributeKey``
+- ``FileAttributeType``
 - ``ItemReplacementOptions``
 - ``UnmountOptions``
+- ``URLRelationship``
