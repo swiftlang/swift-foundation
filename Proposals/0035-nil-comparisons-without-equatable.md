@@ -3,8 +3,9 @@
 * Proposal: [SF-0035](0035-nil-comparisons-without-equatable.md)
 * Authors: [Matthew Turk](https://github.com/MatthewTurk247)
 * Review Manager: [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Status: **Review (2026-07-22...2026-07-29**
+* Status: **Accepted**
 * Bug: [swiftlang/swift-foundation#711](https://github.com/swiftlang/swift-foundation/issues/711)
+* Review: ([v1 pitch](https://forums.swift.org/t/pitch-support-for-nil-comparisons-without-equatable-conformance/84684) [v1 review](https://forums.swift.org/t/review-sf-0035-predicateexpressions-api-for-nil-comparisons-without-equatable-conformance-within-predicates/84817) [v2 pitch](https://forums.swift.org/t/pitch-predicateexpressions-api-for-nil-comparisons-without-equatable-conformance-within-predicates/88338) [v2 review](https://forums.swift.org/t/revision-review-sf-0035-predicateexpressions-api-for-nil-comparisons-without-equatable-conformance-within-predicates/88464))
 
 ## Revision history
 
