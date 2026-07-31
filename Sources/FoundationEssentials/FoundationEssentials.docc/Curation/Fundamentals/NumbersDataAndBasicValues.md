@@ -18,6 +18,7 @@ Work with primitive values and other fundamental types.
 ### URLs
 
 - ``URL``
+- ``URLComponents``
 
 ### Unique identifiers
 
