@@ -49,6 +49,7 @@
 - ``subscript(dynamicMember:)->K.Value?``                    <!-- @preconcurrency subscript<K>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K : AttributedStringKey, K.Value : Sendable { get set } -->
 - ``AttributeDynamicLookup``
 - ``subscript(dynamicMember:)->ScopedAttributeContainer<S>`` <!-- subscript<S>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> where S : AttributeScope { get set } -->
+- ``AttributeScopes``
 - ``ScopedAttributeContainer``
 
 ### Comparing Attributed Strings or Substrings

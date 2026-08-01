@@ -4,6 +4,7 @@
 
 ### Strings with metadata
 
+
 - ``AttributedString``
 - ``AttributedSubstring``
-- <doc:AttributedStringSupportingTypes>
+- ``AttributedStringProtocol``
