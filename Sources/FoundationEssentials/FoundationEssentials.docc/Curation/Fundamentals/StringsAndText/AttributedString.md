@@ -16,21 +16,12 @@
 
 - ``init(stringLiteral:)``
 
-### Creating a localized attributed string
 
-### Creating a localized attributed string with a default value
-
-### Creating an attributed string from Markdown
-
-- ``MarkdownDecodableAttributedStringKey``
-
-### Creating an attributed string from a reference type
-
-### Creating a duplicate attributed string
 
 ### Applying and modifying attributes
 
 - ``setAttributes(_:)``
+- ``AttributeContainer``
 - ``mergeAttributes(_:mergePolicy:)``
 - ``AttributeMergePolicy``
 - ``replaceAttributes(_:with:)``
@@ -38,9 +29,14 @@
 
 ### Using defined attributes
 
+- ``AttributeScope``
 - ``AttributeScopes``
 - ``AttributeDynamicLookup``
 - ``ScopedAttributeContainer``
+
+### Creating an attributed string from Markdown
+
+- ``MarkdownDecodableAttributedStringKey``
 
 ### Searching for a substring
 

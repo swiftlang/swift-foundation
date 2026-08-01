@@ -8,7 +8,6 @@ Types that the attributed string, attributed substring, and helper types extend 
 
 ### Shared attributed string functionality
 
-- ``AttributedStringProtocol``
 
 ### Defining attribute scopes
 
