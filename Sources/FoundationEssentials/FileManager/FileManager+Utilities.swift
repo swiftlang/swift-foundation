@@ -127,17 +127,26 @@ extension _FileManagerImpl {
     
     private static let _catInfoKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden, .creationDate]
     private static let _swiftFoundationUnsupportedKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden]
-    static func _setCatInfoAttributes(_ attributes: [FileAttributeKey : Any], path: String) throws {
+    static func _setCatInfoAttributes(_ attributes: [FileAttributeKey : Any], path: String, fileSystemRepresentation: UnsafePointer<CChar>) throws {
         let hasRelevantKeys = attributes.keys.contains(where: { _catInfoKeys.contains($0) })
         guard hasRelevantKeys else { return }
-        
+
         #if !FOUNDATION_FRAMEWORK
         // Exclude some attributes (like .creationDate) from this check since they are unconditionally, implicitly included in `attributesForItem(atPath:)` results
         if attributes.keys.contains(where: { _swiftFoundationUnsupportedKeys.contains($0) }) {
             throw CocoaError.errorWithFilePath(.featureUnsupported, path)
-        } else {
-            return // TODO: support relevant cat info keys in swift-foundation
         }
+
+        #if canImport(Darwin)
+        if let creationDate = attributes[.creationDate] as? Date {
+            try Self._setCreationDate(creationDate, path: path, fileSystemRepresentation: fileSystemRepresentation)
+        }
+        #endif
+        // On platforms that provide no way to set a file's creation date, the attribute is
+        // ignored rather than reported as unsupported: `.creationDate` is implicitly present in
+        // every `attributesOfItem(atPath:)` result, so throwing would break passing those
+        // results back to `setAttributes(_:ofItemAtPath:)` unmodified.
+        return // TODO: support the remaining cat info keys in swift-foundation
         #else
         // -setAttributes:ofItemAtPath:error: follows symlinks (<rdar://5815920>), but the NSURL resource value API doesn't, so we have to manually resolve the symlink.
         // We lie to fileURLWithPath:isDirectory: to avoid the extra stat. Since this URL isn't used as a base URL for another URL, it shouldn't make any difference.
@@ -179,6 +188,33 @@ extension _FileManagerImpl {
         try url.setResourceValues(URLResourceValues(values: urlAttributes))
         #endif
     }
+
+#if canImport(Darwin) && !FOUNDATION_FRAMEWORK
+    private static func _setCreationDate(_ date: Date, path: String, fileSystemRepresentation: UnsafePointer<CChar>) throws {
+        let interval = date.timeIntervalSince1970
+        let seconds = interval.rounded(.down)
+        // Malformed dates are dropped rather than reported as an error, matching the behavior of `.modificationDate`.
+        guard let tv_sec = time_t(exactly: seconds),
+              let tv_nsec = Int(exactly: ((interval - seconds) * 1_000_000_000).rounded()) else {
+            return
+        }
+
+        var attrs = attrlist(
+            bitmapcount: u_short(ATTR_BIT_MAP_COUNT),
+            reserved: 0,
+            commonattr: attrgroup_t(ATTR_CMN_CRTIME),
+            volattr: 0,
+            dirattr: 0,
+            fileattr: 0,
+            forkattr: 0
+        )
+        var value = timespec(tv_sec: tv_sec, tv_nsec: tv_nsec)
+        // `setAttributes(_:ofItemAtPath:)` follows symlinks, so FSOPT_NOFOLLOW is intentionally not set here.
+        guard setattrlist(fileSystemRepresentation, &attrs, &value, MemoryLayout<timespec>.size, 0) == 0 else {
+            throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
+        }
+    }
+#endif
 
 #if !os(Windows) && !os(WASI) && !os(OpenBSD) && !os(Emscripten)
     static func _setAttribute(_ key: UnsafePointer<CChar>, value: Data, at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
