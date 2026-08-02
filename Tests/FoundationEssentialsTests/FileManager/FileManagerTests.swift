@@ -620,6 +620,24 @@ private struct FileManagerTests {
         }
     }
 
+    @Test func copyItemAtPathWithTrailingSlash() async throws {
+        try await FilePlayground {
+            Directory("dir") {
+                Directory("subdir") {
+                    "file"
+                }
+                "foo"
+            }
+        }.test { fileManager in
+            // A trailing separator on the source path must not be absorbed into the names of the copied items
+            try fileManager.copyItem(atPath: "dir/", toPath: "dir2")
+            #expect(try fileManager.subpathsOfDirectory(atPath: ".").sorted() == [
+                "dir", "dir/foo", "dir/subdir", "dir/subdir/file",
+                "dir2", "dir2/foo", "dir2/subdir", "dir2/subdir/file",
+            ])
+        }
+    }
+
     @Test func removeItemAtPath() async throws {
         try await FilePlayground {
             Directory("dir") {

@@ -1118,7 +1118,11 @@ enum _FileOperations {
         #else
         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             let dstLen = Platform.copyCString(dst: buffer.baseAddress!, src: dstPtr, size: FileManager.MAX_PATH_SIZE)
-            let srcLen = strlen(srcPtr)
+            // fts builds the path of a descendant by appending its name to the source path, inserting a separator only when the source path does not already end with one. Exclude trailing separators from the prefix length so that the remainder of a descendant's path always begins with a separator.
+            var srcLen = strlen(srcPtr)
+            while srcLen > 0, srcPtr[srcLen - 1] == CChar(UInt8(ascii: "/")) {
+                srcLen -= 1
+            }
             let dstAppendPtr = buffer.baseAddress!.advanced(by: dstLen)
             let remainingBuffer = FileManager.MAX_PATH_SIZE - dstLen
             
