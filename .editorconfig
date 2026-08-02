@@ -1,0 +1,32 @@
+# editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+
+[*.{yml,yaml}]
+indent_size = 2
+
+# Test and benchmark inputs are byte-for-byte fixtures rather than source: many
+# deliberately end without a trailing newline, some use CR or CRLF line endings
+# on purpose (see Tests/FoundationEssentialsTests/Resources/JSON5/spec/new-lines,
+# which has its own .editorconfig and marks its contents binary in .gitattributes),
+# and others are binary property lists. Editors must not normalize any of that.
+[Tests/**/Resources/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+
+[Benchmarks/**/Resources/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
