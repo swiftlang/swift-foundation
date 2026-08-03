@@ -1840,7 +1840,18 @@ E {
             #expect(attrStr.runs.count == test.1, "Replacement of range \(NSStringFromRange(test.0)) caused a run count of \(attrStr.runs.count)")
         }
     }
-    
+
+    @Test func infiniteInflectionAlternativeConversion() throws {
+        let ns = NSMutableAttributedString(string: "Hello, world")
+        ns.setAttributes([.inflectionAlternative: ns], range: NSRange(location: 0, length: 12))
+        let attrStr = try AttributedString(ns, including: \.foundation)
+        #expect(attrStr.runs.count == 1)
+        #expect(attrStr.inflectionAlternative == AttributedString("Hello, world"))
+
+        // break retain cycle
+        ns.setAttributes([:], range: NSRange(location: 0, length: 12))
+    }
+
 #endif // FOUNDATION_FRAMEWORK
 
     // MARK: - View Tests
