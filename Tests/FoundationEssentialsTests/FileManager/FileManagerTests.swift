@@ -620,7 +620,7 @@ private struct FileManagerTests {
         }
     }
 
-    @Test func copyItemAtPathWithTrailingSlash() async throws {
+    @Test(arguments: ["dir/", "dir//"]) func copyItemAtPathWithTrailingSlash(_ source: String) async throws {
         try await FilePlayground {
             Directory("dir") {
                 Directory("subdir") {
@@ -628,11 +628,15 @@ private struct FileManagerTests {
                 }
                 "foo"
             }
-        }.test { fileManager in
-            // A trailing separator on the source path must not be absorbed into the names of the copied items
-            try fileManager.copyItem(atPath: "dir/", toPath: "dir2")
+        }.test(captureDelegateCalls: true) { fileManager in
+            // Trailing separators on the source path must not be absorbed into the names of the copied items
+            try fileManager.copyItem(atPath: source, toPath: "dir2")
             #expect(try fileManager.subpathsOfDirectory(atPath: ".").sorted() == [
                 "dir", "dir/foo", "dir/subdir", "dir/subdir/file",
+                "dir2", "dir2/foo", "dir2/subdir", "dir2/subdir/file",
+            ])
+            // The destination paths must be well formed no matter how many of the source path's trailing separators the platform's fts reports for descendants
+            #expect(fileManager.delegateCaptures.shouldCopy.compactMap(\.dst).sorted() == [
                 "dir2", "dir2/foo", "dir2/subdir", "dir2/subdir/file",
             ])
         }
