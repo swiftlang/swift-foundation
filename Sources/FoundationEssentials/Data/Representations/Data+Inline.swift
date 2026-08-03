@@ -110,7 +110,7 @@ extension Data {
             self.init(count: count)
             Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
                 slice.withUnsafeBytes { srcBuffer in
-                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
+                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: Swift.min(count, srcBuffer.count)))
                 }
             }
         }
@@ -120,7 +120,7 @@ extension Data {
             self.init(count: count)
             Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
                 slice.withUnsafeBytes { srcBuffer in
-                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
+                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: Swift.min(count, srcBuffer.count)))
                 }
             }
         }
@@ -239,14 +239,14 @@ extension Data {
         subscript(index: Index) -> UInt8 {
             get {
                 assert(index <= MemoryLayout<Buffer>.size)
-                precondition(index < length, "index \(index) is out of bounds of 0..<\(length)")
+                precondition(index >= 0 && index < length, "index \(index) is out of bounds of 0..<\(length)")
                 return Swift.withUnsafeBytes(of: bytes) { rawBuffer -> UInt8 in
                     return rawBuffer[index]
                 }
             }
             set(newValue) {
                 assert(index <= MemoryLayout<Buffer>.size)
-                precondition(index < length, "index \(index) is out of bounds of 0..<\(length)")
+                precondition(index >= 0 && index < length, "index \(index) is out of bounds of 0..<\(length)")
                 Swift.withUnsafeMutableBytes(of: &bytes) { rawBuffer in
                     rawBuffer[index] = newValue
                 }
@@ -272,8 +272,8 @@ extension Data {
             assert(subrange.lowerBound <= MemoryLayout<Buffer>.size)
             assert(subrange.upperBound <= MemoryLayout<Buffer>.size)
             assert(count - (subrange.upperBound - subrange.lowerBound) + replacementLength <= MemoryLayout<Buffer>.size)
-            precondition(subrange.lowerBound <= length, "index \(subrange.lowerBound) is out of bounds of 0..<\(length)")
-            precondition(subrange.upperBound <= length, "index \(subrange.upperBound) is out of bounds of 0..<\(length)")
+            precondition(subrange.lowerBound >= 0 && subrange.lowerBound <= length, "index \(subrange.lowerBound) is out of bounds of 0..<\(length)")
+            precondition(subrange.upperBound >= 0 && subrange.upperBound <= length, "index \(subrange.upperBound) is out of bounds of 0..<\(length)")
             let currentLength = count
             let resultingLength = currentLength - (subrange.upperBound - subrange.lowerBound) + replacementLength
             let shift = resultingLength - currentLength
