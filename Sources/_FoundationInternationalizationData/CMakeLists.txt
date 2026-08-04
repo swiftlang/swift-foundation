@@ -13,38 +13,26 @@
 ##===----------------------------------------------------------------------===##
 
 add_library(_FoundationInternationalizationData STATIC
-    ListFormatData.c)
+    ListFormatData.swift)
 
-target_include_directories(_FoundationInternationalizationData PUBLIC include)
-
-target_compile_options(_FoundationInternationalizationData INTERFACE
-  "$<BUILD_INTERFACE:$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/include/module.modulemap>>")
+target_compile_options(_FoundationInternationalizationData PRIVATE
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend Lifetimes>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend ImportMacroAliases>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend StrictConcurrency>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend InferSendableFromCaptures>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend MemberImportVisibility>")
+target_compile_options(_FoundationInternationalizationData PRIVATE ${_SwiftFoundation_availability_macros})
+target_compile_options(_FoundationInternationalizationData PRIVATE -package-name "SwiftFoundation")
+target_compile_options(_FoundationInternationalizationData PRIVATE
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -allowable-client -Xfrontend FoundationInternationalization>")
 
 set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS _FoundationInternationalizationData)
 
-if(BUILD_SHARED_LIBS)
-    set(install_directory swift)
+# Only install the binary if we're building a static SDK, otherwise just install the swift module
+if (NOT BUILD_SHARED_LIBS)
+    _swift_foundation_install_target_options(_FoundationInternationalizationData YES)
 else()
-    set(install_directory swift_static)
-endif()
-
-# Copy Headers to known directory for direct client (XCTest) test builds
-file(COPY
-        include/
-    DESTINATION
-        ${CMAKE_BINARY_DIR}/_CModulesForClients/_FoundationInternationalizationData)
-
-# Install headers
-install(DIRECTORY
-            include/
-        DESTINATION
-            lib/${install_directory}/_FoundationInternationalizationData)
-
-if(NOT BUILD_SHARED_LIBS)
-    get_swift_host_os(swift_os)
-    install(TARGETS _FoundationInternationalizationData
-        ARCHIVE DESTINATION lib/${install_directory}/${swift_os}
-        LIBRARY DESTINATION lib/${install_directory}/${swift_os}
-        RUNTIME DESTINATION bin)
+    _swift_foundation_install_target_options(_FoundationInternationalizationData NO)
 endif()
 
