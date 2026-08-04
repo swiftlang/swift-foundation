@@ -1118,7 +1118,12 @@ enum _FileOperations {
         #else
         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             let dstLen = Platform.copyCString(dst: buffer.baseAddress!, src: dstPtr, size: FileManager.MAX_PATH_SIZE)
-            let srcLen = strlen(srcPtr)
+            // fts builds the path of a descendant by appending a separator and its name to the source path, but implementations disagree about how the trailing separators of the source path are treated: some drop one of them beforehand and some keep all of them. Ignore them entirely when determining the length of the prefix that the destination path replaces, and re-insert a single separator below.
+            let pathSeparator = CChar(UInt8(ascii: "/"))
+            var srcLen = strlen(srcPtr)
+            while srcLen > 0, srcPtr[srcLen - 1] == pathSeparator {
+                srcLen -= 1
+            }
             let dstAppendPtr = buffer.baseAddress!.advanced(by: dstLen)
             let remainingBuffer = FileManager.MAX_PATH_SIZE - dstLen
             
@@ -1131,8 +1136,18 @@ enum _FileOperations {
                     
                 case let .entry(entry):
                     let fts_path = entry.ftsEnt.fts_path!
-                    let trimmedPathPtr = fts_path.advanced(by: srcLen)
-                    Platform.copyCString(dst: dstAppendPtr, src: trimmedPathPtr, size: remainingBuffer)
+                    var trimmedPathPtr = fts_path.advanced(by: srcLen)
+                    // Skip the separators that fts kept from the source path so that the item's path relative to the source is appended to the destination as a path component
+                    while trimmedPathPtr.pointee == pathSeparator {
+                        trimmedPathPtr += 1
+                    }
+                    if trimmedPathPtr.pointee == 0 {
+                        // The source itself is copied to the destination path as-is
+                        dstAppendPtr.pointee = 0
+                    } else {
+                        dstAppendPtr.pointee = pathSeparator
+                        Platform.copyCString(dst: dstAppendPtr + 1, src: trimmedPathPtr, size: remainingBuffer - 1)
+                    }
                     
                     // we don't want to ask the delegate on the way back -up- the hierarchy if they want to copy a directory they've already seen and therefore already said "YES" to.
                     guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: fts_path), to: String(cString: buffer.baseAddress!)) else {
