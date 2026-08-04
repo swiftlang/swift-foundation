@@ -201,6 +201,21 @@ private struct CalendarTests {
         #expect(anyHashables[0] != anyHashables[1])
         #expect(anyHashables[1] == anyHashables[2])
     }
+    
+    @Test func longInitializer() throws {
+        let locale = Locale(identifier: "en_AU")
+        let timeZone = try #require(TimeZone(identifier: "Australia/Sydney"))
+
+        var configuredCalendar = Calendar(identifier: .gregorian)
+        configuredCalendar.locale = locale
+        configuredCalendar.timeZone = timeZone
+        configuredCalendar.firstWeekday = 2
+        configuredCalendar.minimumDaysInFirstWeek = 2
+
+        let initializedCalendar = Calendar(identifier: .gregorian, timeZone: timeZone, locale: locale, firstWeekday: 2, minimumDaysInFirstWeek: 2)
+
+        #expect(configuredCalendar == initializedCalendar)
+    }
 
     func decodeHelper(_ l: Calendar) throws -> Calendar {
         let je = JSONEncoder()

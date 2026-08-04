@@ -22,6 +22,8 @@ import Darwin
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if !FOUNDATION_FRAMEWORK

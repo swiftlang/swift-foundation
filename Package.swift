@@ -9,7 +9,7 @@ import CompilerPluginSupport
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
 ]
-let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4"]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.5"]
 
 // Availability Macro Utilities
 
@@ -72,10 +72,10 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 exact: "1.1.6"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
-                branch: "release/6.4.x"),
+                branch: "main"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                branch: "release/6.4.x")
+                branch: "main")
         ]
 }
 
@@ -175,10 +175,17 @@ let package = Package(
 
         // FoundationInternationalization
         .target(
+            name: "_FoundationInternationalizationData",
+            dependencies: [
+                "_FoundationCShims"
+            ]
+        ),
+        .target(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "_FoundationCShims"),
+                .target(name: "_FoundationInternationalizationData"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             exclude: [

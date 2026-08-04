@@ -1,0 +1,6 @@
+module _FoundationInternationalizationData {
+    header "InternationalizationDataMacros.h"
+    header "ListFormatData.h"
+
+    export *
+}

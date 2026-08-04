@@ -15,6 +15,11 @@
 target_sources(FoundationEssentials PRIVATE
     URL.swift
     URL_Bridge.swift
+    URL_C+Encoding.swift
+    URL_C+File.swift
+    URL_C+Parsing.swift
+    URL_C+Resolution.swift
+    URL_C+Spans.swift
     URL_File.swift
     URL_Impl.swift
     URL_Info.swift

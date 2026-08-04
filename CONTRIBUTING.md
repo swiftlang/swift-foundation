@@ -23,7 +23,7 @@ When submitting a pull request:
 
 ## Review
 
-Each pull request will be reviewed by a code owner before merging.
+Each pull request will be reviewed by a code owner before merging. Please refer to the [Contribution Guidelines](CONTRIBUTION_GUIDELINE.md) for code style, API design, testing, and platform expectations before submitting.
 
 * Pull requests should contain small, incremental change.
 * Focus on one task. If a pull request contains several unrelated commits, we will ask for the pull request to be split up.

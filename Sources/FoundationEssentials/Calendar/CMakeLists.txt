@@ -14,10 +14,13 @@
 
 target_sources(FoundationEssentials PRIVATE
     Calendar.swift
+    CalendarConstants.swift
+    CalendarUtility.swift
     Calendar_Autoupdating.swift
     Calendar_Cache.swift
     Calendar_Enumerate.swift
     Calendar_Gregorian.swift
+    Calendar_Hebrew.swift
     Calendar_Protocol.swift
     Calendar_Recurrence.swift
     Date+FormatStyle.swift

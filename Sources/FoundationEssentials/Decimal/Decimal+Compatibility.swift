@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift project authors
+// Copyright (c) 2024-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -111,10 +111,13 @@ private func __NSDecimalSubtract(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let subtraction = try lhs.pointee._subtract(
+        let subtraction = try lhs.pointee._subtractReportingInexact(
             rhs: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = subtraction
+        result.pointee = subtraction.result
+        if subtraction.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
@@ -142,14 +145,19 @@ private func __NSDecimalMultiply(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try lhs.pointee._multiply(
+        let product = try lhs.pointee._multiplyReportingInexact(
             by: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = product
+        result.pointee = product.result
+        if product.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }
@@ -173,14 +181,19 @@ private func __NSDecimalDivide(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try lhs.pointee._divide(
+        let quotient = try lhs.pointee._divideReportingInexact(
             by: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = product
+        result.pointee = quotient.result
+        if quotient.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }

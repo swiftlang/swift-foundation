@@ -30,6 +30,9 @@ fileprivate let _pageSize: Int = {
 #elseif os(WASI)
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
+#elseif os(Emscripten)
+// WebAssembly defines a fixed page size
+fileprivate let _pageSize: Int = 65_536
 #elseif canImport(Android)
 @preconcurrency import Android
 fileprivate let _pageSize: Int = Int(getpagesize())
@@ -51,6 +54,7 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 internal import _FoundationDarwinExtras
 internal import _FoundationDarwinExtras._string_runtime.xlocale
 import stdlib_h
+internal import unistd
 
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(stdlib_h)
@@ -128,7 +132,7 @@ private let _cachedUGIDs: (uid_t, gid_t) = {
 }()
 #endif
 
-#if !os(Windows) && !os(WASI)
+#if !os(Windows) && !os(WASI) && !os(Emscripten)
 extension Platform {
     private static var ROOT_USER: UInt32 { 0 }
     static func getUGIDs(allowEffectiveRootUID: Bool = true) -> (uid: UInt32, gid: UInt32) {
@@ -273,7 +277,7 @@ extension Platform {
         // FIXME: bionic implements this as `return 0;` and does not expose the
         // function via headers. We should be able to shim this and use the call
         // if it is available.
-#if !canImport(Android) && !os(WASI)
+#if !canImport(Android) && !os(WASI) && !os(Emscripten)
         guard issetugid() == 0 else { return nil }
 #endif
         if let value = getenv(name) {

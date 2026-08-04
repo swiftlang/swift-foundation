@@ -1,9 +1,9 @@
 # UUID Version Support and Other Enhancements
 
-* Proposal: [SF-NNNN](NNNN-uuid-versions.md)
+* Proposal: [SF-0041](0041-uuid-versions.md)
 * Authors: [Tony Parker](https://github.com/parkera)
-* Review Manager: TBD
-* Status: **Awaiting review**
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Review: 2026-05-20...2026-05-27**
 * Implementation: [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/pull/1836)
 * Review: ([pitch](https://forums.swift.org/t/pitch-uuid-v7-other-improvements/85427))
 
