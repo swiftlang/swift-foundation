@@ -2234,6 +2234,11 @@ extension JSONEncoderTests {
                 #expect(helloGoodbyeExpectedValue == decoded)
             }
         }
+        
+        let incompleteNumberValue = "hello: 0x".data(using: .utf8)! // Incomplete hex number
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:Int].self, from: incompleteNumberValue)
+        }
 
         let arrayJSON = "[1,2,3]".data(using: .utf8)! // Assumed dictionary can't be an array
         #expect(throws: (any Error).self) {
