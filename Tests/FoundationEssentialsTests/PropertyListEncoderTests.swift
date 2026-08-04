@@ -1418,6 +1418,27 @@ data1 = <7465
         }
     }
     
+    @Test func nonTopObjectOffsetBelowHeader() {
+        // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
+        let bplist = [
+            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
+            0xa3, 0x01, 0x02, 0x03, // 3 elements array: indexes([42, 314, 0xFF])
+            0x10, 0x2a, // integer 42
+            0x11, 0x01, 0x3a, // integer 314
+            0x10, 0xff, // integer 0xFF
+            0x08, /*0x0c*/ 0x03, 0x0e, 0x11, // object offset table: offsets([array, 42, 314, 0xFF]) -- BUT one non-top offset is below the bplist header (< 8).
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
+        ] as [UInt8]
+        let data = Data(bplist)
+
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
+    }
+
     @Test func outOfBoundsOffsetTableStart() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [

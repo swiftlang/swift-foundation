@@ -560,7 +560,7 @@ internal struct BPlistScanner {
         let endIdx = buffer.endIndex
         let maxOffset = trailer._offsetTableOffset - 1
         for _ in 0 ..< trailer._numObjects {
-            guard let off = reader.getSizedInt(at: objectTableCursor, endIndex: endIdx, size: Int(trailer._offsetIntSize)), off <= maxOffset else {
+            guard let off = reader.getSizedInt(at: objectTableCursor, endIndex: endIdx, size: Int(trailer._offsetIntSize)), off >= 8, off <= maxOffset else {
                 throw BPlistError.corruptTopLevelInfo
             }
 
