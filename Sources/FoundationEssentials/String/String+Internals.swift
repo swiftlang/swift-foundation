@@ -272,11 +272,12 @@ extension UnsafeBufferPointer {
         }
     }
 
+    // Note: internal for use in URL
     @specialized(where T == Unicode.UTF8)
     #if FOUNDATION_FRAMEWORK
     @specialized(where T == Unicode.UTF16)
     #endif
-    fileprivate func _decomposed<T: UnicodeCodec>(_ type: String._NormalizationType, as codec: T.Type, into buffer: UnsafeMutableBufferPointer<UInt8>, nullTerminated: Bool = false) throws -> Int where Element == T.CodeUnit {
+    internal func _decomposed<T: UnicodeCodec>(_ type: String._NormalizationType, as codec: T.Type, into buffer: UnsafeMutableBufferPointer<UInt8>, nullTerminated: Bool = false) throws -> Int where Element == T.CodeUnit {
         let scalarSet = BuiltInUnicodeScalarSet(type: type.setType)
         var bufferIdx = 0
         let bufferLength = buffer.count

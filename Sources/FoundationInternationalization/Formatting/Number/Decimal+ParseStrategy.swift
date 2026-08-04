@@ -17,8 +17,11 @@ import FoundationEssentials
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal {
 #if FOUNDATION_FRAMEWORK
+    /// A parse strategy for creating decimal values from formatted strings.
     public struct ParseStrategy<Format> : Foundation.ParseStrategy, Codable, Hashable where Format : Foundation.FormatStyle, Format.FormatInput == Decimal {
+        /// The format style describing the expected format of the string to parse.
         public var formatStyle: Format
+        /// A Boolean value that indicates whether the parse strategy permits some discrepancies when parsing.
         public var lenient: Bool
         internal init(formatStyle: Format, lenient: Bool) {
             self.formatStyle = formatStyle
@@ -26,8 +29,11 @@ extension Decimal {
         }
     }
 #else
+    /// A parse strategy for creating decimal values from formatted strings.
     public struct ParseStrategy<Format> : FoundationEssentials.ParseStrategy, Codable, Hashable where Format : FoundationEssentials.FormatStyle, Format.FormatInput == Decimal {
+        /// The format style describing the expected format of the string to parse.
         public var formatStyle: Format
+        /// A Boolean value that indicates whether the parse strategy permits some discrepancies when parsing.
         public var lenient: Bool
         internal init(formatStyle: Format, lenient: Bool) {
             self.formatStyle = formatStyle
@@ -74,6 +80,16 @@ extension Decimal.ParseStrategy {
         return (upperBoundInSubstr, value)
     }
 
+    /// Parses a decimal string in accordance with this strategy and returns the parsed value.
+    ///
+    /// Use this method to repeatedly parse decimal strings with the same ``Decimal/ParseStrategy``.
+    /// To parse a single decimal string, use the initializers inherited from ``Decimal`` that take
+    /// a `String` and a ``Decimal/FormatStyle`` as parameters.
+    ///
+    /// This method throws an error if the parse strategy can't parse the provided string.
+    ///
+    /// - Parameter value: The string to parse.
+    /// - Returns: The parsed decimal value.
     public func parse(_ value: String) throws -> Format.FormatInput {
         if let result = parse(value, startingAt: value.startIndex, in: value.startIndex..<value.endIndex) {
             return result.1
@@ -124,6 +140,12 @@ public extension Decimal {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle {
+    /// Creates a parse strategy instance using the specified decimal format style.
+    ///
+    /// - Parameters:
+    ///   - format: A configured ``Decimal/FormatStyle`` that describes the string format to parse.
+    ///   - lenient: A Boolean value that indicates whether the parse strategy should permit some
+    ///     discrepancies when parsing. Defaults to `true`.
     init(format: Format, lenient: Bool = true) {
         self.formatStyle = format
         self.lenient = lenient
@@ -132,6 +154,12 @@ public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle.Percent {
+    /// Creates a parse strategy instance using the specified decimal percentage format style.
+    ///
+    /// - Parameters:
+    ///   - format: A configured ``Decimal/FormatStyle/Percent`` that describes the percent string format to parse.
+    ///   - lenient: A Boolean value that indicates whether the parse strategy should permit some
+    ///     discrepancies when parsing. Defaults to `true`.
     init(format: Format, lenient: Bool = true) {
         self.formatStyle = format
         self.lenient = lenient
@@ -140,6 +168,12 @@ public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle.Perce
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle.Currency {
+    /// Creates a parse strategy instance using the specified decimal currency format style.
+    ///
+    /// - Parameters:
+    ///   - format: A configured ``Decimal/FormatStyle/Currency`` that describes the currency string format to parse.
+    ///   - lenient: A Boolean value that indicates whether the parse strategy should permit some
+    ///     discrepancies when parsing. Defaults to `true`.
     init(format: Format, lenient: Bool = true) {
         self.formatStyle = format
         self.lenient = lenient

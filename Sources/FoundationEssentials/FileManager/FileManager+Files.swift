@@ -32,6 +32,8 @@ import WinSDK
 #elseif os(WASI)
 internal import _FoundationCShims
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 extension Date {
@@ -176,7 +178,7 @@ extension stat {
             .ownerAccountID : _writeFileAttributePrimitive(st_uid, as: UInt.self),
             .groupOwnerAccountID : _writeFileAttributePrimitive(st_gid, as: UInt.self)
         ]
-        #if !os(WASI)
+        #if !os(WASI) && !os(Emscripten)
         if let userName = Platform.name(forUID: st_uid) {
             result[.ownerAccountName] = userName
         }
@@ -260,8 +262,8 @@ extension _FileManagerImpl {
             }
             attr?[.protectionKey] = nil
         }
-        #elseif os(WASI)
-        // `.atomic` is unavailable on WASI
+        #elseif os(WASI) || os(Emscripten)
+        // `.atomic` is unavailable on WASI/Emscripten
         let opts: Data.WritingOptions = []
         #else
         let opts = Data.WritingOptions.atomic
@@ -462,7 +464,7 @@ extension _FileManagerImpl {
             parent = fileManager.currentDirectoryPath
         }
 
-#if os(Windows) || os(WASI)
+#if os(Windows) || os(WASI) || os(Emscripten)
         return fileManager.isWritableFile(atPath: parent) && fileManager.isWritableFile(atPath: path)
 #else
         guard fileManager.isWritableFile(atPath: parent),
@@ -485,7 +487,7 @@ extension _FileManagerImpl {
 #endif
     }
 
-#if !os(Windows) && !os(WASI) && !os(OpenBSD)
+#if !os(Windows) && !os(WASI) && !os(OpenBSD) && !os(Emscripten)
     private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
@@ -647,7 +649,7 @@ extension _FileManagerImpl {
             
             var attributes = statAtPath.fileAttributes
             try? Self._catInfo(for: URL(filePath: path, directoryHint: .isDirectory), statInfo: statAtPath, into: &attributes)
-            #if !os(WASI) && !os(OpenBSD)
+            #if !os(WASI) && !os(OpenBSD) && !os(Emscripten)
             if let extendedAttrs = try? _extendedAttributes(at: fsRep, followSymlinks: false) {
                 attributes[._extendedAttributes] = extendedAttrs
             }
@@ -713,8 +715,8 @@ extension _FileManagerImpl {
                 ]
             }
         }
-#elseif os(WASI)
-        // WASI does not support file system attributes
+#elseif os(WASI) || os(Emscripten)
+        // WASI/Emscripten does not support file system attributes
         return [:]
 #else
         try fileManager.withFileSystemRepresentation(for: path) { rep in
@@ -774,11 +776,21 @@ extension _FileManagerImpl {
                     // For each value (total/available bytes, total/available files) report the smaller of the quota hard limit and the statfs value.
                     if quotaInfo.dqb_bhardlimit > 0 {
                         totalSizeBytes = min(quotaInfo.dqb_bhardlimit, totalSizeBytes)
-                        availSizeBytes = min(quotaInfo.dqb_bhardlimit - quotaInfo.dqb_curbytes, availSizeBytes)
+                        let remainingBytes: UInt64 = if quotaInfo.dqb_bhardlimit >= quotaInfo.dqb_curbytes {
+                            quotaInfo.dqb_bhardlimit - quotaInfo.dqb_curbytes
+                        } else {
+                            0
+                        }
+                        availSizeBytes = min(remainingBytes, availSizeBytes)
                     }
                     if (quotaInfo.dqb_ihardlimit > 0) {
                         totalFiles = min(UInt64(quotaInfo.dqb_ihardlimit), totalFiles)
-                        availFiles = min(UInt64(quotaInfo.dqb_ihardlimit - quotaInfo.dqb_curinodes), availFiles)
+                        let remaining: UInt64 = if quotaInfo.dqb_ihardlimit >= quotaInfo.dqb_curinodes {
+                            UInt64(quotaInfo.dqb_ihardlimit - quotaInfo.dqb_curinodes)
+                        } else {
+                            0
+                        }
+                        availFiles = min(remaining, availFiles)
                     }
                 }
             }
@@ -841,7 +853,7 @@ extension _FileManagerImpl {
                 ftTime.dwLowDateTime = uiTime.LowPart
                 ftTime.dwHighDateTime = uiTime.HighPart
 
-                let hFile: HANDLE = CreateFileW($0, GENERIC_WRITE, FILE_SHARE_WRITE, nil, OPEN_EXISTING, 0, nil)
+                let hFile: HANDLE = CreateFileW($0, GENERIC_WRITE, FILE_SHARE_WRITE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
                 if hFile == INVALID_HANDLE_VALUE {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
                 }
@@ -913,8 +925,8 @@ extension _FileManagerImpl {
             // Like the immutable flag, if write permissions are being set, do it first. If they are being unset, do it last.
             var setMode: (() throws -> Void)?
             if let mode {
-                #if os(WASI)
-                // WASI does not have the concept of permissions
+                #if os(WASI) || os(Emscripten)
+                // WASI/Emscripten does not have the concept of permissions
                 throw CocoaError.errorWithFilePath(.featureUnsupported, path)
                 #else
                 setMode = {
@@ -936,8 +948,8 @@ extension _FileManagerImpl {
             let groupID = _readFileAttributePrimitive(attributes[.groupOwnerAccountID], as: UInt.self)
             
             if user != nil || userID != nil || group != nil || groupID != nil {
-                #if os(WASI)
-                // WASI does not have the concept of users or groups
+                #if os(WASI) || os(Emscripten)
+                // WASI/Emscripten does not have the concept of users or groups
                 throw CocoaError.errorWithFilePath(.featureUnsupported, path)
                 #else
                 // Bias toward userID & groupID - try to prevent round trips to getpwnam if possible.
@@ -953,8 +965,8 @@ extension _FileManagerImpl {
             try Self._setCatInfoAttributes(attributes, path: path)
             
             if let extendedAttrs = attributes[.init("NSFileExtendedAttributes")] as? [String : Data] {
-                #if os(WASI) || os(OpenBSD)
-                // WASI does not support extended attributes
+                #if os(WASI) || os(OpenBSD) || os(Emscripten)
+                // WASI/Emscripten does not support extended attributes
                 throw CocoaError.errorWithFilePath(.featureUnsupported, path)
                 #elseif canImport(Android)
                 // Android doesn't allow setting this for normal apps, so just skip it.

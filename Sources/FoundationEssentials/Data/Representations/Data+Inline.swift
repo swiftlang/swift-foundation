@@ -2,13 +2,15 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2025 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+
+#if DATA_LEGACY_ABI
 
 #if canImport(Darwin)
 import Darwin
@@ -20,8 +22,12 @@ import Darwin
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
+#elseif canImport(string_h)
+import string_h
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -76,12 +82,35 @@ extension Data {
             length = UInt8(count)
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        @_alwaysEmitIntoClient @inline(__always)
+        init<E: Error>(
+            rawCapacity: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            self.init()
+            do throws(E) {
+                let count = try Swift.withUnsafeMutableBytes(of: &bytes) {
+                    buffer throws(E) in
+                    let prefix = buffer.prefix(rawCapacity)
+                    var output = OutputRawSpan(buffer: prefix, initializedCount: 0)
+                    try initializer(&output)
+                    return output.finalize(for: prefix)
+                }
+                assert(count <= rawCapacity)
+                length = UInt8(count)
+            } catch {
+                self = .init()
+                throw error
+            }
+        }
+
         @inlinable @inline(__always) // This is @inlinable as a convenience initializer.
         init(_ slice: InlineSlice, count: Int) {
             self.init(count: count)
             Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
                 slice.withUnsafeBytes { srcBuffer in
-                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
+                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: Swift.min(count, srcBuffer.count)))
                 }
             }
         }
@@ -91,7 +120,7 @@ extension Data {
             self.init(count: count)
             Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
                 slice.withUnsafeBytes { srcBuffer in
-                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
+                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: Swift.min(count, srcBuffer.count)))
                 }
             }
         }
@@ -125,23 +154,45 @@ extension Data {
         var endIndex: Int {
             return count
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        func withUnsafeBytes<Result>(_ apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
-            let count = Int(length)
-            return try Swift.withUnsafeBytes(of: bytes) { (rawBuffer) throws -> Result in
-                return try apply(UnsafeRawBufferPointer(start: rawBuffer.baseAddress, count: count))
+
+        @inline(__always)
+        @_alwaysEmitIntoClient
+        func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+            try Swift.withUnsafeBytes(of: bytes) { [count = Int(length)] (rawBuffer) throws(E) -> Result in
+                try apply(UnsafeRawBufferPointer(start: rawBuffer.baseAddress, count: count))
             }
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
-            let count = Int(length)
-            return try Swift.withUnsafeMutableBytes(of: &bytes) { (rawBuffer) throws -> Result in
-                return try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
+
+        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
+        @usableFromInline
+        internal func __legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeBytes(body)
+        }
+
+        @inline(__always)
+        @_alwaysEmitIntoClient
+        mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+            try Swift.withUnsafeMutableBytes(of: &bytes) { [count = Int(length)] (rawBuffer) throws(E) -> Result in
+                try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
             }
         }
-        
+
+        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
+        @usableFromInline
+        internal mutating func __legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeMutableBytes(body)
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         mutating func append(byte: UInt8) {
             let count = self.count
@@ -162,18 +213,40 @@ extension Data {
             length += UInt8(buffer.count)
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        @_alwaysEmitIntoClient
+        mutating func append<E: Error>(
+            _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            let oldCount = self.count
+            let newCapacity = oldCount + extraCapacity
+            assert(newCapacity <= capacity)
+            try Swift.withUnsafeMutableBytes(of: &bytes) {
+                buffer throws(E) in
+                let slice = buffer[oldCount..<newCapacity]
+                var span = OutputRawSpan(buffer: slice, initializedCount: 0)
+                defer {
+                    let addedCount = unsafe span.finalize(for: slice)
+                    length = UInt8(truncatingIfNeeded: oldCount + addedCount)
+                    assert(addedCount <= extraCapacity)
+                    span = OutputRawSpan()
+                }
+                try initializer(&span)
+            }
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         subscript(index: Index) -> UInt8 {
             get {
                 assert(index <= MemoryLayout<Buffer>.size)
-                precondition(index < length, "index \(index) is out of bounds of 0..<\(length)")
+                precondition(index >= 0 && index < length, "index \(index) is out of bounds of 0..<\(length)")
                 return Swift.withUnsafeBytes(of: bytes) { rawBuffer -> UInt8 in
                     return rawBuffer[index]
                 }
             }
             set(newValue) {
                 assert(index <= MemoryLayout<Buffer>.size)
-                precondition(index < length, "index \(index) is out of bounds of 0..<\(length)")
+                precondition(index >= 0 && index < length, "index \(index) is out of bounds of 0..<\(length)")
                 Swift.withUnsafeMutableBytes(of: &bytes) { rawBuffer in
                     rawBuffer[index] = newValue
                 }
@@ -199,8 +272,8 @@ extension Data {
             assert(subrange.lowerBound <= MemoryLayout<Buffer>.size)
             assert(subrange.upperBound <= MemoryLayout<Buffer>.size)
             assert(count - (subrange.upperBound - subrange.lowerBound) + replacementLength <= MemoryLayout<Buffer>.size)
-            precondition(subrange.lowerBound <= length, "index \(subrange.lowerBound) is out of bounds of 0..<\(length)")
-            precondition(subrange.upperBound <= length, "index \(subrange.upperBound) is out of bounds of 0..<\(length)")
+            precondition(subrange.lowerBound >= 0 && subrange.lowerBound <= length, "index \(subrange.lowerBound) is out of bounds of 0..<\(length)")
+            precondition(subrange.upperBound >= 0 && subrange.upperBound <= length, "index \(subrange.upperBound) is out of bounds of 0..<\(length)")
             let currentLength = count
             let resultingLength = currentLength - (subrange.upperBound - subrange.lowerBound) + replacementLength
             let shift = resultingLength - currentLength
@@ -253,3 +326,5 @@ extension Data {
         }
     }
 }
+
+#endif

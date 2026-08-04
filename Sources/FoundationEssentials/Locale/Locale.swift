@@ -10,15 +10,46 @@
 //
 //===----------------------------------------------------------------------===//
 
-/**
- `Locale` encapsulates information about linguistic, cultural, and technological conventions and standards. Examples of information encapsulated by a locale include the symbol used for the decimal separator in numbers and the way dates are formatted.
-
- Locales are typically used to provide, format, and interpret information about and according to the user's customs and preferences. They are frequently used in conjunction with formatters. Although you can use many locales, you usually use the one associated with the current user.
-*/
+/// Information about linguistic, cultural, and technological conventions for use in formatting data for presentation.
+///
+/// `Locale` encapsulates information about linguistic, cultural, and technological conventions and standards. Examples of information encapsulated by a locale include the symbol used for the decimal separator in numbers and the formatting conventions for dates and times.
+///
+/// Apps use locales to provide, format, and interpret information about and according to the user's customs and preferences. Data formatting APIs commonly make use of locales to present data in a locale-appropriate way.
+///
+/// You can create a `Locale` from a common identifier like `en-US`, or by specifying its components. More commonly, you access the current system locale with the ``current`` or ``autoupdatingCurrent`` static variables.
+///
+/// ### Working with locale components
+///
+/// A `Locale` exposes its various traits — the appropriate measurement system, currency symbols, date and time conventions, and more — as strongly-typed properties like ``currency``, `numberingSystem`, and `firstDayOfWeek`.
+///
+/// In addition, the ``language`` property allows you examine traits of languages, through the ``Language`` type, in contast with `NSLocale`, where `NSLocale.languageCode` is just a string identifier. You can use a locale's language to compare whether two locales use the same language, or if one language is a parent of another.
+///
+/// The following example creates a `Locale` from the identifier `zh-CN`, for Chinese. It then accesses this locale's ``language`` to get the language's ``Language/script``, and uses a US English locale to get a localized string describing the script: "Simplified Han". With the locale `zh-Hant-CN`, for Traditional Chinese, the script would be "Traditional Han" instead.
+///
+/// ```swift
+/// let zhCN = Locale(identifier: "zh-CN")
+/// if let script = zhCN.language.script {
+///     let enUS = Locale(identifier: "en-US")
+///     let localizedScript = enUS.localizedString(forScript: script) // "Simplified Han"
+/// }
+/// ```
+///
+/// ### Creating custom locales from components
+///
+/// You can create a custom locale by creating a `Locale` instance from a customized ``Components``. Do this when you want to tweak specific aspects of a locale. The following example creates a locale that uses language conventions of British English (language region `GB`), but otherwise uses US conventions for things like currency and measurement.
+///
+/// ```swift
+/// var components = Locale.Components(languageCode: "en", languageRegion: "GB")
+/// components.region = Locale.Region("US")
+/// let en_GB_US = Locale(components: components)
+/// ```
+///
+/// Creating a custom locale like this isn't necessarily common in apps, but can be useful in unit testing your app's localizations.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Locale : Hashable, Equatable, Sendable {
 
 #if FOUNDATION_FRAMEWORK
+    /// An alias for the standard set of language directions.
     public typealias LanguageDirection = NSLocale.LanguageDirection
 #else
     public enum LanguageDirection : UInt, Sendable {
@@ -39,36 +70,59 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 #endif
 
-    // Identifier canonicalization
+    /// A type that indicates the standard that defines a locale's identifier.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public enum IdentifierType : Sendable {
         /* This canonicalizes the identifier */
-        /// Identifier following ICU (International Components for Unicode) convention. Unlike the `posix` type, does not include character set
-        /// For example: "th_TH@calendar=gregorian;numbers=thai"
+        /// The type of identifiers that follow ICU (International Components for Unicode) conventions.
+        ///
+        /// An example of this type is `th_TH@calendar=gregorian;numbers=thai`.
         case icu
 
         /* This would be a canonicalized "Unicode BCP 47 locale identifier", not a "BCP 47 language tag", per https://www.unicode.org/reports/tr35/#BCP_47_Language_Tag_Conversion */
-        /// The identifier is also a valid BCP47 language tag
-        /// For example: "th-TH-u-ca-gregory-nu-thai"
+        /// The type of BCP 47 language identifiers.
+        ///
+        /// An example of this type is `th-TH-u-ca-gregory-nu-thai`.
         case bcp47
 
-        /// The components are the same as `icu`, but does not use the key-value type keyword list
-        /// For example: "th_TH_u_ca_gregory_nu_thai"
+        /// The type of identifiers that follow CLDR (Common Locale Data Repository) conventions.
+        ///
+        /// The components in this type of identifier use the same components as in ``Locale/IdentifierType/icu``, but don't use the key-value type keyword list. An example of this type is `th_TH_u_ca_gregory_nu_thai`.
         case cldr
     }
 
     internal var _locale: any _LocaleProtocol
 
-    /// Returns a locale which tracks the user's current preferences.
+    /// A locale which tracks the user's current preferences.
     ///
-    /// If mutated, this Locale will no longer track the user's preferences.
+    /// This value represents the locale currently used by the app, based on the following:
     ///
-    /// - note: The autoupdating Locale will only compare equal to another autoupdating Locale.
+    /// * The current system locale.
+    /// * Any app-specific locale choice made in the Settings app.
+    /// * The availability of the preferred locale in the app. For example, if the person using an app has set their device to use a Spanish-language locale, but the app only supports English, this value returns an English locale.
+    ///
+    /// Use this property when you want a locale that always reflects the latest configuration settings. When the person using the app changes settings, reading properties from a locale instance obtained from this property provides the latest values. If you need to rely on a locale that does not change, use the locale given by the ``Locale/current`` property instead.
+    ///
+    /// Although the locale obtained here automatically follows the latest language and region settings, it provides no indication when the settings change. To receive notification of locale changes in Swift, add an observer for ``Locale/CurrentLocaleDidChangeMessage``. In Objective-C, you can add your object as an observer of `NSCurrentLocaleDidChangeNotification`.
+    ///
+    /// If mutated, this `Locale` no longer tracks the user's preferences.
+    ///
+    /// - Note: The autoupdating `Locale` only compares as equal to another autoupdating `Locale`.
     public static var autoupdatingCurrent : Locale {
         Locale(inner: LocaleCache.autoupdatingCurrent)
     }
 
-    /// Returns the user's current locale.
+    /// A locale representing the user's region settings at the time the property is read.
+    ///
+    /// This value represents the locale currently used by the app, based on the following:
+    ///
+    /// * The current system locale.
+    /// * Any app-specific locale choice made in the Settings app.
+    /// * The availability of the preferred locale in the app. For example, if the person using an app has set their device to use a Spanish-language locale, but the app only supports English, this value returns an English locale.
+    ///
+    /// Use this property when you need to rely on a consistent locale. A locale instance obtained this way does not change even when the person using the device changes language or region settings. If you want a locale instance that always reflects the current configuration, use the one provided by the ``Locale/autoupdatingCurrent`` property instead.
+    ///
+    /// To receive notification of locale changes in Swift, add an observer for ``Locale/CurrentLocaleDidChangeMessage``. In Objective-C, you can add your object as an observer of ``NSLocale/currentLocaleDidChangeNotification``.
     public static var current : Locale {
         Locale(inner: LocaleCache.cache.current)
     }
@@ -106,23 +160,45 @@ public struct Locale : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
-    /// Return a locale with the specified identifier.
+    /// Creates a locale with the specified identifier.
+    ///
+    /// - Parameter identifier: A BCP-47 language identifier such as `en_US` or `en-u-nu-thai-ca-buddhist`, or an ICU-style identifier such as `en@calendar=buddhist;numbers=thai`.
     public init(identifier: String) {
         _locale = LocaleCache.cache.fixed(identifier)
     }
 
-    /// Creates a `Locale` with the specified locale components
+    /// Creates a locale from the given components.
+    ///
+    /// Use this initializer to create a locale with a unique combination of components, beyond the defaults provided by a language and country code.
+    ///
+    /// For example, you can create a ``Locale/Components`` instance that uses UK language conventions, but US regional conventions for traits like currency and measurement. You then use the components to create a new `Locale` instance, like this:
+    ///
+    /// ```swift
+    /// var components = Locale.Components(languageCode: "en", languageRegion: "GB")
+    /// components.region = Locale.Region("US")
+    /// let en_GB_US = Locale(components: components)
+    /// ```
+    ///
+    /// - Parameter components: A ``Locale/Components`` instance that provides the components to create a customized locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init(components: Locale.Components) {
         _locale = LocaleCache.cache.fixedComponents(components)
     }
 
-    /// Creates a `Locale` with the specified language components
+    /// Creates a locale from the given language components.
+    ///
+    /// - Parameter languageComponents: A ``Locale/Language/Components`` instance that provides language components that identify a locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init(languageComponents: Locale.Language.Components) {
         self = Locale(identifier: languageComponents.identifier)
     }
 
+    /// Creates a locale with the specified language code, script, and region identifier.
+    ///
+    /// - Parameters:
+    ///   - languageCode: A language code, typically created from a two- or three-letter language code specified by ISO 639.
+    ///   - script: The script to use for the new locale components instance.
+    ///   - languageRegion: A language region, typically created from a two-letter BCP 47 region subtag like `US`.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init(languageCode: LanguageCode? = nil, script: Script? = nil, languageRegion: Region? = nil) {
         let comps = Components(languageCode: languageCode, script: script, languageRegion: languageRegion)
@@ -158,7 +234,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
-    /// Returns a localized string for a specified identifier.
+    /// Returns a localized string for a specified locale identifier.
     ///
     /// For example, in the "en" locale, the result for `"es"` is `"Spanish"`.
     public func localizedString(forIdentifier identifier: String) -> String? {
@@ -193,7 +269,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.variantCodeDisplayName(for: variantCode)
     }
 
-    /// Returns a localized string for a specified `Calendar.Identifier`.
+    /// Returns a localized string for a specified calendar.
     ///
     /// For example, in the "en" locale, the result for `.buddhist` is `"Buddhist Calendar"`.
     public func localizedString(for calendarIdentifier: Calendar.Identifier) -> String? {
@@ -203,7 +279,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// Returns a localized string for a specified ISO 4217 currency code.
     ///
     /// For example, in the "en" locale, the result for `"USD"` is `"US Dollar"`.
-    /// - seealso: `Locale.isoCurrencyCodes`
+    /// - SeeAlso: `Locale.isoCurrencyCodes`
     public func localizedString(forCurrencyCode currencyCode: String) -> String? {
         _locale.currencyCodeDisplayName(for: currencyCode)
     }
@@ -234,7 +310,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
-    /// Returns the identifier of the locale.
+    /// The identifier of the locale.
     public var identifier: String {
         @_effects(releasenone)
         get {
@@ -242,7 +318,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Returns the language code of the locale, or nil if has none.
+    /// The language code of the locale, or `nil` if has none.
     ///
     /// For example, for the locale "zh-Hant-HK", returns "zh".
     @available(macOS, deprecated: 13, renamed: "language.languageCode.identifier")
@@ -253,7 +329,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.languageCode
     }
 
-    /// Returns the region code of the locale, or nil if it has none.
+    /// The region code of the locale, or `nil` if it has none.
     ///
     /// For example, for the locale "zh-Hant-HK", returns "HK".
     @available(macOS, deprecated: 13, renamed: "region.identifier")
@@ -269,7 +345,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         return result
     }
 
-    /// Returns the script code of the locale, or nil if has none.
+    /// The script code of the locale, or `nil` if has none.
     ///
     /// For example, for the locale "zh-Hant-HK", returns "Hant".
     @available(macOS, deprecated: 13, renamed: "language.script.identifier")
@@ -280,7 +356,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.scriptCode
     }
 
-    /// Returns the variant code for the locale, or nil if it has none.
+    /// The variant code for the locale, or `nil` if it has none.
     ///
     /// For example, for the locale "en_POSIX", returns "POSIX".
     @available(macOS, deprecated: 13, renamed: "variant.identifier")
@@ -296,13 +372,13 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 
 #if FOUNDATION_FRAMEWORK
-    /// Returns the exemplar character set for the locale, or nil if has none.
+    /// The exemplar character set for the locale, or `nil` if has none.
     public var exemplarCharacterSet: CharacterSet? {
         _locale.exemplarCharacterSet
     }
 #endif
 
-    /// Returns the calendar for the locale, or the Gregorian calendar as a fallback.
+    /// The calendar for the locale, or the Gregorian calendar as a fallback.
     public var calendar: Calendar {
         var cal = _locale.calendar
         // This is a fairly expensive operation, because it recreates the Calendar's backing ICU object.
@@ -325,7 +401,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 #endif
 
-    /// Returns the collation identifier for the locale, or nil if it has none.
+    /// The collation identifier for the locale, or `nil` if it has none.
     ///
     /// For example, for the locale "en_US@collation=phonebook", returns "phonebook".
     @available(macOS, deprecated: 13, renamed: "collation.identifier")
@@ -336,9 +412,9 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.collationIdentifier
     }
 
-    /// Returns true if the locale uses the metric system.
+    /// A Boolean that is true if the locale uses the metric system.
     ///
-    /// -seealso: MeasurementFormatter
+    /// - SeeAlso: `MeasurementFormatter`
     @available(macOS, deprecated: 13, message: "Use `measurementSystem` instead")
     @available(iOS, deprecated: 16, message: "Use `measurementSystem` instead")
     @available(tvOS, deprecated: 16, message: "Use `measurementSystem` instead")
@@ -347,28 +423,28 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.usesMetricSystem
     }
 
-    /// Returns the decimal separator of the locale.
+    /// The decimal separator of the locale.
     ///
     /// For example, for "en_US", returns ".".
     public var decimalSeparator: String? {
         _locale.decimalSeparator
     }
 
-    /// Returns the grouping separator of the locale.
+    /// The grouping separator of the locale.
     ///
     /// For example, for "en_US", returns ",".
     public var groupingSeparator: String? {
         _locale.groupingSeparator
     }
 
-    /// Returns the currency symbol of the locale.
+    /// The currency symbol of the locale.
     ///
     /// For example, for "zh-Hant-HK", returns "HK$".
     public var currencySymbol: String? {
         _locale.currencySymbol
     }
 
-    /// Returns the currency code of the locale.
+    /// The currency code of the locale.
     ///
     /// For example, for "zh-Hant-HK", returns "HKD".
     @available(macOS, deprecated: 13, renamed: "currency.identifier")
@@ -379,116 +455,165 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.currencyCode
     }
 
-    /// Returns the collator identifier of the locale.
+    /// The collator identifier of the locale.
     public var collatorIdentifier: String? {
         _locale.collatorIdentifier
     }
 
-    /// Returns the quotation begin delimiter of the locale.
+    /// The quotation begin delimiter of the locale.
     ///
-    /// For example, returns `“` for "en_US", and `「` for "zh-Hant-HK".
+    /// For example, returns `\u{201C}` for “en_US”, and `\u{300C}` for “zh-Hant-HK”.
     public var quotationBeginDelimiter: String? {
         _locale.quotationBeginDelimiter
     }
 
-    /// Returns the quotation end delimiter of the locale.
+    /// The quotation end delimiter of the locale.
     ///
-    /// For example, returns `”` for "en_US", and `」` for "zh-Hant-HK".
+    /// For example, returns `\u{201D}` for “en_US”, and `\u{300D}` for “zh-Hant-HK”.
     public var quotationEndDelimiter: String? {
         _locale.quotationEndDelimiter
     }
 
-    /// Returns the alternate quotation begin delimiter of the locale.
+    /// The alternate quotation begin delimiter of the locale.
     ///
-    /// For example, returns `‘` for "en_US", and `『` for "zh-Hant-HK".
+    /// For example, returns `\u{2018}` for "en_US", and `\u{300E}` for "zh-Hant-HK".
     public var alternateQuotationBeginDelimiter: String? {
         _locale.alternateQuotationBeginDelimiter
     }
 
-    /// Returns the alternate quotation end delimiter of the locale.
+    /// The alternate quotation end delimiter of the locale.
     ///
-    /// For example, returns `’` for "en_US", and `』` for "zh-Hant-HK".
+    /// For example, returns `\u{2019}` for "en_US", and `\u{300F}` for "zh-Hant-HK".
     public var alternateQuotationEndDelimiter: String? {
         _locale.alternateQuotationEndDelimiter
     }
 
     // MARK: - Components
 
+    /// The measurement system used by the locale, like metric or the US system.
+    ///
+    /// When called on the special `Locale` instances ``current`` or ``autoupdatingCurrent``, if the user overrode the default measurement system, this property provides the user's preference.
+    ///
+    /// This property corresponds to the `ms` key of the Unicode BCP 47 extension.
+    ///
+    /// For locale instances created with the `ms` specifier (such as `en-US@ms=metric`), or with a custom ``Locale/Components``, this property represents the custom measurement system. Otherwise, it represents the locale's default measurement system.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    /// Returns the measurement system of the locale. Returns `metric` as the default value if the data isn't available.
     public var measurementSystem: MeasurementSystem {
         _locale.measurementSystem
     }
 
-    /// Returns the currency of the locale. Returns nil if the data isn't available.
+    /// The currency used by the locale.
+    ///
+    /// This property corresponds to the `cu` key of the Unicode BCP 47 extension.
+    ///
+    /// For locale instances created with the `cu` specifier (such as `en-US@cu=cad`), or with a custom ``Locale/Components``, this property represents the custom currency. Otherwise, it represents the locale's default currency.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var currency: Currency? {
         _locale.currency
     }
 
-    /// Returns the numbering system of the locale. If the locale has an explicitly specified numbering system in the identifier (e.g. `bn_BD@numbers=latn`) or in the associated `Locale.Components`, that numbering system is returned. Otherwise, returns the default numbering system of the locale. Returns `"latn"` as the default value if the data isn't available.
+    /// The numbering system used by the locale.
+    ///
+    /// This property corresponds to the `nu` key of the Unicode BCP 47 extension.
+    ///
+    /// For locale instances created with the `nu` specifier (such as `en-US@nu=jpanfin`), or with a custom ``Locale/Components``, this property represents the custom numbering system. Otherwise, it represents the locale's default numbering system.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var numberingSystem: NumberingSystem {
         _locale.numberingSystem
     }
 
-    /// Returns all the valid numbering systems for the locale. For example, `"ar-AE (Arabic (United Arab Emirates)"` has both `"latn" (Latin digits)` and `"arab" (Arabic-Indic digits)` numbering system.
+    /// An array containing all the valid numbering systems for the locale.
+    ///
+    /// The following snippet creates a locale for Arabic as used in United Arab Emirates. For this locale, there are two numbering systems available: `latn` (Latin digits) and `arab` (Arabic-Indic digits).
+    ///
+    /// ```swift
+    /// let uae = Locale(identifier: "ar-AE") // Arabic / U.A.E.
+    /// let numberingSystems = uae.availableNumberingSystems
+    /// print("\(numberingSystems.map{$0.identifier})") // ["latn","arab"]
+    /// ```
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var availableNumberingSystems: [NumberingSystem] {
         _locale.availableNumberingSystems
     }
 
-    /// Returns the first day of the week of the locale. Returns `.sunday` as the default value if the data isn't available to the requested locale.
+    /// The first day of the week as represented by this locale.
+    ///
+    /// This value is the preferred first day of the week to show in a calendar view. It isn't necessarily the same as the first day after the weekend; don't try to determine a first-day-of-week value from weekend information.
+    ///
+    /// This property corresponds to the `fw` key of the Unicode BCP 47 extension.
+    ///
+    /// For locale instances created with the `fw` specifier (such as `en-US@fw=mon`), or with a custom ``Locale/Components``, this property represents the custom day. Otherwise, it represents the locale's default first day of the week.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var firstDayOfWeek: Weekday {
         _locale.firstDayOfWeek
     }
 
+    /// The language of the locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var language: Language {
         _locale.language
     }
 
+    /// Returns the locale identifier, in the specified standard format.
+    ///
+    /// - Parameter type: The standard locale identifier format to use for the returned string.
+    /// - Returns: The locale identifier, formatted in accordance with the specified identifier type.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    /// Returns the identifier conforming to the specified standard
     public func identifier(_ type: IdentifierType) -> String {
         _locale.identifier(type)
     }
 
-    /// Returns the hour cycle such as whether it uses 12-hour clock or 24-hour clock. Default is `.zeroToTwentyThree` if the data isn't available.
-    /// Calling this on `.current` or `.autoupdatingCurrent` returns user's preference values as set in the system settings if available, overriding the default value of the user's locale.
+    /// The hour cycle used by the locale, like one-to-twelve or zero-to-twenty-three.
+    ///
+    /// When called on the special `Locale` instances ``current`` or ``autoupdatingCurrent``, if the user overrode the default hour cycle, this property provides the user's preference.
+    ///
+    /// This property corresponds to the `hc` key of the Unicode BCP 47 extension.
+    ///
+    /// For locale instances created with the `hc` specifier (such as `en-US@hc=h23`), or with a custom ``Locale/Components``, this property represents the custom hour cycle. Otherwise, it represents the locale's default hour cycle.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var hourCycle: HourCycle {
         _locale.hourCycle
     }
 
-    /// Returns the default collation used by the locale. Default is `.standard`.
+    /// The string sort order of the locale.
+    ///
+    /// This property corresponds to the `co` key of the Unicode BCP 47 extension.
+    ///
+    /// For locale instances created with the `co` specifier (such as `en-US@co=phonetic`), or with a custom ``Locale/Components``, this property represents the custom collation. Otherwise, it represents the locale's default sort order.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var collation: Collation {
         _locale.collation
     }
 
-    /// Returns the region of the locale. For example, "US" for "en_US", "GB" for "en_GB", "PT" for "pt_PT".
+    /// The region used by the locale.
     ///
+    /// This property corresponds to the `rg` key of the Unicode BCP 47 extension.
     ///
-    /// note: Typically this is equivalent to the language region, unless there's an `rg` override in the locale identifier. For example, for "en_GB@rg=USzzzz", the language region is "GB", while the locale region is "US". `Language.region` represents the region variant of the language, such as "British English" in this example, while `Locale.region` controls the region-specific default values, such as measuring system and first day of the week.
+    /// For locale instances created with the `rg` specifier (such as `en-GB@rg=US`), or with a custom ``Locale/Components``, this property represents the custom region. Otherwise, it represents the language's region.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var region: Region? {
         _locale.region
     }
 
+    /// The time zone associated with the locale, if any.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var timeZone: TimeZone? {
         _locale.timeZone
     }
 
-    /// Returns the regional subdivision for the locale, or nil if there is none.
+    /// The optional subdivision of the region used by this locale.
+    ///
+    /// This property corresponds to the `sd` key of the Unicode BCP 47 extension.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var subdivision: Subdivision? {
         _locale.subdivision
     }
 
-    /// Returns the variant for the locale, or nil if it has none. For example, for the locale "en_POSIX", returns "POSIX".
+    /// An optional variant used by the locale.
+    ///
+    /// This property corresponds to the `va` key of the Unicode BCP 47 extension.
+    ///
+    /// For locale instances created with the `va` specifier (such as `en-US@va=posix`), or with a custom ``Locale/Components``, this property represents the custom variant. Otherwise, it represents the locale's default variant.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var variant: Variant? {
         _locale.variant
@@ -558,12 +683,14 @@ public struct Locale : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
+    /// A list of the user's preferred languages.
+    ///
     /// Returns a list of the user's preferred languages, as specified in Language & Region settings, taking into account any per-app language overrides.
     ///
-    /// - note: `Bundle` is responsible for determining the language that your application will run in, based on the result of this API and combined with the languages your application supports.
-    /// - seealso: `Bundle.preferredLocalizations(from:)`
-    /// - seealso: `Bundle.preferredLocalizations(from:forPreferences:)`
-    /// - seealso: `Locale.preferredLocales`
+    /// - Note: `Bundle` is responsible for determining the language that your application will run in, based on the result of this API and combined with the languages your application supports.
+    /// - SeeAlso: `Bundle.preferredLocalizations(from:)`
+    /// - SeeAlso: `Bundle.preferredLocalizations(from:forPreferences:)`
+    /// - SeeAlso: `Locale.preferredLocales`
     public static var preferredLanguages: [String] {
         LocaleCache.cache.preferredLanguages(forCurrentUser: false)
     }

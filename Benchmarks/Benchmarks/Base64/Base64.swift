@@ -30,7 +30,7 @@ private func autoreleasepool<T>(_ block: () -> T) -> T { block() }
 import Darwin
 #endif
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-encode-jwtHeader-toString-noOptions",
         configuration: Benchmark.Configuration(

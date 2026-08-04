@@ -49,7 +49,7 @@ extension Data {
         }
     }
     
-    /// Enumerate the contents of the data.
+    /// Enumerates the contents of the data's buffer.
     ///
     /// In some cases, (for example, a `Data` backed by a `dispatch_data_t`, the bytes may be stored discontinuously. In those cases, this function invokes the closure for each contiguous region of bytes.
     /// - parameter block: The closure to invoke for each region of data. You may stop the enumeration by setting the `stop` parameter to `true`.

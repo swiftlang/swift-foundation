@@ -1840,7 +1840,18 @@ E {
             #expect(attrStr.runs.count == test.1, "Replacement of range \(NSStringFromRange(test.0)) caused a run count of \(attrStr.runs.count)")
         }
     }
-    
+
+    @Test func infiniteInflectionAlternativeConversion() throws {
+        let ns = NSMutableAttributedString(string: "Hello, world")
+        ns.setAttributes([.inflectionAlternative: ns], range: NSRange(location: 0, length: 12))
+        let attrStr = try AttributedString(ns, including: \.foundation)
+        #expect(attrStr.runs.count == 1)
+        #expect(attrStr.inflectionAlternative == AttributedString("Hello, world"))
+
+        // break retain cycle
+        ns.setAttributes([:], range: NSRange(location: 0, length: 12))
+    }
+
 #endif // FOUNDATION_FRAMEWORK
 
     // MARK: - View Tests
@@ -2012,6 +2023,150 @@ E {
                     #expect(subscriptResult.1 == range, "Subscript index \(idx) did not produce same range as runs slice")
                 }
             }
+        }
+    }
+
+    @Test func runSlicing() {
+        var str = AttributedString()
+        for i in 0 ..< 3 {
+            var container = AttributeContainer()
+
+            str.append(AttributedString("\(i)", attributes: container))
+            container.testInt = 2
+            str.append(AttributedString("\(i)", attributes: container))
+            container.testDouble = 3.4
+            str.append(AttributedString("\(i)", attributes: container))
+            container.testString = "foo"
+            str.append(AttributedString("\(i)", attributes: container))
+            container.testBool = true
+            str.append(AttributedString("\(i)", attributes: container))
+            container.languageIdentifier = "en"
+            str.append(AttributedString("\(i)", attributes: container))
+        }
+
+        struct EquatablePack<each E: Equatable>: Equatable, CustomStringConvertible {
+            let values: (repeat each E)
+
+            init(_ values: repeat each E) {
+                self.values = (repeat each values)
+            }
+
+            var description: String {
+                String(describing: values)
+            }
+
+            static func ==(lhs: Self, rhs: Self) -> Bool {
+                for (left, right) in repeat (each lhs.values, each rhs.values) {
+                    guard left == right else { return false }
+                }
+                return true
+            }
+        }
+
+        do {
+            let testSlice = str.runs[\.testInt].map {
+                EquatablePack($0.0)
+            }
+            let expectation: [EquatablePack<Int?>] = [
+                EquatablePack(nil),
+                EquatablePack(2),
+                EquatablePack(nil),
+                EquatablePack(2),
+                EquatablePack(nil),
+                EquatablePack(2)
+            ]
+
+            #expect(testSlice == expectation)
+        }
+        do {
+            let testSlice = str.runs[\.testInt, \.testDouble].map {
+                EquatablePack($0.0, $0.1)
+            }
+            let expectation: [EquatablePack<Int?, Double?>] = [
+                EquatablePack(nil, nil),
+                EquatablePack(2, nil),
+                EquatablePack(2, 3.4),
+                EquatablePack(nil, nil),
+                EquatablePack(2, nil),
+                EquatablePack(2, 3.4),
+                EquatablePack(nil, nil),
+                EquatablePack(2, nil),
+                EquatablePack(2, 3.4),
+            ]
+
+            #expect(testSlice == expectation)
+        }
+        do {
+            let testSlice = str.runs[\.testInt, \.testDouble, \.testString].map {
+                EquatablePack($0.0, $0.1, $0.2)
+            }
+            let expectation: [EquatablePack<Int?, Double?, String?>] = [
+                EquatablePack(nil, nil, nil),
+                EquatablePack(2, nil, nil),
+                EquatablePack(2, 3.4, nil),
+                EquatablePack(2, 3.4, "foo"),
+                EquatablePack(nil, nil, nil),
+                EquatablePack(2, nil, nil),
+                EquatablePack(2, 3.4, nil),
+                EquatablePack(2, 3.4, "foo"),
+                EquatablePack(nil, nil, nil),
+                EquatablePack(2, nil, nil),
+                EquatablePack(2, 3.4, nil),
+                EquatablePack(2, 3.4, "foo"),
+            ]
+
+            #expect(testSlice == expectation)
+        }
+        do {
+            let testSlice = str.runs[\.testInt, \.testDouble, \.testString, \.testBool].map {
+                EquatablePack($0.0, $0.1, $0.2, $0.3)
+            }
+            let expectation: [EquatablePack<Int?, Double?, String?, Bool?>] = [
+                EquatablePack(nil, nil, nil, nil),
+                EquatablePack(2, nil, nil, nil),
+                EquatablePack(2, 3.4, nil, nil),
+                EquatablePack(2, 3.4, "foo", nil),
+                EquatablePack(2, 3.4, "foo", true),
+                EquatablePack(nil, nil, nil, nil),
+                EquatablePack(2, nil, nil, nil),
+                EquatablePack(2, 3.4, nil, nil),
+                EquatablePack(2, 3.4, "foo", nil),
+                EquatablePack(2, 3.4, "foo", true),
+                EquatablePack(nil, nil, nil, nil),
+                EquatablePack(2, nil, nil, nil),
+                EquatablePack(2, 3.4, nil, nil),
+                EquatablePack(2, 3.4, "foo", nil),
+                EquatablePack(2, 3.4, "foo", true),
+            ]
+
+            #expect(testSlice == expectation)
+        }
+        do {
+            let testSlice = str.runs[\.testInt, \.testDouble, \.testString, \.testBool, \.languageIdentifier].map {
+                EquatablePack($0.0, $0.1, $0.2, $0.3, $0.4)
+            }
+            let expectation: [EquatablePack<Int?, Double?, String?, Bool?, String?>] = [
+                EquatablePack(nil, nil, nil, nil, nil),
+                EquatablePack(2, nil, nil, nil, nil),
+                EquatablePack(2, 3.4, nil, nil, nil),
+                EquatablePack(2, 3.4, "foo", nil, nil),
+                EquatablePack(2, 3.4, "foo", true, nil),
+                EquatablePack(2, 3.4, "foo", true, "en"),
+                EquatablePack(nil, nil, nil, nil, nil),
+                EquatablePack(2, nil, nil, nil, nil),
+                EquatablePack(2, 3.4, nil, nil, nil),
+                EquatablePack(2, 3.4, "foo", nil, nil),
+                EquatablePack(2, 3.4, "foo", true, nil),
+                EquatablePack(2, 3.4, "foo", true, "en"),
+                EquatablePack(nil, nil, nil, nil, nil),
+                EquatablePack(2, nil, nil, nil, nil),
+                EquatablePack(2, 3.4, nil, nil, nil),
+                EquatablePack(2, 3.4, "foo", nil, nil),
+                EquatablePack(2, 3.4, "foo", true, nil),
+                EquatablePack(2, 3.4, "foo", true, "en"),
+            ]
+
+            #expect(testSlice == expectation)
         }
     }
 

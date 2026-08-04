@@ -33,6 +33,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if !NO_FILESYSTEM
@@ -134,12 +136,12 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
 }
 
 /// Caller is responsible for calling `close` on the `Int32` file descriptor.
-#if os(WASI)
-@available(*, unavailable, message: "WASI does not have temporary directories")
+#if os(WASI) || os(Emscripten)
+@available(*, unavailable, message: "WASI/Emscripten does not have temporary directories")
 #endif
 private func createTemporaryFile(at destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, prefix: String, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String) {
-#if os(WASI)
-    // WASI does not have temp directories
+#if os(WASI) || os(Emscripten)
+    // WASI/Emscripten does not have temp directories
     throw CocoaError(.featureUnsupported)
 #else
     var directoryPath = destinationPath
@@ -201,7 +203,12 @@ private func createTemporaryFile(at destinationPath: String, inPath: borrowing s
                 openFileDescriptorProtected(path: $0, flags: _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR, options: options)
             }
 #else
-            guard mktemp(templateFileSystemRep) != nil else {
+            @diagnose(DeprecatedDeclaration, as: ignored)
+            func _mktemp(_ templateFileSystemRep: UnsafeMutablePointer<CChar>!) -> UnsafeMutablePointer<CChar>! {
+                mktemp(templateFileSystemRep)
+            }
+            
+            guard _mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
             let fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
@@ -236,12 +243,12 @@ private func createTemporaryFile(at destinationPath: String, inPath: borrowing s
 
 /// Returns `(file descriptor, temporary file path, temporary directory path)`
 /// Caller is responsible for calling `close` on the `Int32` file descriptor and calling `cleanupTemporaryDirectory` on the temporary directory path. The temporary directory path may be nil, if it does not need to be cleaned up.
-#if os(WASI)
-@available(*, unavailable, message: "WASI does not have temporary directories")
+#if os(WASI) || os(Emscripten)
+@available(*, unavailable, message: "WASI/Emscripten does not have temporary directories")
 #endif
 private func createProtectedTemporaryFile(at destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String, String?) {
-#if os(WASI)
-    // WASI does not have temp directories
+#if os(WASI) || os(Emscripten)
+    // WASI/Emscripten does not have temp directories
     throw CocoaError(.featureUnsupported)
 #else
 #if FOUNDATION_FRAMEWORK
@@ -354,7 +361,7 @@ extension NSData {
 #endif
 
 internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
-#if os(WASI) // `.atomic` is unavailable on WASI
+#if os(WASI) || os(Emscripten) // `.atomic` is unavailable on WASI/Emscripten
     try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
 #else
     if options.contains(.atomic) {
@@ -366,12 +373,12 @@ internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & 
 }
 
 /// Create a new file out of `Data` at a path, using atomic writing.
-#if os(WASI)
-@available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#if os(WASI) || os(Emscripten)
+@available(*, unavailable, message: "atomic writing is unavailable in WASI/Emscripten because temporary files are not supported")
 #endif
 private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
-#if os(WASI)
-    // `.atomic` is unavailable on WASI
+#if os(WASI) || os(Emscripten)
+    // `.atomic` is unavailable on WASI/Emscripten
     throw CocoaError(.featureUnsupported)
 #else
     assert(options.contains(.atomic))
@@ -447,16 +454,46 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                     wcscpy_s($0, cchLength + 1, pwszPath)
                 }
 
-                if !SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) {
-                    let dwError = GetLastError()
-                    guard dwError == ERROR_NOT_SAME_DEVICE else {
-                        throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
+                var renameOk = SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize)
+
+                if !renameOk {
+                    var dwError = GetLastError()
+
+                    // FileRenameInfoEx with POSIX_SEMANTICS + REPLACE_IF_EXISTS returns ERROR_ACCESS_DENIED (mapped from NTSTATUS STATUS_CANNOT_DELETE) when the destination has FILE_ATTRIBUTE_READONLY. Clear it on the destination (in line with POSIX semantics) and retry once before falling through.
+                    if dwError == ERROR_ACCESS_DENIED {
+                        let dwAttributes = GetFileAttributesW(pwszPath)
+
+                        if dwAttributes != INVALID_FILE_ATTRIBUTES
+                            && dwAttributes & FILE_ATTRIBUTE_READONLY != 0
+                        {
+                            // TOCTOU is possible here between GetFileAttributesW and SetFileAttributesW. Only relevant though in the atypical case when SetFileInformationByHandle returns false, where the thread is already on an error path. Hence, skip expensive mitigation and defer to caller.
+                            if SetFileAttributesW(pwszPath, dwAttributes & ~FILE_ATTRIBUTE_READONLY) {
+                                renameOk = SetFileInformationByHandle(hFile, FileRenameInfoEx, pInfo, dwSize) // Retry
+
+                                if !renameOk {
+                                    dwError = GetLastError()
+                                }
+                            } else {
+                                dwError = GetLastError()
+                            }
+                        }
                     }
 
                     _ = CloseHandle(hFile)
                     hFile = INVALID_HANDLE_VALUE
 
-                    // The move is across volumes.
+                    if renameOk {
+                        return
+                    }
+
+                    guard dwError == ERROR_NOT_SAME_DEVICE
+                        || dwError == ERROR_NOT_SUPPORTED
+                        || dwError == ERROR_FILE_SYSTEM_LIMITATION
+                        || dwError == ERROR_INVALID_PARAMETER else {
+                        throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
+                    }
+
+                    // The move is across volumes or on Volumes that don't support FILE_RENAME_FLAG_POSIX_SEMANTICS, like exFat.
                     guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) else {
                         throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
                     }
@@ -476,22 +513,21 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         var newPath = inPath.path
         var preRenameAttributes = PreRenameAttributes()
         var attrs = attrlist(bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_OBJTYPE | ATTR_CMN_ACCESSMASK | ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(ATTR_FILE_LINKCOUNT), forkattr: .init())
-        let result = getattrlist(inPathFileSystemRep, &attrs, &preRenameAttributes, MemoryLayout<PreRenameAttributes>.size, .init(FSOPT_NOFOLLOW))
+        // Provide FSOPT_UNIQUE to ensure that the file is a regular file with a single hard link (so that we can rely on ATTR_CMN_FULLPATH)
+        let result = getattrlist(inPathFileSystemRep, &attrs, &preRenameAttributes, MemoryLayout<PreRenameAttributes>.size, .init(FSOPT_NOFOLLOW | FSOPT_UNIQUE))
         if result == 0 {
             // Use the path from the buffer
             mode = mode_t(preRenameAttributes.mode)
-            if preRenameAttributes.fileType == VREG.rawValue && !(preRenameAttributes.nlink > 1) {
-                // Copy the contents of the getattrlist buffer for the string into a Swift String
-                withUnsafePointer(to: preRenameAttributes.fullPathBuf) { ptrToTuple in
-                    // The length of the string is passed back to us in the same struct as the C string itself
-                    // n.b. Length includes the null-termination byte. Use this size for the buffer.
-                    let length = Int(preRenameAttributes.fullPathAttr.attr_length)
-                    ptrToTuple.withMemoryRebound(to: CChar.self, capacity: length) { pointer in
-                        newPath = String(cString: pointer)
-                    }
+            // Copy the contents of the getattrlist buffer for the string into a Swift String
+            withUnsafePointer(to: preRenameAttributes.fullPathBuf) { ptrToTuple in
+                // The length of the string is passed back to us in the same struct as the C string itself
+                // n.b. Length includes the null-termination byte. Use this size for the buffer.
+                let length = Int(preRenameAttributes.fullPathAttr.attr_length)
+                ptrToTuple.withMemoryRebound(to: CChar.self, capacity: length) { pointer in
+                    newPath = String(cString: pointer)
                 }
             }
-        } else if (errno != ENOENT) && (errno != ENAMETOOLONG) {
+        } else if (errno != ENOENT) && (errno != ENAMETOOLONG) && (errno != ENOTCAPABLE) {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
 #else
@@ -595,7 +631,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
 #if FOUNDATION_FRAMEWORK
                     var attrs = attrlist(bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(), forkattr: .init())
                     var buffer = FullPathAttributes()
-                    let result = fgetattrlist(fd, &attrs, &buffer, MemoryLayout<FullPathAttributes>.size, .init(FSOPT_NOFOLLOW))
+                    let result = fgetattrlist(fd, &attrs, &buffer, MemoryLayout<FullPathAttributes>.size, .init(FSOPT_NOFOLLOW | FSOPT_UNIQUE))
                     // Compare the last one to this one
                     if result == 0 {
                         withUnsafePointer(to: buffer.fullPathBuf) { ptrToTuple in
@@ -622,7 +658,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
 private func writeToFileNoAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
+#if !os(WASI) && !os(Emscripten) // `.atomic` is unavailable on WASI/Emscripten
     assert(!options.contains(.atomic))
 #endif
 
@@ -717,17 +753,19 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 #if FOUNDATION_FRAMEWORK
+    /// Options to control the writing of data to a URL.
     public typealias WritingOptions = NSData.WritingOptions
 #else
     
     // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
+    /// Options to control the writing of data to a URL.
     public struct WritingOptions : OptionSet, Sendable {
         public let rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
         
         /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
-#if os(WASI)
-        @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#if os(WASI) || os(Emscripten)
+        @available(*, unavailable, message: "atomic writing is unavailable in WASI/Emscripten because temporary files are not supported")
 #endif
         public static let atomic = WritingOptions(rawValue: 1 << 0)
         
@@ -751,13 +789,13 @@ extension Data {
     }
 #endif
     
-    /// Write the contents of the `Data` to a location.
+    /// Writes the contents of the data buffer to a location.
     ///
     /// - parameter url: The location to write the data into.
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
-#if !os(WASI) // `.atomic` is unavailable on WASI
+#if !os(WASI) && !os(Emscripten) // `.atomic` is unavailable on WASI/Emscripten
         if options.contains(.withoutOverwriting) && options.contains(.atomic) {
             fatalError("withoutOverwriting is not supported with atomic")
         }

@@ -19,7 +19,11 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-@Suite("TimeZone")
+extension Testing.Tag {
+    @Tag static var timeZone: Self
+}
+
+@Suite("TimeZone", .tags(.timeZone))
 private struct TimeZoneTests {
     @Test func basics() {
         let tz = TimeZone(identifier: "America/Los_Angeles")!
@@ -81,7 +85,10 @@ private struct TimeZoneTests {
         test("America/Sao_Paulo",   "en_US", .generic, "Brasilia Standard Time", "Brasilia Standard Time")
 
         test("America/Los_Angeles", "zh_TW", .shortStandard, "PST", "PST")
-        test("Europe/Paris",       "zh_TW", .shortStandard, "GMT+1", "GMT+2")
+
+        test("Europe/Paris",       "zh_TW", .shortStandard, "GMT+1", "GMT+1")
+        test("Europe/Paris",       "zh_TW", .shortDaylightSaving, "GMT+1", "GMT+2")
+
         test("Antarctica/Davis",   "zh_TW", .shortStandard, "GMT+7", "GMT+7")
         test("Asia/Chongqing",      "zh_TW", .shortStandard, "GMT+8", "GMT+8")
         test("America/Sao_Paulo",   "zh_TW", .shortStandard, "GMT-3", "GMT-3")
@@ -195,6 +202,38 @@ private struct TimeZoneTests {
                      "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9", "GMT+09:00", "GMT+9")
     }
 
+    @Test func timeZoneGMTOffset_extendedForms() throws {
+        let locale = Locale(identifier: "en_US")
+        func test(_ identifiers: [String], _ expectedIdentifier: String, _ expectedOffset: Int, _ expectedAbbreviation: String, _ long: String, _ short: String, daylightLong: String? = nil, daylightShort: String? = nil, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            let dLong = daylightLong ?? long
+            let dShort = daylightShort ?? short
+            for identifier in identifiers {
+                let tz = try #require(TimeZone(identifier: identifier), sourceLocation: sourceLocation)
+                #expect(tz.identifier == expectedIdentifier, sourceLocation: sourceLocation)
+                #expect(tz.secondsFromGMT() == expectedOffset, sourceLocation: sourceLocation)
+                #expect(tz.abbreviation() == expectedAbbreviation, sourceLocation: sourceLocation)
+                #expect(tz.isDaylightSavingTime() == false, sourceLocation: sourceLocation)
+                #expect(tz.nextDaylightSavingTimeTransition == nil, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .standard, locale: locale) == long, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .shortStandard, locale: locale) == short, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .daylightSaving, locale: locale) == dLong, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .shortDaylightSaving, locale: locale) == dShort, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .generic, locale: locale) == long, sourceLocation: sourceLocation)
+                #expect(tz.localizedName(for: .shortGeneric, locale: locale) == short, sourceLocation: sourceLocation)
+            }
+        }
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        try test(["UTC"], "GMT", 0, "GMT", "Greenwich Mean Time", "GMT", daylightLong: "GMT+00:00", daylightShort: "GMT+0")
+#else
+        try test(["UTC"], "GMT", 0, "GMT", "Greenwich Mean Time", "GMT", daylightLong: "GMT", daylightShort: "GMT")
+#endif
+        try test(["GMT-8", "GMT-08", "GMT-0800", "GMT-08:00"], "GMT-0800", -8*3600, "GMT-8", "GMT-08:00", "GMT-8")
+        try test(["GMT+0530", "GMT+05:30", "GMT+5:30"], "GMT+0530", 5*3600 + 30*60, "GMT+5:30", "GMT+05:30", "GMT+5:30")
+        try test(["UTC+2"], "GMT+0200", 2*3600, "GMT+2", "GMT+02:00", "GMT+2")
+        try test(["GMT+14"], "GMT+1400", 14*3600, "GMT+14", "GMT+14:00", "GMT+14")
+        try test(["GMT-11"], "GMT-1100", -11*3600, "GMT-11", "GMT-11:00", "GMT-11")
+    }
+
     @Test func secondsFromGMT_RemoteDates() {
         let date = Date(timeIntervalSinceReferenceDate: -5001243627) // "1842-07-09T05:39:33+0000"
         let europeRome = TimeZone(identifier: "Europe/Rome")!
@@ -243,7 +282,7 @@ private struct TimeZoneTests {
     }
 }
 
-@Suite("TimeZone GMT")
+@Suite("TimeZone GMT", .tags(.timeZone))
 private struct TimeZoneGMTTests {
     var tz: TimeZone {
         TimeZone(identifier: "GMT")!
@@ -290,8 +329,13 @@ private struct TimeZoneGMTTests {
     @Test func localizedName() {
         #expect(tz.localizedName(for: .standard, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
         #expect(tz.localizedName(for: .shortStandard, locale: Locale(identifier: "en_US")) == "GMT")
-        #expect(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        #expect(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")) == "GMT+00:00")
+        #expect(tz.localizedName(for: .shortDaylightSaving, locale: Locale(identifier: "en_US")) == "GMT+0")
+#else
+        #expect(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")) == "GMT")
         #expect(tz.localizedName(for: .shortDaylightSaving, locale: Locale(identifier: "en_US")) == "GMT")
+#endif
         #expect(tz.localizedName(for: .generic, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
         #expect(tz.localizedName(for: .shortGeneric, locale: Locale(identifier: "en_US")) == "GMT")
         
@@ -313,7 +357,7 @@ private struct TimeZoneGMTTests {
     }
 }
 
-@Suite("TimeZone ICU")
+@Suite("TimeZone ICU", .tags(.timeZone))
 private struct TimeZoneICUTests {
     @Test func timeZoneOffset() throws {
         let tz = _TimeZoneICU(identifier: "America/Los_Angeles")!
@@ -392,7 +436,7 @@ private struct TimeZoneICUTests {
     }
 }
 
-@Suite("TimeZone_ICUResource")
+@Suite("TimeZone_ICUResource", .tags(.timeZone))
 private struct TimeZone_ICUResourceTests {
 
     let finalTimeZoneDates = {
@@ -422,7 +466,7 @@ private struct TimeZone_ICUResourceTests {
 
         for d in finalTimeZoneDates {
             for option in options {
-                let offsets = t.rawAndDaylightSavingTimeOffset(for: d, local: true, duplicatedTimePolicy: option.0, nonExistingTimePolicy: option.1)
+                let offsets = try t.rawAndDaylightSavingTimeOffset(for: d, local: true, duplicatedTimePolicy: option.0, nonExistingTimePolicy: option.1)
                 let offsets_expected = truth.rawAndDaylightSavingTimeOffset(for: d, repeatedTimePolicy: option.0, skippedTimePolicy: option.1)
 
                 #expect(offsets.0 == offsets_expected.0, "Date = Date(timeIntervalSince1970: \(d.timeIntervalSince1970)), option = \(option)")
@@ -477,7 +521,7 @@ private struct TimeZone_ICUResourceTests {
                 #expect(rawOffset == offsets_expected.0)
                 #expect(TimeInterval(dstOffset) == offsets_expected.1)
 
-                let nextDST = t.nextTransition(after: d, inclusive: false)
+                let nextDST = t.nextTransition(after: d)
                 let nextDST_expected = truth.nextDaylightSavingTimeTransition(after: d)
                 #expect(nextDST == nextDST_expected)
 
@@ -495,7 +539,7 @@ private struct TimeZone_ICUResourceTests {
 
             let offset = tz.secondsFromGMT(for: date)
             let isDST = tz.isDaylightSavingTime(for: date)
-            let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: date)
+            let (rawOffset, dstOffset) = try tz.rawAndDaylightSavingTimeOffset(for: date)
 
             #expect(offset == expectedOffsetFromGMT)
             #expect(rawOffset == expectedRawOffset)
@@ -572,7 +616,7 @@ private struct TimeZone_ICUResourceTests {
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
-@Suite("TimeZone Bridging")
+@Suite("TimeZone Bridging", .tags(.timeZone))
 private struct TimeZoneBridgingTests {
     @Test func customNSTimeZone() {
         // This test verifies that a custom ObjC subclass of NSTimeZone, bridged into Swift, still calls back into ObjC. `customTimeZone` returns an instances of "MyCustomTimeZone : NSTimeZone".

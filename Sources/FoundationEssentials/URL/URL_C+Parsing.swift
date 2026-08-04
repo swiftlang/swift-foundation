@@ -14,12 +14,6 @@
 
 internal import _ForSwiftFoundation
 
-extension __CFURLFlags {
-    init(type: __CFURLImplType) {
-        self.init(rawValue: type.rawValue)
-    }
-}
-
 // MARK: - NSURL extensions for CF/NSURL creation
 
 @objc
@@ -29,8 +23,12 @@ extension NSURL {
         let string = string.takeUnretainedValue()
         guard _withURLSpan(
             string: string,
-            blockIfASCII: { parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding) },
-            blockIfUTF16: { parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding) }
+            blockIfASCII: {
+                URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+            },
+            blockIfUTF16: {
+                URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+            }
         ) else {
             return false
         }
@@ -46,8 +44,12 @@ extension NSURL {
         let string = string.takeUnretainedValue()
         guard _withURLSpan(
             string: string,
-            blockIfASCII: { parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding) },
-            blockIfUTF16: { parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding) }
+            blockIfASCII: {
+                URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+            },
+            blockIfUTF16: {
+                URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: allowEncoding, useModernParsing: false)
+            }
         ) else {
             return false
         }
@@ -63,8 +65,8 @@ extension NSURL {
         let string = string.takeUnretainedValue()
         guard _withURLSpan(
             string: string,
-            blockIfASCII: { parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
-            blockIfUTF16: { parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
+            blockIfASCII: { URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
+            blockIfUTF16: { URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
         ) else {
             return false
         }
@@ -77,8 +79,8 @@ extension NSURL {
         let string = string.takeUnretainedValue()
         guard _withURLSpan(
             string: string,
-            blockIfASCII: { parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
-            blockIfUTF16: { parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
+            blockIfASCII: { URL.parse(UTF8.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) },
+            blockIfUTF16: { URL.parse(UTF16.self, span: $0, flags: &flags, into: impl, allowEncoding: true, useModernParsing: true) }
         ) else {
             return false
         }

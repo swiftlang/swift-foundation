@@ -79,6 +79,14 @@ extension UNumberFormatStyle {
     static let spellout = UNUM_SPELLOUT
     static let ordinal = UNUM_ORDINAL
     static let scientific = UNUM_SCIENTIFIC
+    var isRuleBased: Bool {
+        switch self {
+        case .spellout, .ordinal:
+            true
+        default:
+            false
+        }
+    }
 }
 
 extension UNumberFormatAttribute {

@@ -22,6 +22,7 @@ internal import os
 #endif
 
 internal import _FoundationICU
+internal import Synchronization
 
 #if canImport(Glibc)
 @preconcurrency import Glibc
@@ -134,15 +135,13 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     let prefs: LocalePreferences?
     
-    private let lock: LockedState<State>
+    private let lock: Mutex<State>
 
     var debugDescription: String { "fixed \(identifier)" }
 
     // MARK: - Logging
 #if FOUNDATION_FRAMEWORK
-    static private let log: SendableOSLog = {
-        .init(OSLog(subsystem: "com.apple.foundation", category: "locale"))
-    }()
+    static private let log = Logger(subsystem: "com.apple.foundation", category: "locale")
 #endif // FOUNDATION_FRAMEWORK
     
 #if FOUNDATION_FRAMEWORK
@@ -158,7 +157,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         self.prefs = prefs
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
-        lock = LockedState(initialState: State())
+        lock = Mutex(State())
     }
 
     required init(components: Locale.Components) {
@@ -180,7 +179,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         if let v = components.subdivision { state.subdivision = v }
         if let v = components.timeZone { state.timeZone = v }
         if let v = components.variant { state.variant = v }
-        lock = LockedState(initialState: state)
+        lock = Mutex(state)
     }
 
     /// Use to create a current-like Locale, with preferences.
@@ -189,11 +188,11 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         if let name {
             ident = Locale._canonicalLocaleIdentifier(from: name)
 #if FOUNDATION_FRAMEWORK
-            if Self.log.log.isEnabled(type: .debug) {
+            if Self.log.isEnabled(type: .debug) {
                 if let ident {
                     let components = Locale.Components(identifier: ident)
                     if components.languageComponents.region == nil {
-                        Logger(Self.log.log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
+                        Self.log.debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
                     }
                 }
             }
@@ -218,7 +217,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
             #if FOUNDATION_FRAMEWORK
             if preferredLanguages == nil && (preferredLocale == nil || performBundleMatching) {
-                Logger(Self.log.log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
+                Self.log.debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
             }
             #endif
 
@@ -251,18 +250,18 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                         // Country???
                         if let countryCode = prefs.country {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
+                            Self.log.debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: "\(languageIdentifier)_\(countryCode)")
                         } else {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
+                            Self.log.debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: languageIdentifier)
                         }
                     } else {
                         #if FOUNDATION_FRAMEWORK
-                        Logger(Self.log.log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
+                        Self.log.debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
                         #endif // FOUNDATION_FRAMEWORK
                     }
                 } else {
@@ -283,7 +282,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         self.prefs = prefs
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
-        lock = LockedState(initialState: State())
+        lock = Mutex(State())
     }
     
     deinit {
@@ -1509,7 +1508,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Locale {
-    /// Returns the `Locale` identifier from a given Windows locale code, or nil if it could not be converted.
+    /// Returns the locale identifier from a given Windows locale code, or `nil` if it could not be converted.
     public static func identifier(fromWindowsLocaleCode code: Int) -> String? {
         guard let unsigned = UInt32(exactly: code) else {
             return nil
@@ -1522,7 +1521,7 @@ extension Locale {
         return result
     }
 
-    /// Returns the Windows locale code from a given identifier, or nil if it could not be converted.
+    /// Returns the Windows locale code from a given identifier, or `nil` if it could not be converted.
     public static func windowsLocaleCode(fromIdentifier identifier: String) -> Int? {
         let result = uloc_getLCID(identifier)
         if result == 0 {
@@ -1533,12 +1532,17 @@ extension Locale {
     }
     
     /// Returns the identifier conforming to the specified standard for the specified string.
+    ///
+    /// - Parameters:
+    ///   - type: The identifier type used by `string`, such as ``Locale/IdentifierType/icu`` or ``Locale/IdentifierType/bcp47``.
+    ///   - string: An identifier string that complies with the standard indicated by `type`.
+    /// - Returns: A locale identifier.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static func identifier(_ type: IdentifierType, from string: String) -> String {
         Locale(identifier: string).identifier(type)
     }
 
-    /// Returns a list of available `Locale` identifiers.
+    /// A list of available identifiers.
     public static var availableIdentifiers: [String] {
         var working = Set<String>()
         let localeCount = uloc_countAvailable()
@@ -1550,7 +1554,7 @@ extension Locale {
         return Array(working)
     }
 
-    /// Returns a list of common `Locale` currency codes.
+    /// A list of common currency codes.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static var commonISOCurrencyCodes: [String] {
         Locale.Currency.commonISOCurrencies

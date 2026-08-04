@@ -2,21 +2,15 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift project authors
+// Copyright (c) 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
+#include "InternationalizationDataMacros.h"
 
-internal import os
-
-/// Wrapper for OSLog until it is marked as Sendable.
-package struct SendableOSLog : @unchecked Sendable {
-    init(_ log: OSLog) { self.log = log }
-    let log: OSLog
-}
-
-#endif
+// Stub for data that will be populated
+INTERNAL const char * const * _ListFormatPatterns;

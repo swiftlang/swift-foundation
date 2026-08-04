@@ -23,6 +23,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -532,13 +534,10 @@ enum _FileOperations {
             throw CocoaError.removeFileError(errno, resolve(path: pathStr))
         }
 
-        #if os(WASI)
-
-        // wasi-libc does not support FTS, so we don't support removing non-empty directories on WASI for now.
-        throw CocoaError.errorWithFilePath(.featureUnsupported, pathStr)
-
+        #if os(Emscripten)
+        // Emscripten doesn't have fts.h; recursive directory removal is not yet supported. The `rmdir` above handles empty directories. For non-empty ones, we need a recursive implementation that doesn't depend on FTS.
+        throw CocoaError.removeFileError(ENOSYS, resolve(path: pathStr))
         #else
-
         let seq = _FTSSequence(path, FTS_PHYSICAL | FTS_XDEV | FTS_NOCHDIR | FTS_NOSTAT)
         let iterator = seq.makeIterator()
         var isFirst = true
@@ -587,8 +586,7 @@ enum _FileOperations {
                 }
             }
         }
-        #endif
-        
+        #endif // !os(Emscripten)
     }
     #endif
 #endif
@@ -897,8 +895,7 @@ enum _FileOperations {
         }
         defer { close(dstfd) }
 
-        #if !os(WASI) // WASI doesn't have fchmod for now
-        // Set the file permissions using fchmod() instead of when open()ing to avoid umask() issues
+        #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchmod for now
         let permissions = mode_t(fileInfo.st_mode) & ~S_IFMT
         guard fchmod(dstfd, permissions) == 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
@@ -915,7 +912,7 @@ enum _FileOperations {
 
         // Attempt to clone the file using platform-specific API. If this operation fails, don't throw
         // an error and just fall back to chunked writes.
-        #if os(Linux)
+        #if os(Linux) && canImport(Glibc)
         if ioctl(dstfd, _filemanager_shims_FICLONE(), srcfd) != -1 {
             return
         }
@@ -941,7 +938,7 @@ enum _FileOperations {
         }
         var current: off_t = 0
         
-        #if os(WASI) || os(OpenBSD)
+        #if os(WASI) || os(OpenBSD) || os(Emscripten)
         // WASI doesn't have sendfile, so we need to do it in user space with read/write
         try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: chunkSize) { buffer in
             while current < total {
@@ -978,7 +975,7 @@ enum _FileOperations {
     
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
-        #if !os(WASI) && !os(Android) && !os(OpenBSD)
+        #if !os(WASI) && !os(Android) && !os(OpenBSD) && !os(Emscripten)
         // Copy extended attributes
         #if os(FreeBSD)
         // FreeBSD uses the `extattr_*` calls for setting extended attributes. Unlike like, the namespace for the extattrs are not determined by prefix of the attribute
@@ -1054,7 +1051,7 @@ enum _FileOperations {
         #endif
         var statInfo = stat()
         if fstat(srcFD, &statInfo) == 0 {
-            #if !os(WASI) // WASI doesn't have fchown for now
+            #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchown for now
             // Copy owner/group
             if fchown(dstFD, statInfo.st_uid, statInfo.st_gid) != 0 {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
@@ -1072,7 +1069,7 @@ enum _FileOperations {
                 }
             }
             
-            #if !os(WASI) // WASI doesn't have fchmod for now
+            #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchmod for now
             // Copy permissions
             if fchmod(dstFD, mode_t(statInfo.st_mode)) != 0 {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
@@ -1114,52 +1111,11 @@ enum _FileOperations {
         #endif
     }
 
-    #if os(WASI)
     private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
-        let src = String(cString: srcPtr)
-        let dst = String(cString: dstPtr)
-        guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
-
-        var stat = stat()
-        guard lstat(srcPtr, &stat) == 0 else {
-            try delegate.throwIfNecessary(errno, src, dst)
-            return
-        }
-        let copyFile = delegate.copyData
-        guard !stat.isDirectory else {
-            // wasi-libc does not support FTS for now, so we don't support copying/linking
-            // directories on WASI for now.
-            let error = CocoaError.errorWithFilePath(.featureUnsupported, src, variant: copyFile ? "Copy" : "Link", source: src, destination: dst)
-            try delegate.throwIfNecessary(error, src, dst)
-            return
-        }
-
-        // For now, we support only copying regular files and symlinks.
-        // After we get FTS support (https://github.com/WebAssembly/wasi-libc/pull/522),
-        // we can remove this method and use the below FTS-based implementation.
-
-        if stat.isSymbolicLink {
-            try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { tempBuff in
-                tempBuff.initialize(repeating: 0)
-                defer { tempBuff.deinitialize() }
-                let len = readlink(srcPtr, tempBuff.baseAddress!, FileManager.MAX_PATH_SIZE - 1)
-                if len >= 0, symlink(tempBuff.baseAddress!, dstPtr) != -1 {
-                    return
-                }
-                try delegate.throwIfNecessary(errno, src, dst)
-            }
-        } else {
-            if copyFile {
-                try _copyRegularFile(srcPtr, dstPtr, delegate: delegate)
-            } else {
-                if link(srcPtr, dstPtr) != 0 {
-                    try delegate.throwIfNecessary(errno, src, dst)
-                }
-            }
-        }
-    }
-    #else
-    private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
+        #if os(Emscripten)
+        // Emscripten doesn't have fts.h; recursive copy/link is not yet supported.
+        throw CocoaError.errorWithFilePath(.featureUnsupported, String(cString: srcPtr))
+        #else
         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             let dstLen = Platform.copyCString(dst: buffer.baseAddress!, src: dstPtr, size: FileManager.MAX_PATH_SIZE)
             let srcLen = strlen(srcPtr)
@@ -1259,9 +1215,9 @@ enum _FileOperations {
                 }
             }
         }
+        #endif // !os(Emscripten)
     }
-    #endif
-    
+
     private static func linkOrCopyFile(_ src: String, dst: String, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         try src.withFileSystemRepresentation { srcPtr in
             guard let srcPtr else {

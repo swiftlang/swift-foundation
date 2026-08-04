@@ -47,7 +47,7 @@
 extern int _mkpath_np(const char *path, mode_t omode, const char **firstdir);
 #endif
 
-#if TARGET_OS_LINUX
+#if TARGET_OS_LINUX && __has_include(<linux/fs.h>)
 #include <linux/fs.h>
 
 static inline unsigned long _filemanager_shims_FICLONE(void) { return FICLONE; }

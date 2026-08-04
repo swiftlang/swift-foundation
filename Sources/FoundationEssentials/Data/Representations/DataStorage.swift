@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -20,8 +20,14 @@ import Darwin
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+internal import _FoundationDarwinExtras
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif
 
 // Underlying storage representation for medium and large data.
@@ -34,9 +40,13 @@ import ucrt
 internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
-    
+
+    #if !DATA_LEGACY_ABI
+    @usableFromInline static let empty = __DataStorage.init(bytes: nil, length: 0)
+    #endif
+
     static func allocate(_ size: Int, _ clear: Bool) -> UnsafeMutableRawPointer? {
-#if canImport(Darwin) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         if clear {
@@ -54,7 +64,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
     
     static func reallocate(_ ptr: UnsafeMutableRawPointer, _ newSize: Int) -> UnsafeMutableRawPointer? {
-#if canImport(Darwin) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS)  && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         return malloc_type_realloc(ptr, newSize, typeDesc.type_id);
@@ -84,31 +94,144 @@ internal final class __DataStorage : @unchecked Sendable {
     static func shouldAllocateCleared(_ size: Int) -> Bool {
         return (size > (128 * 1024))
     }
-    
+
+    // Layout of __DataStorage's byte allocation:
+    //
+    //             _bytes
+    //               ↓
+    //   ┌─ ─ ─ ─ ─ ─┬───────────────────────────────┬───────────────────┐
+    //   ┊ prior     │ initialized bytes             ┊ uninitialized     │
+    //   ┊ prefix    │                               ┊ bytes             │
+    //   └─ ─ ─ ─ ─ ─┴───────────────────────────────┴───────────────────┘
+    //    <─_offset─> <──────────── _length ────────>
+    //                <─────────────────── capacity ────────────────────>
+    //
+    // Layout of Slices:
+    //
+    //   ┌─ ─ ─ ─ ─ ─┬──────────┬──────────────┬─────────┬───────────────┐
+    //   ┊ prior     │ prefix   ┊ slice        ┊ suffix  ┊ uninitialized │
+    //   ┊ prefix    │          ┊              ┊         ┊ bytes         │
+    //   └─ ─ ─ ─ ─ ─┴──────────┴──────────────┴─────────┴───────────────┘
+    //    <─_offset─>
+    //    <─ slice.lowerBound ─>
+    //    <────── slice.upperBound ───────────>
+    //
+    //   The bounds of the slice are relative to the beginning of the prior prefix, not the start
+    //   of the current allocation (_bytes). This guarantees that indices remain stable for slices
+    //   that are mutated
+
+    // The properties below use @exclusivity(unchecked) in release mode to avoid dynamic exclusivity checking. Exclusivity is guaranteed by the copy-on-write implementation of Data itself.
+    // Dynamic exclusivity checks are still enabled in debug builds to catch issues with the copy-on-write implementation at-desk and in unit tests.
+
+    /// A pointer to the start of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _bytes: UnsafeMutableRawPointer?
+
+    /// The size of the initialized portion of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _length: Int
+
+    /// The total capacity of the initialized portion of the referenced byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _capacity: Int
+
+    /// The size of the prior slice's prefix if the allocation was copied from a slice (to maintain
+    /// stable indexing)
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _offset: Int
+
+    /// The deallocator to use when discarding the byte allocation
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?
+
+    /// Whether the uninitialized portion of the byte allocation needs to be cleared before use
+    ///
+    /// When creating an allocation, the uninitialized portion may or may not be zeroed. When
+    /// `true`, `_needToZero` indicates the uninitialized portion has nondeterministic contents and
+    /// needs to be cleared. When `false`, the uninitialized portion is guaranteed to already be
+    /// zeroed and does not need to be cleared before use.
+    #if !DEBUG
+    @exclusivity(unchecked)
+    #endif
     @usableFromInline var _needToZero: Bool
-    
+
+    /// A pointer to the referenced byte allocation, relative to the slice offsets
+    ///
+    /// This is a pointer to the start of the symbolic allocation range that begins at index 0. This
+    /// pointer _must_ be offset by the slice's lowerBound. For slices that have been copied out of
+    /// their original allocation, this may point to memory before the actual allocation.
     @inlinable // This is @inlinable as trivially computable.
     var bytes: UnsafeRawPointer? {
-        return UnsafeRawPointer(_bytes)?.advanced(by: -_offset)
+        return UnsafeRawPointer(_bytes)?.advanced(by: _offset &* -1)
     }
-    
-    @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
-    @discardableResult
-    func withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
-        return try apply(UnsafeRawBufferPointer(start: _bytes?.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    func withUnsafeBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+        if let _bytes {
+            return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+        } else {
+            var value: UInt64 = 0
+            return try Swift.withUnsafeBytes(of: &value) { buffer throws(E) in
+                return try apply(UnsafeRawBufferPointer(start: buffer.baseAddress!, count: 0))
+            }
+        }
     }
-    
-    @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
-    @discardableResult
-    func withUnsafeMutableBytes<Result>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
-        return try apply(UnsafeMutableRawBufferPointer(start: _bytes!.advanced(by:range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+
+#if DATA_LEGACY_ABI
+    @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    func __legacy_withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
+        try withUnsafeBytes(in: range, apply: apply)
     }
-    
+#endif // DATA_LEGACY_ABI
+
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    func withUnsafeMutableBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+        if let _bytes {
+            return try apply(UnsafeMutableRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+        } else {
+            var value: UInt64 = 0
+            return try Swift.withUnsafeMutableBytes(of: &value) { buffer throws(E) in
+                return try apply(UnsafeMutableRawBufferPointer(start: buffer.baseAddress!, count: 0))
+            }
+        }
+    }
+
+#if DATA_LEGACY_ABI
+    @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    internal func __legacy_withUnsafeMutableBytes<ResultType>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        try withUnsafeMutableBytes(in: range, apply: apply)
+    }
+#endif // DATA_LEGACY_ABI
+
+    /// A pointer to the mutable referenced byte allocation, relative to the slice offsets
+    ///
+    /// This is a pointer to the start of the symbolic allocation range that begins at index 0. This
+    /// pointer _must_ be offset by the slice's lowerBound. For slices that have been copied out of
+    /// their original allocation, this may point to memory before the actual allocation.
     @inlinable // This is @inlinable as trivially computable.
     var mutableBytes: UnsafeMutableRawPointer? {
         return _bytes?.advanced(by: _offset &* -1) // _offset is guaranteed to be non-negative, so it can never overflow when negating
@@ -176,7 +299,9 @@ internal final class __DataStorage : @unchecked Sendable {
             if isExternallyOwned {
                 let newCapacity = malloc_good_size(_length)
                 let newBytes = __DataStorage.allocate(newCapacity, false)
-                __DataStorage.move(newBytes!, _bytes!, _length)
+                if let bytes = _bytes {
+                    __DataStorage.move(newBytes!, bytes, _length)
+                }
                 _freeBytes()
                 _bytes = newBytes
                 _capacity = newCapacity
@@ -191,7 +316,6 @@ internal final class __DataStorage : @unchecked Sendable {
             _freeBytes()
             _bytes = newBytes
             _capacity = newCapacity
-            _length = newLength
             _needToZero = true
         } else {
             let cap = _capacity
@@ -313,17 +437,34 @@ internal final class __DataStorage : @unchecked Sendable {
         __DataStorage.move(_bytes!.advanced(by: origLength), bytes, length)
     }
     
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    func withUninitializedBytes<Result: ~Copyable, E: Error>(
+      extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
+    ) throws(E) -> Result {
+        // We use the requested capacity to build the `OutputRawSpan`. The requested capacity may be less than the actual capacity.
+        assert((_length + extraCapacity) <= capacity)
+        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: location), count: extraCapacity)
+        var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
+        defer {
+            appendedCount = outputSpan.finalize(for: buffer)
+            _length &+= appendedCount
+            outputSpan = OutputRawSpan()
+        }
+        return try initializer(&outputSpan)
+    }
+
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func get(_ index: Int) -> UInt8 {
         // index must have already been validated by the caller
-        return _bytes!.load(fromByteOffset: index - _offset, as: UInt8.self)
+        return _bytes.unsafelyUnwrapped.load(fromByteOffset: index &- _offset, as: UInt8.self)
     }
     
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
     func set(_ index: Int, to value: UInt8) {
         // index must have already been validated by the caller
         ensureUniqueBufferReference()
-        _bytes!.storeBytes(of: value, toByteOffset: index - _offset, as: UInt8.self)
+        _bytes.unsafelyUnwrapped.storeBytes(of: value, toByteOffset: index &- _offset, as: UInt8.self)
     }
     
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.

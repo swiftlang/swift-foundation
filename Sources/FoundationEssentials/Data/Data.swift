@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -46,6 +46,17 @@
 @usableFromInline let memset = WASILibc.memset
 @usableFromInline let memcpy = WASILibc.memcpy
 @usableFromInline let memcmp = WASILibc.memcmp
+#elseif canImport(EmscriptenLibc)
+@usableFromInline let calloc = EmscriptenLibc.calloc
+@usableFromInline let malloc = EmscriptenLibc.malloc
+@usableFromInline let free = EmscriptenLibc.free
+@usableFromInline let memset = EmscriptenLibc.memset
+@usableFromInline let memcpy = EmscriptenLibc.memcpy
+@usableFromInline let memcmp = EmscriptenLibc.memcmp
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+@usableFromInline let memset = _FoundationDarwinExtras.memset
+@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
+@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
 #endif
 
 #if !NO_CSHIMS
@@ -81,6 +92,12 @@ internal func malloc_good_size(_ size: Int) -> Int {
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+internal import _FoundationDarwinExtras.POSIX.sys.mman
+#elseif canImport(string_h)
+import string_h
 #endif
 
 #if os(Windows)
@@ -121,18 +138,29 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
     body(buffer)
 }
 
+/// A byte buffer in memory.
+///
+/// The `Data` value type allows simple byte buffers to take on the behavior of Foundation objects.
+/// You can create empty or pre-populated buffers from a variety of sources and later add or remove bytes.
+/// You can filter and sort the content, or compare against other buffers. You can manipulate subranges
+/// of bytes and iterate over some or all of them.
+///
+/// `Data` bridges to the `NSData` class and its mutable subclass, `NSMutableData`. You can use these
+/// interchangeably in code that interacts with Objective-C APIs.
 @frozen
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 #if compiler(>=6.2)
 @_addressableForDependencies
 #endif
 public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceableCollection, Sendable, Hashable {
+    /// A type used to indicate a position in a data's buffer.
     public typealias Index = Int
+    /// A type used to indicate a range of positions in a data's buffer.
     public typealias Indices = Range<Int>
 
     @usableFromInline internal var _representation: _Representation
 
-    // A standard or custom deallocator for `Data`.
+    /// A deallocator you use to customize how the backing store is deallocated for data created with the no-copy initializer.
     ///
     /// When creating a `Data` with the no-copy initializer, you may specify a `Data.Deallocator` to customize the behavior of how the backing store is deallocated.
     public enum Deallocator {
@@ -174,7 +202,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // MARK: -
     // MARK: Init methods
 
-    /// Initialize a `Data` with copied memory content.
+    /// Creates data with copied memory content.
     ///
     /// - parameter bytes: A pointer to the memory. It will be copied.
     /// - parameter count: The number of bytes to copy.
@@ -183,7 +211,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(UnsafeRawBufferPointer(start: bytes, count: count))
     }
 
-    /// Initialize a `Data` with copied memory content.
+    /// Creates a data buffer with copied memory content using a buffer pointer.
     ///
     /// - parameter buffer: A buffer pointer to copy. The size is calculated from `SourceType` and `buffer.count`.
     @inlinable // This is @inlinable as a trivial, generic initializer.
@@ -191,7 +219,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(UnsafeRawBufferPointer(buffer))
     }
 
-    /// Initialize a `Data` with copied memory content.
+    /// Creates a data buffer with copied memory content using a mutable buffer pointer.
     ///
     /// - parameter buffer: A buffer pointer to copy. The size is calculated from `SourceType` and `buffer.count`.
     @inlinable // This is @inlinable as a trivial, generic initializer.
@@ -211,7 +239,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    /// Initialize a `Data` with the specified size.
+    /// Creates an empty data buffer of a specified size.
     ///
     /// This initializer doesn't necessarily allocate the requested memory right away. `Data` allocates additional memory as needed, so `capacity` simply establishes the initial capacity. When it does allocate the initial memory, though, it allocates the specified amount.
     ///
@@ -225,7 +253,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(capacity: capacity)
     }
 
-    /// Initialize a `Data` with the specified count of zeroed bytes.
+    /// Creates a new data buffer with the specified count of zeroed bytes.
     ///
     /// - parameter count: The number of bytes the data initially contains.
     @inlinable // This is @inlinable as a trivial initializer.
@@ -233,14 +261,77 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(count: count)
     }
 
-    /// Initialize an empty `Data`.
+    /// Creates an empty data buffer.
     @inlinable // This is @inlinable as a trivial initializer.
     public init() {
         _representation = .empty
     }
 
+    /// Creates a data instance with the specified capacity, and then calls the given
+    /// closure with an output span covering the instance's uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to the `OutputRawSpan`.
+    /// The `OutputRawSpan` keeps track of the initialized memory, ensuring
+    /// safety. Its `count` at the end of the closure will become the `count` of
+    /// the newly-initialized instance of `Data`.
+    ///
+    /// - Note: While the resulting `Data` may have a capacity larger than the
+    ///   requested amount, the `OutputRawSpan` passed to the closure will cover
+    ///   exactly the number of bytes requested.
+    ///
+    /// - Parameters:
+    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
+    ///   - initializer: A closure to initialize the allocated memory.
+    ///     - Parameters:
+    ///       - span: An `OutputRawSpan` covering uninitialized memory with
+    ///         space for the specified number of bytes.
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    @_spi(_) // TODO: Remove pending API surface amendment
+    public init<E: Error>(
+        rawCapacity capacity: Int,
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) {
+        precondition(capacity >= 0, "capacity must not be negative")
+        _representation = try _Representation(capacity: capacity, initializer)
+    }
 
-    /// Initialize a `Data` without copying the bytes.
+    /// Creates a data instance with the specified capacity, and then calls the given
+    /// closure with an output span covering the instance's uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to the `OutputSpan`.
+    /// The `OutputSpan` keeps track of the initialized memory, ensuring
+    /// safety. Its `count` at the end of the closure will become the `count` of
+    /// the newly-initialized instance of `Data`.
+    ///
+    /// - Note: While the resulting `Data` may have a capacity larger than the
+    ///   requested amount, the `OutputSpan` passed to the closure will cover
+    ///   exactly the number of bytes requested.
+    ///
+    /// - Parameters:
+    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
+    ///   - initializer: A closure to initialize the allocated memory.
+    ///     - Parameters:
+    ///       - span: An `OutputSpan` covering uninitialized memory with
+    ///         space for the specified number of elements.
+    // TODO: Make public pending API surface amendment
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    internal init<E: Error>(
+        capacity: Int,
+        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
+    ) throws(E) {
+        self = try Data(rawCapacity: capacity) { output throws(E) in
+            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
+                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
+                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
+                    try initializer(&span)
+                    count = span.finalize(for: buffer)
+                }
+            }
+        }
+    }
+
+    /// Creates a data buffer with memory content without copying the bytes.
     ///
     /// If the result is mutated and is not a unique reference, then the `Data` will still follow copy-on-write semantics. In this case, the copy will use its own deallocator. Therefore, it is usually best to only use this initializer when you either enforce immutability with `let` or ensure that no other references to the underlying data are formed.
     /// - parameter bytes: A pointer to the bytes.
@@ -267,21 +358,57 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    // Always inlined as it is trivially forwarding
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public init(_ data: Data) {
+        #if DATA_LEGACY_ABI
+        switch data._representation {
+        case .empty, .inline:
+            self = data
+        case .slice(let slice):
+            if slice.startIndex == 0 && slice.storage._deallocator == nil {
+                self = data
+            } else {
+                _representation = slice.withUnsafeBytes { _Representation($0) }
+            }
+        case .large(let large):
+            if large.startIndex == 0 && large.storage._deallocator == nil {
+                self = data
+            } else {
+                _representation = large.withUnsafeBytes { _Representation($0) }
+            }
+        }
+        #else
+        if data._representation.startIndex == 0 && data._representation._storage._deallocator == nil {
+            self = data
+        } else {
+            _representation = data.withUnsafeBytes { _Representation($0) }
+        }
+        #endif
+    }
+
     @inline(__always)
     @_alwaysEmitIntoClient
     public init(_ elements: some Sequence<UInt8> & ContiguousBytes) {
-        // Since the sequence is already contiguous, access the underlying raw memory directly.
-        _representation = elements.withUnsafeBytes {
-            _Representation($0)
+        if let data = _specialize(elements, for: Data.self) {
+            self.init(data)
+            return
         }
+        // Since the sequence is already contiguous, access the underlying raw memory directly.
+        self.init(representation: elements.withUnsafeBytes {
+            _Representation($0)
+        })
     }
 
-    // Always inlined as it is a trivially forwarding fast path
     @inline(__always)
     @_alwaysEmitIntoClient
     @abi(init(fastCheckElements elements: some Sequence<UInt8>))
     public init(_ elements: some Sequence<UInt8>) {
+        if let data = _specialize(elements, for: Data.self) {
+            self.init(data)
+            return
+        }
+
         // The sequence might be able to provide direct access to typed memory.
         // NOTE: It's safe to do this because we're already guarding on S's element as `UInt8`. This would not be safe on arbitrary sequences.
         if let representation = elements.withContiguousStorageIfAvailable({
@@ -299,6 +426,12 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     internal init<S: Sequence>(slowElements elements: S) where S.Element == UInt8 {
         #if FOUNDATION_FRAMEWORK
         // We still check for fast paths here on ABI stable platforms (withContiguousStorageIfAvailable and ContiguousBytes) because older SDKs did not contain always-inline fast paths, so some callers may still be using this ABI entrypoint with values that have fast paths
+
+        if let data = _specialize(elements, for: Data.self) {
+            self = Data(data) // If we already have a Data, call the specialized entrypoint
+            return
+        }
+
         // We check withContiguousStorageIfAvailable first because it is cheaper than a protocol conformance check and all Foundation-defined ContiguousBytes-conforming types respond to withContiguousStorageIfAvailable
         let representation = elements.withContiguousStorageIfAvailable {
             _Representation(UnsafeRawBufferPointer($0))
@@ -311,6 +444,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         // If the sequence is already contiguous, access the underlying raw memory directly.
         if let contiguous = elements as? ContiguousBytes {
             _representation = contiguous.withUnsafeBytes { return _Representation($0) }
+            return
+        }
+
+        // This fast path should always be within the ABI function because Data(referencing:) is opaque anyways
+        if let nsData = elements as? NSData {
+            // If we have an NSData, bridge it rather than slow-copy it
+            self = Data(referencing: nsData)
             return
         }
         #endif
@@ -330,20 +470,23 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             return
         }
 
-        // Append the rest byte-wise, buffering through an InlineData.
-        var buffer = InlineData()
-        while let element = iter.next() {
-            buffer.append(byte: element)
-            if buffer.count == buffer.capacity {
-                buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-                buffer.count = 0
-            }
-        }
+        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { buffer in
+            var count = 0
 
-        // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
-        if buffer.count > 0 {
-            buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-            buffer.count = 0
+            // Append the rest byte-wise, buffering through a temporary allocation.
+            while let element = iter.next() {
+                buffer[count] = element
+                count += 1
+                if count == buffer.count {
+                    _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
+                    count = 0
+                }
+            }
+
+            // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
+            if count > 0 {
+                _representation.append(contentsOf: UnsafeRawBufferPointer(rebasing: buffer.prefix(upTo: count)))
+            }
         }
     }
 
@@ -356,13 +499,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // -----------------------------------
     // MARK: - Properties and Functions
 
+    /// Prepares the collection to store the specified number of elements, when doing so is appropriate for the underlying type.
     @inlinable // This is @inlinable as trivially forwarding.
     public mutating func reserveCapacity(_ minimumCapacity: Int) {
         _representation.reserveCapacity(minimumCapacity)
     }
 
     mutating func stabilizeAddresses() {
-        reserveCapacity(InlineData.maximumCapacity + 1)
+        _representation.stabilizeAddresses()
     }
 
     /// The number of bytes in the data.
@@ -377,36 +521,31 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    public func withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
-        return try _representation.withUnsafeBytes(body)
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public func withUnsafeBytes<E, ResultType: ~Copyable>(_ body: (UnsafeRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
+        try _representation.withUnsafeBytes(body)
     }
+
+#if DATA_LEGACY_ABI
+    @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    internal func __legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        try withUnsafeBytes(body)
+    }
+#endif // DATA_LEGACY_ABI
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var bytes: RawSpan {
         @_lifetime(borrow self)
         borrowing get {
-            let buffer: UnsafeRawBufferPointer
-            switch _representation {
-            case .empty:
-                unsafe buffer = UnsafeRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                unsafe buffer = unsafe UnsafeRawBufferPointer(
-                  start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(let slice):
-                unsafe buffer = unsafe UnsafeRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(let slice):
-                unsafe buffer = unsafe UnsafeRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
-            let span = unsafe RawSpan(_unsafeBytes: buffer)
-            return unsafe _overrideLifetime(span, borrowing: self)
+            _representation.bytes
         }
     }
 
@@ -425,34 +564,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     public var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
         mutating get {
-            let buffer: UnsafeMutableRawBufferPointer
-            switch _representation {
-            case .empty:
-                unsafe buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                unsafe buffer = UnsafeMutableRawBufferPointer(
-                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .large(slice)
-                unsafe buffer = UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .slice(slice)
-                unsafe buffer = UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
-            let span = unsafe MutableRawSpan(_unsafeBytes: buffer)
-            return unsafe _overrideLifetime(span, mutating: &self)
+            _representation.mutableBytes
         }
     }
 
@@ -469,17 +581,34 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    @inline(__always)
     @_alwaysEmitIntoClient
-    public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
-        return try _representation.withUnsafeBytes {
-            return try $0.withMemoryRebound(to: UInt8.self, body)
+    public func withContiguousStorageIfAvailable<E, ResultType: ~Copyable>(
+      _ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws(E) -> ResultType
+    ) throws(E) -> ResultType? {
+        try _representation.withUnsafeBytes { bytes throws(E) in
+          try bytes.withMemoryRebound(to: UInt8.self, body)
         }
     }
 
-    @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    public mutating func withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
-        return try _representation.withUnsafeMutableBytes(body)
+    @inline(__always)
+    @_alwaysEmitIntoClient
+    public mutating func withUnsafeMutableBytes<E, ResultType: ~Copyable>(_ body: (UnsafeMutableRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
+        try _representation.withUnsafeMutableBytes(body)
     }
+
+#if DATA_LEGACY_ABI
+    @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
+    @usableFromInline
+    internal mutating func __legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+        try withUnsafeMutableBytes(body)
+    }
+#endif // DATA_LEGACY_ABI
 
     // MARK: -
 
@@ -489,16 +618,88 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
     }
 
+    /// Appends the specified bytes from memory to the end of the data.
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public mutating func append(_ bytes: UnsafePointer<UInt8>, count: Int) {
         if count == 0 { return }
         _append(UnsafeBufferPointer(start: bytes, count: count))
     }
 
+    /// Appends the specified data to the end of this data.
     public mutating func append(_ other: Data) {
         guard !other.isEmpty else { return }
         other.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
             _representation.append(contentsOf: buffer)
+        }
+    }
+
+    /// Grows this data to have enough capacity for the specified number of
+    /// bytes, then calls the closure with an output span covering the requested
+    /// amount of uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to `span`. It
+    /// ensures safety by keeping track of the initialized memory.
+    /// At the end of the closure, `span`'s `count` elements will have
+    /// been appended to this `Data` instance.
+    ///
+    /// If the closure throws an error, the items appended until that point
+    /// will remain in the `Data` instance.
+    ///
+    /// - Parameters:
+    ///   - uninitializedCount: The number of new elements the `Data` should have
+    ///     space for.
+    ///   - initializer: A closure to initialize memory.
+    ///     - Parameters:
+    ///       - span: An `OutputRawSpan` covering uninitialized memory with
+    ///         space for the specified number of additional bytes.
+    // TODO: Make public pending SE-0527 naming discussion
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    internal mutating func append<E: Error>(
+        addingRawCapacity uninitializedCount: Int,
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) {
+        precondition(uninitializedCount >= 0, "uninitializedCount must not be negative")
+        try _representation.append(addingCapacity: uninitializedCount, initializer)
+    }
+
+    /// Grows this data to have enough capacity for the specified number of
+    /// bytes, then calls the closure with an output span covering the requested
+    /// amount of uninitialized memory.
+    ///
+    /// Inside the closure, initialize elements by appending to `span`. It
+    /// ensures safety by keeping track of the initialized memory.
+    /// At the end of the closure, `span`'s `count` elements will have
+    /// been appended to this `Data` instance.
+    ///
+    /// If the closure throws an error, the items appended until that point
+    /// will remain in the `Data` instance.
+    ///
+    /// - Parameters:
+    ///   - uninitializedCount: The number of new elements the array should have
+    ///     space for.
+    ///   - initializer: A closure to initialize memory.
+    ///     - Parameters:
+    ///       - span: An `OutputSpan` covering uninitialized memory with
+    ///         space for the specified number of additional elements.
+    // TODO: Make public pending SE-0527 naming discussion
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
+    internal mutating func append<E: Error>(
+        addingCapacity uninitializedCount: Int,
+        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
+    ) throws(E) {
+        try self.append(addingRawCapacity: uninitializedCount) { output throws(E) in
+            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
+                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
+                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
+                    defer {
+                        count = span.finalize(for: buffer)
+                        span = OutputSpan()
+                    }
+                    try initializer(&span)
+                }
+            }
         }
     }
 
@@ -510,14 +711,27 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _append(buffer)
     }
 
+    @_alwaysEmitIntoClient
+    public mutating func append(_ byte: UInt8) {
+        Swift.withUnsafeBytes(of: byte) { buffer in
+            _representation.append(contentsOf: buffer)
+        }
+    }
+
     #if FOUNDATION_FRAMEWORK
-    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @abi(mutating func append(contentsOf bytes: [UInt8]))
+    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
     internal mutating func __legacy_append(contentsOf bytes: [UInt8]) {
         self.append(contentsOf: bytes)
     }
     #endif
 
+    /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
     @_alwaysEmitIntoClient
     public mutating func append(contentsOf elements: some Sequence<UInt8> & ContiguousBytes) {
@@ -528,6 +742,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
     @_alwaysEmitIntoClient
     @abi(mutating func append(fastContentsof elements: some Sequence<UInt8>))
@@ -583,26 +798,29 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
             return
         }
 
-        // Append the rest byte-wise, buffering through an InlineData.
-        var buffer = InlineData()
-        while let element = iter.next() {
-            buffer.append(byte: element)
-            if buffer.count == buffer.capacity {
-                buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-                buffer.count = 0
-            }
-        }
+        withUnsafeTemporaryAllocation(byteCount: 16, alignment: 1) { buffer in
+            var count = 0
 
-        // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
-        if buffer.count > 0 {
-            buffer.withUnsafeBytes { _representation.append(contentsOf: $0) }
-            buffer.count = 0
+            // Append the rest byte-wise, buffering through a temporary allocation.
+            while let element = iter.next() {
+                buffer[count] = element
+                count += 1
+                if count == buffer.count {
+                    _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
+                    count = 0
+                }
+            }
+
+            // If we've still got bytes left in the buffer (i.e. the loop ended before we filled up the buffer and cleared it out), append them.
+            if count > 0 {
+                _representation.append(contentsOf: UnsafeRawBufferPointer(rebasing: buffer.prefix(upTo: count)))
+            }
         }
     }
 
     // MARK: -
 
-    /// Set a region of the data to `0`.
+    /// Sets a region of the data buffer to 0.
     ///
     /// If `range` exceeds the bounds of the data, then the data is resized to fit.
     /// - parameter range: The range in the data to set to `0`.
@@ -614,6 +832,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.resetBytes(in: range)
     }
 
+    @_alwaysEmitIntoClient
+    public mutating func insert(_ newElement: UInt8, at i: Index) {
+        Swift.withUnsafeBytes(of: newElement) { buffer in
+            _representation.replaceSubrange(i ..< i, with: buffer.baseAddress, count: buffer.count)
+        }
+    }
+
     #if FOUNDATION_FRAMEWORK
     /// Replace a region of bytes in the data with new data.
     ///
@@ -622,14 +847,19 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - precondition: The bounds of `subrange` must be valid indices of the collection.
     /// - parameter subrange: The range in the data to replace. If `subrange.lowerBound == data.count && subrange.count == 0` then this operation is an append.
     /// - parameter data: The replacement data.
-    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
+    @available(macOS, obsoleted: 1.0)
+    @available(iOS, obsoleted: 1.0)
+    @available(watchOS, obsoleted: 1.0)
+    @available(tvOS, obsoleted: 1.0)
+    @available(visionOS, obsoleted: 1.0)
     @abi(mutating func replaceSubrange(_ subrange: Range<Index>, with data: Data))
+    @usableFromInline // Pre-existing ABI replaced by the below emitted fast paths
     internal mutating func __legacy_replaceSubrange(_ subrange: Range<Index>, with data: Data) {
         self.replaceSubrange(subrange, with: data)
     }
     #endif
 
-    /// Replace a region of bytes in the data with new bytes from a buffer.
+    /// Replaces a region of bytes in the data with new bytes from a buffer.
     ///
     /// This will resize the data if required, to fit the entire contents of `buffer`.
     ///
@@ -641,6 +871,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         replaceSubrange(subrange, with: UnsafeRawBufferPointer(buffer))
     }
 
+    /// Replaces a region of bytes in the data with new bytes from a collection.
+    ///
+    /// This will resize the data if required, to fit the entire contents of `newElements`.
+    ///
+    /// - Precondition: The bounds of `subrange` must be valid indices of the collection.
+    /// - Parameters:
+    ///   - subrange: The range in the data to replace.
+    ///   - newElements: The replacement bytes.
     @inline(__always)
     @_alwaysEmitIntoClient
     public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8> & ContiguousBytes) {
@@ -649,6 +887,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Replaces a region of bytes in the data with new bytes from a collection.
+    ///
+    /// This will resize the data if required, to fit the entire contents of `newElements`.
+    ///
+    /// - Precondition: The bounds of `subrange` must be valid indices of the collection.
+    /// - Parameters:
+    ///   - subrange: The range in the data to replace.
+    ///   - newElements: The replacement bytes.
     @inline(__always)
     @_alwaysEmitIntoClient
     @abi(mutating func repalceSubrangeFast(_ subrange: Range<Index>, with newElements: some Collection<UInt8>))
@@ -697,12 +943,39 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Replaces a region of bytes in the data with bytes from memory.
     @inlinable // This is @inlinable as trivially forwarding.
     public mutating func replaceSubrange(_ subrange: Range<Index>, with bytes: UnsafeRawPointer, count cnt: Int) {
         _representation.replaceSubrange(subrange, with: bytes, count: cnt)
     }
 
-    /// Return a new copy of the data in a specified range.
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func remove(at position: Index) -> UInt8 {
+        precondition(!isEmpty, "Can't remove from an empty collection")
+        let result: UInt8 = self[position]
+        // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+        replaceSubrange(position..<index(after: position), with: UnsafeRawBufferPointer(start: nil, count: 0))
+        return result
+    }
+
+    @_alwaysEmitIntoClient
+    public mutating func removeSubrange(_ bounds: Range<Index>) {
+        // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+        replaceSubrange(bounds, with: UnsafeRawBufferPointer(start: nil, count: 0))
+    }
+
+    @_alwaysEmitIntoClient
+    public mutating func removeAll(keepingCapacity keepCapacity: Bool = false) {
+        if !keepCapacity {
+            self = Data()
+        } else {
+            // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
+            replaceSubrange(startIndex..<endIndex, with: UnsafeRawBufferPointer(start: nil, count: 0))
+        }
+    }
+
+    /// Returns a new copy of the data in a specified range.
     ///
     /// - parameter range: The range to copy.
     public func subdata(in range: Range<Index>) -> Data {
@@ -719,6 +992,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // MARK: -
     //
 
+    /// Returns a new data buffer created by removing the given number of bytes from the front of the original data.
     public func advanced(by amount: Int) -> Data {
         precondition(amount >= 0)
         let start = self.index(self.startIndex, offsetBy: amount)
@@ -729,7 +1003,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     // MARK: -
     // MARK: Index and Subscript
 
-    /// Sets or returns the byte at the specified index.
+    /// Accesses the byte at the specified index.
     @inlinable // This is @inlinable as trivially forwarding.
     public subscript(index: Index) -> UInt8 {
         get {
@@ -740,6 +1014,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Accesses the bytes at the specified range of indexes.
     @inlinable // This is @inlinable as trivially forwarding.
     public subscript(bounds: Range<Index>) -> Data {
         get {
@@ -774,7 +1049,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     }
 
-    /// The start `Index` in the data.
+    /// The beginning index into the data.
     @inlinable // This is @inlinable as trivially forwarding.
     public var startIndex: Index {
         get {
@@ -784,7 +1059,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     /// The end `Index` into the data.
     ///
-    /// This is the "one-past-the-end" position, and will always be equal to the `count`.
+    /// This is the "one-past-the-end" position—that is, the position one greater than the last valid subscript argument.
     @inlinable // This is @inlinable as trivially forwarding.
     public var endIndex: Index {
         get {
@@ -792,11 +1067,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Returns the index that immediately precedes the specified index.
     @inlinable // This is @inlinable as trivially computable.
     public func index(before i: Index) -> Index {
         return i - 1
     }
 
+    /// Returns the index that immediately follows the specified index.
     @inlinable // This is @inlinable as trivially computable.
     public func index(after i: Index) -> Index {
         return i + 1
@@ -843,6 +1120,7 @@ extension Data {
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
     public static func ==(d1 : Data, d2 : Data) -> Bool {
+        #if DATA_LEGACY_ABI
         // See if both are empty
         switch (d1._representation, d2._representation) {
         case (.empty, .empty):
@@ -851,6 +1129,11 @@ extension Data {
             // Continue on to checks below
             break
         }
+        #else
+        if d1._representation._storage === d2._representation._storage, d1._representation._slice == d2._representation._slice {
+            return true
+        }
+        #endif
 
         let length1 = d1.count
         let length2 = d2.count

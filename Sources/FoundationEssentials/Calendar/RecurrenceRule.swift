@@ -107,7 +107,7 @@ extension Calendar {
         ///
         /// Default value is `1`
         public var interval: Int
-        /// When a recurring event stops recurring
+        /// When a recurring event stops recurring.
         public struct End: Sendable, Equatable {
             private enum _End: Equatable, Hashable {
                 case never
@@ -171,8 +171,8 @@ extension Calendar {
             /// If n is negative, repeat on the n-to-last of the given weekday.
             case nth(Int, Locale.Weekday)
         }
-        
-        /// Uniquely identifies a month in any calendar system
+
+        /// Uniquely identifies a month in any calendar system.
         public struct Month: Sendable, ExpressibleByIntegerLiteral, Equatable {
             public typealias IntegerLiteralType = Int
             

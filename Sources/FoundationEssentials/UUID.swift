@@ -14,12 +14,13 @@ internal import _FoundationCShims // uuid.h
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
-/// Represents UUID strings, which can be used to uniquely identify types, interfaces, and other items.
+/// A universally unique value to identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
 public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
+    /// Returns the UUID as bytes.
     public private(set) var uuid: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    /* Create a new UUID with RFC 4122 version 4 random bytes */
+    /// Creates a UUID with RFC 4122 version 4 random bytes.
     public init() {
         withUnsafeMutablePointer(to: &uuid) {
             $0.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<uuid_t>.size) {
@@ -39,9 +40,11 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         }
     }
 
-    /// Create a UUID from a string such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
+    /// Creates a UUID from a string representation.
     ///
-    /// Returns nil for invalid strings.
+    /// Returns `nil` if the string isn't a valid UUID representation.
+    ///
+    /// - Parameter string: The string representation of a UUID, such as `E621E1F8-C36C-495A-93FC-0C247A3E6E5F`.
     public init?(uuidString string: __shared String) {
         let res = withUnsafeMutablePointer(to: &uuid) {
             $0.withMemoryRebound(to: UInt8.self, capacity: 16) {
@@ -53,12 +56,14 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         }
     }
 
-    /// Create a UUID from a `uuid_t`.
+    /// Creates a UUID from the uuid C-language structure.
+    ///
+    /// - Parameter uuid: The C-language structure of a UUID.
     public init(uuid: uuid_t) {
         self.uuid = uuid
     }
 
-    /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
+    /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
     public var uuidString: String {
         var bytes: uuid_string_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         return withUUIDBytes { valBuffer in

@@ -109,13 +109,13 @@ extension NSURL {
         return URLEncoder.percentEncode(string: path, encoding: encoding, component: component, skipAlreadyEncoded: false)
     }
 
-    static func __copySwiftEncodedFSRPath(_ path: String) -> String? {
+    static func __copySwiftEncodedFSRPath(_ path: String) -> Unmanaged<CFString>? {
         guard !path.isEmpty else {
-            return path
+            return _createCFStringFromASCIIString(path)
         }
         // Convert path to its decomposed file system representation then encode
         let maxFSRSize = 3 * path.utf8.count
-        return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxFSRSize) { pathBuffer -> String? in
+        return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxFSRSize) { pathBuffer in
             guard var pathLength = path._decomposed(.hfsPlus, into: pathBuffer) else {
                 return nil
             }
@@ -124,15 +124,14 @@ extension NSURL {
             while pathLength > rootLength && pathBuffer[pathLength - 1] == UInt8(ascii: "/") {
                 pathLength -= 1
             }
-            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 3 * pathLength) { encodedBuffer in
-                let encodedLength = URLEncoder.percentEncodeUnchecked(
+            return _createCFStringFromASCIIBuffer(capacity: 3 * pathLength) { encodedBuffer in
+                URLEncoder.percentEncodeUnchecked(
                     input: UnsafeBufferPointer(rebasing: pathBuffer[..<pathLength]),
                     output: encodedBuffer,
                     // Encode ";" for compatibility
                     component: .pathNoSemicolon,
                     skipAlreadyEncoded: false
                 )
-                return String(decoding: encodedBuffer[..<encodedLength], as: UTF8.self)
             }
         }
     }
@@ -144,17 +143,18 @@ extension NSURL {
     /// a trailing slash if present.
     ///
     /// - Note: Interprets the decoded file system representation as UTF8.
-    static func __copySwiftPOSIXPath(forFileURLString string: String) -> String {
+    static func __copySwiftPOSIXPath(forFileURLString string: String, allocator: CFAllocator) -> Unmanaged<CFString>? {
         assert(string.utf8.starts(with: "file://".utf8))
         var mut = string
         return mut.withUTF8 { buffer in
             let filePrefixSize = 7 // "file://"
-            return String(unsafeUninitializedCapacity: buffer.count - filePrefixSize) { outputBuffer in
-                guard let pathLength = URLEncoder.percentDecode(
+            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: buffer.count - filePrefixSize) { outputBuffer in
+                guard let baseAddress = outputBuffer.baseAddress,
+                      var pathLength = URLEncoder.percentDecode(
                     input: UnsafeBufferPointer(rebasing: buffer[filePrefixSize...]),
                     output: outputBuffer
                 ) else {
-                    return 0
+                    return nil
                 }
                 let rootLength = rootLength(
                     pathBuffer: UnsafeBufferPointer(outputBuffer),
@@ -162,9 +162,14 @@ extension NSURL {
                 )
                 if pathLength > rootLength && outputBuffer[pathLength - 1] == UInt8(ascii: "/") {
                     // Strip the trailing slash
-                    return pathLength - 1
+                    pathLength -= 1
                 }
-                return pathLength
+                guard let result = CFStringCreateWithBytes(
+                    allocator, baseAddress, pathLength, CFStringBuiltInEncodings.UTF8.rawValue, false
+                ) else {
+                    return nil
+                }
+                return Unmanaged.passRetained(result)
             }
         }
     }
@@ -219,6 +224,37 @@ extension NSURL {
             }
             return true
         }
+    }
+}
+
+internal import Foundation_Private.NSString
+
+@objc
+extension NSString {
+    /// Returns `nil` if `self` contains unpaired UTF-16 surrogates
+    private var _validatedString: String? {
+        if let fastCharacters = _fastCharacterContents() {
+            let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: length)
+            return String(validating: charsBuffer, as: UTF16.self)
+        } else if fastestEncoding == NSUnicodeStringEncoding {
+            if length == 0 { return "" }
+            return withUnsafeTemporaryAllocation(of: UInt16.self, capacity: length) { charsBuffer in
+                getCharacters(charsBuffer.baseAddress!, range: NSRange(location: 0, length: charsBuffer.count))
+                return String(validating: charsBuffer, as: UTF16.self)
+            }
+        } else {
+            // If a custom NSString subclass lies about fastestEncoding and
+            // contains unpaired surrogates, they'll get U+FFFD replacement.
+            return String(self)
+        }
+    }
+
+    func __copySwiftStringByAddingPercentEncoding(withAllowedCharacters allowedCharacters: CharacterSet) -> String? {
+        _validatedString?.addingPercentEncoding(withAllowedCharacters: allowedCharacters)
+    }
+
+    func __copySwiftStringByRemovingPercentEncoding() -> String? {
+        _validatedString?.removingPercentEncoding
     }
 }
 

@@ -18,6 +18,7 @@ import Foundation_Private
 #endif
 
 import Testing
+import Synchronization
 
 // MARK: Test data (Subjects, Messages, MessageIdentifiers, NotificationNames)
 
@@ -333,13 +334,10 @@ private struct NotificationCenterMessageTests {
         var secondToken: NotificationCenter.ObservationToken?
 
         final class AtomicCounter: Sendable {
-            private let count = LockedState<Int>(initialState: 0)
-            
+            private let count = Atomic<Int>(0)
+
             func increment() -> Int {
-                count.withLock { value in
-                    value &+= 1
-                    return value
-                }
+                count.wrappingAdd(1, ordering: .relaxed).newValue
             }
         }
 
@@ -783,10 +781,13 @@ private struct NotificationCenterMessageTests {
     @Test func waitForWorkResumesOnTaskCancellation() async {
         await confirmation("expected task to end") { taskEnds in
             await withUnsafeContinuation { (continuation: UnsafeContinuation<Void, Never>) in
-                let state: LockedState<_NotificationCenterActorQueueManager.State> = LockedState(initialState: _NotificationCenterActorQueueManager.State())
-                
+                final class StateRef: Sendable {
+                    let state: Mutex<_NotificationCenterActorQueueManager.State> = Mutex(_NotificationCenterActorQueueManager.State())
+                }
+                let stateRef = StateRef()
+
                 let managerTask = Task {
-                    let result = await _NotificationCenterActorQueueManager.State.waitForWork(state)
+                    let result = await _NotificationCenterActorQueueManager.State.waitForWork(stateRef.state)
                     #expect(result == nil)
                     taskEnds()
                     continuation.resume()
@@ -795,7 +796,7 @@ private struct NotificationCenterMessageTests {
                 // Cancel waitForWork() once state.continuation is set
                 Task {
                     while true {
-                        let cancelTask = state.withLock { state in
+                        let cancelTask = stateRef.state.withLock { state in
                             return state.continuation != nil
                         }
                         if cancelTask {
@@ -813,8 +814,8 @@ private struct NotificationCenterMessageTests {
         await confirmation("expected task to end") { taskEnds in
             await withUnsafeContinuation { (continuation: UnsafeContinuation<Void, Never>) in
                 let task = Task {
-                    let state: LockedState<_NotificationCenterActorQueueManager.State> = LockedState(initialState: _NotificationCenterActorQueueManager.State())
-                    
+                    let state: Mutex<_NotificationCenterActorQueueManager.State> = Mutex(_NotificationCenterActorQueueManager.State())
+
                     while Task.isCancelled == false {
                         do {
                             try await Task.sleep(for: .milliseconds(50))
@@ -918,7 +919,7 @@ private struct NotificationCenterMessageTests {
         // Basic buffering
         for i in 1...5 { center.post(AsyncTestMessage(payloadInt: i, payloadString: "N/A")) }
 
-        center.asyncObserverQueue.state.withLock { _state in
+        center.asyncObserverQueue.stateRef.state.withLock { _state in
             #expect(_state.buffer.isEmpty)
         }
         

@@ -15,27 +15,39 @@ import FoundationEssentials
 #endif
 
 internal import _FoundationICU
+internal import Synchronization
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 internal final class ICULegacyNumberFormatter : @unchecked Sendable {
 
-    /// `Sendable` notes: `UNumberFormat` is safe to use from multple threads after initialization and configuration.
+    // `Sendable` notes: `UNumberFormat` backed by ICU's `DecimalFormat` is safe to use from multiple threads after initialization and configuration. However, `RuleBasedNumberFormat`is not thread-safe. See https://github.com/unicode-org/icu/pull/3928
     let uformatter: UnsafeMutablePointer<UNumberFormat?>
+    // Optional lock to serializes access to uformatter.
+    // FIXME: Remove the lock once ICU fix is available
+    private let formatLock: Mutex<Void>?
 
-    private init(openedFormatter: UnsafeMutablePointer<UNumberFormat?>) {
+    private init(openedFormatter: UnsafeMutablePointer<UNumberFormat?>, needsLock: Bool) {
         uformatter = openedFormatter
+        formatLock = needsLock ? Mutex(()) : nil
+    }
+
+    private func withLockIfNeeded<T>(_ body: () -> T) -> T {
+        formatLock?.withLock { _ in body() } ?? body()
     }
 
     deinit {
+        // We don't need to lock around since the race in ICU only happens in formatting and parsing.
         unum_close(uformatter)
     }
 
     func parseAsInt(_ string: some StringProtocol) -> Int64? {
-        let arr = Array(string.utf16)
-        var status = U_ZERO_ERROR
-        let parsed = unum_parseInt64(uformatter, arr, Int32(arr.count), nil, &status)
-        guard status.isSuccess else { return nil }
-        return parsed
+        withLockIfNeeded {
+            let arr = Array(string.utf16)
+            var status = U_ZERO_ERROR
+            let parsed = unum_parseInt64(uformatter, arr, Int32(arr.count), nil, &status)
+            guard status.isSuccess else { return nil }
+            return parsed
+        }
     }
 
     // `upperBound`: the utf-16 position in the string where the parse ends
@@ -44,25 +56,27 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
         let arr = Array(string.utf16)
         var status = U_ZERO_ERROR
         var pos = Int32(0) // 0 == start, per ICU docs
-        let parsed = unum_parseInt64(uformatter, arr, Int32(arr.count), &pos, &status)
+        let parsed = withLockIfNeeded { unum_parseInt64(uformatter, arr, Int32(arr.count), &pos, &status) }
         guard status.isSuccess else { return nil }
         upperBound = Int(pos)
         return parsed
     }
 
     func parseAsDouble(_ string: some StringProtocol) -> Double? {
-        let arr = Array(string.utf16)
-        var status = U_ZERO_ERROR
-        let parsed = unum_parseDouble(uformatter, arr, Int32(arr.count), nil, &status)
-        guard status.isSuccess else { return nil }
-        return parsed
+        withLockIfNeeded {
+            let arr = Array(string.utf16)
+            var status = U_ZERO_ERROR
+            let parsed = unum_parseDouble(uformatter, arr, Int32(arr.count), nil, &status)
+            guard status.isSuccess else { return nil }
+            return parsed
+        }
     }
 
     func parseAsDouble(_ string: some StringProtocol, upperBound: inout Int) -> Double? {
         let arr = Array(string.utf16)
         var status = U_ZERO_ERROR
         var pos = Int32(0) // 0 == start, per ICU docs
-        let parsed = unum_parseDouble(uformatter, arr, Int32(arr.count), &pos, &status)
+        let parsed = withLockIfNeeded { unum_parseDouble(uformatter, arr, Int32(arr.count), &pos, &status) }
         guard status.isSuccess else { return nil }
         upperBound = Int(pos)
         return parsed
@@ -74,47 +88,55 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
     }
 
     func parseAsDecimal(_ string: some StringProtocol, upperBound: inout Int) -> Decimal? {
-        var status = U_ZERO_ERROR
-        let arr = Array(string.utf16)
+        withLockIfNeeded {
+            let arr = Array(string.utf16)
+            var status = U_ZERO_ERROR
 
-        let formattable = ufmt_open(&status)
-        guard status.isSuccess else { return nil }
-        defer { ufmt_close(formattable) }
+            let formattable = ufmt_open(&status)
+            guard status.isSuccess else { return nil }
+            defer { ufmt_close(formattable) }
 
-        var pos = Int32(0) // 0 == start, per ICU docs
-        unum_parseToUFormattable(uformatter, formattable, arr, Int32(arr.count), &pos, &status)
-        guard status.isSuccess else { return nil }
-        upperBound = Int(pos)
+            var pos = Int32(0) // 0 == start, per ICU docs
+            unum_parseToUFormattable(uformatter, formattable, arr, Int32(arr.count), &pos, &status)
+            guard status.isSuccess else { return nil }
+            upperBound = Int(pos)
 
-        var len: Int32 = 0
-        guard let decNumChars = ufmt_getDecNumChars(formattable, &len, &status) else {
-            return nil
+            var len: Int32 = 0
+            guard let decNumChars = ufmt_getDecNumChars(formattable, &len, &status) else {
+                return nil
+            }
+            guard status.isSuccess else { return nil }
+
+            guard let str = String(validatingUTF8: decNumChars) else {
+                return nil
+            }
+
+            return Decimal(string: str)
         }
-        guard status.isSuccess else { return nil }
-
-        guard let str = String(validatingUTF8: decNumChars) else {
-            return nil
-        }
-
-        return Decimal(string: str)
     }
 
     func format(_ v: Double) -> String? {
-        _withResizingUCharBuffer { buffer, size, status in
-            unum_formatDouble(self.uformatter, v, buffer, size, nil, &status)
+        withLockIfNeeded {
+            _withResizingUCharBuffer { buffer, size, status in
+                unum_formatDouble(self.uformatter, v, buffer, size, nil, &status)
+            }
         }
     }
 
     func format(_ v: Int64) -> String? {
-        _withResizingUCharBuffer { buffer, size, status in
-            unum_formatInt64(self.uformatter, v, buffer, size, nil, &status)
+        withLockIfNeeded {
+            _withResizingUCharBuffer { buffer, size, status in
+                unum_formatInt64(self.uformatter, v, buffer, size, nil, &status)
+            }
         }
     }
 
     func format(_ v: Decimal) -> String? {
-        _withResizingUCharBuffer { buffer, size, status in
-            let valueString = v.description
-            return unum_formatDecimal(uformatter, valueString, Int32(valueString.count), buffer, size, nil, &status)
+        withLockIfNeeded {
+            _withResizingUCharBuffer { buffer, size, status in
+                let valueString = v.description
+                return unum_formatDecimal(uformatter, valueString, Int32(valueString.count), buffer, size, nil, &status)
+            }
         }
     }
 
@@ -125,7 +147,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
         case percent(NumberFormatStyleConfiguration.Collection)
         case currency(CurrencyFormatStyleConfiguration.Collection, currencyCode: String)
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
-        
+
         private typealias NumberCodingKeys = DefaultAssociatedValueCodingKeys1
         private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
         private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
@@ -219,8 +241,8 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
                     }
                 }
             }
-            
-            return ICULegacyNumberFormatter(openedFormatter: formatter)
+
+            return ICULegacyNumberFormatter(openedFormatter: formatter, needsLock: icuType.isRuleBased)
         }
     }
 
@@ -228,9 +250,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
     // lenient is only used for parsing
     static func formatter(for type: NumberFormatType, locale: Locale, lenient: Bool = false) -> ICULegacyNumberFormatter? {
         let sig = Signature(type: type, localeIdentifier: locale.identifier, lenient: lenient)
-        let formatter = try? ICULegacyNumberFormatter.cache.formatter(for: sig, creator: sig.createNumberFormatter)
-
-        return formatter
+        return try? ICULegacyNumberFormatter.cache.formatter(for: sig, creator: sig.createNumberFormatter)
     }
 }
 

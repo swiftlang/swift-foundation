@@ -12,7 +12,7 @@
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
-    /// An iterator over the contents of the data.
+    /// Returns an iterator over the contents of the data.
     ///
     /// The iterator will increment byte-by-byte.
     @inlinable // This is @inlinable as trivially computable.
@@ -20,6 +20,9 @@ extension Data {
         return Iterator(self, at: startIndex)
     }
     
+    /// An iterator that operates over the contents of data.
+    ///
+    /// The iterator will increment byte-by-byte.
     public struct Iterator : IteratorProtocol, Sendable {
         @usableFromInline
         internal typealias Buffer = (

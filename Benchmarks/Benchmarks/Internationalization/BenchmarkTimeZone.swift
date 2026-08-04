@@ -22,7 +22,7 @@ import Foundation
 
 #if FOUNDATION_FRAMEWORK
 // FOUNDATION_FRAMEWORK has a scheme per benchmark file, so only include one benchmark here.
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     timeZoneBenchmarks()
 }
 #endif
@@ -62,14 +62,14 @@ func timeZoneBenchmarks() {
     }
 
     Benchmark("creatingTimeZones", configuration: .init(scalingFactor: .mega)) { benchmark in
-        for name in NSTimeZone.knownTimeZoneNames {
+        for name in TimeZone.knownTimeZoneIdentifiers {
             let t = TimeZone(identifier: name)
             blackHole(t)
         }
     }
 
     Benchmark("secondsFromGMT_manyTimeZones", configuration: .init(scalingFactor: .mega)) { benchmark in
-        for name in NSTimeZone.knownTimeZoneNames {
+        for name in TimeZone.knownTimeZoneIdentifiers {
             let t = TimeZone(identifier: name)!
             for d in testDates {
                 let s = t.secondsFromGMT(for: d)

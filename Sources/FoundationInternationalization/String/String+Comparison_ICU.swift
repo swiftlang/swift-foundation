@@ -20,8 +20,8 @@ internal func compareStringsWithLocale(_ string1: Substring, _ string2: Substrin
     let localeIdentifier = locale.identifier
     var status = U_ZERO_ERROR
 
-    let collator = localeIdentifier.utf8CString.withUnsafeBufferPointer({ buffer in
-        ucol_open(buffer.baseAddress, &status)
+    let collator = localeIdentifier.withCString({ ptr in
+        ucol_open(ptr, &status)
     })
 
     defer {

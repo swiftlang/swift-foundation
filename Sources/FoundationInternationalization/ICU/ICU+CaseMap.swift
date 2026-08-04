@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 internal import _FoundationICU
+internal import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -20,7 +21,7 @@ extension ICU {
     final class CaseMap : @unchecked Sendable {
         let casemap: OpaquePointer?
         
-        let lock: LockedState<Void>
+        let lock: Mutex<Void>
         
         // Empty locale ("") means root locale
         init(localeID: String) throws {
@@ -28,15 +29,15 @@ extension ICU {
             casemap = ucasemap_open(localeID, UInt32(), &status)
             try status.checkSuccess()
             
-            lock = LockedState()
+            lock = Mutex(())
         }
 
         deinit {
             ucasemap_close(casemap)
         }
 
-        private static let _cache: LockedState<[String : CaseMap]> = LockedState(initialState: [:])
-        
+        private static let _cache: Mutex<[String : CaseMap]> = Mutex([:])
+
         // Create and cache a new case mapping object for the specified locale
         internal static func caseMappingForLocale(_ localeID: String?) -> CaseMap? {
             let localeID = localeID ?? ""
@@ -57,28 +58,36 @@ extension ICU {
         }
 
         func lowercase(_ s: String) -> String? {
-            s.utf8CString.withUnsafeBufferPointer { srcBuf in
-                _withResizingCharBuffer { destBuf, destSize, status in
-                    ucasemap_utf8ToLower(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+            var s = s
+            return s.withUTF8 { srcBuf in
+                srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                    _withResizingCharBuffer { destBuf, destSize, status in
+                        ucasemap_utf8ToLower(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                    }
                 }
             }
         }
 
         func uppercase(_ s: String) -> String? {
-            s.utf8CString.withUnsafeBufferPointer { srcBuf in
-                _withResizingCharBuffer { destBuf, destSize, status in
-                    ucasemap_utf8ToUpper(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+            var s = s
+            return s.withUTF8 { srcBuf in
+                srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                    _withResizingCharBuffer { destBuf, destSize, status in
+                        ucasemap_utf8ToUpper(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                    }
                 }
             }
         }
         
         func titlecase(_ s: Substring) -> String? {
-            lock.withLock {
+            lock.withLock { _ in
                 var s = s
                 return s.withUTF8 { srcBuf in
-                    srcBuf.withMemoryRebound(to: CChar.self) { buffer in
-                        _withResizingCharBuffer { destBuf, destSize, status in
-                            ucasemap_utf8ToTitle(casemap, destBuf, destSize, buffer.baseAddress!, Int32(buffer.count), &status)
+                    srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                        srcBuf.withMemoryRebound(to: CChar.self) { buffer in
+                            _withResizingCharBuffer { destBuf, destSize, status in
+                                ucasemap_utf8ToTitle(casemap, destBuf, destSize, buffer.baseAddress!, Int32(buffer.count), &status)
+                            }
                         }
                     }
                 }
@@ -87,19 +96,25 @@ extension ICU {
 
         func titlecase(_ s: String) -> String? {
             // `ucasemap_utf8ToTitle` isn't thread-safe
-            lock.withLock {
-                s.utf8CString.withUnsafeBufferPointer { srcBuf in
-                    _withResizingCharBuffer { destBuf, destSize, status in
-                        ucasemap_utf8ToTitle(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+            lock.withLock { _ in
+                var s = s
+                return s.withUTF8 { srcBuf in
+                    srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                        _withResizingCharBuffer { destBuf, destSize, status in
+                            ucasemap_utf8ToTitle(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                        }
                     }
                 }
             }
         }
 
         func foldcase(_ s: String) -> String? {
-            s.utf8CString.withUnsafeBufferPointer { srcBuf in
-                _withResizingCharBuffer { destBuf, destSize, status in
-                    ucasemap_utf8FoldCase(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+            var s = s
+            return s.withUTF8 { srcBuf in
+                srcBuf.withMemoryRebound(to: CChar.self) { srcBuf in
+                    _withResizingCharBuffer { destBuf, destSize, status in
+                        ucasemap_utf8FoldCase(casemap, destBuf, destSize, srcBuf.baseAddress!, Int32(srcBuf.count), &status)
+                    }
                 }
             }
         }

@@ -30,6 +30,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 internal import _FoundationCShims
@@ -205,8 +207,7 @@ extension _FileManagerImpl {
             }
         }
         return results
-#elseif os(WASI) || os(OpenBSD)
-        // wasi-libc does not support FTS for now
+#elseif os(OpenBSD) || os(Emscripten)
         throw CocoaError.errorWithFilePath(.featureUnsupported, path)
 #else
         return try path.withFileSystemRepresentation { fileSystemRep in
@@ -525,5 +526,21 @@ extension _FileManagerImpl {
             return fileManager.string(withFileSystemRepresentation: buffer.baseAddress!, length: strlen(buffer.baseAddress!))
         }
 #endif
+    }
+}
+
+extension URL {
+    /// Returns `nil` if `getcwd` fails instead of an empty path `URL`.
+    static func currentDirectoryOrNil() -> URL? {
+        #if os(Windows)
+        URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        #else
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
+            guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
+                return nil
+            }
+            return URL(fileURLWithFileSystemRepresentation: buffer.baseAddress!, isDirectory: true, relativeTo: nil)
+        }
+        #endif
     }
 }

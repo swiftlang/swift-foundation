@@ -25,6 +25,8 @@ import WinSDK
 internal import _FoundationCShims
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 extension _FileManagerImpl {

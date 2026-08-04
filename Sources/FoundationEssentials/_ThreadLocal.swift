@@ -32,7 +32,7 @@ struct _ThreadLocal {
     fileprivate typealias PlatformKey = tss_t
 #elseif canImport(WinSDK)
     fileprivate typealias PlatformKey = DWORD
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
     fileprivate typealias PlatformKey = UnsafeMutablePointer<UnsafeMutableRawPointer?>
 #endif
     
@@ -50,7 +50,7 @@ struct _ThreadLocal {
             self.key = key
 #elseif canImport(WinSDK)
             key = FlsAlloc(nil)
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
             key = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: 1)
 #endif
         }
@@ -64,11 +64,11 @@ struct _ThreadLocal {
             tss_get(key)
 #elseif canImport(WinSDK)
             FlsGetValue(key)
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
             key.pointee
 #endif
         }
-        
+
         set {
 #if canImport(Darwin) || canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_setspecific(key, newValue)
@@ -76,7 +76,7 @@ struct _ThreadLocal {
             tss_set(key, newValue)
 #elseif canImport(WinSDK)
             FlsSetValue(key, newValue)
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
             key.pointee = newValue
 #endif
         }

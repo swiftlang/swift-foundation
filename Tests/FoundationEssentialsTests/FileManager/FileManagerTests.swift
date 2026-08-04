@@ -819,10 +819,12 @@ private struct FileManagerTests {
             let key = "org.swift.foundation.testattribute"
             #endif
             let value = Data("Hello, world".utf8)
+            let initialAttrs = try $0.attributesOfItem(atPath: "Foo")
+            let initialCount = (initialAttrs[._extendedAttributes] as? [String : Data])?.count ?? 0
             try $0.setAttributes([._extendedAttributes : [key : value]], ofItemAtPath: "Foo")
             let attrs = try $0.attributesOfItem(atPath: "Foo")
             let xattrs = try #require(attrs[._extendedAttributes] as? [String : Data])
-            #expect(xattrs.count == 1)
+            #expect(xattrs.count == initialCount + 1)
             #expect(xattrs[key] == value)
         }
     }
@@ -883,6 +885,27 @@ private struct FileManagerTests {
                 // Manually clean up attributes so removal does not fail
                 try $0.setAttributes([.immutable: false, .appendOnly: false], ofItemAtPath: test.path)
             }
+        }
+    }
+
+    @Test func testSetAttributesModificationDate() async throws {
+        try await FilePlayground {
+            "testFile"
+            Directory("testDir") {}
+        }.test { fileManager in
+            // Test setAttributes with modificationDate on files
+            let fileTestDate = Date(timeIntervalSince1970: 1234567890)
+            try fileManager.setAttributes([.modificationDate: fileTestDate], ofItemAtPath: "testFile")
+            let fileAttrs = try fileManager.attributesOfItem(atPath: "testFile")
+            let fileModDate = try #require(fileAttrs[.modificationDate] as? Date)
+            #expect(abs(fileModDate.timeIntervalSince1970 - fileTestDate.timeIntervalSince1970) < 2.0, "File modification date should be set correctly")
+
+            // Test setAttributes with modificationDate on directories
+            let dirTestDate = Date(timeIntervalSince1970: 1234567890)
+            try fileManager.setAttributes([.modificationDate: dirTestDate], ofItemAtPath: "testDir")
+            let directoryAttrs = try fileManager.attributesOfItem(atPath: "testDir")
+            let directoryModDate = try #require(directoryAttrs[.modificationDate] as? Date)
+            #expect(abs(directoryModDate.timeIntervalSince1970 - dirTestDate.timeIntervalSince1970) < 2.0, "Directory modification date should be set correctly")
         }
     }
 

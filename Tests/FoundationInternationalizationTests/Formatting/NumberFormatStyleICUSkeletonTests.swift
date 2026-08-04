@@ -87,6 +87,22 @@ private struct NumberFormatStyleICUSkeletonTests {
         #expect(isoCodeFormatter.skeleton == "currency/USD unit-width-iso-code sign-never")
     }
 
+    @Test func currencySkeleton_groupingWithRounding() throws {
+        let style: IntegerFormatStyle<Int>.Currency = .init(code: "USD", locale: Locale(identifier: "en_US"))
+
+        let groupedFormatter = ICUCurrencyNumberFormatter.create(for: style.grouping(.never))!
+        #expect(groupedFormatter.skeleton == "currency/USD unit-width-short group-off")
+
+        let roundedFormatter = ICUCurrencyNumberFormatter.create(for: style.rounded(rule: .toNearestOrEven))!
+        #expect(roundedFormatter.skeleton == "currency/USD unit-width-short rounding-mode-half-even")
+
+        let combinedFormatter = ICUCurrencyNumberFormatter.create(for: style.grouping(.never).rounded(rule: .toNearestOrEven))!
+        #expect(combinedFormatter.skeleton == "currency/USD unit-width-short group-off rounding-mode-half-even")
+
+        let reversedFormatter = ICUCurrencyNumberFormatter.create(for: style.rounded(rule: .toNearestOrEven).grouping(.never))!
+        #expect(reversedFormatter.skeleton == "currency/USD unit-width-short group-off rounding-mode-half-even")
+    }
+
     @Test func styleSkeleton_integer_precisionAndRounding() throws {
         let style: IntegerFormatStyle<Int> = .init(locale: Locale(identifier: "en_US"))
         #expect(style.precision(.fractionLength(3...3)).rounded(increment: 5).collection.skeleton == "precision-increment/5.000 rounding-mode-half-even")

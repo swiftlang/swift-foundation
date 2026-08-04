@@ -10,27 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Android)
-@preconcurrency import Android
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif os(Windows)
-import WinSDK
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#endif
+#if FOUNDATION_FRAMEWORK
 
 #if canImport(os)
 internal import os
 #endif
-
-#if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
-#endif
+internal import Synchronization
 
 /// `_SwiftURL` provides the new Swift implementation for `URL`, using the same parser
 /// and `URLParseInfo` as `URLComponents`, but with a few compatibility behaviors.
@@ -53,10 +39,10 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     private var isDecomposable: Bool {
         return _parseInfo.scheme == nil || hasAuthority || _parseInfo.path.utf8.first == ._slash
     }
-
+    
     // Note: We use a lock instead of a lazy var to ensure that we always
     // bridge to the same NSURL even if the URL was copied across threads.
-    private let _nsurlLock = LockedState<NSURL?>(initialState: nil)
+    private let _nsurlLock = Mutex<NSURL?>(nil)
     private var _nsurl: NSURL {
         return _nsurlLock.withLock {
             if let nsurl = $0 { return nsurl }
@@ -440,12 +426,12 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
                 return Parser.percentEncode(decoded, component: .host)
             } else if encodedComponents.contains(.host) {
                 if _parseInfo.didPercentEncodeHost {
-                    return Parser.percentDecode(encodedHost)
+                    return Parser.percentDecode(encodedHost, excluding: [0])
                 }
                 // Return IDNA-encoded host, which is technically not percent-encoded
                 return encodedHost
             } else {
-                return Parser.percentDecode(encodedHost, encoding: _encoding)
+                return Parser.percentDecode(encodedHost, excluding: [0], encoding: _encoding)
             }
         }
 
@@ -585,8 +571,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         }
     }
 
-    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true) -> String {
-        let urlPath = resolveAgainstBase ? absolutePath(percentEncoded: true) : relativePath(percentEncoded: true)
+    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle) -> String {
+        let urlPath = absolutePath(percentEncoded: true)
         return Self.fileSystemPath(for: urlPath, style: style)
     }
 
@@ -889,13 +875,13 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         let newPath = if URL.compatibility1 && _parseInfo.path == "/../" {
             ""
         } else {
-            String(_parseInfo.path).removingDotSegments
+            String(_parseInfo.path)
         }
         #else
-        let newPath = String(_parseInfo.path).removingDotSegments
+        let newPath = String(_parseInfo.path)
         #endif
         var components = URLComponents(parseInfo: _parseInfo)
-        components.percentEncodedPath = newPath.removingDotSegments
+        components.percentEncodedPath = newPath.removingDotSegments(useRFC1808: true)
         if components.scheme != nil {
             // Standardize scheme:// to scheme:///
             if newPath.isEmpty && _parseInfo.netLocationRange?.isEmpty ?? false {
@@ -926,8 +912,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     var description: String {
         var urlString = relativeString
         if let scheme, scheme.lowercased().utf8.elementsEqual(Self.dataSchemeUTF8), urlString.utf8.count > 128 {
-            let prefix = urlString.utf8.prefix(120)
-            let suffix = urlString.utf8.suffix(8)
+            let prefix = Substring(urlString.utf8.prefix(120))
+            let suffix = Substring(urlString.utf8.suffix(8))
             urlString = "\(prefix) ... \(suffix)"
         }
         if let baseURL {
@@ -1083,7 +1069,6 @@ private extension String {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
 internal import CoreFoundation_Private.CFURL
 
 /// This conformance is only needed in `FOUNDATION_FRAMEWORK`,
@@ -1339,4 +1324,4 @@ extension _SwiftURL {
         }
     }
 }
-#endif
+#endif // FOUNDATION_FRAMEWORK

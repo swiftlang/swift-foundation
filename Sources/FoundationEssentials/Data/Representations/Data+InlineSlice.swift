@@ -2,13 +2,15 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2025 Apple Inc. and the Swift project authors
+// Copyright (c) 2025 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+
+#if DATA_LEGACY_ABI
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
@@ -104,31 +106,50 @@ extension Data {
         
         @inlinable // This is @inlinable as trivially computable.
         var startIndex: Int {
-            return Int(slice.lowerBound)
+            return _assumeNonNegative(Int(slice.lowerBound))
         }
         
         @inlinable // This is @inlinable as trivially computable.
         var endIndex: Int {
-            return Int(slice.upperBound)
+            return _assumeNonNegative(Int(slice.upperBound))
         }
         
         @inlinable // This is @inlinable as trivially computable.
         var capacity: Int {
             return storage.capacity
         }
-        
-        @inlinable // This is @inlinable as trivially computable (and inlining may help avoid retain-release traffic).
+
+        #if FOUNDATION_FRAMEWORK
+        // Legacy ABI entry point for clients built against an older @inlinable reserveCapacity
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
+        @abi(mutating func reserveCapacity(_ minimumCapacity: Int))
+        @usableFromInline
+        internal mutating func __legacy_reserveCapacity(_ minimumCapacity: Int) {
+            reserveCapacity(minimumCapacity)
+        }
+        #endif
+
+        #if FOUNDATION_FRAMEWORK
+        @abi(mutating func __implementation_reserveCapacity(_ minimumCapacity: Int))
+        #endif
+        @_alwaysEmitIntoClient // Ensures that newer clients who may be using `__DataStorage.withUninitializedBytes` always use a new copy of reserveCapacity
         mutating func reserveCapacity(_ minimumCapacity: Int) {
             ensureUniqueReference()
             // the current capacity can be zero (representing externally owned buffer), and count can be greater than the capacity
-            storage.ensureUniqueBufferReference(growingTo: Swift.max(minimumCapacity, count))
+            // Capacity of the storage is relative to the start of the allocation, not start of the slice, so offset by the prefix before the slice
+            let prefixLength = startIndex - storage._offset
+            storage.ensureUniqueBufferReference(growingTo: prefixLength + Swift.max(minimumCapacity, count))
         }
         
         @inlinable // This is @inlinable as trivially computable.
         var count: Int {
             get {
                 // The upper bound is guaranteed to be greater than or equal to the lower bound, and the lower bound must be non-negative so subtraction can never overflow
-                return Int(slice.upperBound &- slice.lowerBound)
+                return _assumeNonNegative(Int(slice.upperBound &- slice.lowerBound))
             }
             set(newValue) {
                 assert(newValue < HalfInt.max)
@@ -156,18 +177,42 @@ extension Data {
                 slice = HalfInt(newValue.lowerBound)..<HalfInt(newValue.upperBound)
             }
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        func withUnsafeBytes<Result>(_ apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
-            return try storage.withUnsafeBytes(in: range, apply: apply)
+
+        @inline(__always)
+        @_alwaysEmitIntoClient
+        func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
+            try storage.withUnsafeBytes(in: range, apply: apply)
         }
-        
-        @inlinable // This is @inlinable as a generic, trivially forwarding function.
-        mutating func withUnsafeMutableBytes<Result>(_ apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
+
+        @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
+        @usableFromInline
+        internal func __legacy_withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeBytes(body)
+        }
+
+        @inline(__always)
+        @_alwaysEmitIntoClient
+        mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             ensureUniqueReference()
             return try storage.withUnsafeMutableBytes(in: range, apply: apply)
         }
-        
+
+        @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
+        @available(macOS, obsoleted: 1.0)
+        @available(iOS, obsoleted: 1.0)
+        @available(watchOS, obsoleted: 1.0)
+        @available(tvOS, obsoleted: 1.0)
+        @available(visionOS, obsoleted: 1.0)
+        @usableFromInline
+        internal mutating func __legacy_withUnsafeMutableBytes<ResultType>(_ body: (UnsafeMutableRawBufferPointer) throws -> ResultType) throws -> ResultType {
+            try withUnsafeMutableBytes(body)
+        }
+
         @inlinable // This is @inlinable as reasonably small.
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
             assert(endIndex + buffer.count < HalfInt.max)
@@ -181,6 +226,20 @@ extension Data {
             slice = slice.lowerBound..<HalfInt(Int(slice.upperBound) + buffer.count)
         }
         
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        @_alwaysEmitIntoClient
+        mutating func append<E: Error>(
+            _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) {
+            assert(count + extraCapacity < HalfInt.max)
+            reserveCapacity(count + extraCapacity)
+            var appendedCount = 0
+            defer {
+                slice = slice.lowerBound..<(slice.upperBound + HalfInt(appendedCount))
+            }
+            try storage.withUninitializedBytes(extraCapacity: extraCapacity, location: endIndex, &appendedCount, initializer)
+        }
+
         @inlinable // This is @inlinable as reasonably small.
         subscript(index: Index) -> UInt8 {
             get {
@@ -246,3 +305,5 @@ extension Data {
         }
     }
 }
+
+#endif

@@ -20,7 +20,11 @@ import Testing
 @testable import Foundation
 #endif
 
-@Suite("Gregorian Calendar")
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
+@Suite("Gregorian Calendar", .tags(.calendar))
 private struct GregorianCalendarTests {
 
     // MARK: Basic

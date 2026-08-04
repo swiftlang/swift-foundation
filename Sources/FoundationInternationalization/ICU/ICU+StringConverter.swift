@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 internal import _FoundationICU
+internal import Synchronization
 
 private extension String.Encoding {
     var _icuConverterName: String? {
@@ -38,7 +39,7 @@ private extension String.Encoding {
 
 extension ICU {
     final class StringConverter: @unchecked Sendable {
-        private let _converter: LockedState<OpaquePointer> // UConverter*
+        private let _converter: Mutex<OpaquePointer> // UConverter*
 
         let encoding: String.Encoding
 
@@ -50,7 +51,7 @@ extension ICU {
             guard let converter = ucnv_open(convName, &status), status.isSuccess else {
                 return nil
             }
-            self._converter = LockedState(initialState: converter)
+            self._converter = Mutex(converter)
             self.encoding = encoding
         }
 
@@ -163,7 +164,7 @@ extension ICU.StringConverter {
 }
 
 extension ICU.StringConverter {
-    private static let _converters: LockedState<[String.Encoding: ICU.StringConverter]> = .init(initialState: [:])
+    private static let _converters: Mutex<[String.Encoding: ICU.StringConverter]> = .init([:])
 
     static func converter(for encoding: String.Encoding) -> ICU.StringConverter? {
         return _converters.withLock {

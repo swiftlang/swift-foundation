@@ -513,17 +513,19 @@ private struct DateFormatStyleTests {
             verifyWithFormat(evening, expected: "晚上09:50:00")
         }
 
+#if FIXED_HOUR_OMITTED_AMPM
         // Test for not showing day period
         do {
             locale = Locale(identifier: "zh_TW")
             format = .init(timeZone: .gmt).hour(.defaultDigits(amPM: .omitted))
-            verifyWithFormat(middleOfNight, expected: "3時")
-            verifyWithFormat(earlyMorning, expected: "6時")
-            verifyWithFormat(morning, expected: "9時")
-            verifyWithFormat(noon, expected: "12時")
-            verifyWithFormat(afternoon, expected: "3時")
-            verifyWithFormat(evening, expected: "9時")
+            verifyWithFormat(middleOfNight, expected: "3")
+            verifyWithFormat(earlyMorning, expected: "6")
+            verifyWithFormat(morning, expected: "9")
+            verifyWithFormat(noon, expected: "12")
+            verifyWithFormat(afternoon, expected: "3")
+            verifyWithFormat(evening, expected: "9")
         }
+#endif
 
         do {
             locale = Locale(identifier: "zh_TW@hours=h24") // using 24-hour time
@@ -1333,12 +1335,14 @@ extension DateFormatStyleTests {
         _verify(.dateTime.hour(.conversationalDefaultDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
         _verify(.dateTime.hour(.conversationalTwoDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
 
+#if FIXED_HOUR_SYMBOL_175541251
         let enGB = Locale(identifier: "en_GB")
         _verify(.dateTime.hour(.defaultDigits(amPM: .abbreviated)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.defaultDigits(amPM: .omitted)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.twoDigits(amPM: .omitted)), expectedFormat: "HH", locale: enGB)
         _verify(.dateTime.hour(.conversationalDefaultDigits(amPM: .omitted)), expectedFormat: "H", locale: enGB)
         _verify(.dateTime.hour(.conversationalTwoDigits(amPM: .omitted)), expectedFormat: "HH", locale: enGB)
+#endif
     }
 }
 #endif

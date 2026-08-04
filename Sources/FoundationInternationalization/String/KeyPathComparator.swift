@@ -14,14 +14,14 @@
 import FoundationEssentials
 #endif
 
-/// Compares elements using a `KeyPath`, and a `SortComparator` which compares
-/// elements of the `KeyPath`s `Value` type.
+/// A comparator that uses another sort comparator to provide the comparison of values at a key path.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 public struct KeyPathComparator<Compared>: SortComparator {
-    /// The key path to the property to be used for comparisons.
+    /// The key path that the comparator uses to compare properties.
     @preconcurrency
     public let keyPath: PartialKeyPath<Compared> & Sendable
 
+    /// The sort order that the comparator uses to compare properties.
     public var order: SortOrder {
         get {
             comparator.order
@@ -251,6 +251,14 @@ public struct KeyPathComparator<Compared>: SortComparator {
         self.order = order
     }
 
+    /// Provides the relative ordering of two items according to the ordering of the properties that the comparator's key path references.
+    ///
+    /// The method returns flipped comparisons if the sort order is ``SortOrder/reverse``.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first property to compare.
+    ///   - rhs: The second property to compare.
+    /// - Returns: The relative ordering for the compared properties.
     public func compare(_ lhs: Compared, _ rhs: Compared) -> ComparisonResult {
         let lhsField = extractField(lhs)
         let rhsField = extractField(rhs)

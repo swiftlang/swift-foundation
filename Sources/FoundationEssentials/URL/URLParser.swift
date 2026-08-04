@@ -466,17 +466,7 @@ internal struct RFC3986Parser {
     }
 
     private static func shouldIgnorePort(forSchemeBuffer schemeBuffer: Slice<UnsafeBufferPointer<UInt8>>) -> Bool {
-        let schemeToIgnore = "addressbook".utf8
-        guard schemeBuffer.count == schemeToIgnore.count else {
-            return false
-        }
-        for i in 0..<schemeBuffer.count {
-            let expected = schemeToIgnore[schemeToIgnore.index(schemeToIgnore.startIndex, offsetBy: i)]
-            guard schemeBuffer[i]._lowercased == expected else {
-                return false
-            }
-        }
-        return true
+        return schemeBuffer.elementsEqual("addressbook".utf8)
     }
 
     /// Fast path used during initial URL buffer parsing.
@@ -1138,9 +1128,11 @@ internal struct URLComponentAllowedMask: RawRepresentable {
 
     static let scheme           = Self(rawValue: 0x07fffffe07fffffe03ff680000000000)
 
-    // user, password, and hostIPvFuture use the same allowed character set.
-    static let user             = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
-    static let password         = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
+    // user and password use the same allowed character set.
+    static let user             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+    static let password         = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+
+    // hostIPvFuture is the user/password set + ":"
     static let hostIPvFuture    = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
 
     static let host             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)

@@ -28,22 +28,20 @@ extension NSURL {
         case .cfurlposixPathStyle:
             urlString = parsePOSIX(path, flags: &flags, isDirectory: isDirectory)
         case .cfurlWindowsPathStyle:
-            urlString = parseWindows(path as String, flags: &flags, isDirectory: isDirectory)
+            urlString = parseWindows(path, flags: &flags, isDirectory: isDirectory)
         case .cfurlhfsPathStyle:
             urlString = parseHFS(path as String, flags: &flags, isDirectory: isDirectory)
         default:
             assert(false, "Unexpected path style: \(pathStyle)")
             return false
         }
-        guard let urlString else {
+        guard let urlString, let cfString = _createCFStringFromASCIIString(urlString) else {
             return false
         }
 
         assert(flags.isDisjoint(with: .nonFileImplFlags))
         impl.pointee._header._flags = flags
-        impl.pointee._header._string = Unmanaged<CFString>.passRetained(
-            urlString as CFString
-        )
+        impl.pointee._header._string = cfString
         return true
     }
 
@@ -55,15 +53,14 @@ extension NSURL {
 
         var flags = __CFURLFlags.fileImplFlags
         let buffer = UnsafeBufferPointer(start: fsr, count: length)
-        guard let urlString = parseFileSystemRepresentation(buffer: buffer, flags: &flags, isDirectory: isDirectory) else {
+        guard let urlString = parseFileSystemRepresentation(buffer: buffer, flags: &flags, isDirectory: isDirectory),
+              let cfString = _createCFStringFromASCIIString(urlString) else {
             return false
         }
 
         assert(flags.isDisjoint(with: .nonFileImplFlags))
         impl.pointee._header._flags = flags
-        impl.pointee._header._string = Unmanaged<CFString>.passRetained(
-            urlString as CFString
-        )
+        impl.pointee._header._string = cfString
         return true
     }
 
@@ -91,83 +88,13 @@ extension NSURL {
     }
 }
 
-/// Call this function when `pathBuffer` has already been allocated with enough
-/// space for a trailing slash and we can modify the buffer directly instead of
-/// making a separate allocation.
-///
-/// - Note: `pathBuffer` must be larger than `pathLength`, which
-///   should point to the end of the FSR (first null byte).
-private func parseMutableFileSystemRepresentation(_ pathBuffer: UnsafeMutableBufferPointer<UInt8>, pathLength: Int, flags: inout _URLFlags, isDirectory: Bool) -> String {
-    // Note: pathLength can technically be 0 for FSRs like "\0".
-    assert(pathBuffer.count > 0)
-    assert(pathLength < pathBuffer.count) // Need room for a trailing slash
-
-    var pathLength = pathLength
-    if isDirectory {
-        flags.insert(.hasDirectoryPath)
-        // Append a trailing "/" if one doesn't exist already
-        if pathBuffer[pathLength - 1] != UInt8(ascii: "/") {
-            pathBuffer[pathLength] = UInt8(ascii: "/")
-            pathLength += 1
-        }
-    } else if pathLength == 1 && pathBuffer[0] == UInt8(ascii: "/") {
-        // Override isDirectory if the path is to root
-        flags.insert(.hasDirectoryPath)
-    } else {
-        // Not a directory, remove all trailing slashes except root
-        let rootLength = rootLength(pathBuffer: UnsafeBufferPointer(pathBuffer), length: pathLength)
-        while pathLength > rootLength && pathBuffer[pathLength - 1] == UInt8(ascii: "/") {
-            pathLength -= 1
-        }
-    }
-
-    // pathBuffer.count > 0, so we're OK to unwrap .baseAddress!
-    let fileIDPrefixSize = 10 // "/.file/id="
-    let isFileReferenceURL = (
-        pathLength >= fileIDPrefixSize &&
-        memcmp(pathBuffer.baseAddress!, "/.file/id=", fileIDPrefixSize) == 0
-    )
-
-    // Note: don't insert .hasOldNetLocation, which only considers a non-empty authority
-    var isAbsolute = true
-    if isFileReferenceURL {
-        flags.insert([.hasScheme, .hasHost, .isFileURL, .isFileReferenceURL])
-    } else if pathBuffer[0] == UInt8(ascii: "/") {
-        flags.insert([.hasScheme, .hasHost, .isFileURL])
-    } else {
-        // We don't know if this is a file URL without checking the base
-        isAbsolute = false
-    }
-
-    // Return the full (maybe percent-encoded) URL string
-    var maxEncodedSize = 3 * pathLength
-    let filePrefixSize = 7 // "file://"
-    if isAbsolute {
-        maxEncodedSize += filePrefixSize
-    }
-    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxEncodedSize) { encodedBuffer in
-        var pathStart = 0
-        if isAbsolute {
-            // maxEncodedSize > 0, so we're OK to unwrap .baseAddress!
-            memcpy(encodedBuffer.baseAddress!, "file://", filePrefixSize)
-            pathStart = filePrefixSize
-        }
-        let bytesWritten = URLEncoder.percentEncodeUnchecked(
-            input: UnsafeBufferPointer(rebasing: pathBuffer[..<pathLength]),
-            output: UnsafeMutableBufferPointer(rebasing: encodedBuffer[pathStart...]),
-            // Encode ";" for compatibility
-            component: .pathNoSemicolon,
-            skipAlreadyEncoded: false
-        )
-        if bytesWritten != pathLength {
-            // The path was percent-encoded
-            flags.insert(.hasEncodedPath)
-        }
-        return String(decoding: encodedBuffer[..<(pathStart + bytesWritten)], as: UTF8.self)
-    }
-}
-
-private func parseFileSystemRepresentation(buffer: UnsafeBufferPointer<UInt8>, flags: inout _URLFlags, isDirectory: Bool) -> String? {
+// Swift URL's file path initializers are non-failable, so we don't use
+// this function's logic of checking and failing on embedded null bytes.
+private func parseFileSystemRepresentation(
+    buffer: UnsafeBufferPointer<UInt8>,
+    flags: inout _URLFlags,
+    isDirectory: Bool
+) -> String? {
     // Check for null bytes.
     var pathLength = buffer.count
     if let nullIndex = buffer.firstIndex(of: 0) {
@@ -178,10 +105,21 @@ private func parseFileSystemRepresentation(buffer: UnsafeBufferPointer<UInt8>, f
         pathLength = nullIndex
     }
 
+    guard pathLength > 0 else {
+        return ""
+    }
+
     // Allocate an extra byte in case we need to append a directory slash.
     return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: pathLength + 1) { pathBuffer in
         _ = pathBuffer.initialize(fromContentsOf: buffer[..<pathLength])
-        return parseMutableFileSystemRepresentation(pathBuffer, pathLength: pathLength, flags: &flags, isDirectory: isDirectory)
+        let finalLength = URL.finalPathLength(
+            updating: pathBuffer,
+            currentLength: pathLength,
+            flags: &flags,
+            isDirectory: isDirectory
+        )
+        let path = pathBuffer.span.extracting(first: finalLength)
+        return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: .cfURL)
     }
 }
 
@@ -200,36 +138,53 @@ private func parsePOSIX(_ path: CFString, flags: inout _URLFlags, isDirectory: B
             )
         }
     }
-    let maxFSRSize = CFStringGetMaximumSizeOfFileSystemRepresentation(path) + (isDirectory ? 1 : 0)
-    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxFSRSize) { pathBuffer in
-        guard let pathLength = (path as String)._decomposed(.hfsPlus, into: pathBuffer), pathLength > 0 else {
+    let maxFSRSize = CFStringGetMaximumSizeOfFileSystemRepresentation(path)
+    // Allocate an extra byte in case we need to append a directory slash.
+    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxFSRSize + 1) { pathBuffer in
+        guard var pathLength = (path as String)._decomposed(.hfsPlus, into: pathBuffer) else {
             return nil
         }
-        // _decomposed(_:into:) already checks for embedded null bytes
-        return parseMutableFileSystemRepresentation(pathBuffer, pathLength: pathLength, flags: &flags, isDirectory: isDirectory)
+        // _decomposed(_:into:) already checks for embedded null bytes,
+        // but includes trailing null bytes in the returned length.
+        while pathLength > 0 && pathBuffer[pathLength - 1] == 0 {
+            pathLength -= 1
+        }
+        let finalLength = URL.finalPathLength(
+            updating: pathBuffer,
+            currentLength: pathLength,
+            flags: &flags,
+            isDirectory: isDirectory
+        )
+        let path = pathBuffer.span.extracting(first: finalLength)
+        return URL.parseFinalFileSystemRepresentation(path: path, flags: &flags, compatibility: .cfURL)
     }
 }
 
-private func parseWindows(_ path: String, flags: inout _URLFlags, isDirectory: Bool) -> String? {
-    var path = path.replacing(._backslash, with: ._slash)
+private func parseWindows(_ path: CFString, flags: inout _URLFlags, isDirectory: Bool) -> String? {
+    var path = (path as String).replacing(._backslash, with: ._slash)
     // Standardizes an absolute path like "C:/" to "/C:/"
     _ = URL.isAbsolute(standardizing: &path, pathStyle: .windows)
+    guard !path.isEmpty else {
+        return ""
+    }
     return path.withUTF8 { pathBuffer in
-        guard !pathBuffer.isEmpty else {
-            return nil
-        }
+        // Check for embedded null bytes just like with POSIX path style
         return parseFileSystemRepresentation(buffer: pathBuffer, flags: &flags, isDirectory: isDirectory)
     }
 }
 
 private func parseHFS(_ path: String, flags: inout _URLFlags, isDirectory: Bool) -> String? {
-    var path = posixLikePath(fromHFSPath: path)
-    return path.withUTF8 { pathBuffer in
-        guard !pathBuffer.isEmpty else {
-            return nil as String?
-        }
-        return parseFileSystemRepresentation(buffer: pathBuffer, flags: &flags, isDirectory: isDirectory)
+    if path == ":" {
+        // CFURL code treats this as a non-absolute "/" with a base URL.
+        // Don't insert .hasScheme/.hasHost flags and just return.
+        flags.insert(.hasDirectoryPath)
+        return "/"
     }
+    let path = posixLikePath(fromHFSPath: path)
+    guard !path.isEmpty else {
+        return ""
+    }
+    return URL.parseUTF8Path(path, flags: &flags, isDirectory: isDirectory, compatibility: .cfURL)
 }
 
 // Note this does not percent-encode the path
@@ -269,7 +224,7 @@ private func posixLikePath(fromHFSPath path: String) -> String {
     }
 
     func components(fromHFSPath path: String) -> [String] {
-        var components = path.split(separator: ":").map(String.init)
+        var components = path.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
         if path.utf8.first != ._colon {
             if components.first?.utf8.count == 1, components.first?.utf8.first == ._slash {
                 // "/" is the "magic" path for a UFS root directory
@@ -298,11 +253,17 @@ private func posixLikePath(fromHFSPath path: String) -> String {
 }
 
 private func posixPath(urlPath: String, encoding: String.Encoding, isFileURL: Bool) -> String? {
-    return URLEncoder.percentDecode(
+    guard var path = URLEncoder.percentDecode(
         string: urlPath,
         encoding: encoding,
         excludingASCII: isFileURL ? .posixPath : .none
-    )?._droppingTrailingSlash
+    ) else {
+        return nil
+    }
+    if path.utf8.last == UInt8(ascii: "/") && path.utf8.count > rootLength(path: path) {
+        path = String(Substring(path.utf8.dropLast()))
+    }
+    return path
 }
 
 private func windowsPath(urlPath: String, encoding: String.Encoding) -> String? {

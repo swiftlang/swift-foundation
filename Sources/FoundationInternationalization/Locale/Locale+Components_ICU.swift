@@ -23,7 +23,9 @@ internal import _FoundationICU
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Components {
 
-    /// - Parameter identifier: Unicode language identifier such as "en-u-nu-thai-ca-buddhist-kk-true"
+    /// Creates a locale components instance with the specified identifier.
+    ///
+    /// - Parameter identifier: A BCP-47 language identifier such as `en-u-nu-thai-ca-buddhist` or an ICU-style identifier such as `en@calendar=buddhist;numbers=thai`.
     public init(identifier: String) {
         let languageComponents = Locale.Language.Components(identifier: identifier)
         self.init(languageCode: languageComponents.languageCode, script: languageComponents.script, languageRegion: languageComponents.region)
@@ -138,7 +140,7 @@ extension Locale.LanguageCode {
         }
     }
     
-    /// Returns if the language is an ISO-639 language
+    /// A Boolean value that indicates whether the language is an ISO-639 language.
     public var isISOLanguage: Bool {
         if Locale.LanguageCode._isoLanguageCodeStrings.contains(_normalizedIdentifier) {
             return true
@@ -147,7 +149,7 @@ extension Locale.LanguageCode {
         }
     }
 
-    /// Returns a list of `Locale` language codes that are two-letter language codes defined in ISO 639 and two-letter codes without a two-letter equivalent
+    /// An array of language codes defined in ISO 639.
     public static var isoLanguageCodes: [Locale.LanguageCode] {
         return _isoLanguageCodeStrings.map { Locale.LanguageCode($0) }
     }
@@ -181,13 +183,31 @@ extension Locale.Script {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Region {
+    /// A Boolean value that indicates whether the region is an ISO-defined region.
     public var isISORegion: Bool {
         var status = U_ZERO_ERROR
         let region = uregion_getRegionFromCode(identifier, &status)
         return status.isSuccess && region != nil
     }
 
-    /// Returns all the sub-regions of the region
+    /// An array of all the sub-regions of the region.
+    ///
+    /// The following example looks up the sub-regions of region `021`, which represents North America.
+    ///
+    /// ```swift
+    /// let northAmericaRegion = Locale.Region("021")
+    /// let subRegions = northAmericaRegion.subRegions //BM, CA, GL, PM, US
+    /// ```
+    ///
+    /// The returned `subRegions` have the following identifiers:
+    ///
+    /// | Identifier | Country |
+    /// |---|---|
+    /// | BM | Bermuda |
+    /// | CA | Canada |
+    /// | GL | Greenland |
+    /// | PM | Saint Pierre and Miquelon |
+    /// | US | United States |
     public var subRegions : [Locale.Region] {
         var status = U_ZERO_ERROR
         let icuRegion = uregion_getRegionFromCode(identifier, &status)
@@ -204,7 +224,14 @@ extension Locale.Region {
         return e.elements.map { Locale.Region($0) }
     }
 
-    /// Returns the region within which the region is contained, e.g. for `US`, returns `Northern America`
+    /// The region that contains this region, if any.
+    ///
+    /// The following example shows how to look up the containing region for the `US` region.
+    ///
+    /// ```swift
+    /// let usRegion = Locale.Region("US")
+    /// let containingRegion = usRegion.containingRegion //Identifier "021": Northern America
+    /// ```
     public var containingRegion: Locale.Region? {
         var status = U_ZERO_ERROR
         let icuRegion = uregion_getRegionFromCode(identifier, &status)
@@ -227,7 +254,9 @@ extension Locale.Region {
         return Locale.Region(code)
     }
 
-    /// Returns the continent of the region. Returns `nil` if the continent cannot be determined, such as when the region isn't an ISO region
+    /// The continent that contains this region, if any.
+    ///
+    /// This value can be `nil` when the system can't determine the appropriate continent, such as when the region isn't an ISO region.
     public var continent: Locale.Region? {
         var status = U_ZERO_ERROR
         let icuRegion = uregion_getRegionFromCode(identifier, &status)
@@ -251,7 +280,7 @@ extension Locale.Region {
         return Locale.Region(code)
     }
 
-    /// Returns a list of regions of a specified type defined by ISO
+    /// An array of regions defined by ISO.
     public static var isoRegions: [Locale.Region] {
         _isoRegionCodes.map { Locale.Region($0) }
     }
@@ -496,16 +525,17 @@ extension Locale.Collation {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Currency {
+    /// A Boolean value that indicates whether the currency is in the list of ISO-defined currencies.
     public var isISOCurrency: Bool {
         identifier.withCString(encodedAs: UTF16.self) {
             ucurr_getNumericCode($0) != 0
         }
     }
 
-    /// Represents an unknown currency, used when no currency is involved in a transaction
+    /// A representation of an "unknown" currency, for use with transactions that don't involve any currency.
     public static let unknown = Locale.Currency("xxx")
 
-    /// Returns a list of `Locale` currency codes defined in ISO-4217
+    /// An array containing currencies defined by the currency codes in ISO-4217.
     public static var isoCurrencies: [Locale.Currency] {
         var status = U_ZERO_ERROR
         let values = ucurr_openISOCurrencies(UInt32(UCURR_ALL.rawValue), &status)
@@ -638,8 +668,9 @@ extension Locale.Language {
         return Locale.LanguageDirection(layoutType: orientation)
     }
 
-    /// Ordering of characters within a line.
-    /// For example, left-to-right for English; top-to-bottom for Mongolian in the Mongolian Script
+    /// The ordering of characters within a line.
+    ///
+    /// For example, English uses left-to-right while Mongolian in the Mongolian script uses top-to-bottom.
     public var characterDirection: Locale.LanguageDirection {
         var status = U_ZERO_ERROR
         let orientation = uloc_getCharacterOrientation(components.identifier, &status)
@@ -652,8 +683,11 @@ extension Locale.Language {
 
     // MARK: - Getting information
 
-    /// Returns the parent language of a language. For example, the parent language of `"en_US_POSIX"` is `"en_US"`
-    /// Returns nil if the parent language cannot be determined
+    /// The parent language of this language, if available.
+    ///
+    /// For example, the parent language of `en_US_POSIX` is `en_US`.
+    ///
+    /// If the system can't determine a parent language, this value is `nil`.
     public var parent: Locale.Language? {
         let parentID = _withFixedCharBuffer { buffer, size, status in
             return ualoc_getAppleParent(components.identifier, buffer, size, &status)
@@ -668,12 +702,34 @@ extension Locale.Language {
 
     }
     
+    /// Returns a Boolean value that indicates if the given language shares a common parent with this language.
+    ///
+    /// - Parameter language: A language to compare parentage with.
+    /// - Returns: `true` if this language and `language` share a common parent; `false` otherwise.
     public func hasCommonParent(with language: Locale.Language) -> Bool {
         self.parent == language.parent
     }
 
-    /// Returns if `self` and the specified `language` are equal after expanding missing components
-    /// For example, `en`, `en-Latn`, `en-US`, and `en-Latn-US` are equivalent
+    /// Returns a Boolean value that indicates whether this language and another language are equivalent after expanding missing components.
+    ///
+    /// - Parameter language: A language to compare equivalence with.
+    /// - Returns: `true` if the two languages are equivalent; `false` otherwise.
+    ///
+    /// The following example shows equivalence tests run on various ways of expressing the US English language, followed by a test against UK English.
+    ///
+    /// ```swift
+    /// let en = Locale.Language(identifier: "en")
+    /// let enUS = Locale.Language(identifier: "en-US")
+    /// let enLatn = Locale.Language(identifier: "en-Latn")
+    /// let enLatnUS = Locale.Language(identifier: "en-Latn-US")
+    ///
+    /// let test1 = en.isEquivalent(to: enUS) // true
+    /// let test2 = en.isEquivalent(to: enLatn) // true
+    /// let test3 = en.isEquivalent(to: enLatnUS) // true
+    ///
+    /// let enUK = Locale.Language(identifier: "en-UK")
+    /// let test4 = en.isEquivalent(to: enUK) // false
+    /// ```
     public func isEquivalent(to language: Locale.Language) -> Bool {
         return self.maximalIdentifier == language.maximalIdentifier
     }
@@ -735,7 +791,7 @@ extension Locale.Language {
     
     // MARK: -
 
-    /// The language code of the language. Returns nil if it cannot be determined
+    /// The language code that identifies the language. Returns `nil` if it cannot be determined.
     public var languageCode: Locale.LanguageCode? {
         var result: Locale.LanguageCode?
         if let lang = components.languageCode {
@@ -748,7 +804,7 @@ extension Locale.Language {
         return result
     }
 
-    /// The script of the language. Returns nil if it cannot be determined
+    /// The script of the language. Returns `nil` if it cannot be determined.
     public var script: Locale.Script? {
         var result: Locale.Script?
         if let script = components.script {
@@ -762,7 +818,7 @@ extension Locale.Language {
         return result
     }
 
-    /// The region of the language. Returns nil if it cannot be determined
+    /// The region of the language. Returns `nil` if it cannot be determined.
     public var region: Locale.Region? {
         var result: Locale.Region?
         if let script = components.region {
@@ -778,7 +834,9 @@ extension Locale.Language {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Language.Components {
-    /// - Parameter identifier: Unicode language identifier, such as "en-US", "es-419", "zh-Hant-TW"
+    /// Creates a language components instance from a language identifier.
+    ///
+    /// - Parameter identifier: A Unicode language identifier, like `en-US`, `es-419`, or `zh-Hant-TW`.
     public init(identifier: String) {
         let languageCode = _withFixedCharBuffer { buffer, size, status in
             uloc_getLanguage(identifier, buffer, size, &status)
@@ -811,6 +869,9 @@ extension Locale.Language.Components {
         self = Locale.Language.Components(languageCode: lc, script: sc, region: rc)
     }
     
+    /// Creates a language components instance from an existing language instance.
+    ///
+    /// - Parameter language: A `Locale.Language` instance. This initializer copies over the language code, script, and region from the provided language.
     public init(language: Locale.Language) {
         self = Locale.Language.Components(languageCode: language.languageCode, script: language.script, region: language.region)
     }

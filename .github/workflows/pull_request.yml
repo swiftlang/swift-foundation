@@ -6,14 +6,11 @@ permissions:
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-    paths-ignore:
-      - '*.md'
-      - 'Proposals/**'
 
 jobs:
   tests:
     name: Test (SwiftPM)
-    uses: swiftlang/github-workflows/.github/workflows/swift_package_test.yml@0.0.6
+    uses: swiftlang/github-workflows/.github/workflows/swift_package_test.yml@0.0.13
     with:
       linux_swift_versions: '["nightly-main"]'
       windows_swift_versions: '["nightly-main"]'
@@ -25,6 +22,9 @@ jobs:
       enable_cross_pr_testing: true
       enable_android_sdk_build: true
       android_sdk_versions: '["nightly-main"]'
+      android_sdk_triples: '["aarch64-unknown-linux-android23", "armv7-unknown-linux-android23", "x86_64-unknown-linux-android26"]'
+      enable_android_sdk_checks: true
+      enable_macos_swiftly_checks: true
 
   cmake_build:
     name: Build (CMake)
@@ -32,20 +32,34 @@ jobs:
     container: swiftlang/swift:nightly-main-noble
     steps:
       - name: Checkout Sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install Dependencies
         shell: bash
-        run: apt update && apt install -y cmake ninja-build
+        run: apt update && apt install -y cmake ninja-build jq
       - name: Configure Project
         shell: bash
-        run: cmake -G 'Ninja' -B build -S . -DCMAKE_C_COMPILER=clang -DCMAKE_Swift_COMPILER=swiftc -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=YES
+        run: |
+          mkdir -p build/.cmake/api/v1/query
+          touch build/.cmake/api/v1/query/codemodel-v2
+          cmake -G 'Ninja' -B build -S . -DCMAKE_C_COMPILER=clang -DCMAKE_Swift_COMPILER=swiftc -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=YES
+      - name: Validate CMake File Lists Match SwiftPM
+        shell: bash
+        run: |
+          swift package describe --type json | jq '.targets[] | select(.name == "FoundationEssentials") | .sources[]' | sort > /tmp/swiftpm-essentials
+          cat build/.cmake/api/v1/reply/target-FoundationEssentials-*.json | jq '.sources[].path[29:]' | sort > /tmp/cmake-essentials
+          swift package describe --type json | jq '.targets[] | select(.name == "FoundationInternationalization") | .sources[]' | sort > /tmp/swiftpm-internationalization
+          cat build/.cmake/api/v1/reply/target-FoundationInternationalization-*.json | jq '.sources[].path[39:]' | sort > /tmp/cmake-internationalization
+          exit_code=0
+          diff -u0 -L "SwiftPM" -L "CMake" /tmp/swiftpm-essentials /tmp/cmake-essentials && echo "::notice::FoundationEssentials CMakeLists.txt matches SwiftPM" || { echo "::error::FoundationEssentials CMakeLists.txt does not match SwiftPM"; exit_code=1; }
+          diff -u0 -L "SwiftPM" -L "CMake" /tmp/swiftpm-internationalization /tmp/cmake-internationalization  && echo "::notice::FoundationInternationalization CMakeLists.txt matches SwiftPM" || { echo "::error::FoundationInternationalization CMakeLists.txt does not match SwiftPM"; exit_code=1; }
+          exit $exit_code
       - name: Build Project
         shell: bash
         run: cmake --build build
 
   soundness:
     name: Soundness
-    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.6
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.13
     with:
       license_header_check_project_name: "Swift.org"
       license_header_check_enabled: false

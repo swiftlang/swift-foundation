@@ -152,7 +152,7 @@
 #ifndef TZDEFAULT
 #define TZDEFAULT    "/etc/localtime"
 #endif /* !defined TZDEFAULT */
-#elif TARGET_OS_WINDOWS || TARGET_OS_WASI
+#elif TARGET_OS_WINDOWS || TARGET_OS_WASI || TARGET_OS_EMSCRIPTEN
 /* not required */
 #else
 #error "possibly define TZDIR and TZDEFAULT for this platform"

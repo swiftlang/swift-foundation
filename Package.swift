@@ -9,7 +9,7 @@ import CompilerPluginSupport
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
 ]
-let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4"]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.5"]
 
 // Availability Macro Utilities
 
@@ -69,7 +69,7 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                from: "1.1.0"),
+                exact: "1.1.6"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
@@ -144,7 +144,7 @@ let package = Package(
             "ProgressManager/CMakeLists.txt",
           ],
           cSettings: [
-            .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))
           ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
@@ -152,7 +152,8 @@ let package = Package(
             .enableExperimentalFeature("AddressableTypes"),
             .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
-            .enableExperimentalFeature("AccessLevelOnImport")
+            .enableExperimentalFeature("AccessLevelOnImport"),
+            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
           ] + availabilityMacros + featureSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
@@ -167,15 +168,24 @@ let package = Package(
             resources: [
                 .copy("Resources")
             ],
-            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+            swiftSettings: [
+                .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
+            ] + availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
 
         // FoundationInternationalization
+        .target(
+            name: "_FoundationInternationalizationData",
+            dependencies: [
+                "_FoundationCShims"
+            ]
+        ),
         .target(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "_FoundationCShims"),
+                .target(name: "_FoundationInternationalizationData"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             exclude: [
@@ -224,7 +234,8 @@ let package = Package(
         .testTarget(
             name: "FoundationMacrosTests",
             dependencies: [
-                "FoundationMacros"
+                "FoundationMacros",
+                "FoundationEssentials"
             ],
             swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         )

@@ -160,4 +160,23 @@ internal func _createCFStringFromCharacterBuffer(
     }
 }
 
+internal func _createCFStringFromASCIIString(_ string: String) -> Unmanaged<CFString>? {
+    let ascii = CFStringBuiltInEncodings.ASCII.rawValue
+    guard !string.isEmpty else {
+        guard let empty = CFStringCreateWithCString(kCFAllocatorDefault, "", ascii) else {
+            return nil
+        }
+        return Unmanaged.passRetained(empty)
+    }
+    var mut = string
+    return mut.withUTF8 { utf8 in
+        guard let result = CFStringCreateWithBytes(
+            kCFAllocatorDefault, utf8.baseAddress!, utf8.count, ascii, false
+        ) else {
+            return nil
+        }
+        return Unmanaged.passRetained(result)
+    }
+}
+
 #endif // FOUNDATION_FRAMEWORK
