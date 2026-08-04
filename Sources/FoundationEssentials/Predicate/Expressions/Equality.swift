@@ -42,11 +42,11 @@ extension PredicateExpressions {
 
 @available(FoundationPreview 6.4, *)
 extension PredicateExpressions {
-    public static func build_Equal<LHS, Wrapped>(lhs: LHS, rhs: NilLiteral<Wrapped>) -> Equal<OptionalFlatMap<LHS, Wrapped, Value<Bool>, Bool>, Value<Bool?>> {
+    public static func build_Equal<LHS, Wrapped>(lhs: LHS, nilLiteral: NilLiteral<Wrapped>) -> Equal<OptionalFlatMap<LHS, Wrapped, Value<Bool>, Bool>, Value<Bool?>> {
         Equal(lhs: OptionalFlatMap(lhs) { _ in Value(true) }, rhs: Value(nil))
     }
     
-    public static func build_Equal<Wrapped, RHS>(lhs: NilLiteral<Wrapped>, rhs: RHS) -> Equal<Value<Bool?>, OptionalFlatMap<RHS, Wrapped, Value<Bool>, Bool>> {
+    public static func build_Equal<Wrapped, RHS>(nilLiteral: NilLiteral<Wrapped>, rhs: RHS) -> Equal<Value<Bool?>, OptionalFlatMap<RHS, Wrapped, Value<Bool>, Bool>> {
         Equal(lhs: Value(nil), rhs: OptionalFlatMap(rhs) { _ in Value(true) })
     }
 }
