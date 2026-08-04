@@ -88,3 +88,17 @@ extension Span<UInt8> {
         return false
     }
 }
+
+extension OutputRawSpan {
+    @_alwaysEmitIntoClient
+    mutating func _append(copying span: RawSpan) {
+        precondition(self.freeCapacity >= span.byteCount, "Insufficient space to copy the provided span (have \(self.freeCapacity) bytes for writing \(span.byteCount) bytes)")
+        self.withUnsafeMutableBytes { buffer, initializedCount in
+            let dest = UnsafeMutableRawBufferPointer(rebasing: buffer.suffix(from: initializedCount))
+            span.withUnsafeBytes { src in
+                dest.copyMemory(from: src)
+                initializedCount += src.count
+            }
+        }
+    }
+}

@@ -130,13 +130,20 @@ extension Data {
             }
         }
 
+        @_alwaysEmitIntoClient
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        mutating func edit<E: Error, R: ~Copyable>(_ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
+            self.ensureUniqueReference()
+            return try _storage.edit(range: &_slice, body)
+        }
+
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
-            addingCapacity uninitializedCount: Int,
+            addingCount newBytesCount: Int,
             _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
-            reserveCapacity(count + uninitializedCount)
+            reserveCapacity(count + newBytesCount)
             var appendedCount = 0
             defer {
                 let newUpperBound = _slice.upperBound + appendedCount
@@ -146,7 +153,7 @@ extension Data {
                     _slice = _slice.lowerBound..<newUpperBound
                 }
             }
-            try _storage.withUninitializedBytes(extraCapacity: uninitializedCount, location: endIndex, &appendedCount, initializer)
+            try _storage.withUninitializedBytes(extraCapacity: newBytesCount, location: endIndex, &appendedCount, initializer)
         }
         
         @_alwaysEmitIntoClient @inline(__always)
@@ -204,7 +211,30 @@ extension Data {
             let resultingUpper = upper - (subrange.upperBound - subrange.lowerBound) + cnt
             _slice = _slice.lowerBound..<resultingUpper
         }
-        
+
+        @_alwaysEmitIntoClient
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        mutating func replaceSubrange<E: Error>(
+            _ subrange: Range<Int>,
+            addingCount newBytesCount: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) -> Void {
+            precondition(startIndex <= subrange.lowerBound, "index \(subrange.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
+            precondition(subrange.upperBound <= endIndex, "index \(subrange.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
+
+            if subrange.isEmpty && newBytesCount == 0 { return }
+
+            ensureUniqueReference()
+            var endIndex = endIndex
+            defer {
+                _slice = _slice.lowerBound ..< endIndex
+                if _slice.lowerBound == 0 && endIndex == 0 {
+                    _storage = .empty
+                }
+            }
+            try _storage.replaceSubrange(subrange, endIndex: &endIndex, addingCount: newBytesCount, initializingWith: initializer)
+        }
+
         @_alwaysEmitIntoClient
         subscript(index: Index) -> UInt8 {
             get {
