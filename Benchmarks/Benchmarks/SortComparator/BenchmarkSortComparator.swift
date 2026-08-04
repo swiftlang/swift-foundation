@@ -20,13 +20,6 @@ import FoundationInternationalization
 import Foundation
 #endif
 
-#if FOUNDATION_FRAMEWORK
-// FOUNDATION_FRAMEWORK has a scheme per benchmark file, so only include one benchmark here.
-let benchmarks: @Sendable () -> Void = {
-    sortComparatorBenchmarks()
-}
-#endif
-
 /// Number of elements sorted per benchmark iteration.
 private let elementCount = 100_000
 
@@ -245,7 +238,7 @@ private func benchmarkClosureSort<Element: Sendable>(
     }
 }
 
-func sortComparatorBenchmarks() {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal]
     Benchmark.defaultConfiguration.scalingFactor = .one
     Benchmark.defaultConfiguration.maxDuration = .seconds(5)
