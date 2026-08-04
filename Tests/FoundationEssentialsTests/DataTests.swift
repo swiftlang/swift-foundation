@@ -2164,6 +2164,11 @@ private final class DataTests {
             var data = try #require("Hello World".data(using: .utf8))
             data.replaceSubrange(5..<200, with: Data())
         }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data.replaceSubrange(-1..<1, with: Data())
+        }
     }
     
     @Test func bounding_failure_replace2() async {
@@ -2222,6 +2227,11 @@ private final class DataTests {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data[100] = 4
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[-1] = 4
         }
     }
 
