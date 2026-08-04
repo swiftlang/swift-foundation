@@ -267,6 +267,9 @@ internal struct JSONScanner {
     var reader: DocumentReader
     var depth: Int = 0
     var partialMap = JSONPartialMapData()
+    
+    // True if any scanned number extends to the last byte of the input.
+    var numberExtendsToEndOfBuffer: Bool = false
 
     internal struct Options {
         var assumesTopLevelDictionary = false
@@ -376,8 +379,8 @@ internal struct JSONScanner {
 
         let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
 
-        // If the input contains only a number, we have to copy the input into a form that is guaranteed to have a trailing NUL byte so that strtod doesn't perform a buffer overrun.
-        if case .number = map.loadValue(at: 0)! {
+        // If any number token extends to the last byte of the input, we must give the map an owned buffer with a trailing NUL so that `strtod` (which peeks one byte past the last consumed digit) doesn't OOB read. Covers the top-level-number case and the `assumesTopLevelDictionary` case where the last value in the (brace-less) object is a number.
+        if numberExtendsToEndOfBuffer {
             map.copyInBuffer()
         }
 
@@ -577,6 +580,9 @@ internal struct JSONScanner {
         var containsExponent = false
         reader.skipNumber(containsExponent: &containsExponent)
         let end = reader.readIndex
+        if reader.isEOF {
+            numberExtendsToEndOfBuffer = true
+        }
         return partialMap.record(tagType: containsExponent ? .numberContainingExponent : .number, count: reader.distance(from: start, to: end), dataOffset: reader.byteOffset(at: start), with: reader)
     }
 
