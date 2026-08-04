@@ -609,7 +609,7 @@ extension Environment {
     ///
     /// This type respects the compiled platform's case sensitivity requirements.
     public struct Key: Codable, Hashable, ExpressibleByStringLiteral, Sendable {
-        public var rawValue: String
+        public let rawValue: String
     }
 }
 
@@ -711,7 +711,7 @@ extension OutputProtocol where Self == FileDescriptorOutput {
 }
 ```
 
-Symmetrically, `FileDescriptorInput` gains a `.standardInput` property that feeds the child the parent process's standard input:
+Symmetrically, `FileDescriptorInput` gains a `.currentStandardInput` property that feeds the child the parent process's standard input:
 
 ```swift
 extension InputProtocol where Self == FileDescriptorInput {
@@ -719,7 +719,7 @@ extension InputProtocol where Self == FileDescriptorInput {
     /// the current process.
     ///
     /// The file descriptor isn't closed afterwards.
-    public static var standardInput: Self
+    public static var currentStandardInput: Self
 }
 ```
 
