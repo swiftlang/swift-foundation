@@ -24,7 +24,7 @@ import CRT
 @preconcurrency import WASILibc
 #endif
 
-/// Shared astronomical and Gregorian day-number toolkit for the non-arithmetic calendars (Chinese today; Islamic and Hindu variants can build on it). Solar/lunar theory follows Reingold & Dershowitz, Calendrical Calculations (built on the Meeus and Bretagnon & Simon series); all APIs are calendar-agnostic.
+/// `Docs/Chinese_Calendar_Math.md` explains how all of this works: the two time scales and delta-T, the solar longitude and new-moon series, how a moment becomes a day, and the precision limits. Shared astronomical and Gregorian day-number toolkit for the non-arithmetic calendars (Chinese today; Islamic and Hindu variants can build on it). Solar/lunar theory follows Reingold & Dershowitz, Calendrical Calculations (built on the Meeus and Bretagnon & Simon series); all APIs are calendar-agnostic.
 internal enum _CalendarAstronomy {
     static let meanSynodicMonth = 29.530588861
     static let j2000 = 730120.5
