@@ -641,6 +641,7 @@ extension Data {
                     precondition(bounds.lowerBound == 0 && (bounds.upperBound - bounds.lowerBound) == 0, "Range \(bounds) out of bounds 0..<0")
                     return Data()
                 case .inline(let inline):
+                    precondition(bounds.lowerBound >= 0, "Range \(bounds) out of bounds 0..<\(inline.count)")
                     precondition(bounds.upperBound <= inline.count, "Range \(bounds) out of bounds 0..<\(inline.count)")
                     if bounds.lowerBound == 0 {
                         var newInline = inline
