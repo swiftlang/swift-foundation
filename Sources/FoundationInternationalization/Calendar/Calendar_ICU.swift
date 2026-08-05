@@ -1934,7 +1934,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
             var unitLength = 0.0
             var keepHourInvariant = false
-            var newAmount = Int32(truncatingIfNeeded: amount)
+            var newAmount = Int32(clamping: amount)
             switch field {
             case UCAL_MILLISECOND, UCAL_MILLISECONDS_IN_DAY:
                 unitLength = 1.0
@@ -2016,9 +2016,9 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             return result
         } else {
             if wrap {
-                ucal_roll(ucalendar, field, Int32(truncatingIfNeeded: amount), &status)
+                ucal_roll(ucalendar, field, Int32(clamping: amount), &status)
             } else {
-                ucal_add(ucalendar, field, Int32(truncatingIfNeeded: amount), &status)
+                ucal_add(ucalendar, field, Int32(clamping: amount), &status)
             }
 
             let result = ucal_getMillis(ucalendar, &status)
