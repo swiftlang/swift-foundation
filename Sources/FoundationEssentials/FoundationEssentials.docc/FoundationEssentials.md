@@ -21,6 +21,7 @@ Foundation Essentials provides a canonical implementation of these types, so dev
 
 - <doc:NumbersDataAndBasicValues>
 - <doc:StringsAndText>
+- <doc:Collections>
 - <doc:DatesAndTimes>
 - <doc:FiltersAndSorting>
 - <doc:DataFormatting>

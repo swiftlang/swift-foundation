@@ -10,6 +10,8 @@
 - ``PredicateExpression``
 - ``StandardPredicateExpression``
 - ``PredicateExpressions``
+- ``Expression(_:)``
+- ``Expression``
 
 ### Sorting
 
