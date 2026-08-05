@@ -3,7 +3,7 @@
 
 ## Topics
 
-### Enumeration Cases
+### Working with deallocator behaviors
 
 - ``custom(_:)``
 - ``free``

@@ -3,7 +3,7 @@
 
 ## Topics
 
-### Enumeration Cases
+### Working with directory hints
 
 - ``checkFileSystem``
 - ``inferFromPath``
