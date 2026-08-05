@@ -18,7 +18,9 @@ import FoundationEssentials
 
 internal import Synchronization
 
+#if canImport(_FoundationInternationalizationData)
 internal import _FoundationInternationalizationData
+#endif
 
 // MARK: - Public-style bridges
 
