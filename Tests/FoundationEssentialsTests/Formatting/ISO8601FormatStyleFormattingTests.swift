@@ -207,12 +207,12 @@ private struct ISO8601FormatStyleFormattingTests {
     }
     
     @Test func rounding() {
-        // Date is: "1970-01-01 15:35:45.9999". Rounding the fractional seconds to the nearest
-        // millisecond rounds .9999 up to a full second, which carries through the calendar, so the
-        // output is the next whole second 15:35:46.000, not the truncated 15:35:45.999.
+        // Date is: "1970-01-01 15:35:45.9999". Rounding to the nearest millisecond is clamped so it
+        // never carries into the next second, so a fraction this close to a full second still
+        // formats as .999 rather than advancing to 15:35:46.000.
         let date = Date(timeIntervalSinceReferenceDate: -978251054.0 - 0.0001)
         let str = Date.ISO8601FormatStyle().timeZone(separator: .colon).time(includingFractionalSeconds: true).timeSeparator(.colon).format(date)
-        #expect(str == "15:35:46.000Z")
+        #expect(str == "15:35:45.999Z")
     }
 
     @Test func fractionalSecondsRoundToNearestMillisecond() throws {
@@ -234,38 +234,35 @@ private struct ISO8601FormatStyleFormattingTests {
             #expect(formatted.hasSuffix(suffix), "ms=\(ms) formatted as \(formatted)")
         }
 
-        // A sub-millisecond remainder that rounds up to a full millisecond carries into the
-        // seconds field through the calendar, so .9996 at second 11 reads as the next whole second.
-        #expect(style.format(Date(timeIntervalSince1970: base + 0.9996)) == "2023-01-18T10:04:12.000")
+        // A sub-millisecond remainder close enough to a full second is clamped rather than carried,
+        // so .9996 at second 11 still reads as second 11 with the largest representable fraction.
+        #expect(style.format(Date(timeIntervalSince1970: base + 0.9996)) == "2023-01-18T10:04:11.999")
     }
 
-    @Test func fractionalSecondsCarryAtSecondBoundary() throws {
-        // parkera's scenario from issue #963: a time like HH:MM:59.9996 formatted with three
-        // fractional digits and round-nearest must not read HH:MM:59.999, which keeps the wrong
-        // value at the boundary. Because the rounding now happens at the Date entry point, the
-        // sub-millisecond remainder rounds up and the calendar carries it across the second.
+    @Test func fractionalSecondsDoNotCarryAtSecondBoundary() throws {
+        // Rounding here exists to undo binary representation error, not to advance the instant. A
+        // time like HH:MM:59.9996 must stay in that second and format as HH:MM:59.999 rather than
+        // rolling the second, the minute, and potentially the day forward.
         let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
 
-        // 1674036299.0 is 2023-01-18T10:04:59. The .9996 remainder rounds up to a full second, so
-        // the output carries to the next whole second: 10:05:00.000, never 10:04:59.999.
-        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_299.0 + 0.9996)) == "2023-01-18T10:05:00.000")
+        // 1674036299.0 is 2023-01-18T10:04:59, so the .9996 remainder must not reach 10:05:00.000.
+        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_299.0 + 0.9996)) == "2023-01-18T10:04:59.999")
 
-        // 0.9999s also carries to the next whole second.
-        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_251.0 + 0.9999)) == "2023-01-18T10:04:12.000")
+        // 0.9999s is likewise clamped instead of carrying.
+        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_251.0 + 0.9999)) == "2023-01-18T10:04:11.999")
     }
 
-    @Test func fractionalSecondsCarryAcrossDSTBoundary() throws {
-        // Carrying a rounded-up millisecond across a second can also cross a daylight saving time
-        // transition. Use US Pacific, where 2023-03-12 01:59:59.9996 local rounds up into the
-        // 03:00 wall-clock jump (02:00 does not exist). The calendar must produce a consistent
-        // wall-clock time and time zone offset for the rounded Date.
+    @Test func fractionalSecondsDoNotCarryAcrossDSTBoundary() throws {
+        // Because rounding never carries across a second, it also cannot push a time across a
+        // daylight saving transition. Use US Pacific, where 2023-03-12 01:59:59.9996 local sits in
+        // the last second before the spring-forward gap and must stay there.
         guard let pacific = TimeZone(identifier: "America/Los_Angeles") else { return }
         let style = Date.ISO8601FormatStyle(timeZone: pacific).year().month().day().time(includingFractionalSeconds: true).timeZone(separator: .colon)
 
-        // 1678615199.0 is 2023-03-12T01:59:59 Pacific (PST, -08:00), the last second before the
-        // spring-forward gap. Rounding .9996 up carries the wall clock to 03:00:00 PDT (-07:00).
+        // 1678615199.0 is 2023-03-12T01:59:59 Pacific (PST, -08:00). The output keeps that wall
+        // clock and offset instead of jumping to 03:00:00 PDT.
         let formatted = style.format(Date(timeIntervalSince1970: 1_678_615_199.0 + 0.9996))
-        #expect(formatted == "2023-03-12T03:00:00.000-07:00")
+        #expect(formatted == "2023-03-12T01:59:59.999-08:00")
     }
 
     @Test func fractionalSecondsRoundTripParseThenFormat() throws {

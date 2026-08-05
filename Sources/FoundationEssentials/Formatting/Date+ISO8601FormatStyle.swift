@@ -357,18 +357,6 @@ extension Date.ISO8601FormatStyle : FormatStyle {
             }
         }
 
-        // When fractional seconds are included, the output's finest unit is the millisecond, so
-        // the sub-millisecond part is the remainder we are about to drop. Round the date to the
-        // nearest millisecond here, at the Date entry point, before extracting components. This
-        // lets the calendar carry any overflow correctly across seconds, minutes, hours, days, and
-        // the time zone boundary. Coarser fields keep truncating, so date-only and whole-second
-        // formatting are unchanged.
-        var value = value
-        if includingFractionalSeconds {
-            let interval = value.timeIntervalSinceReferenceDate
-            value = Date(timeIntervalSinceReferenceDate: (interval * 1000.0).rounded() / 1000.0)
-        }
-
         let secondsFromGMT: Int?
         var components = componentsFormatStyle._calendar._dateComponents(whichComponents, from: value)
         if fields.contains(.timeZone) {
@@ -377,13 +365,17 @@ extension Date.ISO8601FormatStyle : FormatStyle {
             secondsFromGMT = nil
         }
 
-        // The date is already rounded to the nearest millisecond above, but the calendar extracts
-        // the nanosecond from a `Double` fraction, so it lands a hair off the exact millisecond
-        // (e.g. 122999906 for .123). Snap the nanosecond onto the nearest millisecond so the shared
-        // formatter can truncate it back to the right value. The cross-second carry already happened
-        // on the date, so this only cleans up the float error and never reaches a full second.
+        // A `Date` built from a fractional `TimeInterval` cannot represent that fraction exactly, so
+        // the calendar extracts a nanosecond that sits just below the intended value (.123 arrives
+        // as 122999906). Truncating that to milliseconds reads back .122. Rounding to the nearest
+        // millisecond recovers .123, which is the value the caller asked for.
+        //
+        // The rounding is clamped so it can never carry into the next second. Correcting
+        // representation error is the goal, and a fraction genuinely close to a full second (45.9999)
+        // should still format as 45.999 rather than advancing the second, minute, or day.
         if includingFractionalSeconds, let ns = components.nanosecond {
-            components.nanosecond = Int((Double(ns) / 1_000_000.0).rounded()) * 1_000_000
+            let milliseconds = min(Int((Double(ns) / 1_000_000.0).rounded()), 999)
+            components.nanosecond = milliseconds * 1_000_000
         }
 
         return format(components, appendingTimeZoneOffset: secondsFromGMT)
