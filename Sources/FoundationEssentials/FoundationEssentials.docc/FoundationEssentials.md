@@ -28,7 +28,6 @@ Foundation Essentials provides a canonical implementation of these types, so dev
 
 ### App support
 
-- <doc:Resources>
 - <doc:TaskManagement>
 - <doc:Notifications>
 - <doc:ErrorsAndExceptions>
@@ -38,6 +37,3 @@ Foundation Essentials provides a canonical implementation of these types, so dev
 - <doc:FileSystem>
 - <doc:ArchivesAndSerialization>
 
-### Networking
-
-- <doc:URLs>
