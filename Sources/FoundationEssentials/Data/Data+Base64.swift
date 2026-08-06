@@ -85,14 +85,14 @@ extension Data.Base64EncodingOptions {
 
 extension Data.Base64DecodingOptions {
     /// Modify the decoding algorithm so that it expects the base64url alphabet instead of the default base64 alphabet
-    @available(FoundationPreview 6.3, *)
+    @available(FoundationPreview 6.5, *)
     public static let base64URLAlphabet = Self(rawValue: 1 << 2)
 
     /// Modify the decoding algorithm so that it does not expect a padding character at the end of the base64 encoded result.
     /// If the base64 encoded data has a padding character, `nil` will be returned.
     ///
     /// - Warning: This option is ignored if `ignoreUnknownCharacters` is used at the same time.
-    @available(FoundationPreview 6.3, *)
+    @available(FoundationPreview 6.5, *)
     public static let omitPaddingCharacter = Self(rawValue: 1 << 3)
 }
 
