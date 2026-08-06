@@ -2233,6 +2233,26 @@ private final class DataTests {
             var data = try #require("Hello World".data(using: .utf8))
             data[-1] = 4
         }
+
+        await #expect(processExitsWith: .failure) {
+            let data = try #require("Hello World".data(using: .utf8))
+            _ = data[-1 ..< 2]
+        }
+
+        await #expect(processExitsWith: .failure) {
+            let data = try #require("Hello World".data(using: .utf8))
+            _ = data[2 ..< 100]
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[-1 ..< 2] = Data()
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[2 ..< 100] = Data()
+        }
     }
 
     @Test func bounding_failure_copyBytesSourceOverflow() async {
