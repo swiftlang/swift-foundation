@@ -360,7 +360,8 @@ extension ICUDateFormatter.DateFormatInfo {
             return pattern
         }
 
-        // ICU applies its two-digit year window only to year fields narrower than 3. Era years are already scoped by the parsed era, so widen only those affected fields for parsing.
+        // ICU applies its two-digit year window only to year fields narrower than 3.
+        // Era years are already scoped by the parsed era, so widen only those affected fields for parsing.
         var containsEra = false
         var result = ""
         result.reserveCapacity(pattern.utf8.count)
