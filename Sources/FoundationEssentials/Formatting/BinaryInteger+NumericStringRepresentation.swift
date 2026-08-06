@@ -13,15 +13,17 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 // MARK: - BinaryInteger + Numeric string representation

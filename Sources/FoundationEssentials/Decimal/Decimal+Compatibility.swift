@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift project authors
+// Copyright (c) 2024-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -20,35 +20,10 @@ internal import _ForSwiftFoundation
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal {
+    /// An alias for a type that specifies possible rounding modes.
     public typealias RoundingMode = NSDecimalNumber.RoundingMode
+    /// An alias for a type that specifies possible calculation errors.
     public typealias CalculationError = NSDecimalNumber.CalculationError
-}
-
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal {
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func add(_ other: Decimal) {
-        self += other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func subtract(_ other: Decimal) {
-        self -= other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func multiply(by other: Decimal) {
-        self *= other
-    }
-
-    @available(swift, obsoleted: 4, message: "Please use arithmetic operators instead")
-    @_transparent
-    public mutating func divide(by other: Decimal) {
-        self /= other
-    }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -80,7 +55,12 @@ extension Decimal : _ObjectiveCBridgeable {
 // MARK: - Bridging code to C functions
 // We have one implementation function for each, and an entry point for both Darwin (cdecl, exported from the framework), and swift-corelibs-foundation (SPI here and available via that package as API)
 
-#if FOUNDATION_FRAMEWORK
+/// Returns a decimal number raised to a given power.
+///
+/// - Parameters:
+///   - x: The decimal number to raise to the power of `y`.
+///   - y: The power to raise `x` to.
+/// - Returns: The result of raising `x` to the power `y`. Returns `NaN` if the operation fails.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     let result = try? x._power(
@@ -88,15 +68,6 @@ public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     )
     return result ?? .nan
 }
-#else
-@_spi(SwiftCorelibsFoundation)
-public func _pow(_ x: Decimal, _ y: Int) -> Decimal {
-    let result = try? x._power(
-        exponent: y, roundingMode: .plain
-    )
-    return result ?? .nan
-}
-#endif
 
 private func __NSDecimalAdd(
     _ result: UnsafeMutablePointer<Decimal>,
@@ -140,10 +111,13 @@ private func __NSDecimalSubtract(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let subtraction = try lhs.pointee._subtract(
+        let subtraction = try lhs.pointee._subtractReportingInexact(
             rhs: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = subtraction
+        result.pointee = subtraction.result
+        if subtraction.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
@@ -171,14 +145,19 @@ private func __NSDecimalMultiply(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try lhs.pointee._multiply(
+        let product = try lhs.pointee._multiplyReportingInexact(
             by: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = product
+        result.pointee = product.result
+        if product.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }
@@ -202,14 +181,19 @@ private func __NSDecimalDivide(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try lhs.pointee._divide(
+        let quotient = try lhs.pointee._divideReportingInexact(
             by: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = product
+        result.pointee = quotient.result
+        if quotient.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }

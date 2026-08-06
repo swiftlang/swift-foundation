@@ -14,6 +14,27 @@
 
 target_sources(FoundationEssentials PRIVATE
     URL.swift
+    URL_Bridge.swift
+    URL_C+Encoding.swift
+    URL_C+File.swift
+    URL_C+Parsing.swift
+    URL_C+Resolution.swift
+    URL_C+Spans.swift
+    URL_File.swift
+    URL_Impl.swift
+    URL_Info.swift
+    URL_Parsing.swift
+    URL_Protocol.swift
+    URL_Resolution.swift
+    URL_Swift.swift
+    URL_Validation.swift
     URLComponents.swift
     URLComponents_ObjC.swift
-    URLParser.swift)
+    URLEncoder.swift
+    URLParser.swift
+    URLTemplate_Expression.swift
+    URLTemplate_PercentEncoding.swift
+    URLTemplate_Substitution.swift
+    URLTemplate_Value.swift
+    URLTemplate_VariableName.swift
+    URLTemplate.swift)

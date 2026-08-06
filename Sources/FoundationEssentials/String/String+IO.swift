@@ -18,33 +18,18 @@ internal import _FoundationCShims
 
 fileprivate let stringEncodingAttributeName = "com.apple.TextEncoding"
 
-private struct ExtendingToUTF16Sequence<Base: Sequence<UInt8>> : Sequence {
-    typealias Element = UInt16
-    
-    struct Iterator : IteratorProtocol {
-        private var base: Base.Iterator
-        
-        init(_ base: Base.Iterator) {
-            self.base = base
-        }
-        
-        mutating func next() -> Element? {
-            guard let value = base.next() else { return nil }
-            return UInt16(value)
-        }
-    }
-    
-    private let base: Base
-    
-    init(_ base: Base) {
-        self.base = base
-    }
-    
-    func makeIterator() -> Iterator {
-        Iterator(base.makeIterator())
-    }
+#if !FOUNDATION_FRAMEWORK
+@_spi(SwiftCorelibsFoundation)
+dynamic public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
+    // Provide swift-corelibs-foundation with an entry point to convert some bytes into a String
+    return nil
 }
 
+dynamic package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
+    // Concrete implementation is provided by FoundationInternationalization.
+    return nil
+}
+#endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
@@ -68,7 +53,11 @@ extension String {
         switch encoding {
         case .ascii, .nonLossyASCII:
             func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
-                return String(_validating: buffer, as: Unicode.ASCII.self)
+                guard let span = try? UTF8Span(validating: buffer.span) else {
+                    return nil
+                }
+                guard span.isKnownASCII else { return nil }
+                return String(copying: span)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -105,11 +94,7 @@ extension String {
                 if buffer.starts(with: [0xEF, 0xBB, 0xBF]) {
                     buffer = UnsafeBufferPointer(rebasing: buffer.suffix(from: 3))
                 }
-                if let string = String._tryFromUTF8(buffer) {
-                    return string
-                }
-
-                return String(_validating: buffer, as: UTF8.self)
+                return String._tryFromUTF8(buffer)
             }
 
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
@@ -151,7 +136,7 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
+            } else if let result = String(validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
                 self = result
             } else {
                 return nil
@@ -178,19 +163,16 @@ extension String {
             
             if let maybe, let maybe {
                 self = maybe
-            } else if let result = String(_validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
+            } else if let result = String(validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
                 self = result
             } else {
                 return nil
             }
         #if !FOUNDATION_FRAMEWORK
         case .isoLatin1:
-            guard bytes.allSatisfy(\.isValidISOLatin1) else {
-                return nil
-            }
-            // isoLatin1 is an 8-bit encoding that represents a subset of UTF-16
-            // Map to 16-bit values and decode as UTF-16
-            self.init(_validating: ExtendingToUTF16Sequence(bytes), as: UTF16.self)
+            // ISO Latin 1 bytes are always valid since it's an 8-bit encoding that maps scalars 0x0 through 0xFF
+            // Simply extend each byte to 16 bits and decode as UTF-16
+            self.init(decoding: bytes.lazy.map { UInt16($0) }, as: UTF16.self)
         case .macOSRoman:
             func buildString(_ bytes: UnsafeBufferPointer<UInt8>) -> String {
                 String(unsafeUninitializedCapacity: bytes.count * 3) { buffer in
@@ -207,6 +189,17 @@ extension String {
                 }
             }
             self = bytes.withContiguousStorageIfAvailable(buildString) ?? Array(bytes).withUnsafeBufferPointer(buildString)
+        case .japaneseEUC:
+            // Here we catch encodings that are supported by Foundation Framework
+            // but are not supported by corelibs-foundation.
+            // We delegate conversion to ICU.
+            guard let string = (
+                bytes.withContiguousStorageIfAvailable({ _icuMakeStringFromBytes($0, encoding: encoding) }) ??
+                Array(bytes).withUnsafeBufferPointer({ _icuMakeStringFromBytes($0, encoding: encoding) })
+            ) else {
+                return nil
+            }
+            self = string
         #endif
         default:
 #if FOUNDATION_FRAMEWORK
@@ -225,7 +218,12 @@ extension String {
                 return nil
             }
 #else
-            return nil
+            if let string = (bytes.withContiguousStorageIfAvailable({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) }) ??
+                             Array(bytes).withUnsafeBufferPointer({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) })) {
+                self = string
+            } else {
+                return nil
+            }
 #endif
         }
     }
@@ -252,15 +250,15 @@ extension String {
 
     /// Produces a string created by reading data from the file at a given path and returns by reference the encoding used to interpret the file.
     public init(contentsOfFile path: __shared String, usedEncoding: inout Encoding) throws {
-        self = try String(contentsOfFileOrPath: .path(path), usedEncoding: &usedEncoding)
+        self = try String(contentsOfFileOrPath: path, usedEncoding: &usedEncoding)
     }
 
     /// Produces a string created by reading data from a given URL and returns by reference the encoding used to interpret the data.
     public init(contentsOf url: __shared URL, usedEncoding: inout Encoding) throws {
-        self = try String(contentsOfFileOrPath: .url(url), usedEncoding: &usedEncoding)
+        self = try String(contentsOfFileOrPath: url, usedEncoding: &usedEncoding)
     }
     
-    internal init(contentsOfFileOrPath path: PathOrURL, usedEncoding: inout Encoding) throws {
+    internal init(contentsOfFileOrPath path: borrowing some FileSystemRepresentable & ~Copyable, usedEncoding: inout Encoding) throws {
         var attrs: [String : Data] = [:]
         let data = try readDataFromFile(path: path, reportProgress: false, maxLength: nil, options: [], attributesToRead: [stringEncodingAttributeName], attributes: &attrs)
         if let encodingAttributeData = attrs[stringEncodingAttributeName], let extendedAttributeEncoding = encodingFromDataForExtendedAttribute(encodingAttributeData) {
@@ -281,31 +279,31 @@ extension String {
 
 extension String {
     internal init?(dataOfUnknownEncoding data: Data, usedEncoding: inout Encoding) {
-        let len = data.count
-        let encoding: Encoding
-        if len >= 4 && (
-            (data[0] == 0xFF && data[1] == 0xFE && data[2] == 0x00 && data[3] == 0x00) ||
-            (data[0] == 0x00 && data[1] == 0x00 && data[3] == 0xFE && data[4] == 0xFF)) {
-            // Looks like UTF32
-            encoding = .utf32
-        } else if len >= 2 {
-            if ((len & 1) == 0) && ((data[0] == 0xfe && data[1] == 0xff) || (data[0] == 0xff && data[1] == 0xfe)) {
-                // Looks like Unicode
-                encoding = .unicode
-            } else {
-                // Fallback
-                encoding = .utf8
+        var encoding: Encoding?
+        let bytes = data.bytes
+        let len = bytes.byteCount
+
+        if len >= MemoryLayout<UInt32>.size {
+            let potentialBOM = bytes.load(fromByteOffset: 0, as: UInt32.self)
+            if potentialBOM == 0xFFFE0000 || potentialBOM == 0x0000FEFF {
+                // Looks like UTF32
+                encoding = .utf32
             }
-        } else {
-            // Fallback, short string
-            encoding = .utf8
         }
-        
-        guard let str = String(data: data, encoding: encoding) else {
+
+        if encoding == nil && len >= MemoryLayout<UInt16>.size && (len & 1) == 0 {
+            let potentialBOM = bytes.load(fromByteOffset: 0, as: UInt16.self)
+            if potentialBOM == 0xFEFF || potentialBOM == 0xFFFE {
+                encoding = .unicode
+            }
+        }
+
+        let encodingToUse = encoding ?? .utf8
+        guard let str = String(data: data, encoding: encodingToUse) else {
             return nil
         }
         
-        usedEncoding = encoding
+        usedEncoding = encodingToUse
         self = str
     }
 }
@@ -451,9 +449,14 @@ extension StringProtocol {
             attributes = [:]
         }
 
+#if os(WASI) || os(Emscripten)
+        guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
+        let options : Data.WritingOptions = []
+#else
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
+#endif
 
-        try writeToFile(path: .path(String(path)), data: data, options: options, attributes: attributes, reportProgress: false)
+        try writeToFile(path: String(path), buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
     }
 
     /// Writes the contents of the `String` to the URL specified by url using the specified encoding.
@@ -469,34 +472,14 @@ extension StringProtocol {
             attributes = [:]
         }
 
+#if os(WASI) || os(Emscripten)
+        guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
+        let options : Data.WritingOptions = []
+#else
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
+#endif
 
-        try writeToFile(path: .url(url), data: data, options: options, attributes: attributes, reportProgress: false)
+        try writeToFile(path: url, buffer: data.bytes, options: options, attributes: attributes, reportProgress: false)
     }
 #endif
-}
-
-// TODO: This is part of the stdlib as of 5.11. This is a copy to support building on previous Swift stdlib versions, but should be replaced with the stdlib one as soon as possible.
-extension String {
-    internal init?<Encoding: Unicode.Encoding>(_validating codeUnits: some Sequence<Encoding.CodeUnit>, as encoding: Encoding.Type) {
-        var transcoded: [UTF8.CodeUnit] = []
-        transcoded.reserveCapacity(codeUnits.underestimatedCount)
-        var isASCII = true
-        let error = transcode(
-            codeUnits.makeIterator(),
-            from: Encoding.self,
-            to: UTF8.self,
-            stoppingOnError: true,
-            into: {
-                uint8 in
-                transcoded.append(uint8)
-                if isASCII && (uint8 & 0x80) == 0x80 { isASCII = false }
-            }
-        )
-        if error { return nil }
-        let res = transcoded.withUnsafeBufferPointer{
-            String._tryFromUTF8($0)
-        }
-        if let res { self = res } else { return nil }
-    }
 }

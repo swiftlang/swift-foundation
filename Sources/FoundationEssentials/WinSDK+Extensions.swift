@@ -41,6 +41,10 @@ package var CREATE_NEW: DWORD {
     DWORD(WinSDK.CREATE_NEW)
 }
 
+package var DELETE: DWORD {
+    DWORD(WinSDK.DELETE)
+}
+
 package var ERROR_ACCESS_DENIED: DWORD {
     DWORD(WinSDK.ERROR_ACCESS_DENIED)
 }
@@ -79,6 +83,10 @@ package var ERROR_FILE_NOT_FOUND: DWORD {
 
 package var ERROR_FILENAME_EXCED_RANGE: DWORD {
     DWORD(WinSDK.ERROR_FILENAME_EXCED_RANGE)
+}
+
+package var ERROR_INSUFFICIENT_BUFFER: DWORD {
+    DWORD(WinSDK.ERROR_INSUFFICIENT_BUFFER)
 }
 
 package var ERROR_INVALID_ACCESS: DWORD {
@@ -129,6 +137,7 @@ package var FILE_ATTRIBUTE_READONLY: DWORD {
     DWORD(WinSDK.FILE_ATTRIBUTE_READONLY)
 }
 
+
 package var FILE_ATTRIBUTE_REPARSE_POINT: DWORD {
     DWORD(WinSDK.FILE_ATTRIBUTE_REPARSE_POINT)
 }
@@ -147,6 +156,14 @@ package var FILE_MAP_READ: DWORD {
 
 package var FILE_NAME_NORMALIZED: DWORD {
     DWORD(WinSDK.FILE_NAME_NORMALIZED)
+}
+
+package var FILE_RENAME_FLAG_POSIX_SEMANTICS: DWORD {
+    DWORD(WinSDK.FILE_RENAME_FLAG_POSIX_SEMANTICS)
+}
+
+package var FILE_RENAME_FLAG_REPLACE_IF_EXISTS: DWORD {
+    DWORD(WinSDK.FILE_RENAME_FLAG_REPLACE_IF_EXISTS)
 }
 
 package var FILE_SHARE_DELETE: DWORD {
@@ -225,8 +242,16 @@ package var PATHCCH_ALLOW_LONG_PATHS: ULONG {
     ULONG(WinSDK.PATHCCH_ALLOW_LONG_PATHS.rawValue)
 }
 
+package var PATHCCH_ENSURE_IS_EXTENDED_LENGTH_PATH: ULONG {
+    ULONG(WinSDK.PATHCCH_ENSURE_IS_EXTENDED_LENGTH_PATH.rawValue)
+}
+
 package var RRF_RT_REG_SZ: DWORD {
     DWORD(WinSDK.RRF_RT_REG_SZ)
+}
+
+package var SHGFI_EXETYPE: UINT {
+    UINT(WinSDK.SHGFI_EXETYPE)
 }
 
 package var SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE: DWORD {
@@ -282,6 +307,36 @@ internal func WIN32_FROM_HRESULT(_ hr: HRESULT) -> DWORD {
         return HRESULT_CODE(hr)
     }
     return DWORD(hr)
+}
+
+/// Calls a Win32 API function that fills a (potentially long path) null-terminated string buffer by continually attempting to allocate more memory up until the true max path is reached.
+/// This is especially useful for protecting against race conditions like with GetCurrentDirectoryW where the measured length may no longer be valid on subsequent calls.
+/// - parameter initialSize: Initial size of the buffer (including the null terminator) to allocate to hold the returned string.
+/// - parameter maxSize: Maximum size of the buffer (including the null terminator) to allocate to hold the returned string.
+/// - parameter body: Closure to call the Win32 API function to populate the provided buffer.
+///   Should return the number of UTF-16 code units (not including the null terminator) copied, 0 to indicate an error.
+///   If the buffer is not of sufficient size, should return a value greater than or equal to the size of the buffer.
+internal func FillNullTerminatedWideStringBuffer(initialSize: DWORD, maxSize: DWORD, _ body: (UnsafeMutableBufferPointer<WCHAR>) throws -> DWORD) throws -> String {
+    var bufferCount = max(1, min(initialSize, maxSize))
+    while bufferCount <= maxSize {
+        if let result = try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(bufferCount), { buffer in
+            let count = try body(buffer)
+            switch count {
+            case 0:
+                throw Win32Error(GetLastError())
+            case 1..<DWORD(buffer.count):
+                let result = String(decodingCString: buffer.baseAddress!, as: UTF16.self)
+                assert(result.utf16.count == count, "Parsed UTF-16 count \(result.utf16.count) != reported UTF-16 count \(count)")
+                return result
+            default:
+                bufferCount *= 2
+                return nil
+            }
+        }) {
+            return result
+        }
+    }
+    throw Win32Error(ERROR_INSUFFICIENT_BUFFER)
 }
 
 #endif

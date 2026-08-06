@@ -13,16 +13,18 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -366,15 +368,14 @@ enum _FileOperations {
             var stack = [(path, false)]
             while let (directory, checked) = stack.popLast() {
                 try directory.withNTPathRepresentation {
-                    let ntpath = String(decodingCString: $0, as: UTF16.self)
+                    let fullpath = String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix()
 
-                    guard checked || filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
-
+                    guard checked || filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                     if RemoveDirectoryW($0) { return }
                     let dwError: DWORD = GetLastError()
                     guard dwError == ERROR_DIR_NOT_EMPTY else {
                         let error = CocoaError.removeFileError(dwError, directory)
-                        guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: ntpath) ?? false) else {
+                        guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: fullpath) ?? false) else {
                             throw error
                         }
                         return
@@ -383,21 +384,21 @@ enum _FileOperations {
 
                     for entry in _Win32DirectoryContentsSequence(path: directory, appendSlashForDirectory: false, prefix: [directory]) {
                         try entry.fileNameWithPrefix.withNTPathRepresentation {
-                            let ntpath = String(decodingCString: $0, as: UTF16.self)
+                            let fullpath = String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix()
 
                             if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
                                     entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
-                                if filemanager?._shouldRemoveItemAtPath(ntpath) ?? true {
-                                    stack.append((ntpath, true))
+                                if filemanager?._shouldRemoveItemAtPath(fullpath) ?? true {
+                                    stack.append((fullpath, true))
                                 }
                             } else {
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_READONLY == FILE_ATTRIBUTE_READONLY {
                                     guard SetFileAttributesW($0, entry.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY) else {
-                                        throw CocoaError.removeFileError(GetLastError(), ntpath)
+                                        throw CocoaError.removeFileError(GetLastError(), entry.fileName)
                                     }
                                 }
                                 if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
-                                    guard filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
+                                    guard filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                                     if !RemoveDirectoryW($0) {
                                         let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
                                         guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
@@ -405,7 +406,7 @@ enum _FileOperations {
                                         }
                                     }
                                 } else {
-                                    guard filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
+                                    guard filemanager?._shouldRemoveItemAtPath(fullpath) ?? true else { return }
                                     if !DeleteFileW($0) {
                                         let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
                                         guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
@@ -533,13 +534,10 @@ enum _FileOperations {
             throw CocoaError.removeFileError(errno, resolve(path: pathStr))
         }
 
-        #if os(WASI)
-
-        // wasi-libc does not support FTS, so we don't support removing non-empty directories on WASI for now.
-        throw CocoaError.errorWithFilePath(.featureUnsupported, pathStr)
-
+        #if os(Emscripten)
+        // Emscripten doesn't have fts.h; recursive directory removal is not yet supported. The `rmdir` above handles empty directories. For non-empty ones, we need a recursive implementation that doesn't depend on FTS.
+        throw CocoaError.removeFileError(ENOSYS, resolve(path: pathStr))
         #else
-
         let seq = _FTSSequence(path, FTS_PHYSICAL | FTS_XDEV | FTS_NOCHDIR | FTS_NOSTAT)
         let iterator = seq.makeIterator()
         var isFirst = true
@@ -588,8 +586,7 @@ enum _FileOperations {
                 }
             }
         }
-        #endif
-        
+        #endif // !os(Emscripten)
     }
     #endif
 #endif
@@ -829,7 +826,7 @@ enum _FileOperations {
         try src.withNTPathRepresentation { pwszSource in
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faAttributes) else {
-                throw CocoaError.errorWithFilePath(.fileReadNoSuchFile, src, variant: bCopyFile ? "Copy" : "Link", source: src, destination: dst)
+                throw CocoaError.errorWithFilePath(src, win32: GetLastError(), reading: true, variant: bCopyFile ? "Copy" : "Link", source: src, destination: dst)
             }
 
             guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
@@ -873,19 +870,23 @@ enum _FileOperations {
     }
 #else
     #if !canImport(Darwin)
-    private static func _copyRegularFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate) throws {
-        var fileInfo = stat()
-        guard stat(srcPtr, &fileInfo) >= 0 else {
-            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
-            return
-        }
+    #if os(FreeBSD)
+    private static let _freeBSDRelease = getosreldate()
+    #endif
 
+    private static func _copyRegularFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate) throws {
         let srcfd = open(srcPtr, O_RDONLY)
         guard srcfd >= 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
         defer { close(srcfd) }
+        
+        var fileInfo = stat()
+        guard fstat(srcfd, &fileInfo) >= 0 else {
+            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
+            return
+        }
 
         let dstfd = open(dstPtr, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC, 0o666)
         guard dstfd >= 0 else {
@@ -894,8 +895,7 @@ enum _FileOperations {
         }
         defer { close(dstfd) }
 
-        #if !os(WASI) // WASI doesn't have fchmod for now
-        // Set the file permissions using fchmod() instead of when open()ing to avoid umask() issues
+        #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchmod for now
         let permissions = mode_t(fileInfo.st_mode) & ~S_IFMT
         guard fchmod(dstfd, permissions) == 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
@@ -907,8 +907,25 @@ enum _FileOperations {
             // no copying required
             return
         }
-        
+
         let total: Int = Int(fileInfo.st_size)
+
+        // Attempt to clone the file using platform-specific API. If this operation fails, don't throw
+        // an error and just fall back to chunked writes.
+        #if os(Linux) && canImport(Glibc)
+        if ioctl(dstfd, _filemanager_shims_FICLONE(), srcfd) != -1 {
+            return
+        }
+        #elseif os(FreeBSD)
+        if _freeBSDRelease >= 1500000 {
+            // `COPY_FILE_RANGE_CLONE` was introduced in FreeBSD 15.0.
+            let flags = _filemanager_shims_COPY_FILE_RANGE_CLONE()
+            if copy_file_range(srcfd, nil, dstfd, nil, total, flags) != -1 {
+                return
+            }
+        }
+        #endif
+
         // Respect the optimal block size for the file system if available
         // Some platforms including WASI don't provide this information, so we
         // fall back to the default chunk size 4KB, which is a common page size.
@@ -921,7 +938,7 @@ enum _FileOperations {
         }
         var current: off_t = 0
         
-        #if os(WASI)
+        #if os(WASI) || os(OpenBSD) || os(Emscripten)
         // WASI doesn't have sendfile, so we need to do it in user space with read/write
         try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: chunkSize) { buffer in
             while current < total {
@@ -958,8 +975,51 @@ enum _FileOperations {
     
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
-        #if !os(WASI) && !os(Android)
+        #if !os(WASI) && !os(Android) && !os(OpenBSD) && !os(Emscripten)
         // Copy extended attributes
+        #if os(FreeBSD)
+        // FreeBSD uses the `extattr_*` calls for setting extended attributes. Unlike like, the namespace for the extattrs are not determined by prefix of the attribute
+        for namespace in [EXTATTR_NAMESPACE_SYSTEM, EXTATTR_NAMESPACE_USER] {
+            // if we don't have permission to list attributes in system namespace, this returns -1 and skips it
+            var size = extattr_list_fd(srcFD, namespace, nil, 0)
+            if size > 0 {
+                // we are allocating size + 1 bytes here such that we have room for the last null terminator
+                try withUnsafeTemporaryAllocation(of: CChar.self, capacity: size + 1) { keyList in
+                    // The list of entry returns by `extattr_list_*` contains the length(1 byte) of the attribute name, follow by the Non-NULL terminated attribute name. (See exattr(2))
+                    size = extattr_list_fd(srcFD, namespace, keyList.baseAddress!, size)
+
+                    guard size > 0 else { return }
+
+                    var keyLength = Int(keyList.baseAddress!.pointee)
+                    var current = keyList.baseAddress!.advanced(by: 1)
+                    let end = keyList.baseAddress!.advanced(by: size)
+                    keyList.baseAddress!.advanced(by: size).pointee = 0
+
+                    while current < end {
+                        let nextEntry = current.advanced(by: keyLength)
+                        // get the length of next key, if this is the last entry, this points to the explicitly zerod byte at `end`.
+                        keyLength = Int(nextEntry.pointee)
+                        // zero the length field of the next name, so current name can pass in as a null-terminated string
+                        nextEntry.pointee = 0
+                        // this also set `current` to `end` after iterating all entries
+                        defer { current = nextEntry.advanced(by: 1) }
+
+                        var valueSize = extattr_get_fd(srcFD, namespace, current, nil, 0)
+                        if valueSize >= 0 {
+                            try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: valueSize) { valueBuffer in
+                                valueSize = extattr_get_fd(srcFD, namespace, current, valueBuffer.baseAddress!, valueSize)
+                                if valueSize >= 0 {
+                                    if extattr_set_fd(srcFD, namespace, current, valueBuffer.baseAddress!, valueSize) != 0 {
+                                        try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #else
         var size = flistxattr(srcFD, nil, 0)
         if size > 0 {
             try withUnsafeTemporaryAllocation(of: CChar.self, capacity: size) { keyList in
@@ -974,7 +1034,10 @@ enum _FileOperations {
                                 valueSize = fgetxattr(srcFD, current, valueBuffer.baseAddress!, valueSize)
                                 if valueSize >= 0 {
                                     if fsetxattr(dstFD, current, valueBuffer.baseAddress!, valueSize, 0) != 0 {
-                                        try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                                        // Ignore the error if setting this xattr is not supported (ex. SELinux security xattrs)
+                                        if errno != EOPNOTSUPP {
+                                            try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                                        }
                                     }
                                 }
                             }
@@ -985,9 +1048,10 @@ enum _FileOperations {
             }
         }
         #endif
+        #endif
         var statInfo = stat()
         if fstat(srcFD, &statInfo) == 0 {
-            #if !os(WASI) // WASI doesn't have fchown for now
+            #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchown for now
             // Copy owner/group
             if fchown(dstFD, statInfo.st_uid, statInfo.st_gid) != 0 {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
@@ -1005,7 +1069,7 @@ enum _FileOperations {
                 }
             }
             
-            #if !os(WASI) // WASI doesn't have fchmod for now
+            #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchmod for now
             // Copy permissions
             if fchmod(dstFD, mode_t(statInfo.st_mode)) != 0 {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
@@ -1047,55 +1111,19 @@ enum _FileOperations {
         #endif
     }
 
-    #if os(WASI)
     private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
-        let src = String(cString: srcPtr)
-        let dst = String(cString: dstPtr)
-        guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
-
-        var stat = stat()
-        guard lstat(srcPtr, &stat) == 0 else {
-            try delegate.throwIfNecessary(errno, src, dst)
-            return
-        }
-        let copyFile = delegate.copyData
-        guard !stat.isDirectory else {
-            // wasi-libc does not support FTS for now, so we don't support copying/linking
-            // directories on WASI for now.
-            let error = CocoaError.errorWithFilePath(.featureUnsupported, src, variant: copyFile ? "Copy" : "Link", source: src, destination: dst)
-            try delegate.throwIfNecessary(error, src, dst)
-            return
-        }
-
-        // For now, we support only copying regular files and symlinks.
-        // After we get FTS support (https://github.com/WebAssembly/wasi-libc/pull/522),
-        // we can remove this method and use the below FTS-based implementation.
-
-        if stat.isSymbolicLink {
-            try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { tempBuff in
-                tempBuff.initialize(repeating: 0)
-                defer { tempBuff.deinitialize() }
-                let len = readlink(srcPtr, tempBuff.baseAddress!, FileManager.MAX_PATH_SIZE - 1)
-                if len >= 0, symlink(tempBuff.baseAddress!, dstPtr) != -1 {
-                    return
-                }
-                try delegate.throwIfNecessary(errno, src, dst)
-            }
-        } else {
-            if copyFile {
-                try _copyRegularFile(srcPtr, dstPtr, delegate: delegate)
-            } else {
-                if link(srcPtr, dstPtr) != 0 {
-                    try delegate.throwIfNecessary(errno, src, dst)
-                }
-            }
-        }
-    }
-    #else
-    private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
+        #if os(Emscripten)
+        // Emscripten doesn't have fts.h; recursive copy/link is not yet supported.
+        throw CocoaError.errorWithFilePath(.featureUnsupported, String(cString: srcPtr))
+        #else
         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             let dstLen = Platform.copyCString(dst: buffer.baseAddress!, src: dstPtr, size: FileManager.MAX_PATH_SIZE)
-            let srcLen = strlen(srcPtr)
+            // fts builds the path of a descendant by appending a separator and its name to the source path, but implementations disagree about how the trailing separators of the source path are treated: some drop one of them beforehand and some keep all of them. Ignore them entirely when determining the length of the prefix that the destination path replaces, and re-insert a single separator below.
+            let pathSeparator = CChar(UInt8(ascii: "/"))
+            var srcLen = strlen(srcPtr)
+            while srcLen > 0, srcPtr[srcLen - 1] == pathSeparator {
+                srcLen -= 1
+            }
             let dstAppendPtr = buffer.baseAddress!.advanced(by: dstLen)
             let remainingBuffer = FileManager.MAX_PATH_SIZE - dstLen
             
@@ -1108,8 +1136,18 @@ enum _FileOperations {
                     
                 case let .entry(entry):
                     let fts_path = entry.ftsEnt.fts_path!
-                    let trimmedPathPtr = fts_path.advanced(by: srcLen)
-                    Platform.copyCString(dst: dstAppendPtr, src: trimmedPathPtr, size: remainingBuffer)
+                    var trimmedPathPtr = fts_path.advanced(by: srcLen)
+                    // Skip the separators that fts kept from the source path so that the item's path relative to the source is appended to the destination as a path component
+                    while trimmedPathPtr.pointee == pathSeparator {
+                        trimmedPathPtr += 1
+                    }
+                    if trimmedPathPtr.pointee == 0 {
+                        // The source itself is copied to the destination path as-is
+                        dstAppendPtr.pointee = 0
+                    } else {
+                        dstAppendPtr.pointee = pathSeparator
+                        Platform.copyCString(dst: dstAppendPtr + 1, src: trimmedPathPtr, size: remainingBuffer - 1)
+                    }
                     
                     // we don't want to ask the delegate on the way back -up- the hierarchy if they want to copy a directory they've already seen and therefore already said "YES" to.
                     guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: fts_path), to: String(cString: buffer.baseAddress!)) else {
@@ -1192,9 +1230,9 @@ enum _FileOperations {
                 }
             }
         }
+        #endif // !os(Emscripten)
     }
-    #endif
-    
+
     private static func linkOrCopyFile(_ src: String, dst: String, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         try src.withFileSystemRepresentation { srcPtr in
             guard let srcPtr else {

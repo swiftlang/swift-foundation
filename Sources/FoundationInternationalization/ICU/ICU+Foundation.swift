@@ -16,6 +16,10 @@ internal import _FoundationICU
 internal import os
 #endif
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 enum ICU { }
 
 internal struct ICUError: Error, CustomDebugStringConvertible {
@@ -25,7 +29,10 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
     }
 
     var debugDescription: String {
-        String(validatingUTF8: u_errorName(code)) ?? "Unknown ICU error \(code.rawValue)"
+        guard let error = u_errorName(code) else {
+            return "Unknown ICU error \(code.rawValue)"
+        }
+        return String(cString: error)
     }
 
 #if canImport(os)
@@ -36,7 +43,7 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
 }
 
 extension UErrorCode {
-    func checkSuccess() throws {
+    func checkSuccess() throws(ICUError) {
         if !isSuccess {
             throw ICUError(code: self)
         }
@@ -151,9 +158,7 @@ internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_K
 /// Use this function for ICU API which takes a C string and returns a C string. ICU may choose to return the original pointer, making the usual pattern of simply calling `String(cString: result)` use deallocated memory.
 /// See also: rdar://104711456 and rdar://104710940
 internal func _withStringAsCString(_ input: String, _ body: (UnsafePointer<CChar>) -> UnsafePointer<CChar>?) -> String? {
-    return input.utf8CString.withUnsafeBufferPointer { buffer -> String? in
-        // Intentional force unwrap
-        let base = buffer.baseAddress!
+    return input.withCString { base -> String? in
         guard let result = body(base) else {
             return nil
         }

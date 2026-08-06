@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2023 - 2024 Apple Inc. and the Swift project authors
+// Copyright (c) 2023 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -12,12 +12,12 @@
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
+internal import Foundation_Private
 #endif
 
 // Source of truth for a parsed URL
 final class URLParseInfo: Sendable {
     let urlString: String
-    let urlParser: URLParserKind
 
     let schemeRange:    Range<String.Index>?
     let userRange:      Range<String.Index>?
@@ -30,12 +30,24 @@ final class URLParseInfo: Sendable {
 
     let isIPLiteral: Bool
     let didPercentEncodeHost: Bool
-    let pathHasPercent: Bool
     let pathHasFileID: Bool
 
-    init(urlString: String, urlParser: URLParserKind, schemeRange: Range<String.Index>?, userRange: Range<String.Index>?, passwordRange: Range<String.Index>?, hostRange: Range<String.Index>?, portRange: Range<String.Index>?, pathRange: Range<String.Index>?, queryRange: Range<String.Index>?, fragmentRange: Range<String.Index>?, isIPLiteral: Bool, didPercentEncodeHost: Bool, pathHasPercent: Bool, pathHasFileID: Bool) {
+    struct EncodedComponentSet: OptionSet {
+        let rawValue: UInt8
+        static let user     = EncodedComponentSet(rawValue: 1 << 0)
+        static let password = EncodedComponentSet(rawValue: 1 << 1)
+        static let host     = EncodedComponentSet(rawValue: 1 << 2)
+        static let path     = EncodedComponentSet(rawValue: 1 << 3)
+        static let query    = EncodedComponentSet(rawValue: 1 << 4)
+        static let fragment = EncodedComponentSet(rawValue: 1 << 5)
+    }
+
+    /// Empty unless we initialized with a string, data, or bytes that required percent-encoding.
+    /// Used to return the appropriate dataRepresentation or bytes for CFURL.
+    let encodedComponents: EncodedComponentSet
+
+    init(urlString: String, schemeRange: Range<String.Index>?, userRange: Range<String.Index>?, passwordRange: Range<String.Index>?, hostRange: Range<String.Index>?, portRange: Range<String.Index>?, pathRange: Range<String.Index>?, queryRange: Range<String.Index>?, fragmentRange: Range<String.Index>?, isIPLiteral: Bool, didPercentEncodeHost: Bool, pathHasFileID: Bool, encodedComponents: EncodedComponentSet) {
         self.urlString = urlString
-        self.urlParser = urlParser
         self.schemeRange = schemeRange
         self.userRange = userRange
         self.passwordRange = passwordRange
@@ -46,8 +58,8 @@ final class URLParseInfo: Sendable {
         self.fragmentRange = fragmentRange
         self.isIPLiteral = isIPLiteral
         self.didPercentEncodeHost = didPercentEncodeHost
-        self.pathHasPercent = pathHasPercent
         self.pathHasFileID = pathHasFileID
+        self.encodedComponents = encodedComponents
     }
 
     var hasAuthority: Bool {
@@ -59,6 +71,25 @@ final class URLParseInfo: Sendable {
             return nil
         }
         return urlString[schemeRange]
+    }
+
+    var netLocationRange: Range<String.Index>? {
+        guard hasAuthority else {
+            return nil
+        }
+        guard let startIndex = userRange?.lowerBound
+                ?? passwordRange?.lowerBound
+                ?? hostRange?.lowerBound
+                ?? portRange?.lowerBound else {
+            return nil
+        }
+        guard let endIndex = portRange?.upperBound
+                ?? hostRange?.upperBound
+                ?? passwordRange?.upperBound
+                ?? userRange?.upperBound else {
+            return nil
+        }
+        return (startIndex..<endIndex)
     }
 
     var user: Substring? {
@@ -132,41 +163,18 @@ fileprivate struct URLBufferParseInfo {
 
     var isIPLiteral: Bool = false
     var didPercentEncodeHost: Bool = false
-    var pathHasPercent: Bool = false
     var pathHasFileID: Bool = false
-}
-
-internal enum URLParserKind {
-    case RFC3986
-}
-
-internal struct URLParserCompatibility: OptionSet {
-    let rawValue: UInt8
-    static let allowEmptyScheme = URLParserCompatibility(rawValue: 1 << 0)
-    static let allowAnyPort = URLParserCompatibility(rawValue: 1 << 1)
-}
-
-internal protocol URLParserProtocol {
-    static var kind: URLParserKind { get }
-
-    static func parse(urlString: String, encodingInvalidCharacters: Bool) -> URLParseInfo?
-    static func parse(urlString: String, encodingInvalidCharacters: Bool, compatibility: URLParserCompatibility) -> URLParseInfo?
-
-    static func validate(_ string: (some StringProtocol)?, component: URLComponents.Component) -> Bool
-    static func validate(_ string: (some StringProtocol)?, component: URLComponents.Component, percentEncodingAllowed: Bool) -> Bool
-
-    static func percentEncode(_ string: (some StringProtocol)?, component: URLComponents.Component) -> String?
-    static func percentDecode(_ string: (some StringProtocol)?) -> String?
-    static func percentDecode(_ string: (some StringProtocol)?, excluding: Set<UInt8>) -> String?
-
-    static func shouldPercentEncodeHost(_ host: some StringProtocol, forScheme: (some StringProtocol)?) -> Bool
-    static func IDNAEncodeHost(_ host: (some StringProtocol)?) -> String?
-    static func IDNADecodeHost(_ host: (some StringProtocol)?) -> String?
 }
 
 package protocol UIDNAHook {
     static func encode(_ host: some StringProtocol) -> String?
     static func decode(_ host: some StringProtocol) -> String?
+
+    @_lifetime(output: copy output)
+    static func nameToASCII(
+        input: borrowing Span<UTF16.CodeUnit>,
+        output: inout OutputSpan<Unicode.ASCII.CodeUnit>
+    ) -> Bool
 }
 
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
@@ -179,64 +187,59 @@ dynamic package func _uidnaHook() -> UIDNAHook.Type? {
 }
 #endif
 
-internal struct RFC3986Parser: URLParserProtocol {
-    static let kind: URLParserKind = .RFC3986
+internal struct RFC3986Parser {
 
     // MARK: - Encoding
 
-    static func percentEncode(_ string: (some StringProtocol)?, component: URLComponents.Component) -> String? {
+    static func percentEncode(_ string: (some StringProtocol)?, component: URLComponents.Component, skipAlreadyEncoded: Bool = false) -> String? {
         guard let string else { return nil }
         guard !string.isEmpty else { return "" }
         switch component {
         case .scheme:
             fatalError("Scheme cannot be percent-encoded.")
         case .user:
-            return string.addingPercentEncoding(forURLComponent: .user)
+            return string.addingPercentEncoding(forURLComponent: .user, skipAlreadyEncoded: skipAlreadyEncoded)
         case .password:
-            return string.addingPercentEncoding(forURLComponent: .password)
+            return string.addingPercentEncoding(forURLComponent: .password, skipAlreadyEncoded: skipAlreadyEncoded)
         case .host:
-            return percentEncodeHost(string)
+            return percentEncodeHost(string, skipAlreadyEncoded: skipAlreadyEncoded)
         case .port:
             fatalError("Port cannot be percent-encoded.")
         case .path:
-            return percentEncodePath(string)
+            return percentEncodePath(string, skipAlreadyEncoded: skipAlreadyEncoded)
         case .query:
-            return string.addingPercentEncoding(forURLComponent: .query)
+            return string.addingPercentEncoding(forURLComponent: .query, skipAlreadyEncoded: skipAlreadyEncoded)
         case .queryItem:
-            return string.addingPercentEncoding(forURLComponent: .queryItem)
+            return string.addingPercentEncoding(forURLComponent: .queryItem, skipAlreadyEncoded: skipAlreadyEncoded)
         case .fragment:
-            return string.addingPercentEncoding(forURLComponent: .fragment)
+            return string.addingPercentEncoding(forURLComponent: .fragment, skipAlreadyEncoded: skipAlreadyEncoded)
         }
     }
 
-    static func percentDecode(_ string: (some StringProtocol)?) -> String? {
-        return percentDecode(string, excluding: [])
-    }
-
-    static func percentDecode(_ string: (some StringProtocol)?, excluding: Set<UInt8>) -> String? {
+    static func percentDecode(_ string: (some StringProtocol)?, excluding: Set<UInt8> = [], encoding: String.Encoding = .utf8) -> String? {
         guard let string else { return nil }
         guard !string.isEmpty else { return "" }
-        return string.removingURLPercentEncoding(excluding: excluding)
+        return string.removingURLPercentEncoding(excluding: excluding, encoding: encoding)
     }
 
-    private static let schemesToPercentEncodeHost = Set<String>([
-        "tel",
-        "telemergencycall",
-        "telprompt",
-        "callto",
-        "facetime",
-        "facetime-prompt",
-        "facetime-audio",
-        "facetime-audio-prompt",
-        "imap",
-        "pop",
-        "addressbook",
-        "contact",
-        "phasset",
-        "http+unix",
-        "https+unix",
-        "ws+unix",
-        "wss+unix",
+    private static let schemesToPercentEncodeHost = [[UInt8]]([
+        Array("tel".utf8),
+        Array("telemergencycall".utf8),
+        Array("telprompt".utf8),
+        Array("callto".utf8),
+        Array("facetime".utf8),
+        Array("facetime-prompt".utf8),
+        Array("facetime-audio".utf8),
+        Array("facetime-audio-prompt".utf8),
+        Array("imap".utf8),
+        Array("pop".utf8),
+        Array("addressbook".utf8),
+        Array("contact".utf8),
+        Array("phasset".utf8),
+        Array("http+unix".utf8),
+        Array("https+unix".utf8),
+        Array("ws+unix".utf8),
+        Array("wss+unix".utf8),
     ])
 
     private static func looksLikeIPLiteral(_ host: some StringProtocol) -> Bool {
@@ -260,7 +263,8 @@ internal struct RFC3986Parser: URLParserProtocol {
         guard let scheme else {
             return false
         }
-        return schemesToPercentEncodeHost.contains(scheme.lowercased())
+        let lowercased = scheme.lowercased().utf8
+        return schemesToPercentEncodeHost.contains { $0.elementsEqual(lowercased) }
     }
 
     private static func percentEncodeIPLiteralHost(_ host: some StringProtocol) -> String? {
@@ -283,13 +287,17 @@ internal struct RFC3986Parser: URLParserProtocol {
         return "\(host[..<percentIndex])\(zonePart)]"
     }
 
-    private static func percentEncodeHost(_ host: (some StringProtocol)?) -> String? {
+    private static func percentEncodeHost(_ host: (some StringProtocol)?, skipAlreadyEncoded: Bool = false) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
         if looksLikeIPLiteral(host) {
+            if skipAlreadyEncoded {
+                let innerHost = String(decoding: host.utf8.dropFirst().dropLast(), as: UTF8.self)
+                return "[\(innerHost.addingPercentEncoding(forURLComponent: .host, skipAlreadyEncoded: true))]"
+            }
             return percentEncodeIPLiteralHost(host)
         }
-        return host.addingPercentEncoding(forURLComponent: .host)
+        return host.addingPercentEncoding(forURLComponent: .host, skipAlreadyEncoded: skipAlreadyEncoded)
     }
 
     static func IDNAEncodeHost(_ host: (some StringProtocol)?) -> String? {
@@ -305,46 +313,22 @@ internal struct RFC3986Parser: URLParserProtocol {
         return uidnaHook.decode(host)
     }
 
-    private static func percentEncodePath(_ path: some StringProtocol) -> String {
+    private static func percentEncodePath(_ path: some StringProtocol, skipAlreadyEncoded: Bool = false) -> String {
         guard !path.isEmpty else { return "" }
         guard let slashIndex = path.utf8.firstIndex(of: UInt8(ascii: "/")) else {
-            return path.addingPercentEncoding(forURLComponent: .pathFirstSegment)
+            return path.addingPercentEncoding(forURLComponent: .pathFirstSegment, skipAlreadyEncoded: skipAlreadyEncoded)
         }
         guard slashIndex != path.startIndex else {
-            return path.addingPercentEncoding(forURLComponent: .path)
+            return path.addingPercentEncoding(forURLComponent: .path, skipAlreadyEncoded: skipAlreadyEncoded)
         }
-        let firstSegment = path[..<slashIndex].addingPercentEncoding(forURLComponent: .pathFirstSegment)
-        let remaining = path[slashIndex...].addingPercentEncoding(forURLComponent: .path)
+        let firstSegment = path[..<slashIndex].addingPercentEncoding(forURLComponent: .pathFirstSegment, skipAlreadyEncoded: skipAlreadyEncoded)
+        let remaining = path[slashIndex...].addingPercentEncoding(forURLComponent: .path, skipAlreadyEncoded: skipAlreadyEncoded)
         return firstSegment + remaining
     }
 
     // MARK: - Validation
 
-    static func validate(_ string: (some StringProtocol)?, component: URLComponents.Component) -> Bool {
-        guard let string else { return true }
-        switch component {
-        case .scheme:
-            return validate(scheme: string)
-        case .user:
-            return validate(user: string)
-        case .password:
-            return validate(password: string)
-        case .host:
-            return validate(host: string)
-        case .port:
-            return validate(portString: string)
-        case .path:
-            return validate(path: string)
-        case .query:
-            return validate(query: string)
-        case .queryItem:
-            return validate(queryItemPart: string)
-        case .fragment:
-            return validate(fragment: string)
-        }
-    }
-
-    static func validate(_ string: (some StringProtocol)?, component: URLComponents.Component, percentEncodingAllowed: Bool) -> Bool {
+    static func validate(_ string: (some StringProtocol)?, component: URLComponents.Component, percentEncodingAllowed: Bool = true) -> Bool {
         guard let string else { return true }
         switch component {
         case .scheme:
@@ -368,7 +352,7 @@ internal struct RFC3986Parser: URLParserProtocol {
         }
     }
 
-    private static func validate(string: some StringProtocol, component: URLComponentSet, percentEncodingAllowed: Bool = true) -> Bool {
+    private static func validate(string: some StringProtocol, component: URLComponentAllowedMask, percentEncodingAllowed: Bool = true) -> Bool {
         let isValid = string.utf8.withContiguousStorageIfAvailable {
             validate(buffer: $0, component: component, percentEncodingAllowed: percentEncodingAllowed)
         }
@@ -384,9 +368,9 @@ internal struct RFC3986Parser: URLParserProtocol {
         return validate(buffer: string.utf8, component: component, percentEncodingAllowed: percentEncodingAllowed)
     }
 
-    private static func validate<T: Collection>(buffer: T, component: URLComponentSet, percentEncodingAllowed: Bool = true) -> Bool where T.Element: UnsignedInteger {
+    private static func validate<T: Collection>(buffer: T, component allowedMask: URLComponentAllowedMask, percentEncodingAllowed: Bool = true) -> Bool where T.Element: UnsignedInteger {
         guard percentEncodingAllowed else {
-            return buffer.allSatisfy { $0 < 128 && UInt8($0).isAllowedIn(component) }
+            return buffer.allSatisfy { $0 < 128 && allowedMask.contains(UInt8($0)) }
         }
         var hexDigitsRequired = 0
         for v in buffer {
@@ -398,7 +382,7 @@ internal struct RFC3986Parser: URLParserProtocol {
                     return false
                 }
                 hexDigitsRequired = 2
-            } else if !UInt8(v).isAllowedIn(component) {
+            } else if !allowedMask.contains(UInt8(v)) {
                 return false
             } else if hexDigitsRequired > 0 {
                 guard UInt8(v).isValidHexDigit else {
@@ -412,9 +396,9 @@ internal struct RFC3986Parser: URLParserProtocol {
     }
 
     /// Fast path used during initial URL buffer parsing.
-    private static func validate(schemeBuffer: Slice<UnsafeBufferPointer<UInt8>>, compatibility: URLParserCompatibility = .init()) -> Bool {
+    private static func validate(schemeBuffer: Slice<UnsafeBufferPointer<UInt8>>, allowEmptyScheme: Bool = false) -> Bool {
         guard let first = schemeBuffer.first else {
-            return compatibility.contains(.allowEmptyScheme)
+            return allowEmptyScheme
         }
         guard first >= UInt8(ascii: "A"),
               validate(buffer: schemeBuffer, component: .scheme, percentEncodingAllowed: false) else {
@@ -423,7 +407,6 @@ internal struct RFC3986Parser: URLParserProtocol {
         return true
     }
 
-    /// Only used by URLComponents, don't need to consider `URLParserCompatibility.allowEmptyScheme`
     private static func validate(scheme: some StringProtocol) -> Bool {
         // A valid scheme must start with an ALPHA character.
         // If first >= "A" and is in schemeAllowed, then first is ALPHA.
@@ -456,7 +439,7 @@ internal struct RFC3986Parser: URLParserProtocol {
 
         guard let percentIndex = utf8.firstIndex(of: UInt8(ascii: "%")) else {
             // There is no zoneID, so the whole innerHost must be the IP-literal address.
-            return validate(string: innerHost, component: .hostIPLiteral, percentEncodingAllowed: false)
+            return validate(string: innerHost, component: .hostIPvFuture, percentEncodingAllowed: false)
         }
 
         // The first "%" in an IP-literal must be the zone ID delimiter.
@@ -472,7 +455,7 @@ internal struct RFC3986Parser: URLParserProtocol {
             return false
         }
 
-        return validate(string: innerHost[..<percentIndex], component: .hostIPLiteral, percentEncodingAllowed: false) && validate(string: innerHost[innerHost.index(after: twoAfterIndex)...], component: .hostZoneID)
+        return validate(string: innerHost[..<percentIndex], component: .hostIPvFuture, percentEncodingAllowed: false) && validate(string: innerHost[innerHost.index(after: twoAfterIndex)...], component: .hostZoneID)
     }
 
     private static func validate(host: some StringProtocol, knownIPLiteral: Bool = false) -> Bool {
@@ -483,17 +466,7 @@ internal struct RFC3986Parser: URLParserProtocol {
     }
 
     private static func shouldIgnorePort(forSchemeBuffer schemeBuffer: Slice<UnsafeBufferPointer<UInt8>>) -> Bool {
-        let schemeToIgnore = "addressbook".utf8
-        guard schemeBuffer.count == schemeToIgnore.count else {
-            return false
-        }
-        for i in 0..<schemeBuffer.count {
-            let expected = schemeToIgnore[schemeToIgnore.index(schemeToIgnore.startIndex, offsetBy: i)]
-            guard schemeBuffer[i]._lowercased == expected else {
-                return false
-            }
-        }
-        return true
+        return schemeBuffer.elementsEqual("addressbook".utf8)
     }
 
     /// Fast path used during initial URL buffer parsing.
@@ -566,18 +539,7 @@ internal struct RFC3986Parser: URLParserProtocol {
         return true
     }
 
-    private struct InvalidComponentSet: OptionSet {
-        let rawValue: UInt8
-        static let scheme   = InvalidComponentSet(rawValue: 1 << 0)
-        static let user     = InvalidComponentSet(rawValue: 1 << 1)
-        static let password = InvalidComponentSet(rawValue: 1 << 2)
-        static let host     = InvalidComponentSet(rawValue: 1 << 3)
-        static let port     = InvalidComponentSet(rawValue: 1 << 4)
-        static let path     = InvalidComponentSet(rawValue: 1 << 5)
-        static let query    = InvalidComponentSet(rawValue: 1 << 6)
-        static let fragment = InvalidComponentSet(rawValue: 1 << 7)
-    }
-
+    typealias InvalidComponentSet = URLParseInfo.EncodedComponentSet
     private static func invalidComponents(of parseInfo: URLParseInfo) -> InvalidComponentSet {
         var invalidComponents: InvalidComponentSet = []
         if let user = parseInfo.user, !validate(user: user) {
@@ -604,17 +566,53 @@ internal struct RFC3986Parser: URLParserProtocol {
 
     // MARK: - Parsing
 
-    /// Parses a URL string into `URLParseInfo`, with the option to add (or skip) encoding of invalid characters.
-    /// If `encodingInvalidCharacters` is `true`, this function handles encoding of invalid components.
-    static func parse(urlString: String, encodingInvalidCharacters: Bool) -> URLParseInfo? {
-        return parse(urlString: urlString, encodingInvalidCharacters: encodingInvalidCharacters, compatibility: .init())
+    /// Optimization for URLs initialized with just a file path.
+    static func parse(filePath: String, isAbsolute: Bool) -> URLParseInfo {
+        if isAbsolute {
+            precondition(filePath.utf8.first == ._slash)
+            let string = "file://" + filePath
+            let utf8 = string.utf8
+            return URLParseInfo(
+                urlString: string,
+                schemeRange: utf8.startIndex..<utf8.index(utf8.startIndex, offsetBy: 4),
+                userRange: nil,
+                passwordRange: nil,
+                hostRange: utf8.index(utf8.startIndex, offsetBy: 7)..<utf8.index(utf8.startIndex, offsetBy: 7),
+                portRange: nil,
+                pathRange: utf8.index(utf8.startIndex, offsetBy: 7)..<utf8.endIndex,
+                queryRange: nil,
+                fragmentRange: nil,
+                isIPLiteral: false,
+                didPercentEncodeHost: false,
+                pathHasFileID: filePath.utf8.starts(with: URL.fileIDPrefix),
+                encodedComponents: filePath.utf8.contains(UInt8(ascii: "%")) ? .path : []
+            )
+        } else {
+            return URLParseInfo(
+                urlString: filePath,
+                schemeRange: nil,
+                userRange: nil,
+                passwordRange: nil,
+                hostRange: nil,
+                portRange: nil,
+                pathRange: filePath.startIndex..<filePath.endIndex,
+                queryRange: nil,
+                fragmentRange: nil,
+                isIPLiteral: false,
+                didPercentEncodeHost: false,
+                pathHasFileID: false,
+                encodedComponents: filePath.utf8.contains(UInt8(ascii: "%")) ? .path : []
+            )
+        }
     }
 
-    static func parse(urlString: String, encodingInvalidCharacters: Bool, compatibility: URLParserCompatibility) -> URLParseInfo? {
+    /// Parses a URL string into `URLParseInfo`, with the option to add (or skip) encoding of invalid characters.
+    /// If `encodingInvalidCharacters` is `true`, this function handles encoding of invalid components.
+    static func parse(urlString: String, encodingInvalidCharacters: Bool, allowEmptyScheme: Bool = false) -> URLParseInfo? {
         #if os(Windows)
         let urlString = urlString.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
         #endif
-        guard let parseInfo = parse(urlString: urlString, compatibility: compatibility) else {
+        guard let parseInfo = parse(urlString: urlString, allowEmptyScheme: allowEmptyScheme) else {
             return nil
         }
 
@@ -667,6 +665,12 @@ internal struct RFC3986Parser: URLParserProtocol {
                 guard let percentEncodedHost = percentEncode(host, component: .host) else {
                     return nil
                 }
+                if parseInfo.isIPLiteral {
+                    // The IP-literal may still be invalid after percent-encoding the zoneID
+                    guard validate(host: percentEncodedHost, knownIPLiteral: true) else {
+                        return nil
+                    }
+                }
                 finalURLString += percentEncodedHost
             } else if let idnaEncoded = IDNAEncodeHost(String(host)),
                       validate(host: idnaEncoded, knownIPLiteral: false) {
@@ -703,15 +707,15 @@ internal struct RFC3986Parser: URLParserProtocol {
             }
         }
 
-        return parse(urlString: finalURLString, compatibility: compatibility)
+        return parse(urlString: finalURLString, allowEmptyScheme: allowEmptyScheme, encodedComponents: invalidComponents)
     }
 
     /// Parses a URL string into its component parts and stores these ranges in a `URLParseInfo`.
     /// This function calls `parse(buffer:)`, then converts the buffer ranges into string ranges.
-    private static func parse(urlString: String, compatibility: URLParserCompatibility = .init()) -> URLParseInfo? {
+    private static func parse(urlString: String, allowEmptyScheme: Bool = false, encodedComponents: URLParseInfo.EncodedComponentSet = []) -> URLParseInfo? {
         var string = urlString
         let bufferParseInfo = string.withUTF8 {
-            parse(buffer: $0, compatibility: compatibility)
+            parse(buffer: $0, allowEmptyScheme: allowEmptyScheme)
         }
         guard let bufferParseInfo else {
             return nil
@@ -727,7 +731,6 @@ internal struct RFC3986Parser: URLParserProtocol {
 
         return URLParseInfo(
             urlString: string,
-            urlParser: .RFC3986,
             schemeRange: convert(bufferParseInfo.schemeRange),
             userRange: convert(bufferParseInfo.userRange),
             passwordRange: convert(bufferParseInfo.passwordRange),
@@ -738,14 +741,14 @@ internal struct RFC3986Parser: URLParserProtocol {
             fragmentRange: convert(bufferParseInfo.fragmentRange),
             isIPLiteral: bufferParseInfo.isIPLiteral,
             didPercentEncodeHost: bufferParseInfo.didPercentEncodeHost,
-            pathHasPercent: bufferParseInfo.pathHasPercent,
-            pathHasFileID: bufferParseInfo.pathHasFileID
+            pathHasFileID: bufferParseInfo.pathHasFileID,
+            encodedComponents: encodedComponents
         )
     }
 
     /// Parses a URL string into its component parts and stores these ranges in a `URLBufferParseInfo`.
     /// This function only parses based on delimiters and does not do any encoding.
-    private static func parse(buffer: UnsafeBufferPointer<UInt8>, compatibility: URLParserCompatibility = .init()) -> URLBufferParseInfo? {
+    private static func parse(buffer: UnsafeBufferPointer<UInt8>, allowEmptyScheme: Bool = false) -> URLBufferParseInfo? {
         // A URI is either:
         // 1. scheme ":" hier-part [ "?" query ] [ "#" fragment ]
         // 2. relative-ref
@@ -765,12 +768,12 @@ internal struct RFC3986Parser: URLParserProtocol {
             let v = buffer[currentIndex]
             if v == UInt8(ascii: ":") {
                 // Scheme must be at least 1 character, otherwise this is a relative-ref.
-                if currentIndex != buffer.startIndex || compatibility.contains(.allowEmptyScheme) {
+                if currentIndex != buffer.startIndex || allowEmptyScheme {
                     parseInfo.schemeRange = buffer.startIndex..<currentIndex
                     currentIndex = buffer.index(after: currentIndex)
                     if currentIndex == buffer.endIndex {
                         guard let schemeRange = parseInfo.schemeRange,
-                              validate(schemeBuffer: buffer[schemeRange], compatibility: compatibility) else {
+                              validate(schemeBuffer: buffer[schemeRange], allowEmptyScheme: allowEmptyScheme) else {
                             return nil
                         }
                         // The string only contained a scheme, but the path always exists.
@@ -796,7 +799,7 @@ internal struct RFC3986Parser: URLParserProtocol {
         }
 
         if let schemeRange = parseInfo.schemeRange {
-            guard validate(schemeBuffer: buffer[schemeRange], compatibility: compatibility) else {
+            guard validate(schemeBuffer: buffer[schemeRange], allowEmptyScheme: allowEmptyScheme) else {
                 return nil
             }
         }
@@ -832,7 +835,7 @@ internal struct RFC3986Parser: URLParserProtocol {
             } else {
                 // Parse the user, password, host, and port
                 let authority = buffer[authorityRange]
-                guard parseAuthority(authority, into: &parseInfo) else {
+                guard parseAuthority(authority, into: &parseInfo, allowEmptyScheme: allowEmptyScheme) else {
                     return nil
                 }
                 if let portRange = parseInfo.portRange {
@@ -840,11 +843,7 @@ internal struct RFC3986Parser: URLParserProtocol {
                     if let schemeRange = parseInfo.schemeRange {
                         schemeBuffer = buffer[schemeRange]
                     }
-                    if compatibility.contains(.allowAnyPort) {
-                        guard buffer[portRange].allSatisfy({ $0.isValidURLCharacter }) else {
-                            return nil
-                        }
-                    } else if !validate(portBuffer: buffer[portRange], forSchemeBuffer: schemeBuffer) {
+                    guard validate(portBuffer: buffer[portRange], forSchemeBuffer: schemeBuffer) else {
                         return nil
                     }
                 }
@@ -854,7 +853,6 @@ internal struct RFC3986Parser: URLParserProtocol {
         // MARK: Path
 
         let pathStartIndex = currentIndex
-        var sawPercent = false
         if buffer[pathStartIndex...].starts(with: URL.fileIDPrefix) {
             parseInfo.pathHasFileID = true
             currentIndex = buffer.index(pathStartIndex, offsetBy: URL.fileIDPrefix.count)
@@ -863,13 +861,10 @@ internal struct RFC3986Parser: URLParserProtocol {
             let v = buffer[currentIndex]
             if v == UInt8(ascii: "?") || v == UInt8(ascii: "#") {
                 break
-            } else if v == UInt8(ascii: "%") {
-                sawPercent = true
             }
             currentIndex = buffer.index(after: currentIndex)
         }
         parseInfo.pathRange = pathStartIndex..<currentIndex
-        parseInfo.pathHasPercent = sawPercent
 
         if currentIndex == buffer.endIndex {
             return parseInfo
@@ -894,7 +889,7 @@ internal struct RFC3986Parser: URLParserProtocol {
     }
 
     /// Parses the authority component into its user, password, host, and port subcomponents.
-    private static func parseAuthority(_ authority: Slice<UnsafeBufferPointer<UInt8>>, into parseInfo: inout URLBufferParseInfo) -> Bool {
+    private static func parseAuthority(_ authority: Slice<UnsafeBufferPointer<UInt8>>, into parseInfo: inout URLBufferParseInfo, allowEmptyScheme: Bool) -> Bool {
 
         var hostStartIndex = authority.startIndex
         var hostEndIndex = authority.endIndex
@@ -929,8 +924,9 @@ internal struct RFC3986Parser: URLParserProtocol {
             }
         } else if let colonIndex = authority[hostStartIndex...].firstIndex(of: UInt8(ascii: ":")) {
             hostEndIndex = colonIndex
-            if authority.index(after: colonIndex) != authority.endIndex {
+            if authority.index(after: colonIndex) != authority.endIndex || allowEmptyScheme {
                 // Port only exists if non-empty, otherwise RFC 3986 suggests removing the ":".
+                // But, in cases where we allow empty scheme (NS/URL), also allow empty port.
                 parseInfo.portRange = authority.index(after: colonIndex)..<authority.endIndex
             }
         }
@@ -944,130 +940,88 @@ internal struct RFC3986Parser: URLParserProtocol {
 
 // MARK: - Encoding Extensions
 
+@inline(__always)
+internal func hexToAscii(_ hex: UInt8) -> UInt8 {
+    switch hex {
+    case 0x0: return UInt8(ascii: "0")
+    case 0x1: return UInt8(ascii: "1")
+    case 0x2: return UInt8(ascii: "2")
+    case 0x3: return UInt8(ascii: "3")
+    case 0x4: return UInt8(ascii: "4")
+    case 0x5: return UInt8(ascii: "5")
+    case 0x6: return UInt8(ascii: "6")
+    case 0x7: return UInt8(ascii: "7")
+    case 0x8: return UInt8(ascii: "8")
+    case 0x9: return UInt8(ascii: "9")
+    case 0xA: return UInt8(ascii: "A")
+    case 0xB: return UInt8(ascii: "B")
+    case 0xC: return UInt8(ascii: "C")
+    case 0xD: return UInt8(ascii: "D")
+    case 0xE: return UInt8(ascii: "E")
+    case 0xF: return UInt8(ascii: "F")
+    default: fatalError("Invalid hex digit: \(hex)")
+    }
+}
+
+@inline(__always)
+internal func asciiToHex(_ ascii: UInt8) -> UInt8? {
+    return ascii.hexDigitValue
+}
+
 fileprivate extension StringProtocol {
 
-    func hexToAscii(_ hex: UInt8) -> UInt8 {
-        switch hex {
-        case 0x0:
-            return UInt8(ascii: "0")
-        case 0x1:
-            return UInt8(ascii: "1")
-        case 0x2:
-            return UInt8(ascii: "2")
-        case 0x3:
-            return UInt8(ascii: "3")
-        case 0x4:
-            return UInt8(ascii: "4")
-        case 0x5:
-            return UInt8(ascii: "5")
-        case 0x6:
-            return UInt8(ascii: "6")
-        case 0x7:
-            return UInt8(ascii: "7")
-        case 0x8:
-            return UInt8(ascii: "8")
-        case 0x9:
-            return UInt8(ascii: "9")
-        case 0xA:
-            return UInt8(ascii: "A")
-        case 0xB:
-            return UInt8(ascii: "B")
-        case 0xC:
-            return UInt8(ascii: "C")
-        case 0xD:
-            return UInt8(ascii: "D")
-        case 0xE:
-            return UInt8(ascii: "E")
-        case 0xF:
-            return UInt8(ascii: "F")
-        default:
-            fatalError("Invalid hex digit: \(hex)")
-        }
-    }
-
-    func addingPercentEncoding(forURLComponent component: URLComponentSet) -> String {
+    func addingPercentEncoding(forURLComponent component: URLComponentAllowedMask, skipAlreadyEncoded: Bool = false) -> String {
         let fastResult = utf8.withContiguousStorageIfAvailable {
-            addingPercentEncoding(utf8Buffer: $0, component: component)
+            addingPercentEncoding(utf8Buffer: $0, component: component, skipAlreadyEncoded: skipAlreadyEncoded)
         }
         if let fastResult {
             return fastResult
         } else {
-            return addingPercentEncoding(utf8Buffer: utf8, component: component)
+            return addingPercentEncoding(utf8Buffer: utf8, component: component, skipAlreadyEncoded: skipAlreadyEncoded)
         }
     }
 
-    func addingPercentEncoding(utf8Buffer: some Collection<UInt8>, component: URLComponentSet) -> String {
+    func addingPercentEncoding(utf8Buffer: some Collection<UInt8>, component allowedMask: URLComponentAllowedMask, skipAlreadyEncoded: Bool = false) -> String {
+        let percent = UInt8(ascii: "%")
         let maxLength = utf8Buffer.count * 3
-        let result = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxLength + 1) { _buffer in
-            var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
-            for v in utf8Buffer {
-                if v.isAllowedIn(component) {
-                    buffer.appendElement(v)
+        return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxLength) { outputBuffer -> String in
+            var i = 0
+            var index = utf8Buffer.startIndex
+            while index != utf8Buffer.endIndex {
+                let v = utf8Buffer[index]
+                if allowedMask.contains(v) {
+                    outputBuffer[i] = v
+                    i += 1
+                } else if skipAlreadyEncoded, v == percent,
+                          utf8Buffer.index(index, offsetBy: 1) != utf8Buffer.endIndex,
+                          utf8Buffer[utf8Buffer.index(index, offsetBy: 1)].isValidHexDigit,
+                          utf8Buffer.index(index, offsetBy: 2) != utf8Buffer.endIndex,
+                          utf8Buffer[utf8Buffer.index(index, offsetBy: 2)].isValidHexDigit {
+                    let inclusiveEnd = utf8Buffer.index(index, offsetBy: 2)
+                    i = outputBuffer[i...i+2].initialize(fromContentsOf: utf8Buffer[index...inclusiveEnd])
+                    index = inclusiveEnd // Incremented below, too
                 } else {
-                    buffer.appendElement(UInt8(ascii: "%"))
-                    buffer.appendElement(hexToAscii(v >> 4))
-                    buffer.appendElement(hexToAscii(v & 0xF))
+                    i = outputBuffer[i...i+2].initialize(fromContentsOf: [percent, hexToAscii(v >> 4), hexToAscii(v & 0xF)])
                 }
+                index = utf8Buffer.index(after: index)
             }
-            buffer.appendElement(0) // NULL-terminated
-            let initialized = buffer.relinquishBorrowedMemory()
-            return String(cString: initialized.baseAddress!)
-        }
-        return result
-    }
-
-    func asciiToHex(_ ascii: UInt8) -> UInt8? {
-        switch ascii {
-        case UInt8(ascii: "0"):
-            return 0x0
-        case UInt8(ascii: "1"):
-            return 0x1
-        case UInt8(ascii: "2"):
-            return 0x2
-        case UInt8(ascii: "3"):
-            return 0x3
-        case UInt8(ascii: "4"):
-            return 0x4
-        case UInt8(ascii: "5"):
-            return 0x5
-        case UInt8(ascii: "6"):
-            return 0x6
-        case UInt8(ascii: "7"):
-            return 0x7
-        case UInt8(ascii: "8"):
-            return 0x8
-        case UInt8(ascii: "9"):
-            return 0x9
-        case UInt8(ascii: "A"), UInt8(ascii: "a"):
-            return 0xA
-        case UInt8(ascii: "B"), UInt8(ascii: "b"):
-            return 0xB
-        case UInt8(ascii: "C"), UInt8(ascii: "c"):
-            return 0xC
-        case UInt8(ascii: "D"), UInt8(ascii: "d"):
-            return 0xD
-        case UInt8(ascii: "E"), UInt8(ascii: "e"):
-            return 0xE
-        case UInt8(ascii: "F"), UInt8(ascii: "f"):
-            return 0xF
-        default:
-            return nil
+            return String(decoding: outputBuffer[..<i], as: UTF8.self)
         }
     }
 
-    func removingURLPercentEncoding(excluding: Set<UInt8> = []) -> String? {
+    func removingURLPercentEncoding(excluding: Set<UInt8> = [], encoding: String.Encoding = .utf8) -> String? {
         let fastResult = utf8.withContiguousStorageIfAvailable {
-            removingURLPercentEncoding(utf8Buffer: $0, excluding: excluding)
+            removingURLPercentEncoding(utf8Buffer: $0, excluding: excluding, encoding: encoding)
         }
         if let fastResult {
             return fastResult
         } else {
-            return removingURLPercentEncoding(utf8Buffer: utf8, excluding: excluding)
+            return removingURLPercentEncoding(utf8Buffer: utf8, excluding: excluding, encoding: encoding)
         }
     }
 
-    func removingURLPercentEncoding(utf8Buffer: some Collection<UInt8>, excluding: Set<UInt8>) -> String? {
-        let result: String? = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: utf8Buffer.count) { buffer in
+    func removingURLPercentEncoding(utf8Buffer: some Collection<UInt8>, excluding: Set<UInt8>, encoding: String.Encoding = .utf8) -> String? {
+        return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: utf8Buffer.count) { outputBuffer -> String? in
             var i = 0
             var byte: UInt8 = 0
             var hexDigitsRequired = 0
@@ -1087,142 +1041,438 @@ fileprivate extension StringProtocol {
                         byte += hex
                         if excluding.contains(byte) {
                             // Keep the original percent-encoding for this byte
-                            i = buffer[i...i+2].initialize(fromContentsOf: [UInt8(ascii: "%"), hexToAscii(byte >> 4), v])
+                            i = outputBuffer[i...i+2].initialize(fromContentsOf: [UInt8(ascii: "%"), hexToAscii(byte >> 4), v])
                         } else {
-                            buffer[i] = byte
+                            outputBuffer[i] = byte
                             i += 1
                             byte = 0
                         }
                     }
                     hexDigitsRequired -= 1
                 } else {
-                    buffer[i] = v
+                    outputBuffer[i] = v
                     i += 1
                 }
             }
             guard hexDigitsRequired == 0 else {
                 return nil
             }
-            return String(_validating: buffer[..<i], as: UTF8.self)
+            return String(bytes: outputBuffer[..<i], encoding: encoding)
         }
-        return result
+    }
+}
+
+extension RFC3986Parser {
+    /// Used by `URL` for appending path functions. The `including` parameter allows
+    /// characters like `;` or `/` to optionally be encoded, even though they're allowed in
+    /// the path according to RFC 3986.
+    static func percentEncode(pathComponent: some StringProtocol, including: Set<UInt8> = []) -> String {
+        precondition(including.allSatisfy { URLComponentAllowedMask.path.contains($0) })
+        let encoded = pathComponent.addingPercentEncoding(forURLComponent: .path)
+        if including.isEmpty {
+            return encoded
+        }
+        guard let start = encoded.utf8.firstIndex(where: { including.contains($0) }) else {
+            return encoded
+        }
+        var toEncode = encoded[start...]
+        let extraEncoded = toEncode.withUTF8 { inputBuffer in
+            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: inputBuffer.count * 3) { outputBuffer -> String in
+                var i = 0
+                for v in inputBuffer {
+                    if including.contains(v) {
+                        i = outputBuffer[i...i+2].initialize(fromContentsOf: [._percent, hexToAscii(v >> 4), hexToAscii(v & 0xF)])
+                    } else {
+                        outputBuffer[i] = v
+                        i += 1
+                    }
+                }
+                return String(decoding: outputBuffer[..<i], as: UTF8.self)
+            }
+        }
+        return encoded[..<start] + extraEncoded
     }
 }
 
 // MARK: - Validation Extensions
 
-fileprivate struct URLComponentSet: OptionSet {
-    let rawValue: UInt8
-    static let scheme           = URLComponentSet(rawValue: 1 << 0)
+// ===------------------------------------------------------------------------------------=== //
+// URLComponentAllowedMask uses the following grammar from RFC 3986:
+//
+// let ALPHA       = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+// let DIGIT       = "0123456789"
+// let HEXDIG      = DIGIT + "ABCDEFabcdef"
+// let gen_delims  = ":/?#[]@"
+// let sub_delims  = "!$&'()*+,;="
+// let unreserved  = ALPHA + DIGIT + "-._~"
+// let reserved    = gen_delims + sub_delims
+// NOTE: "%" is allowed in pchar and reg_name, but we must validate that 2 HEXDIG follow it
+// let pchar       = unreserved + sub_delims + ":" + "@"
+// let reg_name    = unreserved + sub_delims
+//
+// let schemeAllowed            = CharacterSet(charactersIn: ALPHA + DIGIT + "+-.")
+// let userinfoAllowed          = CharacterSet(charactersIn: unreserved + sub_delims + ":")
+// let hostAllowed              = CharacterSet(charactersIn: reg_name)
+// let hostIPvFutureAllowed     = CharacterSet(charactersIn: unreserved + sub_delims + ":")
+// let hostZoneIDAllowed        = CharacterSet(charactersIn: unreserved)
+// let portAllowed              = CharacterSet(charactersIn: DIGIT)
+// let pathAllowed              = CharacterSet(charactersIn: pchar + "/")
+// let pathFirstSegmentAllowed  = pathAllowed.subtracting(CharacterSet(charactersIn: ":"))
+// let queryAllowed             = CharacterSet(charactersIn: pchar + "/?")
+// let queryItemAllowed         = queryAllowed.subtracting(CharacterSet(charactersIn: "=&"))
+// let fragmentAllowed          = CharacterSet(charactersIn: pchar + "/?")
+// ===------------------------------------------------------------------------------------=== //
 
-    // user, password, and hostIPLiteral use the same allowed character set.
-    static let user             = URLComponentSet(rawValue: 1 << 1)
-    static let password         = URLComponentSet(rawValue: 1 << 1)
-    static let hostIPLiteral    = URLComponentSet(rawValue: 1 << 1)
+internal struct URLComponentAllowedMask: RawRepresentable {
+    let rawValue: UInt128
 
-    static let host             = URLComponentSet(rawValue: 1 << 2)
-    static let hostZoneID       = URLComponentSet(rawValue: 1 << 3)
-    static let path             = URLComponentSet(rawValue: 1 << 4)
-    static let pathFirstSegment = URLComponentSet(rawValue: 1 << 5)
+    static let scheme           = Self(rawValue: 0x07fffffe07fffffe03ff680000000000)
+
+    // user and password use the same allowed character set.
+    static let user             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+    static let password         = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+
+    // hostIPvFuture is the user/password set + ":"
+    static let hostIPvFuture    = Self(rawValue: 0x47fffffe87fffffe2fff7fd200000000)
+
+    static let host             = Self(rawValue: 0x47fffffe87fffffe2bff7fd200000000)
+    static let hostZoneID       = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
+    static let path             = Self(rawValue: 0x47fffffe87ffffff2fffffd200000000)
+    static let pathFirstSegment = Self(rawValue: 0x47fffffe87ffffff2bffffd200000000)
 
     // query and fragment use the same allowed character set.
-    static let query            = URLComponentSet(rawValue: 1 << 6)
-    static let fragment         = URLComponentSet(rawValue: 1 << 6)
+    static let query            = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
+    static let fragment         = Self(rawValue: 0x47fffffe87ffffffafffffd200000000)
 
-    static let queryItem        = URLComponentSet(rawValue: 1 << 7)
+    static let queryItem        = Self(rawValue: 0x47fffffe87ffffff8fffff9200000000)
+
+    // `unreserved` character set from RFC 3986.
+    static let unreserved       = Self(rawValue: 0x47fffffe87fffffe03ff600000000000)
+
+    // `unreserved` + `reserved` character sets from RFC 3986.
+    static let anyValid         = Self(rawValue: 0x47fffffeafffffffafffffda00000000)
+
+    func contains(_ codeUnit: UInt8) -> Bool {
+        return codeUnit < 128 && ((rawValue & (UInt128(1) &<< codeUnit)) != 0)
+    }
 }
 
-fileprivate extension UTF8.CodeUnit {
-    func isAllowedIn(_ component: URLComponentSet) -> Bool {
-        return allowedURLComponents & component.rawValue != 0
-    }
-
-    // ===------------------------------------------------------------------------------------=== //
-    // allowedURLComponents was written programmatically using the following grammar from RFC 3986:
-    //
-    // let ALPHA       = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    // let DIGIT       = "0123456789"
-    // let HEXDIG      = DIGIT + "ABCDEFabcdef"
-    // let gen_delims  = ":/?#[]@"
-    // let sub_delims  = "!$&'()*+,;="
-    // let unreserved  = ALPHA + DIGIT + "-._~"
-    // let reserved    = gen_delims + sub_delims
-    // NOTE: "%" is allowed in pchar and reg_name, but we must validate that 2 HEXDIG follow it
-    // let pchar       = unreserved + sub_delims + ":" + "@"
-    // let reg_name    = unreserved + sub_delims
-    //
-    // let schemeAllowed            = CharacterSet(charactersIn: ALPHA + DIGIT + "+-.")
-    // let userinfoAllowed          = CharacterSet(charactersIn: unreserved + sub_delims + ":")
-    // let hostAllowed              = CharacterSet(charactersIn: reg_name)
-    // let hostIPLiteralAllowed     = CharacterSet(charactersIn: unreserved + sub_delims + ":")
-    // let hostZoneIDAllowed        = CharacterSet(charactersIn: unreserved)
-    // let portAllowed              = CharacterSet(charactersIn: DIGIT)
-    // let pathAllowed              = CharacterSet(charactersIn: pchar + "/")
-    // let pathFirstSegmentAllowed  = pathAllowed.subtracting(CharacterSet(charactersIn: ":"))
-    // let queryAllowed             = CharacterSet(charactersIn: pchar + "/?")
-    // let queryItemAllowed         = queryAllowed.subtracting(CharacterSet(charactersIn: "=&"))
-    // let fragmentAllowed          = CharacterSet(charactersIn: pchar + "/?")
-    // ===------------------------------------------------------------------------------------=== //
-    var allowedURLComponents: URLComponentSet.RawValue {
+internal extension UInt8 {
+    var isAlpha: Bool {
         switch self {
-        case UInt8(ascii: "!"):
-            return 0b11110110
-        case UInt8(ascii: "$"):
-            return 0b11110110
-        case UInt8(ascii: "&"):
-            return 0b01110110
-        case UInt8(ascii: "'"):
-            return 0b11110110
-        case UInt8(ascii: "("):
-            return 0b11110110
-        case UInt8(ascii: ")"):
-            return 0b11110110
-        case UInt8(ascii: "*"):
-            return 0b11110110
-        case UInt8(ascii: "+"):
-            return 0b11110111
-        case UInt8(ascii: ","):
-            return 0b11110110
-        case UInt8(ascii: "-"):
-            return 0b11111111
-        case UInt8(ascii: "."):
-            return 0b11111111
-        case UInt8(ascii: "/"):
-            return 0b11110000
-        case UInt8(ascii: "0")...UInt8(ascii: "9"):
-            return 0b11111111
-        case UInt8(ascii: ":"):
-            return 0b11010010
-        case UInt8(ascii: ";"):
-            return 0b11110110
-        case UInt8(ascii: "="):
-            return 0b01110110
-        case UInt8(ascii: "?"):
-            return 0b11000000
-        case UInt8(ascii: "@"):
-            return 0b11110000
-        case UInt8(ascii: "A")...UInt8(ascii: "Z"):
-            return 0b11111111
-        case UInt8(ascii: "_"):
-            return 0b11111110
-        case UInt8(ascii: "a")...UInt8(ascii: "z"):
-            return 0b11111111
-        case UInt8(ascii: "~"):
-            return 0b11111110
+        case _allLettersUpper, _allLettersLower:
+            return true
         default:
-            return 0
+            return false
         }
     }
+}
 
-    // let urlAllowed = CharacterSet(charactersIn: unreserved + reserved)
-    var isValidURLCharacter: Bool {
-        guard self < 128 else { return false }
-        if self < 64 {
-            let allowed = UInt64(12682136387466559488)
-            return (allowed & (UInt64(1) << self)) != 0
-        } else {
-            let allowed = UInt64(5188146765093666815)
-            return (allowed & (UInt64(1) << (self - 64))) != 0
+// MARK: - Compatibility Parsing
+
+extension RFC3986Parser {
+    static func compatibilityParse(urlString: String, encodingInvalidCharacters: Bool) -> URLParseInfo? {
+        guard let parseInfo = compatibilityParse(urlString: urlString) else {
+            return nil
         }
+
+        if !encodingInvalidCharacters {
+            guard validate(parseInfo: parseInfo) else {
+                return nil
+            }
+            return parseInfo
+        }
+
+        let invalidComponents = invalidComponents(of: parseInfo)
+        if invalidComponents.isEmpty {
+            return parseInfo
+        }
+
+        // One or more components were invalid, encode them.
+
+        // Note: If we made it this far, we are performing CFURL byte encoding.
+        // (CFURL string parsing uses encodingInvalidCharacters: false.)
+
+        // CFURL percent-encoding was different since it left already percent-
+        // encoded characters alone, e.g. "%20 %20" became "%20%20%20".
+
+        var finalURLString = ""
+
+        if let scheme = parseInfo.scheme {
+            finalURLString += "\(scheme):"
+        }
+
+        if parseInfo.hasAuthority {
+            finalURLString += "//"
+        }
+
+        if let user = parseInfo.user {
+            if invalidComponents.contains(.user) {
+                finalURLString += percentEncode(user, component: .user, skipAlreadyEncoded: true)!
+            } else {
+                finalURLString += user
+            }
+
+            if let password = parseInfo.password {
+                if invalidComponents.contains(.password) {
+                    finalURLString += ":\(percentEncode(password, component: .password, skipAlreadyEncoded: true)!)"
+                } else {
+                    finalURLString += ":\(password)"
+                }
+            }
+
+            finalURLString += "@"
+        }
+
+        if let host = parseInfo.host {
+            if !invalidComponents.contains(.host) {
+                finalURLString += host
+            } else {
+                // For compatibility, always percent-encode instead of IDNA-encoding.
+                guard let percentEncodedHost = percentEncode(host, component: .host, skipAlreadyEncoded: true) else {
+                    return nil
+                }
+                finalURLString += percentEncodedHost
+            }
+        }
+
+        // For compatibility, append the port *string*, which may not be numeric.
+        // Use the .fragment component for lenient parsing of the port string.
+        if let portString = parseInfo.portString?.addingPercentEncoding(forURLComponent: .fragment, skipAlreadyEncoded: true) {
+            finalURLString += ":\(portString)"
+        }
+
+        let path = parseInfo.path
+        if invalidComponents.contains(.path) {
+            // For compatibility, don't percent-encode ":" in the first path segment.
+            finalURLString += path.addingPercentEncoding(forURLComponent: .path, skipAlreadyEncoded: true)
+        } else {
+            finalURLString += path
+        }
+
+        if let query = parseInfo.query {
+            if invalidComponents.contains(.query) {
+                finalURLString += "?\(percentEncode(query, component: .query, skipAlreadyEncoded: true)!)"
+            } else {
+                finalURLString += "?\(query)"
+            }
+        }
+
+        if let fragment = parseInfo.fragment {
+            if invalidComponents.contains(.fragment) {
+                finalURLString += "#\(percentEncode(fragment, component: .fragment, skipAlreadyEncoded: true)!)"
+            } else {
+                finalURLString += "#\(fragment)"
+            }
+        }
+
+        return compatibilityParse(urlString: finalURLString, encodedComponents: invalidComponents)
+    }
+
+    /// Parses a URL string into its component parts and stores these ranges in a `URLParseInfo`.
+    /// This function calls `compatibilityParse(buffer:)`, then converts the buffer ranges into string ranges.
+    private static func compatibilityParse(urlString: String, encodedComponents: URLParseInfo.EncodedComponentSet = []) -> URLParseInfo? {
+        var string = urlString
+        let bufferParseInfo = string.withUTF8 {
+            compatibilityParse(buffer: $0)
+        }
+        guard let bufferParseInfo else {
+            return nil
+        }
+
+        typealias URLBuffer = UnsafeBufferPointer<UInt8>
+        func convert(_ range: Range<URLBuffer.Index>?) -> Range<String.Index>? {
+            guard let range else { return nil }
+            let lower = string.utf8.index(string.utf8.startIndex, offsetBy: range.lowerBound)
+            let upper = string.utf8.index(string.utf8.startIndex, offsetBy: range.upperBound)
+            return lower..<upper
+        }
+
+        return URLParseInfo(
+            urlString: string,
+            schemeRange: convert(bufferParseInfo.schemeRange),
+            userRange: convert(bufferParseInfo.userRange),
+            passwordRange: convert(bufferParseInfo.passwordRange),
+            hostRange: convert(bufferParseInfo.hostRange),
+            portRange: convert(bufferParseInfo.portRange),
+            pathRange: convert(bufferParseInfo.pathRange),
+            queryRange: convert(bufferParseInfo.queryRange),
+            fragmentRange: convert(bufferParseInfo.fragmentRange),
+            isIPLiteral: bufferParseInfo.isIPLiteral,
+            didPercentEncodeHost: bufferParseInfo.didPercentEncodeHost,
+            pathHasFileID: bufferParseInfo.pathHasFileID,
+            encodedComponents: encodedComponents
+        )
+    }
+    /// Parses a URL string into its component parts and stores these ranges in a `URLBufferParseInfo`.
+    /// This function only parses based on delimiters and does not do any encoding.
+    private static func compatibilityParse(buffer: UnsafeBufferPointer<UInt8>) -> URLBufferParseInfo? {
+        // A URI is either:
+        // 1. scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+        // 2. relative-ref
+
+        var parseInfo = URLBufferParseInfo()
+        guard !buffer.isEmpty else {
+            // Path always exists, even if it's the empty string.
+            parseInfo.pathRange = buffer.startIndex..<buffer.endIndex
+            return parseInfo
+        }
+
+        var currentIndex = buffer.startIndex
+
+        // MARK: Scheme
+
+        // Even in compatibility mode, scheme must still start with ALPHA
+        if buffer.first!.isAlpha {
+            currentIndex = buffer.index(after: currentIndex)
+            while currentIndex != buffer.endIndex {
+                let v = buffer[currentIndex]
+                if v == UInt8(ascii: ":") {
+                    // Scheme can be empty for compatibility.
+                    parseInfo.schemeRange = buffer.startIndex..<currentIndex
+                    currentIndex = buffer.index(after: currentIndex)
+                    if currentIndex == buffer.endIndex {
+                        // The string only contained a scheme, but the path always exists.
+                        parseInfo.pathRange = buffer.endIndex..<buffer.endIndex
+                        return parseInfo
+                    }
+                    break
+                } else if !URLComponentAllowedMask.scheme.contains(v) {
+                    // For compatibility, now treat this as a relative-ref.
+                    currentIndex = buffer.startIndex
+                    break
+                }
+                currentIndex = buffer.index(after: currentIndex)
+            }
+        } else if buffer.first! == UInt8(ascii: ":") {
+            parseInfo.schemeRange = buffer.startIndex..<buffer.startIndex
+            currentIndex = buffer.index(after: currentIndex)
+        }
+
+        if currentIndex == buffer.endIndex {
+            // We searched the whole string and did not find a scheme.
+            // But, all the characters that are allowed in the scheme
+            // are also allowed in a path, and we found no delimiters
+            // in the scheme, so this must be a relative path.
+            parseInfo.pathRange = buffer.startIndex..<buffer.endIndex
+            return parseInfo
+        }
+
+        // MARK: Authority
+
+        let doubleSlashExists = (
+            buffer.index(after: currentIndex) != buffer.endIndex &&
+            UInt8(ascii: "/") == buffer[currentIndex] &&
+            UInt8(ascii: "/") == buffer[buffer.index(after: currentIndex)]
+        )
+        if doubleSlashExists {
+            currentIndex = buffer.index(currentIndex, offsetBy: 2)
+            let authorityStartIndex = currentIndex
+
+            while currentIndex != buffer.endIndex {
+                let v = buffer[currentIndex]
+                if v == UInt8(ascii: "/") || v == UInt8(ascii: "?") || v == UInt8(ascii: "#") {
+                    break
+                }
+                currentIndex = buffer.index(after: currentIndex)
+            }
+
+            let authorityRange = authorityStartIndex..<currentIndex
+            if authorityRange.isEmpty {
+                // Host exists, but is empty. Other authority components do not exist.
+                parseInfo.hostRange = authorityRange
+            } else {
+                // Parse the user, password, host, and port
+                let authority = buffer[authorityRange]
+                compatibilityParseAuthority(authority, into: &parseInfo)
+                if let portRange = parseInfo.portRange {
+                    // For compatibility, allow the port to have any ASCII
+                    // character you might see in some part of a URL.
+                    guard buffer[portRange].allSatisfy({ URLComponentAllowedMask.anyValid.contains($0) }) else {
+                        return nil
+                    }
+                }
+            }
+        }
+
+        // MARK: Path
+
+        let pathStartIndex = currentIndex
+        if buffer[pathStartIndex...].starts(with: URL.fileIDPrefix) {
+            parseInfo.pathHasFileID = true
+            currentIndex = buffer.index(pathStartIndex, offsetBy: URL.fileIDPrefix.count)
+        }
+        while currentIndex != buffer.endIndex {
+            let v = buffer[currentIndex]
+            if v == UInt8(ascii: "?") || v == UInt8(ascii: "#") {
+                break
+            }
+            currentIndex = buffer.index(after: currentIndex)
+        }
+        parseInfo.pathRange = pathStartIndex..<currentIndex
+
+        if currentIndex == buffer.endIndex {
+            return parseInfo
+        }
+
+        // MARK: Query and Fragment
+
+        if buffer[currentIndex] == UInt8(ascii: "?") {
+            let queryStartIndex = buffer.index(after: currentIndex)
+            if let poundIndex = buffer[queryStartIndex...].firstIndex(of: UInt8(ascii: "#")) {
+                parseInfo.queryRange = queryStartIndex..<poundIndex
+                parseInfo.fragmentRange = buffer.index(after: poundIndex)..<buffer.endIndex
+            } else {
+                parseInfo.queryRange = buffer.index(after: currentIndex)..<buffer.endIndex
+            }
+        } else if buffer[currentIndex] == UInt8(ascii: "#") {
+            let fragmentStartIndex = buffer.index(after: currentIndex)
+            parseInfo.fragmentRange = fragmentStartIndex..<buffer.endIndex
+        }
+
+        return parseInfo
+    }
+
+    /// Parses the authority component into its user, password, host, and port subcomponents.
+    private static func compatibilityParseAuthority(_ authority: Slice<UnsafeBufferPointer<UInt8>>, into parseInfo: inout URLBufferParseInfo) {
+
+        var hostStartIndex = authority.startIndex
+        var hostEndIndex = authority.endIndex
+
+        // MARK: User and Password
+
+        // NOTE: The previous URL parser used the first index of "@", but WHATWG and
+        // other RFC 3986 parsers use the last index, so we should align with those.
+        if let atIndex = authority.lastIndex(of: UInt8(ascii: "@")) {
+            if let colonIndex = authority[..<atIndex].firstIndex(of: UInt8(ascii: ":")) {
+                parseInfo.userRange = authority.startIndex..<colonIndex
+                parseInfo.passwordRange = authority.index(after: colonIndex)..<atIndex
+            } else {
+                parseInfo.userRange = authority.startIndex..<atIndex
+                // Password does not exist.
+            }
+            hostStartIndex = authority.index(after: atIndex)
+        }
+
+        // MARK: Host and Port
+
+        if hostStartIndex != authority.endIndex && authority[hostStartIndex] == UInt8(ascii: "["),
+           let endBracketIndex = authority[hostStartIndex...].firstIndex(of: UInt8(ascii: "]")) {
+            parseInfo.isIPLiteral = true
+            hostEndIndex = authority.index(after: endBracketIndex)
+            if hostEndIndex != authority.endIndex {
+                // For compatibility, don't check if there's characters after the IP literal.
+                parseInfo.portRange = authority.index(after: hostEndIndex)..<authority.endIndex
+            }
+        } else if let colonIndex = authority[hostStartIndex...].firstIndex(of: UInt8(ascii: ":")) {
+            hostEndIndex = colonIndex
+            // For compatibility, keep the ":" from an empty port,
+            // despite RFC 3986 suggesting to remove it.
+            parseInfo.portRange = authority.index(after: colonIndex)..<authority.endIndex
+        }
+
+        // Create the host range, which always exists since we have an authority.
+        parseInfo.hostRange = hostStartIndex..<hostEndIndex
+        parseInfo.didPercentEncodeHost = authority[hostStartIndex..<hostEndIndex].contains(UInt8(ascii: "%"))
     }
 }

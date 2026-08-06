@@ -56,10 +56,12 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif // canImport(Darwin)
 
-internal import _FoundationCShims
+#if !NO_JSON_FOUNDATION_SPECIALIZATION
+internal import Synchronization
+#endif
 
 internal class JSONMap {
     enum TypeDescriptor : Int {
@@ -98,11 +100,11 @@ internal class JSONMap {
     }
 
     let mapBuffer : [Int]
-    var dataLock : LockedState<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
+    let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
     init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
         self.mapBuffer = mapBuffer
-        self.dataLock = .init(initialState: (buffer: dataBuffer, allocation: nil))
+        self.dataLock = .init((buffer: dataBuffer, allocation: nil))
     }
 
     func copyInBuffer() {
@@ -126,11 +128,11 @@ internal class JSONMap {
 
 
     @inline(__always)
-    func withBuffer<T>(
-      for region: Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
-    ) rethrows -> T {
-        try dataLock.withLock {
-            return try closure($0.buffer[region], $0.buffer)
+    func withBuffer<T: ~Copyable, E>(
+      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try dataLock.withLock { state throws(E) in
+            return try closure(state.buffer[region], state.buffer)
         }
     }
 
@@ -265,6 +267,9 @@ internal struct JSONScanner {
     var reader: DocumentReader
     var depth: Int = 0
     var partialMap = JSONPartialMapData()
+    
+    // True if any scanned number extends to the last byte of the input.
+    var numberExtendsToEndOfBuffer: Bool = false
 
     internal struct Options {
         var assumesTopLevelDictionary = false
@@ -374,8 +379,8 @@ internal struct JSONScanner {
 
         let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
 
-        // If the input contains only a number, we have to copy the input into a form that is guaranteed to have a trailing NUL byte so that strtod doesn't perform a buffer overrun.
-        if case .number = map.loadValue(at: 0)! {
+        // If any number token extends to the last byte of the input, we must give the map an owned buffer with a trailing NUL so that `strtod` (which peeks one byte past the last consumed digit) doesn't OOB read. Covers the top-level-number case and the `assumesTopLevelDictionary` case where the last value in the (brace-less) object is a number.
+        if numberExtendsToEndOfBuffer {
             map.copyInBuffer()
         }
 
@@ -575,6 +580,9 @@ internal struct JSONScanner {
         var containsExponent = false
         reader.skipNumber(containsExponent: &containsExponent)
         let end = reader.readIndex
+        if reader.isEOF {
+            numberExtendsToEndOfBuffer = true
+        }
         return partialMap.record(tagType: containsExponent ? .numberContainingExponent : .number, count: reader.distance(from: start, to: end), dataOffset: reader.byteOffset(at: start), with: reader)
     }
 
@@ -1179,7 +1187,7 @@ extension Double : PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Double? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = _stringshims_strtod_l(nptr, &endPtr, nil)
+            let decodedValue = Platform.strtod_clocale(nptr, &endPtr)
             if let endPtr, nptr.advanced(by: count) == endPtr {
                 return decodedValue
             } else {
@@ -1195,7 +1203,7 @@ extension Float : PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Float? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = _stringshims_strtof_l(nptr, &endPtr, nil)
+            let decodedValue = Platform.strtof_clocale(nptr, &endPtr)
             if let endPtr, nptr.advanced(by: count) == endPtr {
                 return decodedValue
             } else {

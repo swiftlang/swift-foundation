@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(FoundationPreview 6.2, *)
 extension AttributedString {
+    /// A view of an attributed string’s contents as a collection of UTF-16 code units.
     public struct UTF16View: Sendable {
         internal var _guts: Guts
         internal var _range: Range<BigString.Index>
@@ -35,6 +36,7 @@ extension AttributedString {
         }
     }
 
+    /// A view of the attributed string’s contents as a collection of UTF-16 code units.
     public var utf16: UTF16View {
         UTF16View(_guts)
     }
@@ -42,6 +44,7 @@ extension AttributedString {
 
 @available(FoundationPreview 6.2, *)
 extension AttributedSubstring {
+    /// A view of the attributed substring's contents as a collection of UTF-16 code units.
     public var utf16: AttributedString.UTF16View {
         AttributedString.UTF16View(_guts, in: _range)
     }
@@ -61,11 +64,11 @@ extension AttributedString.UTF16View: BidirectionalCollection {
     public typealias Subsequence = Self
 
     public var startIndex: AttributedString.Index {
-        .init(_range.lowerBound)
+        .init(_range.lowerBound, version: _guts.version)
     }
 
     public var endIndex: AttributedString.Index {
-        .init(_range.upperBound)
+        .init(_range.upperBound, version: _guts.version)
     }
 
     public var count: Int {
@@ -74,21 +77,21 @@ extension AttributedString.UTF16View: BidirectionalCollection {
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
         precondition(i > startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.utf16.index(before: i._value))
+        let j = Index(_guts.string.utf16.index(before: i._value), version: _guts.version)
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i < endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.utf16.index(after: i._value))
+        let j = Index(_guts.string.utf16.index(after: i._value), version: _guts.version)
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
     }
 
     public func index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.utf16.index(i._value, offsetBy: distance))
+        let j = Index(_guts.string.utf16.index(i._value, offsetBy: distance), version: _guts.version)
         precondition(j >= startIndex && j <= endIndex, "AttributedString index out of bounds")
         return j
     }
@@ -107,7 +110,7 @@ extension AttributedString.UTF16View: BidirectionalCollection {
         }
         precondition(j >= startIndex._value && j <= endIndex._value,
                      "AttributedString index out of bounds")
-        return Index(j)
+        return Index(j, version: _guts.version)
     }
 
     public func distance(

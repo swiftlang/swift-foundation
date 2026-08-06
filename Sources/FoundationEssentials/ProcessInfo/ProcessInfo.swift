@@ -11,20 +11,23 @@
 //===----------------------------------------------------------------------===//
 
 internal import _FoundationCShims
+internal import Synchronization
 
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Bionic
+@preconcurrency import Bionic
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if !NO_PROCESS
@@ -32,16 +35,16 @@ import WASILibc
 final class _ProcessInfo: Sendable {
     static let processInfo: _ProcessInfo = _ProcessInfo()
 
-    private let state: LockedState<State>
+    private let state: Mutex<State>
     // Host name resolution CAN take infinite time,
     // so at the bare min do not share the lock with the
     // rest of the state
-    private let _hostName: LockedState<String?>
+    private let _hostName: Mutex<String?>
 
     internal init() {
         let state: State = State()
-        self.state = LockedState(initialState: state)
-        self._hostName = LockedState(initialState: nil)
+        self.state = Mutex(state)
+        self._hostName = Mutex(nil)
     }
 
     var arguments: [String] {
@@ -156,7 +159,7 @@ final class _ProcessInfo: Sendable {
 
     var processIdentifier: Int32 {
 #if os(Windows)
-        return Int32(bitPattern: UInt32(GetProcessId(GetCurrentProcess())))
+        return Int32(bitPattern: UInt32(GetCurrentProcessId()))
 #else
         return Int32(getpid())
 #endif
@@ -188,8 +191,8 @@ final class _ProcessInfo: Sendable {
             return username
         }
         return ""
-#elseif os(WASI)
-        // WASI does not have user concept
+#elseif os(WASI) || os(Emscripten)
+        // WASI/Emscripten does not have user concept
         return ""
 #elseif os(Windows)
         var dwSize: DWORD = 0
@@ -222,7 +225,7 @@ final class _ProcessInfo: Sendable {
             return fullName
         }
         return ""
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
         return ""
 #elseif os(Windows)
         var ulLength: ULONG = 0
@@ -359,6 +362,8 @@ extension _ProcessInfo {
         return "Haiku"
 #elseif os(WASI)
         return "WASI"
+#elseif os(Emscripten)
+        return "Emscripten"
 #else
         // On other systems at least return something.
         return "Unknown"
@@ -469,7 +474,7 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
-#elseif os(Linux) || os(FreeBSD) || canImport(Android)
+#elseif os(Linux) || os(FreeBSD) || os(OpenBSD) || canImport(Android)
         #if os(Linux)
         if let fsCount = Self.fsCoreCount() {
             return fsCount
@@ -481,7 +486,7 @@ extension _ProcessInfo {
         GetSystemInfo(&sysInfo)
         return sysInfo.dwActiveProcessorMask.nonzeroBitCount
 #else
-        return 0
+        return 1
 #endif
     }
     
@@ -597,10 +602,7 @@ extension _ProcessInfo {
     }
 
     private static func _getProcessName() -> String {
-        guard let processPath = CommandLine.arguments.first else {
-            return ""
-        }
-        return processPath.lastPathComponent
+        return Platform.getFullExecutablePath()?.lastPathComponent ?? ""
     }
 
 #if os(macOS)

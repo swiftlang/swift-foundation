@@ -13,13 +13,15 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if canImport(CRT)
@@ -238,8 +240,17 @@ private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) ->
                 pInfo.err = OpenStepPlistError("Unterminated backslash sequence on line \(lineNumberStrings(pInfo))")
                 return nil
             }
-
-            result!.unicodeScalars.append(UnicodeScalar(getSlashedChar(&pInfo))!)
+            
+            guard let slashedChar = getSlashedChar(&pInfo) else {
+                // Error set by getSlashedChar.
+                return nil
+            }
+            guard let scalar = UnicodeScalar(slashedChar) else {
+                pInfo.err = OpenStepPlistError("Invalid character on line \(lineNumberStrings(pInfo))")
+                return nil
+            }
+            
+            result!.unicodeScalars.append(scalar)
             mark = pInfo.curr
         } else {
             pInfo.advance()
@@ -305,7 +316,7 @@ private func parseOctal(startingWith ch: UInt16, _ pInfo: inout _ParseInfo) -> U
     return .init(nextStep: num)
 }
 
-private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16 {
+private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16? {
     var num : UInt16 = 0
     var numDigits = 4
     while !pInfo.isAtEnd && numDigits > 0 {
@@ -320,13 +331,24 @@ private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16 {
             } else {
                 num += (ch2 &- UInt16(ascii: "a") &+ 10)
             }
+            numDigits -= 1
+        } else {
+            break
         }
-        numDigits -= 1
+    }
+    // We have to have encountered at least one hex digit for the `\U` directive to be valid.
+    if num == 0, numDigits == 4 {
+        if !pInfo.isAtEnd {
+            pInfo.err = OpenStepPlistError("Unexpected character `\(String(describing: Unicode.Scalar(pInfo.currChar)))` while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")
+        } else {
+            pInfo.err = OpenStepPlistError("Unexpected end of file while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")
+        }
+        return nil
     }
     return num
 }
 
-private func getSlashedChar(_ pInfo: inout _ParseInfo) -> UInt16 {
+private func getSlashedChar(_ pInfo: inout _ParseInfo) -> UInt16? {
     let ch = pInfo.currChar
     pInfo.advance()
     switch ch {
@@ -406,7 +428,10 @@ private func getDataBytes(_ pInfo: inout _ParseInfo, bytes: UnsafeMutableBufferP
             return numBytesRead
         }
 
-        func fromHexDigit(ch: UInt8) -> UInt8? {
+        func fromHexDigit(ch: UInt16) -> UInt8? {
+            guard let ch = UInt8(exactly: ch) else {
+                return nil
+            }
             if isdigit(Int32(ch)) != 0 {
                 return ch &- UInt8(ascii: "0")
             }
@@ -419,14 +444,14 @@ private func getDataBytes(_ pInfo: inout _ParseInfo, bytes: UnsafeMutableBufferP
             return nil
         }
 
-        if let first = fromHexDigit(ch: UInt8(ch1)) {
+        if let first = fromHexDigit(ch: ch1) {
             pInfo.advance()
             if pInfo.isAtEnd {
                 return -2 // Error: uneven number of hex digits
             }
 
             let ch2 = pInfo.currChar
-            guard let second = fromHexDigit(ch: UInt8(ch2)) else {
+            guard let second = fromHexDigit(ch: ch2) else {
                 return -2 // Error: uneven number of hex digits
             }
 
@@ -512,7 +537,7 @@ private func lineNumberStrings(_ pInfo: _ParseInfo) -> Int {
             count += 1
 
             let nextIdx = pInfo.utf16.index(after: p)
-            if nextIdx < pInfo.utf16.endIndex && nextIdx < pInfo.curr && pInfo.utf16[nextIdx] == UInt16("\n") {
+            if nextIdx < pInfo.utf16.endIndex && nextIdx < pInfo.curr && pInfo.utf16[nextIdx] == UInt16(ascii: "\n") {
                 p = nextIdx
             }
         } else if pInfo.utf16[p] == UInt16(ascii: "\n") {

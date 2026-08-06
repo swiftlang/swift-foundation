@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// A view into the underlying storage of the attributed string, as Unicode scalars.
     public struct UnicodeScalarView: Sendable {
         internal var _guts: Guts
 
@@ -48,6 +49,15 @@ extension AttributedString {
         }
     }
 
+    /// The Unicode scalars of the attributed string, as a view into the underlying string.
+    ///
+    /// Use this property when you want to split the attributed string by Unicode scalar instead
+    /// of grapheme cluster. This is useful when you need to carefully control insertion points
+    /// or render the content.
+    ///
+    /// You can also use this property to mutate the attributed string, using
+    /// `RangeReplaceableCollection` methods, such as `insert(_:at:)` and `append(_:)`.
+    /// Inserted characters inherit any attributes present at the insertion point.
     public var unicodeScalars: UnicodeScalarView {
         get {
             UnicodeScalarView(_guts)
@@ -107,13 +117,23 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
     public typealias Index = AttributedString.Index
 
     public var startIndex: AttributedString.Index {
-        .init(_range.lowerBound)
+        .init(_range.lowerBound, version: _guts.version)
     }
 
     public var endIndex: AttributedString.Index {
-        .init(_range.upperBound)
+        .init(_range.upperBound, version: _guts.version)
     }
 
+    /// The number of elements in the collection.
+    ///
+    /// To check whether a collection is empty, use its `isEmpty` property
+    /// instead of comparing `count` to zero. Unless the collection guarantees
+    /// random-access performance, calculating `count` can be an O(*n*)
+    /// operation.
+    ///
+    /// - Complexity: O(1) if the collection conforms to
+    ///   `RandomAccessCollection`; otherwise, O(*n*), where *n* is the length
+    ///   of the collection.
     @_alwaysEmitIntoClient
     public var count: Int {
     #if FOUNDATION_FRAMEWORK
@@ -124,7 +144,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return _defaultCount
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal var _count: Int {
         _unicodeScalars.count
@@ -132,21 +152,21 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.unicodeScalars.index(before: i._value))
+        let j = Index(_guts.string.unicodeScalars.index(before: i._value), version: _guts.version)
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.unicodeScalars.index(after: i._value))
+        let j = Index(_guts.string.unicodeScalars.index(after: i._value), version: _guts.version)
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
     }
 
     public func index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.unicodeScalars.index(i._value, offsetBy: distance))
+        let j = Index(_guts.string.unicodeScalars.index(i._value, offsetBy: distance), version: _guts.version)
         precondition(j >= startIndex && j <= endIndex, "AttributedString index out of bounds")
         return j
     }
@@ -165,7 +185,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -181,7 +201,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         }
         precondition(j >= startIndex._value && j <= endIndex._value,
                      "AttributedString index out of bounds")
-        return Index(j)
+        return Index(j, version: _guts.version)
     }
 
     @_alwaysEmitIntoClient
@@ -277,9 +297,9 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         let subrange = _guts.unicodeScalarRange(roundingDown: subrange._bstringRange)
 
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
-        if let newElements = _specializingCast(newElements, to: Self.self) {
+        if let newElements = _specialize(newElements, for: Self.self) {
             _replaceSubrange(subrange, with: newElements._unicodeScalars)
-        } else if let newElements = _specializingCast(newElements, to: Slice<Self>.self) {
+        } else if let newElements = _specialize(newElements, for: Slice<Self>.self) {
             _replaceSubrange(subrange, with: newElements._rebased._unicodeScalars)
         } else {
             _replaceSubrange(subrange, with: newElements)
@@ -296,7 +316,7 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         // don't need to touch string storage, but we still want to update attributes as if it was
         // a full edit.
         var hasStringChanges = true
-        if let newElements = _specializingCast(newElements, to: BigSubstring.UnicodeScalarView.self),
+        if let newElements = _specialize(newElements, for: BigSubstring.UnicodeScalarView.self),
            newElements.isIdentical(to: _unicodeScalars[subrange]) {
             hasStringChanges = false
         }

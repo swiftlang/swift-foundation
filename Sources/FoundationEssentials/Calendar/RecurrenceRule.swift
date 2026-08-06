@@ -12,7 +12,7 @@
 
 extension Calendar {
     /// A rule which specifies how often an event should repeat in the future
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public struct RecurrenceRule: Sendable, Equatable {
         /// The calendar in which the recurrence occurs
         public var calendar: Calendar
@@ -107,7 +107,7 @@ extension Calendar {
         ///
         /// Default value is `1`
         public var interval: Int
-        /// When a recurring event stops recurring
+        /// When a recurring event stops recurring.
         public struct End: Sendable, Equatable {
             private enum _End: Equatable, Hashable {
                 case never
@@ -171,8 +171,8 @@ extension Calendar {
             /// If n is negative, repeat on the n-to-last of the given weekday.
             case nth(Int, Locale.Weekday)
         }
-        
-        /// Uniquely identifies a month in any calendar system
+
+        /// Uniquely identifies a month in any calendar system.
         public struct Month: Sendable, ExpressibleByIntegerLiteral, Equatable {
             public typealias IntegerLiteralType = Int
             
@@ -270,9 +270,76 @@ extension Calendar {
         /// - Returns: a sequence of dates conforming to the recurrence rule, in
         ///   the given `range`. An empty sequence if the rule doesn't match any
         ///   dates.
-        /// A recurrence that repeats every `interval` minutes
         public func recurrences(of start: Date,
                                 in range: Range<Date>? = nil
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: PartialRangeThrough<Date>
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: PartialRangeUpTo<Date>
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: PartialRangeFrom<Date>
+        ) -> some (Sequence<Date> & Sendable) {
+            DatesByRecurring(start: start, recurrence: self, range: range)
+        }
+
+        /// Find recurrences of the given date
+        ///
+        /// The calculations are implemented according to RFC-5545 and RFC-7529.
+        ///
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
+        /// - Parameter range: a range of dates which to search for recurrences.
+        /// - Returns: a sequence of dates conforming to the recurrence rule, in
+        ///   the given `range`. An empty sequence if the rule doesn't match any
+        ///   dates.
+        @available(FoundationPreview 6.3, *)
+        public func recurrences(of start: Date,
+                                in range: ClosedRange<Date>
         ) -> some (Sequence<Date> & Sendable) {
             DatesByRecurring(start: start, recurrence: self, range: range)
         }
@@ -304,7 +371,7 @@ extension Calendar {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.End: Codable {
     enum CodingKeys: String, CodingKey {
         case count
@@ -332,7 +399,7 @@ extension Calendar.RecurrenceRule.End: Codable {
         }
     }
 }
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.Weekday: Codable {
     enum CodingKeys: String, CodingKey {
         case weekday
@@ -359,7 +426,7 @@ extension Calendar.RecurrenceRule.Weekday: Codable {
         }
     }
 }
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.Month: Codable {
     enum CodingKeys: String, CodingKey {
         case month
@@ -388,7 +455,7 @@ extension Calendar.RecurrenceRule.Month: Codable {
         }
     }
 }
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule: Codable {
     enum CodingKeys: String, CodingKey {
         case calendar

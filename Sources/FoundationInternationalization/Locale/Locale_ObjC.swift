@@ -198,11 +198,7 @@ extension NSLocale {
 
     @objc(_localeIdentifierByAddingLikelySubtags:)
     class func _localeIdentifierByAddingLikelySubtags(_ localeID: String) -> String {
-#if canImport(_FoundationICU)
-        Locale.localeIdentifierWithLikelySubtags(localeID)
-#else
-        ""
-#endif
+        LocaleCache.cache.localeIdentifierWithLikelySubtags(localeID, cacheResult: false)
     }
 
     @objc(_localeWithNewCalendarIdentifier:)
@@ -308,7 +304,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
             switch locale.temperatureUnit {
             case .celsius: return NSLocaleTemperatureUnitCelsius
             case .fahrenheit: return NSLocaleTemperatureUnitFahrenheit
+#if !FOUNDATION_FRAMEWORK
+            // On non-framework builds, the enum is non-closed and `package` visibility, so we need a default
             default: return NSLocaleTemperatureUnitCelsius
+#endif
             }
         case .decimalSeparator: return self.decimalSeparator
         case .groupingSeparator: return self.groupingSeparator
@@ -580,7 +579,7 @@ extension NSLocale : _HasCustomAnyHashableRepresentation {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Locale {
-    /// Returns a list of available `Locale` language codes.
+    /// A list of available language codes.
     @available(macOS, deprecated: 13, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     @available(iOS, deprecated: 16, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     @available(tvOS, deprecated: 16, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
@@ -607,7 +606,7 @@ extension Locale {
         }
     }
 
-    /// Returns a list of available `Locale` region codes.
+    /// A list of available region codes.
     @available(macOS, deprecated: 13, message: "Use `Locale.Region.isoRegions` instead")
     @available(iOS, deprecated: 16, message: "Use `Locale.Region.isoRegions` instead")
     @available(tvOS, deprecated: 16, message: "Use `Locale.Region.isoRegions` instead")
@@ -621,7 +620,7 @@ extension Locale {
 #endif
     }
 
-    /// Returns a list of available `Locale` currency codes.
+    /// A list of available currency codes.
     @available(macOS, deprecated: 13, message: "Use `Locale.Currency.isoCurrencies` instead")
     @available(iOS, deprecated: 16, message: "Use `Locale.Currency.isoCurrencies` instead")
     @available(tvOS, deprecated: 16, message: "Use `Locale.Currency.isoCurrencies` instead")

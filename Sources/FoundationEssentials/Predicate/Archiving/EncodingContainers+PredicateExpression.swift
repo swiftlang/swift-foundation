@@ -14,7 +14,7 @@
 
 // Initial API constrained to Output == Bool
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension KeyedEncodingContainer {
     public mutating func encodePredicateExpression<T: PredicateExpression & Encodable, each Input>(_ expression: T, forKey key: Self.Key, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         var container = self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self, forKey: key)
@@ -33,7 +33,7 @@ extension PredicateExpression {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension KeyedDecodingContainer {
     @_optimize(none) // Work around swift optimizer crash (rdar://124533887)
     public mutating func decodePredicateExpression<each Input>(forKey key: Self.Key, input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
@@ -48,7 +48,7 @@ extension KeyedDecodingContainer {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension UnkeyedEncodingContainer {
     public mutating func encodePredicateExpression<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         var container = self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
@@ -64,16 +64,13 @@ extension UnkeyedEncodingContainer {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension UnkeyedDecodingContainer {
     @_optimize(none) // Work around swift optimizer crash (rdar://124533887)
     public mutating func decodePredicateExpression<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
         let (expr, variable) = try container._decode(input: repeat each input, output: Bool.self, predicateConfiguration: predicateConfiguration)
-        guard let casted = expr as? any PredicateExpression<Bool> else {
-            throw DecodingError.dataCorruptedError(in: self, debugDescription: "This expression has an unsupported output type of \(_typeName(type(of: expr).outputType)) (expected Bool)")
-        }
-        return (casted, variable)
+        return (expr as any PredicateExpression<Bool>, variable)
     }
     
     public mutating func decodePredicateExpressionIfPresent<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>))? {
@@ -87,7 +84,7 @@ extension UnkeyedDecodingContainer {
 
 // Added API without Output Constraint
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension KeyedEncodingContainer {
     @_disfavoredOverload
     public mutating func encodePredicateExpression<T: PredicateExpression & Encodable, each Input>(_ expression: T, forKey key: Self.Key, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws {
@@ -102,7 +99,7 @@ extension KeyedEncodingContainer {
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension KeyedDecodingContainer {
     public mutating func decodePredicateExpression<each Input, Output>(forKey key: Self.Key, input: repeat (each Input).Type, output: Output.Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Output>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self, forKey: key)
@@ -115,7 +112,7 @@ extension KeyedDecodingContainer {
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension UnkeyedEncodingContainer {
     @_disfavoredOverload
     public mutating func encodePredicateExpression<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws {
@@ -133,7 +130,7 @@ extension UnkeyedEncodingContainer {
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension UnkeyedDecodingContainer {
     public mutating func decodePredicateExpression<each Input, Output>(input: repeat (each Input).Type, output: Output.Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Output>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)

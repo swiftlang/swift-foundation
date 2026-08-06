@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 
 import PackageDescription
 
@@ -6,7 +6,7 @@ enum UsePackage {
     /// Use a known package hash downloaded from GitHub. Set with env var `USE_PACKAGE`
     case useGitHubPackage
 
-    /// Use a local package, rooted at `String`. For example ".." to back up one directory from the Benchmark package. This is useful when testing local changes. 
+    /// Use a local package, rooted at `String`. For example ".." to back up one directory from the Benchmark package. This is useful when testing local changes.
     /// Set with env var `SWIFTCI_USE_LOCAL_DEPS=<path to root>`, for example `SWIFTCI_USE_LOCAL_DEPS=..`
     case useLocalPackage(String)
 
@@ -15,7 +15,7 @@ enum UsePackage {
 
     var description: String {
         switch self {
-            case .useGitHubPackage: 
+            case .useGitHubPackage:
                 return "Using GitHub package"
             case .useLocalPackage(let root):
                 #if os(macOS)
@@ -37,7 +37,7 @@ let usePackage: UsePackage
 
 if let useLocalPackageEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalPackageEnv.isEmpty {
     if useLocalPackageEnv == "1" {
-        usePackage = .useLocalPackage("..")
+        usePackage = .useLocalPackage("../..")
     } else {
         usePackage = .useLocalPackage(useLocalPackageEnv)
     }
@@ -51,10 +51,14 @@ print("swift-foundation benchmarks: \(usePackage.description)")
 
 // ------------
 
-var packageDependency : [Package.Dependency] = [.package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1")]
+var packageDependency : [Package.Dependency] = [
+    Context.environment["BENCHMARK_DISABLE_JEMALLOC"] != nil
+        ? .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1", traits: [])
+        : .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1")
+]
 var targetDependency : [Target.Dependency] = [.product(name: "Benchmark", package: "package-benchmark")]
 var i18nTargetDependencies : [Target.Dependency] = []
-var swiftSettings : [SwiftSetting] = []
+var swiftSettings : [SwiftSetting] = [.unsafeFlags(["-Rmodule-loading"]), .enableUpcomingFeature("MemberImportVisibility")]
 
 switch usePackage {
     case .useLocalPackage(let root):
@@ -88,7 +92,7 @@ switch usePackage {
 
 let package = Package(
     name: "benchmarks",
-    platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")], // Should match parent project
+    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")], // Should match parent project
     dependencies: packageDependency,
     targets: [
         .executableTarget(
@@ -113,6 +117,15 @@ let package = Package(
             name: "EssentialsBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/Essentials",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
+            name: "DataBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/Data",
             swiftSettings: swiftSettings,
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
@@ -158,7 +171,7 @@ let package = Package(
             name: "JSONBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/JSON",
-            resources: [.copy("Resources")],
+            resources: [.process("Resources")],
             swiftSettings: swiftSettings,
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
@@ -177,6 +190,33 @@ let package = Package(
             name: "Base64Benchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/Base64",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
+            name: "CharacterSetBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/CharacterSet",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
+            name: "DecimalBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/Decimal",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
+            name: "SortComparatorBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/SortComparator",
             swiftSettings: swiftSettings,
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")

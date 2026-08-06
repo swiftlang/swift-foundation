@@ -15,13 +15,41 @@
 #if canImport(ReflectionInternal)
 internal import ReflectionInternal
 
-@available(FoundationPredicate 0.1, *)
+/// A type that provides the expected key paths found in an archived predicate.
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol PredicateCodableKeyPathProviding {
+    /// The allowed key paths.
     @preconcurrency
     static var predicateCodableKeyPaths : [String : PartialKeyPath<Self> & Sendable] { get }
 }
 
-@available(FoundationPredicate 0.1, *)
+/// A specification of the expected types and key paths found in an archived predicate.
+///
+/// Use this configuration when encoding and decoding a predicate to restrict what that predicate can contain.  If a predicate contains data types or keypaths that aren't allowed by the configuration, the encoding or decoding process throws an error.
+///
+/// ```swift
+/// var configuration = PredicateCodableConfiguration.standardConfiguration
+/// configuration.allowType(Message.self, identifier: "MyApp.Message")
+/// configuration.allowType(Person.self, identifier: "MyApp.Person")
+/// configuration.allowKeyPath(\Message.sender, identifier: "MyApp.Message.sender")
+/// configuration.allowKeyPath(\Person.firstName, identifier: "MyApp.Person.firstName")
+/// configuration.allowKeyPath(\Person.lastName, identifier: "MyApp.Person.lastName")
+///
+/// struct MyRequest: Codable {
+/// let predicate: Predicate<Message>
+///
+/// func encode(to encoder: Encoder) throws {
+/// var container = encoder.container(keyedBy: CodingKeys.self)
+/// try container.encode(predicate, forKey: .predicate, configuration: configuration)
+/// }
+///
+/// init(from decoder: Decoder) throws {
+/// let container = try decoder.container(keyedBy: CodingKeys.self)
+/// predicate = try container.decode(Predicate<Message>.self, forKey: .predicate, configuration: configuration)
+/// }
+/// }
+/// ```
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConvertible {
     enum AllowListType : Equatable, Sendable {
         case concrete(Type)
@@ -268,7 +296,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateCodableConfiguration {
     func _identifier(for keyPath: AnyKeyPath & Sendable) -> String? {
         let concreteIdentifier = allowedKeyPaths.first {
@@ -310,7 +338,7 @@ extension PredicateCodableConfiguration {
             guard root == rootReflectionType.partial, let constructed = constructor(rootReflectionType.genericArguments) else {
                 return nil
             }
-            constructed._validateForPredicateUsage(restrictArguments: false)
+            constructed._validateForPredicateUsage()
             return constructed
         }
     }
@@ -342,7 +370,7 @@ extension PredicateCodableConfiguration {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateCodableConfiguration {
     public static let standardConfiguration: Self = {
         var configuration = Self()

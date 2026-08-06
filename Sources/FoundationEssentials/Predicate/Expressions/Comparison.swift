@@ -10,10 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public enum ComparisonOperator: Codable, Sendable {
         case lessThan, lessThanOrEqual, greaterThan, greaterThanOrEqual
+        
+        private typealias LessThanCodingKeys = EmptyCodingKeys
+        private typealias LessThanOrEqualCodingKeys = EmptyCodingKeys
+        private typealias GreaterThanCodingKeys = EmptyCodingKeys
+        private typealias GreaterThanOrEqualCodingKeys = EmptyCodingKeys
     }
 
     public struct Comparison<
@@ -54,17 +59,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Comparison : CustomStringConvertible {
     public var description: String {
         "Comparison(lhs: \(lhs), operator: \(op), rhs: \(rhs))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Comparison : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -81,5 +86,5 @@ extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : C
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Comparison : Sendable where LHS : Sendable, RHS : Sendable {}

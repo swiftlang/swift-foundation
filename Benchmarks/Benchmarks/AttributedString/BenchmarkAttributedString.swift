@@ -56,16 +56,16 @@ class AttributedStringBox {
     }
 }
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.warmupIterations = 0
     Benchmark.defaultConfiguration.maxDuration = .seconds(1)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
     
     let manyAttributesString = createManyAttributesString()
+    let longString = createLongString()
 #if FOUNDATION_FRAMEWORK
     let manyAttributesNS = createManyAttributesNSString()
-    let longString = createLongString()
     let toInsertNS = NSAttributedString(string: String(repeating: "c", count: longString.characters.count))
 #endif
     
@@ -414,12 +414,29 @@ let benchmarks = {
 #endif
     
     let manyAttributesString2 = createManyAttributesString()
+    let manyAttributesString3 =  {
+        var str = createManyAttributesString()
+        str.characters.append("a")
+        return str
+    }()
     let manyAttributesStringRange = manyAttributesString.characters.index(manyAttributesString.startIndex, offsetBy: manyAttributesString.characters.count / 2)...
     let manyAttributesSubstring = manyAttributesString[manyAttributesStringRange]
     let manyAttributes2Substring = manyAttributesString2[manyAttributesStringRange]
 
+    Benchmark("equalityShared") { benchmark in
+        blackHole(manyAttributesString == manyAttributesString)
+    }
+
     Benchmark("equality") { benchmark in
         blackHole(manyAttributesString == manyAttributesString2)
+    }
+
+    Benchmark("equalityDifferingCharacters") { benchmark in
+        blackHole(manyAttributesString == manyAttributesString3)
+    }
+
+    Benchmark("substringEqualityShared") { benchmark in
+        blackHole(manyAttributesSubstring == manyAttributesSubstring)
     }
     
     Benchmark("substringEquality") { benchmark in
@@ -439,7 +456,7 @@ let benchmarks = {
     }
     
     struct TestAttribute : AttributedStringKey {
-        static var name = "0"
+        nonisolated(unsafe) static var name = "0"
         typealias Value = Int
     }
     var hashAttributeContainer = AttributeContainer()
@@ -455,6 +472,57 @@ let benchmarks = {
         blackHole(hasher.finalize())
     }
 #endif
+    
+    let manyAttributesWithParagraph = {
+        var str = createManyAttributesString()
+        str.testParagraphConstrained = 2
+        return str
+    }()
+    
+    Benchmark("paragraphBoundSliceEnumeration-shortRuns") { benchmark in
+        for (value, range) in manyAttributesWithParagraph.runs[\.testParagraphConstrained] {
+            blackHole(value)
+        }
+    }
+    
+    Benchmark("paragraphBoundSliceEnumeration-shortRuns-reversed") { benchmark in
+        for (value, range) in manyAttributesWithParagraph.runs[\.testParagraphConstrained].reversed() {
+            blackHole(value)
+        }
+    }
+    
+    let longParagraphsString = {
+        var str = String(repeating: "a", count: 10000) + "\n"
+        str += String(repeating: "b", count: 10000) + "\n"
+        str += String(repeating: "c", count: 10000)
+        return AttributedString(str, attributes: AttributeContainer.testParagraphConstrained(1).testInt(2))
+    }()
+    
+    Benchmark("paragraphBoundSliceEnumeration-longRuns") { benchmark in
+        for (value, range) in longParagraphsString.runs[\.testParagraphConstrained] {
+            blackHole(value)
+        }
+    }
+    
+    Benchmark("paragraphBoundSliceEnumeration-longRuns-reversed") { benchmark in
+        for (value, range) in longParagraphsString.runs[\.testParagraphConstrained].reversed() {
+            blackHole(value)
+        }
+    }
+    
+    Benchmark("range(of:)") { benchmark in
+        longString.range(of: "cccc")
+    }
+
+    Benchmark("runs") {benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(manyAttributesString.runs)
+        }
+    }
+
+    Benchmark("stringConversion") { benchmark in
+        blackHole(String(longString.characters))
+    }
 }
 
 

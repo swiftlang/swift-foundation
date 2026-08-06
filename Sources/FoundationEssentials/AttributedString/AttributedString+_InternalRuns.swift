@@ -44,7 +44,7 @@ extension AttributedString {
 extension AttributedString._InternalRuns {
     /// A metric that assigns each run a size of 1; i.e., the metric corresponding to run offsets.
     ///
-    /// Runs are not divisable under this metric.
+    /// Runs are not divisible under this metric.
     struct RunMetric: RopeMetric {
         typealias Element = AttributedString._InternalRun
         typealias Summary = Element.Summary

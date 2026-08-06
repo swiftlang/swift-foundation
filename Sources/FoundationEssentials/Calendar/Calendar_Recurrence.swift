@@ -71,13 +71,51 @@ extension Calendar {
         let start: Date
         /// The recurrenece rule
         let recurrence: RecurrenceRule
-        /// Range in which the search should occur. If `nil`, return all results
-        let range: Range<Date>?
+        /// The lower end of the search range. If `nil`, the search is unbounded
+        /// in the past.
+        let lowerBound: Date?
+        /// The upper end of the search range. If `nil`, the search is unbounded
+        /// in the future. If `inclusive` is true, `bound` is a valid result
+        let upperBound: (bound: Date, inclusive: Bool)?
         
         init(start: Date, recurrence: RecurrenceRule, range: Range<Date>?) {
             self.start = start
             self.recurrence = recurrence
-            self.range = range
+            if let range {
+                self.lowerBound = range.lowerBound
+                self.upperBound = (range.upperBound, false)
+            } else {
+                self.lowerBound = nil
+                self.upperBound = nil
+            }
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: ClosedRange<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = range.lowerBound
+            self.upperBound = (range.upperBound, true)
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: PartialRangeFrom<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = range.lowerBound
+            self.upperBound = nil
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: PartialRangeThrough<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = nil
+            self.upperBound = (range.upperBound, true)
+        }
+
+        init(start: Date, recurrence: RecurrenceRule, range: PartialRangeUpTo<Date>) {
+            self.start = start
+            self.recurrence = recurrence
+            self.lowerBound = nil
+            self.upperBound = (range.upperBound, false)
         }
         
         struct Iterator: Sendable, IteratorProtocol {
@@ -85,13 +123,14 @@ extension Calendar {
             let start: Date
             /// The recurrence rule that should be used for enumeration
             let recurrence: RecurrenceRule
-            /// The range in which the sequence should produce results
-            let range: Range<Date>?
+
+            /// The lower bound for iteration results, inclusive
+            let lowerBound: Date?
+            /// The upper bound for iteration results and whether it's inclusive
+            let upperBound: (bound: Date, inclusive: Bool)?
             
-            /// The lower bound of `range`, adjusted so that date expansions may
-            /// still fit in range even if this value is outside the range. This
-            /// value is used as a lower bound for ``nextBaseRecurrenceDate()``.
-            let rangeLowerBound: Date?
+            /// The start date's nanoseconds component
+            let startDateNanoseconds: TimeInterval
             
             /// How many occurrences have been found so far
             var resultsFound = 0
@@ -102,6 +141,10 @@ extension Calendar {
             /// date, by the interval specified by the recurrence rule frequency
             /// This does not include the start date itself.
             var baseRecurrence: Calendar.DatesByMatching.Iterator
+            /// The lower bound for `baseRecurrence`. Note that this date can be
+            /// lower than `lowerBound`
+            let baseRecurrenceLowerBound: Date?
+            
             
             /// How many elements we have consumed from `baseRecurrence` 
             var iterations: Int = 0
@@ -120,7 +163,8 @@ extension Calendar {
             
             internal init(start: Date, 
                           matching recurrence: RecurrenceRule,
-                          range: Range<Date>?) {
+                          lowerBound: Date?,
+                          upperBound: (bound: Date, inclusive: Bool)?) {
                 // Copy the calendar if it's autoupdating
                 var recurrence = recurrence
                 if recurrence.calendar == .autoupdatingCurrent {
@@ -129,7 +173,6 @@ extension Calendar {
                 self.recurrence = recurrence
                 
                 self.start = start
-                self.range = range
                 
                 let frequency = recurrence.frequency
                 
@@ -212,10 +255,12 @@ extension Calendar {
                     secondAction = .expand
                 }
                 
-                if let range {
-                    rangeLowerBound = recurrence.calendar.dateInterval(of: frequency.component, for: range.lowerBound)?.start
+                self.lowerBound = lowerBound
+                self.upperBound = upperBound
+                if let lowerBound {
+                    baseRecurrenceLowerBound = recurrence.calendar.dateInterval(of: frequency.component, for: lowerBound)?.start
                 } else {
-                    rangeLowerBound = nil
+                    baseRecurrenceLowerBound = nil
                 }
                 
                 // Create date components that enumerate recurrences without any
@@ -231,6 +276,8 @@ extension Calendar {
                     case .yearly:   [.second, .minute, .hour, .day, .month, .isLeapMonth]
                 }
                 var componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
+                
+                startDateNanoseconds = start.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1)
                 
                 let expansionChangesDay = dayOfYearAction == .expand || dayOfMonthAction == .expand || weekAction == .expand || weekdayAction == .expand
                 let expansionChangesMonth = dayOfYearAction == .expand || monthAction == .expand || weekAction == .expand
@@ -325,7 +372,7 @@ extension Calendar {
                     }
                     // If a range has been specified, we should skip a few extra 
                     // occurrences until we reach the start date
-                    if let rangeLowerBound, nextDate < rangeLowerBound {
+                    if let baseRecurrenceLowerBound, nextDate < baseRecurrenceLowerBound {
                         continue
                     }
                     anchor = nextDate
@@ -422,6 +469,13 @@ extension Calendar {
                     recurrence._limitTimeComponent(.second, dates: &dates, anchor: anchor)
                 }
                 
+                if startDateNanoseconds > 0 {
+                    // `_dates(startingAfter:)` above returns whole-second dates,
+                    // so we need to restore the nanoseconds value present in the original start date.
+                    for idx in dates.indices {
+                        dates[idx] += startDateNanoseconds
+                    }
+                }
                 dates = dates.filter { $0 >= self.start }
                 
                 if let limit = recurrence.end.date {
@@ -464,11 +518,18 @@ extension Calendar {
                             finished = true
                             return nil
                         }
-                        if let range = self.range {
-                            if date >= range.upperBound {
+                        if let upperBound = self.upperBound {
+                            let outOfRange = switch upperBound.inclusive {
+                                case true:  date > upperBound.bound
+                                case false: date >= upperBound.bound
+                            }
+                            if outOfRange {
                                 finished = true
                                 return nil
-                            } else if date < range.lowerBound {
+                            }
+                        }
+                        if let lowerBound = self.lowerBound {
+                            if date < lowerBound {
                                 continue
                             }
                         }
@@ -491,7 +552,7 @@ extension Calendar {
         }
         
         public func makeIterator() -> Iterator {
-            return Iterator(start: start, matching: recurrence, range: range)
+            return Iterator(start: start, matching: recurrence, lowerBound: lowerBound, upperBound: upperBound)
         }
     }
 }
@@ -602,7 +663,155 @@ extension Calendar {
         var minutes: [Int]? = nil
         var seconds: [Int]? = nil
     }
-    
+
+    /// Expand `_DateComponentCombinations` into a flat array of single-valued `DateComponents` for the fast path. Negative ordinals are translated to `{month, weekday, weekOfMonth}` using `anchor`'s month structure. Returns nil if the pattern can't be expanded.
+    fileprivate func _fastPathDateComponents(_ c: _DateComponentCombinations, anchor: Date? = nil, maxCombinations: Int = 64) -> [DateComponents]? {
+        var hasNegativeOrdinal = false
+        if let weekdays = c.weekdays {
+            for w in weekdays {
+                switch w {
+                case .every:
+                    return nil
+                case .nth(let n, _):
+                    if n == 0 { return nil }
+                    if n < 0 {
+                        guard anchor != nil else { return nil }
+                        hasNegativeOrdinal = true
+                    }
+                }
+            }
+        }
+
+        let monthsCount = c.months?.count ?? 1
+        let weekdaysCount = c.weekdays?.count ?? 1
+        let daysOfMonthCount = c.daysOfMonth?.count ?? 1
+        let daysOfYearCount = c.daysOfYear?.count ?? 1
+        let weeksOfYearCount = c.weeksOfYear?.count ?? 1
+        let hoursCount = c.hours?.count ?? 1
+        let minutesCount = c.minutes?.count ?? 1
+        let secondsCount = c.seconds?.count ?? 1
+
+        let counts = [monthsCount, weekdaysCount, daysOfMonthCount, daysOfYearCount, weeksOfYearCount, hoursCount, minutesCount, secondsCount]
+        var total = 1
+        for count in counts {
+            let (product, overflow) = total.multipliedReportingOverflow(by: count)
+            if overflow || product > maxCombinations { return nil }
+            total = product
+        }
+        if total < 1 { return nil }
+
+        var negOrdMonth = 0
+        var negOrdIsLeap = false
+        var negOrdDay1Weekday = 0
+        var negOrdDaysInMonth = 0
+        var negOrdFirstWeekday = 0
+        var negOrdMinDays = 0
+        if hasNegativeOrdinal, let anchor = anchor {
+            let targetMonth: Int
+            let targetIsLeap: Bool
+            let targetYear: Int
+            if let ms = c.months, ms.count == 1 {
+                targetMonth = ms[0].index
+                targetIsLeap = ms[0].isLeap
+                targetYear = self.component(.year, from: anchor)
+            } else if c.months == nil || c.months!.isEmpty {
+                targetMonth = self.component(.month, from: anchor)
+                targetIsLeap = false
+                targetYear = self.component(.year, from: anchor)
+            } else {
+                return nil
+            }
+            var monthStartComps = DateComponents()
+            monthStartComps.year = targetYear
+            monthStartComps.month = targetMonth
+            monthStartComps.day = 1
+            if targetIsLeap { monthStartComps.isLeapMonth = true }
+            guard let monthStart = self.date(from: monthStartComps), let dayRange = self.range(of: .day, in: .month, for: monthStart) else { return nil }
+            negOrdMonth = targetMonth
+            negOrdIsLeap = targetIsLeap
+            negOrdDay1Weekday = self.component(.weekday, from: monthStart)
+            negOrdDaysInMonth = dayRange.upperBound - 1
+            negOrdFirstWeekday = self.firstWeekday
+            negOrdMinDays = self.minimumDaysInFirstWeek
+        }
+
+        var base = DateComponents()
+        if let ms = c.months, ms.count == 1 { base.month = ms[0].index; base.isLeapMonth = ms[0].isLeap }
+        if let woy = c.weeksOfYear, woy.count == 1 { base.weekOfYear = woy[0] }
+        if let doy = c.daysOfYear, doy.count == 1 { base.dayOfYear = doy[0] }
+        if let dom = c.daysOfMonth, dom.count == 1 { base.day = dom[0] }
+        if let hs = c.hours, hs.count == 1 { base.hour = hs[0] }
+        if let mins = c.minutes, mins.count == 1 { base.minute = mins[0] }
+        if let secs = c.seconds, secs.count == 1 { base.second = secs[0] }
+
+        var seeds: [DateComponents]
+        if let wds = c.weekdays {
+            if wds.count == 1 {
+                guard Self._translateWeekday(wds[0], into: &base, hasNegativeOrdinal: hasNegativeOrdinal, month: negOrdMonth, isLeapMonth: negOrdIsLeap, day1Weekday: negOrdDay1Weekday, daysInMonth: negOrdDaysInMonth, firstWeekday: negOrdFirstWeekday, minDays: negOrdMinDays) else { return nil }
+                seeds = [base]
+            } else {
+                seeds = []
+                seeds.reserveCapacity(wds.count)
+                for wd in wds {
+                    var wdBase = base
+                    guard Self._translateWeekday(wd, into: &wdBase, hasNegativeOrdinal: hasNegativeOrdinal, month: negOrdMonth, isLeapMonth: negOrdIsLeap, day1Weekday: negOrdDay1Weekday, daysInMonth: negOrdDaysInMonth, firstWeekday: negOrdFirstWeekday, minDays: negOrdMinDays) else { return nil }
+                    seeds.append(wdBase)
+                }
+            }
+        } else {
+            seeds = [base]
+        }
+
+        // Expand multi valued axes by cloning and setting each value directly.
+        if let ms = c.months, ms.count > 1 { seeds = seeds.flatMap { seed in ms.map { m in var dc = seed; dc.month = m.index; dc.isLeapMonth = m.isLeap; return dc } } }
+        if let woy = c.weeksOfYear, woy.count > 1 { seeds = seeds.flatMap { seed in woy.map { v in var dc = seed; dc.weekOfYear = v; return dc } } }
+        if let doy = c.daysOfYear, doy.count > 1 { seeds = seeds.flatMap { seed in doy.map { v in var dc = seed; dc.dayOfYear = v; return dc } } }
+        if let dom = c.daysOfMonth, dom.count > 1 { seeds = seeds.flatMap { seed in dom.map { v in var dc = seed; dc.day = v; return dc } } }
+        if let hs = c.hours, hs.count > 1 { seeds = seeds.flatMap { seed in hs.map { v in var dc = seed; dc.hour = v; return dc } } }
+        if let mins = c.minutes, mins.count > 1 { seeds = seeds.flatMap { seed in mins.map { v in var dc = seed; dc.minute = v; return dc } } }
+        if let secs = c.seconds, secs.count > 1 { seeds = seeds.flatMap { seed in secs.map { v in var dc = seed; dc.second = v; return dc } } }
+
+        return seeds
+    }
+
+    /// Translate a `.nth(N, day)` weekday entry into DateComponents fields. Returns false if out of range.
+    private static func _translateWeekday(_ entry: RecurrenceRule.Weekday, into dc: inout DateComponents, hasNegativeOrdinal: Bool, month: Int, isLeapMonth: Bool, day1Weekday: Int, daysInMonth: Int, firstWeekday: Int, minDays: Int) -> Bool {
+        guard case .nth(let n, let dayOfWeek) = entry else { return false }
+        let wdIdx = dayOfWeek.icuIndex
+        if n > 0 {
+            dc.weekdayOrdinal = n
+            dc.weekday = wdIdx
+            return true
+        }
+        guard hasNegativeOrdinal else { return false }
+        let firstOcc = 1 + ((wdIdx - day1Weekday + 7) % 7)
+        let totalOcc = (daysInMonth - firstOcc) / 7 + 1
+        let kthFromLast = -n
+        let dayOfMonth = firstOcc + (totalOcc - kthFromLast) * 7
+        guard dayOfMonth >= 1, dayOfMonth <= daysInMonth else { return false }
+        let periodStart = ((day1Weekday - firstWeekday) % 7 + 7) % 7
+        let correction = (7 - periodStart) >= minDays ? 1 : 0
+        let weekOfMonth = (dayOfMonth + periodStart - 1) / 7 + correction
+        dc.month = month
+        dc.isLeapMonth = isLeapMonth
+        dc.weekday = wdIdx
+        dc.weekOfMonth = weekOfMonth
+        return true
+    }
+
+    /// Probe all expanded DateComponents via the fast path. Returns sorted results or nil if any DC isn't fast-pathable.
+    private func _probeAllFastPath(_ allDCs: [DateComponents], after startDate: Date) -> [(Date, DateComponents)]? {
+        guard allDCs.allSatisfy({ _supportsNextDateFastPath(for: $0._populatedComponentSet) }) else { return nil }
+        var results: [(Date, DateComponents)] = []
+        results.reserveCapacity(allDCs.count)
+        for dc in allDCs {
+            guard let fast = _calendarNextDate(after: startDate, matching: dc, direction: .forward) else { return nil }
+            results.append((fast, dc))
+        }
+        results.sort { $0.0 < $1.0 }
+        return results
+    }
+
 
     /// Find date components which can be used to filter or enumerate each given
     /// weekday in a range
@@ -638,7 +847,7 @@ extension Calendar {
         // necessarily occur in the first week of the month.
         
         /// The component where we set the week number, if we are targeting only
-        /// a particular occurence of a weekday
+        /// a particular occurrence of a weekday
         let weekComponent: Calendar.Component = if parent == .month {
             .weekOfMonth
         } else {
@@ -658,7 +867,13 @@ extension Calendar {
         // it falls on the day after the last day in the interval. Subtracting a
         // few seconds can give us the last day in the interval
         lazy var lastWeekday = component(.weekday, from: interval.end.addingTimeInterval(-0.1))
-        
+        let calendarFirstWeekday = self.firstWeekday
+
+        /// Convert an absolute weekday (Sun=1...Sat=7) to an index within the calendar's week, which can start on an arbitrary weekday.
+        func positionInWeek(_ weekday: Int) -> Int {
+            (weekday - calendarFirstWeekday + 7) % 7
+        }
+
         for (weekday, occurences) in map {
             let weekdayIdx = weekday.icuIndex
             if occurences == [] {
@@ -667,8 +882,8 @@ extension Calendar {
                 components.weekday = weekdayIdx
                 result.append(components)
             } else {
-                lazy var firstWeek = weekRange.lowerBound + (weekdayIdx < firstWeekday ? 1 : 0)
-                lazy var lastWeek  = weekRange.upperBound - (weekdayIdx > lastWeekday  ? 1 : 0)
+                lazy var firstWeek = weekRange.lowerBound + (positionInWeek(weekdayIdx) < positionInWeek(firstWeekday) ? 1 : 0)
+                lazy var lastWeek  = weekRange.upperBound - (positionInWeek(weekdayIdx) > positionInWeek(lastWeekday)  ? 1 : 0)
                 for occurence in occurences {
                     var components = DateComponents()
                     if occurence > 0 {
@@ -760,6 +975,14 @@ extension Calendar {
                                       matching combinationComponents: _DateComponentCombinations,
                                       matchingPolicy: MatchingPolicy,
                                       repeatedTimePolicy: RepeatedTimePolicy) throws -> [(Date, DateComponents)]? {
+
+        // Fast-path: _probeAllFastPath checks supportsNextDateFastPath per pattern.
+        if matchingPolicy == .nextTime && repeatedTimePolicy == .first {
+            if let allDCs = _fastPathDateComponents(combinationComponents, anchor: startDate),
+               let results = _probeAllFastPath(allDCs, after: startDate) {
+                return results
+            }
+        }
 
         let isStrictMatching = matchingPolicy == .strict
 

@@ -10,14 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A comparison algorithm for a given type.
+/// A comparison algorithm for a specified type.
+///
+/// Objects that conform to ``SortComparator`` provide a comparison algorithm and storage for the sort order to use when comparing.
 @preconcurrency
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 public protocol SortComparator<Compared>: Hashable, Sendable {
-    /// The type that the `SortComparator` provides a comparison for.
+    /// A type that the sort comparator can compare.
     associatedtype Compared
 
-    /// The relative ordering of lhs, and rhs.
+    /// Provides the relative ordering of two elements based on the sort order
+    /// of the comparator.
     ///
     /// The result of comparisons should be flipped if the current `order`
     /// is `reverse`.
@@ -30,21 +33,30 @@ public protocol SortComparator<Compared>: Hashable, Sendable {
     /// - Parameters:
     ///     - lhs: A value to compare.
     ///     - rhs: A value to compare.
+    /// - Returns: The relative ordering of the two values.
     func compare(_ lhs: Compared, _ rhs: Compared) -> ComparisonResult
 
-    /// If the `SortComparator`s resulting order is forward or reverse.
+    /// The sort order that the comparator uses to compare.
     var order: SortOrder { get set }
 }
 
-/// The orderings that sorts can be performed with.
+/// The orderings that you can perform sorts with.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 @frozen
 public enum SortOrder: Hashable, Codable, Sendable {
-    /// The ordering where if compare(a, b) == .orderedAscending,
-    /// a is placed before b.
+    /// The ordering that places the first item before the second when comparing
+    /// two items using an ascending order.
+    ///
+    /// The ordering places the first item before the second when a
+    /// ``ComparisonResult`` of two items is
+    /// ``ComparisonResult/orderedAscending``.
     case forward
-    /// The ordering where if compare(a, b) == .orderedAscending,
-    /// a is placed after b.
+    /// The ordering that places the first item after the second when comparing
+    /// two items using an ascending order.
+    ///
+    /// The ordering places the first item after the second when a
+    /// ``ComparisonResult`` of two items is
+    /// ``ComparisonResult/orderedAscending``.
     case reverse
 
     public init(from decoder: Decoder) throws {
@@ -137,13 +149,16 @@ package struct AnySortComparator: SortComparator, Sendable {
     }
 }
 
-/// Compares `Comparable` types using their comparable implementation.
+/// A comparator that compares types according to their conformance to the comparable protocol.
+///
+/// The comparator uses the relevant type's <doc://com.apple.documentation/documentation/swift/comparable> implementation to compare instances.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 public struct ComparableComparator<Compared: Comparable>: SortComparator, Sendable {
+    /// The sort order that the comparator uses to compare.
     public var order: SortOrder
     
 #if FOUNDATION_FRAMEWORK
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(order: SortOrder = .forward) {
         self.order = order
     }
@@ -160,6 +175,14 @@ public struct ComparableComparator<Compared: Comparable>: SortComparator, Sendab
         return .orderedSame
     }
 
+    /// Provides the relative ordering of two elements.
+    ///
+    /// The method returns flipped comparisons if the sort order is ``SortOrder/reverse``.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first element to compare.
+    ///   - rhs: The second element to compare.
+    /// - Returns: The relative ordering between the two elements.
     public func compare(_ lhs: Compared, _ rhs: Compared) -> ComparisonResult {
         return unorderedCompare(lhs, rhs).withOrder(order)
     }
@@ -216,6 +239,7 @@ extension Sequence {
     /// - Parameters:
     ///   - comparator: the comparator to use in ordering elements
     /// - Returns: an array of the elements sorted using `comparator`.
+    @inlinable
     public func sorted<Comparator: SortComparator>(using comparator: Comparator) -> [Element] where Comparator.Compared == Element {
         return self.sorted {
             comparator.compare($0, $1) == .orderedAscending
@@ -231,6 +255,7 @@ extension Sequence {
     ///   sorting the sequence's elements. Any subsequent comparators are used
     ///   to further refine the order of elements with equal values.
     /// - Returns: an array of the elements sorted using `comparators`.
+    @inlinable
     public func sorted<S: Sequence, Comparator: SortComparator>(using comparators: S) -> [Element] where
         S.Element == Comparator,
         Element == Comparator.Compared
@@ -250,6 +275,7 @@ extension Sequence {
     /// comparator to be used in sorting the sequence's elements. Any subsequent
     /// comparators are used to further refine the order of elements with equal
     /// values.
+    @inlinable
     public func compare<Comparator: SortComparator>(_ lhs: Comparator.Compared, _ rhs: Comparator.Compared) -> ComparisonResult where Element == Comparator {
         for comparator in self {
             let result = comparator.compare(lhs, rhs)
@@ -264,6 +290,7 @@ extension MutableCollection where Self: RandomAccessCollection {
     /// Sorts the collection using the given comparator to compare elements.
     /// - Parameters:
     ///     - comparator: the sort comparator used to compare elements.
+    @inlinable
     public mutating func sort<Comparator: SortComparator>(using comparator: Comparator) where Comparator.Compared == Element {
         self.sort {
             comparator.compare($0, $1) == .orderedAscending
@@ -278,6 +305,7 @@ extension MutableCollection where Self: RandomAccessCollection {
     ///   first comparator specifies the primary comparator to be used in
     ///   sorting the sequence's elements. Any subsequent comparators are used
     ///   to further refine the order of elements with equal values.
+    @inlinable
     public mutating func sort<S: Sequence, Comparator: SortComparator>(using comparators: S) where S.Element == Comparator, Element == Comparator.Compared {
         self.sort {
             comparators.compare($0, $1) == .orderedAscending

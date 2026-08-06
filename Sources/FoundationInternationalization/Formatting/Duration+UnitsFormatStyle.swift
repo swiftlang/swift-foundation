@@ -495,9 +495,6 @@ extension Duration {
             Attributed(innerStyle: self)
         }
     }
-
-    // For testing purpose. See notes about String._Encoding
-    internal typealias _UnitsFormatStyle = UnitsFormatStyle
 }
 
 // `FormatStyle` static membership lookup
@@ -518,13 +515,13 @@ extension FormatStyle where Self == Duration.UnitsFormatStyle {
 
     /// A factory function to create a units format style to format a duration.
     /// - Parameters:
-    ///   - allowedUnits: The units that may be included in the output string.
+    ///   - units: The units that may be included in the output string.
     ///   - width: The width of the unit and the spacing between the value and the unit.
     ///   - maximumUnitCount: The maximum number of time units to include in the output string.
     ///   - zeroValueUnits: The strategy for how zero-value units are handled.
     ///   - valueLengthLimits: The padding or truncating behavior of the unit value.
     ///   - fractionalPart: The strategy for displaying a duration if it cannot be represented exactly with the allowed units.
-    ///   - Returns: A format style to format a duration.
+    /// - Returns: A format style to format a duration.
     public static func units<ValueRange: RangeExpression>(allowed units: Set<Duration.UnitsFormatStyle.Unit> = [.hours, .minutes, .seconds], width: Duration.UnitsFormatStyle.UnitWidth = .abbreviated, maximumUnitCount : Int? = nil, zeroValueUnits: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy = .hide, valueLengthLimits: ValueRange, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy = .hide) -> Self where ValueRange.Bound == Int {
         .init(allowedUnits: units, width: width, maximumUnitCount: maximumUnitCount, zeroValueUnits: zeroValueUnits, valueLengthLimits: valueLengthLimits, fractionalPart: fractionalPart)
     }
@@ -632,7 +629,7 @@ extension Duration.UnitsFormatStyle {
 
 // MARK: Dynamic Member Lookup
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.UnitsFormatStyle.Attributed {
     public subscript<T>(dynamicMember key: KeyPath<Duration.UnitsFormatStyle, T>) -> T {
         innerStyle[keyPath: key]
@@ -650,7 +647,7 @@ extension Duration.UnitsFormatStyle.Attributed {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         self.innerStyle.discreteInput(before: input)
@@ -661,7 +658,7 @@ extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         let (bound, isIncluded) = self.bound(for: input, countingDown: true)

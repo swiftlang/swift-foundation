@@ -15,6 +15,8 @@
 target_sources(FoundationEssentials PRIVATE
     BinaryInteger+NumericStringRepresentation.swift
     Date+ISO8601FormatStyle.swift
+    Date+HTTPFormatStyle.swift
+    DateComponents+ISO8601FormatStyle.swift
     DiscreteFormatStyle.swift
     FormatParsingUtilities.swift
     FormatStyle.swift

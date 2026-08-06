@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// A view into the underlying storage of the attributed string, as Unicode characters.
     public struct CharacterView : Sendable {
         /// The guts of the base attributed string.
         internal var _guts: Guts
@@ -55,6 +56,15 @@ extension AttributedString {
         }
     }
 
+    /// The characters of the attributed string, as a view into the underlying string.
+    ///
+    /// Use the ``AttributedString/characters`` view when you want to look for specific string
+    /// content. You can then use the resulting ranges to set attributes for specific parts of
+    /// the ``AttributedString``.
+    ///
+    /// You can also use this property to mutate the attributed string, using
+    /// `RangeReplaceableCollection` methods, such as `insert(_:at:)` and `append(_:)`.
+    /// Inserted characters inherit any attributes present at the insertion point.
     public var characters: CharacterView {
         get {
             return CharacterView(_guts)
@@ -106,13 +116,21 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     public typealias Index = AttributedString.Index
 
     public var startIndex: AttributedString.Index {
-        .init(_range.lowerBound)
+        .init(_range.lowerBound, version: _guts.version)
     }
 
     public var endIndex: AttributedString.Index {
-        .init(_range.upperBound)
+        .init(_range.upperBound, version: _guts.version)
     }
 
+    /// The number of characters in the collection.
+    ///
+    /// To check whether a collection is empty, use its `isEmpty` property
+    /// instead of comparing `count` to zero. Unless the collection guarantees
+    /// random-access performance, calculating `count` can be an O(*n*)
+    /// operation.
+    ///
+    /// - Complexity: O(*n*)
     @_alwaysEmitIntoClient
     public var count: Int {
     #if FOUNDATION_FRAMEWORK
@@ -123,7 +141,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultCount
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal var _count: Int {
         _characters.count
@@ -131,14 +149,14 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(before: i._value))
+        let j = Index(_guts.string.index(before: i._value), version: _guts.version)
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(after: i._value))
+        let j = Index(_guts.string.index(after: i._value), version: _guts.version)
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
     }
@@ -153,11 +171,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(i._value, offsetBy: distance))
+        let j = Index(_guts.string.index(i._value, offsetBy: distance), version: _guts.version)
         precondition(j >= startIndex && j <= endIndex, "AttributedString index out of bounds")
         return j
     }
@@ -176,7 +194,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -192,7 +210,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         }
         precondition(j >= startIndex._value && j <= endIndex._value,
                      "AttributedString index out of bounds")
-        return Index(j)
+        return Index(j, version: _guts.version)
     }
 
     @_alwaysEmitIntoClient
@@ -207,7 +225,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultDistance(from: start, to: end)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
@@ -296,9 +314,9 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         let subrange = _guts.characterRange(roundingDown: subrange._bstringRange)
         
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
-        if let newElements = _specializingCast(newElements, to: Self.self) {
+        if let newElements = _specialize(newElements, for: Self.self) {
             _replaceSubrange(subrange, with: newElements._characters)
-        } else if let newElements = _specializingCast(newElements, to: Slice<Self>.self) {
+        } else if let newElements = _specialize(newElements, for: Slice<Self>.self) {
             _replaceSubrange(subrange, with: newElements._rebased._characters)
         } else {
             _replaceSubrange(subrange, with: newElements)
@@ -315,7 +333,7 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         // don't need to touch string storage, but we still want to update attributes as if it was
         // a full edit.
         var hasStringChanges = true
-        if let newElements = _specializingCast(newElements, to: BigSubstring.self),
+        if let newElements = _specialize(newElements, for: BigSubstring.self),
            newElements.isIdentical(to: _characters[subrange]) {
             hasStringChanges = false
         }

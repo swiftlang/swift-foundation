@@ -42,6 +42,26 @@ internal struct BufferView<Element> {
         guard let baseAddress = UnsafeRawPointer(buffer.baseAddress) else { return nil }
         self.init(unsafeBaseAddress: baseAddress, count: buffer.count)
     }
+    
+    var bytes: RawSpan {
+        @_lifetime(borrow self)
+        borrowing get {
+            let buffer = UnsafeRawBufferPointer(start: baseAddress, count: count)
+            let span = unsafe RawSpan(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, borrowing: self)
+        }
+    }
+}
+
+// TODO: This can be improved once stdlib API for safe conversions for fully-inhabited types is ready
+extension BufferView where Element == UInt8 {
+    var span: Span<Element> {
+        @_lifetime(borrow self)
+        borrowing get {
+            let span = unsafe bytes._unsafeView(as: Element.self)
+            return _overrideLifetime(span, borrowing: self)
+        }
+    }
 }
 
 extension BufferView /*where Element: BitwiseCopyable*/ {
@@ -54,6 +74,8 @@ extension BufferView /*where Element: BitwiseCopyable*/ {
         self.init(unsafeBaseAddress: p, count: q)
     }
 }
+
+extension BufferView: Sendable where Element: Sendable {}
 
 //MARK: Sequence
 
@@ -73,9 +95,6 @@ extension BufferView: Sequence {
         }
     }
 }
-
-@available(*, unavailable)
-extension BufferView: Sendable {}
 
 extension BufferView where Element: Equatable {
 

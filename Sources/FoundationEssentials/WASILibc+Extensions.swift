@@ -11,7 +11,7 @@
 
 #if os(WASI)
 
-import WASILibc
+@preconcurrency import WASILibc
 internal import _FoundationCShims
 
 // MARK: - Clock
@@ -48,6 +48,9 @@ internal var O_TRUNC: Int32 {
 }
 internal var O_WRONLY: Int32 {
     return _platform_shims_O_WRONLY()
+}
+internal var O_NONBLOCK: Int32 {
+    return _platform_shims_O_NONBLOCK()
 }
 internal var O_RDONLY: Int32 {
     return _platform_shims_O_RDONLY()

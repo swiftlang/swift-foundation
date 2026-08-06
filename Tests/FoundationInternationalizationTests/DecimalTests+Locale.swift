@@ -10,58 +10,75 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if canImport(FoundationInternationalization)
+@testable import FoundationEssentials
+@testable import FoundationInternationalization
+#elseif FOUNDATION_FRAMEWORK
+@testable import Foundation
 #endif
 
-final class DecimalLocaleTests : XCTestCase {
-    func test_stringWithLocale() {
+@Suite("Decimal (Locale)")
+private struct DecimalLocaleTests {
+    
+    @Test func stringWithLocale() {
+        
         let en_US = Locale(identifier: "en_US")
         let fr_FR = Locale(identifier: "fr_FR")
         
-        XCTAssertEqual(Decimal(string: "1,234.56")! * 1000, Decimal(1000))
-        XCTAssertEqual(Decimal(string: "1,234.56", locale: en_US)! * 1000, Decimal(1000))
-        XCTAssertEqual(Decimal(string: "1,234.56", locale: fr_FR)! * 1000, Decimal(1234))
-        XCTAssertEqual(Decimal(string: "1.234,56", locale: en_US)! * 1000, Decimal(1234))
-        XCTAssertEqual(Decimal(string: "1.234,56", locale: fr_FR)! * 1000, Decimal(1000))
+        #expect(Decimal(string: "1,234.56")! * 1000 == Decimal(1000))
+        #expect(Decimal(string: "1,234.56", locale: en_US)! * 1000 == Decimal(1000))
+        #expect(Decimal(string: "1,234.56", locale: fr_FR)! * 1000 == Decimal(1234))
+        #expect(Decimal(string: "1.234,56", locale: en_US)! * 1000 == Decimal(1234))
+        #expect(Decimal(string: "1.234,56", locale: fr_FR)! * 1000 == Decimal(1000))
         
-        XCTAssertEqual(Decimal(string: "-1,234.56")! * 1000, Decimal(-1000))
-        XCTAssertEqual(Decimal(string: "+1,234.56")! * 1000, Decimal(1000))
-        XCTAssertEqual(Decimal(string: "+1234.56e3"), Decimal(1234560))
-        XCTAssertEqual(Decimal(string: "+1234.56E3"), Decimal(1234560))
-        XCTAssertEqual(Decimal(string: "+123456000E-3"), Decimal(123456))
+        #expect(Decimal(string: "-1,234.56")! * 1000 == Decimal(-1000))
+        #expect(Decimal(string: "+1,234.56")! * 1000 == Decimal(1000))
+        #expect(Decimal(string: "+1234.56e3") == Decimal(1234560))
+        #expect(Decimal(string: "+1234.56E3") == Decimal(1234560))
+        #expect(Decimal(string: "+123456000E-3") == Decimal(123456))
         
-        XCTAssertNil(Decimal(string: ""))
-        XCTAssertNil(Decimal(string: "x"))
-        XCTAssertEqual(Decimal(string: "-x"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "+x"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "-"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "+"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "-."), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "+."), Decimal.zero)
+        #expect(Decimal(string: "") == nil)
+        #expect(Decimal(string: "x") == nil)
+        #expect(Decimal(string: "-x") == Decimal.zero)
+        #expect(Decimal(string: "+x") == Decimal.zero)
+        #expect(Decimal(string: "-") == Decimal.zero)
+        #expect(Decimal(string: "+") == Decimal.zero)
+        #expect(Decimal(string: "-.") == Decimal.zero)
+        #expect(Decimal(string: "+.") == Decimal.zero)
         
-        XCTAssertEqual(Decimal(string: "-0"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "+0"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "-0."), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "+0."), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "e1"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: "e-5"), Decimal.zero)
-        XCTAssertEqual(Decimal(string: ".3e1"), Decimal(3))
+        #expect(Decimal(string: "-0") == Decimal.zero)
+        #expect(Decimal(string: "+0") == Decimal.zero)
+        #expect(Decimal(string: "-0.") == Decimal.zero)
+        #expect(Decimal(string: "+0.") == Decimal.zero)
+        #expect(Decimal(string: "e1") == Decimal.zero)
+        #expect(Decimal(string: "e-5") == Decimal.zero)
+        #expect(Decimal(string: ".3e1") == Decimal(3))
         
-        XCTAssertEqual(Decimal(string: "."), Decimal.zero)
-        XCTAssertEqual(Decimal(string: ".", locale: en_US), Decimal.zero)
-        XCTAssertNil(Decimal(string: ".", locale: fr_FR))
+        #expect(Decimal(string: ".") == Decimal.zero)
+        #expect(Decimal(string: ".", locale: en_US) == Decimal.zero)
+        #expect(Decimal(string: ".", locale: fr_FR) == nil)
         
-        XCTAssertNil(Decimal(string: ","))
-        XCTAssertEqual(Decimal(string: ",", locale: fr_FR), Decimal.zero)
-        XCTAssertNil(Decimal(string: ",", locale: en_US))
+        #expect(Decimal(string: ",") == nil)
+        #expect(Decimal(string: ",", locale: fr_FR) == Decimal.zero)
+        #expect(Decimal(string: ",", locale: en_US) == nil)
         
         let s1 = "1234.5678"
-        XCTAssertEqual(Decimal(string: s1, locale: en_US)?.description, s1)
-        XCTAssertEqual(Decimal(string: s1, locale: fr_FR)?.description, "1234")
+        #expect(Decimal(string: s1, locale: en_US)?.description == s1)
+        #expect(Decimal(string: s1, locale: fr_FR)?.description == "1234")
         
         let s2 = "1234,5678"
-        XCTAssertEqual(Decimal(string: s2, locale: en_US)?.description, "1234")
-        XCTAssertEqual(Decimal(string: s2, locale: fr_FR)?.description, s1)
+        #expect(Decimal(string: s2, locale: en_US)?.description == "1234")
+        #expect(Decimal(string: s2, locale: fr_FR)?.description == s1)
+    }
+    
+    @Test func descriptionWithLocale() throws {
+        let decimal = Decimal(string: "-123456.789")!
+        #expect(decimal._toString(withDecimalSeparator: ".") == "-123456.789")
+        let en = decimal._toString(withDecimalSeparator: try #require(Locale(identifier: "en_GB").decimalSeparator))
+        #expect(en == "-123456.789")
+        let fr = decimal._toString(withDecimalSeparator: try #require(Locale(identifier: "fr_FR").decimalSeparator))
+        #expect(fr == "-123456,789")
     }
 }

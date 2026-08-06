@@ -24,18 +24,20 @@ internal import QuarantinePrivate
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 internal import _FoundationCShims
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if os(Windows)
@@ -66,6 +68,12 @@ extension stat {
         let type = mode_t(self.st_mode) & S_IFMT
         return type == S_IFBLK || type == S_IFCHR
     }
+}
+#endif
+
+#if FOUNDATION_FRAMEWORK && os(macOS)
+extension URLResourceKey {
+    static var _finderInfoKey: Self { URLResourceKey("_NSURLFinderInfoKey") }
 }
 #endif
 
@@ -172,7 +180,7 @@ extension _FileManagerImpl {
         #endif
     }
 
-#if !os(Windows) && !os(WASI)
+#if !os(Windows) && !os(WASI) && !os(OpenBSD) && !os(Emscripten)
     static func _setAttribute(_ key: UnsafePointer<CChar>, value: Data, at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         try value.withUnsafeBytes { buffer in
             #if canImport(Darwin)

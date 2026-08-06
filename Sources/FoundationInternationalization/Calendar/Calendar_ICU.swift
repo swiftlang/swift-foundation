@@ -15,20 +15,23 @@ import FoundationEssentials
 #endif
 
 #if canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(CRT)
 import CRT
 #elseif canImport(Darwin)
 import Darwin
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 internal import _FoundationICU
+internal import Synchronization
 
 #if !FOUNDATION_FRAMEWORK
 @_dynamicReplacement(for: _calendarICUClass())
@@ -38,7 +41,7 @@ private func _calendarICUClass_localized() -> _CalendarProtocol.Type? {
 #endif
 
 internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
-    let lock: LockedState<Void>
+    let lock: Mutex<Void>
     let identifier: Calendar.Identifier
 
     var ucalendar: UnsafeMutablePointer<UCalendar?>
@@ -60,7 +63,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     {
         self.identifier = identifier
 
-        lock = LockedState<Void>()
+        lock = Mutex<Void>(())
 
         self.locale = locale
         _timeZone = timeZone ?? TimeZone.default
@@ -141,7 +144,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
     var locale: Locale? {
         didSet {
-            lock.withLock {
+            lock.withLock { _ in
                 _locked_regenerate()
             }
         }
@@ -152,7 +155,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             _timeZone
         }
         set {
-            lock.withLock {
+            lock.withLock { _ in
                 _timeZone = newValue
                 _locked_regenerate()
             }
@@ -161,12 +164,12 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
     var firstWeekday: Int {
         get {
-            lock.withLock {
+            lock.withLock { _ in
                 _locked_firstWeekday
             }
         }
         set {
-            lock.withLock {
+            lock.withLock { _ in
                 customFirstWeekday = newValue
                 ucal_setAttribute(ucalendar, UCAL_FIRST_DAY_OF_WEEK, Int32(newValue))
             }
@@ -187,12 +190,12 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
     var minimumDaysInFirstWeek: Int {
         get {
-            lock.withLock {
+            lock.withLock { _ in
                 _locked_minimumDaysInFirstWeek
             }
         }
         set {
-            lock.withLock {
+            lock.withLock { _ in
                 customMinimumFirstDaysInWeek = newValue
                 ucal_setAttribute(ucalendar, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK, Int32(newValue))
             }
@@ -213,7 +216,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
               changingTimeZone: TimeZone? = nil,
               changingFirstWeekday: Int? = nil,
               changingMinimumDaysInFirstWeek: Int? = nil) -> any _CalendarProtocol {
-        return lock.withLock {
+        return lock.withLock { _ in
             var newLocale = self.locale
             var newTimeZone = self.timeZone
             var newFirstWeekday: Int?
@@ -248,16 +251,16 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     func hash(into hasher: inout Hasher) {
-        lock.lock()
-        hasher.combine(identifier)
-        hasher.combine(timeZone)
-        hasher.combine(_locked_firstWeekday)
-        hasher.combine(_locked_minimumDaysInFirstWeek)
-        hasher.combine(localeIdentifier)
-        // It's important to include only properties that affect the Calendar itself. That allows e.g. currentLocale (with an irrelevant pref about something like preferred metric unit) to compare equal to a different locale.
-        hasher.combine(preferredFirstWeekday)
-        hasher.combine(preferredMinimumDaysInFirstweek)
-        lock.unlock()
+        lock.withLock { _ in
+            hasher.combine(identifier)
+            hasher.combine(timeZone)
+            hasher.combine(_locked_firstWeekday)
+            hasher.combine(_locked_minimumDaysInFirstWeek)
+            hasher.combine(localeIdentifier)
+            // It's important to include only properties that affect the Calendar itself. That allows e.g. currentLocale (with an irrelevant pref about something like preferred metric unit) to compare equal to a different locale.
+            hasher.combine(preferredFirstWeekday)
+            hasher.combine(preferredMinimumDaysInFirstweek)
+        }
     }
     
 #if FOUNDATION_FRAMEWORK
@@ -287,7 +290,15 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             return 1..<5
         case .calendar, .timeZone:
             return nil
-        case .era, .year, .month, .day, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .isLeapMonth, .dayOfYear:
+        case .isLeapMonth:
+            // Fast path but also workaround an ICU bug where they return 1 as the max value even for calendars without leap month
+            let hasLeapMonths = identifier == .chinese || identifier == .dangi || identifier == .gujarati || identifier == .kannada || identifier == .marathi || identifier == .telugu || identifier == .vietnamese || identifier == .vikram
+            if !hasLeapMonths {
+                return 0..<1
+            } else {
+                return nil
+            }
+        case .era, .year, .month, .day, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .isRepeatedDay:
             return nil
         }
     }
@@ -301,7 +312,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             return nil
         }
 
-        return lock.withLock {
+        return lock.withLock { _ in
             var status = U_ZERO_ERROR
             let min = ucal_getLimit(ucalendar, fields, UCAL_GREATEST_MINIMUM, &status)
             guard status.isSuccess else { return nil }
@@ -318,7 +329,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     func maximumRange(of component: Calendar.Component) -> Range<Int>? {
-        return lock.withLock {
+        return lock.withLock { _ in
             return _locked_maximumRange(of: component)
         }
     }
@@ -457,7 +468,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
-        return lock.withLock {
+        return lock.withLock { _ in
             return _locked_range(of: smaller, in: larger, for: date)
         }
     }
@@ -571,7 +582,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
-        lock.withLock {
+        lock.withLock { _ in
             _locked_ordinality(of: smaller, in: larger, for: date)
         }
     }
@@ -1128,7 +1139,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     // MARK: - Date Interval Creation
 
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
-        lock.withLock {
+        lock.withLock { _ in
             _locked_dateInterval(of: component, at: date)
         }
     }
@@ -1136,7 +1147,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     // MARK: - Weekends and Special Times
 
     func isDateInWeekend(_ date: Date) -> Bool {
-        return lock.withLock {
+        return lock.withLock { _ in
             var status = U_ZERO_ERROR
             return ucal_isWeekend(ucalendar, date.udate, &status).boolValue
         }
@@ -1155,11 +1166,14 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             return withTz.date(from: dc)
         }
 
-        return lock.withLock {
+        return lock.withLock { _ in
             ucal_clear(ucalendar)
             ucal_set(ucalendar, UCAL_YEAR, 1)
             ucal_set(ucalendar, UCAL_MONTH, 0)
             ucal_set(ucalendar, UCAL_IS_LEAP_MONTH, 0)
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
+#endif
             ucal_set(ucalendar, UCAL_DAY_OF_MONTH, 1)
             ucal_set(ucalendar, UCAL_HOUR_OF_DAY, 0)
             ucal_set(ucalendar, UCAL_MINUTE, 0)
@@ -1215,7 +1229,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents {
-        return lock.withLock {
+        return lock.withLock { _ in
             let capped = date.capped
             var status = U_ZERO_ERROR
             ucal_clear(ucalendar)
@@ -1246,6 +1260,13 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 dc.isLeapMonth = result == 0 ? false : true
             }
 
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            if components.contains(.isRepeatedDay) {
+                let result = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
+                dc.isRepeatedDay = result == 0 ? false : true
+            }
+#endif
+
             if components.contains(.timeZone) {
                 dc.timeZone = timeZone
             }
@@ -1258,7 +1279,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     // MARK: -
 
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
-        return lock.withLock {
+        return lock.withLock { _ in
             let capped = date.capped
 
             var status = U_ZERO_ERROR
@@ -1313,7 +1334,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
-        return lock.withLock {
+        return lock.withLock { _ in
             let cappedStart = start.capped
             let cappedEnd = end.capped
 
@@ -1392,7 +1413,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         var effectiveUnit = unit
         switch effectiveUnit {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
             switch identifier {
@@ -1468,8 +1489,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return Date(timeIntervalSinceReferenceDate: -60645542400.0)
             case .dangi:
                 fallthrough
-            case .thai:
-                fallthrough
             case .vietnamese:
                 // TODO: This is copied from `.chinese` and needs to be revisited for each new calendar.
                 if time < -146325744000.0 { return nil }
@@ -1514,7 +1533,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         var effectiveUnit = unit
         switch effectiveUnit {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
             switch identifier {
@@ -1589,8 +1608,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 if time < -60645542400.0 { return nil }
                 return DateInterval(start: Date(timeIntervalSinceReferenceDate: -60645542400.0), duration: inf_ti)
             case .dangi:
-                fallthrough
-            case .thai:
                 fallthrough
             case .vietnamese:
                 // TODO: This is copied from `.chinese` and needs to be revisited for each new calendar.
@@ -1733,7 +1750,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     // for testing only
     internal func firstInstant(of unit: Calendar.Component, at: Date) -> Date {
         let at = at.capped
-        return lock.withLock {
+        return lock.withLock { _ in
             var status = U_ZERO_ERROR
             let current = ucal_getMillis(ucalendar, &status)
 
@@ -1810,6 +1827,9 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         case .month:
             ucal_set(ucalendar, UCAL_DAY_OF_MONTH, ucal_getLimit(ucalendar, UCAL_DAY_OF_MONTH, UCAL_ACTUAL_MINIMUM, &status))
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
+#endif
             fallthrough
 
         case .weekdayOrdinal, .weekday, .day, .dayOfYear:
@@ -1867,7 +1887,23 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         }
 
         let useDayOfMonth = startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal
-        
+
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        if useDayOfMonth {
+            let targetDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
+            let targetRepeat = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
+            var currentDay = targetDay
+            var currentRepeat = targetRepeat
+
+            repeat {
+                udate = ucal_getMillis(ucalendar, &status)
+                ucal_add(ucalendar, UCAL_SECOND, -1, &status)
+                currentDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
+                currentRepeat = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
+            } while (targetDay == currentDay) && (targetRepeat == currentRepeat)
+            ucal_setMillis(ucalendar, udate, &status)
+        }
+#else
         if useDayOfMonth {
             let targetDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
             var currentDay = targetDay
@@ -1879,6 +1915,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             } while targetDay == currentDay
             ucal_setMillis(ucalendar, udate, &status)
         }
+#endif
         
         udate = ucal_getMillis(ucalendar, &status)
         let start = Date(udate: udate)
@@ -2234,6 +2271,11 @@ extension Calendar.Component {
         case .weekOfYear: UCAL_WEEK_OF_YEAR
         case .yearForWeekOfYear: UCAL_YEAR_WOY
         case .isLeapMonth: UCAL_IS_LEAP_MONTH
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        case .isRepeatedDay: UCAL_IS_REPEATED_DAY
+#else
+        case .isRepeatedDay: nil
+#endif
         case .dayOfYear: UCAL_DAY_OF_YEAR
         case .nanosecond: nil
         case .calendar: nil
@@ -2273,6 +2315,10 @@ extension Calendar.Component {
             self = .yearForWeekOfYear
         case UCAL_IS_LEAP_MONTH:
             self = .isLeapMonth
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        case UCAL_IS_REPEATED_DAY:
+            self = .isRepeatedDay
+#endif
         default:
             return nil
         }

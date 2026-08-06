@@ -12,17 +12,29 @@
 
 #if canImport(Darwin)
 import Darwin
+#elseif canImport(Android)
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif os(Windows)
+import CRT
+import WinSDK
+#elseif os(WASI)
+@preconcurrency import WASILibc
+#elseif canImport(string_h)
+import string_h
 #endif
-
-internal import _FoundationCShims
 
 internal struct JSON5Scanner {
     let options: Options
     var reader: DocumentReader
     var depth: Int = 0
     var partialMap = JSONPartialMapData()
+
+    // True if any scanned number extends to the last byte of the input.
+    var numberExtendsToEndOfBuffer: Bool = false
 
     internal struct Options {
         var assumesTopLevelDictionary = false
@@ -123,7 +135,14 @@ internal struct JSON5Scanner {
             throw JSONError.unexpectedCharacter(context: "after top-level value", ascii: char, location: reader.sourceLocation)
         }
 
-        return JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
+        let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
+
+        // If any number token extends to the last byte of the input, we must give the map an owned buffer with a trailing NUL so that `strtod` (which peeks one byte past the last consumed digit) doesn't OOB read. Covers the top-level-number case and the `assumesTopLevelDictionary` case where the last value in the (brace-less) object is a number.
+        if numberExtendsToEndOfBuffer {
+            map.copyInBuffer()
+        }
+
+        return map
     }
 
     // MARK: Generic Value Scanning
@@ -346,6 +365,9 @@ internal struct JSON5Scanner {
         let start = reader.readIndex
         reader.skipNumber()
         let end = reader.readIndex
+        if reader.isEOF {
+            numberExtendsToEndOfBuffer = true
+        }
         return partialMap.record(tagType: .number, count: reader.distance(from: start, to: end), dataOffset: reader.byteOffset(at: start), with: reader)
     }
 
@@ -937,7 +959,7 @@ extension JSON5Scanner {
         case UInt8(ascii: "x"), UInt8(ascii: "X"):
             // We have to further validate that there is another digit following this one.
             let firstHexDigitIndex = jsonBytes.index(after: jsonBytes.startIndex)
-            guard firstHexDigitIndex <= jsonBytes.endIndex else {
+            guard firstHexDigitIndex < jsonBytes.endIndex else {
                 throw JSONError.unexpectedCharacter(context: "in number", ascii: jsonBytes[offset: 0], location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
             }
             let maybeHex = jsonBytes[unchecked: firstHexDigitIndex]
@@ -1081,7 +1103,7 @@ extension JSON5Scanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ _stringshims_strncasecmp_l($0, "0x", $1, nil) })
+        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ Platform.strncasecmp_clocale($0, "0x", $1) })
         if cmp == 0 {
             jsonBytes.formIndex(&index, offsetBy: 2)
 

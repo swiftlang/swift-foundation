@@ -13,15 +13,17 @@
 #if canImport(Darwin)
 internal import os
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 internal import _FoundationCShims
@@ -33,7 +35,7 @@ extension StringProtocol {
         // Standardize the path to use forward slashes before processing for consistency
         return self.replacing(._backslash, with: ._slash)
         #else
-        if let str = _specializingCast(self, to: String.self) {
+        if let str = _specialize(self, for: String.self) {
             return str
         } else {
             return String(self)
@@ -210,10 +212,11 @@ extension String {
         guard !pathExtension.isEmpty, validatePathExtension(pathExtension) else {
             return self
         }
+        if self == "/" { return "/.\(pathExtension)"}
         var result = self._droppingTrailingSlashes
-        guard result != "/" else {
+        if result == "/" {
             // Path was all slashes
-            return self + ".\(pathExtension)"
+            return Substring(self.utf8.dropLast()) + ".\(pathExtension)/"
         }
         result += ".\(pathExtension)"
         if utf8.last == ._slash {
@@ -223,14 +226,19 @@ extension String {
     }
 
     internal var pathExtension: String {
-        let lastComponent = lastPathComponent.utf8
-        guard lastComponent.last != ._dot,
-              !lastComponent.starts(with: [._dot, ._dot]),
-              let lastDot = lastComponent.lastIndex(of: ._dot),
-              lastDot != lastComponent.startIndex else {
+        let utf8Component = lastPathComponent.utf8
+        guard utf8Component.last != ._dot,
+              let lastDot = utf8Component.lastIndex(of: ._dot),
+              // Don't treat a hidden file name as an extension
+              lastDot != utf8Component.startIndex else {
             return ""
         }
-        let result = String(lastPathComponent[lastComponent.index(after: lastDot)...])
+        let utf8FileName = utf8Component[..<lastDot]
+        // Guard against "." and ".." file names
+        if (utf8FileName.count == 1 || utf8FileName.count == 2) && utf8FileName.allSatisfy({ $0 == ._dot }) {
+            return ""
+        }
+        let result = String(lastPathComponent[utf8Component.index(after: lastDot)...])
         guard validatePathExtension(result) else {
             return ""
         }
@@ -252,118 +260,26 @@ extension String {
     }
 
     internal var removingDotSegments: String {
-        _convertingSlashesIfNeeded()._removingDotSegments
+        removingDotSegments()
     }
-    
-    private var _removingDotSegments: String {
-        guard !isEmpty else {
-            return ""
-        }
 
-        enum RemovingDotState {
-            case initial
-            case dot
-            case dotDot
-            case slash
-            case slashDot
-            case slashDotDot
-            case appendUntilSlash
-        }
+    internal func removingDotSegments(useRFC1808: Bool = false) -> String {
+        _convertingSlashesIfNeeded()._removingDotSegments(useRFC1808: useRFC1808)
+    }
 
-        return String(unsafeUninitializedCapacity: utf8.count) { buffer in
-
-            // State machine for remove_dot_segments() from RFC 3986
-            //
-            // First, remove all "./" and "../" prefixes by moving through
-            // the .initial, .dot, and .dotDot states (without appending).
-            //
-            // Then, move through the remaining states/components, first
-            // checking if the component is special ("/./" or "/../") so
-            // that we only append when necessary.
-
-            var state = RemovingDotState.initial
-            var i = 0
-            for v in utf8 {
-                switch state {
-                case .initial:
-                    if v == ._dot {
-                        state = .dot
-                    } else if v == ._slash {
-                        state = .slash
-                    } else {
-                        buffer[i] = v
-                        i += 1
-                        state = .appendUntilSlash
-                    }
-                case .dot:
-                    if v == ._dot {
-                        state = .dotDot
-                    } else if v == ._slash {
-                        state = .initial
-                    } else {
-                        i = buffer[i...i+1].initialize(fromContentsOf: [._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .dotDot:
-                    if v == ._slash {
-                        state = .initial
-                    } else {
-                        i = buffer[i...i+2].initialize(fromContentsOf: [._dot, ._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .slash:
-                    if v == ._dot {
-                        state = .slashDot
-                    } else if v == ._slash {
-                        buffer[i] = ._slash
-                        i += 1
-                    } else {
-                        i = buffer[i...i+1].initialize(fromContentsOf: [._slash, v])
-                        state = .appendUntilSlash
-                    }
-                case .slashDot:
-                    if v == ._dot {
-                        state = .slashDotDot
-                    } else if v == ._slash {
-                        state = .slash
-                    } else {
-                        i = buffer[i...i+2].initialize(fromContentsOf: [._slash, ._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .slashDotDot:
-                    if v == ._slash {
-                        // Cheaply remove the previous component by moving i to its start
-                        i = buffer[..<i].lastIndex(of: ._slash) ?? 0
-                        state = .slash
-                    } else {
-                        i = buffer[i...i+3].initialize(fromContentsOf: [._slash, ._dot, ._dot, v])
-                        state = .appendUntilSlash
-                    }
-                case .appendUntilSlash:
-                    if v == ._slash {
-                        state = .slash
-                    } else {
-                        buffer[i] = v
-                        i += 1
-                    }
-                }
+    private func _removingDotSegments(useRFC1808: Bool = false) -> String {
+        guard !isEmpty else { return "" }
+        return String(unsafeUninitializedCapacity: utf8.count) { resolvedBuffer in
+            _ = resolvedBuffer.initialize(fromContentsOf: utf8)
+            let length = resolveDotSegmentsInPlace(buffer: resolvedBuffer, useRFC1808: useRFC1808)
+            if !useRFC1808 && length == 1 && resolvedBuffer[0] == ._dot {
+                // resolveDotSegmentsInPlace returns "." instead of "" for
+                // compatibility with CFURL behavior. This Swift function
+                // has historically returned "" instead, so maintain that
+                // behavior here.
+                return 0
             }
-
-            switch state {
-            case .slash: fallthrough
-            case .slashDot:
-                buffer[i] = ._slash
-                i += 1
-            case .slashDotDot:
-                // Note: "/.." is not yet appended to the buffer
-                i = buffer[..<i].lastIndex(of: ._slash) ?? 0
-                buffer[i] = ._slash
-                i += 1
-            default:
-                break
-            }
-
-            return i
+            return length
         }
     }
 
@@ -402,6 +318,13 @@ extension String {
             }
             return i
         }
+    }
+
+    internal var _droppingTrailingSlash: String {
+        guard utf8.last == ._slash, utf8.count > 1 else {
+            return self
+        }
+        return String(Substring(utf8.dropLast()))
     }
 
     internal var _droppingTrailingSlashes: String {
@@ -467,7 +390,7 @@ extension String {
             return envVar.standardizingPath
         }
         
-        #if !os(WASI) // WASI does not have user concept
+        #if !os(WASI) && !os(Emscripten) // WASI/Emscripten does not have user concept
         // Next, attempt to find the home directory via getpwuid
         // We use the real UID instead of the EUID here when the EUID is the root user (i.e. a process has called seteuid(0))
         // In this instance, we historically do this to ensure a stable home directory location for processes that call seteuid(0)
@@ -536,7 +459,7 @@ extension String {
         if let envVar = Platform.getEnvSecure("CFFIXED_USER_HOME") {
             return envVar.standardizingPath
         }
-        #if !os(WASI) // WASI does not have user concept
+        #if !os(WASI) && !os(Emscripten) // WASI/Emscripten does not have user concept
         // Next, attempt to find the home directory via getpwnam
         return Platform.homeDirectory(forUserName: user)?.standardizingPath
         #else
@@ -579,7 +502,7 @@ extension String {
         }
         #endif // canImport(Darwin)
 
-        #if !os(WASI)
+        #if !os(WASI) && !os(Emscripten)
         if let envValue = Platform.getEnvSecure("TMPDIR") {
             return normalizedPath(with: envValue)
         }
@@ -636,7 +559,7 @@ extension String {
             result = resolved
         }
 
-        result = result._removingDotSegments
+        result = result._removingDotSegments()
 
         // Automounted paths need to be stripped for various flavors of paths
         for prefix in String._automountPrefixes {
@@ -728,15 +651,7 @@ extension String {
                 guard GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwLength, VOLUME_NAME_DOS) == dwLength - 1 else {
                     return nil
                 }
-
-                let pathBaseAddress: UnsafePointer<WCHAR>
-                if Array($0.prefix(4)) == Array(#"\\?\"#.utf16) {
-                    // When using `VOLUME_NAME_DOS`, the returned path uses `\\?\`.
-                    pathBaseAddress = UnsafePointer($0.baseAddress!.advanced(by: 4))
-                } else {
-                    pathBaseAddress = UnsafePointer($0.baseAddress!)
-                }
-                return String(decodingCString: pathBaseAddress, as: UTF16.self)
+                return String(decodingCString: UnsafePointer($0.baseAddress!), as: UTF16.self).removingNTPathPrefix()
             }
         }
         #else // os(Windows)
@@ -918,3 +833,13 @@ extension StringProtocol {
         return prefixEnd == endIndex || utf8[prefixEnd] == ._slash
     }
 }
+
+#if !FOUNDATION_FRAMEWORK
+internal func rootLength(path: String) -> Int {
+    return 1
+}
+
+internal func rootLength(pathBuffer: UnsafeBufferPointer<UInt8>, length: Int) -> Int {
+    return 1
+}
+#endif

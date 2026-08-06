@@ -12,7 +12,7 @@
 
 #if compiler(>=5.11)
 
-@available(FoundationPredicateRegex 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions {
     public struct StringContainsRegex<
         Subject : PredicateExpression,
@@ -48,7 +48,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicateRegex 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions {
     public struct PredicateRegex: Sendable, Codable, RegexComponent, CustomStringConvertible {
         private struct _Storage: @unchecked Sendable {
@@ -90,10 +90,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicateRegex 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.StringContainsRegex : Sendable where Subject : Sendable, Regex : Sendable {}
 
-@available(FoundationPredicateRegex 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.StringContainsRegex : Codable where Subject : Codable, Regex : Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -108,7 +108,7 @@ extension PredicateExpressions.StringContainsRegex : Codable where Subject : Cod
     }
 }
 
-@available(FoundationPredicateRegex 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.StringContainsRegex : StandardPredicateExpression where Subject : StandardPredicateExpression, Regex : StandardPredicateExpression {}
 
 #endif

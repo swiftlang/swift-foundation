@@ -15,15 +15,16 @@ import FoundationEssentials
 #endif
 
 internal import _FoundationICU
+internal import Synchronization
 
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #endif
 
 typealias UChar = UInt16
@@ -262,7 +263,7 @@ final class ICUDateFormatter : @unchecked Sendable {
     }
 
     static let formatterCache = FormatterCache<DateFormatInfo, ICUDateFormatter?>()
-    static let patternCache = LockedState<[PatternCacheKey : String]>(initialState: [:])
+    static let patternCache = Mutex<[PatternCacheKey : String]>([:])
 
     static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> ICUDateFormatter? {
         return Self.formatterCache.formatter(for: dateFormatInfo) {
@@ -446,7 +447,7 @@ extension ICUDateFormatter.DateFormatInfo {
         }
     }
 
-    static let updateScheduleCache = LockedState<[Self: UpdateSchedule]>(initialState: [:])
+    static let updateScheduleCache = Mutex<[Self: UpdateSchedule]>([:])
 
     static func cachedUpdateSchedule(for format: Date.VerbatimFormatStyle) -> UpdateSchedule {
         return Self.updateScheduleCache.withLock { state in
@@ -580,7 +581,8 @@ extension String {
     ///
     /// E.g.: `"'hello, it''s 'hh':'mm"` is turned into `"hhmm"`.
     fileprivate func purgingStringLiterals() -> String {
-        self.split(separator: "'", omittingEmptySubsequences: false)
+        // Explicitly specify Character("'") to avoid accidentally using an implicit RegexBuilder overload
+        self.split(separator: Character("'"), omittingEmptySubsequences: false)
             .enumerated()
             .filter { offset, _ in offset.isMultiple(of: 2) }
             .map(\.element)

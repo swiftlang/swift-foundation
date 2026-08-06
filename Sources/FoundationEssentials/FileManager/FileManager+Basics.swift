@@ -13,16 +13,22 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
+#endif
+
+#if FOUNDATION_FRAMEWORK
+internal import Foundation_Private
 #endif
 
 #if os(Windows)
@@ -269,11 +275,11 @@ internal struct _FileManagerImpl {
                                 if read(fd2, buf2.baseAddress!, quantum) != readBytes {
                                     return false
                                 }
-                                if !buf1.elementsEqual(buf2) {
+                                if !buf1.prefix(readBytes).elementsEqual(buf2.prefix(readBytes)) {
                                     return false
                                 }
                             }
-                            if readBytes < -1 { return false }
+                            if readBytes == -1 { return false }
                             return true
                         }
                     }

@@ -83,6 +83,13 @@ extension Collection where Element == AttributedString.AttributeRunBoundaries {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Collection where Element == AttributedString.AttributeRunBoundaries? {
+    var _containsScalarConstraint: Bool {
+        self.contains { $0?._isScalarConstrained ?? false }
+    }
+}
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Guts {
     
@@ -176,11 +183,18 @@ extension AttributedString.Guts {
     /// - Returns: The UTF-8 range that was modified during this invalidation.
     ///     (If no modification took place, then the result is `range`.)
     func enforceAttributeConstraintsBeforeMutation(to utf8Range: Range<Int>) -> Range<Int> {
-        guard !utf8Range.isEmpty else { return utf8Range }
+        var utf8Start = utf8Range.lowerBound
+        var utf8End = utf8Range.upperBound
+
+        // Eagerly record the attributes at the end of the mutation as invalidating attributes at the start may change attributes at the end (if the mutation is within a run)
+        let originalEndingAttributes = if utf8End > 0 {
+            _characterInvalidatedAttributes(at: utf8End - 1)
+        } else {
+            _AttributeStorage()
+        }
 
         // Invalidate attributes preceding the range.
-        var utf8Start = utf8Range.lowerBound
-        do {
+        if utf8Start < string.utf8.count {
             let attributes = _characterInvalidatedAttributes(at: utf8Start)
             var remainingKeys = Set(attributes.keys)
             let runs = runs(in: 0 ..< utf8Start)
@@ -203,9 +217,8 @@ extension AttributedString.Guts {
         }
 
         // Invalidate attributes following the range.
-        var utf8End = utf8Range.upperBound
-        do {
-            let attributes = _characterInvalidatedAttributes(at: utf8End - 1)
+        if utf8End > 0 {
+            let attributes = originalEndingAttributes
             var remainingKeys = Set(attributes.keys)
             let runs = runs(in: utf8End ..< string.utf8.count)
             var i = runs.startIndex

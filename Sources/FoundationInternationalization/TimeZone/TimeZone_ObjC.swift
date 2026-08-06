@@ -15,6 +15,7 @@
 internal import _ForSwiftFoundation
 import CoreFoundation
 internal import os
+internal import Synchronization
 
 @objc
 extension NSTimeZone {
@@ -23,7 +24,7 @@ extension NSTimeZone {
     static func _timeZoneWith(name: String, data: Data?) -> _NSSwiftTimeZone? {
         if let data {
             // We don't cache data-based TimeZones
-            guard let tz = TimeZone(name: name) else {
+            guard let tz = TimeZone(identifier: name) else {
                 return nil
             }
             return _NSSwiftTimeZone(timeZone: tz, data: data)
@@ -136,11 +137,11 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge, @unchecked Sendable {
         var data: Data?
     }
 
-    let lock: LockedState<State>
+    let lock: Mutex<State>
 
     init(timeZone: TimeZone, data: Data? = nil) {
         self.timeZone = timeZone
-        lock = LockedState(initialState: State(data: data))
+        lock = Mutex(State(data: data))
         super.init()
     }
     

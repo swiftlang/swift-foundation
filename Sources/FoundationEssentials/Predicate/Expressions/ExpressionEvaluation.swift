@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
-    @available(FoundationPredicate 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public struct ExpressionEvaluate<
         Transformation : PredicateExpression,
         each Input : PredicateExpression,
@@ -35,23 +35,23 @@ extension PredicateExpressions {
         }
     }
     
-    @available(FoundationPredicate 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public static func build_evaluate<Transformation, each Input, Output>(_ expression: Transformation, _ input: repeat each Input) -> ExpressionEvaluate<Transformation, repeat each Input, Output> {
         ExpressionEvaluate(expression: expression, input: repeat each input)
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.ExpressionEvaluate : CustomStringConvertible {
     public var description: String {
         "ExpressionEvaluate(expression: \(expression), input: \(input))"
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.ExpressionEvaluate : StandardPredicateExpression where Transformation : StandardPredicateExpression, repeat each Input : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.ExpressionEvaluate : Codable where Transformation : Codable, repeat each Input : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -66,5 +66,5 @@ extension PredicateExpressions.ExpressionEvaluate : Codable where Transformation
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension PredicateExpressions.ExpressionEvaluate : Sendable where Transformation : Sendable, repeat each Input : Sendable {}

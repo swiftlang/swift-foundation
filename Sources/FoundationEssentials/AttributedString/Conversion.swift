@@ -27,21 +27,21 @@ extension String {
         self.init(characters._characters)
     }
 
-    #if false // FIXME: Make this public.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    @backDeployed(before: macOS 14, iOS 17, tvOS 17, watchOS 10)
+    @_alwaysEmitIntoClient
     public init(_ characters: AttributedString.CharacterView) {
-        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
-            self.init(_characters: characters)
+        #if FOUNDATION_FRAMEWORK
+        guard #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) else {
+            // Forward to the slice overload above, which somehow did end up shipping in
+            // the original AttributedString release.
+            self.init(characters[...])
             return
         }
-        // Forward to the slice overload above, which somehow did end up shipping in
-        // the original AttributedString release.
-        self.init(characters[...])
+        #endif
+        self.init(_characters: characters)
     }
-    #endif
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
         self.init(_characters._characters)
@@ -50,11 +50,26 @@ extension String {
 
 #if FOUNDATION_FRAMEWORK
 
+/// A protocol that defines Objective-C interoperability with an attribute key's value type.
+///
+/// Conform to this protocol to allow your attributed string key to customize its Objective-C conversion behavior. This allows you to define an Objective-C value type and provide methods to convert to and from this type.
+///
+/// Attributed string keys that don't conform to this protocol cast the value to <doc://com.apple.documentation/documentation/swift/anyobject> before converting to Objective-C. When converting from Objective-C, the value casts to the key's ``AttributedStringKey/Value`` type. In cases where Swift types bridge automatically to Objective-C types, like <doc://com.apple.documentation/documentation/swift/string> to ``NSString``, this default behavior is adequate. But for unbridged value types, you need to conform to this protocol and provide the conversion methods.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
+    /// The Objective-C type that corresponds to this key's value type.
     associatedtype ObjectiveCValue : NSObject
 
+    /// Returns an Objective-C typed value for a given value of this key's type.
+    ///
+    /// - Parameter value: The value to convert.
+    /// - Returns: `value`, expressed as the Objective-C type defined by
+    ///   ``ObjectiveCConvertibleAttributedStringKey/ObjectiveCValue``.
     static func objectiveCValue(for value: Value) throws -> ObjectiveCValue
+    /// Returns a value of this key's type for a given Objective-C value.
+    ///
+    /// - Parameter object: The Objective-C value to convert.
+    /// - Returns: `object`, expressed as this key's type.
     static func value(for object: ObjectiveCValue) throws -> Value
 }
 
@@ -93,15 +108,39 @@ internal struct _AttributeConversionOptions : OptionSet {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeContainer {
+    /// Creates an attribute container from a dictionary, using default attribute scopes.
+    ///
+    /// - Parameter dictionary: A dictionary of attribute keys and their values.
+    ///
+    /// This initializer includes all attribute scopes defined by the SDK, such as
+    /// `FoundationAttributes`, `SwiftUIAttributes`, and `AccessibilityAttributes`. To use
+    /// third-party attribute scopes, use the initializers ``AttributeContainer/init(_:including:)-2mw0o``
+    /// and ``AttributeContainer/init(_:including:)-28n0g``.
     public init(_ dictionary: [NSAttributedString.Key : Any]) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(dictionary, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
 
+    /// Creates an attribute container from a dictionary and an attribute scope that a key path identifies.
+    ///
+    /// - Parameters:
+    ///   - dictionary: A dictionary of attribute keys and their values.
+    ///   - scope: A key path that identifies the attribute scope of the dictionary keys. This can be a nested scope that contains several scopes.
+    ///
+    /// This initializer only collects attributes from `dictionary` that exist in the provided scope.
+    /// The resulting attribute container omits any keys in `dictionary` that don't exist in `scope`.
     public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(dictionary, including: S.self)
     }
     
+    /// Creates an attribute container from a dictionary and an attribute scope.
+    ///
+    /// - Parameters:
+    ///   - dictionary: A dictionary of attribute keys and their values.
+    ///   - scope: The attribute scope of the dictionary keys. This can be a nested scope that contains several scopes.
+    ///
+    /// This initializer only collects attributes from `dictionary` that exist in the provided scope.
+    /// The resulting attribute container omits any keys in `dictionary` that don't exist in `scope`.
     public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: S.Type) throws {
         try self.init(dictionary, attributeTable: S.attributeKeyTypes())
     }
@@ -111,7 +150,8 @@ extension AttributeContainer {
         for (key, value) in dictionary {
             if let type = attributeTable[key.rawValue] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
-                    storage[K.self] = try K._convertFromObjectiveCValue(value as AnyObject)
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    storage[assumingSendable: K.self] = try K._convertFromObjectiveCValue(value as AnyObject)
                 }
                 do {
                     try project(type)
@@ -145,7 +185,8 @@ extension Dictionary where Key == NSAttributedString.Key, Value == Any {
         for key in container.storage.keys {
             if let type = attributeTable[key] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
-                    self[NSAttributedString.Key(rawValue: key)] = try K._convertToObjectiveCValue(container.storage[K.self]!)
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    self[NSAttributedString.Key(rawValue: key)] = try K._convertToObjectiveCValue(container.storage[assumingSendable: K.self]!)
                 }
                 do {
                     try project(type)
@@ -161,15 +202,33 @@ extension Dictionary where Key == NSAttributedString.Key, Value == Any {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension NSAttributedString {
+    /// Creates a reference-type attributed string from the specified value-type attributed string.
+    ///
+    /// This initializer includes all attribute scopes defined by the SDK, such as
+    /// `FoundationAttributes`, `SwiftUIAttributes`, and `AccessibilityAttributes`.
+    /// To use third-party attribute scopes, use the initializers that accept an `including` parameter.
+    ///
+    /// - Parameters:
+    ///   - attrStr: The value type attributed string that provides the text and attributes of the new object.
     public convenience init(_ attrStr: AttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(attrStr, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
-    
+
+    /// Creates a reference-type attributed string from the specified value-type attributed string, including an attribute scope that a key path identifies.
+    ///
+    /// - Parameters:
+    ///   - attrStr: The value-type attributed string that provides the text and attributes of the new object.
+    ///   - scope: A key path that identifies the attribute scope of the attributes in `attrStr`. This can be a nested scope that contains several scopes.
     public convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(attrStr, including: S.self)
     }
-    
+
+    /// Creates a reference-type attributed string from the specified value-type attributed string, including an attribute scope.
+    ///
+    /// - Parameters:
+    ///   - attrStr: The value-type attributed string that provides the text and attributes of the new object.
+    ///   - scope: The attribute scope of the attributes in `attrStr`. This can be a nested scope that contains several scopes.
     public convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: S.Type) throws {
         try self.init(attrStr, attributeTable: scope.attributeKeyTypes())
     }
@@ -203,15 +262,39 @@ extension NSAttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// Creates a value-type attributed string from a reference type.
+    ///
+    /// - Parameter nsStr: The ``NSAttributedString`` to convert.
+    ///
+    /// This initializer includes all attribute scopes defined by the SDK, such as
+    /// `FoundationAttributes`, `SwiftUIAttributes`, and `AccessibilityAttributes`. To use
+    /// third-party attribute scopes, use the initializers ``AttributedString/init(_:including:)-9no47``
+    /// or ``AttributedString/init(_:including:)-puv0``.
     public init(_ nsStr: NSAttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(nsStr, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
+    /// Creates a value-type attributed string from a reference type, including an attribute scope that a key path identifies.
+    ///
+    /// - Parameters:
+    ///   - nsStr: The ``NSAttributedString`` to convert.
+    ///   - scope: A key path that identifies the attribute scope of the attributes in `nsStr`. This can be a nested scope that contains several scopes.
+    ///
+    /// This initializer only collects attributes from `nsStr` that exist in the provided scope.
+    /// The resulting attributed string omits any keys in `nsStr` that don't exist in `scope`.
     public init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(nsStr, including: S.self)
     }
     
+    /// Creates a value-type attributed string from a reference type, including an attribute scope.
+    ///
+    /// - Parameters:
+    ///   - nsStr: The ``NSAttributedString`` to convert.
+    ///   - scope: The attribute scope of the attributes in `nsStr`. This can be a nested scope that contains several scopes.
+    ///
+    /// This initializer only collects attributes from `nsStr` that exist in the provided scope.
+    /// The resulting attributed string omits any keys in `nsStr` that don't exist in `scope`.
     public init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: S.Type) throws {
         try self.init(nsStr, attributeTable: S.attributeKeyTypes())
     }
@@ -314,7 +397,7 @@ extension AttributedString.Index {
         }
         let j = target.__guts.string.index(roundingDown: i)
         guard j == i else { return nil }
-        self.init(j)
+        self.init(j, version: target.__guts.version)
     }
 }
 
@@ -446,7 +529,7 @@ extension Range where Bound == AttributedString.Index {
         let end = bstr.utf16.index(start, offsetBy: range.length)
 
         guard start >= string.startIndex._value, end <= string.endIndex._value else { return nil }
-        self.init(uncheckedBounds: (.init(start), .init(end)))
+        self.init(uncheckedBounds: (.init(start, version: string.__guts.version), .init(end, version: string.__guts.version)))
     }
 #endif // FOUNDATION_FRAMEWORK
 
@@ -485,7 +568,7 @@ extension Range where Bound == AttributedString.Index {
         else {
             return nil
         }
-        self.init(uncheckedBounds: (.init(lower), .init(upper)))
+        self.init(uncheckedBounds: (.init(lower, version: attributedString.__guts.version), .init(upper, version: attributedString.__guts.version)))
     }
 }
 
@@ -498,14 +581,20 @@ extension AttributedString {
         typealias Element = Index
         
         let string: Substring
-        init(_ string: Substring) { self.string = string }
+        let version: Guts.Version
+        
+        init(_ string: Substring, version: Guts.Version) {
+            self.string = string
+            self.version = version
+        }
+        
         subscript(position: Index) -> Index { position }
-        var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset)) }
-        var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset)) }
+        var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset), version: version) }
+        var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset), version: version) }
         func index(after i: Index) -> Index {
             let j = String.Index(_utf8Offset: i._value.utf8Offset)
             let k = string.index(after: j)
-            return Index(BigString.Index(_utf8Offset: k._utf8Offset))
+            return Index(BigString.Index(_utf8Offset: k._utf8Offset), version: version)
         }
     }
 }
@@ -525,7 +614,8 @@ extension Range where Bound == String.Index {
             return
         }
         let str = Substring(string)
-        let dummy = AttributedString._IndexConverterFromAttributedString(str)
+        // Due to the FIXME notes above, we do not have a valid version to supply here since we have no AttributedString, so instead we use a newly created version to maintain existing behavior
+        let dummy = AttributedString._IndexConverterFromAttributedString(str, version: AttributedString.Guts.createNewVersion())
         let range = region.relative(to: dummy)
         self.init(_range: range, in: str)
     }

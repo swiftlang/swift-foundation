@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 
-final class PredicateMacroLanguageTokenTests: XCTestCase {
-    func testConditional() {
+@Suite("#Predicate Macro Language Tokens")
+private struct PredicateMacroLanguageTokenTests {
+    @Test func conditional() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object, Object> { inputA, inputB, inputC in
@@ -22,17 +23,17 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object, Object>({ inputA, inputB, inputC in
-                PredicateExpressions.build_Conditional(
-                    PredicateExpressions.build_Arg(inputA),
-                    PredicateExpressions.build_Arg(inputB),
-                    PredicateExpressions.build_Arg(inputC)
+                PredicateExpressions.\(foundationModuleName)::build_Conditional(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputC)
                 )
             })
             """
         )
     }
     
-    func testTypeCheck() {
+    @Test func typeCheck() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -41,15 +42,15 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.TypeCheck<_, Int>(
-                    PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::TypeCheck<_, Int>(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                 )
             })
             """
         )
     }
     
-    func testConditionalCast() {
+    @Test func conditionalCast() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -58,11 +59,11 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.ConditionalCast<_, Bool>(
-                        PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::ConditionalCast<_, Bool>(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                     ),
-                    rhs: PredicateExpressions.build_Arg(true)
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(true)
                 )
             })
             """
@@ -76,11 +77,11 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.ForceCast<_, Bool>(
-                        PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::ForceCast<_, Bool>(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                     ),
-                    rhs: PredicateExpressions.build_Arg(true)
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(true)
                 )
             })
             """
@@ -94,18 +95,18 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.ForceCast<_, Bool>(
-                        PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::ForceCast<_, Bool>(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                     ),
-                    rhs: PredicateExpressions.build_Arg(true)
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(true)
                 )
             })
             """
         )
     }
     
-    func testIfExpressions() {
+    @Test func ifExpressions() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -118,13 +119,13 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_Conditional(
-                    PredicateExpressions.build_Arg(input),
-                    PredicateExpressions.build_Arg(
+                PredicateExpressions.\(foundationModuleName)::build_Conditional(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(
                         input
                     ),
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                         keyPath: \\.foo
                     )
                 )
@@ -144,35 +145,35 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ input, inputB in
-                PredicateExpressions.build_Conditional(
-                    PredicateExpressions.build_Conjunction(
-                        lhs: PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                PredicateExpressions.\(foundationModuleName)::build_Conditional(
+                    PredicateExpressions.\(foundationModuleName)::build_Conjunction(
+                        lhs: PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.foo
                         ),
-                        rhs: PredicateExpressions.build_Conjunction(
-                            lhs: PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg(input),
+                        rhs: PredicateExpressions.\(foundationModuleName)::build_Conjunction(
+                            lhs: PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                                 keyPath: \\.abc
                             ),
-                            rhs: PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg(input),
+                            rhs: PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                                 keyPath: \\.xyz
                             )
                         )
                     ),
-                    PredicateExpressions.build_Conjunction(
-                        lhs: PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Conjunction(
+                        lhs: PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.bar
                         ),
-                        rhs: PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                        rhs: PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.baz
                         )
                     ),
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg(inputB),
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg(inputB),
                         keyPath: \\.foobar
                     )
                 )
@@ -200,36 +201,36 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_Conditional(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg(input),
+                PredicateExpressions.\(foundationModuleName)::build_Conditional(
+                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                        root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                         keyPath: \\.foo
                     ),
-                    PredicateExpressions.build_Conditional(
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Conditional(
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.bar
                         ),
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.baz
                         ),
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.foobar
                         )
                     ),
-                    PredicateExpressions.build_Conditional(
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Conditional(
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.bar
                         ),
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.foobar
                         ),
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.baz
                         )
                     )
@@ -263,16 +264,16 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ input in
-                PredicateExpressions.build_NilCoalesce(
-                    lhs: PredicateExpressions.build_flatMap(
-                        PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::build_NilCoalesce(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                     ) { nonOpt in
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(nonOpt),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(nonOpt),
                             keyPath: \\.foo
                         )
                     },
-                    rhs: PredicateExpressions.build_Arg(
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(
                         true
                     )
                 )
@@ -292,22 +293,22 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ input in
-                PredicateExpressions.build_NilCoalesce(
-                    lhs: PredicateExpressions.build_flatMap(
-                        PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::build_NilCoalesce(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                     ) { nonOpt in
-                        PredicateExpressions.build_flatMap(
-                            PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg(nonOpt),
+                        PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                            PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg(nonOpt),
                                 keyPath: \\.foo
                             )
                         ) { nonOpt2 in
-                            PredicateExpressions.build_Arg(
+                            PredicateExpressions.\(foundationModuleName)::build_Arg(
                                 nonOpt2
                             )
                         }
                     },
-                    rhs: PredicateExpressions.build_Arg(
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(
                         true
                     )
                 )
@@ -327,26 +328,26 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_NilCoalesce(
-                    lhs: PredicateExpressions.build_flatMap(
-                        PredicateExpressions.build_flatMap(
-                            PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg(input),
+                PredicateExpressions.\(foundationModuleName)::build_NilCoalesce(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                        PredicateExpressions.\(foundationModuleName)::build_flatMap(
+                            PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                                 keyPath: \\.foo
                             )
                         ) {
-                            PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg($0),
+                            PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                                 keyPath: \\.bar
                             )
                         }
                     ) { nonOpt in
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(nonOpt),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(nonOpt),
                             keyPath: \\.baz
                         )
                     },
-                    rhs: PredicateExpressions.build_Arg(
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(
                         true
                     )
                 )
@@ -381,7 +382,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testNilLiterals() {
+    @Test func nilLiterals() {
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { input in
@@ -390,16 +391,16 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object?>({ input in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_Arg(input),
-                    rhs: PredicateExpressions.build_NilLiteral()
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_NilLiteral()
                 )
             })
             """
         )
     }
     
-    func testDiagnoseDeclarations() {
+    @Test func diagnoseDeclarations() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -461,7 +462,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testDiagnoseMiscellaneousStatements() {
+    @Test func diagnoseMiscellaneousStatements() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -517,7 +518,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                return PredicateExpressions.build_Arg(
+                return PredicateExpressions.\(foundationModuleName)::build_Arg(
                     input
                 )
             })

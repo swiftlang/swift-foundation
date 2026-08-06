@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2023-2024 Apple Inc. and the Swift project authors
+// Copyright (c) 2023-2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -23,7 +23,78 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 import WASILibc
+#elseif os(Emscripten)
+import EmscriptenLibc
+#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+internal import _FoundationDarwinExtras
+#elseif canImport(stdlib_h)
+import stdlib_h
 #endif
+
+#if !FOUNDATION_FRAMEWORK
+extension Data {
+    
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public struct Base64EncodingOptions : OptionSet, Sendable {
+        public let rawValue: UInt
+        
+        public init(rawValue: UInt) {
+            self.rawValue = rawValue
+        }
+        /// Set the maximum line length to 64 characters, after which a line ending is inserted.
+        public static let lineLength64Characters = Base64EncodingOptions(rawValue: 1 << 0)
+        /// Set the maximum line length to 76 characters, after which a line ending is inserted.
+        public static let lineLength76Characters = Base64EncodingOptions(rawValue: 1 << 1)
+        /// When a maximum line length is set, specify that the line ending to insert should include a carriage return.
+        public static let endLineWithCarriageReturn = Base64EncodingOptions(rawValue: 1 << 4)
+        /// When a maximum line length is set, specify that the line ending to insert should include a line feed.
+        public static let endLineWithLineFeed       = Base64EncodingOptions(rawValue: 1 << 5)
+    }
+    
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public struct Base64DecodingOptions : OptionSet, Sendable {
+        public let rawValue: UInt
+        
+        public init(rawValue: UInt) {
+            self.rawValue = rawValue
+        }
+        /// Modify the decoding algorithm so that it ignores unknown non-Base-64 bytes, including line ending characters.
+        public static let ignoreUnknownCharacters = Base64DecodingOptions(rawValue: 1 << 0)
+    }
+}
+#else
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data {
+    // These types are typealiased to the `NSData` options for framework builds only.
+    /// Options to use when encoding data.
+    public typealias Base64EncodingOptions = NSData.Base64EncodingOptions
+    /// Options to use when decoding data.
+    public typealias Base64DecodingOptions = NSData.Base64DecodingOptions
+}
+#endif //!FOUNDATION_FRAMEWORK
+
+extension Data.Base64EncodingOptions {
+    /// Use the base64url alphabet to encode the data
+    @available(FoundationPreview 6.3, *)
+    public static let base64URLAlphabet = Self(rawValue: 1 << 6)
+    
+    /// Omit the `=` padding characters in the end of the base64 encoded result
+    @available(FoundationPreview 6.3, *)
+    public static let omitPaddingCharacter = Self(rawValue: 1 << 7)
+}
+
+extension Data.Base64DecodingOptions {
+    /// Modify the decoding algorithm so that it expects the base64url alphabet instead of the default base64 alphabet
+    @available(FoundationPreview 6.3, *)
+    public static let base64URLAlphabet = Self(rawValue: 1 << 2)
+
+    /// Modify the decoding algorithm so that it does not expect a padding character at the end of the base64 encoded result.
+    /// If the base64 encoded data has a padding character, `nil` will be returned.
+    ///
+    /// - Warning: This option is ignored if `ignoreUnknownCharacters` is used at the same time.
+    @available(FoundationPreview 6.3, *)
+    public static let omitPaddingCharacter = Self(rawValue: 1 << 3)
+}
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
@@ -65,7 +136,7 @@ extension Data {
         Base64.encodeToString(bytes: self, options: options)
     }
 
-    /// Returns a Base-64 encoded `Data`.
+    /// Returns Base-64 encoded data.
     ///
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded data.
@@ -146,6 +217,64 @@ extension Base64 {
         UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "/"),
     ]
 
+    static let encoding0url: [UInt8] = [
+        UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "C"),
+        UInt8(ascii: "C"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "E"), UInt8(ascii: "E"), UInt8(ascii: "E"),
+        UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "H"),
+        UInt8(ascii: "H"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "J"), UInt8(ascii: "J"), UInt8(ascii: "J"),
+        UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "M"),
+        UInt8(ascii: "M"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "O"), UInt8(ascii: "O"), UInt8(ascii: "O"),
+        UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "R"),
+        UInt8(ascii: "R"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "T"), UInt8(ascii: "T"), UInt8(ascii: "T"),
+        UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "W"),
+        UInt8(ascii: "W"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Y"), UInt8(ascii: "Y"), UInt8(ascii: "Y"),
+        UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "b"),
+        UInt8(ascii: "b"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "d"), UInt8(ascii: "d"), UInt8(ascii: "d"),
+        UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "g"),
+        UInt8(ascii: "g"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "i"), UInt8(ascii: "i"), UInt8(ascii: "i"),
+        UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "l"),
+        UInt8(ascii: "l"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "n"), UInt8(ascii: "n"), UInt8(ascii: "n"),
+        UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "q"),
+        UInt8(ascii: "q"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "s"), UInt8(ascii: "s"), UInt8(ascii: "s"),
+        UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "v"),
+        UInt8(ascii: "v"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "x"), UInt8(ascii: "x"), UInt8(ascii: "x"),
+        UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "0"),
+        UInt8(ascii: "0"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "2"), UInt8(ascii: "2"), UInt8(ascii: "2"),
+        UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "5"),
+        UInt8(ascii: "5"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "7"), UInt8(ascii: "7"), UInt8(ascii: "7"),
+        UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "-"),
+        UInt8(ascii: "-"), UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "_"), UInt8(ascii: "_"), UInt8(ascii: "_"),
+    ]
+
+    static let encoding1url: [UInt8] = [
+        UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"),
+        UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"),
+        UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"),
+        UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"),
+        UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"),
+        UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"),
+        UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"),
+        UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"),
+        UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"),
+        UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"),
+        UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"),
+        UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"),
+        UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "A"), UInt8(ascii: "B"),
+        UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"),
+        UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"),
+        UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"),
+        UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"),
+        UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"),
+        UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"),
+        UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"),
+        UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"),
+        UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"),
+        UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"),
+        UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"),
+        UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"),
+        UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"),
+    ]
+
     static func encodeToBytes<Buffer: Collection>(bytes: Buffer, options: Data.Base64EncodingOptions)
         -> [UInt8] where Buffer.Element == UInt8
     {
@@ -212,7 +341,7 @@ extension Base64 {
             return self._encodeWithLineBreaks(input: input, buffer: buffer, length: &length, options: options)
         }
 
-        let omitPaddingCharacter = false
+        let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
 
         Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { (e0, e1) throws(Never) -> Void in
             let to = input.count / 3 * 3
@@ -382,7 +511,16 @@ extension Base64 {
     }
 
     static func encodeComputeCapacity(bytes: Int, options: Data.Base64EncodingOptions) -> Int {
-        let capacityWithoutBreaks = ((bytes + 2) / 3) * 4
+        let capacityWithoutBreaks = if options.contains(.omitPaddingCharacter) {
+            switch bytes % 3 {
+            case 0: ((bytes + 2) / 3) * 4
+            case 1: ((bytes + 2) / 3) * 4 - 2
+            case 2: ((bytes + 2) / 3) * 4 - 1
+            default: fatalError()
+            }
+        } else {
+            ((bytes + 2) / 3) * 4
+        }
 
         guard options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters) else {
             return capacityWithoutBreaks
@@ -395,13 +533,18 @@ extension Base64 {
 
         let lineLength = options.contains(.lineLength64Characters) ? 64 : 76
         let lineBreaks = capacityWithoutBreaks / lineLength
-        let lineBreakCapacity = lineBreaks * seperatorBytes
+        var lineBreakCapacity = lineBreaks * seperatorBytes
+        // in case the last row uses all available space, we don't need to add line breaks
+        // but we can't remove bytes if we have an empty input
+        if capacityWithoutBreaks % lineLength == 0 && capacityWithoutBreaks > seperatorBytes {
+            lineBreakCapacity -= seperatorBytes
+        }
         return capacityWithoutBreaks + lineBreakCapacity
     }
 
     static func withUnsafeEncodingTablesAsBufferPointers<R>(options: Data.Base64EncodingOptions, _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<UInt8>) -> R) -> R {
-        let encoding0 = Self.encoding0
-        let encoding1 = Self.encoding1
+        let encoding0 = options.contains(.base64URLAlphabet) ? Self.encoding0url : Self.encoding0
+        let encoding1 = options.contains(.base64URLAlphabet) ? Self.encoding1url : Self.encoding1
 
         assert(encoding0.count == 256)
         assert(encoding1.count == 256)
@@ -486,19 +629,25 @@ extension Base64 {
 
         let outputLength = ((inBuffer.count + 3) / 4) * 3
 
-        let pointer = malloc(outputLength)
+        let pointer = __DataStorage.allocate(outputLength, false)
         let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
         let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
         var length = outputLength
-        if options.contains(.ignoreUnknownCharacters) {
-            try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
-        } else {
-            // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
-            // branch prediction?
-            try self._decode(from: inBuffer, into: target, length: &length, options: options)
+        do {
+            if options.contains(.ignoreUnknownCharacters) {
+                try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
+            } else {
+                // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
+                // branch prediction?
+                try self._decode(from: inBuffer, into: target, length: &length, options: options)
+            }
+            
+            return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
+        } catch {
+            // Do not leak the malloc on error
+            free(pointer)
+            throw error
         }
-
-        return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
     }
 
     static func _decode(
@@ -507,18 +656,43 @@ extension Base64 {
         length: inout Int,
         options: Data.Base64DecodingOptions
     ) throws(DecodingError) {
-        let remaining = inBuffer.count % 4
-        switch (options.contains(.omitPaddingCharacter), remaining) {
-        case (false, 1...):
-            throw DecodingError.invalidLength
-        case (true, 1):
-            throw DecodingError.invalidLength
-        default:
-            break
+        let bytesToParseLength: Int
+        let fullchunks: Int
+        if options.contains(.omitPaddingCharacter) {
+            // No padding character is expected. If we find one anywhere, the input is invalid.
+            if inBuffer.contains(Self.encodePaddingCharacter) {
+                throw DecodingError.invalidCharacter(Self.encodePaddingCharacter)
+            }
+            let remaining = inBuffer.count % 4
+            if remaining == 1 {
+                throw DecodingError.invalidLength
+            }
+            bytesToParseLength = inBuffer.count
+            fullchunks = remaining == 0 ? inBuffer.count / 4 - 1 : inBuffer.count / 4
+        } else {
+            guard let lastNonPaddedIndex = inBuffer.lastIndex(where: { $0 != Self.encodePaddingCharacter }) else {
+                if inBuffer.count >= 4 {
+                    outBuffer[0] = 0
+                    length = 1
+                    return
+                } else {
+                    throw DecodingError.invalidLength
+                }
+            }
+            let base64NonPaddedLength = lastNonPaddedIndex + 1
+            bytesToParseLength = if base64NonPaddedLength % 4 == 0 {
+                (base64NonPaddedLength / 4) * 4
+            } else {
+                (base64NonPaddedLength / 4) * 4 + 4
+            }
+            if bytesToParseLength > inBuffer.count {
+                throw DecodingError.invalidLength
+            }
+            fullchunks = bytesToParseLength / 4 - 1
         }
 
-        let outputLength = ((inBuffer.count + 3) / 4) * 3
-        let fullchunks = remaining == 0 ? inBuffer.count / 4 - 1 : inBuffer.count / 4
+        let outputLength = ((bytesToParseLength + 3) / 4) * 3
+
         guard outBuffer.count >= outputLength else {
             preconditionFailure("Expected the out buffer to be at least as long as outputLength")
         }
@@ -556,19 +730,11 @@ extension Base64 {
             let a1 = inBuffer[inIndex + 1]
             var a2: UInt8?
             var a3: UInt8?
-            if inIndex + 2 < inBuffer.count {
-                if inBuffer[inIndex + 2] != Self.encodePaddingCharacter {
-                    a2 = inBuffer[inIndex + 2]
-                } else if options.contains(.omitPaddingCharacter) {
-                    throw DecodingError.invalidCharacter(Self.encodePaddingCharacter)
-                }
+            if inIndex + 2 < inBuffer.count, inBuffer[inIndex + 2] != Self.encodePaddingCharacter {
+                a2 = inBuffer[inIndex + 2]
             }
-            if inIndex + 3 < inBuffer.count {
-                if inBuffer[inIndex + 3] != Self.encodePaddingCharacter {
-                    a3 = inBuffer[inIndex + 3]
-                } else if options.contains(.omitPaddingCharacter) {
-                    throw DecodingError.invalidCharacter(Self.encodePaddingCharacter)
-                }
+            if inIndex + 3 < inBuffer.count, inBuffer[inIndex + 3] != Self.encodePaddingCharacter {
+                a3 = inBuffer[inIndex + 3]
             }
 
             var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2 ?? 65)] | d3[Int(a3 ?? 65)]
@@ -621,8 +787,8 @@ extension Base64 {
                 var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
 
                 if x >= Self.badCharacter {
-                    if a3 == Self.encodePaddingCharacter {
-                        break // the loop
+                    if a3 == Self.encodePaddingCharacter || a2 == Self.encodePaddingCharacter || a1 == Self.encodePaddingCharacter || a0 == Self.encodePaddingCharacter {
+                        break fastLoop // the loop
                     }
 
                     // error fast path. we assume that illeagal errors are at the boundary.
@@ -702,20 +868,12 @@ extension Base64 {
                 return
             }
 
-            guard (inIndex + 3 < inBuffer.count) || (inIndex + 1 < inBuffer.count && options.contains(.omitPaddingCharacter)) else {
-                if options.contains(.ignoreUnknownCharacters) {
-                    // ensure that all remaining characters are unknown
-                    while inIndex < inBuffer.count {
-                        let value = inBuffer[inIndex]
-                        if self.isValidBase64Byte(value, options: options) || value == Self.encodePaddingCharacter {
-                            throw DecodingError.invalidCharacter(inBuffer[inIndex])
-                        }
-                        inIndex &+= 1
-                    }
-                    length = outIndex
-                    return
-                }
-                throw DecodingError.invalidLength
+            guard inIndex + 3 < inBuffer.count else {
+                // ensure that all remaining characters are unknown or padding
+                try Self.validateRemainingBytesAreInvalidOrPadding(in: inBuffer, from: inIndex, options: options)
+                if outIndex == 0 && inBuffer.count > 0 { throw DecodingError.invalidLength }
+                length = outIndex
+                return
             }
 
             let a0 = inBuffer[inIndex]
@@ -725,39 +883,19 @@ extension Base64 {
             var padding2 = false
             var padding3 = false
 
-            if options.contains(.omitPaddingCharacter) {
-                if inBuffer.count > inIndex + 2 {
-                    a2 = inBuffer[inIndex + 2]
-                    if a2 == Self.encodePaddingCharacter {
-                        throw DecodingError.invalidCharacter(a2)
-                    }
-                } else {
-                    padding2 = true
-                }
-                if inBuffer.count > inIndex + 3 {
-                    a3 = inBuffer[inIndex + 3]
-                    if a3 == Self.encodePaddingCharacter {
-                        throw DecodingError.invalidCharacter(a3)
-                    }
-                } else {
-                    padding3 = true
-                }
+            if inBuffer[inIndex + 2] == Self.encodePaddingCharacter {
+                padding2 = true
             } else {
-                if inBuffer[inIndex + 2] == Self.encodePaddingCharacter {
-                    padding2 = true
-                } else {
-                    a2 = inBuffer[inIndex + 2]
-                }
-                if inBuffer[inIndex + 3] == Self.encodePaddingCharacter {
-                    padding3 = true
-                } else {
-                    if padding2 && self.isValidBase64Byte(inBuffer[inIndex + 3], options: options) {
-                        throw DecodingError.unexpectedPaddingCharacter
-                    }
-                    a3 = inBuffer[inIndex + 3]
-                }
+                a2 = inBuffer[inIndex + 2]
             }
-
+            if inBuffer[inIndex + 3] == Self.encodePaddingCharacter {
+                padding3 = true
+            } else {
+                if padding2 && self.isValidBase64Byte(inBuffer[inIndex + 3], options: options) {
+                    throw DecodingError.unexpectedPaddingCharacter
+                }
+                a3 = inBuffer[inIndex + 3]
+            }
 
             var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
             if x >= Self.badCharacter {
@@ -782,10 +920,14 @@ extension Base64 {
                             break scanForValidCharacters
                         }
                     } else if value == Self.encodePaddingCharacter {
-                        guard b0 != nil, b1 != nil else {
+                        if b0 == nil {
+                            try Self.validateRemainingBytesAreInvalidOrPadding(in: inBuffer, from: inIndex, options: options)
+                            if outIndex == 0 && inBuffer.count > 0 { throw DecodingError.invalidLength }
+                            length = outIndex
+                            return
+                        } else if b1 == nil {
                             throw DecodingError.invalidLength
-                        }
-                        if b2 == nil {
+                        } else if b2 == nil {
                             padding2 = true
                             b2 = 65
                         } else if b3 == nil {
@@ -824,6 +966,22 @@ extension Base64 {
             }
 
             length = outIndex
+        }
+    }
+
+    static func validateRemainingBytesAreInvalidOrPadding(
+        in inBuffer: UnsafeBufferPointer<UInt8>,
+        from index: Int,
+        options: Data.Base64DecodingOptions
+    ) throws(DecodingError) {
+        var inIndex = index
+        // ensure that all remaining characters are unknown or padding
+        while inIndex < inBuffer.count {
+            let value = inBuffer[inIndex]
+            if self.isValidBase64Byte(value, options: options) {
+                throw DecodingError.invalidCharacter(inBuffer[inIndex])
+            }
+            inIndex &+= 1
         }
     }
 

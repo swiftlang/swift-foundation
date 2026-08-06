@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -7,18 +7,16 @@ import CompilerPluginSupport
 // Availability Macros
 
 let availabilityTags: [_Availability] = [
-    _Availability("FoundationPreview"), // Default FoundationPreview availability,
-    _Availability("FoundationPredicate"), // Predicate relies on pack parameter runtime support
-    _Availability("FoundationPredicateRegex") // Predicate regexes rely on new stdlib APIs
+    _Availability("FoundationPreview"), // Default FoundationPreview availability
 ]
-let versionNumbers = ["0.1", "0.2", "0.3", "0.4", "6.0.2", "6.1", "6.2"]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.5"]
 
 // Availability Macro Utilities
 
 enum _OSAvailability: String {
-    case alwaysAvailable = "macOS 15, iOS 18, tvOS 18, watchOS 11" // This should match the package's deployment target
+    case alwaysAvailable = "macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26" // This should match the package's deployment target
     // Use 10000 for future availability to avoid compiler magic around the 9999 version number but ensure it is greater than 9999
-    case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000"
+    case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000, visionOS 10000"
 }
 struct _Availability {
     let name: String
@@ -35,29 +33,43 @@ let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
     }
 }
 
-let concurrencyChecking: [SwiftSetting] = [
+let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
-    .enableUpcomingFeature("InferSendableFromCaptures")
+    .enableExperimentalFeature("ImportMacroAliases"),
+    .enableUpcomingFeature("InferSendableFromCaptures"),
+    .enableUpcomingFeature("MemberImportVisibility"),
+    .swiftLanguageMode(.v5)
 ]
 
-var dependencies: [Package.Dependency] {
-    if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] != nil {
+var dependencies: [Package.Dependency] = []
+
+if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalDepsEnv.isEmpty {
+    let root: String
+    if useLocalDepsEnv == "1" {
+        root = ".."
+    } else {
+        root = useLocalDepsEnv
+    }
+    dependencies += 
         [
             .package(
                 name: "swift-collections",
-                path: "../swift-collections"),
+                path: "\(root)/swift-collections"),
             .package(
                 name: "swift-foundation-icu",
-                path: "../swift-foundation-icu"),
+                path: "\(root)/swift-foundation-icu"),
             .package(
                 name: "swift-syntax",
-                path: "../swift-syntax")
+                path: "\(root)/swift-syntax")
         ]
-    } else {
+} else {
+    // These dependencies should match `update-checkout`
+    // See `update-checkout-config.json` for the `main` branch-scheme
+    dependencies += 
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                from: "1.1.0"),
+                exact: "1.1.6"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
@@ -65,7 +77,6 @@ var dependencies: [Package.Dependency] {
                 url: "https://github.com/swiftlang/swift-syntax",
                 branch: "main")
         ]
-    }
 }
 
 let wasiLibcCSettings: [CSetting] = [
@@ -73,9 +84,13 @@ let wasiLibcCSettings: [CSetting] = [
     .define("_WASI_EMULATED_MMAN", .when(platforms: [.wasi])),
 ]
 
+let testOnlySwiftSettings: [SwiftSetting] = [
+    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
+]
+
 let package = Package(
     name: "swift-foundation",
-    platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")],
+    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
     products: [
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
@@ -93,12 +108,9 @@ let package = Package(
         // TestSupport (Internal)
         .target(
             name: "TestSupport",
-            dependencies: [
-                "FoundationEssentials",
-                "FoundationInternationalization",
-            ],
+            path: "Tests/TestSupport",
             cSettings: wasiLibcCSettings,
-            swiftSettings: availabilityMacros + concurrencyChecking
+            swiftSettings: availabilityMacros + featureSettings
         ),
 
         // FoundationEssentials
@@ -108,6 +120,7 @@ let package = Package(
             "_FoundationCShims",
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
+            .product(name: "DequeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
           ],
           exclude: [
@@ -126,15 +139,22 @@ let package = Package(
             "CMakeLists.txt",
             "ProcessInfo/CMakeLists.txt",
             "FileManager/CMakeLists.txt",
-            "URL/CMakeLists.txt"
+            "URL/CMakeLists.txt",
+            "NotificationCenter/CMakeLists.txt",
+            "ProgressManager/CMakeLists.txt",
           ],
           cSettings: [
-            .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))
           ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
-            .enableExperimentalFeature("AccessLevelOnImport")
-          ] + availabilityMacros + concurrencyChecking,
+            .enableExperimentalFeature("Lifetimes"),
+            .enableExperimentalFeature("AddressableTypes"),
+            .enableExperimentalFeature("AllowUnsafeAttribute"),
+            .enableExperimentalFeature("BuiltinModule"),
+            .enableExperimentalFeature("AccessLevelOnImport"),
+            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
+          ] + availabilityMacros + featureSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
           ]
@@ -148,15 +168,26 @@ let package = Package(
             resources: [
                 .copy("Resources")
             ],
-            swiftSettings: availabilityMacros + concurrencyChecking
+            swiftSettings: [
+                .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
+            ] + availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
 
         // FoundationInternationalization
+        .target(
+            name: "_FoundationInternationalizationData",
+            exclude: ["CMakeLists.txt"],
+            swiftSettings: [
+                .enableExperimentalFeature("AccessLevelOnImport"),
+                .enableExperimentalFeature("Lifetimes"),
+            ] + availabilityMacros + featureSettings
+        ),
         .target(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "_FoundationCShims"),
+                .target(name: "_FoundationInternationalizationData"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             exclude: [
@@ -167,12 +198,13 @@ let package = Package(
                 "Locale/CMakeLists.txt",
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
-                "Predicate/CMakeLists.txt"
+                "Predicate/CMakeLists.txt",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
-                .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros + concurrencyChecking
+                .enableExperimentalFeature("AccessLevelOnImport"),
+                .enableExperimentalFeature("Lifetimes"),
+            ] + availabilityMacros + featureSettings
         ),
         
         .testTarget(
@@ -181,7 +213,7 @@ let package = Package(
                 "TestSupport",
                 "FoundationInternationalization",
             ],
-            swiftSettings: availabilityMacros + concurrencyChecking
+            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
         
         // FoundationMacros
@@ -198,22 +230,16 @@ let package = Package(
             exclude: ["CMakeLists.txt"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros + concurrencyChecking
+            ] + availabilityMacros + featureSettings
         ),
+        
+        .testTarget(
+            name: "FoundationMacrosTests",
+            dependencies: [
+                "FoundationMacros",
+                "FoundationEssentials"
+            ],
+            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+        )
     ]
 )
-
-// https://github.com/apple/swift-package-manager/issues/7174
-// Test macro targets result in multiple definitions of `main` on Windows.
-#if !os(Windows)
-package.targets.append(contentsOf: [
-    .testTarget(
-        name: "FoundationMacrosTests",
-        dependencies: [
-            "FoundationMacros",
-            "TestSupport"
-        ],
-        swiftSettings: availabilityMacros + concurrencyChecking
-    )
-])
-#endif

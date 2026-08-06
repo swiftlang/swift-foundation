@@ -10,141 +10,169 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
 #endif
 
 #if canImport(RegexBuilder)
 import RegexBuilder
 #endif
 
-#if !FOUNDATION_FRAMEWORK
-// Resolve ambiguity between Foundation.#Predicate and FoundationEssentials.#Predicate
-@freestanding(expression)
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
-@freestanding(expression)
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-macro Expression<each Input, Output>(_ body: (repeat each Input) -> Output) -> Expression<repeat each Input, Output> = #externalMacro(module: "FoundationMacros", type: "ExpressionMacro")
-#endif
+// These types are non-private and in the global scope to ensure a consistent string type name for the debugDescription() test
+struct PredicateTestObject {
+    var a: Int
+    var b: String
+    var c: Double
+    var d: Int
+    var e: Character
+    var f: Bool
+    var g: [Int]
+    var h: Date = .now
+    var i: Any = 3
+}
 
-// Work around an issue issue on older Swift compilers
-#if compiler(>=6.0)
+struct PredicateTestObject2 {
+    var a: Bool
+}
 
-final class PredicateTests: XCTestCase {
+fileprivate class PredicateTestObject3 {
+    private let firstValue: Bool
+    private let secondValue: Bool
+    private let thirdValue: Bool
     
-    override func setUp() async throws {
-        guard #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) else {
-            throw XCTSkip("This test is not available on this OS version")
-        }
+    private(set) var firstAccessed = false
+    private(set) var secondAccessed = false
+    private(set) var thirdAccessed = false
+    
+    var first: Bool {
+        firstAccessed = true
+        return firstValue
     }
     
-    struct Object {
-        var a: Int
-        var b: String
-        var c: Double
-        var d: Int
-        var e: Character
-        var f: Bool
-        var g: [Int]
-        var h: Date = .now
-        var i: Any = 3
+    var second: Bool {
+        secondAccessed = true
+        return secondValue
     }
     
-    struct Object2 {
-        var a: Bool
+    var third: Bool {
+        thirdAccessed = true
+        return thirdValue
     }
     
-    func testBasic() throws {
+    init(first: Bool, second: Bool, third: Bool) {
+        self.firstValue = first
+        self.secondValue = second
+        self.thirdValue = third
+    }
+}
+
+fileprivate protocol PredicateProducer {
+    var prop: Int { get }
+    func getPredicate() -> Predicate<Self>
+}
+
+fileprivate struct PredicateProducerConformer : PredicateProducer {
+    let prop = 2
+}
+
+extension PredicateProducer {
+    func getPredicate() -> Predicate<Self> {
+        #Predicate { $0.prop == 2 }
+    }
+}
+
+@Suite("Predicate")
+private struct PredicateTests {
+    typealias Object = PredicateTestObject
+    typealias Object2 = PredicateTestObject2
+    
+    @Test func basic() throws {
         let compareTo = 2
         let predicate = #Predicate<Object> {
             $0.a == compareTo
         }
-        try XCTAssertFalse(predicate.evaluate(Object(a: 1, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
-        try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
+        #expect(try !predicate.evaluate(Object(a: 1, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
-    func testVariadic() throws {
+    @Test func variadic() throws {
         let predicate = #Predicate<Object, Int> {
             $0.a == $1 + 1
         }
-        XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), 2))
+        #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), 2))
     }
     
-    func testArithmetic() throws {
+    @Test func arithmetic() throws {
         let predicate = #Predicate<Object> {
             $0.a + 2 == 4
         }
-        XCTAssert(try predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
-    func testDivision() throws {
+    @Test func division() throws {
         let predicate = #Predicate<Object> {
             $0.a / 2 == 3
         }
         let predicate2 = #Predicate<Object> {
             $0.c / 2.1 <= 3.0
         }
-        XCTAssert(try predicate.evaluate(Object(a: 6, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
-        XCTAssert(try predicate2.evaluate(Object(a: 2, b: "", c: 6.0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 6, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate2.evaluate(Object(a: 2, b: "", c: 6.0, d: 0, e: "c", f: true, g: [])))
     }
     
-    func testBuildDivision() throws {
-        let predicate = #Predicate<Object> {
-            $0.a / 2 == 3
-        }
-        XCTAssert(try predicate.evaluate(Object(a: 6, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
-    }
-    
-    func testUnaryMinus() throws {
+    @Test func unaryMinus() throws {
         let predicate = #Predicate<Object> {
             -$0.a == 17
         }
-        XCTAssert(try predicate.evaluate(Object(a: -17, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: -17, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
-    func testCount() throws {
+    @Test func count() throws {
         let predicate = #Predicate<Object> {
             $0.g.count == 5
         }
-        XCTAssert(try predicate.evaluate(Object(a: 0, b: "", c: 0, d: 0, e: "c", f: true, g: [2, 3, 5, 7, 11])))
+        #expect(try predicate.evaluate(Object(a: 0, b: "", c: 0, d: 0, e: "c", f: true, g: [2, 3, 5, 7, 11])))
     }
     
-    func testFilter() throws {
+    @Test func filter() throws {
         let predicate = #Predicate<Object> { object in
             !object.g.filter {
                 $0 == object.d
             }.isEmpty
         }
-        XCTAssert(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 17, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
+        #expect(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 17, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
     }
     
-    func testContains() throws {
+    @Test func contains() throws {
         let predicate = #Predicate<Object> {
             $0.g.contains($0.a)
         }
-        XCTAssert(try predicate.evaluate(Object(a: 13, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3, 5, 11, 13, 17])))
+        #expect(try predicate.evaluate(Object(a: 13, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3, 5, 11, 13, 17])))
     }
     
-    func testContainsWhere() throws {
+    @Test func containsWhere() throws {
         let predicate = #Predicate<Object> { object in
             object.g.contains {
                 $0 % object.a == 0
             }
         }
-        XCTAssert(try predicate.evaluate(Object(a: 2, b: "", c: 0.0, d: 0, e: "c", f: true, g: [3, 5, 7, 2, 11, 13])))
+        #expect(try predicate.evaluate(Object(a: 2, b: "", c: 0.0, d: 0, e: "c", f: true, g: [3, 5, 7, 2, 11, 13])))
     }
     
-    func testAllSatisfy() throws {
+    @Test func allSatisfy() throws {
         let predicate = #Predicate<Object> { object in
             object.g.allSatisfy {
                 $0 % object.d != 0
             }
         }
-        XCTAssert(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 2, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
+        #expect(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 2, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
     }
     
-    func testOptional() throws {
+    @Test func optional() throws {
         struct Wrapper<T> {
             let wrapped: T?
         }
@@ -154,38 +182,40 @@ final class PredicateTests: XCTestCase {
         let predicate2 = #Predicate<Wrapper<Int>> {
             $0.wrapped! == 19
         }
-        XCTAssert(try predicate.evaluate(Wrapper<Int>(wrapped: 4)))
-        XCTAssert(try predicate.evaluate(Wrapper<Int>(wrapped: nil)))
-        XCTAssert(try predicate2.evaluate(Wrapper<Int>(wrapped: 19)))
-        XCTAssertThrowsError(try predicate2.evaluate(Wrapper<Int>(wrapped: nil)))
+        #expect(try predicate.evaluate(Wrapper<Int>(wrapped: 4)))
+        #expect(try predicate.evaluate(Wrapper<Int>(wrapped: nil)))
+        #expect(try predicate2.evaluate(Wrapper<Int>(wrapped: 19)))
+        #expect(throws: (any Error).self) {
+            try predicate2.evaluate(Wrapper<Int>(wrapped: nil))
+        }
         
         struct _NonCodableType : Equatable {}
         let predicate3 = #Predicate<Wrapper<_NonCodableType>> {
             $0.wrapped == nil
         }
-        XCTAssertFalse(try predicate3.evaluate(Wrapper(wrapped: _NonCodableType())))
-        XCTAssertTrue(try predicate3.evaluate(Wrapper(wrapped: nil)))
+        #expect(try !predicate3.evaluate(Wrapper(wrapped: _NonCodableType())))
+        #expect(try predicate3.evaluate(Wrapper(wrapped: nil)))
     }
     
-    func testConditional() throws {
+    @Test func conditional() throws {
         let predicate = #Predicate<Bool, String, String> {
             ($0 ? $1 : $2) == "if branch"
         }
-        XCTAssert(try predicate.evaluate(true, "if branch", "else branch"))
+        #expect(try predicate.evaluate(true, "if branch", "else branch"))
     }
     
-    func testClosedRange() throws {
+    @Test func closedRange() throws {
         let predicate = #Predicate<Object> {
             (3...5).contains($0.a)
         }
         let predicate2 = #Predicate<Object> {
             ($0.a ... $0.d).contains(4)
         }
-        XCTAssert(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
-        XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
     
-    func testRange() throws {
+    @Test func range() throws {
         let predicate = #Predicate<Object> {
             (3 ..< 5).contains($0.a)
         }
@@ -193,50 +223,56 @@ final class PredicateTests: XCTestCase {
         let predicate2 = #Predicate<Object> {
             ($0.a ..< $0.d).contains(toMatch)
         }
-        XCTAssert(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
-        XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
     
-    func testRangeContains() throws {
+    @Test func rangeContains() throws {
         let date = Date.distantPast
         let predicate = #Predicate<Object> {
             (date ..< date).contains($0.h)
         }
         
-        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
+        #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
     
-    func testTypes() throws {
+    @Test func types() throws {
         let predicate = #Predicate<Object> {
             ($0.i as? Int).flatMap { $0 == 3 } ?? false
         }
         let predicate2 = #Predicate<Object> {
             $0.i is Int
         }
-        XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
-        XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
     
-    func testSubscripts() throws {
+    @Test func subscripts() throws {
         var predicate = #Predicate<Object> {
             $0.g[0] == 0
         }
         
-        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
-        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1])))
-        XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
+        #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1])))
+        #expect(throws: (any Error).self) {
+            try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: []))
+        }
         
         predicate = #Predicate<Object> {
             $0.g[0 ..< 2].isEmpty
         }
         
-        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1, 2])))
-        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1])))
-        XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
-        XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
+        #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1, 2])))
+        #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1])))
+        #expect(throws: (any Error).self) {
+            try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0]))
+        }
+        #expect(throws: (any Error).self) {
+            try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: []))
+        }
     }
     
-    func testLazyDefaultValueSubscript() throws {
+    @Test func lazyDefaultValueSubscript() throws {
         struct Foo : Codable, Sendable {
             var property: Int {
                 fatalError("This property should not have been accessed")
@@ -247,46 +283,46 @@ final class PredicateTests: XCTestCase {
         let predicate = #Predicate<[String : Int]> {
             $0["key", default: foo.property] == 1
         }
-        XCTAssertFalse(try predicate.evaluate(["key" : 2]))
+        #expect(try !predicate.evaluate(["key" : 2]))
     }
     
-    func testStaticValues() throws {
-        func assertPredicate<T>(_ pred: Predicate<T>, value: T, expected: Bool) throws {
-            XCTAssertEqual(try pred.evaluate(value), expected)
+    @Test func staticValues() throws {
+        func assertPredicate<T>(_ pred: Predicate<T>, value: T, expected: Bool, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            #expect(try pred.evaluate(value) == expected, sourceLocation: sourceLocation)
         }
         
         try assertPredicate(.true, value: "Hello", expected: true)
         try assertPredicate(.false, value: "Hello", expected: false)
     }
     
-    func testMaxMin() throws {
+    @Test func maxMin() throws {
         var predicate = #Predicate<Object> {
             $0.g.max() == 2
         }
-        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
-        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 2])))
+        #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 2])))
         
         predicate = #Predicate<Object> {
             $0.g.min() == 2
         }
-        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
-        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3])))
+        #expect(try !predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3])))
     }
     
     #if FOUNDATION_FRAMEWORK
     
-    func testCaseInsensitiveCompare() throws {
+    @Test func caseInsensitiveCompare() throws {
         let equal = ComparisonResult.orderedSame
         let predicate = #Predicate<Object> {
             $0.b.caseInsensitiveCompare("ABC") == equal
         }
-        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
-        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "def", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try predicate.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try !predicate.evaluate(Object(a: 3, b: "def", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
     }
     
     #endif
     
-    func testBuildDynamically() throws {
+    @Test func buildDynamically() throws {
         func _build(_ equal: Bool) -> Predicate<Int> {
             Predicate<Int> {
                 if equal {
@@ -303,11 +339,11 @@ final class PredicateTests: XCTestCase {
             }
         }
         
-        XCTAssertTrue(try _build(true).evaluate(1))
-        XCTAssertFalse(try _build(false).evaluate(1))
+        #expect(try _build(true).evaluate(1))
+        #expect(try !_build(false).evaluate(1))
     }
     
-    func testResilientKeyPaths() {
+    @Test func resilientKeyPaths() {
         // Local, non-resilient type
         struct Foo {
             let a: String   // Non-resilient
@@ -320,37 +356,142 @@ final class PredicateTests: XCTestCase {
             $0.a == $0.c && $0.b == now
         }
     }
-
-    #if compiler(>=5.11)
-    func testRegex() throws {
-        guard #available(FoundationPredicateRegex 0.4, *) else {
-            throw XCTSkip("This test is not available on this OS version")
+    
+    @Test func finalKeyPaths() {
+        final class Foo {
+            var id: Int = 1
+        }
+        _ = #Predicate<Foo> { $0.id == 2 }
+    }
+    
+    @Test func genericKeyPaths() {
+        let obj = PredicateProducerConformer()
+        // Ensure forming a predicate to a generic type does not cause crashes when validating keypaths
+        _ = obj.getPredicate()
+    }
+    
+#if FOUNDATION_EXIT_TESTS
+    @Test func unsupportedKeyPaths() async {
+        struct Sample {
+            let stored: Sample2
+            var immutableComputed: Sample2 { fatalError() }
+            var mutableComputed: Sample2 {
+                get { fatalError() }
+                set { fatalError() }
+            }
+            var optional: Sample2? { fatalError() }
+            
+            subscript(_ arg: Int) -> Sample2 { fatalError() }
+            subscript() -> Sample2 { fatalError() }
         }
         
+        struct Sample2 {
+            var prop: Int
+        }
+        
+        // multiple components
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.stored.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.immutableComputed.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.mutableComputed.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional?.prop
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.[1].prop
+            )
+        }
+        
+        // subscripts with arguments
+        // This keypath is currently allow but should be considered invalid (https://github.com/swiftlang/swift-foundation/issues/1482)
+        #if false
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.[0]
+            )
+        }
+        #endif
+        
+        // Optional chaining
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional?
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.?
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.?.stored
+            )
+        }
+        
+        // Force unwrapping
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample.optional!
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.!
+            )
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = PredicateExpressions.KeyPath(
+                root: PredicateExpressions.Variable(),
+                keyPath: \Sample?.!.stored
+            )
+        }
+    }
+#endif
+
+    @Test
+    func regex() throws {
         let literalRegex = #/[AB0-9]\/?[^\n]+/#
         var predicate = #Predicate<Object> {
             $0.b.contains(literalRegex)
         }
-        XCTAssertTrue(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
-        XCTAssertFalse(try predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        #expect(try !predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
         predicate = #Predicate<Object> {
             $0.b.contains(#/[AB0-9]\/?[^\n]+/#)
         }
-        XCTAssertTrue(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
-        XCTAssertFalse(try predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        #expect(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        #expect(try !predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
     }
     
-    func testRegex_RegexBuilder() throws {
-        #if !canImport(RegexBuilder)
-        throw XCTSkip("RegexBuilder is unavavailable on this platform")
-        #elseif !os(Linux) && !os(Android) && !FOUNDATION_FRAMEWORK
-        // Disable this test in swift-foundation macOS CI because of incorrect availability annotations in the StringProcessing module
-        throw XCTSkip("This test is currently disabled on this platform")
-        #else
-        guard #available(FoundationPredicateRegex 0.4, *) else {
-            throw XCTSkip("This test is not available on this OS version")
-        }
-        
+    #if canImport(RegexBuilder)
+    @Test
+    func regex_RegexBuilder() throws {
         let builtRegex = Regex {
             ChoiceOf {
                 "A"
@@ -363,17 +504,13 @@ final class PredicateTests: XCTestCase {
         let predicate = #Predicate<Object> {
             $0.b.contains(builtRegex)
         }
-        XCTAssertTrue(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
-        XCTAssertFalse(try predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
-        #endif
+        #expect(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        #expect(try !predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
     }
     #endif
     
-    func testDebugDescription() throws {
-        guard #available(FoundationPredicate 0.3, *) else {
-            throw XCTSkip("This test is not available on this OS version")
-        }
-        
+    @Test
+    func debugDescription() throws {
         let date = Date.now
         let predicate = #Predicate<Object> {
             if let num = $0.i as? Int {
@@ -382,19 +519,15 @@ final class PredicateTests: XCTestCase {
                 $0.h == date
             }
         }
-#if FOUNDATION_FRAMEWORK
-        let moduleName = "Foundation"
-        let testModuleName = "Unit"
-#else
-        let moduleName = "FoundationEssentials"
-        let testModuleName = "FoundationEssentialsTests"
-#endif
-        XCTAssertEqual(
-            predicate.description,
+        
+        let dateName = _typeName(Date.self)
+        let objectName = _typeName(Object.self)
+        #expect(
+            predicate.description ==
             """
             capture1 (Swift.Int): 3
-            capture2 (\(moduleName).Date): <Date \(date.timeIntervalSince1970)>
-            Predicate<\(testModuleName).PredicateTests.Object> { input1 in
+            capture2 (\(dateName)): <Date \(date.timeIntervalSince1970)>
+            Predicate<\(objectName)> { input1 in
                 (input1.i as? Swift.Int).flatMap({ variable1 in
                     variable1 == capture1
                 }) ?? (input1.h == capture2)
@@ -403,18 +536,16 @@ final class PredicateTests: XCTestCase {
         )
         
         let debugDescription = predicate.debugDescription.replacing(#/Variable\([0-9]+\)/#, with: "Variable(#)")
-        XCTAssertEqual(
-            debugDescription,
-            "\(moduleName).Predicate<Pack{\(testModuleName).PredicateTests.Object}>(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\Object.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\Object.h), rhs: Value<\(moduleName).Date>(\(date.debugDescription)))))"
+        let predicateName = _typeName(Predicate<Object>.self)
+        #expect(
+            debugDescription ==
+            "\(predicateName)(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.h), rhs: Value<\(dateName)>(\(date.debugDescription)))))"
         )
     }
 
     #if FOUNDATION_FRAMEWORK
-    func testNested() throws {
-        guard #available(FoundationPredicate 0.3, *) else {
-            throw XCTSkip("This test is not available on this OS version")
-        }
-
+    @Test
+    func nested() throws {
         let predicateA = #Predicate<Object> {
             $0.a == 3
         }
@@ -423,26 +554,113 @@ final class PredicateTests: XCTestCase {
             predicateA.evaluate($0) && $0.a > 2
         }
 
-        XCTAssertTrue(try predicateA.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
-        XCTAssertFalse(try predicateA.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
-        XCTAssertTrue(try predicateB.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
-        XCTAssertFalse(try predicateB.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
-        XCTAssertFalse(try predicateB.evaluate(Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try predicateA.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try !predicateA.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try predicateB.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try !predicateB.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        #expect(try !predicateB.evaluate(Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
     }
     #endif
     
-    func testExpression() throws {
-        guard #available(FoundationPredicate 0.4, *) else {
-            throw XCTSkip("This test is not available on this OS version")
-        }
-        
+    @Test
+    func expression() throws {
         let expression = #Expression<Int, Int> {
             $0 + 1
         }
         for i in 0 ..< 10 {
-            XCTAssertEqual(try expression.evaluate(i), i + 1)
+            #expect(try expression.evaluate(i) == i + 1)
         }
     }
+    
+    #if FOUNDATION_FRAMEWORK
+    @Test func all() throws {
+        #expect(try Predicate(all: []).evaluate(42))
+        #expect(try !Predicate(all: [Predicate.true, Predicate.false]).evaluate(42))
+        let input = Object(a: 6, b: "xyz", c: 0.27, d: 97, e: "u", f: false, g: [7, 42, 1, 0, 25])
+        var predicates: [Predicate<Object>] = [
+            #Predicate { $0.a == 6 },
+            #Predicate { $0.b == "xyz" },
+            #Predicate { $0.c < 0.3 },
+            #Predicate { $0.d == 97 },
+            #Predicate { $0.d % 2 != 0 },
+            #Predicate { !$0.f },
+            #Predicate { $0.g.contains(42) },
+            #Predicate { $0.g.min() == 0 }
+        ]
+        #expect(try Predicate(all: predicates).evaluate(input))
+        predicates.append(#Predicate { $0.g.max() == 7 })
+        #expect(try !Predicate(all: predicates).evaluate(input))
+        predicates.append(#Predicate { $0.c < 0.0 })
+        #expect(try !Predicate(all: predicates).evaluate(input))
+    }
+    
+    @Test func allShortCircuitEvaluation() throws {
+        let predicates: [Predicate<PredicateTestObject3>] = [
+            #Predicate { $0.first },
+            #Predicate { $0.second },
+            #Predicate { $0.third }
+        ]
+        
+        let input1 = PredicateTestObject3(first: false, second: true, third: true)
+        #expect(try !Predicate(all: predicates).evaluate(input1))
+        #expect(input1.firstAccessed)
+        #expect(!input1.secondAccessed)
+        #expect(!input1.thirdAccessed)
+        
+        let input2 = PredicateTestObject3(first: true, second: false, third: true)
+        #expect(try !Predicate(all: predicates).evaluate(input2))
+        #expect(input2.firstAccessed)
+        #expect(input2.secondAccessed)
+        #expect(!input2.thirdAccessed)
+        
+        let input3 = PredicateTestObject3(first: true, second: true, third: true)
+        #expect(try Predicate(all: predicates).evaluate(input3))
+        #expect(input3.firstAccessed)
+        #expect(input3.secondAccessed)
+        #expect(input3.thirdAccessed)
+    }
+    
+    @Test func any() throws {
+        #expect(try !Predicate(any: []).evaluate(42))
+        #expect(try Predicate(any: [Predicate.true, Predicate.false]).evaluate(42))
+        let input = Object(a: 6, b: "xyz", c: 0.27, d: 97, e: "u", f: false, g: [7, 42, 1, 0, 25])
+        let predicates: [Predicate<Object>] = [
+            #Predicate { $0.g.max() == 7 },
+            #Predicate { $0.c < 0.0 },
+            #Predicate { $0.a == 6 },
+            #Predicate { $0.b == "xyz" },
+            #Predicate { $0.c < 0.3 }
+        ]
+        #expect(try Predicate(any: predicates.dropLast()).evaluate(input))
+        #expect(try Predicate(any: predicates.dropLast(2)).evaluate(input))
+        #expect(try !Predicate(any: predicates.dropLast(3)).evaluate(input))
+        #expect(try !Predicate(any: predicates.dropLast(4)).evaluate(input))
+    }
+    
+    @Test func anyShortCircuitEvaluation() throws {
+        let predicates: [Predicate<PredicateTestObject3>] = [
+            #Predicate { $0.first },
+            #Predicate { $0.second },
+            #Predicate { $0.third }
+        ]
+        
+        let input1 = PredicateTestObject3(first: true, second: false, third: false)
+        #expect(try Predicate(any: predicates).evaluate(input1))
+        #expect(input1.firstAccessed)
+        #expect(!input1.secondAccessed)
+        #expect(!input1.thirdAccessed)
+        
+        let input2 = PredicateTestObject3(first: false, second: true, third: false)
+        #expect(try Predicate(any: predicates).evaluate(input2))
+        #expect(input2.firstAccessed)
+        #expect(input2.secondAccessed)
+        #expect(!input2.thirdAccessed)
+        
+        let input3 = PredicateTestObject3(first: false, second: false, third: false)
+        #expect(try !Predicate(any: predicates).evaluate(input3))
+        #expect(input3.firstAccessed)
+        #expect(input3.secondAccessed)
+        #expect(input3.thirdAccessed)
+    }
+    #endif
 }
-
-#endif // compiler(>=6.0)

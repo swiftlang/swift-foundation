@@ -13,9 +13,15 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(WASILibc)
+@preconcurrency import WASILibc
+#elseif canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -166,6 +172,7 @@ extension UInt8 {
     internal static var _exclamation: UInt8 { UInt8(ascii: "!") }
     internal static var _ampersand: UInt8 { UInt8(ascii: "&") }
     internal static var _pipe: UInt8 { UInt8(ascii: "|") }
+    internal static var _percent: UInt8 { UInt8(ascii: "%") }
     internal static var _period: UInt8 { UInt8(ascii: ".") }
     internal static var _e: UInt8 { UInt8(ascii: "e") }
     internal static var _E: UInt8 { UInt8(ascii: "E") }
@@ -212,6 +219,8 @@ extension UInt8 {
         }
     }
 }
+
+#if !NO_JSON_FOUNDATION_SPECIALIZATION
 
 //===----------------------------------------------------------------------===//
 // Date parsing conveniences
@@ -337,6 +346,8 @@ internal extension Date {
         return (y, m, d)
     }
 }
+
+#endif
 
 //===----------------------------------------------------------------------===//
 // Integer parsing conveniences
@@ -598,7 +609,7 @@ struct BufferReader {
                 if nextIndex < readIndex && fullBuffer[unchecked: nextIndex] == ._newline {
                     p = nextIndex
                 }
-            } else if fullBuffer[offset: 1] == ._newline {
+            } else if fullBuffer[unchecked: p] == ._newline {
                 count += 1
             }
             fullBuffer.formIndex(&p, offsetBy: 1)
@@ -686,3 +697,14 @@ extension BufferView where Element == UInt8 {
     }
 }
 
+// Non-RawRepresentable Codable enum cases with the same number and labels of associated values all share equivalent CodingKeys, but the compiler-synthesized implementation generates a new type for each case.
+// Each of these types has their own set of `metadata instantiation cache for protocol conformance descriptor` symbols for each of 5 protocol conformances which consumes DATA space.
+// Instead of using the synthesized CodingKey types, you can make a `private typealias <CaseName>CodingKeys = <one of these types>` inside the Codable enum to reduce the amount of redundant DATA.
+package enum EmptyCodingKeys: CodingKey { }
+package enum DefaultAssociatedValueCodingKeys1: String, CodingKey {
+    case _0
+}
+package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
+    case _0
+    case _1
+}

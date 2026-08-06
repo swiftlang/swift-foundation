@@ -19,17 +19,19 @@ internal import os
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 internal import _FoundationCShims
@@ -82,12 +84,16 @@ extension _FileManagerImpl {
         if domain == .systemDomainMask {
             domain = ._partitionedSystemDomainMask
         }
-        let lastElement = domain == ._partitionedSystemDomainMask
-        #else
-        let lastElement = false
         #endif
+        
         let urls = Array(_SearchPathURLs(for: directory, in: domain, expandTilde: true))
-        guard let url = lastElement ? urls.last : urls.first else {
+        #if FOUNDATION_FRAMEWORK
+        let url = domain == ._partitionedSystemDomainMask ? urls.last : urls.first
+        #else
+        let url = urls.first
+        #endif
+        
+        guard let url else {
             throw CocoaError(.fileReadUnknown)
         }
         
@@ -201,8 +207,7 @@ extension _FileManagerImpl {
             }
         }
         return results
-#elseif os(WASI)
-        // wasi-libc does not support FTS for now
+#elseif os(OpenBSD) || os(Emscripten)
         throw CocoaError.errorWithFilePath(.featureUnsupported, path)
 #else
         return try path.withFileSystemRepresentation { fileSystemRep in
@@ -257,36 +262,6 @@ extension _FileManagerImpl {
         try fileManager.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
-#if os(Windows)
-    /// If `path` is absolute, this is the same as `path.withNTPathRepresentation`.
-    /// If `path` is relative, this creates an absolute path of `path` relative to `currentDirectoryPath` and runs
-    /// `body` with that path.
-    private func withAbsoluteNTPathRepresentation<Result>(
-        of path: String,
-        _ body: (UnsafePointer<WCHAR>) throws -> Result
-    ) throws -> Result {
-        try path.withNTPathRepresentation { pwszPath in
-            if !PathIsRelativeW(pwszPath) {
-                // We already have an absolute path. Nothing to do
-                return try body(pwszPath)
-            }
-            guard let currentDirectoryPath else {
-                preconditionFailure("We should always have a current directory on Windows")
-            }
-
-            // We have a relateive path. Make it absolute.
-            let absoluteUrl = URL(
-                filePath: path,
-                directoryHint: .isDirectory,
-                relativeTo: URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
-            )
-            return try absoluteUrl.path.withNTPathRepresentation { pwszPath in
-                return try body(pwszPath)
-            }
-        }
-    }
-#endif
-    
     func createDirectory(
         atPath path: String,
         withIntermediateDirectories createIntermediates: Bool,
@@ -297,35 +272,47 @@ extension _FileManagerImpl {
             SECURITY_ATTRIBUTES(nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size),
                                 lpSecurityDescriptor: nil,
                                 bInheritHandle: false)
-        // `SHCreateDirectoryExW` creates intermediate directories while `CreateDirectoryW` does not.
+        // `CreateDirectoryW` does not create intermediate directories, so we need to handle that manually.  
+        // Note: `SHCreateDirectoryExW` seems to have issues with long paths.
         if createIntermediates {
-            // `SHCreateDirectoryExW` requires an absolute path while `CreateDirectoryW` works based on the current working
-            // directory.
-            try withAbsoluteNTPathRepresentation(of: path) { pwszPath in
-                let errorCode = SHCreateDirectoryExW(nil, pwszPath, &saAttributes)
-                guard let errorCode = DWORD(exactly: errorCode) else {
-                    // `SHCreateDirectoryExW` returns `Int` but all error codes are defined in terms of `DWORD`, aka
-                    // `UInt`. We received an unknown error code.
-                    throw CocoaError.errorWithFilePath(.fileWriteUnknown, path)
-                }
-                switch errorCode {
-                case ERROR_SUCCESS:
-                    if let attributes {
-                        try? fileManager.setAttributes(attributes, ofItemAtPath: path)
+            // Create intermediate directories recursively
+            func _createDirectoryRecursively(at directoryPath: String) throws {
+                try directoryPath.withNTPathRepresentation { pwszPath in
+                    // Create this directory
+                    guard CreateDirectoryW(pwszPath, &saAttributes) else {
+                        let lastError = GetLastError()
+                        if lastError == ERROR_ALREADY_EXISTS {
+                            var isDir: Bool = false
+                            if fileExists(atPath: directoryPath, isDirectory: &isDir), isDir {
+                                return // Directory now exists, success
+                            }
+                        } else if lastError == ERROR_PATH_NOT_FOUND {
+                            let parentPath = directoryPath.deletingLastPathComponent()
+                            if !parentPath.isEmpty && parentPath != directoryPath {
+                                // Recursively create parent directory
+                                try _createDirectoryRecursively(at: parentPath)
+                                // Now try creating this one again.
+                                guard CreateDirectoryW(pwszPath, &saAttributes) else {
+                                    let lastError = GetLastError()
+                                    if lastError == ERROR_ALREADY_EXISTS {
+                                        var isDir: Bool = false
+                                        if fileExists(atPath: directoryPath, isDirectory: &isDir), isDir {
+                                            return // Directory now exists, success
+                                        }
+                                    }
+                                    throw CocoaError.errorWithFilePath(directoryPath, win32: lastError, reading: false)
+                                }
+                                return
+                            }
+                        }
+                        throw CocoaError.errorWithFilePath(directoryPath, win32: lastError, reading: false)
                     }
-                case ERROR_ALREADY_EXISTS:
-                    var isDirectory: Bool = false
-                    if fileExists(atPath: path, isDirectory: &isDirectory), isDirectory {
-                        // A directory already exists at this path, which is not an error if we have
-                        // `createIntermediates == true`.
-                        break
-                    }
-                    // A file (not a directory) exists at the given path or the file creation failed and the item
-                    // at this path has been deleted before the call to `fileExists`. Throw the original error.
-                    fallthrough
-                default:
-                    throw CocoaError.errorWithFilePath(path, win32: errorCode, reading: false)
                 }
+            }
+            
+            try _createDirectoryRecursively(at: path)
+            if let attributes {
+                try? fileManager.setAttributes(attributes, ofItemAtPath: path)
             }
         } else {
             try path.withNTPathRepresentation { pwszPath in
@@ -507,7 +494,12 @@ extension _FileManagerImpl {
     func changeCurrentDirectoryPath(_ path: String) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
-            SetCurrentDirectoryW($0)
+            // It seems setting CWD with the long name prefix causes issues with calls to GetFullPathNameW, path which are just '\'
+            // end up coming back a '\\' instead of 'C:\'.  There is some gih ub comments suggesting the prefix does not work with
+            // SetCurrentDirectroy either (https://github.com/MicrosoftDocs/feedback/issues/1441#issuecomment-506574206)
+            String(decodingCString: $0, as: UTF16.self).removingNTPathPrefix().withCString(encodedAs: UTF16.self) { pwszStripped in
+                SetCurrentDirectoryW(pwszStripped)
+            }
         }) ?? false
 #else
         fileManager.withFileSystemRepresentation(for: path) { rep in
@@ -519,22 +511,13 @@ extension _FileManagerImpl {
     
     var currentDirectoryPath: String? {
 #if os(Windows)
-        var dwLength: DWORD = GetCurrentDirectoryW(0, nil)
-        guard dwLength > 0 else { return nil }
-
-        for _ in 0 ... 8 {
-            if let szCurrentDirectory = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength), {
-                let dwResult: DWORD = GetCurrentDirectoryW(dwLength, $0.baseAddress)
-                if dwResult == dwLength - 1 {
-                    return String(decodingCString: $0.baseAddress!, as: UTF16.self)
-                }
-                dwLength = dwResult
-                return nil
-            }) {
-                return szCurrentDirectory
-            }
+        // Make an initial call to GetCurrentDirectoryW to get a buffer size estimate.
+        // This is solely to minimize the number of allocations and number of bytes allocated versus starting with a hardcoded value like MAX_PATH.
+        // We should NOT early-return if this returns 0, in order to avoid TOCTOU issues.
+        let dwSize = GetCurrentDirectoryW(0, nil)
+        return try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
+            GetCurrentDirectoryW(DWORD($0.count), $0.baseAddress)
         }
-        return nil
 #else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
@@ -543,5 +526,21 @@ extension _FileManagerImpl {
             return fileManager.string(withFileSystemRepresentation: buffer.baseAddress!, length: strlen(buffer.baseAddress!))
         }
 #endif
+    }
+}
+
+extension URL {
+    /// Returns `nil` if `getcwd` fails instead of an empty path `URL`.
+    static func currentDirectoryOrNil() -> URL? {
+        #if os(Windows)
+        URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        #else
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
+            guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
+                return nil
+            }
+            return URL(fileURLWithFileSystemRepresentation: buffer.baseAddress!, isDirectory: true, relativeTo: nil)
+        }
+        #endif
     }
 }

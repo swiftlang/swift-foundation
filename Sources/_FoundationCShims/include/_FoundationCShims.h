@@ -17,6 +17,7 @@
 #include "_CStdlib.h"
 #include "CFUniCharBitmapData.inc.h"
 #include "CFUniCharBitmapData.h"
+#include "CFUniCharBitmapDataAccess.h"
 #include "string_shims.h"
 #include "bplist_shims.h"
 #include "io_shims.h"

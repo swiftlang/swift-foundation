@@ -13,18 +13,20 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 internal import _FoundationCShims
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 extension _FileManagerImpl {
@@ -64,7 +66,7 @@ extension _FileManagerImpl {
 
         try path.withNTPathRepresentation { lpSymlinkFileName in
             try destPath.withFileSystemRepresentation {
-                try String(cString: $0!).withCString(encodedAs: UTF16.self) { lpTargetFileName in
+                try String(cString: $0!).withNTPathRepresentation(relative: true) { lpTargetFileName in
                     if CreateSymbolicLinkW(lpSymlinkFileName, lpTargetFileName, SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE | (bIsDirectory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) == 0 {
                         throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
                     }

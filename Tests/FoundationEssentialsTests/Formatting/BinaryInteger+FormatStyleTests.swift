@@ -5,17 +5,12 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
 
-import XCTest
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#else
 @testable import Foundation
 #endif
 
@@ -27,16 +22,17 @@ import Numberick
 import BigInt
 #endif
 
-final class BinaryIntegerFormatStyleTests: XCTestCase {
+@Suite("BinaryIntegerFormatStyle")
+private struct BinaryIntegerFormatStyleTests {
     // NSR == numericStringRepresentation
-    func checkNSR(value: some BinaryInteger, expected: String) {
-        XCTAssertEqual(String(decoding: value.numericStringRepresentation.utf8, as: Unicode.ASCII.self), expected)
+    func checkNSR(value: some BinaryInteger, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        #expect(String(decoding: value.numericStringRepresentation.utf8, as: Unicode.ASCII.self) == expected)
     }
 
-    func testNumericStringRepresentation_builtinIntegersLimits() throws {
-        func check<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String) {
-            checkNSR(value: I.min, expected: min)
-            checkNSR(value: I.max, expected: max)
+    @Test func numericStringRepresentation_builtinIntegersLimits() throws {
+        func check<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            checkNSR(value: I.min, expected: min, sourceLocation: sourceLocation)
+            checkNSR(value: I.max, expected: max, sourceLocation: sourceLocation)
         }
 
         check(type: Int8.self, min: "-128", max: "127")
@@ -52,13 +48,13 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt128.self, min: "0", max: "340282366920938463463374607431768211455")
     }
 
-    func testNumericStringRepresentation_builtinIntegersAroundDecimalMagnitude() throws {
-        func check<I: FixedWidthInteger>(type: I.Type = I.self, magnitude: String, oneLess: String, oneMore: String) {
+    @Test func numericStringRepresentation_builtinIntegersAroundDecimalMagnitude() throws {
+        func check<I: FixedWidthInteger>(type: I.Type = I.self, magnitude: String, oneLess: String, oneMore: String, sourceLocation: SourceLocation = #_sourceLocation) {
             var mag = I(1); while !mag.multipliedReportingOverflow(by: 10).overflow { mag *= 10 }
             
-            checkNSR(value: mag, expected: magnitude)
-            checkNSR(value: mag - 1, expected: oneLess)
-            checkNSR(value: mag + 1, expected: oneMore)
+            checkNSR(value: mag, expected: magnitude, sourceLocation: sourceLocation)
+            checkNSR(value: mag - 1, expected: oneLess, sourceLocation: sourceLocation)
+            checkNSR(value: mag + 1, expected: oneMore, sourceLocation: sourceLocation)
         }
 
         check(type: Int8.self, magnitude: "100", oneLess: "99", oneMore: "101")
@@ -105,14 +101,14 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
                               String(repeating: "1234567890", count: 10),
                               String(repeating: "1234567890", count: 100)] {
             if let value = initialiser(valueAsString) { // The test cases cover a wide range of values, that don't all fit into every type tested (i.e. the fixed-width types from Numberick).
-                XCTAssertEqual(value.description, valueAsString) // Sanity check that it initialised from the string correctly.
+                #expect(value.description == valueAsString) // Sanity check that it initialised from the string correctly.
                 checkNSR(value: value, expected: valueAsString)
 
                 if I.isSigned {
                     let negativeValueAsString = "-" + valueAsString
                     let negativeValue = initialiser(negativeValueAsString)!
 
-                    XCTAssertEqual(negativeValue.description, negativeValueAsString) // Sanity check that it initialised from the string correctly.
+                    #expect(negativeValue.description == negativeValueAsString) // Sanity check that it initialised from the string correctly.
                     checkNSR(value: negativeValue, expected: negativeValueAsString)
                 }
             }
@@ -120,7 +116,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
     }
 
 #if canImport(Numberick)
-    func testNumericStringRepresentation_largeIntegers() throws {
+    @Test func numericStringRepresentation_largeIntegers() throws {
         check(type: Int128.self, initialiser: { Int128($0) })
         check(type: UInt128.self, initialiser: { UInt128($0) })
 
@@ -130,7 +126,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
 #endif
 
 #if canImport(BigInt)
-    func testNumericStringRepresentation_arbitraryPrecisionIntegers() throws {
+    @Test func numericStringRepresentation_arbitraryPrecisionIntegers() throws {
         check(type: BigInt.self, initialiser: { BigInt($0)! })
         check(type: BigUInt.self, initialiser: { BigUInt($0)! })
     }
@@ -138,11 +134,11 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
 #endif // canImport(Numberick) || canImport(BigInt)
 }
 
-final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
+struct BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords {
     
     // MARK: Tests
     
-    func testInt32() {
+    @Test func int32() {
         check( Int32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0")
         check( Int32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
         check( Int32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647") //  Int32.max
@@ -152,7 +148,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check( Int32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:          "-1")
     }
     
-    func testUInt32() {
+    @Test func uint32() {
         check(UInt32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0") // UInt32.min
         check(UInt32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
         check(UInt32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647")
@@ -162,7 +158,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check(UInt32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:  "4294967295") // UInt32.max
     }
     
-    func testInt64() {
+    @Test func int64() {
         check( Int64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0")
         check( Int64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
         check( Int64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807") //  Int64.max
@@ -172,7 +168,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check( Int64(truncatingIfNeeded: 0xffffffffffffffff as UInt64), expectation:                   "-1")
     }
     
-    func testUInt64() {
+    @Test func uint64() {
         check(UInt64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0") // UInt64.min
         check(UInt64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
         check(UInt64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807")
@@ -184,7 +180,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     // MARK: Tests + Big Integer
     
-    func testInt128() {
+    @Test func int128() {
         check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: true,  expectation:                                        "0")
         check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: true,  expectation:   "20011376718272490338853433276725592320")
         check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: true,  expectation:  "170141183460469231731687303715884105727") //  Int128.max
@@ -193,7 +189,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: true,  expectation:                                       "-1")
     }
     
-    func testUInt128() {
+    @Test func uint128() {
         check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: false, expectation:                                        "0") // UInt128.min
         check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: false, expectation:   "20011376718272490338853433276725592320")
         check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105728")
@@ -204,12 +200,12 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     // MARK: Tests + Big Integer + Miscellaneous
     
-    func testWordsIsEmptyResultsInZero() {
+    @Test func wordsIsEmptyResultsInZero() {
         check(words:[              ] as [UInt], isSigned: true,  expectation:  "0")
         check(words:[              ] as [UInt], isSigned: false, expectation:  "0")
     }
     
-    func testSignExtendingDoesNotChangeTheResult() {
+    @Test func signExtendingDoesNotChangeTheResult() {
         check(words:[ 0            ] as [UInt], isSigned: true,  expectation:  "0")
         check(words:[ 0,  0        ] as [UInt], isSigned: true,  expectation:  "0")
         check(words:[ 0,  0,  0    ] as [UInt], isSigned: true,  expectation:  "0")
@@ -228,22 +224,22 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     // MARK: Assertions
     
-    func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(integer.description, expectation, "integer description does not match expectation", file: file, line: line)
-        check(ascii: integer.numericStringRepresentation.utf8, expectation: expectation, file: file, line: line)
-        check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, file: file, line: line)
+    func check(_ integer: some BinaryInteger, expectation: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        #expect(integer.description == expectation, "integer description does not match expectation", sourceLocation: sourceLocation)
+        check(ascii: integer.numericStringRepresentation.utf8, expectation: expectation, sourceLocation: sourceLocation)
+        check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, sourceLocation: sourceLocation)
     }
     
-    func check(x64: [UInt64], isSigned: Bool, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
-        check(words: x64.flatMap(\.words), isSigned: isSigned, expectation: expectation, file: file, line: line)
+    func check(x64: [UInt64], isSigned: Bool, expectation: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        check(words: x64.flatMap(\.words), isSigned: isSigned, expectation: expectation, sourceLocation: sourceLocation)
     }
     
-    func check(words: [UInt], isSigned: Bool, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
+    func check(words: [UInt], isSigned: Bool, expectation: String, sourceLocation: SourceLocation = #_sourceLocation) {
         let ascii =  numericStringRepresentationForBinaryInteger(words: words, isSigned: isSigned).utf8
-        check(ascii: ascii, expectation: expectation, file: file, line: line)
+        check(ascii: ascii, expectation: expectation, sourceLocation: sourceLocation)
     }
     
-    func check(ascii: some Collection<UInt8>, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(String(decoding: ascii, as: Unicode.ASCII.self), expectation, file: file, line: line)
+    func check(ascii: some Collection<UInt8>, expectation: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        #expect(String(decoding: ascii, as: Unicode.ASCII.self) == expectation, sourceLocation: sourceLocation)
     }
 }

@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-/**
- `DateComponents` encapsulates the components of a date in an extendable, structured manner.
-
- It is used to specify a date by providing the temporal components that make up a date and time in a particular calendar: hour, minutes, seconds, day, month, year, and so on. It can also be used to specify a duration of time, for example, 5 hours and 16 minutes. A `DateComponents` is not required to define all the component fields.
-
- When a new instance of `DateComponents` is created, the date components are set to `nil`.
-*/
+/// A date or time specified in terms of units (such as year, month, day, hour, minute) to be evaluated in a calendar system and time zone.
+///
+/// `DateComponents` encapsulates the components of a date in an extendable, structured manner.
+///
+/// It is used to specify a date by providing the temporal components that make up a date and time in a particular calendar: hour, minutes, seconds, day, month, year, and so on. It can also be used to specify a duration of time, for example, 5 hours and 16 minutes. A `DateComponents` is not required to define all the component fields.
+///
+/// When a new instance of `DateComponents` is created, the date components are set to `nil`.
 @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _calendar: Calendar?
@@ -38,8 +38,9 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _weekOfYear: Int?
     internal var _yearForWeekOfYear: Int?
     internal var _isLeapMonth: Bool?
+    internal var _isRepeatedDay: Bool?
 
-    /// Initialize a `DateComponents`, optionally specifying values for its fields.
+    /// Initializes a date components value, optionally specifying values for its fields.
     public init(calendar: Calendar? = nil,
          timeZone: TimeZone? = nil,
          era: Int? = nil,
@@ -75,10 +76,62 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         self.yearForWeekOfYear = yearForWeekOfYear
         self.dayOfYear = nil
     }
+    
+    /// Same as the public initializer, but with the dayOfYear field, and skipping the 'conversion' for callers who expect ObjC behavior (Int.max -> nil).
+    @inline(__always)
+    internal init(calendar: Calendar? = nil,
+         timeZone: TimeZone? = nil,
+         rawEra: Int? = nil,
+         rawYear: Int? = nil,
+         rawMonth: Int? = nil,
+         rawDay: Int? = nil,
+         rawHour: Int? = nil,
+         rawMinute: Int? = nil,
+         rawSecond: Int? = nil,
+         rawNanosecond: Int? = nil,
+         rawWeekday: Int? = nil,
+         rawWeekdayOrdinal: Int? = nil,
+         rawQuarter: Int? = nil,
+         rawWeekOfMonth: Int? = nil,
+         rawWeekOfYear: Int? = nil,
+         rawYearForWeekOfYear: Int? = nil,
+         rawDayOfYear: Int? = nil,
+         isLeapMonth: Bool? = nil,
+         isRepeatedDay: Bool? = nil) {
+
+        // Be sure to set the time zone of the calendar if appropriate
+        if var calendar, let timeZone {
+            calendar.timeZone = timeZone
+            _calendar = calendar
+            _timeZone = timeZone
+        } else if let calendar {
+            _calendar = calendar
+        } else if let timeZone {
+            _timeZone = timeZone
+        }
+        
+        _era = rawEra
+        _year = rawYear
+        _month = rawMonth
+        _day = rawDay
+        _hour = rawHour
+        _minute = rawMinute
+        _second = rawSecond
+        _nanosecond = rawNanosecond
+        _weekday = rawWeekday
+        _weekdayOrdinal = rawWeekdayOrdinal
+        _quarter = rawQuarter
+        _weekOfMonth = rawWeekOfMonth
+        _weekOfYear = rawWeekOfYear
+        _yearForWeekOfYear = rawYearForWeekOfYear
+        _dayOfYear = rawDayOfYear
+        _isLeapMonth = isLeapMonth
+        _isRepeatedDay = isRepeatedDay
+    }
 
     package init?(component: Calendar.Component, value: Int) {
         switch component {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         default:
             setValue(value, for: component)
@@ -97,7 +150,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         }
     }
 
-    /// The `Calendar` used to interpret the other values in this structure.
+    /// The calendar used to interpret the other values in this structure.
     ///
     /// - note: API which uses `DateComponents` may have different behavior if this value is `nil`. For example, assuming the current calendar or ignoring certain values.
     public var calendar: Calendar? {
@@ -116,10 +169,12 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     public var timeZone: TimeZone? {
         get { _timeZone }
         set {
-            _timeZone = newValue
-            // Also changes the time zone of the calendar
-            if let newValue {
-                _calendar?.timeZone = newValue
+            if _timeZone != newValue {
+                _timeZone = newValue
+                // Also changes the time zone of the calendar
+                if let newValue {
+                    _calendar?.timeZone = newValue
+                }
             }
         }
     }
@@ -219,7 +274,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// A day of the year.
     /// For example, in the Gregorian calendar, can go from 1 to 365 or 1 to 366 in leap years.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public var dayOfYear: Int? {
         get { _dayOfYear }
         set { _dayOfYear = converted(newValue) }
@@ -231,7 +286,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         set { _week = converted(newValue) }
     }
 
-    /// The ISO 8601 week-numbering year of the receiver.
+    /// The year corresponding to a week-counting week.
     ///
     /// The Gregorian calendar defines a week to have 7 days, and a year to have 365 days, or 366 in a leap year. However, neither 365 or 366 divide evenly into a 7 day week, so it is often the case that the last week of a year ends on a day in the next year, and the first week of a year begins in the preceding year. To reconcile this, ISO 8601 defines a week-numbering year, consisting of either 52 or 53 full weeks (364 or 371 days), such that the first week of a year is designated to be the week containing the first Thursday of the year.
     ///
@@ -247,8 +302,15 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         get { _isLeapMonth }
         set { _isLeapMonth = newValue }
     }
-    
-    /// Returns a `Date` calculated from the current components using the `calendar` property.
+
+    /// Set to true if these components represent a repeated day.
+    @available(FoundationPreview 6.2, *)
+    public var isRepeatedDay: Bool? {
+        get { _isRepeatedDay }
+        set { _isRepeatedDay = newValue }
+    }
+
+    /// The date calculated from the current components using the stored calendar.
     public var date: Date? {
         guard let calendar = _calendar else { return nil }
 
@@ -265,7 +327,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
     /// Set the value of one of the properties, using an enumeration value instead of a property name.
     ///
-    /// The calendar and timeZone and isLeapMonth properties cannot be set by this method.
+    /// The calendar, timeZone, isLeapMonth, and isRepeatedDay properties cannot be set by this method.
     @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public mutating func setValue(_ value: Int?, for component: Calendar.Component) {
         switch component {
@@ -284,7 +346,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .yearForWeekOfYear: self.yearForWeekOfYear = value
         case .nanosecond: self.nanosecond = value
         case .dayOfYear: self.dayOfYear = value
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             // Do nothing
             break
         }
@@ -292,7 +354,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
     /// Returns the value of one of the properties, using an enumeration value instead of a property name.
     ///
-    /// The calendar and timeZone and isLeapMonth property values cannot be retrieved by this method.
+    /// The calendar, timeZone, isLeapMonth, and isRepeatedDay property values cannot be retrieved by this method.
     @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func value(for component: Calendar.Component) -> Int? {
         switch component {
@@ -311,14 +373,14 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .yearForWeekOfYear: return self.yearForWeekOfYear
         case .nanosecond: return self.nanosecond
         case .dayOfYear: return self.dayOfYear
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         }
     }
 
     // MARK: -
 
-    /// Returns true if the combination of properties which have been set in the receiver is a date which exists in the `calendar` property.
+    /// Indicates whether the current combination of properties represents a date which exists in the current calendar.
     ///
     /// This method is not appropriate for use on `DateComponents` values which are specifying relative quantities of calendar components.
     ///
@@ -333,7 +395,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         return isValidDate(in: calendar)
     }
 
-    /// Returns true if the combination of properties which have been set in the receiver is a date which exists in the specified `Calendar`.
+    /// Indicates whether the current combination of properties represents a date which exists in the specified calendar.
     ///
     /// This method is not appropriate for use on `DateComponents` values which are specifying relative quantities of calendar components.
     ///
@@ -425,6 +487,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         hasher.combine(_weekOfYear)
         hasher.combine(_yearForWeekOfYear)
         hasher.combine(_isLeapMonth)
+        hasher.combine(_isRepeatedDay)
         hasher.combine(_dayOfYear)
     }
 
@@ -458,10 +521,35 @@ public struct DateComponents : Hashable, Equatable, Sendable {
             return false
         }
 
+        if lhs.isRepeatedDay != rhs.isRepeatedDay {
+            return false
+        }
+
         if lhs.calendar != rhs.calendar { return false }
         if lhs.timeZone != rhs.timeZone { return false }
 
         return true
+    }
+}
+
+extension DateComponents {
+    internal var _populatedComponentSet: Calendar.ComponentSet {
+        var result = Calendar.ComponentSet()
+        if era != nil { result.insert(.era) }
+        if year != nil { result.insert(.year) }
+        if month != nil { result.insert(.month) }
+        if day != nil { result.insert(.day) }
+        if hour != nil { result.insert(.hour) }
+        if minute != nil { result.insert(.minute) }
+        if second != nil { result.insert(.second) }
+        if weekday != nil { result.insert(.weekday) }
+        if weekdayOrdinal != nil { result.insert(.weekdayOrdinal) }
+        if weekOfMonth != nil { result.insert(.weekOfMonth) }
+        if weekOfYear != nil { result.insert(.weekOfYear) }
+        if yearForWeekOfYear != nil { result.insert(.yearForWeekOfYear) }
+        if nanosecond != nil { result.insert(.nanosecond) }
+        if dayOfYear != nil { result.insert(.dayOfYear) }
+        return result
     }
 }
 
@@ -498,6 +586,7 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
         if let r = dayOfYear { c.append((label: "dayOfYear", value: r)) }
         if let r = yearForWeekOfYear { c.append((label: "yearForWeekOfYear", value: r)) }
         if let r = isLeapMonth { c.append((label: "isLeapMonth", value: r)) }
+        if let r = isRepeatedDay { c.append((label: "isRepeatedDay", value: r)) }
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
@@ -522,6 +611,7 @@ extension DateComponents : Codable {
         case weekOfYear
         case yearForWeekOfYear
         case isLeapMonth
+        case isRepeatedDay
         case dayOfYear
     }
 
@@ -546,6 +636,7 @@ extension DateComponents : Codable {
         let yearForWeekOfYear = try container.decodeIfPresent(Int.self, forKey: .yearForWeekOfYear)
 
         let isLeapMonth = try container.decodeIfPresent(Bool.self, forKey: .isLeapMonth)
+        let isRepeatedDay = try container.decodeIfPresent(Bool.self, forKey: .isRepeatedDay)
 
         let dayOfYear = try container.decodeIfPresent(Int.self, forKey: .dayOfYear)
         
@@ -568,6 +659,10 @@ extension DateComponents : Codable {
 
         if let isLeapMonth {
             self.isLeapMonth = isLeapMonth
+        }
+
+        if let isRepeatedDay {
+            self.isRepeatedDay = isRepeatedDay
         }
         
         if let dayOfYear {
@@ -594,6 +689,7 @@ extension DateComponents : Codable {
         try container.encodeIfPresent(self.weekOfYear, forKey: .weekOfYear)
         try container.encodeIfPresent(self.yearForWeekOfYear, forKey: .yearForWeekOfYear)
         try container.encodeIfPresent(self.isLeapMonth, forKey: .isLeapMonth)
+        try container.encodeIfPresent(self.isRepeatedDay, forKey: .isRepeatedDay)
         try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
     }
 }
@@ -633,6 +729,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
         if let _yearForWeekOfYear { ns.yearForWeekOfYear = _yearForWeekOfYear }
         if let _dayOfYear { ns.dayOfYear = _dayOfYear }
         if let _isLeapMonth { ns.isLeapMonth = _isLeapMonth }
+        if let _isRepeatedDay { ns.isRepeatedDay = _isRepeatedDay}
         if let _week { __NSDateComponentsSetWeek(ns, _week) }
         return ns
     }
@@ -664,6 +761,9 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
         if ns.dayOfYear != NSInteger.max { dc.dayOfYear = ns.dayOfYear }
         if (__NSDateComponentsIsLeapMonthSet(ns)) {
             dc.isLeapMonth = ns.isLeapMonth
+        }
+        if (__NSDateComponentsIsRepeatedDaySet(ns)) {
+            dc.isRepeatedDay = ns.isRepeatedDay
         }
         if (__NSDateComponentsWeek(ns) != NSInteger.max) {
             dc._week = __NSDateComponentsWeek(ns)

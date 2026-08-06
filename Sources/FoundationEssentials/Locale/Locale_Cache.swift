@@ -18,6 +18,7 @@ internal import os
 #endif
 
 internal import _FoundationCShims
+internal import Synchronization
 
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
 // Here, we always have access to _LocaleICU
@@ -45,7 +46,7 @@ struct LocaleCache : Sendable, ~Copyable {
         }
 
         private var cachedFixedLocales: [String : any _LocaleProtocol] = [:]
-        private var cachedFixedComponentsLocales: [Locale.Components : any _LocaleProtocol] = [:]
+        private var cachedFixedComponentsLocales: [String /*ICU identifier*/: any _LocaleProtocol] = [:]
 
 #if FOUNDATION_FRAMEWORK
         private var cachedFixedIdentifierToNSLocales: [String : _NSSwiftLocale] = [:]
@@ -99,33 +100,34 @@ struct LocaleCache : Sendable, ~Copyable {
 
 #endif // FOUNDATION_FRAMEWORK
 
-        func fixedComponents(_ comps: Locale.Components) -> (any _LocaleProtocol)? {
-            cachedFixedComponentsLocales[comps]
-        }
-
         mutating func fixedComponentsWithCache(_ comps: Locale.Components) -> any _LocaleProtocol {
-            if let l = fixedComponents(comps) {
+            let identifier = comps.icuIdentifier
+            if let l = cachedFixedComponentsLocales[identifier] {
                 return l
             } else {
                 let new = _localeICUClass().init(components: comps)
 
-                cachedFixedComponentsLocales[comps] = new
+                cachedFixedComponentsLocales[identifier] = new
                 return new
             }
         }
+        
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+        var identifiersWithLikelySubtags: [String : String] = [:]
+#endif
     }
 
-    let lock: LockedState<State>
+    let lock: Mutex<State>
 
     static let cache = LocaleCache()
-    private let _currentCache = LockedState<(any _LocaleProtocol)?>(initialState: nil)
+    private let _currentCache = Mutex<(any _LocaleProtocol)?>(nil)
 
 #if FOUNDATION_FRAMEWORK
-    private var _currentNSCache = LockedState<_NSSwiftLocale?>(initialState: nil)
+    private let _currentNSCache = Mutex<_NSSwiftLocale?>(nil)
 #endif
 
     fileprivate init() {
-        lock = LockedState(initialState: State())
+        lock = Mutex(State())
     }
 
 
@@ -359,4 +361,27 @@ struct LocaleCache : Sendable, ~Copyable {
         return nil
 #endif
     }
+    
+#if FOUNDATION_FRAMEWORK
+    func localeIdentifierWithLikelySubtags(_ localeID: String, cacheResult: Bool) -> String {
+#if canImport(_FoundationICU)
+        let existing = lock.withLock {
+            $0.identifiersWithLikelySubtags[localeID]
+        }
+        if let existing {
+            return existing
+        }
+        
+        let result = Locale.localeIdentifierWithLikelySubtags(localeID)
+        if cacheResult {
+            lock.withLock {
+                $0.identifiersWithLikelySubtags[localeID] = result
+            }
+        }
+        return result
+#else
+        return ""
+#endif
+    }
+#endif
 }

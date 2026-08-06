@@ -14,6 +14,7 @@
 
 internal import _ForSwiftFoundation
 internal import os
+internal import Synchronization
 
 @objc
 extension NSURLComponents {
@@ -34,8 +35,8 @@ extension NSURLComponents {
         return _NSSwiftURLComponents(components: components)
     }
 
-    static func _parseString(_ string: String, encodingInvalidCharacters: Bool, compatibility: URLParserCompatibility.RawValue) -> String? {
-        return RFC3986Parser.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters, compatibility: .init(rawValue: compatibility))?.urlString
+    static func _parseString(_ string: String, encodingInvalidCharacters: Bool, allowEmptyScheme: Bool) -> String? {
+        return RFC3986Parser.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters, allowEmptyScheme: allowEmptyScheme)?.urlString
     }
 }
 
@@ -101,18 +102,18 @@ extension NSURLComponents {
 
 @objc(_NSSwiftURLComponents)
 internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
-    let lock: OSAllocatedUnfairLock<URLComponents>
+    let lock: Mutex<URLComponents>
     var components: URLComponents {
         lock.withLock { $0 }
     }
 
     init(components: URLComponents) {
-        lock = OSAllocatedUnfairLock(initialState: components)
+        lock = Mutex(components)
         super.init()
     }
 
     override init() {
-        lock = OSAllocatedUnfairLock(initialState: URLComponents())
+        lock = Mutex(URLComponents())
         super.init()
     }
 
@@ -120,7 +121,7 @@ internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
         guard let comp = URLComponents(string: string) else {
             return nil
         }
-        lock = OSAllocatedUnfairLock(initialState: comp)
+        lock = Mutex(comp)
         super.init()
     }
 
@@ -134,7 +135,7 @@ internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
         guard let comp = URLComponents(string: string) else {
             return nil
         }
-        lock = OSAllocatedUnfairLock(initialState: comp)
+        lock = Mutex(comp)
         super.init()
     }
 

@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 
-final class PredicateMacroFunctionCallTests: XCTestCase {
-    func testSubscript() {
+@Suite("#Predicate Macro Function Calls")
+private struct PredicateMacroFunctionCallTests {
+    @Test func `subscript`() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -22,9 +23,9 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_subscript(
-                    PredicateExpressions.build_Arg(input),
-                    PredicateExpressions.build_Arg(1)
+                PredicateExpressions.\(foundationModuleName)::build_subscript(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(1)
                 )
             })
             """
@@ -38,10 +39,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input in
-                PredicateExpressions.build_subscript(
-                    PredicateExpressions.build_Arg(input),
-                    PredicateExpressions.build_Arg(1),
-                    default: PredicateExpressions.build_Arg("Hello")
+                PredicateExpressions.\(foundationModuleName)::build_subscript(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(1),
+                    default: PredicateExpressions.\(foundationModuleName)::build_Arg("Hello")
                 )
             })
             """
@@ -55,23 +56,23 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ input, input2, input3 in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_subscript(
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg(input),
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_subscript(
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
                             keyPath: \\.dictionary
                         ),
-                        PredicateExpressions.build_Arithmetic(
-                            lhs: PredicateExpressions.build_Arg(input2),
-                            rhs: PredicateExpressions.build_Arg(1),
+                        PredicateExpressions.\(foundationModuleName)::build_Arithmetic(
+                            lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input2),
+                            rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(1),
                             op: .add
                         ),
-                        default: PredicateExpressions.build_Equal(
-                            lhs: PredicateExpressions.build_Arg(input3),
-                            rhs: PredicateExpressions.build_Arg(input2)
+                        default: PredicateExpressions.\(foundationModuleName)::build_Equal(
+                            lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input3),
+                            rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input2)
                         )
                     ),
-                    rhs: PredicateExpressions.build_Arg(false)
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(false)
                 )
             })
             """
@@ -96,7 +97,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testContains() {
+    @Test func contains() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -105,9 +106,9 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object, Object>({ inputA, inputB in
-                PredicateExpressions.build_contains(
-                    PredicateExpressions.build_Arg(inputA),
-                    PredicateExpressions.build_Arg(inputB)
+                PredicateExpressions.\(foundationModuleName)::build_contains(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputB)
                 )
             })
             """
@@ -121,16 +122,16 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<String>({ input in
-                PredicateExpressions.build_contains(
-                    PredicateExpressions.build_Arg(input),
-                    PredicateExpressions.build_Arg("foo")
+                PredicateExpressions.\(foundationModuleName)::build_contains(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg("foo")
                 )
             })
             """
         )
     }
     
-    func testContainsWhere() {
+    @Test func containsWhere() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -141,10 +142,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_contains(
-                    PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_contains(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                     where: {
-                        PredicateExpressions.build_Arg(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(
                             $0
                         )
                     }
@@ -163,10 +164,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_contains(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_contains(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 ) {
-                    PredicateExpressions.build_Arg(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(
                         $0
                     )
                 }
@@ -175,7 +176,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testAllSatisfy() {
+    @Test func allSatisfy() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -186,10 +187,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_allSatisfy(
-                    PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_allSatisfy(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                     {
-                        PredicateExpressions.build_Arg(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(
                             $0
                         )
                     }
@@ -208,10 +209,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_allSatisfy(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_allSatisfy(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 ) {
-                    PredicateExpressions.build_Arg(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(
                         $0
                     )
                 }
@@ -220,7 +221,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testFilter() {
+    @Test func filter() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -231,10 +232,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_filter(
-                    PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_filter(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                     {
-                        PredicateExpressions.build_Arg(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(
                             $0
                         )
                     }
@@ -253,10 +254,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_filter(
-                    PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_filter(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                 ) {
-                    PredicateExpressions.build_Arg(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(
                         $0
                     )
                 }
@@ -273,12 +274,12 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_filter(
-                    PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_filter(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                     {
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_Arg($0),
+                        PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                            root: PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                                 keyPath: \\.foo
                             ),
                             keyPath: \\.bar
@@ -299,9 +300,9 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_starts(
-                    PredicateExpressions.build_Arg(inputA),
-                    with: PredicateExpressions.build_Arg(\\Element.foo.bar)
+                PredicateExpressions.\(foundationModuleName)::build_starts(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    with: PredicateExpressions.\(foundationModuleName)::build_Arg(\\Element.foo.bar)
                 )
             })
             """
@@ -315,14 +316,14 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<[Object]>({ inputA in
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_filter(
-                        PredicateExpressions.build_Arg(inputA),
+                PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                    root: PredicateExpressions.\(foundationModuleName)::build_filter(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
                         {
-                            PredicateExpressions.build_KeyPath(
-                                root: PredicateExpressions.build_ForcedUnwrap(
-                                    PredicateExpressions.build_KeyPath(
-                                        root: PredicateExpressions.build_Arg($0),
+                            PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                root: PredicateExpressions.\(foundationModuleName)::build_ForcedUnwrap(
+                                    PredicateExpressions.\(foundationModuleName)::build_KeyPath(
+                                        root: PredicateExpressions.\(foundationModuleName)::build_Arg($0),
                                         keyPath: \\.foo
                                     )
                                 ),
@@ -347,7 +348,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testStartsWith() {
+    @Test func startsWith() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -356,9 +357,9 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<Object>({ inputA in
-                PredicateExpressions.build_starts(
-                    PredicateExpressions.build_Arg(inputA),
-                    with: PredicateExpressions.build_Arg("foo")
+                PredicateExpressions.\(foundationModuleName)::build_starts(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    with: PredicateExpressions.\(foundationModuleName)::build_Arg("foo")
                 )
             })
             """
@@ -386,7 +387,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testMin() {
+    @Test func min() {
         AssertPredicateExpansion(
             """
             #Predicate<[Int]> { inputA in
@@ -395,18 +396,18 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<[Int]>({ inputA in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_min(
-                        PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_min(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                     ),
-                    rhs: PredicateExpressions.build_Arg(0)
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(0)
                 )
             })
             """
         )
     }
     
-    func testMax() {
+    @Test func max() {
         AssertPredicateExpansion(
             """
             #Predicate<[Int]> { inputA in
@@ -415,18 +416,19 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<[Int]>({ inputA in
-                PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_max(
-                        PredicateExpressions.build_Arg(inputA)
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_max(
+                        PredicateExpressions.\(foundationModuleName)::build_Arg(inputA)
                     ),
-                    rhs: PredicateExpressions.build_Arg(0)
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(0)
                 )
             })
             """
         )
     }
-    
-    func testLocalizedStandardContains() {
+
+    #if FOUNDATION_FRAMEWORK
+    @Test func localizedStandardContains() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -435,9 +437,9 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<String>({ inputA in
-                PredicateExpressions.build_localizedStandardContains(
-                    PredicateExpressions.build_Arg(inputA),
-                    PredicateExpressions.build_Arg("foo")
+                PredicateExpressions.\(foundationModuleName)::build_localizedStandardContains(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg("foo")
                 )
             })
             """
@@ -462,7 +464,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testLocalizedStandardCompare() {
+    @Test func localizedStandardCompare() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -471,9 +473,9 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<String>({ inputA in
-                PredicateExpressions.build_localizedCompare(
-                    PredicateExpressions.build_Arg(inputA),
-                    PredicateExpressions.build_Arg("foo")
+                PredicateExpressions.\(foundationModuleName)::build_localizedCompare(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg("foo")
                 )
             })
             """
@@ -516,7 +518,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testCaseInsensitiveCompare() {
+    @Test func caseInsensitiveCompare() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -525,17 +527,16 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<String>({ inputA in
-                PredicateExpressions.build_caseInsensitiveCompare(
-                    PredicateExpressions.build_Arg(inputA),
-                    PredicateExpressions.build_Arg("foo")
+                PredicateExpressions.\(foundationModuleName)::build_caseInsensitiveCompare(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(inputA),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg("foo")
                 )
             })
             """
         )
     }
-    
-    #if FOUNDATION_FRAMEWORK
-    func testEvaluate() {
+
+    @Test func evaluate() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { input in
@@ -544,8 +545,8 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<String>({ input in
-                PredicateExpressions.build_evaluate(
-                    PredicateExpressions.build_Arg(other)
+                PredicateExpressions.\(foundationModuleName)::build_evaluate(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(other)
                 )
             })
             """
@@ -558,9 +559,9 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<String>({ input in
-                PredicateExpressions.build_evaluate(
-                    PredicateExpressions.build_Arg(other),
-                    PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::build_evaluate(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(other),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                 )
             })
             """
@@ -573,10 +574,10 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             """
             \(foundationModuleName).Predicate<String>({ input in
-                PredicateExpressions.build_evaluate(
-                    PredicateExpressions.build_Arg(other),
-                    PredicateExpressions.build_Arg(input),
-                    PredicateExpressions.build_Arg(input)
+                PredicateExpressions.\(foundationModuleName)::build_evaluate(
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(other),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input),
+                    PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                 )
             })
             """
@@ -584,7 +585,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
     }
     #endif
     
-    func testDiagnoseUnsupportedFunction() {
+    @Test func diagnoseUnsupportedFunction() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in

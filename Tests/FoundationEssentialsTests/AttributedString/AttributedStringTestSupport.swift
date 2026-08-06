@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -110,6 +112,10 @@ extension AttributeScopes.TestAttributes {
             return NonCodableType(inner: inner)
         }
     }
+
+    struct NonCodableType : Hashable {
+        var inner : Int
+    }
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -118,10 +124,6 @@ extension AttributeScopes.TestAttributes.TestStringAttribute : MarkdownDecodable
 extension AttributeScopes.TestAttributes.TestBoolAttribute : MarkdownDecodableAttributedStringKey {}
 extension AttributeScopes.TestAttributes.TestDoubleAttribute : MarkdownDecodableAttributedStringKey {}
 #endif // FOUNDATION_FRAMEWORK
-
-struct NonCodableType : Hashable {
-    var inner : Int
-}
 
 extension AttributeScopes {
     var test: TestAttributes.Type { TestAttributes.self }
@@ -153,17 +155,3 @@ enum TestError: Error {
     case conversionError
     case markdownError
 }
-
-#if !FOUNDATION_FRAMEWORK
-
-extension AttributedStringProtocol {
-    func range(of other: String) -> Range<AttributedString.Index>? {
-        let str = String(characters)
-        guard let strRange = str.firstRange(of: other) else { return nil }
-        let start = str.unicodeScalars.distance(from: str.startIndex, to: strRange.lowerBound)
-        let end = str.unicodeScalars.distance(from: str.startIndex, to: strRange.upperBound)
-        return unicodeScalars.index(startIndex, offsetBy: start) ..< unicodeScalars.index(startIndex, offsetBy: end)
-    }
-}
-
-#endif // !FOUNDATION_FRAMEWORK

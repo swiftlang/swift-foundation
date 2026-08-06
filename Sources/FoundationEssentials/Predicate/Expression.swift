@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 public struct Expression<each Input, Output> : Sendable {
     public let expression : any StandardPredicateExpression<Output>
     public let variable: (repeat PredicateExpressions.Variable<each Input>)
@@ -29,6 +29,6 @@ public struct Expression<each Input, Output> : Sendable {
 
 #if hasFeature(Macros)
 @freestanding(expression)
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 public macro Expression<each Input, Output>(_ body: (repeat each Input) -> Output) -> Expression<repeat each Input, Output> = #externalMacro(module: "FoundationMacros", type: "ExpressionMacro")
 #endif

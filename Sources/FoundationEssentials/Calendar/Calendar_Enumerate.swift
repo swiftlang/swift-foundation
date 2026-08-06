@@ -38,9 +38,7 @@ extension DateInterval {
 extension Calendar {
     // MARK: - Logging
 #if FOUNDATION_FRAMEWORK
-    static fileprivate let log: SendableOSLog = {
-        .init(OSLog(subsystem: "com.apple.foundation", category: "calendar_enumeration"))
-    }()
+    static fileprivate let log = Logger(subsystem: "com.apple.foundation", category: "calendar_enumeration")
 #endif // FOUNDATION_FRAMEWORK
 
     func validRange(for component: Component) -> ClosedRange<Int> {
@@ -149,7 +147,7 @@ extension DateComponents {
             guard calendar.value(v, isValidFor: .nanosecond) else { return false }
         }
 
-        if !hasAtLeastOneFieldSet && (isLeapMonth ?? false) {
+        if !hasAtLeastOneFieldSet && !(isLeapMonth ?? false) && !(isRepeatedDay ?? false) {
             return false
         }
 
@@ -217,6 +215,7 @@ extension DateComponents {
         if self.yearForWeekOfYear != nil { units.insert(.yearForWeekOfYear) }
         if self.dayOfYear != nil { units.insert(.dayOfYear) }
         if self.nanosecond != nil { units.insert(.nanosecond) }
+        if self.isRepeatedDay != nil { units.insert(.isRepeatedDay) }
         return units
     }
 
@@ -253,19 +252,19 @@ private func _handleCalendarError(_ error: CalendarEnumerationError, date: Date,
 #if FOUNDATION_FRAMEWORK
     switch error {
     case .dateOutOfRange(let component, let test):
-        Logger(Calendar.log.log).error("Out of range Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+        Calendar.log.error("Out of range Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
         
     case .notAdvancing(let next, let previous):
-        Logger(Calendar.log.log).error("Not advancing Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) next: \(next.timeIntervalSinceReferenceDate, privacy: .public) previous: \(previous.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+        Calendar.log.error("Not advancing Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) next: \(next.timeIntervalSinceReferenceDate, privacy: .public) previous: \(previous.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
     case .unexpectedResult(let component, let test):
-        Logger(Calendar.log.log).error("Unexpected Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+        Calendar.log.error("Unexpected Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
     }
 #endif
 }
 
 private func _handleCalendarResultNotFound(date: Date, calendar: Calendar, comps: DateComponents, direction: Calendar.SearchDirection, matchingPolicy: Calendar.MatchingPolicy, repeatedTimePolicy: Calendar.RepeatedTimePolicy) {
 #if FOUNDATION_FRAMEWORK
-    Logger(Calendar.log.log).debug("Unable to find Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+    Calendar.log.debug("Unable to find Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
 #endif
 }
 
@@ -309,6 +308,9 @@ extension Calendar {
             // Calculated at init, checked on `next`
             var finished: Bool
             
+            // Fast-path: skip `_enumerateDatesStep` when the calendar can answer directly.
+            let usesFastPath: Bool
+
             internal init(_ calendar: Calendar, start: Date, range: Range<Date>?, matching matchingComponents: DateComponents, matchingPolicy: Calendar.MatchingPolicy, repeatedTimePolicy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection) {
                 self.calendar = calendar
                 
@@ -324,12 +326,29 @@ extension Calendar {
                 searchingDate = start
                 
                 // If this fails we'll short circuit the next `next`
-                finished = !matchingComponents._validate(for: calendar)
+                let validates = matchingComponents._validate(for: calendar)
+                finished = !validates
+
+                self.usesFastPath = validates && matchingPolicy == .nextTime && repeatedTimePolicy == .first && calendar._supportsNextDateFastPath(for: matchingComponents._populatedComponentSet)
             }
             
             mutating func next() -> Element? {
                 guard !finished else { return nil }
                 
+                if usesFastPath {
+                    guard let next = calendar._calendarNextDate(after: searchingDate, matching: matchingComponents, direction: direction) else {
+                        finished = true
+                        return nil
+                    }
+                    if let range, !range.contains(next) {
+                        finished = true
+                        return nil
+                    }
+                    searchingDate = next
+                    previouslyReturnedMatchDate = next
+                    return next
+                }
+
                 repeat {
                     iterations += 1
                     do {
@@ -514,6 +533,14 @@ extension Calendar {
                                          direction: SearchDirection,
                                          inSearchingDate searchingDate: Date,
                                          previouslyReturnedMatchDate: Date?) throws -> SearchStepResult {
+
+        // Fast-path: ask the calendar directly.
+        if _supportsNextDateFastPath(for: matchingComponents._populatedComponentSet) && matchingPolicy == .nextTime && repeatedTimePolicy == .first {
+            if let fast = _calendarNextDate(after: searchingDate, matching: matchingComponents, direction: direction) {
+                return SearchStepResult(result: (fast, true), newSearchDate: fast)
+            }
+            return SearchStepResult(result: nil, newSearchDate: searchingDate)
+        }
 
         // Step A: Call helper method that does the searching
 
@@ -1205,7 +1232,6 @@ extension Calendar {
 
         // We need to check for leap* situations
         let isGregorianCalendar = identifier == .gregorian
-        let isChineseCalendar = identifier == .chinese
 
         if nextHighestUnit == .year || leapMonthMismatch {
             let desiredMonth = compsToMatch.month
@@ -1216,7 +1242,7 @@ extension Calendar {
                 return matchDate
             }
 
-            if isChineseCalendar {
+            if hasRepeatingMonths {
                 if leapMonthMismatch {
                     return try _adjustedDateForMismatchedChineseLeapMonth(start: start, searchingDate: searchingDate, matchDate: matchDate, matchingComponents: matchingComponents, compsToMatch: compsToMatch, direction: direction, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, isExactMatch: &isExactMatch, isLeapDay: &isLeapDay)
                 } else {
@@ -1580,7 +1606,7 @@ extension Calendar {
         return result
     }
     
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     internal func dateAfterMatchingDayOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let dayOfYear = components.dayOfYear else {
             // Nothing to do
@@ -1624,44 +1650,57 @@ extension Calendar {
             return nil
         }
 
-        let isChineseCalendar = self.identifier == .chinese
-        let isLeapMonthDesired = isChineseCalendar && (components.isLeapMonth ?? false)
+        let isLeapMonthDesired = hasRepeatingMonths && (components.isLeapMonth ?? false)
 
         // After this point, result is at least startDate
         var result = startDate
         var dateMonth = component(.month, from: result)
         if month != dateMonth {
-            repeat {
-                let lastResult = result
-                
-                guard let foundRange = dateInterval(of: .month, for: result) else {
-                    throw CalendarEnumerationError.dateOutOfRange(.month, result)
+            // Fast-path: advance to target month directly.
+            if !isLeapMonthDesired || !strictMatching {
+                if _supportsNextDateFastPath(for: [.month]) {
+                    var minimal = DateComponents()
+                    minimal.month = month
+                    minimal.isLeapMonth = components.isLeapMonth
+                    if let fast = _calendarNextDate(after: result, matching: minimal, direction: direction) {
+                        result = fast
+                        dateMonth = month
+                    }
                 }
-                var duration = foundRange.duration
+            }
+            if month != dateMonth {
+                repeat {
+                    let lastResult = result
 
-                if direction == .backward {
-                    let numMonth = component(.month, from: foundRange.start)
-                    if numMonth == 3 && (self.identifier == .gregorian || self.identifier == .buddhist || self.identifier == .japanese || self.identifier == .iso8601 || self.identifier == .republicOfChina) {
-                        // Take it back 3 days so we land in february.  That is, March has 31 days, and Feb can have 28 or 29, so to ensure we get to either Feb 1 or 2, we need to take it back 3 days.
-                        duration -= 86400 * 3
-                    } else {
-                        // Take it back a day
-                        duration -= 86400
+                    guard let foundRange = dateInterval(of: .month, for: result) else {
+                        throw CalendarEnumerationError.dateOutOfRange(.month, result)
+                    }
+                    var duration = foundRange.duration
+
+                    if direction == .backward {
+                        let numMonth = component(.month, from: foundRange.start)
+                        if numMonth == 3 && (self.identifier == .gregorian || self.identifier == .buddhist || self.identifier == .japanese || self.identifier == .iso8601 || self.identifier == .republicOfChina) {
+                            // Take it back 3 days so we land in february.  That is, March has 31 days, and Feb can have 28 or 29, so to ensure we get to either Feb 1 or 2, we need to take it back 3 days.
+                            duration -= 86400 * 3
+                        } else {
+                            // Take it back a day
+                            duration -= 86400
+                        }
+
+                        // So we can go backwards in time
+                        duration *= -1
                     }
 
-                    // So we can go backwards in time
-                    duration *= -1
-                }
+                    let searchDate = foundRange.start + duration
+                    dateMonth = component(.month, from: searchDate)
+                    result = searchDate
 
-                let searchDate = foundRange.start + duration
-                dateMonth = component(.month, from: searchDate)
-                result = searchDate
-                
-                try verifyAdvancingResult(result, previous: lastResult, direction: direction)
-            } while month != dateMonth
+                    try verifyAdvancingResult(result, previous: lastResult, direction: direction)
+                } while month != dateMonth
+            }
         }
 
-        // As far as we know, this is only relevant for the Chinese calendar.  In that calendar, the leap month has the same month number as the preceding month.
+        // This is relevant for the Chinese, Vietnamese, Korean, and Hindu lunisolar calendars.  In those calendars, the leap month has the same month number as the preceding month.
         // If we're searching forwards in time looking for a leap month, we need to skip the first occurrence we found of that month number because the first occurrence would not be the leap month; however, we only do this is if we are matching strictly. If we don't care about strict matching, we can skip this and let the caller handle it so it can deal with the approximations if necessary.
         if isLeapMonthDesired && strictMatching {
             // Check to see if we are already at a leap month
@@ -1717,6 +1756,15 @@ extension Calendar {
         guard weekOfMonth != dateWeekOfMonth else {
             // Already matches
             return nil
+        }
+
+        // Fast-path: enrich with current month and ask the calendar directly.
+        if components.month == nil, components.weekday != nil {
+            var enriched = components
+            enriched.month = component(.month, from: startingAt)
+            if _supportsNextDateFastPath(for: enriched._populatedComponentSet) {
+                return _calendarNextDate(after: startingAt, matching: enriched, direction: direction)
+            }
         }
 
         // After this point, result is at least startDate
@@ -1806,6 +1854,11 @@ extension Calendar {
         guard weekdayOrdinal != dateWeekdayOrdinal else {
             // Nothing to do
             return nil
+        }
+
+        // Fast-path: ask the calendar directly.
+        if _supportsNextDateFastPath(for: components._populatedComponentSet) {
+            return _calendarNextDate(after: startingAt, matching: components, direction: direction)
         }
 
         // After this point, result is at least startDate
@@ -1914,6 +1967,13 @@ extension Calendar {
             return nil
         }
 
+        // Fast-path: use minimal {weekday}-only components.
+        if _supportsNextDateFastPath(for: [.weekday]) {
+            var minimal = DateComponents()
+            minimal.weekday = weekday
+            return _calendarNextDate(after: startingAt, matching: minimal, direction: direction)
+        }
+
         // After this point, result is at least startDate
         var result = startingAt
         repeat {
@@ -1956,14 +2016,27 @@ extension Calendar {
         return result
     }
 
+    internal func dayMatches(day: Int?, dateDay: Int,
+                             repeatedDay: Bool?, dateRepeatedDay: Bool) -> Bool {
+        // the intent here is to match day if the target component's day is not nil
+        // and to match isRepeatedDay if the target component's isRepeated day is not nil
+        let dayMatch = day == nil || day == dateDay
+        let repeatedMatch = repeatedDay == nil || repeatedDay == dateRepeatedDay
+        return dayMatch && repeatedMatch
+    }
+
     internal func dateAfterMatchingDay(startingAt startDate: Date, originalStartDate: Date, components comps: DateComponents, direction: SearchDirection) throws -> Date? {
-        guard let day = comps.day else {
+        let day = comps.day
+        let repeatedDay = comps.isRepeatedDay
+
+        guard day != nil || repeatedDay == true else {
             // Nothing to do
             return nil
         }
 
         var result = startDate
         var dateDay = component(.day, from: result)
+        var dateIsRepeatedDay = _dateComponents(.isRepeatedDay, from: result).isRepeatedDay ?? false
         let month = comps.month
 
         if month != nil && direction == .backward {
@@ -1978,12 +2051,13 @@ extension Calendar {
                     if let anotherFoundRange = dateInterval(of: .day, for: tempSearchDate) {
                         result = anotherFoundRange.start
                         dateDay = component(.day, from: result)
+                        dateIsRepeatedDay = _dateComponents(.isRepeatedDay, from: result).isRepeatedDay ?? false
                     }
                 }
             }
         }
 
-        if day != dateDay {
+        if !dayMatches(day: day, dateDay: dateDay, repeatedDay: repeatedDay, dateRepeatedDay: dateIsRepeatedDay)  {
             // The condition below keeps us from blowing past a month day by day to find a day which does not exist.
             // e.g. trying to find the 30th of February starting in January would go to March 30th if we don't stop here
             let originalMonth = component(.month, from: result)
@@ -2028,6 +2102,7 @@ extension Calendar {
                  }
 
                 dateDay = component(.day, from: tempSearchDate)
+                dateIsRepeatedDay = _dateComponents(.isRepeatedDay, from: tempSearchDate).isRepeatedDay ?? false
                 let dateMonth = component(.month, from: tempSearchDate)
 
                 try verifyAdvancingResult(tempSearchDate, previous: result, direction: direction)
@@ -2039,7 +2114,7 @@ extension Calendar {
                     break
                 }
                 
-            } while day != dateDay
+            } while !dayMatches(day: day, dateDay: dateDay, repeatedDay: repeatedDay, dateRepeatedDay: dateIsRepeatedDay)
 
             // If we blew past a month in its entirety, roll back by a day to the very end of the month.
             if (advancedPastWholeMonth) {
@@ -2456,7 +2531,7 @@ extension Calendar.Component {
             return .yearForWeekOfYear
         case .quarter, .isLeapMonth, .month, .dayOfYear:
             return .year
-        case .day, .weekOfMonth, .weekdayOrdinal:
+        case .day, .weekOfMonth, .weekdayOrdinal, .isRepeatedDay:
             return .month
         case .weekday:
             return .weekOfMonth

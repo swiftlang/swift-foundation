@@ -17,6 +17,7 @@
 internal import CoreFoundation_Private.CFString
 internal import ObjectiveC_Private.objc_internal
 internal import CoreFoundation_Private.ForFoundationOnly
+internal import Foundation_Private.NSString
 
 //===----------------------------------------------------------------------===//
 // New Strings
@@ -69,9 +70,62 @@ extension String : _ObjectiveCBridgeable {
                 return String(unsafeUninitializedCapacity: SMALL_STRING_CAPACITY) {
                     _NSTaggedPointerStringGetBytes(source, $0.baseAddress!)
                 }
-            } else if tag.rawValue == 22 /* OBJC_TAG_Foundation_1 */ {
-                let cStr = source.utf8String!
-                return String.init(utf8String: cStr)!
+            } else if tag == OBJC_TAG_NSIndirectString {
+                var len = UInt16(0)
+                let contentsPtr = _CFIndirectTaggedPointerStringGetContents(source, &len)
+                let contents = UnsafeBufferPointer(start: contentsPtr, count: Int(len))
+                // Will only fail if contents aren't valid UTF8/ASCII
+                if let result = _SwiftCreateImmortalString_ForFoundation(buffer: contents, isASCII: true) {
+                    return result
+                }
+                // Since our contents are invalid, force a real copy of the string and bridge that instead. This should basically never be hit in practice
+                return source.mutableCopy() as! String
+            } else if tag == OBJC_TAG_Foundation_1 {
+                // _NSBPlistMappedString. The bytes live in a permanently-mmap'd file and may contain embedded NULs (see rdar://173406489), so avoid methods with C string length semantics
+                var len = 0
+                if let asciiPtr = source._fastUTF8StringContents(false, utf8Length: &len) {
+                    let buffer = UnsafeBufferPointer(start: asciiPtr, count: len)
+                    return String(unsafeUninitializedCapacity: len) { dest in
+                        _ = dest.initialize(fromContentsOf: buffer)
+                        return len
+                    }
+                }
+
+                let nsLen = source.length
+                if nsLen == 0 { return "" }
+
+                func writeUTF8(into buffer: UnsafeMutableBufferPointer<UInt8>, capacity: Int) -> Int {
+                    var usedLen = 0
+                    var remaining = NSRange(location: 0, length: 0)
+                    let ok = source.getBytes(buffer.baseAddress,
+                                             maxLength: capacity,
+                                             usedLength: &usedLen,
+                                             encoding: String.Encoding.utf8.rawValue,
+                                             options: [],
+                                             range: NSRange(location: 0, length: nsLen),
+                                             remaining: &remaining)
+                    assert(!ok || remaining.length == 0, "getBytes should consume the entire source range when capacity is sufficient")
+                    return ok ? usedLen : 0
+                }
+
+                // If the worst-case UTF-8 size fits in withUnsafeTemporaryAllocation's 1024-byte stack cutoff, stack allocate as much as we could possibly need, and let the closure return the actual size.
+                let conservativeUTF8Cap = nsLen * 3
+                if conservativeUTF8Cap <= 1024 {
+                    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: conservativeUTF8Cap) { tempBuf in
+                        let usedLen = writeUTF8(into: tempBuf, capacity: conservativeUTF8Cap)
+                        return String(unsafeUninitializedCapacity: usedLen) { dest in
+                            let src = UnsafeBufferPointer(start: tempBuf.baseAddress, count: usedLen)
+                            _ = dest.initialize(fromContentsOf: src)
+                            return usedLen
+                        }
+                    }
+                }
+                
+                // Otherwise, do an extra pass to get the exact length, so we don't risk over-allocating
+                let exactUTF8Len = source.lengthOfBytes(using: String.Encoding.utf8.rawValue)
+                return String(unsafeUninitializedCapacity: exactUTF8Len) { buffer in
+                    writeUTF8(into: buffer, capacity: exactUTF8Len)
+                }
             }
         }
 #endif
@@ -88,6 +142,9 @@ extension String : _ObjectiveCBridgeable {
 
             if constant {
                 if ascii {
+                    // We would like to use _SwiftCreateImmortalString_ForFoundation here, but we can't because we need to maintain the invariant
+                    // (constantString as String as NSString) === constantString
+                    // and using _SwiftCreateImmortalString_ForFoundation would make an indirect tagged string instead on the way back
                     return String(_immortalCocoaString: source, count: len, encoding: Unicode.ASCII.self)
                 } else {
                     return String(_immortalCocoaString: source, count: len, encoding: Unicode.UTF16.self)
@@ -271,65 +328,4 @@ extension BidirectionalCollection where Element == Unicode.Scalar, Index == Stri
 
 }
 
-// START: Workaround for https://github.com/swiftlang/swift/pull/78697
-
-// The extensions below are temporarily relocated to work around a compiler crash.
-// Once that crash is resolved, they should be moved back to their original files.
-
-#if !NO_FILESYSTEM
-
-// Relocated from FileManager+Utilities.swift
-#if FOUNDATION_FRAMEWORK && os(macOS)
-extension URLResourceKey {
-    static var _finderInfoKey: Self { URLResourceKey("_NSURLFinderInfoKey") }
-}
 #endif
-
-// Relocated from FileManager+Files.swift
-#if FOUNDATION_FRAMEWORK
-internal import DarwinPrivate.sys.content_protection
-#endif
-
-#if !os(Windows)
-#if FOUNDATION_FRAMEWORK
-extension FileProtectionType {
-    var intValue: Int32? {
-        switch self {
-        case .complete: PROTECTION_CLASS_A
-        case .init(rawValue: "NSFileProtectionWriteOnly"), .completeUnlessOpen: PROTECTION_CLASS_B
-        case .init(rawValue: "NSFileProtectionCompleteUntilUserAuthentication"), .completeUntilFirstUserAuthentication: PROTECTION_CLASS_C
-        case .none: PROTECTION_CLASS_D
-        #if !os(macOS)
-        case .completeWhenUserInactive: PROTECTION_CLASS_CX
-        #endif
-        default: nil
-        }
-    }
-    
-    init?(intValue value: Int32) {
-        switch value {
-        case PROTECTION_CLASS_A: self = .complete
-        case PROTECTION_CLASS_B: self = .completeUnlessOpen
-        case PROTECTION_CLASS_C: self = .completeUntilFirstUserAuthentication
-        case PROTECTION_CLASS_D: self = .none
-        #if !os(macOS)
-        case PROTECTION_CLASS_CX: self = .completeWhenUserInactive
-        #endif
-        default: return nil
-        }
-    }
-}
-#endif
-#endif
-#endif
-
-#endif
-
-#if !NO_FILESYSTEM
-// Relocated from FileManager+Files.swift. Originally fileprivate.
-extension FileAttributeKey {
-    internal static var _extendedAttributes: Self { Self("NSFileExtendedAttributes") }
-}
-#endif
-
-// END: Workaround for https://github.com/swiftlang/swift/pull/78697

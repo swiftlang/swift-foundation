@@ -10,22 +10,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
 internal import Synchronization
-#endif
 
-@available(FoundationPredicate 0.1, *)
+/// A component expression that makes up part of a predicate.
+///
+/// To transform a predicate, define a protocol for the result and add conformance on each predicate expression type that you support. For example:
+///
+/// ```swift
+/// protocol ProsePredicateExpression {
+/// func proseQuery() -> String
+/// }
+///
+/// // Repeated for each supported operator.
+/// extension PredicateExpressions.Equal: ProsePredicateExpression
+/// where LHS: ProsePredicateExpression,
+/// RHS: ProsePredicateExpression {
+/// func proseQuery() -> String {
+/// return lhs.proseQuery() + " is equal to " + rhs.proseQuery()
+/// }
+/// }
+///
+/// extension Predicate  {
+/// func proseQuery() -> String? {
+/// guard let expression = expression as? ProsePredicateExpression else { return nil }
+/// return expression.proseQuery()
+/// }
+/// }
+/// ```
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol PredicateExpression<Output> {
     associatedtype Output
     
     func evaluate(_ bindings: PredicateBindings) throws -> Output
 }
 
-// Only Foundation should add conformances to this protocol
-@available(FoundationPredicate 0.1, *)
+/// A component expression that makes up part of a predicate, and that's supported by the standard predicate type.
+///
+/// Don't declare new types that conform to the `StandardPredicateExpression` protocol.  Only the types provided by Foundation are valid conforming types.
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol StandardPredicateExpression<Output> : PredicateExpression, Codable, Sendable {}
 
-@available(FoundationPredicate 0.1, *)
+/// An error thrown while evaluating a predicate.
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
     internal enum _Error: Hashable, Sendable {
         case undefinedVariable
@@ -81,27 +107,14 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
     public static let invalidInput = Self(.invalidInput(nil))
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
         let id: UInt
-        #if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
         private static let nextID = Atomic<UInt>(0)
-        #else
-        private static let nextID = LockedState(initialState: UInt(0))
-        #endif
         
         init() {
-            #if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
             self.id = Self.nextID.wrappingAdd(1, ordering: .relaxed).oldValue
-            #else
-            self.id = Self.nextID.withLock { value in
-                defer {
-                    (value, _) = value.addingReportingOverflow(1)
-                }
-                return value
-            }
-            #endif
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -203,7 +216,7 @@ extension AnyKeyPath {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.KeyPath : Codable where Root : Codable {
     private enum CodingKeys : CodingKey {
         case root
@@ -240,20 +253,20 @@ extension PredicateExpressions.KeyPath : Codable where Root : Codable {
 #endif // FOUNDATION_FRAMEWORK
     }
 }
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.KeyPath : StandardPredicateExpression where Root : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.KeyPath : CustomStringConvertible {
     public var description: String {
         "KeyPath(root: \(root), keyPath: \(keyPath.debugDescription))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Value : Codable where Output : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -266,13 +279,13 @@ extension PredicateExpressions.Value : Codable where Output : Codable {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Value : Sendable where Output : Sendable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable /*, Output : Sendable*/ {}
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Value : CustomStringConvertible {
     public var description: String {
         var result = "Value<\(_typeName(Output.self))>("
@@ -281,14 +294,14 @@ extension PredicateExpressions.Value : CustomStringConvertible {
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Variable : CustomStringConvertible {
     public var description: String {
         "Variable(\(key.id))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.KeyPath {
     public enum CommonKeyPathKind : Hashable, Sendable {
         case collectionCount

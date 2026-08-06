@@ -159,7 +159,7 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
     // MARK: -
 
     class FormatResult {
-        var result: OpaquePointer
+        var result: OpaquePointer?
 
         init(formatter: OpaquePointer, value: Int64) throws {
             var status = U_ZERO_ERROR
@@ -188,7 +188,9 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
             var str = value.description
 #endif // FOUNDATION_FRAMEWORK
             str.withUTF8 {
-                unumf_formatDecimal(formatter, $0.baseAddress, Int32($0.count), result, &status)
+                $0.withMemoryRebound(to: CChar.self) {
+                    unumf_formatDecimal(formatter, $0.baseAddress, Int32($0.count), result, &status)
+                }
             }
             try status.checkSuccess()
         }
@@ -200,7 +202,9 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
             
             var value = value
             value.withUTF8 {
-                unumf_formatDecimal(formatter, $0.baseAddress, Int32($0.count), result, &status)
+                $0.withMemoryRebound(to: CChar.self) {
+                    unumf_formatDecimal(formatter, $0.baseAddress, Int32($0.count), result, &status)
+                }
             }
             
             try status.checkSuccess()
