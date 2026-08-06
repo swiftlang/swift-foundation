@@ -201,6 +201,11 @@ private struct DateFormatStyleTests {
         #expect(parsePattern("'G' y年M月d日") == "'G' y年M月d日")
         #expect(parsePattern("G '' y年M月d日") == "G '' yyyy年M月d日")
         #expect(parsePattern("G 'it''s y' y年M月d日") == "G 'it''s y' yyyy年M月d日")
+        #expect(parsePattern("G\u{301}y年M月d日") == "G\u{301}yyyy年M月d日")
+
+        let patternWithQuotedScalars = parsePattern("G 'e\u{301} y' y年M月d日")
+        let expectedPatternWithQuotedScalars = "G 'e\u{301} y' yyyy年M月d日"
+        #expect(patternWithQuotedScalars.unicodeScalars.elementsEqual(expectedPatternWithQuotedScalars.unicodeScalars))
 
         #expect(parsePattern("Gy年M月d日", calendarIdentifier: .republicOfChina) == "Gyyyy年M月d日")
         #expect(parsePattern("Gy年M月d日", calendarIdentifier: .gregorian) == "Gy年M月d日")

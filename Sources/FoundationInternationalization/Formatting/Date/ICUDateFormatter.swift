@@ -359,72 +359,56 @@ extension ICUDateFormatter.DateFormatInfo {
         guard calendarIdentifier == .japanese || calendarIdentifier == .republicOfChina else {
             return pattern
         }
-        guard containsUnquotedField("G", in: pattern) else {
-            return pattern
-        }
 
-        // ICU applies its two-digit year window only to year fields narrower
-        // than 3. Era years are already scoped by the parsed era, so widen
-        // only those affected fields for parsing.
-        return replacingUnquotedFieldRuns(in: pattern, matching: "y") { count in
-            guard count < 3 else {
-                return String(repeating: "y", count: count)
-            }
-            return "yyyy"
-        }
-    }
-
-    private static func containsUnquotedField(_ field: Character, in pattern: String) -> Bool {
-        var found = false
-        forEachUnquotedFieldRun(in: pattern) { runField, _ in
-            if runField == field {
-                found = true
-            }
-        }
-        return found
-    }
-
-    private static func replacingUnquotedFieldRuns(in pattern: String, matching field: Character, with replacement: (Int) -> String) -> String {
+        // ICU applies its two-digit year window only to year fields narrower than 3. Era years are already scoped by the parsed era, so widen only those affected fields for parsing.
+        var containsEra = false
         var result = ""
+        result.reserveCapacity(pattern.utf8.count)
         forEachUnquotedFieldRun(in: pattern) { runField, runLength in
-            if runField == field {
-                result += replacement(runLength)
-            } else {
-                result += String(repeating: String(runField), count: runLength)
+            if runField == "G" {
+                containsEra = true
             }
-        } quotedRun: { quotedText in
-            result += quotedText
+            if runField == "y" && runLength < 3 {
+                result += "yyyy"
+            } else {
+                for _ in 0 ..< runLength {
+                    result.unicodeScalars.append(runField)
+                }
+            }
+        } quotedScalar: { scalar in
+            result.unicodeScalars.append(scalar)
         }
-        return result
+        return containsEra ? result : pattern
     }
 
-    private static func forEachUnquotedFieldRun(in pattern: String, _ body: (Character, Int) -> Void, quotedRun: ((String) -> Void)? = nil) {
-        var index = pattern.startIndex
+    private static func forEachUnquotedFieldRun(in pattern: String, _ body: (Unicode.Scalar, Int) -> Void, quotedScalar: ((Unicode.Scalar) -> Void)? = nil) {
+        // ICU pattern fields and quoting are defined in terms of Unicode scalars.
+        let scalars = pattern.unicodeScalars
+        var index = scalars.startIndex
         var isInQuote = false
 
-        while index < pattern.endIndex {
-            let character = pattern[index]
-            if character == "'" {
-                let next = pattern.index(after: index)
-                if next < pattern.endIndex && pattern[next] == "'" {
-                    quotedRun?("''")
-                    index = pattern.index(after: next)
+        while index < scalars.endIndex {
+            let scalar = scalars[index]
+            if scalar == "'" {
+                quotedScalar?(scalar)
+                let next = scalars.index(after: index)
+                if next < scalars.endIndex && scalars[next] == "'" {
+                    quotedScalar?(scalars[next])
+                    index = scalars.index(after: next)
                 } else {
-                    quotedRun?("'")
                     isInQuote.toggle()
                     index = next
                 }
             } else if isInQuote {
-                quotedRun?(String(character))
-                index = pattern.index(after: index)
+                quotedScalar?(scalar)
+                index = scalars.index(after: index)
             } else {
-                let runStart = index
                 var runLength = 0
                 repeat {
                     runLength += 1
-                    index = pattern.index(after: index)
-                } while index < pattern.endIndex && pattern[index] == character
-                body(pattern[runStart], runLength)
+                    index = scalars.index(after: index)
+                } while index < scalars.endIndex && scalars[index] == scalar
+                body(scalar, runLength)
             }
         }
     }
