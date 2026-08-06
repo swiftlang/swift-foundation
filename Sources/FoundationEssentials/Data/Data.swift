@@ -53,7 +53,7 @@
 @usableFromInline let memset = EmscriptenLibc.memset
 @usableFromInline let memcpy = EmscriptenLibc.memcpy
 @usableFromInline let memcmp = EmscriptenLibc.memcmp
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+#elseif canImport(_FoundationDarwinExtras)
 @usableFromInline let memset = _FoundationDarwinExtras.memset
 @usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
 @usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
@@ -94,7 +94,7 @@ import ucrt
 @preconcurrency import WASILibc
 #elseif canImport(EmscriptenLibc)
 @preconcurrency import EmscriptenLibc
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+#elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras.POSIX.sys.mman
 #elseif canImport(string_h)
 import string_h

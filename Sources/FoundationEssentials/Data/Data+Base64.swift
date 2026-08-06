@@ -25,7 +25,7 @@ import WinSDK
 import WASILibc
 #elseif os(Emscripten)
 import EmscriptenLibc
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+#elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras
 #elseif canImport(stdlib_h)
 import stdlib_h
