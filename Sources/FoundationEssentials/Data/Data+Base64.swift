@@ -380,7 +380,7 @@ extension Base64 {
         length: inout Int,
         options: Data.Base64EncodingOptions
     ) {
-        let omitPaddingCharacter = false
+        let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
 
         assert(options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters))
 
