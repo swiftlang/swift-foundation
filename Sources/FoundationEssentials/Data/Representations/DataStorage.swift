@@ -24,7 +24,7 @@ import ucrt
 @preconcurrency import EmscriptenLibc
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+#elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras
 #elseif canImport(stdlib_h)
 import stdlib_h
@@ -46,7 +46,7 @@ internal final class __DataStorage : @unchecked Sendable {
     #endif
 
     static func allocate(_ size: Int, _ clear: Bool) -> UnsafeMutableRawPointer? {
-#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+#if (canImport(Darwin) || canImport(_FoundationDarwinExtras)) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         if clear {
@@ -64,7 +64,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
     
     static func reallocate(_ ptr: UnsafeMutableRawPointer, _ newSize: Int) -> UnsafeMutableRawPointer? {
-#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS)  && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+#if (canImport(Darwin) || canImport(_FoundationDarwinExtras))  && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         return malloc_type_realloc(ptr, newSize, typeDesc.type_id);
