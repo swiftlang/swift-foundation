@@ -166,4 +166,84 @@ private struct ChineseCalendarTests {
             #expect((dc.day ?? 0) >= 1, "\(gy)-\(gm)-\(gd)")
         }
     }
+
+    // A roll wraps the month inside its own year and never carries into the year, and it wraps around this year's own month count, 12 or 13 when there is a leap month. Regression: the wrapping path had a branch for .day but none for .month, so a roll fell through to the month walk a plain add uses, and that walk crosses year boundaries.
+    @Test func rollMonthWrapsWithinYear() {
+        let c = Self.chineseCalendar()
+        // (relatedISOYear, expected month count, roll amount, expected month afterwards)
+        let cases: [(Int, UInt8, Int, Int)] = [
+            (2024, 12, 11, 2), (2024, 12, 12, 3), (2024, 12, -1, 2), (2024, 12, -11, 4),
+            (2025, 13, 11, 1), (2025, 13, 13, 3), (2025, 13, -1, 2), (2025, 13, -11, 5),
+        ]
+        for (iso, monthCount, amount, wantMonth) in cases {
+            let y = _CalendarChinese.year(relatedISOYear: iso)
+            #expect(y.monthCount == monthCount, "fixture \(iso): month count is \(y.monthCount)")
+            let from = Self.date(rataDie: y.monthStartRataDie(ordinal: 3) + 4)   // ordinal month 3, day 5
+            let before = c.dateComponents([.year, .month, .day], from: from, in: .gmt)
+            var dc = DateComponents()
+            dc.month = amount
+            guard let rolled = c.date(byAdding: dc, to: from, wrappingComponents: true) else {
+                #expect(Bool(false), "\(iso) roll by \(amount) returned nil")
+                continue
+            }
+            let after = c.dateComponents([.year, .month, .day], from: rolled, in: .gmt)
+            #expect(after.year == before.year, "\(iso) roll by \(amount) changed the year, \(before.year ?? -1) to \(after.year ?? -1)")
+            #expect(after.month == wantMonth, "\(iso) roll by \(amount): month \(after.month ?? -1), wanted \(wantMonth)")
+            #expect(after.day == 5, "\(iso) roll by \(amount): day \(after.day ?? -1)")
+        }
+        // The same amount as a plain add does carry into the next year. That difference is the whole point of the wrapping branch, so pin it too.
+        let y = _CalendarChinese.year(relatedISOYear: 2024)
+        let from = Self.date(rataDie: y.monthStartRataDie(ordinal: 3) + 4)
+        var dc = DateComponents()
+        dc.month = 11
+        let added = c.date(byAdding: dc, to: from, wrappingComponents: false)
+        let before = c.dateComponents([.year], from: from, in: .gmt)
+        let after = added.map { c.dateComponents([.year, .month], from: $0, in: .gmt) }
+        #expect(after?.year == (before.year ?? 0) + 1 && after?.month == 2,
+                "add of 11 months: y\(after?.year ?? -1)/m\(after?.month ?? -1)")
+    }
+
+    // range(of: .day, in: .weekOfMonth) reports the day-of-month values the week covers, clipped to the month at both ends because a week can start before the month or run past its end. Regression: the (.day, .weekOfMonth) pair was missing from ordinality, so the generic range fallback gave up on the first lookup and returned nil.
+    @Test func dayRangeInWeekOfMonth() {
+        let c = Self.chineseCalendar()
+        let y = _CalendarChinese.year(relatedISOYear: 2024)   // 12 months, new year Feb 10; firstWeekday is Sunday here
+        // (ordinal month, day of month, expected range)
+        let cases: [(Int, Int, Range<Int>)] = [
+            (1, 1, 1..<2),      // the month starts on a Saturday, so its first week holds a single day
+            (1, 15, 9..<16),    // a whole week, clipped at neither end
+            (3, 1, 1..<6),      // first week, clipped by the month start
+            (2, 30, 29..<31),   // last week, clipped by the month end
+            (3, 29, 27..<30),   // last week, clipped by the month end
+        ]
+        for (ordinal, day, want) in cases {
+            let d = Self.date(rataDie: y.monthStartRataDie(ordinal: ordinal) + day - 1)
+            let got = c.range(of: .day, in: .weekOfMonth, for: d)
+            #expect(got == want, "ordinal \(ordinal) day \(day): \(got.map { "\($0)" } ?? "nil"), wanted \(want)")
+        }
+        // The invariant behind those pins: never nil, always inside the month, always covering the day itself. Three decades is enough to hit every weekday alignment, both month lengths and a dozen leap months.
+        var failures: [String] = []
+        for iso in 2000...2030 {
+            let year = _CalendarChinese.year(relatedISOYear: iso)
+            for ordinal in 1...Int(year.monthCount) {
+                let length = year.monthLength(ordinal: ordinal)
+                let start = year.monthStartRataDie(ordinal: ordinal)
+                for day in 1...length {
+                    let d = Self.date(rataDie: start + day - 1)
+                    guard let r = c.range(of: .day, in: .weekOfMonth, for: d) else {
+                        failures.append("\(iso)/o\(ordinal)/d\(day): nil range")
+                        continue
+                    }
+                    if r.isEmpty || r.lowerBound < 1 || r.upperBound > length + 1 || !r.contains(day) {
+                        failures.append("\(iso)/o\(ordinal)/d\(day): \(r) in a \(length) day month")
+                    }
+                    guard let o = c.ordinality(of: .day, in: .weekOfMonth, for: d) else {
+                        failures.append("\(iso)/o\(ordinal)/d\(day): nil ordinality")
+                        continue
+                    }
+                    if o < 1 || o > 7 { failures.append("\(iso)/o\(ordinal)/d\(day): ordinality \(o)") }
+                }
+            }
+        }
+        #expect(failures.isEmpty, "\(failures.count) failures, first few: \(failures.prefix(5))")
+    }
 }

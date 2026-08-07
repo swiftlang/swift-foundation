@@ -371,6 +371,18 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             let (extendedYear, ordinal, _) = fields(for: date, in: timeZone)
             guard let span = Self.quarterSpan(extendedYear: extendedYear, ordinal: ordinal) else { return nil }
             return Range(span.firstDisplay...span.lastDisplay)
+        case (.day, .weekOfMonth):
+            // The day-of-month values this week covers, the same shape the Gregorian calendar reports. A week can start before or end after the month, so clip to the month's own day range.
+            guard let week = dateInterval(of: .weekOfMonth, for: date) else { return nil }
+            let (extendedYear, ordinal, _) = fields(for: date, in: timeZone)
+            let monthLength = Self.yearData(extendedYear: extendedYear).monthLength(ordinal: ordinal)
+            let monthStart = Self.rataDie(extendedYear: extendedYear, ordinal: ordinal, day: 1)
+            let localSeconds = week.start.timeIntervalSinceReferenceDate + Double(timeZone.secondsFromGMT(for: week.start))
+            let (weekStart, _): (Int, Double) = _CalendarUtility.rataDieAndSecondsInDay(localSeconds: localSeconds)
+            let firstDay = max(1, weekStart - monthStart + 1)
+            let lastDay = min(monthLength, weekStart - monthStart + 7)
+            guard firstDay <= lastDay else { return nil }
+            return Range(firstDay...lastDay)
         case (.day, .quarter):
             // ICU counts calendar days here, not 86400 s chunks, the generic interval+ordinality fallback overcounts by one in DST fall-back quarters.
             let (extendedYear, ordinal, _) = fields(for: date, in: timeZone)
@@ -424,7 +436,8 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         case (.weekday, .month), (.weekdayOrdinal, .month):
             guard let day = dateComponents([.day], from: date, in: timeZone).day else { return nil }
             return (day - 1) / 7 + 1
-        case (.weekday, .weekOfYear):
+        case (.weekday, .weekOfYear), (.day, .weekOfMonth), (.weekday, .weekOfMonth):
+            // Position of the day inside its week, counting from firstWeekday.
             guard let weekday = dateComponents([.weekday], from: date, in: timeZone).weekday else { return nil }
             return ((weekday - firstWeekday + 7) % 7) + 1
         case (.hour, .day):
@@ -788,26 +801,53 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: Adding
 
+    // How many components carry a non-zero value. The roll shortcuts below apply only when a single field is set, so they can wrap that one field and leave everything else alone.
+    private static func nonZeroComponentCount(_ c: DateComponents) -> Int {
+        var count = 0
+        if (c.era ?? 0) != 0 { count += 1 }
+        if (c.year ?? 0) != 0 { count += 1 }
+        if (c.month ?? 0) != 0 { count += 1 }
+        if (c.day ?? 0) != 0 { count += 1 }
+        if (c.hour ?? 0) != 0 { count += 1 }
+        if (c.minute ?? 0) != 0 { count += 1 }
+        if (c.second ?? 0) != 0 { count += 1 }
+        if (c.nanosecond ?? 0) != 0 { count += 1 }
+        if (c.weekday ?? 0) != 0 { count += 1 }
+        if (c.weekdayOrdinal ?? 0) != 0 { count += 1 }
+        if (c.weekOfMonth ?? 0) != 0 { count += 1 }
+        if (c.weekOfYear ?? 0) != 0 { count += 1 }
+        if (c.yearForWeekOfYear ?? 0) != 0 { count += 1 }
+        if (c.dayOfYear ?? 0) != 0 { count += 1 }
+        return count
+    }
+
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
         var result = date
 
-        // Wrap-day single-component fast path.
-        if wrappingComponents,
-           let d = components.day, d != 0,
-           (components.era ?? 0) == 0, (components.year ?? 0) == 0, (components.month ?? 0) == 0,
-           (components.weekOfYear ?? 0) == 0, (components.weekOfMonth ?? 0) == 0,
-           (components.weekdayOrdinal ?? 0) == 0, (components.weekday ?? 0) == 0,
-           (components.dayOfYear ?? 0) == 0, (components.yearForWeekOfYear ?? 0) == 0,
-           (components.hour ?? 0) == 0, (components.minute ?? 0) == 0,
-           (components.second ?? 0) == 0, (components.nanosecond ?? 0) == 0 {
+        // Rolling a single field wraps it in place and never carries into a larger field.
+        if wrappingComponents, Self.nonZeroComponentCount(components) == 1 {
             let timeZone = self.timeZone
-            let (extendedYear, ordinal, curDay, secondsInDay) = fieldsAndTime(for: result, in: timeZone)
-            let y = Self.yearData(extendedYear: extendedYear)
-            let monthLen = y.monthLength(ordinal: ordinal)
-            let newDay = ((curDay - 1 + d) % monthLen + monthLen) % monthLen + 1
-            let rataDie = y.monthStartRataDie(ordinal: ordinal) + newDay - 1
-            return _CalendarUtility.utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
-                           repeatedTimePolicy: .former, skippedTimePolicy: .former)
+            if let d = components.day, d != 0 {
+                let (extendedYear, ordinal, curDay, secondsInDay) = fieldsAndTime(for: result, in: timeZone)
+                let y = Self.yearData(extendedYear: extendedYear)
+                let monthLen = y.monthLength(ordinal: ordinal)
+                let newDay = ((curDay - 1 + d) % monthLen + monthLen) % monthLen + 1
+                let rataDie = y.monthStartRataDie(ordinal: ordinal) + newDay - 1
+                return _CalendarUtility.utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
+                               repeatedTimePolicy: .former, skippedTimePolicy: .former)
+            }
+            // The month wraps around this year's own month count, 12 or 13 when there is a leap month, so the year never carries. Walking months the way a plain add does would cross into the next year.
+            if let m = components.month, m != 0 {
+                let (extendedYear, ordinal, curDay, secondsInDay) = fieldsAndTime(for: result, in: timeZone)
+                let y = Self.yearData(extendedYear: extendedYear)
+                let monthCount = Int(y.monthCount)
+                let newOrdinal = ((ordinal - 1 + m) % monthCount + monthCount) % monthCount + 1
+                // A shorter target month clamps the day, matching the non-wrapping month add.
+                let clampedDay = min(curDay, y.monthLength(ordinal: newOrdinal))
+                let rataDie = y.monthStartRataDie(ordinal: newOrdinal) + clampedDay - 1
+                return _CalendarUtility.utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
+                               repeatedTimePolicy: .former, skippedTimePolicy: .former)
+            }
         }
 
         var yearsToAdd = components.year ?? 0
