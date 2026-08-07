@@ -115,7 +115,7 @@ private struct ChineseCalendarTests {
         #expect(c.maximumRange(of: .weekOfYear) == 1..<56)
     }
 
-    // Deliberate divergence from ICU, guarded: ICU's chinese calendar cannot use YEAR_WOY on the fields-to-time side (chnsecal handleGetExtendedYear ignores it), yielding a nil interval and a no-op add; we implement Gregorian-family week-year semantics instead (precedent: the Japanese calendar's .era interval). If this test is changed to expect nil/no-op, that reversion must be an explicit decision.
+    // Deliberate divergence from ICU, guarded: ICU's chinese calendar returns nil for the yearForWeekOfYear interval and no-ops an add of it, so we implement Gregorian-family week-year semantics instead (precedent: the Japanese calendar's .era interval). ICU is asymmetric here, it does resolve the week-year form in date(from:), which dateFromWeekYearComponents pins against ICU's own answers. If this test is changed to expect nil/no-op, that reversion must be an explicit decision.
     @Test func weekYearSemantics() {
         let c = Self.chineseCalendar()
         let d = Self.date(rataDie: _CalendarAstronomy.gregorianRataDie(2025, 7, 4))
@@ -242,6 +242,68 @@ private struct ChineseCalendarTests {
                     }
                     if o < 1 || o > 7 { failures.append("\(iso)/o\(ordinal)/d\(day): ordinality \(o)") }
                 }
+            }
+        }
+        #expect(failures.isEmpty, "\(failures.count) failures, first few: \(failures.prefix(5))")
+    }
+
+    // A date can be named by yearForWeekOfYear + weekOfYear + weekday instead of era + year + month + day, and `date(from:)` has to accept that form. It used to require `.year` and returned nil for anything else. Note that yearForWeekOfYear is an extended year here, not a cycle year, so it is used directly and `era` is ignored on this path; ICU does the same. Expected values below were checked against the ICU-backed calendar and agree with it exactly.
+    @Test func dateFromWeekYearComponents() {
+        let c = Self.chineseCalendar()
+        // (yearForWeekOfYear, weekOfYear, weekday, expected era, year, month, day)
+        let cases: [(Int, Int, Int, Int, Int, Int, Int)] = [
+            (5779, 16, 2, 97, 19, 4, 15),
+            (5779, 1, 1, 97, 18, 12, 28),   // week 1 begins in the previous calendar year
+            (5779, 30, 7, 97, 19, 8, 1),
+            (5780, 52, 4, 97, 21, 1, 7),    // a week past the end of the week-year runs on, it is not clamped
+            (4656, 10, 6, 78, 36, 3, 8),
+            (4651, 38, 5, 78, 31, 9, 23),
+        ]
+        for (weekYear, weekOfYear, weekday, wantEra, wantYear, wantMonth, wantDay) in cases {
+            var dc = DateComponents()
+            dc.yearForWeekOfYear = weekYear
+            dc.weekOfYear = weekOfYear
+            dc.weekday = weekday
+            dc.hour = 12
+            dc.timeZone = .gmt
+
+            guard let date = c.date(from: dc) else {
+                #expect(Bool(false), "date(from:) returned nil for yWoY \(weekYear) woY \(weekOfYear) weekday \(weekday)")
+                continue
+            }
+            let back = c.dateComponents([.era, .year, .month, .day, .weekday, .hour], from: date, in: .gmt)
+            #expect(back.era == wantEra && back.year == wantYear && back.month == wantMonth
+                    && back.day == wantDay && back.weekday == weekday && back.hour == 12,
+                    "yWoY \(weekYear) woY \(weekOfYear) weekday \(weekday): got e\(back.era ?? -1)/y\(back.year ?? -1)/m\(back.month ?? -1)/d\(back.day ?? -1) wd\(back.weekday ?? -1), wanted e\(wantEra)/y\(wantYear)/m\(wantMonth)/d\(wantDay) wd\(weekday)")
+        }
+    }
+
+    // The invariant behind those pins: whatever week fields we report for a date, handing them back has to return that same date. Runs over 20 years of consecutive days, and over non-default firstWeekday and minimumDaysInFirstWeek, because the week-year anchor depends on both.
+    @Test func weekYearComponentsRoundTrip() {
+        var failures: [String] = []
+        for (firstWeekday, minimumDays) in [(nil, nil), (2, 4), (7, 1), (4, 7)] as [(Int?, Int?)] {
+            let c = _CalendarChinese(identifier: .chinese, timeZone: .gmt, locale: nil,
+                                     firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDays,
+                                     gregorianStartDate: nil)
+            let config = "fw \(firstWeekday.map(String.init) ?? "default")/md \(minimumDays.map(String.init) ?? "default")"
+            var rataDie = _CalendarAstronomy.gregorianRataDie(2000, 1, 1)
+            let end = _CalendarAstronomy.gregorianRataDie(2019, 12, 31)
+            while rataDie <= end {
+                let date = Self.date(rataDie: rataDie)
+                let read = c.dateComponents([.era, .yearForWeekOfYear, .weekOfYear, .weekday, .hour], from: date, in: .gmt)
+                var dc = DateComponents()
+                dc.era = read.era
+                dc.yearForWeekOfYear = read.yearForWeekOfYear
+                dc.weekOfYear = read.weekOfYear
+                dc.weekday = read.weekday
+                dc.hour = read.hour
+                dc.timeZone = .gmt
+                if let back = c.date(from: dc) {
+                    if back != date { failures.append("\(config) rd \(rataDie): off by \(back.timeIntervalSince(date) / 86400) days") }
+                } else {
+                    failures.append("\(config) rd \(rataDie): nil")
+                }
+                rataDie += 1
             }
         }
         #expect(failures.isEmpty, "\(failures.count) failures, first few: \(failures.prefix(5))")

@@ -548,7 +548,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             let end = localMidnight(extendedYear: extendedYear + 1, ordinal: 1, day: 1, in: timeZone)
             return DateInterval(start: start, duration: end.timeIntervalSince(start))
         case .yearForWeekOfYear:
-            // Deliberate divergence from ICU: ICU's chinese calendar cannot use YEAR_WOY on the fields-to-time side (chnsecal handleGetExtendedYear never reads it), so its interval degenerates to nil and its add is a no-op. We implement the Gregorian-family week-year semantics instead, like Hebrew (precedent: Japanese .era interval). If behavior identical to ICU is ever required: return nil here and delete the yearForWeekOfYear block in date(byAdding:).
+            // Deliberate divergence from ICU: ICU's chinese calendar returns nil for this interval and no-ops an add of yearForWeekOfYear, both measured. We implement the Gregorian-family week-year semantics instead, like Hebrew (precedent: Japanese .era interval). ICU is asymmetric here, it does resolve the week-year form in date(from:), and we match that exactly. If behavior identical to ICU is ever required: return nil here and delete the yearForWeekOfYear block in date(byAdding:), and leave date(from:) as it is.
             let weekYearComps = dateComponents([.yearForWeekOfYear], from: date, in: timeZone)
             guard let weekYear = weekYearComps.yearForWeekOfYear else { return nil }
             let rdStart = firstDayOfWeekYear(weekYear)
@@ -623,12 +623,31 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Date ↔ DateComponents
 
     func date(from components: DateComponents) -> Date? {
+        var secondsInDay: Double = 0
+        if let hour = components.hour { secondsInDay += Double(hour) * 3600 }
+        if let minute = components.minute { secondsInDay += Double(minute) * 60 }
+        if let second = components.second { secondsInDay += Double(second) }
+        if let nanosecond = components.nanosecond { secondsInDay += Double(nanosecond) / 1e9 }
+
+        let timeZone = components.timeZone ?? timeZone
+
+        // A request carrying yearForWeekOfYear instead of year resolves through the week-year, the way the Gregorian calendar does, so the week fields we report in dateComponents can be handed back to us. yearForWeekOfYear is an extended year for this calendar (see the field conventions note above), so it is used directly rather than combined with era; the Gregorian calendar likewise skips its era adjustment once a week is specified. The week number is not clipped to the week-year: as in the Gregorian calendar, a week past the end simply runs on into the next year.
+        if components.year == nil, let weekYear = components.yearForWeekOfYear {
+            guard weekYear > Self.extendedYearLowerBound && weekYear < Self.extendedYearUpperBound else { return nil }
+            let weekOfYear = components.weekOfYear ?? 1
+            let weekday = components.weekday ?? firstWeekday
+            let dayWithinWeek = ((weekday - firstWeekday) % 7 + 7) % 7
+            let rataDie = firstDayOfWeekYear(weekYear) + (weekOfYear - 1) * 7 + dayWithinWeek
+            return _CalendarUtility.utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
+                           repeatedTimePolicy: .former, skippedTimePolicy: .former)
+        }
+
         // Missing era defaults to the CURRENT date's era (ICU fields default from now).
         let era: Int
         if let e = components.era {
             era = e
         } else {
-            let (nowExt, _, _) = fields(for: Date.now, in: components.timeZone ?? timeZone)
+            let (nowExt, _, _) = fields(for: Date.now, in: timeZone)
             era = Self.eraAndYear(extendedYear: nowExt).era
         }
         guard let yearValue = components.year else { return nil }
@@ -655,13 +674,6 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
         let rataDie = y.monthStartRataDie(ordinal: ordinal) + day - 1
 
-        var secondsInDay: Double = 0
-        if let hour = components.hour { secondsInDay += Double(hour) * 3600 }
-        if let minute = components.minute { secondsInDay += Double(minute) * 60 }
-        if let second = components.second { secondsInDay += Double(second) }
-        if let nanosecond = components.nanosecond { secondsInDay += Double(nanosecond) / 1e9 }
-
-        let timeZone = components.timeZone ?? timeZone
         return _CalendarUtility.utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone,
                        repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
