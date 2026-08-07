@@ -12,7 +12,6 @@
 
 // Data.WritingOptions is not a true OptionSet - the file protection constants act as an enum (exactly zero or one must be used)
 // while the remaining options (.atomic, .withoutOverwriting) act as an option set (any number - or none - may be selected).
-// Note: .atomic and .withoutOverwriting are mutually exclusive in practice, but that is enforced by receivers of Data.WritingOptions and not enforced in the option set itself as this may not apply to future options and is supported by their raw values
 // Below are implementations for all SetAlgebra functions that implement correct logic for the file protection enum.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data.WritingOptions {
