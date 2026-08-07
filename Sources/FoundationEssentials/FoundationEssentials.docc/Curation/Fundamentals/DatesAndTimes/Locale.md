@@ -17,68 +17,84 @@
 - ``init(languageComponents:)``
 - ``Language/Components``
 
+### Working with the current locale
+
+- ``autoupdatingCurrent``
+- ``current``
+
+### Working with between identifiers
+
+- ``identifier(fromComponents:)``
+- ``IdentifierType``
 
 
 
-<!-- divide -->
+### Working with locale components
 
-
-
-### Structures
-
-- ``Collation``
 - ``Components``
-- ``Currency``
+
+### Working with language components
+
+- ``language``
 - ``Language``
-- ``LanguageCode``
+
+### Working with date and time components
+
+- ``firstDayOfWeek``
+- ``Weekday``
+- ``hourCycle``
+- ``HourCycle``
+- ``timeZone``
+
+### Working with measurement and counting components
+
+- ``currency``
+- ``Currency``
+- ``measurementSystem``
 - ``MeasurementSystem``
+- ``numberingSystem``
+- ``availableNumberingSystems``
 - ``NumberingSystem``
+
+### Working with region components
+
+- ``region``
 - ``Region``
-- ``Script``
+- ``subdivision``
 - ``Subdivision``
+- ``variant``
 - ``Variant``
 
-### Operators
+### Working with ordering components
 
-- ``==(_:_:)``
-
-
-### Instance Properties
-
-- ``alternateQuotationBeginDelimiter``
-- ``alternateQuotationEndDelimiter``
-- ``availableNumberingSystems``
-- ``calendar``
 - ``collation``
+- ``Collation``
+
+
+### Working with information about a locale
+
+- ``identifier``
+- ``identifier(_:)``
+- ``IdentifierType``
+- ``calendar``
+- ``regionCode``
+- ``languageCode``
+- ``scriptCode``
+- ``variantCode``
 - ``collationIdentifier``
 - ``collatorIdentifier``
-- ``currency``
+- ``usesMetricSystem``
+- ``decimalSeparator``
+- ``groupingSeparator``
 - ``currencyCode``
 - ``currencySymbol``
-- ``decimalSeparator``
-- ``firstDayOfWeek``
-- ``groupingSeparator``
-- ``hourCycle``
-- ``identifier``
-- ``language``
-- ``languageCode``
-- ``measurementSystem``
-- ``numberingSystem``
 - ``quotationBeginDelimiter``
 - ``quotationEndDelimiter``
-- ``region``
-- ``regionCode``
-- ``scriptCode``
-- ``subdivision``
-- ``timeZone``
-- ``usesMetricSystem``
-- ``variant``
-- ``variantCode``
+- ``alternateQuotationBeginDelimiter``
+- ``alternateQuotationEndDelimiter``
 
-### Instance Methods
+### Working with display information about a locale
 
-- ``hash(into:)``
-- ``identifier(_:)``
 - ``localizedString(for:)``
 - ``localizedString(forCollationIdentifier:)``
 - ``localizedString(forCollatorIdentifier:)``
@@ -89,27 +105,7 @@
 - ``localizedString(forScriptCode:)``
 - ``localizedString(forVariantCode:)``
 
-### Type Properties
+### Working with preferred languages
 
-- ``autoupdatingCurrent``
-- ``availableIdentifiers``
-- ``commonISOCurrencyCodes``
-- ``current``
 - ``preferredLanguages``
-- ``preferredLocales``
 
-### Type Methods
-
-- ``canonicalIdentifier(from:)``
-- ``canonicalLanguageIdentifier(from:)``
-- ``identifier(_:from:)``
-- ``identifier(fromComponents:)``
-- ``identifier(fromWindowsLocaleCode:)``
-- ``windowsLocaleCode(fromIdentifier:)``
-
-### Enumerations
-
-- ``HourCycle``
-- ``IdentifierType``
-- ``LanguageDirection``
-- ``Weekday``
