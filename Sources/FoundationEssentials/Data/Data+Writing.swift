@@ -166,6 +166,44 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
     try? FileManager.default.removeItem(atPath: inPath)
 }
 
+#if !os(Windows) && !os(WASI) && !os(Emscripten)
+private enum ExclusiveRenameResult {
+    case success
+    /// The rename failed. `errno` is `EEXIST` when the destination exists.
+    case failure(errno: Int32)
+    /// This file system implements neither an exclusive rename nor hard links, so the rename cannot be performed without the risk of replacing the destination.
+    case unsupported
+}
+
+/// Renames `name` in `fromDirfd` to `newName` in `toDirfd`, failing rather than replacing an existing destination.
+private func renameatWithoutOverwriting(_ fromDirfd: Int32, _ name: UnsafePointer<CChar>, _ toDirfd: Int32, _ newName: UnsafePointer<CChar>) -> ExclusiveRenameResult {
+#if canImport(Darwin)
+    if renameatx_np(fromDirfd, name, toDirfd, newName, UInt32(RENAME_EXCL)) == 0 {
+        return .success
+    }
+    // A file system that does not implement RENAME_EXCL reports ENOTSUP; some report EINVAL for the unrecognized flag instead. Either way, fall through to link(2) rather than reporting a failure that is really about the flag.
+    guard errno == ENOTSUP || errno == EINVAL else {
+        return .failure(errno: errno)
+    }
+#endif
+    // renameat2(RENAME_NOREPLACE) is Linux-specific and is not declared by every C library we support, so use link(2), which atomically fails with EEXIST when the destination exists.
+    if linkat(fromDirfd, name, toDirfd, newName, 0) == 0 {
+        // Removing the old name is best effort: on failure the caller unlinks the temporary file anyway.
+        _ = unlinkat(fromDirfd, name, 0)
+        return .success
+    }
+    switch errno {
+    case EEXIST:
+        return .failure(errno: EEXIST)
+    case EPERM, ENOTSUP, EOPNOTSUPP, EMLINK, EXDEV, ENOSYS:
+        // Hard links are unavailable here. POSIX specifies EPERM for a file system that does not support link(2) at all, which is what FAT-derived file systems report.
+        return .unsupported
+    default:
+        return .failure(errno: errno)
+    }
+}
+#endif
+
 /// Creates a temporary file for atomic writing of `inPath` in the destination's parent directory.
 /// If `destDirfd` is -1, then `destinationPath` should be the full path.
 #if os(WASI) || os(Emscripten)
@@ -521,7 +559,9 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
             try withUnsafeTemporaryAllocation(byteCount: Int(dwSize),
                                               alignment: MemoryLayout<FILE_RENAME_INFO>.alignment) { pBuffer in
                 var pInfo = pBuffer.baseAddress?.bindMemory(to: FILE_RENAME_INFO.self, capacity: 1)
-                pInfo?.pointee.Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS
+                pInfo?.pointee.Flags = options.contains(.withoutOverwriting)
+                    ? FILE_RENAME_FLAG_POSIX_SEMANTICS
+                    : FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS
                 pInfo?.pointee.RootDirectory = nil
                 pInfo?.pointee.FileNameLength = DWORD(cbSize)
                 pBuffer.baseAddress?.advanced(by: MemoryLayout<FILE_RENAME_INFO>.offset(of: \.FileName)!)
@@ -534,8 +574,8 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                 if !renameOk {
                     var dwError = GetLastError()
 
-                    // FileRenameInfoEx with POSIX_SEMANTICS + REPLACE_IF_EXISTS returns ERROR_ACCESS_DENIED (mapped from NTSTATUS STATUS_CANNOT_DELETE) when the destination has FILE_ATTRIBUTE_READONLY. Clear it on the destination (in line with POSIX semantics) and retry once before falling through.
-                    if dwError == ERROR_ACCESS_DENIED {
+                    // FileRenameInfoEx with POSIX_SEMANTICS + REPLACE_IF_EXISTS returns ERROR_ACCESS_DENIED (mapped from NTSTATUS STATUS_CANNOT_DELETE) when the destination has FILE_ATTRIBUTE_READONLY. Clear it on the destination (in line with POSIX semantics) and retry once before falling through. Without REPLACE_IF_EXISTS the destination is never deleted, so there is nothing to clear.
+                    if dwError == ERROR_ACCESS_DENIED && !options.contains(.withoutOverwriting) {
                         let dwAttributes = GetFileAttributesW(pwszPath)
 
                         if dwAttributes != INVALID_FILE_ATTRIBUTES
@@ -569,7 +609,10 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                     }
 
                     // The move is across volumes or on Volumes that don't support FILE_RENAME_FLAG_POSIX_SEMANTICS, like exFat.
-                    guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) else {
+                    let dwMoveFlags = options.contains(.withoutOverwriting)
+                        ? MOVEFILE_COPY_ALLOWED
+                        : MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING
+                    guard MoveFileExW(pwszAuxiliaryPath, pwszPath, dwMoveFlags) else {
                         throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
                     }
                 }
@@ -661,7 +704,22 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
                 throw CocoaError(.fileWriteInvalidFileName)
             }
             
-            if renameat(tempDirfd, auxNameRep, destDirfd, basenameRep) != 0 {
+            if options.contains(.withoutOverwriting) {
+                // None of the fallbacks below may be used here: each of them replaces the destination if it exists.
+                switch renameatWithoutOverwriting(tempDirfd, auxNameRep, destDirfd, basenameRep) {
+                case .success:
+                    break
+                case .failure(let renameErrno):
+                    _ = unlinkat(tempDirfd, auxNameRep, 0)
+                    cleanupTemporaryDirectory(at: temporaryDirectoryPath)
+                    throw CocoaError.errorWithFilePath(inPath, errno: renameErrno, reading: false)
+                case .unsupported:
+                    // Completing the write here would mean giving up either atomicity or the guarantee that an existing file is not replaced. Report the failure instead of silently weakening one of them.
+                    _ = unlinkat(tempDirfd, auxNameRep, 0)
+                    cleanupTemporaryDirectory(at: temporaryDirectoryPath)
+                    throw CocoaError.errorWithFilePath(.featureUnsupported, newPath)
+                }
+            } else if renameat(tempDirfd, auxNameRep, destDirfd, basenameRep) != 0 {
                 if errno == EINVAL {
                     // rename() fails on DOS file systems if newname already exists.
                     // Makes "atomically" next to meaningless, but...
@@ -853,13 +911,9 @@ extension Data {
     /// - parameter url: The location to write the data into.
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
+    ///
+    /// - Note: Combining `.atomic` with `.withoutOverwriting` requires an exclusive rename, which not every file system provides; where it is unavailable the write fails with `CocoaError.Code.featureUnsupported`. Releases that predate support for the combination trap on it instead of honoring it, so check the version of the running OS before relying on it.
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
-#if !os(WASI) && !os(Emscripten) // `.atomic` is unavailable on WASI/Emscripten
-        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
-            fatalError("withoutOverwriting is not supported with atomic")
-        }
-#endif
-        
         guard url.isFileURL else {
             throw CocoaError(.fileWriteUnsupportedScheme)
         }
