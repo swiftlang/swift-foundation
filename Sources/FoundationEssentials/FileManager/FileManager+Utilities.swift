@@ -136,18 +136,15 @@ extension _FileManagerImpl {
         if attributes.keys.contains(where: { _swiftFoundationUnsupportedKeys.contains($0) }) {
             throw CocoaError.errorWithFilePath(.featureUnsupported, path)
         }
+        #endif
 
         #if canImport(Darwin)
         if let creationDate = attributes[.creationDate] as? Date {
             try Self._setCreationDate(creationDate, path: path, fileSystemRepresentation: fileSystemRepresentation)
         }
         #endif
-        // On platforms that provide no way to set a file's creation date, the attribute is
-        // ignored rather than reported as unsupported: `.creationDate` is implicitly present in
-        // every `attributesOfItem(atPath:)` result, so throwing would break passing those
-        // results back to `setAttributes(_:ofItemAtPath:)` unmodified.
-        return // TODO: support the remaining cat info keys in swift-foundation
-        #else
+
+        #if FOUNDATION_FRAMEWORK
         // -setAttributes:ofItemAtPath:error: follows symlinks (<rdar://5815920>), but the NSURL resource value API doesn't, so we have to manually resolve the symlink.
         // We lie to fileURLWithPath:isDirectory: to avoid the extra stat. Since this URL isn't used as a base URL for another URL, it shouldn't make any difference.
         var url = URL(fileURLWithPath: path.resolvingSymlinksInPath, isDirectory: false)
@@ -182,14 +179,14 @@ extension _FileManagerImpl {
         if let extensionHidden = attributes[.extensionHidden] {
             urlAttributes[.hasHiddenExtensionKey] = extensionHidden
         }
-        if let creationDate = attributes[.creationDate] {
-            urlAttributes[.creationDateKey] = creationDate
-        }
+        guard !urlAttributes.isEmpty else { return }
         try url.setResourceValues(URLResourceValues(values: urlAttributes))
+        #else
+        // TODO: support the remaining cat info keys in swift-foundation. Platforms with no way to record a creation date ignore `.creationDate` rather than reporting it as unsupported, since it is implicitly included in every `attributesOfItem(atPath:)` result and throwing would break passing such a result straight back into `setAttributes(_:ofItemAtPath:)`.
         #endif
     }
 
-#if canImport(Darwin) && !FOUNDATION_FRAMEWORK
+#if canImport(Darwin)
     private static func _setCreationDate(_ date: Date, path: String, fileSystemRepresentation: UnsafePointer<CChar>) throws {
         let interval = date.timeIntervalSince1970
         let seconds = interval.rounded(.down)
