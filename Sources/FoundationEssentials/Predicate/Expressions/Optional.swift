@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct OptionalFlatMap<
@@ -218,3 +220,5 @@ extension PredicateExpressions {
         NilLiteral()
     }
 }
+
+#endif // !$Embedded

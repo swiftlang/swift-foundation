@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 import Observation
 
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
@@ -271,3 +273,5 @@ import Observation
         ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
     }
 }
+
+#endif // !$Embedded

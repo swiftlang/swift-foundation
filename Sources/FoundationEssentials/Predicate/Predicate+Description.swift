@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 package struct DebugStringConversionState {
     private var variables: [PredicateExpressions.VariableID : String]
@@ -479,3 +481,5 @@ extension Expression : CustomDebugStringConvertible {
         return "\(_typeName(Self.self))(variable: (\(variableDesc.joined(separator: ", "))), expression: \(expression))"
     }
 }
+
+#endif // !$Embedded

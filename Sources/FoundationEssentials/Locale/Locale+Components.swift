@@ -18,7 +18,7 @@ extension Locale {
 
     /// A type that represents the components of a locale, for use when creating a locale with specific overrides.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Components : Hashable, Codable, Sendable {
+    public struct Components : Hashable, Sendable {
 
         /// Represents the language identifier a locale
         public var languageComponents: Language.Components
@@ -159,7 +159,7 @@ extension Locale {
 
     /// An alphabetical code associated with a language.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct LanguageCode : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+    public struct LanguageCode : Hashable, Sendable, ExpressibleByStringLiteral {
         /// Creates a language code from an identifier as a string literal.
         ///
         /// - Parameter value: A two-letter ISO 639-1 or three-letter ISO 639-2 code, such as `en` for English. You can also use a code of your own choice for a custom language.
@@ -222,6 +222,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -244,11 +245,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// The written script used with a given language.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Script : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+    public struct Script : Hashable, Sendable, ExpressibleByStringLiteral {
         /// Creates a script from a BCP 47 identifier as a string literal.
         public init(stringLiteral value: String) {
             self.init(value)
@@ -289,6 +291,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -311,11 +314,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// A type that represents a geographic region, for use in specifying a locale or language.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Region : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+    public struct Region : Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("rg")
         package static let legacyKeywordKey = ICULegacyKey("rg")
@@ -364,6 +368,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -386,11 +391,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// A type that represents the string sort order used by the locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Collation : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+    public struct Collation : Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("co")
         package static let legacyKeywordKey = ICULegacyKey("collation")
@@ -445,6 +451,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -467,11 +474,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// A type that represents the currency system used by a locale, like dollars or euros.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Currency : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+    public struct Currency : Hashable, Sendable, ExpressibleByStringLiteral {
         // The complete list of currency codes can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/currency.xml), under the key with the name "cu"
         
         package static let cldrKeywordKey = ICUCLDRKey("cu")
@@ -519,6 +527,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -541,11 +550,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// A type that represents the numbering system used in a locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct NumberingSystem : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+    public struct NumberingSystem : Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("nu")
         package static let legacyKeywordKey = ICULegacyKey("numbers")
@@ -592,6 +602,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -614,11 +625,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// A type that represents weekdays, used for indicating a locale's first day of the week.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public enum Weekday: String, Codable, Hashable, Sendable {
+    public enum Weekday: String, Hashable, Sendable {
         /// The weekday enumeration value for Sunday.
         case sunday = "sun"
         /// The weekday enumeration value for Monday.
@@ -662,7 +674,7 @@ extension Locale {
 
     /// A type that represents the hour cycle used in a locale, like one-to-twelve or zero-to-twenty-three.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public enum HourCycle : String, Codable, Hashable, Sendable {
+    public enum HourCycle : String, Hashable, Sendable {
         /// 12-hour clock. Hour ranges from 0 to 11
         case zeroToEleven = "h11"
 
@@ -681,7 +693,7 @@ extension Locale {
 
     /// A type that represents the measurement system used by a locale, like metric or the US system.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct MeasurementSystem: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
+    public struct MeasurementSystem: Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("ms")
         package static let legacyKeywordKey = ICULegacyKey("measure")
@@ -740,6 +752,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -762,11 +775,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// A type that represents a subdivision of a region, such as a state in the US or a province in Canada.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Subdivision : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
+    public struct Subdivision : Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("sd")
         package static let legacyKeywordKey = ICULegacyKey("sd")
@@ -819,6 +833,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -841,11 +856,12 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 
     /// A type that represents a locale's language variant.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Variant: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
+    public struct Variant: Hashable, Sendable, ExpressibleByStringLiteral {
 
         package static let cldrKeywordKey = ICUCLDRKey("va")
         package static let legacyKeywordKey = ICULegacyKey("va")
@@ -894,6 +910,7 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
+#if !$Embedded
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -916,8 +933,49 @@ extension Locale {
             var container = encoder.singleValueContainer()
             try container.encode(_identifier)
         }
+#endif
     }
 }
+
+#if !$Embedded
+// Codable conformances are unavailable in Embedded Swift. The witnesses (or
+// synthesized implementations) live on the primary type declarations above.
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Components : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.LanguageCode : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Script : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Region : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Collation : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Currency : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.NumberingSystem : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Weekday : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.HourCycle : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.MeasurementSystem : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Subdivision : Codable {}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Variant : Codable {}
+#endif
 
 // MARK: - Key Wrappers
 

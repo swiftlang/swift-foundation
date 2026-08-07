@@ -11,7 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
+#if $Embedded
+import Darwin
+#else
 internal import os
+#endif
 #elseif canImport(Android)
 @preconcurrency import Android
 #elseif canImport(Glibc)
@@ -344,8 +348,8 @@ extension String {
 
 // MARK: - Filesystem String Extensions
 
-#if !NO_FILESYSTEM
-    
+#if !NO_FILESYSTEM && !$Embedded
+
     internal static func homeDirectoryPath() -> String {
         #if os(Windows)
         func fallbackCurrentUserDirectory() -> String {

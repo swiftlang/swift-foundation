@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct UnaryMinus<Wrapped: PredicateExpression> : PredicateExpression where Wrapped.Output: SignedNumeric {
@@ -56,3 +58,5 @@ extension PredicateExpressions.UnaryMinus : Codable where Wrapped : Codable {
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.UnaryMinus : Sendable where Wrapped : Sendable {}
+
+#endif // !$Embedded

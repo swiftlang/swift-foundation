@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
@@ -70,3 +72,5 @@ extension PredicateExpressions.StringCaseInsensitiveCompare : Codable where Root
 extension PredicateExpressions.StringCaseInsensitiveCompare : Sendable where Root : Sendable, Other : Sendable {}
 
 #endif
+
+#endif // !$Embedded

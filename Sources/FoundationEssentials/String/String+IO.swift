@@ -435,7 +435,7 @@ internal func extendedAttributeData(for encoding: String.Encoding) -> Data? {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !$Embedded
     /// Writes the contents of the `String` to a file at a given path using a given encoding.
     public func write<T : StringProtocol>(toFile path: T, atomically useAuxiliaryFile: Bool, encoding enc: String.Encoding) throws {
         guard let data = data(using: enc) else {

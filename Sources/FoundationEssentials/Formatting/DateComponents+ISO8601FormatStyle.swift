@@ -13,36 +13,38 @@
 @available(FoundationPreview 6.2, *)
 extension DateComponents {
     /// Options for generating and parsing string representations of dates following the ISO 8601 standard.
-    public struct ISO8601FormatStyle : Hashable, Sendable, Codable {
+    public struct ISO8601FormatStyle : Hashable, Sendable {
         public internal(set) var timeSeparator: Date.ISO8601FormatStyle.TimeSeparator
         /// If set, fractional seconds will be present in formatted output. Fractional seconds may be present in parsing regardless of the setting of this property.
         public internal(set) var includingFractionalSeconds: Bool
         public internal(set) var timeZoneSeparator: Date.ISO8601FormatStyle.TimeZoneSeparator
         public internal(set) var dateSeparator: Date.ISO8601FormatStyle.DateSeparator
         public internal(set) var dateTimeSeparator: Date.ISO8601FormatStyle.DateTimeSeparator
-        
-        internal struct Fields : Codable, Hashable, OptionSet {
+
+        internal struct Fields : Hashable, OptionSet {
             package var rawValue: UInt
             package init(rawValue: UInt) {
                 self.rawValue = rawValue
             }
-            
+
             package static var year: Self { Self(rawValue: 1 << 0) }
             package static var month: Self { Self(rawValue: 1 << 1) }
             package static var weekOfYear: Self { Self(rawValue: 1 << 2) }
             package static var day: Self { Self(rawValue: 1 << 3) }
             package static var time: Self { Self(rawValue: 1 << 4) }
             package static var timeZone: Self { Self(rawValue: 1 << 5) }
-            
+
+#if !$Embedded
             package init(from decoder: any Decoder) throws {
                 let c = try decoder.singleValueContainer()
                 rawValue = try c.decode(UInt.self)
             }
-            
+
             package func encode(to encoder: any Encoder) throws {
                 var c = encoder.singleValueContainer()
                 try c.encode(rawValue)
             }
+#endif
         }
         
         private var _formatFields: Fields = []
@@ -63,6 +65,7 @@ extension DateComponents {
             _formatFields.insert(fields)
         }
         
+#if !$Embedded
         enum CodingKeys : String, CodingKey {
             case timeZoneSeparator
             case timeZone
@@ -72,9 +75,9 @@ extension DateComponents {
             case dateSeparator
             case timeSeparator
         }
-        
+
         // Encoding
-        
+
         public init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             timeZoneSeparator = try c.decode(Date.ISO8601FormatStyle.TimeZoneSeparator.self, forKey: .timeZoneSeparator)
@@ -84,11 +87,11 @@ extension DateComponents {
             includingFractionalSeconds = try c.decode(Bool.self, forKey: .includingFractionalSeconds)
             dateSeparator = try c.decode(Date.ISO8601FormatStyle.DateSeparator.self, forKey: .dateSeparator)
             timeSeparator = try c.decode(Date.ISO8601FormatStyle.TimeSeparator.self, forKey: .timeSeparator)
-            
+
             _calendar = Calendar(identifier: .iso8601)
             _calendar.timeZone = timeZone
         }
-        
+
         public func encode(to encoder: any Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encode(timeZoneSeparator, forKey: .timeZoneSeparator)
@@ -99,7 +102,8 @@ extension DateComponents {
             try c.encode(dateSeparator, forKey: .dateSeparator)
             try c.encode(timeSeparator, forKey: .timeSeparator)
         }
-        
+#endif
+
         public func hash(into hasher: inout Hasher) {
             hasher.combine(timeZoneSeparator)
             hasher.combine(timeZone)
@@ -144,6 +148,13 @@ extension DateComponents {
         }
     }
 }
+
+#if !$Embedded
+@available(FoundationPreview 6.2, *)
+extension DateComponents.ISO8601FormatStyle : Codable {}
+@available(FoundationPreview 6.2, *)
+extension DateComponents.ISO8601FormatStyle.Fields : Codable {}
+#endif
 
 @available(FoundationPreview 6.2, *)
 extension DateComponents.ISO8601FormatStyle {
@@ -765,6 +776,7 @@ extension DateComponents.ISO8601FormatStyle: ParseableFormatStyle {
 
 // MARK: - Regex
 
+#if !$Embedded
 @available(FoundationPreview 6.2, *)
 extension DateComponents.ISO8601FormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = DateComponents
@@ -818,3 +830,4 @@ extension RegexComponent where Self == DateComponents.ISO8601FormatStyle {
         return DateComponents.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }
 }
+#endif // !$Embedded

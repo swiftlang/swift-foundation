@@ -20,6 +20,7 @@ internal import os
 internal import _FoundationCShims
 internal import Synchronization
 
+#if !$Embedded
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
 // Here, we always have access to _LocaleICU
 internal func _localeICUClass() -> _LocaleProtocol.Type {
@@ -31,6 +32,37 @@ dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
     _LocaleUnlocalized.self
 }
 #endif
+#endif // !$Embedded
+
+// Factory helpers that construct the backing locale implementation.
+//
+// In Embedded Swift only the pure-Swift `_LocaleUnlocalized` is available; it is hard-wired here, avoiding
+// both the metatype-based class dispatch and the `dynamic` upcall to FoundationInternationalization/ICU
+// (neither is supported in Embedded). In non-embedded builds these route through `_localeICUClass()`,
+// preserving the original behavior (including ICU's dynamic replacement) exactly.
+func _makeLocale(identifier: String, prefs: LocalePreferences?) -> any _LocaleProtocol {
+#if $Embedded
+    _LocaleUnlocalized(identifier: identifier, prefs: prefs)
+#else
+    _localeICUClass().init(identifier: identifier, prefs: prefs)
+#endif
+}
+
+func _makeLocale(components: Locale.Components) -> any _LocaleProtocol {
+#if $Embedded
+    _LocaleUnlocalized(components: components)
+#else
+    _localeICUClass().init(components: components)
+#endif
+}
+
+func _makeLocale(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) -> any _LocaleProtocol {
+#if $Embedded
+    _LocaleUnlocalized(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+#else
+    _localeICUClass().init(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+#endif
+}
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
 struct LocaleCache : Sendable, ~Copyable {
@@ -64,7 +96,7 @@ struct LocaleCache : Sendable, ~Copyable {
             if let locale = cachedFixedLocales[id] {
                 return locale
             } else {
-                let locale = _localeICUClass().init(identifier: id, prefs: nil)
+                let locale = _makeLocale(identifier: id, prefs: nil)
                 cachedFixedLocales[id] = locale
                 return locale
             }
@@ -105,7 +137,7 @@ struct LocaleCache : Sendable, ~Copyable {
             if let l = cachedFixedComponentsLocales[identifier] {
                 return l
             } else {
-                let new = _localeICUClass().init(components: comps)
+                let new = _makeLocale(components: comps)
 
                 cachedFixedComponentsLocales[identifier] = new
                 return new
@@ -135,7 +167,7 @@ struct LocaleCache : Sendable, ~Copyable {
     /// This mutates global state of the current locale, so it is not safe to use in concurrent testing.
     func resetCurrent(to preferences: LocalePreferences) {
         // Disable bundle matching so we can emulate a non-English main bundle during test
-        let newLocale = _localeICUClass().init(name: nil, prefs: preferences, disableBundleMatching: true)
+        let newLocale = _makeLocale(name: nil, prefs: preferences, disableBundleMatching: true)
         _currentCache.withLock {
             $0 = newLocale
         }
@@ -162,7 +194,7 @@ struct LocaleCache : Sendable, ~Copyable {
 
         // We need to fetch prefs and try again
         let (preferences, doCache) = preferences()
-        let locale = _localeICUClass().init(name: nil, prefs: preferences, disableBundleMatching: false)
+        let locale = _makeLocale(name: nil, prefs: preferences, disableBundleMatching: false)
 
         // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
         if doCache {
@@ -189,7 +221,7 @@ struct LocaleCache : Sendable, ~Copyable {
     static let autoupdatingCurrent = _LocaleAutoupdating()
 
     static let system : any _LocaleProtocol = {
-        _localeICUClass().init(identifier: "", prefs: nil)
+        _makeLocale(identifier: "", prefs: nil)
     }()
 
 #if FOUNDATION_FRAMEWORK
@@ -323,13 +355,13 @@ struct LocaleCache : Sendable, ~Copyable {
         var (prefs, _) = preferences()
         if let overrides { prefs.apply(overrides) }
 
-        let inner = _localeICUClass().init(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        let inner = _makeLocale(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
         return Locale(inner: inner)
     }
 
     func localeWithPreferences(identifier: String, prefs: LocalePreferences?) -> Locale {
         if let prefs {
-            let inner = _localeICUClass().init(identifier: identifier, prefs: prefs)
+            let inner = _makeLocale(identifier: identifier, prefs: prefs)
             return Locale(inner: inner)
         } else {
             return Locale(inner: LocaleCache.cache.fixed(identifier))

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct ConditionalCast<
@@ -145,3 +147,5 @@ extension PredicateExpressions.ForceCast : Sendable where Input : Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.TypeCheck : Sendable where Input : Sendable {}
+
+#endif // !$Embedded

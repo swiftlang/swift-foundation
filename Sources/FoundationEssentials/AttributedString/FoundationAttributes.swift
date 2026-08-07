@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 // MARK: Attribute Scope
 
 #if FOUNDATION_FRAMEWORK
@@ -1141,3 +1143,5 @@ extension AttributedString {
         private typealias RightToLeftCodingKeys = EmptyCodingKeys
     }
 }
+
+#endif // !$Embedded

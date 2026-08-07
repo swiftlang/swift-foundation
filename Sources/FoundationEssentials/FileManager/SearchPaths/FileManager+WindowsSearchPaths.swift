@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if os(Windows)
 
 import WinSDK
@@ -75,3 +77,5 @@ func _WindowsSearchPathURL(for directory: FileManager.SearchPathDirectory, in do
 }
 
 #endif
+
+#endif // !$Embedded

@@ -49,6 +49,7 @@ extension BufferView<UInt8> {
         return BufferView(start: address, count: sliceCount)
     }
     
+#if !$Embedded
     internal subscript(region: JSONMap.Region) -> BufferView {
         slice(from: region.startOffset, count: region.count)
     }
@@ -56,4 +57,5 @@ extension BufferView<UInt8> {
     internal subscript(unchecked region: JSONMap.Region) -> BufferView {
         uncheckedSlice(from: region.startOffset, count: region.count)
     }
+#endif
 }

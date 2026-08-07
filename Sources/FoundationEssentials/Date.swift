@@ -256,7 +256,7 @@ extension Date {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+extension Date : CustomDebugStringConvertible, CustomStringConvertible {
 // For backwards compatibility, the Darwin version of this method is left alone
 // because it uses `NSDateFormatter` and may behave slightly differently.
 #if !FOUNDATION_FRAMEWORK
@@ -318,7 +318,11 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
     public var debugDescription: String {
         return description
     }
+}
 
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Date : CustomReflectable {
     public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
           ("timeIntervalSinceReferenceDate", timeIntervalSinceReferenceDate)
@@ -326,7 +330,9 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Date : Codable {
     public init(from decoder: Decoder) throws {
@@ -340,6 +346,7 @@ extension Date : Codable {
         try container.encode(self.timeIntervalSinceReferenceDate)
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK

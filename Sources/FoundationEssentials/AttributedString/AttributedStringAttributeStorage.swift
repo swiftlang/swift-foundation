@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal struct _AttributeValue : Hashable, CustomStringConvertible, Sendable {
@@ -295,3 +297,5 @@ extension AttributedString._AttributeStorage {
         contains(K.name)
     }
 }
+
+#endif // !$Embedded

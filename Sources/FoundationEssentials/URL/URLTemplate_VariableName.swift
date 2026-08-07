@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(FoundationPreview 6.2, *)
 extension URL.Template {
     /// The name of a variable used for expanding a template.
@@ -41,3 +43,5 @@ extension URL.Template.VariableName: CustomStringConvertible {
         String(self)
     }
 }
+
+#endif

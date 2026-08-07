@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 protocol PlistDecodingMap: AnyObject {
     associatedtype Value
     associatedtype ContainedValueReference
@@ -870,3 +872,5 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
     }
 }
 
+
+#endif // !$Embedded

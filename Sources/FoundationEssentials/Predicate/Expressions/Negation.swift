@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Negation<Wrapped: PredicateExpression> : PredicateExpression where Wrapped.Output == Bool {
@@ -56,3 +58,5 @@ extension PredicateExpressions.Negation : Codable where Wrapped : Codable {
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Negation : Sendable where Wrapped : Sendable {}
+
+#endif // !$Embedded

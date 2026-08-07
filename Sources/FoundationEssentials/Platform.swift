@@ -341,6 +341,7 @@ extension Platform {
 
 // MARK: - Executable Path
 extension Platform {
+#if !$Embedded
     static func getFullExecutablePath() -> String? {
 #if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
         guard let cPath = _CFProcessPath() else {
@@ -393,6 +394,7 @@ extension Platform {
         return nil
 #endif
     }
+#endif
 }
 
 extension Platform {

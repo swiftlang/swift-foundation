@@ -28,7 +28,7 @@
 /// strategy: style.parseStrategy) // 12345.67
 /// ```
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public protocol ParseStrategy : Codable, Hashable {
+public protocol ParseStrategy : Hashable {
 
     /// The input type parsed by this strategy.
     ///
@@ -48,3 +48,7 @@ public protocol ParseStrategy : Codable, Hashable {
     /// - Returns: A parsed value of the type declared by ``ParseStrategy/ParseOutput``.
     func parse(_ value: ParseInput) throws -> ParseOutput
 }
+
+#if !$Embedded
+extension ParseStrategy : Codable { }
+#endif

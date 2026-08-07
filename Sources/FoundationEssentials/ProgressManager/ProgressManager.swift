@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 import Observation
 internal import Synchronization
 
@@ -565,3 +567,5 @@ extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible
         return self.description
     }
 }
+
+#endif // !$Embedded

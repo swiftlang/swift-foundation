@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if compiler(>=5.11)
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
@@ -112,3 +114,5 @@ extension PredicateExpressions.StringContainsRegex : Codable where Subject : Cod
 extension PredicateExpressions.StringContainsRegex : StandardPredicateExpression where Subject : StandardPredicateExpression, Regex : StandardPredicateExpression {}
 
 #endif
+
+#endif // !$Embedded

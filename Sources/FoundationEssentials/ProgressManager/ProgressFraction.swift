@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -344,3 +346,5 @@ internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvert
         return (n / gcd, d / gcd)
     }
 }
+
+#endif // !$Embedded

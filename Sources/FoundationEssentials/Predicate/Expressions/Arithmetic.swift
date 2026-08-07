@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public enum ArithmeticOperator: Codable, Sendable {
@@ -86,3 +88,5 @@ extension PredicateExpressions.Arithmetic : Codable where LHS : Codable, RHS : C
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Arithmetic : Sendable where LHS : Sendable, RHS : Sendable {}
+
+#endif // !$Embedded

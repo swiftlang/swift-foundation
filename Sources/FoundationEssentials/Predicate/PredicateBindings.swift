@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 /// A mapping from a predicates's input variables to their values.
 ///
 /// If you define a custom predicate expression type, you must propagate the predicate's bindings to its subexpressions.
@@ -64,3 +66,5 @@ public struct PredicateBindings {
 @available(watchOS, unavailable, introduced: 10.0)
 @available(*, unavailable)
 extension PredicateBindings : Sendable {}
+
+#endif // !$Embedded

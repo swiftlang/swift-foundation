@@ -573,6 +573,7 @@ extension Decimal : Comparable {
     }
 }
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -628,6 +629,7 @@ extension Decimal : Codable {
         try mantissaContainer.encode(_mantissa.7)
     }
 }
+#endif
 
 // MARK: - SignedNumeric
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)

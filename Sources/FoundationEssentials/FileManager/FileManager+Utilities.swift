@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 internal import XPCPrivate
 internal import _ForSwiftFoundation
@@ -297,3 +299,5 @@ extension FileManager {
 #endif
     }
 }
+
+#endif // !$Embedded

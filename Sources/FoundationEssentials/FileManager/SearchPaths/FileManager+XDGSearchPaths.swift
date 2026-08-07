@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if !canImport(Darwin) && !os(Windows)
 
 private func _xdgHomeURL() -> URL {
@@ -205,3 +207,5 @@ func _XDGSearchPathURL(for directory: FileManager.SearchPathDirectory, in domain
 }
 
 #endif
+
+#endif // !$Embedded

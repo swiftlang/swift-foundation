@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct SequenceContains<
@@ -249,3 +251,5 @@ extension PredicateExpressions.SequenceAllSatisfy : Sendable where LHS : Sendabl
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceStartsWith : Sendable where Base : Sendable, Prefix : Sendable {}
+
+#endif // !$Embedded

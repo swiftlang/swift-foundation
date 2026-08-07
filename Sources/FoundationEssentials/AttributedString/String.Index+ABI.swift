@@ -9,6 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 // Bits of String.Index that are ABI but aren't exposed by public API.
 extension String.Index {
   @inline(__always)
@@ -111,3 +113,5 @@ extension String.Index {
     self.init(_rawBits: UInt64(_chunkData) &<< 14)
   }
 }
+
+#endif // !$Embedded

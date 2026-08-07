@@ -54,7 +54,7 @@ extension Date {
     /// ```
     public struct ISO8601FormatStyle : Sendable {
         /// A type describing the character separating the time and time zone of a date in an ISO 8601 date format.
-        public enum TimeZoneSeparator : String, Codable, Sendable {
+        public enum TimeZoneSeparator : String, Sendable {
             /// Use a colon (`:`) to separate the time zone components.
             case colon = ":"
             /// Omit the time zone separator.
@@ -62,7 +62,7 @@ extension Date {
         }
 
         /// A type describing the character separating year, month, and day components of a date in an ISO 8601 date format.
-        public enum DateSeparator : String, Codable, Sendable {
+        public enum DateSeparator : String, Sendable {
             /// Use a dash (`-`) to separate date components.
             case dash = "-"
             /// Omit the date separator.
@@ -70,7 +70,7 @@ extension Date {
         }
 
         /// Type describing the character separating the time components of a date in an ISO 8601 date format.
-        public enum TimeSeparator : String, Codable, Sendable {
+        public enum TimeSeparator : String, Sendable {
             /// Use a colon (`:`) to separate time components.
             case colon = ":"
             /// Omit the time separator.
@@ -78,7 +78,7 @@ extension Date {
         }
 
         /// Type describing the character separating the date and time components of a date in an ISO 8601 date format.
-        public enum DateTimeSeparator : String, Codable, Sendable {
+        public enum DateTimeSeparator : String, Sendable {
             /// Use a space to separate the date and time components.
             case space = " "
             /// Use the standard `T` separator between date and time components.
@@ -155,17 +155,19 @@ extension Date {
         }
         
         // MARK: - Encoding
-        
+
+#if !$Embedded
         public init(from decoder: any Decoder) throws {
             // Delegate to the DateComponents.ISO8601FormatStyle type
             componentsFormatStyle = try DateComponents.ISO8601FormatStyle(from: decoder)
         }
-        
+
         public func encode(to encoder: any Encoder) throws {
             // Delegate to the DateComponents.ISO8601FormatStyle type
             try componentsFormatStyle.encode(to: encoder)
         }
-        
+#endif
+
         public func hash(into hasher: inout Hasher) {
             hasher.combine(componentsFormatStyle)
         }
@@ -462,6 +464,7 @@ extension Date.ISO8601FormatStyle: ParseableFormatStyle {
 
 // MARK: - Regex
 
+#if !$Embedded
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.ISO8601FormatStyle : CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
@@ -526,3 +529,15 @@ extension RegexComponent where Self == Date.ISO8601FormatStyle {
         return Date.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }
 }
+#endif // !$Embedded
+
+#if !$Embedded
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.TimeZoneSeparator : Codable {}
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.DateSeparator : Codable {}
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.TimeSeparator : Codable {}
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.DateTimeSeparator : Codable {}
+#endif

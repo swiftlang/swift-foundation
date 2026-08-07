@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Conjunction<
@@ -67,3 +69,5 @@ extension PredicateExpressions.Conjunction : Codable where LHS : Codable, RHS : 
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Conjunction : Sendable where LHS : Sendable, RHS : Sendable {}
+
+#endif // !$Embedded

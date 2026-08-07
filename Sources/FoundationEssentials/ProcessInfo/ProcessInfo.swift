@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 internal import _FoundationCShims
 internal import Synchronization
 
@@ -629,3 +631,5 @@ extension _ProcessInfo {
 }
 
 #endif // !NO_PROCESS
+
+#endif // !$Embedded
