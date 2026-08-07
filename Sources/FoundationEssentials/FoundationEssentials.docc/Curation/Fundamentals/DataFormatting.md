@@ -10,8 +10,8 @@ While FoundationEssentials defines the core protocols, most implementations of `
 
 When you import `FoundationInternationalization`, you have two general approaches to perform formatting of supported types:
 
-* Call `formatted()` or `formatted(_:)` on an instance of the type, optionally passing in a customized `FormatStyle` appropriate to the type. These methods, defined by extensions in `FoundationInternationalization`, are useful for performing one-off formatting with default styles or slightly-customized styles.
-* Call `format(_:)` on an instance of the `FormatStyle`, passing in the type you want to format. This method, defined by the `FormatStyle` itself, makes sense when you customize a style and want to format many instances with it.
+* Call `formatted()` or `formatted(_:)` on an instance of the type, optionally passing in a customized `FormatStyle` appropriate to the type. These methods, defined by extensions in `FoundationInternationalization`, are useful for performing one-off formatting with default styles or slightly-customized styles. For example, `var string123 = Double(1.23).formatted()` creates the string `1.23`.
+* Call `format(_:)` on an instance of the `FormatStyle`, passing in the type you want to format. This method, defined by the `FormatStyle` itself, makes sense when you customize a style and want to format many instances with it. For example, `var string456 = FloatingPointFormatStyle<Double>().format(4.56)` creates the string `4.56`.
 
 The arrangement is similar with parsing:
 
