@@ -13,7 +13,8 @@
 ##===----------------------------------------------------------------------===##
 
 add_library(_FoundationInternationalizationData STATIC
-    ListFormatData.swift)
+    ListFormatData.swift
+    ListFormatLookup.swift)
 
 target_compile_options(_FoundationInternationalizationData PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"
@@ -35,4 +36,3 @@ if (NOT BUILD_SHARED_LIBS)
 else()
     _swift_foundation_install_target_options(_FoundationInternationalizationData NO)
 endif()
-
