@@ -4,7 +4,7 @@
 
 ## Code Style
 
-**Do not manually wrap comments or DocC.**
+**Do not manually wrap comments or DocC.** Keep it on one line unless splitting genuinely improves readability.
 
 **Add a comment when the *why* is non-obvious:** non-obvious assumptions, platform workarounds, deliberately unusual choices (e.g. two enum raw values with the same raw value on purpose).
 
@@ -13,9 +13,41 @@
 - Reference the PR or bug that motivated the change (belongs in the PR description)
 - Repeat information accessible from `git blame`
 
+**Let clear names replace comments.** Review the names of your functions and their arguments. If a name is clear on its own, drop any comment that only restates what it does. If you need a comment to explain what the code is doing, improve the name instead of adding the comment.
+
 **Using TODOs:** Remove stale TODOs when addressing them. For future refactoring opportunities you are *not* addressing in this PR, use `// TODO:`.
 
+**When you reimplement functionality that belongs in the standard library** (e.g. Unicode scalar property queries), add a `// TODO:` referencing a filed enhancement request number so the local workaround can be removed once the stdlib gains the capability.
+
 **DocC must be accurate.** Do not mention parameters in documentation that do not affect the described behavior.
+
+**Do not leave a brace, keyword, or condition orphaned on its own line** when it can be joined with the adjacent line without hurting readability.
+
+**Avoid abbreviations** Prefer full descriptive names. If a domain term has a conventional abbreviation, name the public parameter in full and reserve the abbreviation for internal use only.
+
+**Avoid C-style prefixes on constant names** (e.g. `_kMyConstant`). Use descriptive names instead.
+
+**Keep type names and file names in sync.** If a file defines a single primary type, name the file after that type.
+
+**Use the `if let` shorthand when unwrapping to a non-optional.** When the only purpose is to bind a non-`nil` optional to a non-optional of the same name, write `if let value` rather than `if let value = value`. This applies to each binding in a comma-separated condition list too.
+
+---
+
+## Writing Style
+
+Write comments, DocC, commit messages, and PR descriptions in plain English. Aim for prose that is clear and concise, written with the reader in mind.
+
+**Keep sentences short.** Aim for an average of 15 to 20 words and one main idea per sentence. Break a long sentence up rather than forcing everything into one.
+
+**Prefer active verbs.** Write "the parser reads the header", not "the header is read by the parser". Reserve the passive for when the doer is unknown or genuinely does not matter.
+
+**Avoid nominalizations.** Use the verb, not the noun spun from it: "we discussed the design", not "we had a discussion about the design"; "the team implemented it", not "implementation was done by the team".
+
+**Use everyday words.** Pick the simplest word that fits: "extra" over "additional", "start" over "commence", "before" over "prior to", "about" over "regarding", "use" over "utilize", "so" over "consequently". Explain any domain term the reader may not know.
+
+**Give direct instructions.** In steps and guidance, use the imperative: "call `reset()` first", not "you should call `reset()` first".
+
+**Use lists to break up dense information.** A few bullets read faster than one long, comma-heavy sentence.
 
 ---
 
@@ -23,7 +55,27 @@
 
 **Factor out shared constants and logic.** If two or more implementations share constants or logic, extract them.
 
+**Consolidate near-duplicate logic.** If two functions do almost the same thing, or one check is always immediately followed by another that repeats it, merge them into a single implementation.
+
 **Decompose complex features into smaller, focused PRs.**
+
+**Move struct-building logic into the type's own initializer.** If a block of code exists only to populate the fields of a type before constructing it, make it an `init` on that type instead of leaving it as free-floating setup code at the call site.
+
+**Prefer enums or named constants over bare integer or "magic" values.** A parameter that selects among a fixed set of options reads far better as an enum (or at least a symbolic constant) than as a raw `Int`, both at call sites and in the `switch` statements that consume it.
+
+**Keep a type focused on a single responsibility.** A type that loads resource data should stay focused on loading; move unrelated concerns (for example, condition or predicate helpers) into their own type rather than accreting them onto it.
+
+**Do not introduce a stored property or local used exactly once.** If a value is computed and then consumed in a single place, inline the expression at its use site rather than naming it.
+
+**Respect encapsulation.** Avoid reaching into another type's internal representation to take a shortcut. When a performance path genuinely requires it, add a `// TODO:` (and file an issue) to revisit the design later.
+
+---
+
+## API Design
+
+**A function's `nil` return should have one unambiguous meaning.** Do not overload `nil` to mean both "not applicable here" and "no result found."
+
+**Do not provide a default protocol-witness implementation when existing conformances already diverge in real behavior.** There is no single "standard" behavior to default to, and a default makes divergence easy to overlook. Require each conformance to implement it explicitly.
 
 ---
 
@@ -37,9 +89,29 @@
 
 **Avoid unsafe APIs** (`UnsafeMutablePointer`, `UnsafeRawPointer`, `UnsafeBufferPointer`, etc.) unless there is no safe alternative. When unsafe is required, isolate it to a small, focused helper.
 
-**`@unchecked Sendable`, `nonisolated(unsafe)`**: If you need to use these, add:
+**`@unchecked Sendable`, `nonisolated(unsafe)`**: Prefer plain `Sendable`; only reach for `@unchecked Sendable` when the compiler genuinely cannot prove conformance. If you need to use these, add:
 - a code or PR comment explaining why the suppression is safe
 - `// TODO:` with a migration path to remove the annotation if applicable
+
+**Prefer `Mutex` for synchronizing shared mutable state** over ad-hoc caching or locking helpers introduced before `Mutex` was available.
+
+**Avoid constructing expensive value types repeatedly inside nested loops.** Restructure to build shared state once and only vary what actually changes across iterations.
+
+**Avoid `KeyPath` for performance-critical property access.** It involves runtime dispatch. Profile against direct property accessors before choosing `KeyPath` in a hot path.
+
+**Check for overflow in multiplications used for size or capacity calculations** (e.g. with `multipliedReportingOverflow`) and bail out rather than letting it silently wrap or trap.
+
+**Avoid capturing outer-scope variables in helper functions or closures.** Pass them as explicit parameters so the dependency is traceable at the call site.
+
+**Build strings by appending into a caller-supplied buffer** rather than returning and re-allocating an intermediate string for each step. Pass an `inout String`, or use `Span` / `OutputBuffer`, so a multi-part result is assembled in one buffer. See `URL_Impl.swift` for an example.
+
+**Avoid dropping to `unicodeScalars`.** When the significant characters are ASCII, prefer the UTF-8 domain (`string.utf8`, `string.withUTF8 { }`, `utf8Span`) and add an all-ASCII fast path via `utf8Span.isKnownASCII`. Where performance is not the concern, prefer readable String-level APIs (`starts(with:)`, `lowercased()`) over a hand-rolled scalar loop.
+
+**Prefer `withTemporaryAllocation` for short-lived scratch buffers** over manual unsafe allocation, once the `swift-tools-version` supports it.
+
+**Do not apply `@inline(__always)` reflexively.** It increases code size. Confirm a measured improvement before adding it, rather than sprinkling it across a file.
+
+**Prefer idiomatic stdlib conveniences over manual multi-step equivalents.** For example, `String(contentsOf:)` instead of reading `Data` and decoding it separately, or a small `TextOutputStream` writing to stderr with `print(_:to:)` instead of `FileHandle.standardError` plus `.data(using: .utf8)`.
 
 ---
 
@@ -64,4 +136,6 @@
 **Tests and implementation should work on all supported platforms by default.** Reach for `#if os(...)` only when the behavior genuinely differs or the API does not exist on that platform.
 
 **Add comments for platform conditionals to explain the divergence.** If a platform (e.g. OpenBSD) partially implements an API category, do not lump it under a broad flag like `NO_LOCALIZATION`. Use an explicit `|| os(OpenBSD)` with a comment.
+
+**Plan the removal of temporary build flags.** When a flag gates a replacement for an existing implementation (e.g. a native Swift path superseding an ICU one), decide up front how and when the flag and the superseded code get retired, rather than leaving both to coexist indefinitely.
 
