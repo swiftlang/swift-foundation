@@ -290,19 +290,70 @@ struct LocaleCache : Sendable, ~Copyable {
         return preferredLocaleID
     }
 #else
+    private static let fallbackLocaleIdentifier = "en_001"
+    private static let maximumPOSIXLocaleIdentifierUTF8Count = 156 // Source: ICU's ULOC_FULLNAME_CAPACITY - 1.
+    private static let allowedPOSIXLocaleIdentifierScalars = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.@".unicodeScalars)
+
+    // Source: ICU's POSIX default-locale lookup uses LC_MESSAGES, indirectly
+    // following POSIX setlocale(3)'s category order: LC_ALL, the category
+    // variable, then LANG. POSIX locale names commonly use
+    // language[_territory][.codeset][@modifier]; Foundation's locale identifier
+    // for this fallback only needs the base language/territory/variant portion.
+    private static func _localeIdentifier(fromPOSIXLocaleIdentifier identifier: String) -> String? {
+        guard !identifier.isEmpty && identifier != "C" && identifier != "POSIX" else {
+            return nil
+        }
+        guard identifier.utf8.count <= Self.maximumPOSIXLocaleIdentifierUTF8Count else {
+            return nil
+        }
+        guard identifier.unicodeScalars.allSatisfy(Self.allowedPOSIXLocaleIdentifierScalars.contains) else {
+            return nil
+        }
+
+        let endIndex = identifier.firstIndex { character in
+            character == "." || character == "@"
+        } ?? identifier.endIndex
+        let baseIdentifier = String(identifier[..<endIndex])
+        guard !baseIdentifier.isEmpty && baseIdentifier != "C" && baseIdentifier != "POSIX" else {
+            return nil
+        }
+
+        return baseIdentifier.replacing("-", with: "_")
+    }
+
+    private static func _preferredLanguageIdentifier(fromLocaleIdentifier identifier: String) -> String {
+        let languageIdentifier = String(identifier.split(separator: "@", maxSplits: 1)[0]).replacing("_", with: "-")
+        return Locale.canonicalLanguageIdentifier(from: languageIdentifier)
+    }
+
+    private static func _localeIdentifierFromEnvironment() -> String? {
+        #if !NO_PROCESS && (os(Linux) || os(Android) || os(FreeBSD) || os(OpenBSD) || canImport(Musl))
+        for environmentVariable in ["LC_ALL", "LC_MESSAGES", "LANG"] {
+            guard let value = Platform.getEnvSecure(environmentVariable), !value.isEmpty else {
+                continue
+            }
+            return _localeIdentifier(fromPOSIXLocaleIdentifier: value)
+        }
+        #endif
+
+        return nil
+    }
+
     func preferences() -> (LocalePreferences, Bool) {
         var prefs = LocalePreferences()
-        prefs.locale = "en_001"
-        prefs.languages = ["en-001"]
+        let localeIdentifier = Self._localeIdentifierFromEnvironment() ?? Self.fallbackLocaleIdentifier
+        prefs.locale = localeIdentifier
+        prefs.languages = [Self._preferredLanguageIdentifier(fromLocaleIdentifier: localeIdentifier)]
         return (prefs, true)
     }
 
     func preferredLanguages(forCurrentUser: Bool) -> [String] {
-        [Locale.canonicalLanguageIdentifier(from: "en-001")]
+        let localeIdentifier = Self._localeIdentifierFromEnvironment() ?? Self.fallbackLocaleIdentifier
+        return [Self._preferredLanguageIdentifier(fromLocaleIdentifier: localeIdentifier)]
     }
 
     func preferredLocale() -> String? {
-        "en_001"
+        Self._localeIdentifierFromEnvironment() ?? Self.fallbackLocaleIdentifier
     }
 #endif
 

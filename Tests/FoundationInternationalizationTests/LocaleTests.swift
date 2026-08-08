@@ -12,12 +12,65 @@
 
 import Testing
 
+#if canImport(Android)
+@preconcurrency import Android
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #elseif canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
+
+#if !FOUNDATION_FRAMEWORK && (os(Linux) || os(Android) || canImport(Musl))
+private func environmentValue(_ name: String) -> String? {
+    name.withCString { namePtr in
+        guard let value = getenv(namePtr) else {
+            return nil
+        }
+        return String(cString: value)
+    }
+}
+
+private func setEnvironmentValue(_ name: String, _ value: String?) {
+    name.withCString { namePtr in
+        if let value {
+            value.withCString { valuePtr in
+                _ = setenv(namePtr, valuePtr, 1)
+            }
+        } else {
+            _ = unsetenv(namePtr)
+        }
+    }
+}
+
+private func withLocaleEnvironment(lcAll: String?, lcMessages: String?, lang: String?, body: () -> Void) {
+    let updates: [(String, String?)] = [
+        ("LC_ALL", lcAll),
+        ("LC_MESSAGES", lcMessages),
+        ("LANG", lang),
+    ]
+    let oldValues = updates.map { (name, _) in
+        (name, environmentValue(name))
+    }
+
+    for (name, value) in updates {
+        setEnvironmentValue(name, value)
+    }
+    defer {
+        for (name, value) in oldValues {
+            setEnvironmentValue(name, value)
+        }
+    }
+
+    body()
+}
+#endif
 
 @Suite("Locale")
 private struct LocaleTests {
@@ -47,6 +100,84 @@ private struct LocaleTests {
         // Need to find a good test case for collator identifier
         // #expect("something" == locale.localizedString(forCollatorIdentifier: "en"))
     }
+
+#if !FOUNDATION_FRAMEWORK && (os(Linux) || os(Android) || canImport(Musl))
+    @Test func currentLocaleUsesPOSIXLocaleEnvironment() async {
+        await usingCurrentInternationalizationPreferences {
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "en_US.UTF-8") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_US")
+                #expect(Locale.current.identifier == "en_US")
+                #expect(Locale.current.region?.identifier == "US")
+                #expect(Locale.preferredLanguages == ["en-US"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: "zh_CN.UTF-8", lang: "en_US.UTF-8") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "zh_CN")
+                #expect(Locale.current.identifier == "zh_CN")
+                #expect(Locale.current.region?.identifier == "CN")
+                #expect(Locale.preferredLanguages == ["zh-CN"])
+            }
+
+            withLocaleEnvironment(lcAll: "de_DE.UTF-8", lcMessages: "zh_CN.UTF-8", lang: "en_US.UTF-8") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "de_DE")
+                #expect(Locale.current.identifier == "de_DE")
+                #expect(Locale.current.region?.identifier == "DE")
+                #expect(Locale.preferredLanguages == ["de-DE"])
+            }
+
+            withLocaleEnvironment(lcAll: "C", lcMessages: "zh_CN.UTF-8", lang: "en_US.UTF-8") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
+                #expect(Locale.current.identifier == "en_001")
+                #expect(Locale.current.region?.identifier == "001")
+                #expect(Locale.preferredLanguages == ["en-001"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "pt-BR.UTF-8") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "pt_BR")
+                #expect(Locale.current.identifier == "pt_BR")
+                #expect(Locale.current.region?.identifier == "BR")
+                #expect(Locale.preferredLanguages == ["pt-BR"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "fr_FR.utf8@euro") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "fr_FR")
+                #expect(Locale.current.identifier == "fr_FR")
+                #expect(Locale.current.region?.identifier == "FR")
+                #expect(Locale.preferredLanguages == ["fr-FR"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "en_US/UTF-8") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
+                #expect(Locale.current.identifier == "en_001")
+                #expect(Locale.current.region?.identifier == "001")
+                #expect(Locale.preferredLanguages == ["en-001"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: "en_US_é") {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
+                #expect(Locale.current.identifier == "en_001")
+                #expect(Locale.current.region?.identifier == "001")
+                #expect(Locale.preferredLanguages == ["en-001"])
+            }
+
+            withLocaleEnvironment(lcAll: nil, lcMessages: nil, lang: String(repeating: "a", count: 157)) {
+                LocaleCache.cache.reset()
+                #expect(LocaleCache.cache.preferredLocale() == "en_001")
+                #expect(Locale.current.identifier == "en_001")
+                #expect(Locale.current.region?.identifier == "001")
+                #expect(Locale.preferredLanguages == ["en-001"])
+            }
+        }
+    }
+#endif
 
     @available(macOS, deprecated: 13)
     @available(iOS, deprecated: 16)
