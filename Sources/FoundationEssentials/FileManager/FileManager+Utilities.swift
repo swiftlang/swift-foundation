@@ -138,6 +138,7 @@ extension _FileManagerImpl {
         }
         #endif
 
+        // Platforms with no way to record a creation date ignore `.creationDate` rather than reporting it as unsupported, since it is implicitly included in every `attributesOfItem(atPath:)` result and throwing would break passing such a result straight back into `setAttributes(_:ofItemAtPath:)`.
         #if canImport(Darwin)
         if let creationDate = attributes[.creationDate] as? Date {
             try Self._setCreationDate(creationDate, path: path, fileSystemRepresentation: fileSystemRepresentation)
@@ -182,7 +183,7 @@ extension _FileManagerImpl {
         guard !urlAttributes.isEmpty else { return }
         try url.setResourceValues(URLResourceValues(values: urlAttributes))
         #else
-        // TODO: support the remaining cat info keys in swift-foundation. Platforms with no way to record a creation date ignore `.creationDate` rather than reporting it as unsupported, since it is implicitly included in every `attributesOfItem(atPath:)` result and throwing would break passing such a result straight back into `setAttributes(_:ofItemAtPath:)`.
+        // TODO: support the remaining cat info keys in swift-foundation
         #endif
     }
 
