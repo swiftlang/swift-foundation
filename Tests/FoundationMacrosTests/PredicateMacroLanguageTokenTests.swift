@@ -393,7 +393,55 @@ private struct PredicateMacroLanguageTokenTests {
             \(foundationModuleName).Predicate<Object?>({ input in
                 PredicateExpressions.\(foundationModuleName)::build_Equal(
                     lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
-                    rhs: PredicateExpressions.\(foundationModuleName)::build_NilLiteral()
+                    nilLiteral: PredicateExpressions.\(foundationModuleName)::build_NilLiteral()
+                )
+            })
+            """
+        )
+        
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object?> { input in
+                nil == input
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object?>({ input in
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    nilLiteral: PredicateExpressions.\(foundationModuleName)::build_NilLiteral(),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input)
+                )
+            })
+            """
+        )
+        
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object?> { input in
+                input != nil
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object?>({ input in
+                PredicateExpressions.\(foundationModuleName)::build_NotEqual(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input),
+                    nilLiteral: PredicateExpressions.\(foundationModuleName)::build_NilLiteral()
+                )
+            })
+            """
+        )
+        
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object?> { input in
+                nil != input
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object?>({ input in
+                PredicateExpressions.\(foundationModuleName)::build_NotEqual(
+                    nilLiteral: PredicateExpressions.\(foundationModuleName)::build_NilLiteral(),
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_Arg(input)
                 )
             })
             """
