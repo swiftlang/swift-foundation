@@ -285,7 +285,27 @@ extension Data {
             let resultingUpper = upper - (subrange.upperBound - subrange.lowerBound) + cnt
             slice = slice.lowerBound..<HalfInt(resultingUpper)
         }
-        
+
+        @_alwaysEmitIntoClient
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        mutating func replaceSubrange<E: Error>(
+            _ subrange: Range<Int>,
+            addingCount newBytesCount: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) -> Void {
+            precondition(startIndex <= subrange.lowerBound, "index \(subrange.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
+            precondition(subrange.lowerBound <= endIndex, "index \(subrange.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
+            precondition(startIndex <= subrange.upperBound, "index \(subrange.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
+            precondition(subrange.upperBound <= endIndex, "index \(subrange.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
+
+            ensureUniqueReference()
+            var endIndex = endIndex
+            defer {
+                slice = slice.lowerBound ..< HalfInt(endIndex)
+            }
+            try storage.replaceSubrange(subrange, endIndex: &endIndex, addingCount: newBytesCount, initializingWith: initializer)
+        }
+
         @inlinable // This is @inlinable as reasonably small.
         func copyBytes(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
             precondition(startIndex <= range.lowerBound, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")

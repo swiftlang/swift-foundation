@@ -304,6 +304,44 @@ extension Data {
             }
         }
 
+        @_alwaysEmitIntoClient
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        mutating func edit<E: Error, R: ~Copyable>(_ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
+            switch self {
+            case .empty:
+                var span = OutputRawSpan()
+                return try body(&span)
+            case .inline(var inline):
+                var length = inline.length
+                defer {
+                    inline.length = length
+                    self = .inline(inline)
+                }
+                return try Swift.withUnsafeMutableBytes(of: &inline.bytes) { buffer throws(E) in
+                    var span = OutputRawSpan(buffer: buffer, initializedCount: count)
+                    defer {
+                        length = UInt8(span.finalize(for: buffer))
+                        span = OutputRawSpan()
+                    }
+                    return try body(&span)
+                }
+            case .slice(var slice):
+                self = .empty
+                slice.ensureUniqueReference()
+                defer { self = .slice(slice) }
+                return try slice.storage.edit(range: &slice.range, body)
+            case .large(var slice):
+                self = .empty
+                slice.ensureUniqueReference()
+                var range = slice.range
+                defer {
+                    slice.slice.range = range
+                    self = .large(slice)
+                }
+                return try slice.storage.edit(range: &range, body)
+            }
+        }
+
         @inline(__always)
         @_alwaysEmitIntoClient
         func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
@@ -424,17 +462,17 @@ extension Data {
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @_alwaysEmitIntoClient
         mutating func append<E: Error>(
-            addingCapacity uninitializedCount: Int,
+            addingCount newByteCount: Int,
             _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
-            let newCapacity = count + uninitializedCount
+            let newCapacity = count + newByteCount
 
             func appendInline(_ inline: consuming InlineData) throws(E) {
                 if InlineData.canStore(count: newCapacity) {
                     defer {
                         self = (inline.count == 0) ? .empty : .inline(inline)
                     }
-                    try inline.append(uninitializedCount, initializer)
+                    try inline.append(newByteCount, initializer)
                 } else {
                     let storage = __DataStorage(capacity: newCapacity)
                     inline.withUnsafeBytes { storage.append($0.baseAddress!, length: $0.count) }
@@ -448,7 +486,7 @@ extension Data {
                             self = .large(LargeSlice(storage, count: newCount))
                         }
                     }
-                    try storage.withUninitializedBytes(extraCapacity: uninitializedCount, location: inline.count, &appendedCount, initializer)
+                    try storage.withUninitializedBytes(extraCapacity: newByteCount, location: inline.count, &appendedCount, initializer)
                 }
             }
 
@@ -461,17 +499,17 @@ extension Data {
                 if InlineSlice.canStore(count: newCapacity) {
                     self = .empty
                     defer { self = .slice(slice) }
-                    try slice.append(uninitializedCount, initializer)
+                    try slice.append(newByteCount, initializer)
                 } else {
                     self = .empty
                     var newSlice = LargeSlice(slice)
                     defer { self = .large(newSlice) }
-                    try newSlice.append(uninitializedCount, initializer)
+                    try newSlice.append(newByteCount, initializer)
                 }
             case .large(var slice):
                 self = .empty
                 defer { self = .large(slice) }
-                try slice.append(uninitializedCount, initializer)
+                try slice.append(newByteCount, initializer)
             }
         }
 
@@ -604,7 +642,96 @@ extension Data {
                 }
             }
         }
-        
+
+        @_alwaysEmitIntoClient
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        public mutating func replaceSubrange<E: Error>(
+            _ subrange: Range<Int>,
+            addingCount cnt: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) -> Void {
+            switch self {
+            case .empty:
+                precondition(subrange.lowerBound == 0 && subrange.upperBound == 0, "range \(subrange) out of bounds of 0..<0")
+                if cnt == 0 {
+                    return
+                } else if InlineData.canStore(count: cnt) {
+                    var inline = InlineData()
+                    defer {
+                        self = (inline.count == 0) ? .empty : .inline(inline)
+                    }
+                    try inline.append(cnt, initializer)
+                } else {
+                    let storage = __DataStorage(capacity: cnt)
+                    var size = 0
+                    defer {
+                        if InlineSlice.canStore(count: size) {
+                            self = .slice(InlineSlice(storage, count: size))
+                        } else {
+                            self = .large(LargeSlice(storage, count: size))
+                        }
+                    }
+                    try storage.withUninitializedBytes(extraCapacity: cnt, location: 0, &size, initializer)
+                }
+            case .inline(var inline):
+                precondition(subrange.lowerBound >= 0 && subrange.lowerBound <= inline.count, "index \(subrange.lowerBound) is out of bounds of 0..<\(inline.count)")
+                precondition(subrange.upperBound >= 0 && subrange.upperBound <= inline.count, "index \(subrange.upperBound) is out of bounds of 0..<\(inline.count)")
+                let resultingCount = inline.count + cnt - (subrange.upperBound - subrange.lowerBound)
+                if resultingCount == 0 {
+                    self = .empty
+                    var span = OutputRawSpan()
+                    try initializer(&span)
+                } else if InlineData.canStore(count: resultingCount) {
+                    defer { self = .inline(inline) }
+                    try inline.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                } else if InlineSlice.canStore(count: resultingCount) {
+                    var slice = InlineSlice(inline)
+                    defer { self = .slice(slice) }
+                    try slice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                } else {
+                    var slice = LargeSlice(inline)
+                    defer { self = .large(slice) }
+                    try slice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                }
+            case .slice(var slice):
+                let resultingUpper = slice.endIndex + cnt - (subrange.upperBound - subrange.lowerBound)
+                if slice.startIndex == 0 && resultingUpper == 0 {
+                    self = .empty
+                } else if slice.startIndex == 0 && InlineData.canStore(count: resultingUpper) {
+                    self = .empty
+                    defer { self = .inline(InlineData(slice, count: slice.count))}
+                    try slice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                } else if InlineSlice.canStore(count: resultingUpper) {
+                    self = .empty
+                    defer { self = .slice(slice) }
+                    try slice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                } else {
+                    self = .empty
+                    var newSlice = LargeSlice(slice)
+                    defer { self = .large(newSlice) }
+                    try newSlice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                }
+            case .large(var slice):
+                let resultingUpper = slice.endIndex + cnt - (subrange.upperBound - subrange.lowerBound)
+                if slice.startIndex == 0 && resultingUpper == 0 {
+                    self = .empty
+                } else if slice.startIndex == 0 && InlineData.canStore(count: resultingUpper) {
+                    self = .empty
+                    defer { self = .inline(InlineData(slice, count: resultingUpper - slice.startIndex)) }
+                    try slice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                } else if InlineSlice.canStore(count: slice.startIndex) && InlineSlice.canStore(count: resultingUpper) {
+                    self = .empty
+                    var newSlice = InlineSlice(slice)
+                    defer { self = .slice(newSlice) }
+                    try newSlice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                } else {
+                    self = .empty
+                    defer { self = .large(slice) }
+                    try slice.replaceSubrange(subrange, addingCount: cnt, initializingWith: initializer)
+                }
+            }
+        }
+
         @inlinable // This is @inlinable as trivially forwarding.
         subscript(index: Index) -> UInt8 {
             get {
